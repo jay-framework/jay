@@ -45,6 +45,7 @@ interface ParsedYamlProp {
 
 interface ParsedYaml {
     name: string;
+    description?: string;
     tags: Array<ParsedYamlTag>;
     props?: Array<ParsedYamlProp>;
     /** URL/load params: object of param name -> type string (e.g. { slug: string }). Design Log #85. */
@@ -427,6 +428,9 @@ export function parseContract(contractYaml: string, fileName: string): WithValid
 
         const contract: Contract = {
             name: parsedYaml.name,
+            ...(typeof parsedYaml.description === 'string' && {
+                description: parsedYaml.description,
+            }),
             tags: parsedTags,
             ...(parsedProps && parsedProps.length > 0 && { props: parsedProps }),
             ...(parsedParams && parsedParams.length > 0 && { params: parsedParams }),

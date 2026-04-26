@@ -7,7 +7,9 @@ import {
 import { checkValidationErrors, JAY_QUERY_HYDRATE } from '@jay-framework/compiler-shared';
 import { asyncSwapScript, type ServerRenderContext } from '@jay-framework/ssr-runtime';
 import type { ViteDevServer } from 'vite';
+import type { HeadTag } from '@jay-framework/fullstack-component';
 import type { DevServerPagePart } from './load-page-parts';
+import { serializeHeadTags } from './head-tags';
 import type { TrackByMap } from '@jay-framework/view-state-merge';
 import {
     buildScriptFragments,
@@ -89,6 +91,8 @@ export async function generateSSRPageHtml(
     options: GenerateClientScriptOptions = {},
     /** Source directory for headfull FS file resolution when jayHtmlDir is pre-rendered */
     sourceDir?: string,
+    /** Head tags to inject into <head> during SSR (Design Log #127) */
+    headTags?: HeadTag[],
 ): Promise<string> {
     const jayHtmlPath = path.join(jayHtmlDir, jayHtmlFilename);
 
@@ -181,17 +185,140 @@ export async function generateSSRPageHtml(
     const cssLink = cached.cssHref ? `    <link rel="stylesheet" href="${cached.cssHref}" />` : '';
 
     // Step 5: Build full HTML page
-    const headExtras = [headLinksHtml, cssLink].filter((_) => _).join('\n');
+    // Head tags from components (DL#127)
+    const headTagsHtml = headTags && headTags.length > 0 ? serializeHeadTags(headTags) : '';
+    const hasCustomTitle = headTags?.some((t) => t.tag.toLowerCase() === 'title');
+    const titleHtml = hasCustomTitle ? '' : '    <title>Vite + TS</title>\n';
+    const headExtras = [headLinksHtml, cssLink, headTagsHtml].filter((_) => _).join('\n');
     return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + TS</title>
-${headExtras ? headExtras + '\n' : ''}  </head>
+${titleHtml}${headExtras ? headExtras + '\n' : ''}  </head>
   <body>
     <div id="target">${ssrHtml}</div>${asyncScripts}
     ${hydrationScript}
+  </body>
+</html>`;
+}
+
+/**
+ * Generate a frozen page — pure SSR HTML with no client scripts (DL#127).
+ *
+ * Uses the same server element module as generateSSRPageHtml, but:
+ * - No hydration script
+ * - No Vite client
+ * - No component runtime
+ * - Just rendered HTML + CSS
+ *
+ * @param format - 'page' for full HTML document, 'fragment' for body-only (shadow DOM)
+ */
+export async function generateFrozenPageHtml(
+    vite: ViteDevServer,
+    jayHtmlContent: string,
+    jayHtmlFilename: string,
+    jayHtmlDir: string,
+    viewState: object,
+    buildFolder: string,
+    projectRoot: string,
+    routeDir: string,
+    tsConfigFilePath?: string,
+    sourceDir?: string,
+    format: 'page' | 'fragment' = 'page',
+    freezeName?: string,
+): Promise<string> {
+    const jayHtmlPath = path.join(jayHtmlDir, jayHtmlFilename);
+
+    // Reuse the same server element cache
+    let cached = serverModuleCache.get(jayHtmlPath);
+    if (!cached) {
+        cached = await compileAndLoadServerElement(
+            vite,
+            jayHtmlContent,
+            jayHtmlFilename,
+            jayHtmlDir,
+            buildFolder,
+            projectRoot,
+            routeDir,
+            tsConfigFilePath,
+            sourceDir,
+        );
+        serverModuleCache.set(jayHtmlPath, cached);
+    }
+
+    // Render HTML
+    const htmlChunks: string[] = [];
+    const ctx: ServerRenderContext = {
+        write: (chunk: string) => {
+            htmlChunks.push(chunk);
+        },
+        onAsync: () => {
+            // In frozen mode, async content is not supported — skip
+        },
+    };
+
+    cached.renderToStream(viewState, ctx);
+    const ssrHtml = htmlChunks.join('');
+
+    if (format === 'fragment') {
+        // Shadow DOM fragment: body content + scoped styles.
+        // For shadow DOM to work cross-origin, CSS must be inlined (not linked).
+        // Images use absolute URLs. Fonts would need base64 inlining for full
+        // cross-origin support (deferred — requires reading font files from disk).
+        let inlineCss = '';
+        if (cached.cssHref) {
+            try {
+                // cssHref is a Vite URL like /@fs/path/to/file.css?v=hash&direct
+                // Extract the filesystem path and read the CSS directly.
+                const cssPath = cached.cssHref.replace(/^\/@fs/, '').replace(/\?.*$/, '');
+                const cssContent = await fs.readFile(cssPath, 'utf-8');
+                inlineCss = `<style>${cssContent}</style>`;
+            } catch {
+                // Fallback to link tag
+                inlineCss = `<link rel="stylesheet" href="${cached.cssHref}" />`;
+            }
+        }
+        return `${inlineCss}\n${ssrHtml}`;
+    }
+
+    // Full page: complete HTML document, no client scripts
+    const headLinksHtml = cached.headLinks
+        .map((link) => {
+            const attrs = Object.entries(link.attributes)
+                .map(([k, v]) => ` ${k}="${v}"`)
+                .join('');
+            return `    <link rel="${link.rel}" href="${link.href}"${attrs} />`;
+        })
+        .join('\n');
+    const cssLink = cached.cssHref ? `    <link rel="stylesheet" href="${cached.cssHref}" />` : '';
+    const headExtras = [headLinksHtml, cssLink].filter((_) => _).join('\n');
+    const label = freezeName ? ` — ${freezeName}` : '';
+
+    return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Frozen${label}</title>
+${headExtras ? headExtras + '\n' : ''}    <style>
+      body::before {
+        content: 'FROZEN${label ? `: ${freezeName}` : ''}';
+        position: fixed;
+        top: 0;
+        right: 0;
+        background: #1a1a2e;
+        color: #e0e0ff;
+        padding: 2px 10px;
+        font: 11px/1.6 system-ui;
+        z-index: 99999;
+        border-bottom-left-radius: 4px;
+        opacity: 0.8;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="target">${ssrHtml}</div>
   </body>
 </html>`;
 }

@@ -59,6 +59,34 @@ export interface PluginManifest {
     actions?: ActionManifestEntry[];
     /** Plugin initialization configuration */
     init?: PluginInitConfig;
+    /** Server-side services provided by this plugin (DL#125) */
+    services?: Array<{
+        name: string;
+        marker: string;
+        description?: string;
+        doc?: string;
+    }>;
+    /** Client-side contexts provided by this plugin (DL#125) */
+    contexts?: Array<{
+        name: string;
+        marker: string;
+        description?: string;
+        doc?: string;
+    }>;
+    /** Plugin-provided routes — full pages served by the dev server (DL#130).
+     *  Each route is a headless component + jay-html template + route path. */
+    routes?: Array<{
+        /** Route path (e.g., "/aiditor", "/aiditor/pages/[route]") */
+        path: string;
+        /** Export subpath for the jay-html file (resolved via package.json exports) */
+        jayHtml: string;
+        /** Export subpath for the CSS file (optional, resolved via package.json exports) */
+        css?: string;
+        /** Exported member name for the page component */
+        component: string;
+        /** Human-readable description */
+        description?: string;
+    }>;
     /** Plugin setup configuration (Design Log #87) */
     setup?: {
         /** Export name (NPM) or relative path (local) to setup handler function */

@@ -159,3 +159,17 @@ URL query parameters (`?page=2&sort=price`) are available in the **fast render p
 - `props.query` is `Record<string, string>` — empty `{}` when no query string
 - Not available in the slow phase (compile error) — slow results are cached by path params only
 - In the interactive phase, use `new URLSearchParams(window.location.search)` directly
+
+## Plugin Routes
+
+Plugins can provide their own pages via `routes` in `plugin.yaml`. These are backoffice tools, admin dashboards, or editors with boxed designs that don't need per-site customization.
+
+Plugin routes appear alongside project routes. If your project defines the same route path in `src/pages/`, your page takes precedence — the plugin's page is skipped.
+
+To override a plugin route, simply create a page at the same path:
+
+```
+# Plugin provides /admin/products
+# To customize, create:
+src/pages/admin/products/page.jay-html
+```

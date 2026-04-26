@@ -1,0 +1,17 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    url: string
+    </script>
+</head>
+<body>
+<div>
+    <img src="/image.jpg" alt="MICHAEL KORS
+חולצה מכופתרת סלים.">
+    <div data-info="line one
+line two
+line three">static</div>
+</div>
+</body>
+</html>

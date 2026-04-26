@@ -115,11 +115,70 @@ outputSchema:
 | `prop: record(T)`         | Record with typed values  |
 | `prop: importedName`      | Type from `import:` block |
 
+## makeJayStream — Streaming (POST, NDJSON)
+
+Streaming actions return an async generator that yields chunks:
+
+```typescript
+import { makeJayStream } from '@jay-framework/fullstack-component';
+
+export const discoverParams = makeJayStream('routes.discoverParams')
+  .withServices(PRODUCTS_SERVICE)
+  .withHandler(async function* (input: { route: string }, productsService) {
+    let page = 1;
+    while (true) {
+      const products = await productsService.list({ page, pageSize: 100 });
+      yield products.map((p) => ({ slug: p.slug }));
+      if (!products.hasMore) break;
+      page++;
+    }
+  });
+```
+
+### Consuming on the client
+
+```typescript
+for await (const batch of discoverParams({ route: '/products/[slug]' })) {
+  console.log(batch); // [{ slug: 'item-a' }, { slug: 'item-b' }]
+}
+```
+
+### Wire format
+
+The server responds with NDJSON (newline-delimited JSON). Each line is a complete JSON object:
+
+```
+{"chunk":[{"slug":"item-a"},{"slug":"item-b"}]}
+{"chunk":[{"slug":"item-c"}]}
+{"done":true}
+```
+
+### .jay-action for streaming
+
+Add `streaming: true` to the metadata file:
+
+```yaml
+name: discoverParams
+description: Discover URL params by querying the product catalog
+streaming: true
+inputSchema:
+  route: string
+outputSchema:
+  - slug: string
+```
+
 ## Type Helpers
 
 ```typescript
-import { ActionInput, ActionOutput, isJayAction } from '@jay-framework/fullstack-component';
+import {
+  ActionInput,
+  ActionOutput,
+  isJayAction,
+  StreamChunk,
+  isJayStreamAction,
+} from '@jay-framework/fullstack-component';
 
 type SearchInput = ActionInput<typeof searchProducts>;
 type SearchOutput = ActionOutput<typeof searchProducts>;
+type ParamBatch = StreamChunk<typeof discoverParams>;
 ```

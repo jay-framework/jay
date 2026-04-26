@@ -171,6 +171,16 @@ The project follows a rigorous design log methodology for all significant featur
 
 IMPORTANT - YOU ARE NOT ALLOWED TO USE toContain ON CODE FILES.
 
+## Creating Jay Artifacts
+
+When creating jay artifacts (pages, components, contracts, plugins, templates), read the relevant role guides under `packages/jay-stack/stack-cli/agent-kit-template/` before writing code:
+
+- **Jay Designer** — `agent-kit-template/designer/INSTRUCTIONS.md` — Creates `.jay-html` pages, binds to contracts and plugins, template syntax, styling
+- **Jay Developer** — `agent-kit-template/developer/INSTRUCTIONS.md` — Creates `page.ts` components, page contracts, project config, services, state management
+- **Jay Plugin Developer** — `agent-kit-template/plugin/INSTRUCTIONS.md` — Creates headless components, `plugin.yaml`, contracts, actions, services, plugin routes
+
+Each role directory contains detailed guides on specific topics (routing, contracts, refs, render results, etc.). Read the `INSTRUCTIONS.md` first to understand the role's scope, then consult topic-specific guides as needed.
+
 ### CODING STANDARD
 
 IMPORTANT - YOU ARE NOT ALLOWED TO USE toContain ON CODE FILES.

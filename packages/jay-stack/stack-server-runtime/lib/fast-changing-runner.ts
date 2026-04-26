@@ -1,4 +1,9 @@
-import { AnyFastRenderResult, PageProps, phaseOutput } from '@jay-framework/fullstack-component';
+import {
+    AnyFastRenderResult,
+    HeadTag,
+    PageProps,
+    phaseOutput,
+} from '@jay-framework/fullstack-component';
 import { DevServerPagePart, HeadlessInstanceComponent } from './load-page-parts';
 import { resolveServices } from './services';
 import type { InstancePhaseData } from './instance-slow-render';
@@ -37,6 +42,7 @@ export async function renderFastChangingData(
 ): Promise<AnyFastRenderResult> {
     let fastViewState = {};
     let fastCarryForward = {};
+    const fastHeadTagSources: HeadTag[][] = [];
     for (const part of parts) {
         const { compDefinition, key, contractInfo } = part;
         if (compDefinition.fastRender) {
@@ -56,11 +62,9 @@ export async function renderFastChangingData(
                 }),
             };
 
-            const fastRenderedPart = await compDefinition.fastRender(
-                partProps,
-                partSlowlyCarryForward,
-                ...services,
-            );
+            const fastRenderedPart = compDefinition.slowlyRender
+                ? await compDefinition.fastRender(partProps, partSlowlyCarryForward, ...services)
+                : await compDefinition.fastRender(partProps, ...services);
             if (fastRenderedPart.kind === 'PhaseOutput') {
                 if (!key) {
                     fastViewState = { ...fastViewState, ...fastRenderedPart.rendered };
@@ -68,6 +72,10 @@ export async function renderFastChangingData(
                 } else {
                     fastViewState[key] = fastRenderedPart.rendered;
                     fastCarryForward[key] = fastRenderedPart.carryForward;
+                }
+                // Collect head tags from page parts (DL#127)
+                if (fastRenderedPart.headTags) {
+                    fastHeadTagSources.push(fastRenderedPart.headTags);
                 }
             } else return fastRenderedPart;
         }
@@ -113,6 +121,10 @@ export async function renderFastChangingData(
                         : fastResult.rendered;
                     if (fastResult.carryForward) {
                         instanceCarryForwards[coordKey] = fastResult.carryForward;
+                    }
+                    // Collect head tags from static instances (DL#127)
+                    if (fastResult.headTags) {
+                        fastHeadTagSources.push(fastResult.headTags);
                     }
                 }
             } else {
@@ -194,5 +206,10 @@ export async function renderFastChangingData(
         (fastCarryForward as any).__headlessInstances = instanceCarryForwards;
     }
 
-    return Promise.resolve(phaseOutput(fastViewState, fastCarryForward));
+    // Head tags from fast phase (DL#127). Fast replaces slow entirely.
+    const result = phaseOutput(fastViewState, fastCarryForward);
+    if (fastHeadTagSources.length > 0) {
+        result.headTags = fastHeadTagSources.flat();
+    }
+    return Promise.resolve(result);
 }

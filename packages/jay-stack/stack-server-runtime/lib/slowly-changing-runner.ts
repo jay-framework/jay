@@ -1,11 +1,10 @@
 import {
     AnySlowlyRenderResult,
-    JayStackComponentDefinition,
+    HeadTag,
     PageProps,
     UrlParams,
     phaseOutput,
 } from '@jay-framework/fullstack-component';
-import { JayComponentCore } from '@jay-framework/component';
 import { DevServerPagePart, HeadlessInstanceComponent } from './load-page-parts';
 import { resolveServices } from './services';
 import type { DiscoveredHeadlessInstance } from '@jay-framework/compiler-jay-html';
@@ -33,6 +32,7 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
     ): Promise<AnySlowlyRenderResult> {
         let slowlyViewState = {};
         let carryForward = {};
+        const slowHeadTagSources: HeadTag[][] = [];
         for (const part of parts) {
             const { compDefinition, key, contractInfo } = part;
             if (compDefinition.slowlyRender) {
@@ -60,6 +60,10 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
                     } else {
                         slowlyViewState[key] = slowlyRenderedPart.rendered;
                         carryForward[key] = slowlyRenderedPart.carryForward;
+                    }
+                    // Collect head tags (DL#127)
+                    if (slowlyRenderedPart.headTags) {
+                        slowHeadTagSources.push(slowlyRenderedPart.headTags);
                     }
                 } else return slowlyRenderedPart;
             }
@@ -118,6 +122,10 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
                             contract: comp.contract,
                             slowViewState: slowResult.rendered as Record<string, unknown>,
                         });
+                        // Collect head tags from instances (DL#127)
+                        if (slowResult.headTags) {
+                            slowHeadTagSources.push(slowResult.headTags);
+                        }
                     }
                 }
             }
@@ -128,57 +136,28 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
             (carryForward as any).__instanceResolvedData = instanceResolvedData;
         }
 
+        // Store slow head tags in carryForward for the cached path (DL#127)
+        if (slowHeadTagSources.length > 0) {
+            (carryForward as any).__slowHeadTags = slowHeadTagSources;
+        }
+
         return phaseOutput(slowlyViewState, carryForward);
     }
 }
 
-export async function runLoadParams<
-    Refs extends object,
-    SlowVS extends object,
-    FastVS extends object,
-    InteractiveVS extends object,
-    Services extends Array<any>,
-    Contexts extends Array<any>,
-    PropsT extends object,
-    Params extends UrlParams,
-    CompCore extends JayComponentCore<PropsT, InteractiveVS>,
->(
-    compDefinition: JayStackComponentDefinition<
-        Refs,
-        SlowVS,
-        FastVS,
-        InteractiveVS,
-        Services,
-        Contexts,
-        PropsT,
-        Params,
-        CompCore
-    >,
-    services: Services,
-) {
-    compDefinition.loadParams(services);
+/**
+ * Run loadParams for all parts (page + keyed headless components).
+ * Yields param batches from each part that has loadParams.
+ */
+export async function* runLoadParams(
+    parts: DevServerPagePart[],
+): AsyncGenerator<Record<string, string>[]> {
+    for (const part of parts) {
+        if (part.compDefinition.loadParams) {
+            const services = resolveServices(part.compDefinition.services);
+            for await (const batch of part.compDefinition.loadParams(services)) {
+                yield batch;
+            }
+        }
+    }
 }
-
-export function runSlowlyChangingRender<
-    Refs extends object,
-    SlowVS extends object,
-    FastVS extends object,
-    InteractiveVS extends object,
-    Services extends Array<any>,
-    Contexts extends Array<any>,
-    PropsT extends object,
-    Params extends UrlParams,
-    CompCore extends JayComponentCore<PropsT, InteractiveVS>,
->(
-    compDefinition: JayStackComponentDefinition<
-        Refs,
-        SlowVS,
-        FastVS,
-        InteractiveVS,
-        Services,
-        Contexts,
-        PropsT,
-        Params,
-        CompCore
-    >,
-) {}

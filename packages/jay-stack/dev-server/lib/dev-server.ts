@@ -5,6 +5,7 @@ import {
     JayRoutes,
     routeToExpressRoute,
     scanRoutes,
+    createRoute,
 } from '@jay-framework/stack-route-scanner';
 import {
     DevSlowlyChangingPhase,
@@ -24,12 +25,14 @@ import type {
 } from '@jay-framework/fullstack-component';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import fsSync from 'node:fs';
 import { RequestHandler } from 'express-serve-static-core';
-import { renderFastChangingData } from '@jay-framework/stack-server-runtime';
+import { renderFastChangingData, mergeHeadTags } from '@jay-framework/stack-server-runtime';
 import { loadPageParts } from '@jay-framework/stack-server-runtime';
 import {
     generateClientScript,
     generateSSRPageHtml,
+    generateFrozenPageHtml,
     clearServerElementCache,
     ProjectClientInitInfo,
 } from '@jay-framework/stack-server-runtime';
@@ -59,17 +62,135 @@ import {
     type InstancePhaseData,
     type ForEachHeadlessInstance,
 } from '@jay-framework/stack-server-runtime';
+import { scanPlugins } from '@jay-framework/stack-server-runtime';
 import { WithValidations } from '@jay-framework/compiler-shared';
 import { getLogger, getDevLogger, type RequestTiming } from '@jay-framework/logger';
+import { FreezeStore } from './freeze';
+import { DevServerService, DEV_SERVER_SERVICE } from './dev-server-service';
+import { registerService } from '@jay-framework/stack-server-runtime';
 
-/** Callback to register linked CSS files for watching. Set by setupSlowRenderCacheInvalidation. */
-let _watchLinkedCssFiles: (cssFiles: string[]) => void = () => {};
+/** Callback to register linked files for watching. Set by setupSlowRenderCacheInvalidation. */
+let _watchLinkedFiles: (files: string[]) => void = () => {};
 
 async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
     return await scanRoutes(pagesBaseFolder, {
         jayHtmlFilename: 'page.jay-html',
         compFilename: 'page.ts',
     });
+}
+
+/**
+ * Scan plugins for routes declared in plugin.yaml (DL#130).
+ * Resolves jayHtml/css paths via package.json exports.
+ * Skips routes that collide with existing project routes.
+ */
+async function scanPluginRoutes(projectRoot: string, projectRoutes: JayRoutes): Promise<JayRoutes> {
+    const plugins = await scanPlugins({ projectRoot, includeDevDeps: true });
+    const projectPaths = new Set(projectRoutes.map((r) => r.rawRoute));
+    const pluginRoutes: JayRoutes = [];
+
+    for (const [, plugin] of plugins) {
+        if (!plugin.manifest.routes) continue;
+
+        for (const route of plugin.manifest.routes) {
+            // Skip if project already defines this route
+            if (projectPaths.has(route.path)) {
+                getLogger().info(
+                    `[Routes] Plugin "${plugin.name}" route ${route.path} skipped — project route takes precedence`,
+                );
+                continue;
+            }
+
+            // Resolve jayHtml path via package.json exports
+            const jayHtmlPath = resolvePluginExport(plugin.pluginPath, route.jayHtml);
+            if (!jayHtmlPath) {
+                getLogger().warn(
+                    `[Routes] Plugin "${plugin.name}" route ${route.path}: jayHtml "${route.jayHtml}" not found`,
+                );
+                continue;
+            }
+
+            // Resolve component path.
+            // For local plugins: component is a relative file path (e.g., ./pages/admin/page.ts)
+            // For NPM plugins: component is an exported member name from the module
+            const compPath = route.component.startsWith('.')
+                ? path.resolve(plugin.pluginPath, route.component)
+                : resolvePluginModule(plugin);
+
+            pluginRoutes.push(createRoute(route.path, jayHtmlPath, compPath));
+
+            getLogger().info(`[Routes] Plugin "${plugin.name}" provides route ${route.path}`);
+        }
+    }
+
+    return pluginRoutes;
+}
+
+/** Resolve a plugin export subpath via package.json exports. */
+function resolvePluginExport(pluginPath: string, exportSubpath: string): string | undefined {
+    // Normalize: strip leading ./ for export lookup
+    const normalized = exportSubpath.replace(/^\.\//, '');
+
+    const packageJsonPath = path.join(pluginPath, 'package.json');
+    try {
+        const packageJson = JSON.parse(fsSync.readFileSync(packageJsonPath, 'utf-8'));
+        if (packageJson.exports) {
+            const exportKey = './' + normalized;
+            const exportValue = packageJson.exports[exportKey];
+            if (exportValue) {
+                const resolved =
+                    typeof exportValue === 'string'
+                        ? exportValue
+                        : exportValue.default || exportValue.import || exportValue.require;
+                if (resolved) {
+                    const fullPath = path.join(pluginPath, resolved);
+                    return fullPath;
+                }
+            }
+        }
+    } catch {
+        /* skip */
+    }
+
+    // Fallback: try common locations
+    for (const dir of ['dist', 'lib', '']) {
+        const candidate = path.join(pluginPath, dir, normalized);
+        try {
+            fsSync.accessSync(candidate);
+            return candidate;
+        } catch {
+            /* skip */
+        }
+    }
+    return undefined;
+}
+
+/** Resolve the main module path for a plugin. */
+function resolvePluginModule(plugin: {
+    pluginPath: string;
+    manifest: { module?: string };
+}): string {
+    const modulePath = plugin.manifest.module || 'index';
+    for (const ext of ['.ts', '.js', '/index.ts', '/index.js']) {
+        const candidate = path.join(plugin.pluginPath, modulePath + ext);
+        try {
+            fsSync.accessSync(candidate);
+            return candidate;
+        } catch {
+            /* skip */
+        }
+    }
+    // Try lib/ directory
+    for (const ext of ['.ts', '.js']) {
+        const candidate = path.join(plugin.pluginPath, 'lib', path.basename(modulePath) + ext);
+        try {
+            fsSync.accessSync(candidate);
+            return candidate;
+        } catch {
+            /* skip */
+        }
+    }
+    return path.join(plugin.pluginPath, modulePath);
 }
 
 function defaults(options: DevServerOptions): DevServerOptions {
@@ -110,6 +231,9 @@ export interface DevServer {
     viteServer: ViteDevServer;
     routes: DevServerRoute[];
     lifecycleManager: ServiceLifecycleManager;
+    freezeStore?: FreezeStore;
+    /** Public API for design board applications and CLI (DL#128) */
+    service: DevServerService;
 }
 
 function handleOtherResponseCodes(
@@ -176,6 +300,7 @@ function mkRoute(
     slowlyPhase: SlowlyChangingPhase,
     options: DevServerOptions,
     slowRenderCache: SlowRenderCache,
+    freezeStore: FreezeStore | undefined,
     projectInit?: ProjectClientInitInfo,
     allPluginsWithInit: PluginWithInit[] = [],
     allPluginClientInits: PluginClientInitInfo[] = [],
@@ -202,6 +327,26 @@ function mkRoute(
             const urlObj = new URL(req.originalUrl, `http://${req.headers.host}`);
             for (const [key, value] of urlObj.searchParams) {
                 query[key] = value; // last value wins for repeated keys
+            }
+
+            // Frozen page rendering (DL#127): serve a static SSR snapshot
+            // from a saved ViewState — no component logic, no client scripts.
+            const freezeId = query['_jay_freeze'];
+            if (freezeId && freezeStore) {
+                timing?.annotate('[FROZEN]');
+                await handleFrozenRequest(
+                    vite,
+                    route,
+                    options,
+                    freezeStore,
+                    slowRenderCache,
+                    freezeId,
+                    pageParams,
+                    query['format'] === 'fragment' ? 'fragment' : 'page',
+                    res,
+                    timing,
+                );
+                return;
             }
 
             if (options.disableSSR) {
@@ -312,11 +457,16 @@ async function handleCachedRequest(
         return;
     }
 
-    const { parts: pageParts, clientTrackByMap, usedPackages, linkedCssFiles } =
-        pagePartsResult.val;
+    const {
+        parts: pageParts,
+        clientTrackByMap,
+        usedPackages,
+        linkedCssFiles,
+        linkedComponentFiles,
+    } = pagePartsResult.val;
 
-    // Register linked CSS files for watching (absolute paths from jay-html parser)
-    if (linkedCssFiles?.length) _watchLinkedCssFiles(linkedCssFiles);
+    // Register linked files for watching (absolute paths from jay-html parser)
+    _watchLinkedFiles([...(linkedCssFiles || []), ...(linkedComponentFiles || [])]);
 
     const pluginsForPage = filterPluginsForPage(
         allPluginClientInits,
@@ -354,6 +504,11 @@ async function handleCachedRequest(
     const fastViewState = renderedFast.rendered;
     const fastCarryForward = renderedFast.carryForward;
 
+    // Head tags (DL#127): fast replaces slow entirely. If fast has none, use slow.
+    const headTags =
+        renderedFast.headTags ??
+        mergeHeadTags((cachedEntry.carryForward as any)?.__slowHeadTags ?? []);
+
     // Only fast+interactive viewState (slow is baked into jay-html)
     // Use the pre-rendered file path so Vite compiles it
     // Pass slowViewState so automation can show full merged state
@@ -370,9 +525,11 @@ async function handleCachedRequest(
         projectInit,
         pluginsForPage,
         options,
+        routeToExpressRoute(route),
         cachedEntry.slowViewState,
         timing,
         cachedEntry.preRenderedContent,
+        headTags,
     );
 }
 
@@ -414,9 +571,9 @@ async function handlePreRenderRequest(
         return;
     }
 
-    // Register linked CSS files for watching
-    if (initialPartsResult.val.linkedCssFiles?.length)
-        _watchLinkedCssFiles(initialPartsResult.val.linkedCssFiles);
+    // Register linked files for watching
+    const { linkedCssFiles: initCss, linkedComponentFiles: initComps } = initialPartsResult.val;
+    _watchLinkedFiles([...(initCss || []), ...(initComps || [])]);
 
     // Run slow phase to get slowViewState and carryForward
     // Includes key-based parts slow render + pre-render pipeline (instance slow render)
@@ -550,10 +707,11 @@ async function handleClientOnlyRequest(
         discoveredInstances,
         forEachInstances,
         linkedCssFiles,
+        linkedComponentFiles,
     } = pagePartsResult.val;
 
-    // Register linked CSS files for watching
-    _watchLinkedCssFiles(linkedCssFiles);
+    // Register linked files for watching
+    _watchLinkedFiles([...(linkedCssFiles || []), ...(linkedComponentFiles || [])]);
 
     const pluginsForPage = filterPluginsForPage(
         allPluginClientInits,
@@ -628,6 +786,7 @@ async function handleClientOnlyRequest(
         pluginsForPage,
         {
             enableAutomation: !options.disableAutomation,
+            routePattern: routeToExpressRoute(route),
         },
     );
 
@@ -666,9 +825,11 @@ async function sendResponse(
     projectInit: ProjectClientInitInfo | undefined,
     pluginsForPage: PluginClientInitInfo[],
     options: DevServerOptions,
+    routePattern: string,
     slowViewState?: object,
     timing?: RequestTiming,
     preLoadedContent?: string,
+    headTags?: import('@jay-framework/fullstack-component').HeadTag[],
 ): Promise<void> {
     let pageHtml: string;
 
@@ -707,9 +868,11 @@ async function sendResponse(
             {
                 enableAutomation: !options.disableAutomation,
                 slowViewState,
+                routePattern,
             },
             // Pass source directory for headfull FS file resolution when using pre-rendered path
             jayHtmlDir !== sourceDir ? sourceDir : undefined,
+            headTags,
         );
     } catch (err) {
         // Fall back to client-only rendering
@@ -726,6 +889,7 @@ async function sendResponse(
             {
                 enableAutomation: !options.disableAutomation,
                 slowViewState,
+                routePattern,
             },
         );
     }
@@ -743,6 +907,86 @@ async function sendResponse(
     timing?.recordViteClient(Date.now() - viteStart);
 
     res.status(200).set({ 'Content-Type': 'text/html' }).send(compiledPageHtml);
+    timing?.end();
+}
+
+// ============================================================================
+// Frozen page rendering (DL#127)
+// ============================================================================
+
+/**
+ * Handle a frozen page request — render SSR with a saved ViewState.
+ * No component logic runs, no client scripts are included.
+ */
+async function handleFrozenRequest(
+    vite: ViteDevServer,
+    route: JayRoute,
+    options: DevServerOptions,
+    freezeStore: FreezeStore,
+    slowRenderCache: SlowRenderCache,
+    freezeId: string,
+    pageParams: Record<string, string>,
+    format: 'page' | 'fragment',
+    res: Response,
+    timing?: RequestTiming,
+): Promise<void> {
+    const entry = await freezeStore.get(freezeId);
+    if (!entry) {
+        getLogger().warn(`[Freeze] Freeze "${freezeId}" not found`);
+        res.status(404).send(`Freeze "${freezeId}" not found`);
+        timing?.end();
+        return;
+    }
+
+    const label = entry.name ? `"${entry.name}" (${freezeId})` : freezeId;
+    getLogger().info(`[Freeze] Serving frozen page ${label} for ${route.rawRoute} [${format}]`);
+
+    try {
+        // Use the pre-rendered jay-html (with slowForEach items unrolled)
+        // so the server element sees the same structure as the client hydrate.
+        // Fall back to the original jay-html if no pre-rendered version exists.
+        const cachedEntry = await slowRenderCache.get(route.jayHtmlPath, pageParams);
+        const jayHtmlPath = cachedEntry?.preRenderedPath ?? route.jayHtmlPath;
+        const jayHtmlContent =
+            cachedEntry?.preRenderedContent ?? (await fs.readFile(jayHtmlPath, 'utf-8'));
+        const jayHtmlFilename = path.basename(jayHtmlPath);
+        const jayHtmlDir = path.dirname(jayHtmlPath);
+        const sourceDir = path.dirname(route.jayHtmlPath);
+        const routeDir = path.dirname(path.relative(options.pagesRootFolder!, route.jayHtmlPath));
+
+        // Inject headfull FS templates (component jay-html)
+        const { injectHeadfullFSTemplates } = await import('@jay-framework/compiler-jay-html');
+        const { JAY_IMPORT_RESOLVER } = await import('@jay-framework/compiler-jay-html');
+        const fullJayHtml = injectHeadfullFSTemplates(
+            jayHtmlContent,
+            sourceDir,
+            JAY_IMPORT_RESOLVER,
+        );
+
+        const html = await generateFrozenPageHtml(
+            vite,
+            fullJayHtml,
+            jayHtmlFilename,
+            jayHtmlDir,
+            entry.viewState,
+            options.buildFolder!,
+            options.projectRootFolder!,
+            routeDir,
+            options.jayRollupConfig?.tsConfigFilePath,
+            undefined,
+            format,
+            entry.name,
+        );
+
+        const headers: Record<string, string> = { 'Content-Type': 'text/html' };
+        if (format === 'fragment') {
+            headers['Access-Control-Allow-Origin'] = '*';
+        }
+        res.status(200).set(headers).send(html);
+    } catch (err: any) {
+        getLogger().warn(`[Freeze] Failed to render frozen page: ${err.message}`);
+        res.status(500).send(`Failed to render frozen page: ${err.message}`);
+    }
     timing?.end();
 }
 
@@ -983,11 +1227,20 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     const { publicBaseUrlPath, pagesRootFolder, projectRootFolder, buildFolder, jayRollupConfig } =
         options;
 
-    // Clean entire build folder on startup.
+    // Clean build folder on startup, preserving freezes/.
     // Server elements, CSS files, and pre-rendered cache all live here and go
     // stale when package code or jay-html templates change between restarts.
+    // Frozen ViewState snapshots (build/freezes/) are preserved across restarts.
     if (buildFolder) {
-        await fs.rm(buildFolder, { recursive: true, force: true }).catch(() => {});
+        try {
+            const entries = await fs.readdir(buildFolder).catch(() => []);
+            for (const entry of entries) {
+                if (entry === 'freezes') continue;
+                await fs.rm(path.join(buildFolder, entry), { recursive: true, force: true });
+            }
+        } catch {
+            // Build folder may not exist yet
+        }
     }
 
     // Map Jay log level to Vite log level
@@ -1025,10 +1278,14 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     // Scan routes, excluding any page files found inside the build folder.
     // This prevents pre-rendered cache files from being picked up as additional routes
     // when the build folder is inside the pages root (e.g., in tests).
-    const allRoutes: JayRoutes = await initRoutes(pagesRootFolder);
-    const routes = buildFolder
-        ? allRoutes.filter((route) => !route.jayHtmlPath.startsWith(buildFolder))
-        : allRoutes;
+    const projectRoutes: JayRoutes = await initRoutes(pagesRootFolder);
+    const filteredProjectRoutes = buildFolder
+        ? projectRoutes.filter((route) => !route.jayHtmlPath.startsWith(buildFolder))
+        : projectRoutes;
+
+    // Scan plugin routes and merge — project routes take precedence (DL#130)
+    const pluginRoutes = await scanPluginRoutes(projectRootFolder, filteredProjectRoutes);
+    const routes = [...filteredProjectRoutes, ...pluginRoutes];
     const slowlyPhase = new DevSlowlyChangingPhase();
 
     // Create pre-rendered jay-html cache
@@ -1037,8 +1294,8 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     const slowRenderCache = new SlowRenderCache(slowRenderCacheDir, pagesRootFolder);
 
     // Set up file watching for slow render cache invalidation.
-    // Sets _watchLinkedCssFiles callback for registering CSS files after SSR.
-    _watchLinkedCssFiles = setupSlowRenderCacheInvalidation(
+    // Sets _watchLinkedFiles callback for registering CSS/component files after SSR.
+    _watchLinkedFiles = setupSlowRenderCacheInvalidation(
         vite,
         slowRenderCache,
         pagesRootFolder,
@@ -1050,6 +1307,12 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     const pluginsWithInit = lifecycleManager.getPluginsWithInit();
     const pluginClientInits = preparePluginClientInits(pluginsWithInit);
 
+    // Set up page freeze (DL#127)
+    const freezeStore = buildFolder ? new FreezeStore(buildFolder) : undefined;
+    if (freezeStore) {
+        setupFreezeEndpoint(vite, freezeStore);
+    }
+
     const devServerRoutes: DevServerRoute[] = routes.map((route: JayRoute) =>
         mkRoute(
             route,
@@ -1057,17 +1320,32 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
             slowlyPhase,
             options,
             slowRenderCache,
+            freezeStore,
             projectInit,
             pluginsWithInit,
             pluginClientInits,
         ),
     );
 
+    const service = new DevServerService(
+        devServerRoutes,
+        vite,
+        options.pagesRootFolder,
+        options.projectRootFolder,
+        options.jayRollupConfig,
+        freezeStore,
+    );
+
+    // Register as a Jay service so plugin actions/components can inject it (DL#130)
+    registerService(DEV_SERVER_SERVICE, service);
+
     return {
         server: vite.middlewares,
         viteServer: vite,
         routes: devServerRoutes,
         lifecycleManager,
+        freezeStore,
+        service,
     };
 }
 
@@ -1132,6 +1410,43 @@ function setupActionRouter(vite: ViteDevServer): void {
 }
 
 /**
+ * Sets up the freeze POST endpoint for saving ViewState snapshots (DL#127).
+ */
+function setupFreezeEndpoint(vite: ViteDevServer, freezeStore: FreezeStore): void {
+    vite.middlewares.use((req: any, res: any, next: any) => {
+        if (
+            req.method === 'POST' &&
+            (req.url === '/_jay/freeze' || req.originalUrl === '/_jay/freeze')
+        ) {
+            let body = '';
+            req.on('data', (chunk: any) => (body += chunk));
+            req.on('end', async () => {
+                try {
+                    const { route, routePattern, viewState } = JSON.parse(body);
+                    if (!route || !viewState) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'Missing route or viewState' }));
+                        return;
+                    }
+                    const entry = await freezeStore.save(route, viewState, routePattern);
+                    getLogger().info(`[Freeze] Saved freeze "${entry.id}" for ${route}`);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(entry));
+                } catch (err: any) {
+                    getLogger().warn(`[Freeze] Failed to save: ${err.message}`);
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: err.message }));
+                }
+            });
+        } else {
+            next();
+        }
+    });
+
+    getLogger().info('[Freeze] Freeze endpoint mounted at /_jay/freeze');
+}
+
+/**
  * Sets up file watching for slow render cache invalidation.
  *
  * When jay-html, page.ts, or contract files change, the cached pre-rendered
@@ -1142,49 +1457,46 @@ function setupSlowRenderCacheInvalidation(
     cache: SlowRenderCache,
     pagesRootFolder: string,
     projectRootFolder: string,
-): (cssFiles: string[]) => void {
-    // Track watched CSS files to avoid re-adding. Vite's root is pagesRootFolder
-    // (e.g., src/pages/), so CSS files outside it (src/styles/, src/components/)
-    // are invisible to the watcher unless explicitly added with absolute paths.
-    const watchedCssFiles = new Set<string>();
+): (files: string[]) => void {
+    // Track watched files (CSS, component jay-html) to avoid re-adding.
+    // Vite's root is pagesRootFolder (e.g., src/pages/), so files outside it
+    // (src/styles/, src/components/) are invisible to the watcher unless
+    // explicitly added with absolute paths.
+    const watchedFiles = new Set<string>();
 
     /**
-     * Register linked CSS files for watching. Called after loadPageParts()
-     * so we watch exactly the CSS files referenced by jay-html pages.
+     * Register linked files for watching. Called after loadPageParts()
+     * so we watch exactly the files referenced by jay-html pages.
      */
-    const watchLinkedCssFiles = (cssFiles: string[]) => {
-        for (const cssFile of cssFiles) {
-            if (watchedCssFiles.has(cssFile)) continue;
-            watchedCssFiles.add(cssFile);
-            vite.watcher.add(cssFile);
-            getLogger().info(`[SlowRender] Watching CSS: ${cssFile}`);
+    const watchLinkedFiles = (files: string[]) => {
+        for (const file of files) {
+            if (watchedFiles.has(file)) continue;
+            watchedFiles.add(file);
+            vite.watcher.add(file);
+            getLogger().info(`[SlowRender] Watching: ${file}`);
         }
     };
 
     vite.watcher.on('change', (changedPath) => {
-        // CSS files linked from jay-html (or nested headfull FS components).
-        // The CSS content is inlined in the SSR output by the parser, so the
-        // pre-rendered cache must be invalidated when CSS changes.
-        if (changedPath.endsWith('.css') && watchedCssFiles.has(changedPath)) {
+        // CSS or component files linked from jay-html.
+        // CSS content is inlined in the SSR output; component jay-html templates
+        // are injected into pages. Both require cache invalidation on change.
+        if (watchedFiles.has(changedPath)) {
             clearServerElementCache();
             cache.clear().then(() => {
                 getLogger().info(
-                    `[SlowRender] Cache cleared (CSS changed: ${changedPath})`,
+                    `[SlowRender] Cache cleared (linked file changed: ${changedPath})`,
                 );
                 vite.ws.send({ type: 'full-reload' });
             });
             return;
         }
 
-        // Component jay-html files (headfull FS) may live outside the pages folder
-        // (e.g., src/components/). A change to any jay-html should clear the cache
-        // since it may be included by a page via headfull FS import.
-        if (changedPath.endsWith('.jay-html') && changedPath.startsWith(projectRootFolder)) {
+        // Page jay-html files inside the pages folder
+        if (changedPath.endsWith('.jay-html') && changedPath.startsWith(pagesRootFolder)) {
             clearServerElementCache();
             cache.clear().then(() => {
-                getLogger().info(
-                    `[SlowRender] Cache cleared (jay-html changed: ${changedPath})`,
-                );
+                getLogger().info(`[SlowRender] Cache cleared (jay-html changed: ${changedPath})`);
                 vite.ws.send({ type: 'full-reload' });
             });
             return;
@@ -1225,5 +1537,5 @@ function setupSlowRenderCacheInvalidation(
         }
     });
 
-    return watchLinkedCssFiles;
+    return watchLinkedFiles;
 }

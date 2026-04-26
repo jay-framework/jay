@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/compiler-jay-stack",
-  "version": "0.15.5",
+  "version": "0.15.6",
   "type": "module",
   "license": "Apache-2.0",
   "main": "dist/index.js",

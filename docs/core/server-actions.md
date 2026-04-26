@@ -67,6 +67,7 @@ Jay Stack provides two builders for different use cases:
 | --------------- | -------------- | --------------------------------------------------- |
 | `makeJayAction` | POST           | Mutations: add to cart, submit form, update profile |
 | `makeJayQuery`  | GET            | Reads: search, get details, list items (cacheable)  |
+| `makeJayStream` | POST           | Streaming: paginated discovery, progressive loading |
 
 ### makeJayAction (Mutations)
 
@@ -112,6 +113,61 @@ export const searchProducts = makeJayQuery('products.search')
     };
   });
 ```
+
+### makeJayStream (Streaming)
+
+For operations that produce data in chunks — paginated results, long-running discovery, progressive loading:
+
+```typescript
+import { makeJayStream } from '@jay-framework/fullstack-component';
+
+export const discoverParams = makeJayStream('routes.discoverParams')
+  .withServices(PRODUCTS_SERVICE)
+  .withHandler(async function* (input: { route: string }, productsService) {
+    let page = 1;
+    while (true) {
+      const products = await productsService.list({ page, pageSize: 100 });
+      yield products.map((p) => ({ slug: p.slug }));
+      if (!products.hasMore) break;
+      page++;
+    }
+  });
+```
+
+Streaming actions always use POST and respond with NDJSON (newline-delimited JSON). Each `yield` sends a chunk; the stream ends with a done signal.
+
+#### Consuming on the Client
+
+```typescript
+for await (const batch of discoverParams({ route: '/products/[slug]' })) {
+  // batch: Array<{ slug: string }>
+  addToList(batch);
+}
+```
+
+#### Wire Format
+
+```
+{"chunk":[{"slug":"item-a"},{"slug":"item-b"}]}
+{"chunk":[{"slug":"item-c"}]}
+{"done":true}
+```
+
+Errors mid-stream produce `{"error":"message"}` and terminate the stream.
+
+#### .jay-action Metadata for Streaming
+
+```yaml
+name: discoverParams
+description: Discover all URL params by querying the catalog
+streaming: true
+inputSchema:
+  route: string
+outputSchema:
+  - slug: string
+```
+
+The `streaming: true` field marks this action as a generator. The `outputSchema` describes the shape of each chunk.
 
 ## Builder API
 

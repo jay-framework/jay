@@ -4,6 +4,7 @@ import {
     adoptElement,
     adoptText,
     dynamicAttribute as da,
+    booleanAttribute as ba,
 } from '../../../lib';
 import { hydrate, makeServerHTML } from './hydration-test-utils';
 
@@ -123,5 +124,48 @@ describe('adoptElement', () => {
         // Static paragraph unchanged
         const staticP = root.querySelector('p')!;
         expect(staticP.textContent).toBe('Static paragraph');
+    });
+
+    // Boolean attribute: should remove attribute from DOM when value becomes false
+    it('removes boolean attribute from DOM when value becomes false', () => {
+        interface VS {
+            isDisabled: boolean;
+        }
+        const { jayElement, root } = hydrate<VS>(
+            '<button jay-coordinate="btn" disabled>Submit</button>',
+            { isDisabled: true },
+            () =>
+                adoptElement<VS>('btn', {
+                    disabled: ba((vs) => vs.isDisabled),
+                }),
+        );
+
+        const btn = root.querySelector('[jay-coordinate="btn"]')!;
+        expect(btn.hasAttribute('disabled')).toBe(true);
+
+        jayElement.update({ isDisabled: false });
+        expect(btn.hasAttribute('disabled')).toBe(false);
+    });
+
+    // Boolean attribute: should re-add attribute when value becomes true again
+    it('re-adds boolean attribute to DOM when value becomes true again', () => {
+        interface VS {
+            isDisabled: boolean;
+        }
+        const { jayElement, root } = hydrate<VS>(
+            '<button jay-coordinate="btn" disabled>Submit</button>',
+            { isDisabled: true },
+            () =>
+                adoptElement<VS>('btn', {
+                    disabled: ba((vs) => vs.isDisabled),
+                }),
+        );
+
+        const btn = root.querySelector('[jay-coordinate="btn"]')!;
+        jayElement.update({ isDisabled: false });
+        expect(btn.hasAttribute('disabled')).toBe(false);
+
+        jayElement.update({ isDisabled: true });
+        expect(btn.hasAttribute('disabled')).toBe(true);
     });
 });

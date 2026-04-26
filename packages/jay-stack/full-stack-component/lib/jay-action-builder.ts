@@ -287,3 +287,131 @@ export function isJayAction(value: unknown): value is JayAction<unknown, unknown
         typeof (value as any).actionName === 'string'
     );
 }
+
+// ============================================================================
+// Streaming Actions (DL#129)
+// ============================================================================
+
+/**
+ * A callable streaming action that returns an async iterable of chunks.
+ * Server handler is an async generator; client receives chunks via NDJSON.
+ */
+export interface JayStreamAction<Input, Chunk> {
+    /** Call the action — returns async iterable of chunks */
+    (input: Input): AsyncIterable<Chunk>;
+
+    /** Unique action name for routing */
+    readonly actionName: string;
+
+    /** HTTP method (always POST for streaming) */
+    readonly method: 'POST';
+
+    /** Streaming flag */
+    readonly isStreaming: true;
+
+    /** Internal marker for type identification */
+    readonly _brand: 'JayStreamAction';
+}
+
+/**
+ * Internal definition for server-side registration of streaming actions.
+ */
+export interface JayStreamActionDefinition<Input, Chunk, Services extends any[]> {
+    actionName: string;
+    method: 'POST';
+    isStreaming: true;
+    services: ServiceMarkers<Services>;
+    handler: (input: Input, ...services: Services) => AsyncIterable<Chunk>;
+}
+
+/**
+ * Builder interface for streaming actions.
+ */
+export interface JayStreamBuilder<Services extends any[]> {
+    withServices<NewServices extends any[]>(
+        ...services: ServiceMarkers<NewServices>
+    ): JayStreamBuilder<NewServices>;
+
+    withHandler<I, C>(
+        handler: (input: I, ...services: Services) => AsyncIterable<C>,
+    ): JayStreamAction<I, C> & JayStreamActionDefinition<I, C, Services>;
+}
+
+class JayStreamBuilderImpl<Services extends any[]> implements JayStreamBuilder<Services> {
+    private _services: ServiceMarkers<Services> = [] as unknown as ServiceMarkers<Services>;
+
+    constructor(private readonly _actionName: string) {}
+
+    withServices<NewServices extends any[]>(
+        ...services: ServiceMarkers<NewServices>
+    ): JayStreamBuilder<NewServices> {
+        this._services = services as unknown as ServiceMarkers<Services>;
+        return this as unknown as JayStreamBuilder<NewServices>;
+    }
+
+    withHandler<I, C>(
+        handler: (input: I, ...services: Services) => AsyncIterable<C>,
+    ): JayStreamAction<I, C> & JayStreamActionDefinition<I, C, Services> {
+        const actionName = this._actionName;
+        const serviceMarkers = this._services;
+
+        const action = Object.assign(
+            (input: I): AsyncIterable<C> => {
+                const resolver = globalThis.__JAY_SERVICE_RESOLVER__;
+                const resolvedServices = resolver ? resolver(serviceMarkers as any[]) : [];
+                return handler(input, ...(resolvedServices as Services));
+            },
+            {
+                actionName,
+                method: 'POST' as const,
+                isStreaming: true as const,
+                services: serviceMarkers,
+                handler,
+                _brand: 'JayStreamAction' as const,
+            },
+        );
+
+        return action as JayStreamAction<I, C> & JayStreamActionDefinition<I, C, Services>;
+    }
+}
+
+/**
+ * Create a streaming action that yields chunks via an async generator.
+ * Use for paginated data, long-running operations, or any streaming response.
+ *
+ * @param name - Unique action name (e.g., 'routes.discoverParams')
+ *
+ * @example
+ * ```typescript
+ * export const discoverParams = makeJayStream('routes.discoverParams')
+ *     .withServices(PRODUCTS_SERVICE)
+ *     .withHandler(async function* (input: { route: string }, productsService) {
+ *         let page = 1;
+ *         while (true) {
+ *             const products = await productsService.list({ page, pageSize: 100 });
+ *             yield products.map(p => ({ slug: p.slug }));
+ *             if (!products.hasMore) break;
+ *             page++;
+ *         }
+ *     });
+ * ```
+ */
+export function makeJayStream(name: string): JayStreamBuilder<[]> {
+    return new JayStreamBuilderImpl<[]>(name);
+}
+
+/**
+ * Check if a value is a JayStreamAction.
+ */
+export function isJayStreamAction(value: unknown): value is JayStreamAction<unknown, unknown> {
+    return (
+        typeof value === 'function' &&
+        (value as any)._brand === 'JayStreamAction' &&
+        typeof (value as any).actionName === 'string'
+    );
+}
+
+/**
+ * Extract the chunk type from a JayStreamAction.
+ */
+export type StreamChunk<T> = T extends JayStreamAction<any, infer C> ? C : never;

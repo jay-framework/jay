@@ -155,6 +155,78 @@ export interface ImportResponse<TVendorDoc> extends BaseResponse {
     vendorDoc?: TVendorDoc;
 }
 
+// --- Freeze management (DL#128) ---
+
+export interface FreezeEntry {
+    id: string;
+    name?: string;
+    /** The concrete URL path (e.g., /products/kitan) */
+    route: string;
+    /** The route pattern (e.g., /products/kitan{/:category}) */
+    routePattern?: string;
+    createdAt: string;
+}
+
+export interface ListRoutesMessage extends BaseMessage<ListRoutesResponse> {
+    type: 'listRoutes';
+}
+
+export interface ListRoutesResponse extends BaseResponse {
+    type: 'listRoutes';
+    routes: Array<{ path: string; jayHtmlPath: string }>;
+}
+
+export interface ListFreezesMessage extends BaseMessage<ListFreezesResponse> {
+    type: 'listFreezes';
+    route: string;
+}
+
+export interface ListFreezesResponse extends BaseResponse {
+    type: 'listFreezes';
+    freezes: FreezeEntry[];
+}
+
+export interface RenameFreezeMessage extends BaseMessage<RenameFreezeResponse> {
+    type: 'renameFreeze';
+    id: string;
+    name: string;
+}
+
+export interface RenameFreezeResponse extends BaseResponse {
+    type: 'renameFreeze';
+}
+
+export interface DeleteFreezeMessage extends BaseMessage<DeleteFreezeResponse> {
+    type: 'deleteFreeze';
+    id: string;
+}
+
+export interface DeleteFreezeResponse extends BaseResponse {
+    type: 'deleteFreeze';
+}
+
+// --- Route params discovery (DL#128) ---
+
+export interface LoadRouteParamsMessage extends BaseMessage<LoadRouteParamsResponse> {
+    type: 'loadRouteParams';
+    /** Route path, e.g. "/products/kitan/[[category]]" */
+    route: string;
+}
+
+/** Initial response acknowledging the request. Param batches arrive as events. */
+export interface LoadRouteParamsResponse extends BaseResponse {
+    type: 'loadRouteParams';
+}
+
+/** Streamed event: a batch of params from the loadParams generator */
+export interface RouteParamsBatchEvent {
+    type: 'routeParamsBatch';
+    route: string;
+    params: Record<string, string>[];
+    /** true if more batches may follow, false if this is the last */
+    hasMore: boolean;
+}
+
 // Union types for all messages and responses
 export type EditorProtocolMessageTypes<TVendorDoc> =
     | PublishMessage
@@ -162,7 +234,12 @@ export type EditorProtocolMessageTypes<TVendorDoc> =
     | HasImageMessage
     | GetProjectInfoMessage
     | ExportMessage<TVendorDoc>
-    | ImportMessage<TVendorDoc>;
+    | ImportMessage<TVendorDoc>
+    | ListRoutesMessage
+    | ListFreezesMessage
+    | RenameFreezeMessage
+    | DeleteFreezeMessage
+    | LoadRouteParamsMessage;
 
 export type EditorProtocolResponseTypes<TVendorDoc> =
     | PublishResponse
@@ -170,7 +247,12 @@ export type EditorProtocolResponseTypes<TVendorDoc> =
     | HasImageResponse
     | GetProjectInfoResponse
     | ExportResponse
-    | ImportResponse<TVendorDoc>;
+    | ImportResponse<TVendorDoc>
+    | ListRoutesResponse
+    | ListFreezesResponse
+    | RenameFreezeResponse
+    | DeleteFreezeResponse
+    | LoadRouteParamsResponse;
 
 export interface ProtocolMessage<TVendorDoc> {
     id: string;
@@ -186,42 +268,38 @@ export interface ProtocolResponse<TVendorDoc> {
 
 // Editor side interface for communicating with dev server
 export interface EditorProtocol {
-    // Publish jay-html files to the dev server
     publish(params: PublishMessage): Promise<PublishResponse>;
-
-    // Save an image to the local dev server
     saveImage(params: SaveImageMessage): Promise<SaveImageResponse>;
-
-    // Check if a previously saved image exists
     hasImage(params: HasImageMessage): Promise<HasImageResponse>;
-
-    // Get comprehensive project information including configuration and contracts
     getProjectInfo(params: GetProjectInfoMessage): Promise<GetProjectInfoResponse>;
-
-    // Export design from vendor (e.g., Figma) to Jay
     export<TVendorDoc>(params: ExportMessage<TVendorDoc>): Promise<ExportResponse>;
-
-    // Import design from Jay back to vendor
     import<TVendorDoc>(params: ImportMessage<TVendorDoc>): Promise<ImportResponse<TVendorDoc>>;
+    // Freeze management (DL#128)
+    listRoutes(params: ListRoutesMessage): Promise<ListRoutesResponse>;
+    listFreezes(params: ListFreezesMessage): Promise<ListFreezesResponse>;
+    renameFreeze(params: RenameFreezeMessage): Promise<RenameFreezeResponse>;
+    deleteFreeze(params: DeleteFreezeMessage): Promise<DeleteFreezeResponse>;
+    // Route params discovery
+    loadRouteParams(params: LoadRouteParamsMessage): Promise<LoadRouteParamsResponse>;
 }
 
 // Dev server side interface for handling editor requests
 export interface DevServerProtocol {
-    // Handle jay-html publication requests
     onPublish(callback: EditorProtocol['publish']): void;
-
-    // Handle image save requests
     onSaveImage(callback: EditorProtocol['saveImage']): void;
-
-    // Handle image existence check requests
     onHasImage(callback: EditorProtocol['hasImage']): void;
-
-    // Handle project info requests
     onGetProjectInfo(callback: EditorProtocol['getProjectInfo']): void;
-
-    // Handle vendor export requests
     onExport(callback: EditorProtocol['export']): void;
-
-    // Handle vendor import requests
     onImport(callback: EditorProtocol['import']): void;
+    // Freeze management (DL#128)
+    onListRoutes(callback: EditorProtocol['listRoutes']): void;
+    onListFreezes(callback: EditorProtocol['listFreezes']): void;
+    onRenameFreeze(callback: EditorProtocol['renameFreeze']): void;
+    onDeleteFreeze(callback: EditorProtocol['deleteFreeze']): void;
+    /** Emit freeze-changed event to all connected clients */
+    emitFreezeChanged(): void;
+    // Route params discovery — handler receives the message and streams batches via emitRouteParamsBatch
+    onLoadRouteParams(callback: EditorProtocol['loadRouteParams']): void;
+    /** Emit a batch of params to all connected clients */
+    emitRouteParamsBatch(event: RouteParamsBatchEvent): void;
 }

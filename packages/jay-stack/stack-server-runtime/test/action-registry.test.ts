@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { ActionRegistry } from '../lib/action-registry';
+import { ActionRegistry, type RegisteredAction } from '../lib/action-registry';
 import { registerService, clearServiceRegistry } from '../lib/services';
 import {
     makeJayAction,
@@ -87,7 +87,7 @@ describe('ActionRegistry', () => {
             const registered = registry.get('products.search');
             expect(registered).toBeDefined();
             expect(registered!.method).toBe('GET');
-            expect(registered!.cacheOptions).toEqual({ maxAge: 60 });
+            expect((registered as RegisteredAction).cacheOptions).toEqual({ maxAge: 60 });
         });
     });
 
@@ -432,5 +432,86 @@ describe('direct action call with automatic service injection', () => {
             });
 
         await expect(action({ quantity: 20 })).rejects.toThrow('Cannot exceed 10');
+    });
+});
+
+// ============================================================================
+// Streaming Actions (DL#129)
+// ============================================================================
+
+import { makeJayStream } from '@jay-framework/fullstack-component';
+
+describe('Streaming Action Registry (DL#129)', () => {
+    let registry: ActionRegistry;
+
+    beforeEach(() => {
+        registry = new ActionRegistry();
+    });
+
+    it('should register and detect a streaming action', () => {
+        const stream = makeJayStream('test.stream').withHandler(async function* () {
+            yield 1;
+        });
+
+        registry.registerStream(stream);
+
+        expect(registry.has('test.stream')).toBe(true);
+        expect(registry.isStreaming('test.stream')).toBe(true);
+    });
+
+    it('isStreaming returns false for regular actions', () => {
+        const action = makeJayAction('test.regular').withHandler(async () => 'ok');
+        registry.register(action);
+
+        expect(registry.isStreaming('test.regular')).toBe(false);
+    });
+
+    it('executeStream yields all chunks from the handler', async () => {
+        const stream = makeJayStream('test.multi').withHandler(async function* (input: {
+            count: number;
+        }) {
+            for (let i = 0; i < input.count; i++) {
+                yield { index: i };
+            }
+        });
+
+        registry.registerStream(stream);
+
+        const chunks: any[] = [];
+        for await (const chunk of registry.executeStream('test.multi', { count: 3 })) {
+            chunks.push(chunk);
+        }
+
+        expect(chunks).toHaveLength(3);
+        expect(chunks[0]).toEqual({ index: 0 });
+        expect(chunks[1]).toEqual({ index: 1 });
+        expect(chunks[2]).toEqual({ index: 2 });
+    });
+
+    it('executeStream throws for non-existent action', async () => {
+        await expect(async () => {
+            for await (const _ of registry.executeStream('nonexistent', {})) {
+                // should not reach here
+            }
+        }).rejects.toThrow("Streaming action 'nonexistent' not found");
+    });
+
+    it('executeStream propagates handler errors', async () => {
+        const stream = makeJayStream('test.error').withHandler(async function* () {
+            yield 'before';
+            throw new Error('stream failed');
+        });
+
+        registry.registerStream(stream);
+
+        const chunks: any[] = [];
+        await expect(async () => {
+            for await (const chunk of registry.executeStream('test.error', {})) {
+                chunks.push(chunk);
+            }
+        }).rejects.toThrow('stream failed');
+
+        expect(chunks).toHaveLength(1);
+        expect(chunks[0]).toBe('before');
     });
 });

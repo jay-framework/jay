@@ -203,6 +203,145 @@ function buildActionUrl<Input>(
 }
 
 /**
+ * Creates a client-side stream caller that makes an HTTP request and returns
+ * an async iterable of chunks via NDJSON streaming.
+ *
+ * This function is used by the build transform to replace server-side makeJayStream
+ * handlers with client-side HTTP stream consumers.
+ *
+ * @param actionName - The unique action name (matches server registration)
+ * @returns A callable function that returns an AsyncIterable of chunks
+ *
+ * @example
+ * ```typescript
+ * // Build transform replaces:
+ * import { checkInventory } from './actions/inventory-check.actions';
+ *
+ * // With:
+ * const checkInventory = createStreamCaller<void, { name: string }>('inventory.check');
+ * ```
+ */
+export function createStreamCaller<Input, Chunk>(
+    actionName: string,
+): (input: Input) => AsyncIterable<Chunk> {
+    return (input: Input): AsyncIterable<Chunk> => {
+        return {
+            [Symbol.asyncIterator](): AsyncIterableIterator<Chunk> {
+                const baseUrl = globalOptions.baseUrl ?? '';
+                const url = `${baseUrl}${ACTION_ENDPOINT_BASE}/${actionName}`;
+
+                let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
+                let buffer = '';
+                let done = false;
+                let error: Error | null = null;
+                const chunks: Chunk[] = [];
+                let resolveNext: (() => void) | null = null;
+
+                // Start the fetch immediately
+                const fetchPromise = fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...globalOptions.headers,
+                    },
+                    body: JSON.stringify(input),
+                })
+                    .then((response) => {
+                        if (!response.ok) {
+                            throw new ActionError(
+                                'STREAM_ERROR',
+                                `Stream '${actionName}' failed with status ${response.status}`,
+                            );
+                        }
+                        reader = response.body!.getReader();
+                        pump();
+                    })
+                    .catch((err) => {
+                        error =
+                            err instanceof ActionError
+                                ? err
+                                : new ActionError(
+                                      'NETWORK_ERROR',
+                                      `Network error streaming '${actionName}': ${err.message}`,
+                                  );
+                        if (resolveNext) resolveNext();
+                    });
+
+                const decoder = new TextDecoder();
+
+                function pump() {
+                    reader!
+                        .read()
+                        .then(({ done: readerDone, value }) => {
+                            if (value) {
+                                buffer += decoder.decode(value, { stream: true });
+                                // Process complete lines
+                                const lines = buffer.split('\n');
+                                buffer = lines.pop()!; // Keep incomplete line in buffer
+                                for (const line of lines) {
+                                    if (!line.trim()) continue;
+                                    const parsed = JSON.parse(line);
+                                    if (parsed.error) {
+                                        error = new ActionError('STREAM_ERROR', parsed.error);
+                                        if (resolveNext) resolveNext();
+                                        return;
+                                    }
+                                    if (parsed.done) {
+                                        done = true;
+                                        if (resolveNext) resolveNext();
+                                        return;
+                                    }
+                                    if ('chunk' in parsed) {
+                                        chunks.push(parsed.chunk);
+                                        if (resolveNext) resolveNext();
+                                    }
+                                }
+                            }
+                            if (readerDone) {
+                                done = true;
+                                if (resolveNext) resolveNext();
+                                return;
+                            }
+                            pump();
+                        })
+                        .catch((err) => {
+                            error = new ActionError('STREAM_ERROR', err.message);
+                            if (resolveNext) resolveNext();
+                        });
+                }
+
+                return {
+                    async next(): Promise<IteratorResult<Chunk>> {
+                        // Wait for fetch to start
+                        await fetchPromise;
+
+                        while (true) {
+                            if (chunks.length > 0) {
+                                return { value: chunks.shift()!, done: false };
+                            }
+                            if (error) {
+                                throw error;
+                            }
+                            if (done) {
+                                return { value: undefined as any, done: true };
+                            }
+                            // Wait for more data
+                            await new Promise<void>((resolve) => {
+                                resolveNext = resolve;
+                            });
+                            resolveNext = null;
+                        }
+                    },
+                    [Symbol.asyncIterator]() {
+                        return this;
+                    },
+                };
+            },
+        };
+    };
+}
+
+/**
  * Checks if an object is "simple" (all values are primitives).
  */
 function isSimpleObject(obj: unknown): boolean {

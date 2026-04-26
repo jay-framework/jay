@@ -10,3 +10,10 @@ contracts:
 # Usage: jay-stack action product-widget/listProducts
 actions:
   - listProducts
+
+# Plugin-provided routes (DL#130)
+routes:
+  - path: /admin/products
+    jayHtml: ./pages/admin/page.jay-html
+    component: ./pages/admin/page.ts
+    description: Product admin dashboard — list all products with stats

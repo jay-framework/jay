@@ -1,0 +1,34 @@
+<html>
+  <head>
+    <style>
+      .inventory-page { padding: 20px }
+      .status { margin: 10px 0; font-weight: bold }
+      .progress { margin: 10px 0; color: #666 }
+      .result-row { padding: 8px; margin: 4px 0; border: 1px solid #ddd; display: flex; gap: 16px }
+      .in-stock { color: green }
+      .out-of-stock { color: red }
+    </style>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
+  </head>
+  <body>
+    <div class="inventory-page">
+      <h1>Inventory Check</h1>
+      <p>Stream stock status for all products using <code>makeJayStream</code>.</p>
+
+      <button ref="start-check">Run Inventory Check</button>
+
+      <div class="status">Status: {status}</div>
+      <div class="progress">Checked: {checkedCount} / {totalCount}</div>
+
+      <div forEach="results" trackBy="productId">
+        <div class="result-row">
+          <span>[{sku}]</span>
+          <span><strong>{name}</strong></span>
+          <span>{units} units</span>
+          <span if="inStock" class="in-stock">In Stock</span>
+          <span if="!inStock" class="out-of-stock">Out of Stock</span>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

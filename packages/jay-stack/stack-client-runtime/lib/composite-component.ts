@@ -114,6 +114,16 @@ export function makeCompositeJayComponent<
                         ) as ViewState;
                     }
                 });
+
+                // Re-inject non-keyed instance ViewStates so the automation API
+                // can capture the complete page state including nested components.
+                // instancesData.viewStates is kept up-to-date by instance components
+                // via viewStateChange events (DL#128).
+                const ivs = instancesData.viewStates;
+                if (Object.keys(ivs).length > 0) {
+                    (viewState as any).__headlessInstances = ivs;
+                }
+
                 return viewState;
             },
         } as unknown as CompCore;

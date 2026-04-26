@@ -198,3 +198,79 @@ describe('Type inference', () => {
         expectTypeOf<Output>().toEqualTypeOf<SearchResult>();
     });
 });
+
+// ============================================================================
+// Streaming Actions (DL#129)
+// ============================================================================
+
+import { makeJayStream, isJayStreamAction, StreamChunk } from '../lib';
+
+describe('makeJayStream', () => {
+    it('should create a streaming action with correct metadata', () => {
+        const stream = makeJayStream('test.stream').withHandler(async function* (input: {
+            page: number;
+        }) {
+            yield [{ id: '1' }, { id: '2' }];
+            yield [{ id: '3' }];
+        });
+
+        expect(stream.actionName).toBe('test.stream');
+        expect(stream.method).toBe('POST');
+        expect(stream.isStreaming).toBe(true);
+        expect(stream._brand).toBe('JayStreamAction');
+    });
+
+    it('should be callable and return async iterable', async () => {
+        const stream = makeJayStream('test.stream').withHandler(async function* (input: {
+            query: string;
+        }) {
+            yield { result: input.query + '-1' };
+            yield { result: input.query + '-2' };
+        });
+
+        const chunks: any[] = [];
+        for await (const chunk of stream({ query: 'test' })) {
+            chunks.push(chunk);
+        }
+
+        expect(chunks).toHaveLength(2);
+        expect(chunks[0].result).toBe('test-1');
+        expect(chunks[1].result).toBe('test-2');
+    });
+
+    it('should support service injection', () => {
+        const SERVICE = createJayService<CartService>('CartService');
+
+        const stream = makeJayStream('test.withServices')
+            .withServices(SERVICE)
+            .withHandler(async function* (input: { id: string }, cartService: CartService) {
+                const cart = await cartService.getCart();
+                yield cart;
+            });
+
+        expect(stream.actionName).toBe('test.withServices');
+        expect(stream.isStreaming).toBe(true);
+    });
+
+    it('isJayStreamAction identifies streaming actions', () => {
+        const stream = makeJayStream('test.check').withHandler(async function* () {
+            yield 1;
+        });
+        const action = makeJayAction('test.regular').withHandler(async () => 'ok');
+
+        expect(isJayStreamAction(stream)).toBe(true);
+        expect(isJayStreamAction(action)).toBe(false);
+        expect(isJayStreamAction(null)).toBe(false);
+    });
+
+    it('StreamChunk extracts the chunk type', () => {
+        const stream = makeJayStream('test.typed').withHandler(async function* (_input: {
+            x: number;
+        }) {
+            yield { name: 'a', value: 1 };
+        });
+
+        type Chunk = StreamChunk<typeof stream>;
+        expectTypeOf<Chunk>().toEqualTypeOf<{ name: string; value: number }>();
+    });
+});

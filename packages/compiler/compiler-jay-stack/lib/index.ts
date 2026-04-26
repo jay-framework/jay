@@ -245,16 +245,28 @@ export function jayStackCompiler(options: JayStackCompilerOptions = {}): Plugin[
                         return null;
                     }
 
-                    // Generate virtual module with createActionCaller exports
+                    // Generate virtual module with createActionCaller/createStreamCaller exports
+                    const hasRegularActions = actions.some((a) => !a.isStreaming);
+                    const hasStreamActions = actions.some((a) => a.isStreaming);
+                    const importNames: string[] = [];
+                    if (hasRegularActions) importNames.push('createActionCaller');
+                    if (hasStreamActions) importNames.push('createStreamCaller');
+
                     const lines: string[] = [
-                        `import { createActionCaller } from '@jay-framework/stack-client-runtime';`,
+                        `import { ${importNames.join(', ')} } from '@jay-framework/stack-client-runtime';`,
                         '',
                     ];
 
                     for (const action of actions) {
-                        lines.push(
-                            `export const ${action.exportName} = createActionCaller('${action.actionName}', '${action.method}');`,
-                        );
+                        if (action.isStreaming) {
+                            lines.push(
+                                `export const ${action.exportName} = createStreamCaller('${action.actionName}');`,
+                            );
+                        } else {
+                            lines.push(
+                                `export const ${action.exportName} = createActionCaller('${action.actionName}', '${action.method}');`,
+                            );
+                        }
                     }
 
                     // Also export any non-action exports (like types, interfaces)

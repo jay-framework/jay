@@ -45,17 +45,8 @@ class AutomationAgent implements AutomationAPI {
         options?: AutomationAgentOptions,
     ) {
         if (options) {
-            // Store the initial merged state as base for future merges
             this.initialSlowViewState = options.initialViewState;
-            // Store trackByMap for deep merging
             this.trackByMap = options.trackByMap;
-            // Do initial merge with current component viewState
-            // (component may have computed additional properties during hydration)
-            this.mergedViewState = deepMergeViewStates(
-                options.initialViewState,
-                this.component.viewState || {},
-                options.trackByMap,
-            );
         }
         this.subscribeToUpdates();
     }
@@ -66,13 +57,9 @@ class AutomationAgent implements AutomationAPI {
             this.cachedRaw = null;
             this.cachedGrouped = null;
             // Update merged state if we're tracking slow ViewState
-            if (this.initialSlowViewState && this.trackByMap) {
-                this.mergedViewState = deepMergeViewStates(
-                    this.initialSlowViewState,
-                    this.component.viewState || {},
-                    this.trackByMap,
-                );
-            }
+            // Clear cached merged state — getPageState() recomputes it fresh
+            // to pick up lazy __headlessInstances from nested components (DL#128).
+            this.mergedViewState = null;
             this.notifyListeners();
         };
         this.component.addEventListener(VIEW_STATE_CHANGE, this.viewStateHandler);
@@ -95,9 +82,29 @@ class AutomationAgent implements AutomationAPI {
     }
 
     getPageState(): PageState {
+        // Always read from the component's viewState getter — it lazily collects
+        // non-keyed instance ViewStates via __headlessInstances (DL#128).
+        // For pages with slow rendering, merge with the initial slow ViewState
+        // to include slow-phase-only properties.
+        let viewState: object;
+        if (this.initialSlowViewState && this.trackByMap) {
+            viewState = deepMergeViewStates(
+                this.initialSlowViewState,
+                this.component.viewState || {},
+                this.trackByMap,
+            );
+            // Prefer the component's __headlessInstances (current interactive state)
+            // over the slow-phase snapshot which may have stale values.
+            const componentInstances = (this.component.viewState as any)?.__headlessInstances;
+            if (componentInstances) {
+                (viewState as any).__headlessInstances = componentInstances;
+            }
+        } else {
+            viewState = this.component.viewState;
+        }
+
         return {
-            // Use merged state if available (slow+fast), otherwise component's viewState
-            viewState: this.mergedViewState || this.component.viewState,
+            viewState,
             interactions: this.getGrouped(),
             customEvents: this.getCustomEvents(),
         };

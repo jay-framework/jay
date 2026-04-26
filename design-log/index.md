@@ -79,6 +79,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | --- | ---------------------------------------------- | -------------------------------------------------------------------------- |
 | 63  | jay-stack server actions                       | RPC-style server actions: `makeJayAction`, `makeJayQuery`, action registry |
 | 82  | automatic server-side action service injection | Auto-inject services when actions called from server code                  |
+| 129 | streaming actions                              | `makeJayStream` with `AsyncGenerator` handlers, SSE transport              |
 
 ---
 
@@ -94,6 +95,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 87  | jay-stack setup command                           | Plugin config templating, credential validation, references              |
 | 88  | PR 158 review guide                               | Review guide for export_import branch (Figma vendor + plugin resolution) |
 | 89  | PR 158 merge concerns                             | Merge conflicts, duplicate work, and decisions for PR #158 into main     |
+| 130 | plugin routes and templates                       | Plugins provide pages (jay-html + page.ts) as routes; project overrides  |
 
 ---
 
@@ -203,6 +205,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 116 | client import rewriting in library builds               | Fix bare @jay-framework/\* imports not rewritten to /client in vite build output                       |
 | 119 | async data SSR and hydration                            | Fix async data (Promise types) through SSR swap scripts, hydrate compiler, and ViewState serialization |
 | 126 | coordinate assignment rules                             | Complete rules for coordinate assignment across forEach, slowForEach, headless, headfull nesting       |
+| 127 | SEO head injection                                      | Render SEO data (title, meta, OG tags) from ViewState into `<head>` during SSR                         |
 
 ---
 
@@ -224,6 +227,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 114 | documentation gaps and updates                         | Audit of docs vs design logs; gap list and update plan                                    |
 | 124 | contract props and params consistency                  | Ensure contracts declare props/params; agent-kit authoring docs + validate checks         |
 | 125 | plugin agent-kit                                       | `agent-kit --mode plugin` for AI agents creating plugins (contracts, components, actions) |
+| 128 | unfolded variant view                                  | Page freeze: capture ViewState, render static SSR snapshots for side-by-side comparison   |
 | 92  | Gemini agent plugin for jay-stack                      | Embedded AI agent: Gemini API, .jay-action metadata, chat contract, page automation       |
 | 97  | Contract-based tool descriptions for gemini agent      | Semantic tool descriptions from .jay-contract via server action, not embedded in HTML     |
 

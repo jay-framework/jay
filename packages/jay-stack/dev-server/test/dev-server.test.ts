@@ -217,28 +217,127 @@ target.appendChild(wrapped.element.dom);
     }, 5000000);
 });
 
+describe('DevServerService', () => {
+    const baseOptions = {
+        serverBase: '/',
+        pagesBase: path.resolve(__dirname, './'),
+        projectRootFolder: path.resolve(__dirname, './'),
+        jayRollupConfig: {
+            tsConfigFilePath: path.resolve(__dirname, '../../../tsconfig.json'),
+        },
+    };
+
+    it('listRoutes returns all routes', async () => {
+        const httpServer = http.createServer();
+        const devServer = await mkDevServer({
+            ...baseOptions,
+            pagesRootFolder: path.resolve(__dirname, './simple-page'),
+            projectRootFolder: path.resolve(__dirname, './simple-page'),
+            httpServer,
+        });
+
+        const routes = devServer.service.listRoutes();
+        expect(routes).toHaveLength(1);
+        expect(routes[0].path).toBe('/');
+        expect(routes[0].jayHtmlPath).toBeDefined();
+        expect(routes[0].compPath).toBeDefined();
+
+        await devServer.viteServer.close();
+    });
+
+    it('loadRouteParams returns empty for route without loadParams', async () => {
+        const httpServer = http.createServer();
+        const devServer = await mkDevServer({
+            ...baseOptions,
+            pagesRootFolder: path.resolve(__dirname, './simple-page'),
+            projectRootFolder: path.resolve(__dirname, './simple-page'),
+            httpServer,
+        });
+
+        const batches: any[] = [];
+        for await (const batch of devServer.service.loadRouteParams('/')) {
+            batches.push(batch);
+        }
+
+        expect(batches).toHaveLength(0);
+
+        await devServer.viteServer.close();
+    });
+
+    it('loadRouteParams yields param batches for route with loadParams', async () => {
+        const httpServer = http.createServer();
+        const devServer = await mkDevServer({
+            ...baseOptions,
+            pagesRootFolder: path.resolve(__dirname, './page-with-params'),
+            projectRootFolder: path.resolve(__dirname, './page-with-params'),
+            httpServer,
+        });
+
+        const batches: any[] = [];
+        for await (const batch of devServer.service.loadRouteParams('/')) {
+            batches.push(batch);
+        }
+
+        // Generator yields 2 batches
+        expect(batches).toHaveLength(2);
+
+        // First batch: [{ slug: 'item-a' }, { slug: 'item-b' }]
+        expect(batches[0]).toHaveLength(2);
+        expect(batches[0][0].slug).toBe('item-a');
+        expect(batches[0][1].slug).toBe('item-b');
+
+        // Second batch: [{ slug: 'item-c' }]
+        expect(batches[1]).toHaveLength(1);
+        expect(batches[1][0].slug).toBe('item-c');
+
+        await devServer.viteServer.close();
+    });
+
+    it('loadRouteParams throws for unknown route', async () => {
+        const httpServer = http.createServer();
+        const devServer = await mkDevServer({
+            ...baseOptions,
+            pagesRootFolder: path.resolve(__dirname, './simple-page'),
+            projectRootFolder: path.resolve(__dirname, './simple-page'),
+            httpServer,
+        });
+
+        await expect(async () => {
+            for await (const _ of devServer.service.loadRouteParams('/nonexistent')) {
+                // should not reach here
+            }
+        }).rejects.toThrow('Route "/nonexistent" not found');
+
+        await devServer.viteServer.close();
+    });
+});
+
 function clearScriptForTest(script: string) {
     const cmd = process.cwd();
-    return script
-        .replace(cmd, '')
-        .replace(/\/\/\#.*/, '// source-map')
-        .replace(
-            /from "(\/@fs\/.*?stack-client-runtime.*?)"/g,
-            'from "@jay-framework/stack-client-runtime"',
-        )
-        .replace(
-            /from "(\/@fs\/.*?runtime-automation.*?)"/g,
-            'from "@jay-framework/runtime-automation"',
-        )
-        .replace(/from "(\/@fs\/.*?runtime\/dist.*?)"/g, 'from "@jay-framework/runtime"')
-        .replace(
-            /from "(\/@fs\/.*?view-state-merge.*?)"/g,
-            'from "@jay-framework/view-state-merge"',
-        )
-        .replace(/\/build\/pre-rendered\//g, '/')
-        .split('\n')
-        .map((line) => line.trim())
-        .join('\n');
+    return (
+        script
+            .replace(cmd, '')
+            .replace(/\/\/\#.*/, '// source-map')
+            .replace(
+                /from "(\/@fs\/.*?stack-client-runtime.*?)"/g,
+                'from "@jay-framework/stack-client-runtime"',
+            )
+            .replace(
+                /from "(\/@fs\/.*?runtime-automation.*?)"/g,
+                'from "@jay-framework/runtime-automation"',
+            )
+            .replace(/from "(\/@fs\/.*?runtime\/dist.*?)"/g, 'from "@jay-framework/runtime"')
+            .replace(
+                /from "(\/@fs\/.*?view-state-merge.*?)"/g,
+                'from "@jay-framework/view-state-merge"',
+            )
+            .replace(/\/build\/pre-rendered\//g, '/')
+            .split('\n')
+            .map((line) => line.trim())
+            .join('\n')
+            // Strip the freeze shortcut script (DL#128) — it's an implementation detail
+            .replace(/\n\/\/ Page Freeze[\s\S]*?\n\/\/ source-map/, '\n// source-map')
+    );
 }
 
 async function makeRequest(handler: any, path: string): Promise<[string, Record<string, string>]> {

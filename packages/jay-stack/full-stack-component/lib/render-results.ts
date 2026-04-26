@@ -1,4 +1,10 @@
-import { ClientError4xx, PhaseOutput, Redirect3xx, ServerError5xx } from './jay-stack-types';
+import {
+    ClientError4xx,
+    HeadTag,
+    PhaseOutput,
+    Redirect3xx,
+    ServerError5xx,
+} from './jay-stack-types';
 
 // ============================================================================
 // Error Constructors
@@ -61,12 +67,19 @@ export function redirect3xx(status: number, location: string, message?: string):
 
 /**
  * Create a successful phase output with rendered ViewState and carry-forward data.
+ * Optionally include head tags to inject into <head> during SSR (Design Log #127).
  */
 export function phaseOutput<ViewState extends object, CarryForward = {}>(
     rendered: ViewState,
     carryForward: CarryForward,
+    options?: { headTags?: HeadTag[] },
 ): PhaseOutput<ViewState, CarryForward> {
-    return { kind: 'PhaseOutput', rendered, carryForward };
+    return {
+        kind: 'PhaseOutput',
+        rendered,
+        carryForward,
+        ...(options?.headTags && { headTags: options.headTags }),
+    };
 }
 
 /**

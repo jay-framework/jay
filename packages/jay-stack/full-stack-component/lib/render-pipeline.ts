@@ -1,5 +1,6 @@
 import {
     ClientError4xx,
+    HeadTag,
     PhaseOutput,
     Redirect3xx,
     RenderOutcome,
@@ -401,7 +402,7 @@ export class RenderPipeline<
      * Resolves all pending promises and applies the final mapping.
      */
     async toPhaseOutput(
-        fn: (value: T) => { viewState: TargetVS; carryForward: TargetCF },
+        fn: (value: T) => { viewState: TargetVS; carryForward: TargetCF; headTags?: HeadTag[] },
     ): Promise<RenderOutcome<TargetVS, TargetCF>> {
         // Resolve the value
         let resolvedValue:
@@ -453,8 +454,8 @@ export class RenderPipeline<
         }
 
         // Apply the final mapping
-        const { viewState, carryForward } = fn(resolvedValue as T);
-        return phaseOutput(viewState, carryForward);
+        const { viewState, carryForward, headTags } = fn(resolvedValue as T);
+        return phaseOutput(viewState, carryForward, headTags ? { headTags } : undefined);
     }
 
     // =========================================================================

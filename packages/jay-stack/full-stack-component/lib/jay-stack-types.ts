@@ -115,6 +115,20 @@ export interface Redirect3xx {
 }
 
 /**
+ * A tag to inject into the HTML <head> during SSR (Design Log #127).
+ * Components return these from phaseOutput() to control page metadata (title, meta, link, etc.).
+ * Head tags are SSR-only — not hydrated on the client.
+ */
+export interface HeadTag {
+    /** Element name, e.g. 'title', 'meta', 'link' */
+    tag: string;
+    /** HTML attributes, e.g. { name: 'description', content: '...' } */
+    attrs?: Record<string, string>;
+    /** Text content, e.g. 'My Page Title' for <title> */
+    children?: string;
+}
+
+/**
  * Successful output of a rendering phase.
  * Contains the rendered ViewState and data to carry forward to the next phase.
  */
@@ -122,6 +136,8 @@ export interface PhaseOutput<ViewState extends object, CarryForward = {}> {
     kind: 'PhaseOutput';
     rendered: ViewState;
     carryForward: CarryForward;
+    /** Tags to inject into <head> during SSR (Design Log #127). */
+    headTags?: HeadTag[];
 }
 
 /**

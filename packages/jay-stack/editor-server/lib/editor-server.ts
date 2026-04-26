@@ -19,6 +19,17 @@ import type {
     GetProjectInfoResponse,
     ExportResponse,
     ImportResponse,
+    ListRoutesMessage,
+    ListRoutesResponse,
+    ListFreezesMessage,
+    ListFreezesResponse,
+    RenameFreezeMessage,
+    RenameFreezeResponse,
+    DeleteFreezeMessage,
+    DeleteFreezeResponse,
+    LoadRouteParamsMessage,
+    LoadRouteParamsResponse,
+    RouteParamsBatchEvent,
 } from '@jay-framework/editor-protocol';
 import { createProtocolResponse } from '@jay-framework/editor-protocol';
 
@@ -52,6 +63,11 @@ export class EditorServer implements DevServerProtocol {
         getProjectInfo?: (params: GetProjectInfoMessage) => Promise<GetProjectInfoResponse>;
         export?: (params: ExportMessage<any>) => Promise<ExportResponse>;
         import?: (params: ImportMessage<any>) => Promise<ImportResponse<any>>;
+        listRoutes?: (params: ListRoutesMessage) => Promise<ListRoutesResponse>;
+        listFreezes?: (params: ListFreezesMessage) => Promise<ListFreezesResponse>;
+        renameFreeze?: (params: RenameFreezeMessage) => Promise<RenameFreezeResponse>;
+        deleteFreeze?: (params: DeleteFreezeMessage) => Promise<DeleteFreezeResponse>;
+        loadRouteParams?: (params: LoadRouteParamsMessage) => Promise<LoadRouteParamsResponse>;
     } = {};
 
     constructor(options: EditorServerOptions) {
@@ -164,6 +180,37 @@ export class EditorServer implements DevServerProtocol {
         callback: (params: ImportMessage<TVendorDoc>) => Promise<ImportResponse<TVendorDoc>>,
     ): void {
         this.handlers.import = callback;
+    }
+
+    // Freeze management (DL#128)
+    onListRoutes(callback: (params: ListRoutesMessage) => Promise<ListRoutesResponse>): void {
+        this.handlers.listRoutes = callback;
+    }
+
+    onListFreezes(callback: (params: ListFreezesMessage) => Promise<ListFreezesResponse>): void {
+        this.handlers.listFreezes = callback;
+    }
+
+    onRenameFreeze(callback: (params: RenameFreezeMessage) => Promise<RenameFreezeResponse>): void {
+        this.handlers.renameFreeze = callback;
+    }
+
+    onDeleteFreeze(callback: (params: DeleteFreezeMessage) => Promise<DeleteFreezeResponse>): void {
+        this.handlers.deleteFreeze = callback;
+    }
+
+    emitFreezeChanged(): void {
+        this.io?.emit('freezeChanged');
+    }
+
+    onLoadRouteParams(
+        callback: (params: LoadRouteParamsMessage) => Promise<LoadRouteParamsResponse>,
+    ): void {
+        this.handlers.loadRouteParams = callback;
+    }
+
+    emitRouteParamsBatch(event: RouteParamsBatchEvent): void {
+        this.io?.emit('routeParamsBatch', event);
     }
 
     private handlePortDiscovery(req: any, res: any): void {
@@ -285,6 +332,52 @@ export class EditorServer implements DevServerProtocol {
                 }
                 const importResult = await this.handlers.import(payload as ImportMessage<any>);
                 return createProtocolResponse(id, importResult);
+
+            // Freeze management (DL#128)
+            case 'listRoutes':
+                if (!this.handlers.listRoutes) {
+                    throw new Error('List routes handler not registered');
+                }
+                return createProtocolResponse(
+                    id,
+                    await this.handlers.listRoutes(payload as ListRoutesMessage),
+                );
+
+            case 'listFreezes':
+                if (!this.handlers.listFreezes) {
+                    throw new Error('List freezes handler not registered');
+                }
+                return createProtocolResponse(
+                    id,
+                    await this.handlers.listFreezes(payload as ListFreezesMessage),
+                );
+
+            case 'renameFreeze':
+                if (!this.handlers.renameFreeze) {
+                    throw new Error('Rename freeze handler not registered');
+                }
+                return createProtocolResponse(
+                    id,
+                    await this.handlers.renameFreeze(payload as RenameFreezeMessage),
+                );
+
+            case 'deleteFreeze':
+                if (!this.handlers.deleteFreeze) {
+                    throw new Error('Delete freeze handler not registered');
+                }
+                return createProtocolResponse(
+                    id,
+                    await this.handlers.deleteFreeze(payload as DeleteFreezeMessage),
+                );
+
+            case 'loadRouteParams':
+                if (!this.handlers.loadRouteParams) {
+                    throw new Error('Load route params handler not registered');
+                }
+                return createProtocolResponse(
+                    id,
+                    await this.handlers.loadRouteParams(payload as LoadRouteParamsMessage),
+                );
 
             default:
                 throw new Error(`Unknown message type: ${(payload as any).type}`);

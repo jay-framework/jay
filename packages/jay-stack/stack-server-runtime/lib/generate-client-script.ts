@@ -46,6 +46,8 @@ export interface GenerateClientScriptOptions {
      * so that AI/automation tools can see the complete page state.
      */
     slowViewState?: object;
+    /** Route pattern (e.g., /products/kitan{/:category}) for freeze entries */
+    routePattern?: string;
 }
 
 /**
@@ -150,6 +152,88 @@ ${parts.map((part) => '        ' + part.clientPart).join(',\n')}
 }
 
 /**
+ * Client-side freeze shortcut script (DL#127, DL#128).
+ * Alt+S (Option+S on Mac) captures the current ViewState, saves it, and opens a frozen tab.
+ * In embed mode (_jay_embed): suppresses Alt+S (parent owns it), listens for
+ * jay:requestFreeze from parent, posts jay:freeze back with the freeze ID.
+ * Includes visual feedback: white flash + camera shutter sound.
+ */
+function buildFreezeScript(routePattern?: string): string {
+    const routePatternLiteral = routePattern ? `'${routePattern}'` : 'undefined';
+    return `
+      // Page Freeze (DL#127, DL#128 iframe addendum)
+      // Sticky embed mode: URL param sets a session cookie so in-iframe navigation preserves it
+      if (new URLSearchParams(window.location.search).has('_jay_embed')) {
+        document.cookie = '_jay_embed=1;path=/;samesite=lax';
+      }
+      const __jayEmbedMode = document.cookie.split(';').some(c => c.trim().startsWith('_jay_embed='));
+
+      async function __jayDoFreeze() {
+          const automation = window.__jay?.automation;
+          if (!automation) return;
+
+          // Visual feedback: white flash
+          const flash = document.createElement('div');
+          flash.style.cssText = 'position:fixed;inset:0;background:white;z-index:999999;opacity:0.8;pointer-events:none;transition:opacity 0.3s';
+          document.body.appendChild(flash);
+          requestAnimationFrame(() => { flash.style.opacity = '0'; });
+          setTimeout(() => flash.remove(), 400);
+
+          // Audio feedback: camera shutter
+          try {
+            const ctx = new AudioContext();
+            const buf = ctx.createBuffer(1, ctx.sampleRate * 0.15, ctx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < data.length; i++) {
+              data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.02));
+            }
+            const src = ctx.createBufferSource();
+            src.buffer = buf;
+            src.connect(ctx.destination);
+            src.start();
+          } catch {}
+
+          // Capture and save
+          try {
+            const state = automation.getPageState();
+            const route = window.location.pathname;
+            const routePattern = ${routePatternLiteral};
+            const resp = await fetch('/_jay/freeze', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ route, routePattern, viewState: state.viewState }),
+            });
+            const { id } = await resp.json();
+            if (__jayEmbedMode) {
+              window.parent.postMessage({ type: 'jay:freeze', id, route }, '*');
+            } else {
+              window.open(route + '?_jay_freeze=' + id, '_blank');
+            }
+          } catch (err) {
+            console.error('[Freeze] Failed:', err);
+          }
+      }
+
+      if (__jayEmbedMode) {
+        // Notify parent of the current route on load (DL#128 route addendum)
+        window.parent.postMessage({ type: 'jay:route', route: window.location.pathname, routePattern: ${routePatternLiteral} }, '*');
+
+        // Embed mode: parent triggers freeze via postMessage
+        window.addEventListener('message', (e) => {
+          if (e.data?.type === 'jay:requestFreeze') __jayDoFreeze();
+        });
+      } else {
+        // Standalone: Alt+S / Option+S keyboard shortcut
+        document.addEventListener('keydown', (e) => {
+          if (e.altKey && e.code === 'KeyS') {
+            e.preventDefault();
+            __jayDoFreeze();
+          }
+        });
+      }`;
+}
+
+/**
  * Generate the automation wrapping code.
  * @param mode - 'client' appends to DOM; 'hydrate' skips appendChild (DOM already present)
  */
@@ -167,6 +251,8 @@ export function buildAutomationWrap(
 
     const appendLine = appendDom ? `\n      target.appendChild(wrapped.element.dom);` : '';
 
+    const freezeScript = buildFreezeScript(options.routePattern);
+
     if (hasSlowViewState) {
         return `
       // Wrap with automation for dev tooling
@@ -176,7 +262,8 @@ export function buildAutomationWrap(
       registerGlobalContext(AUTOMATION_CONTEXT, wrapped.automation);
       window.__jay = window.__jay || {};
       window.__jay.automation = wrapped.automation;
-      window.dispatchEvent(new Event('jay:automation-ready'));${appendLine}`;
+      window.dispatchEvent(new Event('jay:automation-ready'));${appendLine}
+${freezeScript}`;
     }
 
     return `
@@ -185,7 +272,8 @@ export function buildAutomationWrap(
       registerGlobalContext(AUTOMATION_CONTEXT, wrapped.automation);
       window.__jay = window.__jay || {};
       window.__jay.automation = wrapped.automation;
-      window.dispatchEvent(new Event('jay:automation-ready'));${appendLine}`;
+      window.dispatchEvent(new Event('jay:automation-ready'));${appendLine}
+${freezeScript}`;
 }
 
 /**

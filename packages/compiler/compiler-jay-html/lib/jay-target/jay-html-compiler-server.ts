@@ -44,6 +44,7 @@ import {
     propertyMapping,
     resolveHeadlessImport,
     textEscape,
+    escapeForJsString,
     validateAsyncAccessor,
     validateForEachAccessor,
     validateSlowForEachAccessor,
@@ -439,7 +440,7 @@ function renderServerAttributes(element: HTMLElement, context: ServerContext): R
                     ),
                 );
             } else {
-                const escaped = attrValue.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                const escaped = escapeForJsString(attrValue);
                 parts.push(w(indent, `' ${attrCanonical}="${escaped}"'`));
             }
         } else if (attrCanonical === 'class') {
@@ -457,7 +458,7 @@ function renderServerAttributes(element: HTMLElement, context: ServerContext): R
                     ),
                 );
             } else {
-                const escaped = attrValue.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                const escaped = escapeForJsString(attrValue);
                 parts.push(w(indent, `' class="${escaped}"'`));
             }
         } else if (attrCanonical === 'style') {
@@ -474,7 +475,7 @@ function renderServerAttributes(element: HTMLElement, context: ServerContext): R
                     ),
                 );
             } else {
-                const escaped = attrValue.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                const escaped = escapeForJsString(attrValue);
                 parts.push(w(indent, `' style="${escaped}"'`));
             }
         } else {
@@ -492,7 +493,7 @@ function renderServerAttributes(element: HTMLElement, context: ServerContext): R
                     ),
                 );
             } else {
-                const escaped = attrValue.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                const escaped = escapeForJsString(attrValue);
                 parts.push(w(indent, `' ${attrCanonical}="${escaped}"'`));
             }
         }
@@ -701,7 +702,7 @@ function renderServerAttributesAsString(
                     ),
                 );
             } else {
-                const escaped = attrValue.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                const escaped = escapeForJsString(attrValue);
                 parts.push(new RenderFragment(`' ${attrCanonical}="${escaped}"'`));
             }
         } else if (attrCanonical === 'class') {
@@ -715,7 +716,7 @@ function renderServerAttributesAsString(
                     ),
                 );
             } else {
-                const escaped = attrValue.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                const escaped = escapeForJsString(attrValue);
                 parts.push(new RenderFragment(`' class="${escaped}"'`));
             }
         } else if (attrCanonical === 'style') {
@@ -731,7 +732,7 @@ function renderServerAttributesAsString(
                     ),
                 );
             } else {
-                const escaped = attrValue.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                const escaped = escapeForJsString(attrValue);
                 parts.push(new RenderFragment(`' style="${escaped}"'`));
             }
         } else {
@@ -747,7 +748,7 @@ function renderServerAttributesAsString(
                     ),
                 );
             } else {
-                const escaped = attrValue.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                const escaped = escapeForJsString(attrValue);
                 parts.push(new RenderFragment(`' ${attrCanonical}="${escaped}"'`));
             }
         }

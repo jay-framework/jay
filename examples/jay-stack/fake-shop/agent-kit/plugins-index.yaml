@@ -3,18 +3,24 @@ plugins:
     path: ./src/plugins/product-rating
     contracts:
       - name: product-rating
+        description: Product rating widget with stars and review count
         type: static
         path: ./src/plugins/product-rating/product-rating.jay-contract
   - name: product-widget
     path: ./src/plugins/product-widget
     contracts:
       - name: product-widget
+        description: Product widget card showing name, price, and stock status
         type: static
         path: ./src/plugins/product-widget/product-widget.jay-contract
+    routes:
+      - path: /admin/products
+        description: Product admin dashboard — list all products with stats
   - name: stock-status
     path: ./src/plugins/stock-status
     contracts:
       - name: stock-status
+        description: Stock status badge showing availability (fast-only, no slow phase)
         type: static
         path: ./src/plugins/stock-status/stock-status.jay-contract
   - name: webmcp
@@ -24,5 +30,6 @@ plugins:
     path: ./../mood-tracker-plugin
     contracts:
       - name: mood-tracker
+        description: A mood tracker component with happy, neutral, and sad states
         type: static
         path: ./../mood-tracker-plugin/dist/mood-tracker.jay-contract

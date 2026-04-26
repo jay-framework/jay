@@ -172,3 +172,31 @@ jay-stack params wix-stores/product-page
 ```
 
 See [Jay Stack Components](./jay-stack.md#url-parameter-loading) for more on `loadParams` and parameter loading patterns.
+
+## Plugin Routes
+
+Plugins can provide their own pages via the `routes` field in `plugin.yaml`. This is designed for backoffice tools, admin dashboards, and editors — pages with a boxed design that doesn't need per-site visual customization.
+
+```yaml
+# In plugin.yaml
+routes:
+  - path: /admin/products
+    jayHtml: ./pages/admin/page.jay-html
+    component: ./pages/admin/page.ts
+    description: Product admin dashboard
+```
+
+Plugin routes are served alongside project routes by the dev server. They use the same rendering pipeline — full SSR, hydration, and HMR.
+
+### Route Priority
+
+Project routes always take precedence over plugin routes. If both define the same path, the project's page wins:
+
+```
+src/pages/admin/products/page.jay-html   ← project wins
+plugin provides /admin/products          ← skipped
+```
+
+This lets you override any plugin page by creating a project page at the same path.
+
+See [Plugins](./plugins.md#routes) for the full `routes` field documentation.

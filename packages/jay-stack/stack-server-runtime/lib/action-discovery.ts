@@ -9,7 +9,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { createRequire } from 'node:module';
 import { ActionRegistry, actionRegistry } from './action-registry';
-import { isJayAction } from '@jay-framework/fullstack-component';
+import { isJayAction, isJayStreamAction } from '@jay-framework/fullstack-component';
 import {
     loadPluginManifest,
     PluginManifest,
@@ -123,7 +123,7 @@ export async function discoverAndRegisterActions(
                 module = await import(filePath);
             }
 
-            // Find and register all JayAction exports
+            // Find and register all JayAction/JayStreamAction exports
             for (const [exportName, exportValue] of Object.entries(module)) {
                 if (isJayAction(exportValue)) {
                     registry.register(exportValue as any);
@@ -133,6 +133,16 @@ export async function discoverAndRegisterActions(
                     if (verbose) {
                         getLogger().info(
                             `[Actions] Registered: ${(exportValue as any).actionName}`,
+                        );
+                    }
+                } else if (isJayStreamAction(exportValue)) {
+                    registry.registerStream(exportValue as any);
+                    result.actionNames.push((exportValue as any).actionName);
+                    result.actionCount++;
+
+                    if (verbose) {
+                        getLogger().info(
+                            `[Actions] Registered stream: ${(exportValue as any).actionName}`,
                         );
                     }
                 }
@@ -402,6 +412,14 @@ async function registerNpmPluginActions(
                 if (verbose) {
                     getLogger().info(`[Actions] Registered NPM plugin action: ${registeredName}`);
                 }
+            } else if (actionExport && isJayStreamAction(actionExport)) {
+                registry.registerStream(actionExport as any);
+                const registeredName = (actionExport as any).actionName;
+                registeredActions.push(registeredName);
+
+                if (verbose) {
+                    getLogger().info(`[Actions] Registered NPM plugin stream: ${registeredName}`);
+                }
             } else {
                 getLogger().warn(
                     `[Actions] NPM plugin "${packageName}" declares action "${actionName}" but it's not exported or not a JayAction`,
@@ -511,6 +529,14 @@ export async function discoverPluginActions(
 
                 if (verbose) {
                     getLogger().info(`[Actions] Registered plugin action: ${registeredName}`);
+                }
+            } else if (actionExport && isJayStreamAction(actionExport)) {
+                registry.registerStream(actionExport as any);
+                const registeredName = (actionExport as any).actionName;
+                registeredActions.push(registeredName);
+
+                if (verbose) {
+                    getLogger().info(`[Actions] Registered plugin stream: ${registeredName}`);
                 }
             } else {
                 getLogger().warn(

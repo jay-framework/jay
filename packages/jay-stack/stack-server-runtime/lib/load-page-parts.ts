@@ -63,6 +63,8 @@ export interface LoadedPageParts {
     forEachInstances: ForEachHeadlessInstance[];
     /** Absolute paths to linked CSS files (from <link rel="stylesheet">) for dev-server watching */
     linkedCssFiles: string[];
+    /** Absolute paths to headfull FS component jay-html files for dev-server watching */
+    linkedComponentFiles: string[];
 }
 
 export interface LoadPagePartsOptions {
@@ -233,6 +235,7 @@ export async function loadPageParts(
             discoveredInstances: discoveryResult.instances,
             forEachInstances: discoveryResult.forEachInstances,
             linkedCssFiles: jayHtml.linkedCssFiles ?? [],
+            linkedComponentFiles: jayHtml.linkedComponentFiles ?? [],
         };
     });
 }

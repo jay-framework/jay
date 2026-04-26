@@ -41,6 +41,11 @@ export interface JayHtmlSourceFile extends CompilerSourceFile {
      * Used by the dev server to watch these files for changes.
      */
     linkedCssFiles?: string[];
+    /**
+     * Absolute paths to headfull FS component jay-html files included by this page.
+     * Includes nested headfull components. Used by the dev server to watch for changes.
+     */
+    linkedComponentFiles?: string[];
     filename?: string;
     contract?: Contract; // The parsed contract if using contract reference
     contractRef?: string; // Path to contract file if using contract reference

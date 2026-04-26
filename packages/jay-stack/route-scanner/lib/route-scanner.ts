@@ -1,4 +1,4 @@
-import { promises as fs } from 'fs';
+import { promises as fs, existsSync } from 'fs';
 import path from 'path';
 import { parse } from 'node-html-parser';
 import YAML from 'yaml';
@@ -75,7 +75,8 @@ function convertToRoutePath(
             else return name;
         });
 
-    const compPath = jayHtmlPath.replace(jayHtmlFilename, compFilename);
+    const candidateCompPath = jayHtmlPath.replace(jayHtmlFilename, compFilename);
+    const compPath = existsSync(candidateCompPath) ? candidateCompPath : '';
     return { segments, jayHtmlPath, compPath, rawRoute };
 }
 
@@ -228,6 +229,41 @@ async function parseJayParams(
             validations: [`Failed to parse jay-params YAML: ${(e as Error).message}`],
         };
     }
+}
+
+/**
+ * Parse a route path string into segments (DL#130).
+ * Supports [param], [[optional]], [...catchAll] patterns.
+ */
+export function parseRouteSegments(routePath: string): JayRouteSegment[] {
+    return routePath
+        .split('/')
+        .filter((s) => s.length > 0)
+        .map((segment) => {
+            const match = segment.match(PARSE_PARAM);
+            if (!match) return segment;
+            return {
+                name: match[3],
+                type: match[1]
+                    ? JayRouteParamType.optional
+                    : match[2]
+                      ? JayRouteParamType.catchAll
+                      : JayRouteParamType.single,
+            } as JayRouteParam;
+        });
+}
+
+/**
+ * Create a JayRoute from explicit path and file locations (DL#130).
+ * Used for plugin-provided routes where the path is declared, not inferred from the filesystem.
+ */
+export function createRoute(routePath: string, jayHtmlPath: string, compPath: string): JayRoute {
+    return {
+        segments: parseRouteSegments(routePath),
+        rawRoute: routePath,
+        jayHtmlPath,
+        compPath,
+    };
 }
 
 export async function scanRoutes(baseDir: string, options: ScanFilesOptions): Promise<JayRoutes> {

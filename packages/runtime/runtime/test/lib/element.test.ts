@@ -144,6 +144,19 @@ describe('element', () => {
             jayElement.update({ disabled: false });
             expect((jayElement.dom as HTMLInputElement).disabled).toBe(false);
         });
+
+        it('should remove attribute from DOM when value becomes false', () => {
+            expect(jayElement.dom.hasAttribute('disabled')).toBe(true);
+            jayElement.update({ disabled: false });
+            expect(jayElement.dom.hasAttribute('disabled')).toBe(false);
+        });
+
+        it('should re-add attribute to DOM when value becomes true again', () => {
+            jayElement.update({ disabled: false });
+            expect(jayElement.dom.hasAttribute('disabled')).toBe(false);
+            jayElement.update({ disabled: true });
+            expect(jayElement.dom.hasAttribute('disabled')).toBe(true);
+        });
     });
 
     describe('dynamic classes', () => {

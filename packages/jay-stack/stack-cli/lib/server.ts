@@ -86,7 +86,7 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
 
     // Start dev server — pass httpServer so Vite's HMR WebSocket piggybacks
     // on Express's port instead of binding to the default port 24678
-    const { server, viteServer, routes } = await mkDevServer({
+    const { server, viteServer, routes, service } = await mkDevServer({
         pagesRootFolder: path.resolve(resolvedConfig.devServer.pagesBase),
         projectRootFolder: process.cwd(),
         publicBaseUrlPath: '/',
@@ -96,6 +96,82 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
     });
 
     app.use(server);
+
+    // Wire editor protocol handlers to DevServerService (DL#128)
+    const { freezeStore } = service;
+
+    editorServer.onListRoutes(async () => ({
+        type: 'listRoutes' as const,
+        success: true,
+        routes: service.listRoutes(),
+    }));
+
+    if (freezeStore) {
+        editorServer.onListFreezes(async (params) => ({
+            type: 'listFreezes' as const,
+            success: true,
+            freezes: (await freezeStore.list(params.route)).map(
+                ({ id, name, route, routePattern, createdAt }) => ({
+                    id,
+                    name,
+                    route,
+                    routePattern,
+                    createdAt,
+                }),
+            ),
+        }));
+        editorServer.onRenameFreeze(async (params) => ({
+            type: 'renameFreeze' as const,
+            success: await freezeStore.rename(params.id, params.name),
+        }));
+        editorServer.onDeleteFreeze(async (params) => ({
+            type: 'deleteFreeze' as const,
+            success: await freezeStore.delete(params.id),
+        }));
+
+        // Emit freezeChanged when jay-html or CSS changes
+        viteServer.watcher.on('change', (changedPath) => {
+            if (changedPath.endsWith('.jay-html') || changedPath.endsWith('.css')) {
+                editorServer.emitFreezeChanged();
+            }
+        });
+    }
+
+    // Route params discovery — delegates to DevServerService generator
+    editorServer.onLoadRouteParams(async (params) => {
+        const routePath = params.route;
+        try {
+            // Stream batches asynchronously, respond immediately
+            (async () => {
+                try {
+                    for await (const batch of service.loadRouteParams(routePath)) {
+                        editorServer.emitRouteParamsBatch({
+                            type: 'routeParamsBatch',
+                            route: routePath,
+                            params: batch,
+                            hasMore: true,
+                        });
+                    }
+                    editorServer.emitRouteParamsBatch({
+                        type: 'routeParamsBatch',
+                        route: routePath,
+                        params: [],
+                        hasMore: false,
+                    });
+                } catch (err: any) {
+                    editorServer.emitRouteParamsBatch({
+                        type: 'routeParamsBatch',
+                        route: routePath,
+                        params: [],
+                        hasMore: false,
+                    });
+                }
+            })();
+            return { type: 'loadRouteParams' as const, success: true };
+        } catch (err: any) {
+            return { type: 'loadRouteParams' as const, success: false, error: err.message };
+        }
+    });
 
     // Serve static files from public folder
     const publicPath = path.resolve(resolvedConfig.devServer.publicFolder);
