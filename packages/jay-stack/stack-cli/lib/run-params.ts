@@ -27,16 +27,36 @@ export async function runParams(
     let viteServer: Awaited<ReturnType<typeof createViteForCli>> | undefined;
 
     try {
-        const slashIndex = contractRef.indexOf('/');
-        if (slashIndex === -1) {
-            getLogger().error(
-                chalk.red('❌ Invalid contract reference. Use format: <plugin>/<contract>'),
-            );
-            process.exit(1);
-        }
+        // Parse plugin/contract — scoped packages use @scope/name/contract
+        let pluginName: string;
+        let contractName: string;
 
-        const pluginName = contractRef.substring(0, slashIndex);
-        const contractName = contractRef.substring(slashIndex + 1);
+        if (contractRef.startsWith('@')) {
+            // Scoped package: @scope/name/contract — split on second slash
+            const secondSlash = contractRef.indexOf('/', contractRef.indexOf('/') + 1);
+            if (secondSlash === -1) {
+                getLogger().error(
+                    chalk.red(
+                        '❌ Invalid contract reference. Use format: @scope/plugin/contract',
+                    ),
+                );
+                process.exit(1);
+            }
+            pluginName = contractRef.substring(0, secondSlash);
+            contractName = contractRef.substring(secondSlash + 1);
+        } else {
+            const slashIndex = contractRef.indexOf('/');
+            if (slashIndex === -1) {
+                getLogger().error(
+                    chalk.red(
+                        '❌ Invalid contract reference. Use format: <plugin>/<contract>',
+                    ),
+                );
+                process.exit(1);
+            }
+            pluginName = contractRef.substring(0, slashIndex);
+            contractName = contractRef.substring(slashIndex + 1);
+        }
 
         if (options.verbose) {
             getLogger().info('Starting Vite for TypeScript support...');
