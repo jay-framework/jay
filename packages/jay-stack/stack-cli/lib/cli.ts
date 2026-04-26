@@ -413,9 +413,9 @@ program
 program
     .command('params <plugin/contract>')
     .description(
-        'Discover load param values for a contract (e.g., jay-stack params wix-stores/product-page)',
+        'Discover load param values for a contract. Streams results as NDJSON (one JSON object per line) or YAML.',
     )
-    .option('--yaml', 'Output result as YAML instead of JSON')
+    .option('--yaml', 'Output as YAML instead of NDJSON')
     .option('-v, --verbose', 'Show detailed output')
     .action(async (contractRef: string, options) => {
         await runParams(contractRef, options, process.cwd(), initializeServicesForCli);

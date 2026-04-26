@@ -103,23 +103,24 @@ export async function runParams(
         const { resolveServices } = await import('@jay-framework/stack-server-runtime');
         const resolvedServices = resolveServices(component.services || []);
 
-        // Run loadParams generator
-        const allParams: Record<string, string>[] = [];
+        // Run loadParams generator — stream each batch as it arrives
         const paramsGenerator = component.loadParams(resolvedServices);
+        let total = 0;
 
         for await (const batch of paramsGenerator) {
-            allParams.push(...batch);
-        }
-
-        if (options.yaml) {
-            getLogger().important(YAML.stringify(allParams));
-        } else {
-            getLogger().important(JSON.stringify(allParams, null, 2));
+            for (const params of batch) {
+                if (options.yaml) {
+                    getLogger().important(YAML.stringify([params]).trimEnd());
+                } else {
+                    getLogger().important(JSON.stringify(params));
+                }
+                total++;
+            }
         }
 
         if (!options.yaml) {
             getLogger().important(
-                chalk.green(`\n✅ Found ${allParams.length} param combination(s)`),
+                chalk.green(`\n✅ Found ${total} param combination(s)`),
             );
         }
     } catch (error: any) {
