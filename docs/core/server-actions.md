@@ -271,6 +271,20 @@ refs.uploadBtn.onclick(async () => {
 
 The framework automatically sends `FormData` when the input contains `File` or `Blob` values, and falls back to JSON otherwise.
 
+**File fields must be top-level properties.** Files nested inside objects or arrays of objects are not supported. This works:
+
+```typescript
+// Supported: files at top level
+{ caption: string; photo: JayFile; images: JayFile[] }
+
+// Supported: dynamic file fields via index signature
+{ notes: string; [key: string]: string | JayFile | undefined }
+
+// NOT supported: files inside nested objects
+{ meta: { photo: JayFile } }
+{ items: Array<{ name: string; file: JayFile }> }
+```
+
 In `.jay-action` metadata files, use the `file` type:
 
 ```yaml
@@ -280,6 +294,14 @@ inputSchema:
   caption: string
   photo: file
   attachments?: file[]
+```
+
+For dynamic file fields, use `record(file)`:
+
+```yaml
+inputSchema:
+  notes: string
+  files: record(file)
 ```
 
 ## Error Handling

@@ -88,6 +88,14 @@ Use an array type for the field — files with the same field name are grouped:
 });
 ```
 
+**File fields must be top-level properties** — not nested inside objects. Dynamic file fields via index signatures are supported:
+
+```typescript
+{ notes: string; screenshot: JayFile; extras: JayFile[] }           // OK
+{ notes: string; [key: string]: string | JayFile | undefined }      // OK
+{ meta: { photo: JayFile } }                                        // NOT supported
+```
+
 ### Streaming with files
 
 `makeJayStream` also supports `.withFiles()`:
@@ -263,6 +271,18 @@ outputSchema:
   fileId: string
   message: string
 ```
+
+For dynamic file fields, use `record(file)`:
+
+```yaml
+name: submitTask
+description: Submit task with named file attachments
+inputSchema:
+  notes: string
+  files: record(file)
+```
+
+This generates `files: Record<string, JayFile>`.
 
 ## Type Helpers
 
