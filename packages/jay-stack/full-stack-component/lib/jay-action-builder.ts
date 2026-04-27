@@ -21,8 +21,13 @@ declare global {
 // ============================================================================
 
 /**
- * A file received by a multipart action handler.
- * Files are written to a temp directory and cleaned up after the handler returns.
+ * Represents a file in a Jay action.
+ *
+ * On the **client**, browser `File` and `Blob` objects are assignable to this type
+ * (they have `name`, `type`, `size`). The framework converts them to FormData automatically.
+ *
+ * On the **server**, the framework populates `path` with a temp file location.
+ * The temp file is cleaned up after the handler returns.
  */
 export interface JayFile {
     /** Original filename */
@@ -31,8 +36,8 @@ export interface JayFile {
     type: string;
     /** File size in bytes */
     size: number;
-    /** Absolute path to the temp file on disk */
-    path: string;
+    /** Absolute path to the temp file on disk (server-side only, always present in handlers) */
+    path?: string;
 }
 
 /**

@@ -43,7 +43,7 @@ function uploadPageConstructor(
         try {
             const result = await uploadProductImage({
                 productName: productName || 'Unnamed',
-                image: file as any,
+                image: file,
             });
             setUploadResult(result.message);
         } catch (err: any) {
@@ -72,7 +72,7 @@ function uploadPageConstructor(
         try {
             for await (const chunk of processImages({
                 label: label || 'Untitled',
-                images: files as any[],
+                images: files,
             })) {
                 setStreamLog((prev) => prev + JSON.stringify(chunk) + '\n');
             }

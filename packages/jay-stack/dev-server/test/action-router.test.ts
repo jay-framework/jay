@@ -421,7 +421,7 @@ describe('Action Router', () => {
                 .withHandler(async (input: { notes: string; screenshot: JayFile }) => {
                     receivedInput = input;
                     // Verify the temp file exists and has content
-                    const content = fs.readFileSync(input.screenshot.path, 'utf-8');
+                    const content = fs.readFileSync(input.screenshot.path!, 'utf-8');
                     return { content, notes: input.notes };
                 });
 
@@ -466,7 +466,7 @@ describe('Action Router', () => {
             expect(receivedInput.screenshot.size).toBe(fileContent.length);
 
             // Verify temp files are cleaned up
-            expect(fs.existsSync(receivedInput.screenshot.path)).toBe(false);
+            expect(fs.existsSync(receivedInput.screenshot.path!)).toBe(false);
         });
 
         it('should reject multipart for actions without withFiles', async () => {
@@ -524,7 +524,7 @@ describe('Action Router', () => {
             const stream = makeJayStream('test.streamUpload')
                 .withFiles()
                 .withHandler(async function* (input: { label: string; file: JayFile }) {
-                    const content = fs.readFileSync(input.file.path, 'utf-8');
+                    const content = fs.readFileSync(input.file.path!, 'utf-8');
                     yield { step: 'received', filename: input.file.name };
                     yield { step: 'processed', content };
                 });
