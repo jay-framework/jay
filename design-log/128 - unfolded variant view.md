@@ -347,3 +347,38 @@ This fires once per page load — every time the iframe navigates to a new page,
 - `routePattern` is the same literal already baked in for freeze entries — no new plumbing needed
 - Fires synchronously on script execution (not deferred) so the parent knows the route before any user interaction
 - On client-side SPA navigation within the iframe, the message only fires on full page loads (script re-execution). If SPA navigation is added later, a separate mechanism would be needed
+
+## Addendum: Targeted page reload for iframe coexistence
+
+### Problem
+
+When the AIditor loads a preview page in a same-origin iframe, Vite's `full-reload` HMR signal reloads **all** connected pages — including the AIditor itself. Editing a product page's jay-html causes the AIditor to lose all state.
+
+### Design
+
+Replace untargeted `vite.ws.send({ type: 'full-reload' })` with a custom HMR event that carries a route prefix. The client-side listener (injected in every page's module script) only reloads if `location.pathname` matches.
+
+**Server:** `sendPageReload(vite, jayHtmlPath, pagesRootFolder)` derives a static route prefix by stripping dynamic segments (`[param]`, `[[param]]`) from the jay-html directory path. Sends:
+
+```js
+vite.ws.send({ type: 'custom', event: 'jay:page-reload', data: { routePrefix: '/products/kitan' } })
+```
+
+**Client:** `import.meta.hot.on('jay:page-reload')` checks `location.pathname` against the prefix. Only reloads if the current page is under that prefix.
+
+### What uses targeted vs global reload
+
+| Trigger | Reload type | Reason |
+| --- | --- | --- |
+| `.jay-html` change | Targeted (route prefix) | Only affects that page's route |
+| `page.ts` change | Targeted (route prefix) | Only affects that page's route |
+| `.jay-contract` change | Targeted (route prefix) | Only affects that page's route |
+| `init.ts` change | Global (`path: '*'`) | Services affect all pages |
+| Linked CSS/component change | Global (`full-reload`) | Shared files may affect multiple pages |
+
+### Files changed
+
+| File | Change |
+| --- | --- |
+| `dev-server/lib/dev-server.ts` | `getRoutePrefix()`, `sendPageReload()`; 3 page-specific reload calls switched to custom event |
+| `stack-server-runtime/lib/generate-client-script.ts` | `import.meta.hot.on('jay:page-reload')` listener in freeze script |

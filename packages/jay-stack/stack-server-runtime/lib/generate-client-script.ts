@@ -230,6 +230,17 @@ function buildFreezeScript(routePattern?: string): string {
             __jayDoFreeze();
           }
         });
+      }
+
+      // Targeted page reload: only reload if this page matches the changed route prefix
+      if (import.meta.hot) {
+        import.meta.hot.on('jay:page-reload', (data) => {
+          const prefix = data.routePrefix;
+          const pathname = window.location.pathname;
+          if (pathname === prefix || pathname.startsWith(prefix + '/')) {
+            window.location.reload();
+          }
+        });
       }`;
 }
 

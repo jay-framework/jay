@@ -1452,6 +1452,36 @@ function setupFreezeEndpoint(vite: ViteDevServer, freezeStore: FreezeStore): voi
  * When jay-html, page.ts, or contract files change, the cached pre-rendered
  * jay-html is invalidated (deleted from disk) so it will be regenerated on the next request.
  */
+/**
+ * Derive a route prefix from a jay-html file path for targeted reload.
+ * Strips dynamic segments ([param], [[param]]) to get the static prefix.
+ * Example: src/pages/products/kitan/[[category]]/page.jay-html → /products/kitan
+ */
+function getRoutePrefix(jayHtmlPath: string, pagesRootFolder: string): string {
+    const rel = path.relative(pagesRootFolder, path.dirname(jayHtmlPath));
+    const segments = rel.split(path.sep).filter(Boolean);
+    // Keep segments up to (but not including) the first dynamic one
+    const staticSegments: string[] = [];
+    for (const seg of segments) {
+        if (seg.startsWith('[')) break;
+        staticSegments.push(seg);
+    }
+    return '/' + staticSegments.join('/');
+}
+
+/**
+ * Send a targeted page reload via Vite custom HMR event.
+ * Only pages whose pathname starts with the route prefix will reload.
+ */
+function sendPageReload(vite: ViteDevServer, jayHtmlPath: string, pagesRootFolder: string): void {
+    const routePrefix = getRoutePrefix(jayHtmlPath, pagesRootFolder);
+    vite.ws.send({
+        type: 'custom',
+        event: 'jay:page-reload',
+        data: { routePrefix },
+    });
+}
+
 function setupSlowRenderCacheInvalidation(
     vite: ViteDevServer,
     cache: SlowRenderCache,
@@ -1497,7 +1527,7 @@ function setupSlowRenderCacheInvalidation(
             clearServerElementCache();
             cache.clear().then(() => {
                 getLogger().info(`[SlowRender] Cache cleared (jay-html changed: ${changedPath})`);
-                vite.ws.send({ type: 'full-reload' });
+                sendPageReload(vite, changedPath, pagesRootFolder);
             });
             return;
         }
@@ -1517,7 +1547,7 @@ function setupSlowRenderCacheInvalidation(
                 getLogger().info(
                     `[SlowRender] Cache invalidated for ${jayHtmlPath} (page.ts changed)`,
                 );
-                vite.ws.send({ type: 'full-reload' });
+                sendPageReload(vite, jayHtmlPath, pagesRootFolder);
             });
             return;
         }
@@ -1531,7 +1561,7 @@ function setupSlowRenderCacheInvalidation(
                 getLogger().info(
                     `[SlowRender] Cache invalidated for ${jayHtmlPath} (contract changed)`,
                 );
-                vite.ws.send({ type: 'full-reload' });
+                sendPageReload(vite, jayHtmlPath, pagesRootFolder);
             });
             return;
         }
