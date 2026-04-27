@@ -22,18 +22,31 @@ function uploadPageConstructor(
     const [uploadResult, setUploadResult] = createSignal('');
     const [streamLog, setStreamLog] = createSignal('');
 
+    // Signals driven by input events
+    const [productName, setProductName] = createSignal('');
+    const [selectedFile, setSelectedFile] = createSignal<File | undefined>(undefined);
+    const [selectedFiles, setSelectedFiles] = createSignal<File[]>([]);
+    const [streamLabel, setStreamLabel] = createSignal('');
+
+    refs.productName.oninput(({event}) => {
+        setProductName((event.target as HTMLInputElement).value);
+    });
+
+    refs.fileInput.oninput(({event}) => {
+        setSelectedFile((event.target as HTMLInputElement).files?.[0]);
+    });
+
+    refs.streamLabel.oninput(({event}) => {
+        setStreamLabel((event.target as HTMLInputElement).value);
+    });
+
+    refs.multiFileInput.oninput(({event}) => {
+        setSelectedFiles(Array.from((event.target as HTMLInputElement).files || []));
+    });
+
     // Single file upload
     refs.uploadBtn.onclick(async () => {
-        let file: File | undefined;
-        let productName = '';
-
-        refs.fileInput.exec$((el) => {
-            file = (el as HTMLInputElement).files?.[0];
-        });
-        refs.productName.exec$((el) => {
-            productName = (el as HTMLInputElement).value;
-        });
-
+        const file = selectedFile();
         if (!file) {
             setUploadResult('Please select a file first.');
             return;
@@ -42,7 +55,7 @@ function uploadPageConstructor(
         setUploadResult('Uploading...');
         try {
             const result = await uploadProductImage({
-                productName: productName || 'Unnamed',
+                productName: productName() || 'Unnamed',
                 image: file,
             });
             setUploadResult(result.message);
@@ -53,16 +66,7 @@ function uploadPageConstructor(
 
     // Streaming multi-file upload
     refs.streamBtn.onclick(async () => {
-        let files: File[] = [];
-        let label = '';
-
-        refs.multiFileInput.exec$((el) => {
-            files = Array.from((el as HTMLInputElement).files || []);
-        });
-        refs.streamLabel.exec$((el) => {
-            label = (el as HTMLInputElement).value;
-        });
-
+        const files = selectedFiles();
         if (files.length === 0) {
             setStreamLog('Please select files first.');
             return;
@@ -71,7 +75,7 @@ function uploadPageConstructor(
         setStreamLog('Starting...\n');
         try {
             for await (const chunk of processImages({
-                label: label || 'Untitled',
+                label: streamLabel() || 'Untitled',
                 images: files,
             })) {
                 setStreamLog((prev) => prev + JSON.stringify(chunk) + '\n');
