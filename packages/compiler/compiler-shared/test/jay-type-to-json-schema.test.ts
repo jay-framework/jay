@@ -24,6 +24,13 @@ describe('jayTypeToJsonSchema', () => {
         expect(jayTypeToJsonSchema(new JayAtomicType('boolean'))).toEqual({ type: 'boolean' });
     });
 
+    it('should convert file atomic type', () => {
+        expect(jayTypeToJsonSchema(new JayAtomicType('file'))).toEqual({
+            type: 'string',
+            description: 'Binary file upload (JayFile)',
+        });
+    });
+
     it('should convert enum type', () => {
         expect(jayTypeToJsonSchema(new JayEnumType('status', ['active', 'inactive']))).toEqual({
             type: 'string',

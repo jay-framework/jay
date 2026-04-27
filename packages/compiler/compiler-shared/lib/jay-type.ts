@@ -29,6 +29,7 @@ export const JayString = new JayAtomicType('string');
 export const JayNumber = new JayAtomicType('number');
 export const JayBoolean = new JayAtomicType('boolean');
 export const JayDate = new JayAtomicType('Date');
+export const JayFileType = new JayAtomicType('file');
 export const JayUnknown = new JayAtomicType('Unknown');
 
 const typesMap = {
@@ -36,6 +37,7 @@ const typesMap = {
     number: JayNumber,
     boolean: JayBoolean,
     date: JayDate,
+    file: JayFileType,
 };
 
 export function resolvePrimitiveType(typeName: string): JayType {

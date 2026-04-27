@@ -325,4 +325,24 @@ outputSchema:
         );
         expect(result.val).toContain('products: Array<MyProductCard>;');
     });
+
+    it('should render file type as JayFile with import', () => {
+        const yaml = `
+name: uploadPhoto
+description: Upload a product photo
+inputSchema:
+  caption: string
+  photo: file
+  attachments: file[]
+`;
+        const result = compile(yaml);
+        expect(result).toEqual(
+            `import { JayFile } from '@jay-framework/fullstack-component';\n\n` +
+                `export interface UploadPhotoInput {\n` +
+                `  caption: string;\n` +
+                `  photo: JayFile;\n` +
+                `  attachments: Array<JayFile>;\n` +
+                `}`,
+        );
+    });
 });

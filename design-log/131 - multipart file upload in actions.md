@@ -221,12 +221,14 @@ Update the compiler's client-side action replacement to pass `acceptsFiles` flag
 ### Tests — 16/16 passing (action-router), 28/28 passing (transform)
 
 4 new e2e tests in `dev-server/test/action-router.test.ts`:
+
 - File upload with JayFile — handler receives temp path, reads content, temp cleaned up after
 - Reject multipart on non-file actions — 400 FILES_NOT_ACCEPTED
 - JSON fallback on file actions — withFiles() actions still accept JSON
 - Streaming action with file upload — multipart in, NDJSON out
 
 4 new unit tests in `compiler-jay-stack/test/transform-action-imports.test.ts`:
+
 - Extract withFiles flag from makeJayAction
 - Extract withFiles flag from makeJayStream
 - Transform withFiles action to createActionCaller with acceptsFiles option
@@ -242,15 +244,15 @@ Update the compiler's client-side action replacement to pass `acceptsFiles` flag
 
 ### Files changed
 
-| File | Change |
-| --- | --- |
-| `full-stack-component/lib/jay-action-builder.ts` | `JayFile`, `FileUploadOptions` types; `.withFiles()` on both builders; `acceptsFiles`/`fileOptions` on definitions |
-| `stack-server-runtime/lib/action-registry.ts` | `acceptsFiles` on `RegisteredActionBase`; carried in `register()`/`registerStream()` |
-| `dev-server/lib/action-router.ts` | `parseMultipart()` with busboy; `cleanupTempDir()`; multipart detection in body parser; temp cleanup in router |
-| `dev-server/package.json` | Added `busboy` + `@types/busboy` dependencies |
-| `stack-client-runtime/lib/action-caller.ts` | `buildFormData()`, `hasFiles()`; `acceptsFiles` option on both callers |
-| `compiler-jay-stack/lib/transform-action-imports.ts` | `.withFiles()` detection in builder chain; `acceptsFiles` on `ActionMetadata` |
-| `compiler-jay-stack/lib/index.ts` | `acceptsFiles` in virtual module generation |
-| `agent-kit-template/plugin/actions-guide.md` | Documentation for `.withFiles()`, `JayFile`, `FileUploadOptions` |
-| `examples/jay-stack/fake-shop/src/actions/upload.actions.ts` | Example upload + streaming upload actions |
-| `examples/jay-stack/fake-shop/src/pages/upload/` | Example upload page (contract, jay-html, page.ts) |
+| File                                                         | Change                                                                                                             |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| `full-stack-component/lib/jay-action-builder.ts`             | `JayFile`, `FileUploadOptions` types; `.withFiles()` on both builders; `acceptsFiles`/`fileOptions` on definitions |
+| `stack-server-runtime/lib/action-registry.ts`                | `acceptsFiles` on `RegisteredActionBase`; carried in `register()`/`registerStream()`                               |
+| `dev-server/lib/action-router.ts`                            | `parseMultipart()` with busboy; `cleanupTempDir()`; multipart detection in body parser; temp cleanup in router     |
+| `dev-server/package.json`                                    | Added `busboy` + `@types/busboy` dependencies                                                                      |
+| `stack-client-runtime/lib/action-caller.ts`                  | `buildFormData()`, `hasFiles()`; `acceptsFiles` option on both callers                                             |
+| `compiler-jay-stack/lib/transform-action-imports.ts`         | `.withFiles()` detection in builder chain; `acceptsFiles` on `ActionMetadata`                                      |
+| `compiler-jay-stack/lib/index.ts`                            | `acceptsFiles` in virtual module generation                                                                        |
+| `agent-kit-template/plugin/actions-guide.md`                 | Documentation for `.withFiles()`, `JayFile`, `FileUploadOptions`                                                   |
+| `examples/jay-stack/fake-shop/src/actions/upload.actions.ts` | Example upload + streaming upload actions                                                                          |
+| `examples/jay-stack/fake-shop/src/pages/upload/`             | Example upload page (contract, jay-html, page.ts)                                                                  |

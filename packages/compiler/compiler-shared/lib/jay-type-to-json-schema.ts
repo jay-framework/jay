@@ -42,6 +42,9 @@ export function jayTypeToJsonSchema(type: JayType): JsonSchemaProperty | null {
         if (name === 'string' || name === 'number' || name === 'boolean') {
             return { type: name };
         }
+        if (name === 'file') {
+            return { type: 'string', description: 'Binary file upload (JayFile)' };
+        }
         // Unknown atomic (e.g., Date) — fall back to string
         return { type: 'string' };
     }

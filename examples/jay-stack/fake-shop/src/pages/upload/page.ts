@@ -28,19 +28,19 @@ function uploadPageConstructor(
     const [selectedFiles, setSelectedFiles] = createSignal<File[]>([]);
     const [streamLabel, setStreamLabel] = createSignal('');
 
-    refs.productName.oninput(({event}) => {
+    refs.productName.oninput(({ event }) => {
         setProductName((event.target as HTMLInputElement).value);
     });
 
-    refs.fileInput.oninput(({event}) => {
+    refs.fileInput.oninput(({ event }) => {
         setSelectedFile((event.target as HTMLInputElement).files?.[0]);
     });
 
-    refs.streamLabel.oninput(({event}) => {
+    refs.streamLabel.oninput(({ event }) => {
         setStreamLabel((event.target as HTMLInputElement).value);
     });
 
-    refs.multiFileInput.oninput(({event}) => {
+    refs.multiFileInput.oninput(({ event }) => {
         setSelectedFiles(Array.from((event.target as HTMLInputElement).files || []));
     });
 

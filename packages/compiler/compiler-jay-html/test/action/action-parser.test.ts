@@ -330,6 +330,29 @@ outputSchema:
         expect((inner as JayRecordType).itemType.name).toBe('boolean');
     });
 
+    it('should parse file type in input schema', () => {
+        const yaml = `
+name: uploadPhoto
+description: Upload a product photo
+inputSchema:
+  caption: string
+  photo: file
+  attachments?: file[]
+`;
+        const result = parseAction(yaml, 'upload.jay-action');
+
+        expect(result.validations).toEqual([]);
+        const input = result.val!.inputType;
+        expect(isAtomicType(input.props.caption)).toBe(true);
+        expect(input.props.caption.name).toBe('string');
+        expect(isAtomicType(input.props.photo)).toBe(true);
+        expect(input.props.photo.name).toBe('file');
+        expect(isOptionalType(input.props.attachments)).toBe(true);
+        const inner = (input.props.attachments as JayOptionalType).innerType;
+        expect(isArrayType(inner)).toBe(true);
+        expect((inner as JayArrayType).itemType.name).toBe('file');
+    });
+
     it('should throw on malformed YAML', () => {
         expect(() => parseAction('{{invalid yaml', 'bad.jay-action')).toThrow();
     });

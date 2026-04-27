@@ -223,6 +223,65 @@ export const getCategories = makeJayQuery('products.categories')
   });
 ```
 
+### `.withFiles(options?)`
+
+Enable multipart file uploads. The handler receives `JayFile` objects with temp file paths:
+
+```typescript
+import { makeJayAction, type JayFile } from '@jay-framework/fullstack-component';
+
+export const uploadPhoto = makeJayAction('photos.upload')
+  .withFiles({ maxFileSize: 5 * 1024 * 1024 }) // 5MB limit
+  .withHandler(async (input: { caption: string; photo: JayFile }) => {
+    // JayFile: { name, type, size, path? }
+    // path is always present on the server (temp file, cleaned up after handler returns)
+    console.log(`Received ${input.photo.name} (${input.photo.size} bytes)`);
+    return { success: true };
+  });
+```
+
+Options:
+
+| Option        | Default | Description         |
+| ------------- | ------- | ------------------- |
+| `maxFileSize` | 10MB    | Max bytes per file  |
+| `maxFiles`    | 10      | Max number of files |
+
+Works with `makeJayStream` too — upload files and stream back results:
+
+```typescript
+export const processImages = makeJayStream('images.process')
+  .withFiles()
+  .withHandler(async function* (input: { images: JayFile[] }) {
+    for (const img of input.images) {
+      yield { step: 'processing', fileName: img.name };
+    }
+    yield { step: 'done' };
+  });
+```
+
+On the client, browser `File` objects are assignable to `JayFile` — no casting needed:
+
+```typescript
+refs.uploadBtn.onclick(async () => {
+  const file = selectedFile(); // File from <input type="file">
+  await uploadPhoto({ caption: 'My photo', photo: file });
+});
+```
+
+The framework automatically sends `FormData` when the input contains `File` or `Blob` values, and falls back to JSON otherwise.
+
+In `.jay-action` metadata files, use the `file` type:
+
+```yaml
+name: uploadPhoto
+description: Upload a product photo
+inputSchema:
+  caption: string
+  photo: file
+  attachments?: file[]
+```
+
 ## Error Handling
 
 ### ActionError (Business Logic Errors)
@@ -557,6 +616,7 @@ outputSchema:
 | Notation                      | Meaning                  | Example                      |
 | ----------------------------- | ------------------------ | ---------------------------- |
 | `string`, `number`, `boolean` | Primitives               | `name: string`               |
+| `file`                        | File upload (`JayFile`)  | `photo: file`                |
 | `enum(a \| b \| c)`           | Enum type                | `sortBy?: enum(asc \| desc)` |
 | `propName?:`                  | Optional property        | `filters?: ...`              |
 | `type[]`                      | Array shorthand          | `ids: string[]`              |

@@ -65,6 +65,18 @@ function collectImportedAliases(type: JayType, aliases: Set<string>): void {
     }
 }
 
+/**
+ * Checks if a JayType tree contains any `file` atomic type.
+ */
+function containsFileType(type: JayType): boolean {
+    if (isAtomicType(type)) return type.name === 'file';
+    if (isOptionalType(type)) return containsFileType(type.innerType);
+    if (isArrayType(type)) return containsFileType(type.itemType);
+    if (isRecordType(type)) return containsFileType(type.itemType);
+    if (isObjectType(type)) return Object.values(type.props).some(containsFileType);
+    return false;
+}
+
 // ============================================================================
 // Type rendering (JayType → TypeScript)
 // ============================================================================
@@ -79,6 +91,7 @@ function renderType(type: JayType, aliasToViewState: Map<string, string>, indent
     }
 
     if (isAtomicType(type)) {
+        if (type.name === 'file') return 'JayFile';
         return type.name;
     }
 
@@ -203,6 +216,14 @@ export function compileAction(
             importStatements.push(
                 `import { ${resolved.viewStateName} } from '${resolved.importPath}';`,
             );
+        }
+
+        // Add JayFile import if file type is used (DL#131)
+        const usesFileType =
+            containsFileType(action.inputType) ||
+            (action.outputType && containsFileType(action.outputType));
+        if (usesFileType) {
+            importStatements.push(`import { JayFile } from '@jay-framework/fullstack-component';`);
         }
 
         if (importStatements.length > 0) {

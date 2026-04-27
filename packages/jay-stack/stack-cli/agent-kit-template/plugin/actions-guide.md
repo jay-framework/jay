@@ -69,10 +69,10 @@ export const uploadPhoto = makeJayAction('photos.upload')
 
 ```typescript
 interface JayFile {
-  name: string;  // Original filename
-  type: string;  // MIME type (e.g., 'image/png')
-  size: number;  // File size in bytes
-  path: string;  // Absolute path to temp file on disk
+  name: string; // Original filename
+  type: string; // MIME type (e.g., 'image/png')
+  size: number; // File size in bytes
+  path: string; // Absolute path to temp file on disk
 }
 ```
 
@@ -109,9 +109,9 @@ The client automatically sends `FormData` when `File` or `Blob` objects are pres
 
 ```typescript
 refs.uploadBtn.onClick(async () => {
-    const fileInput = refs.fileInput.element as HTMLInputElement;
-    const file = fileInput.files?.[0];
-    const result = await uploadPhoto({ caption: 'My photo', photo: file });
+  const fileInput = refs.fileInput.element as HTMLInputElement;
+  const file = fileInput.files?.[0];
+  const result = await uploadPhoto({ caption: 'My photo', photo: file });
 });
 ```
 
@@ -188,6 +188,8 @@ outputSchema:
 | `prop: string`            | Required string           |
 | `prop?: number`           | Optional number           |
 | `prop: boolean`           | Required boolean          |
+| `prop: file`              | File upload (`JayFile`)   |
+| `prop: file[]`            | Multiple file uploads     |
 | `prop: enum(a \| b \| c)` | Required enum             |
 | `prop:` + nested block    | Nested object             |
 | `prop:` + `- child: type` | Array of objects          |
@@ -244,6 +246,22 @@ inputSchema:
   route: string
 outputSchema:
   - slug: string
+```
+
+### .jay-action for file uploads
+
+Use `file` type for upload fields. The generated TypeScript uses `JayFile`:
+
+```yaml
+name: uploadPhoto
+description: Upload a product photo with caption
+inputSchema:
+  caption: string
+  photo: file
+  attachments?: file[]
+outputSchema:
+  fileId: string
+  message: string
 ```
 
 ## Type Helpers
