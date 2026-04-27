@@ -81,6 +81,37 @@ export const page = makeJayStackComponent<ProductPageContract>()
   });
 ```
 
+## Calling File Upload Actions
+
+Actions created with `.withFiles()` accept browser `File` objects directly. Use `oninput` events on file inputs to drive signals, then pass them to the action:
+
+```typescript
+import { createSignal } from '@jay-framework/component';
+import { uploadPhoto } from '../actions/upload.actions';
+
+.withInteractive(function UploadPage(props, refs, fastViewState) {
+    const [result, setResult] = createSignal('');
+    const [selectedFile, setSelectedFile] = createSignal<File | undefined>(undefined);
+
+    refs.fileInput.oninput(({ event }) => {
+        setSelectedFile((event.target as HTMLInputElement).files?.[0]);
+    });
+
+    refs.uploadBtn.onclick(async () => {
+        const file = selectedFile();
+        if (!file) return;
+        const res = await uploadPhoto({ caption: 'My photo', photo: file });
+        setResult(res.message);
+    });
+
+    return {
+        render: () => ({ result: result() }),
+    };
+})
+```
+
+No casting needed — browser `File` is assignable to `JayFile`.
+
 ## Combining with Headless Plugins
 
 A page component handles page-level data. Plugin headless components handle their own data independently. Both render into the same page:
