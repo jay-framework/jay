@@ -80,6 +80,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 63  | jay-stack server actions                       | RPC-style server actions: `makeJayAction`, `makeJayQuery`, action registry |
 | 82  | automatic server-side action service injection | Auto-inject services when actions called from server code                  |
 | 129 | streaming actions                              | `makeJayStream` with `AsyncGenerator` handlers, SSE transport              |
+| 131 | multipart file upload in actions               | `withFiles()` opt-in for binary uploads via FormData, `JayFile` temp paths |
 
 ---
 

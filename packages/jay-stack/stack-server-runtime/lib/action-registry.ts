@@ -34,6 +34,8 @@ export interface RegisteredActionBase {
     /** Optional metadata from .jay-action file (description, input/output schemas).
      *  Actions with metadata are exposed to AI agents; those without are not. */
     metadata?: ActionMetadata;
+    /** Whether this action accepts file uploads (DL#131) */
+    acceptsFiles?: boolean;
 }
 
 /**
@@ -116,6 +118,7 @@ export class ActionRegistry {
             cacheOptions: action.cacheOptions,
             services: action.services as any[],
             handler: action.handler,
+            ...(action.acceptsFiles && { acceptsFiles: true }),
         };
 
         this.actions.set(action.actionName, entry);
@@ -302,6 +305,7 @@ export class ActionRegistry {
             isStreaming: true,
             services: action.services as any[],
             handler: action.handler,
+            ...(action.acceptsFiles && { acceptsFiles: true }),
         };
         this.actions.set(action.actionName, entry);
     }

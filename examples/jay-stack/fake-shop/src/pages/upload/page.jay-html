@@ -1,0 +1,47 @@
+<html>
+  <head>
+    <style>
+      .upload-page { max-width: 600px; margin: 40px auto; font-family: sans-serif; }
+      .section { margin: 30px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+      .section h2 { margin-top: 0; }
+      .form-row { margin: 10px 0; }
+      .form-row label { display: block; font-weight: bold; margin-bottom: 4px; }
+      .result { margin-top: 15px; padding: 10px; background: #f0f8ff; border-radius: 4px; white-space: pre-wrap; font-family: monospace; font-size: 13px; }
+      button { padding: 8px 16px; cursor: pointer; }
+    </style>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
+  </head>
+  <body>
+    <div class="upload-page">
+      <h1>File Upload Demo (DL#131)</h1>
+
+      <div class="section">
+        <h2>Single File Upload</h2>
+        <div class="form-row">
+          <label>Product Name</label>
+          <input ref="productName" type="text" placeholder="e.g. Ceramic Vase" />
+        </div>
+        <div class="form-row">
+          <label>Product Image</label>
+          <input ref="fileInput" type="file" accept="image/*" />
+        </div>
+        <button ref="uploadBtn">Upload</button>
+        <div class="result" if="uploadResult">{uploadResult}</div>
+      </div>
+
+      <div class="section">
+        <h2>Streaming Multi-File Upload</h2>
+        <div class="form-row">
+          <label>Label</label>
+          <input ref="streamLabel" type="text" placeholder="e.g. Spring Collection" />
+        </div>
+        <div class="form-row">
+          <label>Images</label>
+          <input ref="multiFileInput" type="file" accept="image/*" multiple />
+        </div>
+        <button ref="streamBtn">Upload &amp; Process</button>
+        <div class="result" if="streamLog">{streamLog}</div>
+      </div>
+    </div>
+  </body>
+</html>

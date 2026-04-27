@@ -1,0 +1,43 @@
+name: Page
+tags:
+  - tag: uploadResult
+    type: data
+    dataType: string
+    phase: fast+interactive
+    description: Result message from last upload
+
+  - tag: streamLog
+    type: data
+    dataType: string
+    phase: fast+interactive
+    description: Streaming processing log
+
+  - tag: fileInput
+    type: interactive
+    elementType: HTMLInputElement
+    description: File input element
+
+  - tag: productName
+    type: interactive
+    elementType: HTMLInputElement
+    description: Product name text input
+
+  - tag: uploadBtn
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Upload button
+
+  - tag: multiFileInput
+    type: interactive
+    elementType: HTMLInputElement
+    description: Multiple file input for streaming demo
+
+  - tag: streamLabel
+    type: interactive
+    elementType: HTMLInputElement
+    description: Label input for streaming demo
+
+  - tag: streamBtn
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Stream upload button

@@ -32,6 +32,8 @@ export interface ActionMetadata {
     exportName: string;
     /** Whether this is a streaming action (makeJayStream) */
     isStreaming?: boolean;
+    /** Whether this action accepts file uploads (DL#131) */
+    acceptsFiles?: boolean;
 }
 
 /**
@@ -164,6 +166,7 @@ function extractActionFromExpression(
     let current: ts.Expression = node;
     let method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'POST';
     let explicitMethod: string | null = null;
+    let acceptsFiles = false;
 
     while (tsBridge.isCallExpression(current)) {
         const expr = current.expression;
@@ -174,6 +177,13 @@ function extractActionFromExpression(
             if (arg && tsBridge.isStringLiteral(arg)) {
                 explicitMethod = arg.text;
             }
+            current = expr.expression;
+            continue;
+        }
+
+        // Check for .withFiles() (DL#131)
+        if (tsBridge.isPropertyAccessExpression(expr) && expr.name.text === 'withFiles') {
+            acceptsFiles = true;
             current = expr.expression;
             continue;
         }
@@ -203,6 +213,7 @@ function extractActionFromExpression(
                             actionName: nameArg.text,
                             method: 'POST',
                             isStreaming: true,
+                            ...(acceptsFiles && { acceptsFiles: true }),
                         };
                     }
 
@@ -217,6 +228,7 @@ function extractActionFromExpression(
                     return {
                         actionName: nameArg.text,
                         method,
+                        ...(acceptsFiles && { acceptsFiles: true }),
                     };
                 }
             }
@@ -339,14 +351,15 @@ export async function transformActionImports(
         for (const importName of imp.namedImports) {
             const action = actions.find((a) => a.exportName === importName);
             if (action) {
+                const filesOpt = action.acceptsFiles ? ', { acceptsFiles: true }' : '';
                 if (action.isStreaming) {
                     callerDeclarations.push(
-                        `const ${importName} = createStreamCaller('${action.actionName}');`,
+                        `const ${importName} = createStreamCaller('${action.actionName}'${filesOpt});`,
                     );
                     needsCreateStreamCallerImport = true;
                 } else {
                     callerDeclarations.push(
-                        `const ${importName} = createActionCaller('${action.actionName}', '${action.method}');`,
+                        `const ${importName} = createActionCaller('${action.actionName}', '${action.method}'${filesOpt});`,
                     );
                     needsCreateActionCallerImport = true;
                 }

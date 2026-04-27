@@ -7,8 +7,12 @@
 
 import { Request, Response, RequestHandler } from 'express';
 import { ActionRegistry, actionRegistry } from '@jay-framework/stack-server-runtime';
-import type { HttpMethod } from '@jay-framework/fullstack-component';
+import type { HttpMethod, JayFile } from '@jay-framework/fullstack-component';
 import { getDevLogger } from '@jay-framework/logger';
+import Busboy from 'busboy';
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
 
 /**
  * The base path for action endpoints.
@@ -131,6 +135,12 @@ export function createActionRouter(options?: ActionRouterOptions): RequestHandle
             ACTION_ENDPOINT_BASE + '/' + actionName,
         );
 
+        // Temp dir cleanup helper (DL#131)
+        const tempDir = (req as any)._jayTempDir as string | undefined;
+        const cleanup = () => {
+            if (tempDir) cleanupTempDir(tempDir);
+        };
+
         // Streaming action (DL#129): respond with NDJSON
         if (registry.isStreaming(actionName)) {
             res.setHeader('Content-Type', 'application/x-ndjson');
@@ -145,6 +155,7 @@ export function createActionRouter(options?: ActionRouterOptions): RequestHandle
             } catch (err: any) {
                 res.write(JSON.stringify({ error: err.message }) + '\n');
             }
+            cleanup();
             res.end();
             timing?.end();
             return;
@@ -152,6 +163,7 @@ export function createActionRouter(options?: ActionRouterOptions): RequestHandle
 
         // Execute the action
         const result = await registry.execute(actionName, input);
+        cleanup();
 
         // Set cache headers for GET requests
         if (requestMethod === 'GET' && result.success) {
@@ -207,10 +219,156 @@ function getStatusCodeForError(code: string, isActionError: boolean): number {
 }
 
 /**
- * Express middleware to parse JSON body for action requests.
+ * Options for the action body parser middleware.
+ */
+export interface ActionBodyParserOptions {
+    /** Build folder for temp file storage (DL#131) */
+    buildFolder: string;
+    /** Action registry to check for acceptsFiles (default: global actionRegistry) */
+    registry?: ActionRegistry;
+}
+
+/**
+ * Default file upload limits.
+ */
+const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const DEFAULT_MAX_FILES = 10;
+
+/**
+ * Parse a multipart/form-data request using busboy (DL#131).
+ * File fields are written to a temp directory and returned as JayFile objects.
+ * The `_json` field contains JSON-serialized text data.
+ */
+function parseMultipart(
+    req: Request,
+    tempDir: string,
+    maxFileSize: number,
+    maxFiles: number,
+): Promise<{ body: Record<string, any>; tempDir: string }> {
+    return new Promise((resolve, reject) => {
+        fs.mkdirSync(tempDir, { recursive: true });
+
+        const files: Record<string, JayFile | JayFile[]> = {};
+        let jsonData: Record<string, any> = {};
+        let fileCount = 0;
+        let errored = false;
+        const pendingWrites: Promise<void>[] = [];
+
+        const bb = Busboy({
+            headers: req.headers,
+            limits: {
+                fileSize: maxFileSize,
+                files: maxFiles,
+            },
+        });
+
+        bb.on('file', (fieldname, stream, info) => {
+            if (errored) return;
+            fileCount++;
+
+            const filename = info.filename || `upload-${fileCount}`;
+            const tempPath = path.join(tempDir, `${fileCount}-${filename}`);
+            let size = 0;
+            let truncated = false;
+
+            const writeStream = fs.createWriteStream(tempPath);
+            stream.pipe(writeStream);
+
+            stream.on('data', (data: Buffer) => {
+                size += data.length;
+            });
+
+            stream.on('limit', () => {
+                truncated = true;
+            });
+
+            pendingWrites.push(
+                new Promise<void>((resolveWrite, rejectWrite) => {
+                    writeStream.on('close', () => {
+                        if (truncated) {
+                            rejectWrite(
+                                new Error(
+                                    `File "${filename}" exceeds maximum size of ${maxFileSize} bytes`,
+                                ),
+                            );
+                            return;
+                        }
+
+                        const jayFile: JayFile = {
+                            name: filename,
+                            type: info.mimeType,
+                            size,
+                            path: tempPath,
+                        };
+
+                        // Support multiple files on same field name
+                        if (files[fieldname]) {
+                            const existing = files[fieldname];
+                            if (Array.isArray(existing)) {
+                                existing.push(jayFile);
+                            } else {
+                                files[fieldname] = [existing, jayFile];
+                            }
+                        } else {
+                            files[fieldname] = jayFile;
+                        }
+                        resolveWrite();
+                    });
+                }),
+            );
+        });
+
+        bb.on('field', (fieldname, value) => {
+            if (errored) return;
+            if (fieldname === '_json') {
+                try {
+                    jsonData = JSON.parse(value);
+                } catch {
+                    errored = true;
+                    reject(new Error('Invalid JSON in _json field'));
+                }
+            }
+        });
+
+        bb.on('close', () => {
+            if (errored) return;
+            // Wait for all file write streams to finish before resolving
+            Promise.all(pendingWrites)
+                .then(() => resolve({ body: { ...jsonData, ...files }, tempDir }))
+                .catch((err) => reject(err));
+        });
+
+        bb.on('error', (err: Error) => {
+            if (!errored) {
+                errored = true;
+                reject(err);
+            }
+        });
+
+        req.pipe(bb);
+    });
+}
+
+/**
+ * Clean up a temp directory and all its contents.
+ */
+function cleanupTempDir(dir: string): void {
+    try {
+        fs.rmSync(dir, { recursive: true, force: true });
+    } catch {
+        // Best effort cleanup
+    }
+}
+
+/**
+ * Express middleware to parse request body for action requests.
+ * Supports JSON (default) and multipart/form-data (for actions with .withFiles()).
  * Should be applied before the action router.
  */
-export function actionBodyParser(): RequestHandler {
+export function actionBodyParser(options: ActionBodyParserOptions): RequestHandler {
+    const { buildFolder, registry: reg } = options;
+    const registryToUse = reg ?? actionRegistry;
+
     return (req: Request, res: Response, next) => {
         // Only parse for action routes
         if (!req.path.startsWith(ACTION_ENDPOINT_BASE)) {
@@ -224,7 +382,52 @@ export function actionBodyParser(): RequestHandler {
             return;
         }
 
-        // Parse JSON body
+        const contentType = req.headers['content-type'] || '';
+
+        // Multipart/form-data: parse with busboy (DL#131)
+        if (contentType.startsWith('multipart/form-data')) {
+            const actionName = req.path.slice(ACTION_ENDPOINT_BASE.length + 1);
+            const action = registryToUse.get(actionName);
+
+            if (!action?.acceptsFiles) {
+                res.status(400).json({
+                    success: false,
+                    error: {
+                        code: 'FILES_NOT_ACCEPTED',
+                        message: `Action '${actionName}' does not accept file uploads. Use .withFiles() on the action builder.`,
+                        isActionError: false,
+                    },
+                });
+                return;
+            }
+
+            const requestId = crypto.randomUUID();
+            const tempDir = path.join(buildFolder, '.tmp', 'actions', requestId);
+            const maxFileSize = (action as any).fileOptions?.maxFileSize ?? DEFAULT_MAX_FILE_SIZE;
+            const maxFiles = (action as any).fileOptions?.maxFiles ?? DEFAULT_MAX_FILES;
+
+            parseMultipart(req, tempDir, maxFileSize, maxFiles)
+                .then(({ body, tempDir: td }) => {
+                    req.body = body;
+                    // Attach cleanup function for the action router to call after handler
+                    (req as any)._jayTempDir = td;
+                    next();
+                })
+                .catch((err) => {
+                    cleanupTempDir(tempDir);
+                    res.status(400).json({
+                        success: false,
+                        error: {
+                            code: 'MULTIPART_PARSE_ERROR',
+                            message: err.message,
+                            isActionError: false,
+                        },
+                    });
+                });
+            return;
+        }
+
+        // Default: parse JSON body
         let body = '';
         req.setEncoding('utf8');
 

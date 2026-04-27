@@ -1273,7 +1273,7 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     setupServiceHotReload(vite, lifecycleManager);
 
     // Set up action router for /_jay/actions/* endpoints
-    setupActionRouter(vite);
+    setupActionRouter(vite, buildFolder!);
 
     // Scan routes, excluding any page files found inside the build folder.
     // This prevents pre-rendered cache files from being picked up as additional routes
@@ -1399,9 +1399,9 @@ function setupServiceHotReload(
  * Sets up the action router for handling /_jay/actions/* requests.
  * Actions are RPC-style endpoints that can be called from the client.
  */
-function setupActionRouter(vite: ViteDevServer): void {
-    // Add body parser middleware for action requests
-    vite.middlewares.use(actionBodyParser());
+function setupActionRouter(vite: ViteDevServer, buildFolder: string): void {
+    // Add body parser middleware for action requests (DL#131: multipart support)
+    vite.middlewares.use(actionBodyParser({ buildFolder }));
 
     // Add action router
     vite.middlewares.use(ACTION_ENDPOINT_BASE, createActionRouter());

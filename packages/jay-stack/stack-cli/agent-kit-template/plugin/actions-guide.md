@@ -38,10 +38,89 @@ makeJayAction('name')
   .withServices(SERVICE1, SERVICE2) // Inject services
   .withMethod('PUT') // Override HTTP method (default: POST for actions)
   .withCaching({ maxAge: 60 }) // Enable caching (queries only)
+  .withFiles({ maxFileSize: 5_000_000 }) // Accept file uploads (multipart/form-data)
   .withHandler(async (input, svc1, svc2) => {
     // Define handler
     return result;
   });
+```
+
+## .withFiles() — File Uploads
+
+Actions can receive binary files (images, documents, etc.) via multipart/form-data.
+Add `.withFiles()` to the builder chain to enable file uploads.
+
+```typescript
+import { makeJayAction, type JayFile } from '@jay-framework/fullstack-component';
+import fs from 'fs';
+
+export const uploadPhoto = makeJayAction('photos.upload')
+  .withFiles({ maxFileSize: 5 * 1024 * 1024 }) // 5MB limit, 10 files max (default)
+  .withHandler(async (input: { caption: string; photo: JayFile }) => {
+    // JayFile provides: name, type, size, path (temp file on disk)
+    const data = fs.readFileSync(input.photo.path);
+    // Process file...
+    return { fileName: input.photo.name, size: input.photo.size };
+    // Temp file is automatically cleaned up after handler returns
+  });
+```
+
+### JayFile type
+
+```typescript
+interface JayFile {
+  name: string;  // Original filename
+  type: string;  // MIME type (e.g., 'image/png')
+  size: number;  // File size in bytes
+  path: string;  // Absolute path to temp file on disk
+}
+```
+
+### Multiple files
+
+Use an array type for the field — files with the same field name are grouped:
+
+```typescript
+.withHandler(async (input: { images: JayFile[] }) => {
+    for (const img of input.images) {
+      // Process each file
+    }
+});
+```
+
+### Streaming with files
+
+`makeJayStream` also supports `.withFiles()`:
+
+```typescript
+export const processImages = makeJayStream('images.process')
+  .withFiles()
+  .withHandler(async function* (input: { images: JayFile[] }) {
+    for (const img of input.images) {
+      yield { step: 'processing', fileName: img.name };
+    }
+    yield { step: 'done' };
+  });
+```
+
+### Client-side usage
+
+The client automatically sends `FormData` when `File` or `Blob` objects are present:
+
+```typescript
+refs.uploadBtn.onClick(async () => {
+    const fileInput = refs.fileInput.element as HTMLInputElement;
+    const file = fileInput.files?.[0];
+    const result = await uploadPhoto({ caption: 'My photo', photo: file });
+});
+```
+
+### FileUploadOptions
+
+```typescript
+.withFiles()                                       // Defaults: 10MB per file, 10 files max
+.withFiles({ maxFileSize: 2 * 1024 * 1024 })       // 2MB limit
+.withFiles({ maxFileSize: 20_000_000, maxFiles: 5 }) // 20MB, 5 files
 ```
 
 ## ActionError

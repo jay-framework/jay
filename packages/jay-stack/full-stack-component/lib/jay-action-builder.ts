@@ -17,6 +17,35 @@ declare global {
 }
 
 // ============================================================================
+// File Upload Types (DL#131)
+// ============================================================================
+
+/**
+ * A file received by a multipart action handler.
+ * Files are written to a temp directory and cleaned up after the handler returns.
+ */
+export interface JayFile {
+    /** Original filename */
+    name: string;
+    /** MIME type */
+    type: string;
+    /** File size in bytes */
+    size: number;
+    /** Absolute path to the temp file on disk */
+    path: string;
+}
+
+/**
+ * Options for file upload support.
+ */
+export interface FileUploadOptions {
+    /** Maximum file size in bytes (default: 10MB) */
+    maxFileSize?: number;
+    /** Maximum number of files (default: 10) */
+    maxFiles?: number;
+}
+
+// ============================================================================
 // HTTP Method and Cache Types
 // ============================================================================
 
@@ -102,6 +131,12 @@ export interface JayActionDefinition<Input, Output, Services extends any[]> {
     /** Service markers for dependency injection */
     services: ServiceMarkers<Services>;
 
+    /** Whether this action accepts file uploads (DL#131) */
+    acceptsFiles?: boolean;
+
+    /** File upload options (DL#131) */
+    fileOptions?: FileUploadOptions;
+
     /** The handler function */
     handler: (input: Input, ...services: Services) => Promise<Output>;
 }
@@ -143,6 +178,14 @@ export interface JayActionBuilder<
     withCaching(options?: CacheOptions): JayActionBuilder<Services, Input, Output, DefaultMethod>;
 
     /**
+     * Mark this action as accepting file uploads (DL#131).
+     * The handler will receive JayFile objects for file fields.
+     */
+    withFiles(
+        options?: FileUploadOptions,
+    ): JayActionBuilder<Services, Input, Output, DefaultMethod>;
+
+    /**
      * Define the handler function. Input and output types are inferred from the handler signature.
      */
     withHandler<I, O>(
@@ -160,6 +203,8 @@ class JayActionBuilderImpl<Services extends any[], DefaultMethod extends HttpMet
     private _services: ServiceMarkers<Services> = [] as unknown as ServiceMarkers<Services>;
     private _method: HttpMethod;
     private _cacheOptions?: CacheOptions;
+    private _acceptsFiles = false;
+    private _fileOptions?: FileUploadOptions;
 
     constructor(
         private readonly _actionName: string,
@@ -187,6 +232,14 @@ class JayActionBuilderImpl<Services extends any[], DefaultMethod extends HttpMet
         return this;
     }
 
+    withFiles(
+        options?: FileUploadOptions,
+    ): JayActionBuilder<Services, unknown, unknown, DefaultMethod> {
+        this._acceptsFiles = true;
+        this._fileOptions = options;
+        return this;
+    }
+
     withHandler<I, O>(
         handler: (input: I, ...services: Services) => Promise<O>,
     ): JayAction<I, O> & JayActionDefinition<I, O, Services> {
@@ -198,6 +251,9 @@ class JayActionBuilderImpl<Services extends any[], DefaultMethod extends HttpMet
         // Create the action object with callable function and metadata
         // On server: uses global resolver to inject services automatically
         // On client: build transform replaces this with HTTP call
+        const acceptsFiles = this._acceptsFiles;
+        const fileOptions = this._fileOptions;
+
         const action = Object.assign(
             (input: I): Promise<O> => {
                 const resolver = globalThis.__JAY_SERVICE_RESOLVER__;
@@ -211,6 +267,8 @@ class JayActionBuilderImpl<Services extends any[], DefaultMethod extends HttpMet
                 services: serviceMarkers,
                 handler,
                 _brand: 'JayAction' as const,
+                ...(acceptsFiles && { acceptsFiles: true }),
+                ...(fileOptions && { fileOptions }),
             },
         );
 
@@ -321,6 +379,10 @@ export interface JayStreamActionDefinition<Input, Chunk, Services extends any[]>
     method: 'POST';
     isStreaming: true;
     services: ServiceMarkers<Services>;
+    /** Whether this action accepts file uploads (DL#131) */
+    acceptsFiles?: boolean;
+    /** File upload options (DL#131) */
+    fileOptions?: FileUploadOptions;
     handler: (input: Input, ...services: Services) => AsyncIterable<Chunk>;
 }
 
@@ -332,6 +394,11 @@ export interface JayStreamBuilder<Services extends any[]> {
         ...services: ServiceMarkers<NewServices>
     ): JayStreamBuilder<NewServices>;
 
+    /**
+     * Mark this streaming action as accepting file uploads (DL#131).
+     */
+    withFiles(options?: FileUploadOptions): JayStreamBuilder<Services>;
+
     withHandler<I, C>(
         handler: (input: I, ...services: Services) => AsyncIterable<C>,
     ): JayStreamAction<I, C> & JayStreamActionDefinition<I, C, Services>;
@@ -339,6 +406,8 @@ export interface JayStreamBuilder<Services extends any[]> {
 
 class JayStreamBuilderImpl<Services extends any[]> implements JayStreamBuilder<Services> {
     private _services: ServiceMarkers<Services> = [] as unknown as ServiceMarkers<Services>;
+    private _acceptsFiles = false;
+    private _fileOptions?: FileUploadOptions;
 
     constructor(private readonly _actionName: string) {}
 
@@ -349,11 +418,19 @@ class JayStreamBuilderImpl<Services extends any[]> implements JayStreamBuilder<S
         return this as unknown as JayStreamBuilder<NewServices>;
     }
 
+    withFiles(options?: FileUploadOptions): JayStreamBuilder<Services> {
+        this._acceptsFiles = true;
+        this._fileOptions = options;
+        return this;
+    }
+
     withHandler<I, C>(
         handler: (input: I, ...services: Services) => AsyncIterable<C>,
     ): JayStreamAction<I, C> & JayStreamActionDefinition<I, C, Services> {
         const actionName = this._actionName;
         const serviceMarkers = this._services;
+        const acceptsFiles = this._acceptsFiles;
+        const fileOptions = this._fileOptions;
 
         const action = Object.assign(
             (input: I): AsyncIterable<C> => {
@@ -368,6 +445,8 @@ class JayStreamBuilderImpl<Services extends any[]> implements JayStreamBuilder<S
                 services: serviceMarkers,
                 handler,
                 _brand: 'JayStreamAction' as const,
+                ...(acceptsFiles && { acceptsFiles: true }),
+                ...(fileOptions && { fileOptions }),
             },
         );
 

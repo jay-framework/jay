@@ -258,13 +258,14 @@ export function jayStackCompiler(options: JayStackCompilerOptions = {}): Plugin[
                     ];
 
                     for (const action of actions) {
+                        const filesOpt = action.acceptsFiles ? ', { acceptsFiles: true }' : '';
                         if (action.isStreaming) {
                             lines.push(
-                                `export const ${action.exportName} = createStreamCaller('${action.actionName}');`,
+                                `export const ${action.exportName} = createStreamCaller('${action.actionName}'${filesOpt});`,
                             );
                         } else {
                             lines.push(
-                                `export const ${action.exportName} = createActionCaller('${action.actionName}', '${action.method}');`,
+                                `export const ${action.exportName} = createActionCaller('${action.actionName}', '${action.method}'${filesOpt});`,
                             );
                         }
                     }

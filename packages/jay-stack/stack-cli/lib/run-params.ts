@@ -36,9 +36,7 @@ export async function runParams(
             const secondSlash = contractRef.indexOf('/', contractRef.indexOf('/') + 1);
             if (secondSlash === -1) {
                 getLogger().error(
-                    chalk.red(
-                        '❌ Invalid contract reference. Use format: @scope/plugin/contract',
-                    ),
+                    chalk.red('❌ Invalid contract reference. Use format: @scope/plugin/contract'),
                 );
                 process.exit(1);
             }
@@ -48,9 +46,7 @@ export async function runParams(
             const slashIndex = contractRef.indexOf('/');
             if (slashIndex === -1) {
                 getLogger().error(
-                    chalk.red(
-                        '❌ Invalid contract reference. Use format: <plugin>/<contract>',
-                    ),
+                    chalk.red('❌ Invalid contract reference. Use format: <plugin>/<contract>'),
                 );
                 process.exit(1);
             }
@@ -119,9 +115,7 @@ export async function runParams(
         }
 
         if (!options.yaml) {
-            getLogger().important(
-                chalk.green(`\n✅ Found ${total} param combination(s)`),
-            );
+            getLogger().important(chalk.green(`\n✅ Found ${total} param combination(s)`));
         }
     } catch (error: any) {
         getLogger().error(chalk.red('❌ Failed to discover params:') + ' ' + error.message);

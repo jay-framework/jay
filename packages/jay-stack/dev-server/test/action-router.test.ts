@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { createActionRouter, ACTION_ENDPOINT_BASE } from '../lib/action-router';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { createActionRouter, actionBodyParser, ACTION_ENDPOINT_BASE } from '../lib/action-router';
 import {
     ActionRegistry,
     registerService,
@@ -11,7 +11,12 @@ import {
     ActionError,
     createJayService,
     makeJayStream,
+    type JayFile,
 } from '@jay-framework/fullstack-component';
+import http from 'http';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 
 // Mock Express request/response
 function createMockRequest(overrides: Partial<any> = {}) {
@@ -343,6 +348,220 @@ describe('Action Router', () => {
             expect(lines[0]).toEqual({ chunk: 'ok' });
             expect(lines[1]).toEqual({ error: 'mid-stream failure' });
             expect(res.ended).toBe(true);
+        });
+    });
+
+    // --- File Upload (DL#131) ---
+
+    describe('file upload (DL#131)', () => {
+        let server: http.Server;
+        let buildFolder: string;
+        let serverUrl: string;
+
+        beforeEach(async () => {
+            buildFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'jay-test-'));
+        });
+
+        afterEach(async () => {
+            if (server) {
+                await new Promise<void>((resolve) => server.close(() => resolve()));
+            }
+            fs.rmSync(buildFolder, { recursive: true, force: true });
+        });
+
+        /**
+         * Start a minimal HTTP server with the action body parser + router.
+         */
+        function startServer(reg: ActionRegistry): Promise<string> {
+            const bodyParser = actionBodyParser({ buildFolder, registry: reg });
+            const router = createActionRouter({ registry: reg });
+
+            server = http.createServer((req, res) => {
+                // Simulate Express-like req/res
+                const expressReq = req as any;
+                expressReq.path = req.url!;
+                expressReq.query = {};
+
+                const expressRes = res as any;
+                expressRes.status = (code: number) => {
+                    res.statusCode = code;
+                    return expressRes;
+                };
+                expressRes.json = (data: any) => {
+                    res.setHeader('Content-Type', 'application/json');
+                    res.end(JSON.stringify(data));
+                };
+                expressRes.set = (k: string, v: string) => {
+                    res.setHeader(k, v);
+                    return expressRes;
+                };
+
+                // Run body parser, then router
+                bodyParser(expressReq, expressRes, () => {
+                    // Strip the base path for the router (it's mounted at ACTION_ENDPOINT_BASE)
+                    expressReq.path = expressReq.path.slice(ACTION_ENDPOINT_BASE.length);
+                    router(expressReq, expressRes, () => {});
+                });
+            });
+
+            return new Promise((resolve) => {
+                server.listen(0, () => {
+                    const addr = server.address() as any;
+                    serverUrl = `http://127.0.0.1:${addr.port}`;
+                    resolve(serverUrl);
+                });
+            });
+        }
+
+        it('should receive JayFile objects for uploaded files', async () => {
+            let receivedInput: any = null;
+
+            const action = makeJayAction('test.upload')
+                .withFiles()
+                .withHandler(async (input: { notes: string; screenshot: JayFile }) => {
+                    receivedInput = input;
+                    // Verify the temp file exists and has content
+                    const content = fs.readFileSync(input.screenshot.path, 'utf-8');
+                    return { content, notes: input.notes };
+                });
+
+            registry.register(action);
+            const url = await startServer(registry);
+
+            // Build multipart request
+            const boundary = '----TestBoundary' + Date.now();
+            const fileContent = 'fake PNG data for testing';
+
+            const parts = [
+                `--${boundary}\r\n` +
+                    `Content-Disposition: form-data; name="_json"\r\n\r\n` +
+                    `{"notes":"Fix the header"}\r\n`,
+                `--${boundary}\r\n` +
+                    `Content-Disposition: form-data; name="screenshot"; filename="capture.png"\r\n` +
+                    `Content-Type: image/png\r\n\r\n` +
+                    `${fileContent}\r\n`,
+                `--${boundary}--\r\n`,
+            ];
+
+            const body = parts.join('');
+
+            const response = await fetch(`${url}${ACTION_ENDPOINT_BASE}/test.upload`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': `multipart/form-data; boundary=${boundary}`,
+                },
+                body,
+            });
+
+            const data = await response.json();
+
+            expect(response.status).toBe(200);
+            expect(data.success).toBe(true);
+            expect(data.data.notes).toBe('Fix the header');
+            expect(data.data.content).toBe(fileContent);
+
+            // Verify handler received JayFile
+            expect(receivedInput.screenshot.name).toBe('capture.png');
+            expect(receivedInput.screenshot.type).toBe('image/png');
+            expect(receivedInput.screenshot.size).toBe(fileContent.length);
+
+            // Verify temp files are cleaned up
+            expect(fs.existsSync(receivedInput.screenshot.path)).toBe(false);
+        });
+
+        it('should reject multipart for actions without withFiles', async () => {
+            const action = makeJayAction('test.nofiles').withHandler(
+                async (input: { text: string }) => ({
+                    ok: true,
+                }),
+            );
+
+            registry.register(action);
+            const url = await startServer(registry);
+
+            const boundary = '----TestBoundary' + Date.now();
+            const body =
+                `--${boundary}\r\n` +
+                `Content-Disposition: form-data; name="_json"\r\n\r\n` +
+                `{"text":"hello"}\r\n` +
+                `--${boundary}--\r\n`;
+
+            const response = await fetch(`${url}${ACTION_ENDPOINT_BASE}/test.nofiles`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': `multipart/form-data; boundary=${boundary}`,
+                },
+                body,
+            });
+
+            const data = await response.json();
+            expect(response.status).toBe(400);
+            expect(data.error.code).toBe('FILES_NOT_ACCEPTED');
+        });
+
+        it('should still handle JSON requests for withFiles actions', async () => {
+            const action = makeJayAction('test.flexible')
+                .withFiles()
+                .withHandler(async (input: { notes: string }) => ({
+                    notes: input.notes,
+                }));
+
+            registry.register(action);
+            const url = await startServer(registry);
+
+            const response = await fetch(`${url}${ACTION_ENDPOINT_BASE}/test.flexible`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ notes: 'just text' }),
+            });
+
+            const data = await response.json();
+            expect(response.status).toBe(200);
+            expect(data.data.notes).toBe('just text');
+        });
+
+        it('should handle streaming action with file upload', async () => {
+            const stream = makeJayStream('test.streamUpload')
+                .withFiles()
+                .withHandler(async function* (input: { label: string; file: JayFile }) {
+                    const content = fs.readFileSync(input.file.path, 'utf-8');
+                    yield { step: 'received', filename: input.file.name };
+                    yield { step: 'processed', content };
+                });
+
+            registry.registerStream(stream);
+            const url = await startServer(registry);
+
+            const boundary = '----TestBoundary' + Date.now();
+            const fileContent = 'stream test data';
+            const body = [
+                `--${boundary}\r\n` +
+                    `Content-Disposition: form-data; name="_json"\r\n\r\n` +
+                    `{"label":"test"}\r\n`,
+                `--${boundary}\r\n` +
+                    `Content-Disposition: form-data; name="file"; filename="data.txt"\r\n` +
+                    `Content-Type: text/plain\r\n\r\n` +
+                    `${fileContent}\r\n`,
+                `--${boundary}--\r\n`,
+            ].join('');
+
+            const response = await fetch(`${url}${ACTION_ENDPOINT_BASE}/test.streamUpload`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': `multipart/form-data; boundary=${boundary}`,
+                },
+                body,
+            });
+
+            const text = await response.text();
+            const lines = text
+                .trim()
+                .split('\n')
+                .map((l) => JSON.parse(l));
+
+            expect(lines[0]).toEqual({ chunk: { step: 'received', filename: 'data.txt' } });
+            expect(lines[1]).toEqual({ chunk: { step: 'processed', content: fileContent } });
+            expect(lines[2]).toEqual({ done: true });
         });
     });
 });

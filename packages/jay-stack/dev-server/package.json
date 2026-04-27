@@ -33,6 +33,7 @@
     "@jay-framework/stack-route-scanner": "workspace:^",
     "@jay-framework/stack-server-runtime": "workspace:^",
     "@jay-framework/view-state-merge": "workspace:^",
+    "busboy": "^1.6.0",
     "vite": "^5.0.11"
   },
   "devDependencies": {
@@ -40,6 +41,7 @@
     "@jay-framework/jay-cli": "workspace:^",
     "@jay-framework/stack-client-runtime": "workspace:^",
     "@playwright/test": "^1.58.2",
+    "@types/busboy": "^1.5.4",
     "@types/express": "^5.0.2",
     "@types/node": "^22.15.21",
     "jsdom": "^23.2.0",

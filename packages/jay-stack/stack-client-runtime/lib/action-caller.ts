@@ -95,25 +95,86 @@ export function setActionCallerOptions(options: ActionCallerOptions): void {
  * const addToCart = createActionCaller<{productId: string}, {cartCount: number}>('cart.addToCart', 'POST');
  * ```
  */
+/**
+ * Options for action callers.
+ */
+export interface CreateActionCallerOptions {
+    /** Whether this action accepts file uploads (DL#131) */
+    acceptsFiles?: boolean;
+}
+
+/**
+ * Build a FormData body from an input object (DL#131).
+ * File/Blob values become file fields; everything else goes into a `_json` field.
+ */
+function buildFormData(input: any): FormData {
+    const formData = new FormData();
+    const jsonFields: Record<string, any> = {};
+
+    for (const [key, value] of Object.entries(input)) {
+        if (value instanceof Blob) {
+            const name = value instanceof File ? value.name : `${key}.bin`;
+            formData.append(key, value, name);
+        } else if (Array.isArray(value) && value.some((v) => v instanceof Blob)) {
+            const nonFiles: any[] = [];
+            for (const item of value) {
+                if (item instanceof Blob) {
+                    const name = item instanceof File ? item.name : `${key}.bin`;
+                    formData.append(key, item, name);
+                } else {
+                    nonFiles.push(item);
+                }
+            }
+            if (nonFiles.length > 0) {
+                jsonFields[key] = nonFiles;
+            }
+        } else {
+            jsonFields[key] = value;
+        }
+    }
+
+    if (Object.keys(jsonFields).length > 0) {
+        formData.append('_json', JSON.stringify(jsonFields));
+    }
+
+    return formData;
+}
+
+/**
+ * Check if an input object contains File or Blob values.
+ */
+function hasFiles(input: any): boolean {
+    if (typeof input !== 'object' || input === null) return false;
+    for (const value of Object.values(input)) {
+        if (value instanceof Blob) return true;
+        if (Array.isArray(value) && value.some((v) => v instanceof Blob)) return true;
+    }
+    return false;
+}
+
 export function createActionCaller<Input, Output>(
     actionName: string,
     method: HttpMethod = 'POST',
+    options?: CreateActionCallerOptions,
 ): (input: Input) => Promise<Output> {
     return async (input: Input): Promise<Output> => {
         const baseUrl = globalOptions.baseUrl ?? '';
-        const url = buildActionUrl(baseUrl, actionName, method, input);
+        const useFormData = options?.acceptsFiles && hasFiles(input);
+        const url = useFormData
+            ? `${baseUrl}${ACTION_ENDPOINT_BASE}/${actionName}`
+            : buildActionUrl(baseUrl, actionName, method, input);
 
         const fetchOptions: RequestInit = {
             method,
             headers: {
-                'Content-Type': 'application/json',
+                ...(useFormData ? {} : { 'Content-Type': 'application/json' }),
                 ...globalOptions.headers,
             },
         };
 
         // For non-GET requests, include body
         if (method !== 'GET') {
-            fetchOptions.body = JSON.stringify(input);
+            fetchOptions.body = useFormData ? buildFormData(input) : JSON.stringify(input);
         }
 
         // Add timeout via AbortController
@@ -223,12 +284,14 @@ function buildActionUrl<Input>(
  */
 export function createStreamCaller<Input, Chunk>(
     actionName: string,
+    options?: CreateActionCallerOptions,
 ): (input: Input) => AsyncIterable<Chunk> {
     return (input: Input): AsyncIterable<Chunk> => {
         return {
             [Symbol.asyncIterator](): AsyncIterableIterator<Chunk> {
                 const baseUrl = globalOptions.baseUrl ?? '';
                 const url = `${baseUrl}${ACTION_ENDPOINT_BASE}/${actionName}`;
+                const useFormData = options?.acceptsFiles && hasFiles(input);
 
                 let reader: ReadableStreamDefaultReader<Uint8Array> | null = null;
                 let buffer = '';
@@ -241,10 +304,10 @@ export function createStreamCaller<Input, Chunk>(
                 const fetchPromise = fetch(url, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
+                        ...(useFormData ? {} : { 'Content-Type': 'application/json' }),
                         ...globalOptions.headers,
                     },
-                    body: JSON.stringify(input),
+                    body: useFormData ? buildFormData(input) : JSON.stringify(input),
                 })
                     .then((response) => {
                         if (!response.ok) {

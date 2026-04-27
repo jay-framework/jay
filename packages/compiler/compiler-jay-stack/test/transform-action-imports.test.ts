@@ -199,6 +199,50 @@ describe('transform-action-imports', () => {
             });
         });
 
+        it('should extract makeJayAction with withFiles flag', () => {
+            const source = `
+                import { makeJayAction } from '@jay-framework/fullstack-component';
+
+                export const uploadPhoto = makeJayAction('photos.upload')
+                    .withFiles()
+                    .withHandler(async (input) => ({ id: '1' }));
+            `;
+
+            const actions = extractActionsFromSource(source, 'test-files.ts');
+
+            expect(actions).toHaveLength(1);
+            expect(actions[0]).toEqual({
+                actionName: 'photos.upload',
+                method: 'POST',
+                exportName: 'uploadPhoto',
+                acceptsFiles: true,
+            });
+        });
+
+        it('should extract makeJayStream with withFiles flag', () => {
+            const source = `
+                import { makeJayStream } from '@jay-framework/fullstack-component';
+
+                export const submitTask = makeJayStream('aiditor.submitTask')
+                    .withFiles({ maxFileSize: 5000000 })
+                    .withServices(AGENT_SERVICE)
+                    .withHandler(async function* (input, agent) {
+                        yield { status: 'done' };
+                    });
+            `;
+
+            const actions = extractActionsFromSource(source, 'test-stream-files.ts');
+
+            expect(actions).toHaveLength(1);
+            expect(actions[0]).toEqual({
+                actionName: 'aiditor.submitTask',
+                method: 'POST',
+                exportName: 'submitTask',
+                isStreaming: true,
+                acceptsFiles: true,
+            });
+        });
+
         it('should ignore non-exported actions', () => {
             const source = `
                 import { makeJayAction } from '@jay-framework/fullstack-component';
@@ -451,6 +495,98 @@ describe('transform-action-imports', () => {
                 async function run() {
                     await addToCart({ productId: '1' });
                     for await (const chunk of checkInventory({})) {
+                        console.log(chunk);
+                    }
+                }
+            `;
+
+            expect(await prettify(result!.code)).toEqual(await prettify(expected));
+        });
+
+        it('should transform withFiles action to createActionCaller with acceptsFiles option', async () => {
+            const filesActionSource = `
+                import { makeJayAction } from '@jay-framework/fullstack-component';
+
+                export const uploadPhoto = makeJayAction('photos.upload')
+                    .withFiles()
+                    .withHandler(async (input) => ({ id: '1' }));
+            `;
+
+            const mockFilesResolve = async (importSource: string, _importer: string) => {
+                if (importSource.includes('.actions') || importSource.includes('/actions/')) {
+                    return { path: '/test/upload.actions.ts', code: filesActionSource };
+                }
+                return null;
+            };
+
+            const source = `
+                import { uploadPhoto } from './actions/upload.actions';
+
+                async function run() {
+                    await uploadPhoto({ file: someFile });
+                }
+            `;
+
+            const result = await transformActionImports(source, '/test/page.ts', mockFilesResolve);
+
+            expect(result).not.toBeNull();
+
+            const expected = `
+                import { createActionCaller } from '@jay-framework/stack-client-runtime';
+
+                const uploadPhoto = createActionCaller('photos.upload', 'POST', { acceptsFiles: true });
+
+                async function run() {
+                    await uploadPhoto({ file: someFile });
+                }
+            `;
+
+            expect(await prettify(result!.code)).toEqual(await prettify(expected));
+        });
+
+        it('should transform withFiles stream to createStreamCaller with acceptsFiles option', async () => {
+            const filesStreamSource = `
+                import { makeJayStream } from '@jay-framework/fullstack-component';
+
+                export const submitTask = makeJayStream('aiditor.submitTask')
+                    .withFiles()
+                    .withHandler(async function* (input) {
+                        yield { status: 'done' };
+                    });
+            `;
+
+            const mockStreamFilesResolve = async (importSource: string, _importer: string) => {
+                if (importSource.includes('.actions') || importSource.includes('/actions/')) {
+                    return { path: '/test/task.actions.ts', code: filesStreamSource };
+                }
+                return null;
+            };
+
+            const source = `
+                import { submitTask } from './actions/task.actions';
+
+                async function run() {
+                    for await (const chunk of submitTask({ screenshots: [file1] })) {
+                        console.log(chunk);
+                    }
+                }
+            `;
+
+            const result = await transformActionImports(
+                source,
+                '/test/page.ts',
+                mockStreamFilesResolve,
+            );
+
+            expect(result).not.toBeNull();
+
+            const expected = `
+                import { createStreamCaller } from '@jay-framework/stack-client-runtime';
+
+                const submitTask = createStreamCaller('aiditor.submitTask', { acceptsFiles: true });
+
+                async function run() {
+                    for await (const chunk of submitTask({ screenshots: [file1] })) {
                         console.log(chunk);
                     }
                 }
