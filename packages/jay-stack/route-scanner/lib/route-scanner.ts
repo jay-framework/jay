@@ -19,6 +19,8 @@ export type JayRoute = {
     rawRoute: string;
     jayHtmlPath: string;
     compPath: string;
+    /** Export name for the page component (default: 'page'). Used by plugin routes where the export name differs. */
+    componentExport?: string;
     /**
      * Explicit params declared via <script type="application/jay-params"> in the jay-html.
      * Used by static override routes to provide param values.
@@ -257,12 +259,18 @@ export function parseRouteSegments(routePath: string): JayRouteSegment[] {
  * Create a JayRoute from explicit path and file locations (DL#130).
  * Used for plugin-provided routes where the path is declared, not inferred from the filesystem.
  */
-export function createRoute(routePath: string, jayHtmlPath: string, compPath: string): JayRoute {
+export function createRoute(
+    routePath: string,
+    jayHtmlPath: string,
+    compPath: string,
+    componentExport?: string,
+): JayRoute {
     return {
         segments: parseRouteSegments(routePath),
         rawRoute: routePath,
         jayHtmlPath,
         compPath,
+        ...(componentExport && { componentExport }),
     };
 }
 

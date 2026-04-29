@@ -259,3 +259,20 @@ The only difference: the source files come from the plugin's NPM package instead
 | `stack-server-runtime/lib/slowly-changing-runner.ts` | `runLoadParams(parts)` iterates all parts, resolves services, yields param batches              |
 | `dev-server/lib/dev-server-service.ts`               | Constructor takes page/project config; `loadRouteParams` uses `loadPageParts` + `runLoadParams` |
 | `dev-server/lib/dev-server.ts`                       | Pass config args to `DevServerService` constructor                                              |
+
+### Fix: componentExport for NPM plugin page routes
+
+NPM plugin routes declare the page component's export name in `plugin.yaml` (e.g., `component: aiditorPage`). But `loadPageParts` hardcoded the export name to `page`, so the SSR module load always accessed `.page` regardless of what the plugin declared.
+
+**Fix:**
+
+- `JayRoute.componentExport` — new optional field (default: `'page'`)
+- `createRoute()` — accepts optional 4th arg `componentExport`
+- Dev server — passes `route.component` as `componentExport` for NPM plugin routes (where the component field is an export name, not a file path)
+- `loadPageParts()` — uses `route.componentExport || 'page'` for both SSR load and client import generation
+
+| File | Change |
+| --- | --- |
+| `route-scanner/lib/route-scanner.ts` | `JayRoute.componentExport` field; `createRoute()` 4th arg |
+| `dev-server/lib/dev-server.ts` | Pass `componentExport` for NPM plugin routes |
+| `stack-server-runtime/lib/load-page-parts.ts` | Use `componentExport` instead of hardcoded `'page'` |

@@ -99,11 +99,12 @@ export async function loadPageParts(
     if (exists) {
         // Load page component - SSR mode automatically triggers server transformation
         // (client code is stripped because ssrLoadModule sets ssr: true)
-        const pageComponent = (await vite.ssrLoadModule(route.compPath)).page;
+        const exportName = route.componentExport || 'page';
+        const pageComponent = (await vite.ssrLoadModule(route.compPath))[exportName];
         parts.push({
             compDefinition: pageComponent,
-            clientImport: `import {page} from '${route.compPath}'`,
-            clientPart: `{comp: page.comp, contextMarkers: page.contexts || []}`,
+            clientImport: `import {${exportName}} from '${route.compPath}'`,
+            clientPart: `{comp: ${exportName}.comp, contextMarkers: ${exportName}.contexts || []}`,
         });
     }
 

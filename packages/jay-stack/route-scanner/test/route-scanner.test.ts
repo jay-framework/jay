@@ -1,4 +1,10 @@
-import { JayRouteParamType, ScanFilesOptions, scanRoutes, sortRoutesByPriority } from '../lib';
+import {
+    JayRouteParamType,
+    ScanFilesOptions,
+    scanRoutes,
+    sortRoutesByPriority,
+    createRoute,
+} from '../lib';
 import path from 'path';
 
 describe('RouteScanner', () => {
@@ -210,6 +216,26 @@ describe('jay-params parsing', () => {
         const routes = await scanRoutes('./test/fixtures/jay-params', options);
         const route = routes.find((r) => r.rawRoute === '/no-head');
         expect(route?.inferredParams).toBeUndefined();
+    });
+});
+
+describe('createRoute', () => {
+    it('should create a route without componentExport (defaults to page)', () => {
+        const route = createRoute('/products', '/src/pages/products/page.jay-html', '/src/pages/products/page.ts');
+        expect(route.rawRoute).toBe('/products');
+        expect(route.compPath).toBe('/src/pages/products/page.ts');
+        expect(route.componentExport).toBeUndefined();
+    });
+
+    it('should create a plugin route with componentExport', () => {
+        const route = createRoute(
+            '/aiditor',
+            '/node_modules/@jay-framework/aiditor/dist/pages/aiditor/page.jay-html',
+            '/node_modules/@jay-framework/aiditor/dist/index.js',
+            'aiditorPage',
+        );
+        expect(route.rawRoute).toBe('/aiditor');
+        expect(route.componentExport).toBe('aiditorPage');
     });
 });
 

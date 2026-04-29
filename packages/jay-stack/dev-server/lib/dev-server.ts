@@ -113,11 +113,14 @@ async function scanPluginRoutes(projectRoot: string, projectRoutes: JayRoutes): 
             // Resolve component path.
             // For local plugins: component is a relative file path (e.g., ./pages/admin/page.ts)
             // For NPM plugins: component is an exported member name from the module
-            const compPath = route.component.startsWith('.')
+            const isLocalComponent = route.component.startsWith('.');
+            const compPath = isLocalComponent
                 ? path.resolve(plugin.pluginPath, route.component)
                 : resolvePluginModule(plugin);
+            // For NPM plugins, route.component is the export name (e.g., 'aiditorPage')
+            const componentExport = isLocalComponent ? undefined : route.component;
 
-            pluginRoutes.push(createRoute(route.path, jayHtmlPath, compPath));
+            pluginRoutes.push(createRoute(route.path, jayHtmlPath, compPath, componentExport));
 
             getLogger().info(`[Routes] Plugin "${plugin.name}" provides route ${route.path}`);
         }
