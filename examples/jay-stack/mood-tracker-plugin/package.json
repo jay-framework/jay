@@ -14,7 +14,8 @@
     ".": "./dist/index.js",
     "./client": "./dist/index.client.js",
     "./mood-tracker.jay-contract": "./dist/mood-tracker.jay-contract",
-    "./plugin.yaml": "./plugin.yaml"
+    "./plugin.yaml": "./plugin.yaml",
+    "./pages/mood-stats/page.jay-html": "./lib/pages/mood-stats/page.jay-html"
   },
   "scripts": {
     "build": "npm run definitions && npm run build:client && npm run build:server && npm run build:copy-contract",

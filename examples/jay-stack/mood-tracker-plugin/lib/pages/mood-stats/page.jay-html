@@ -1,0 +1,50 @@
+<html>
+  <head>
+    <style>
+      .mood-stats { max-width: 500px; margin: 40px auto; font-family: sans-serif; }
+      .mood-stats h1 { border-bottom: 2px solid #333; padding-bottom: 10px; }
+      .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin: 20px 0; }
+      .stat-card { padding: 20px; border-radius: 8px; text-align: center; }
+      .stat-card .count { font-size: 36px; font-weight: bold; }
+      .stat-card .label { font-size: 14px; color: #666; margin-top: 5px; }
+      .happy { background: #e8f5e9; }
+      .neutral { background: #fff3e0; }
+      .sad { background: #e3f2fd; }
+      .summary { padding: 15px; background: #f5f5f5; border-radius: 8px; margin: 20px 0; }
+      .actions { display: flex; gap: 10px; margin-top: 20px; }
+      button { padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background: white; }
+      button:hover { background: #f0f0f0; }
+    </style>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
+  </head>
+  <body>
+    <div class="mood-stats">
+      <h1>Mood Stats Dashboard</h1>
+
+      <div class="stat-grid">
+        <div class="stat-card happy">
+          <div class="count">{happyCount}</div>
+          <div class="label">Happy</div>
+        </div>
+        <div class="stat-card neutral">
+          <div class="count">{neutralCount}</div>
+          <div class="label">Neutral</div>
+        </div>
+        <div class="stat-card sad">
+          <div class="count">{sadCount}</div>
+          <div class="label">Sad</div>
+        </div>
+      </div>
+
+      <div class="summary">
+        <div>Total entries: {total}</div>
+        <div>Current streak: {streak}</div>
+      </div>
+
+      <div class="actions">
+        <button ref="refreshBtn">Refresh</button>
+        <button ref="clearBtn">Clear History</button>
+      </div>
+    </div>
+  </body>
+</html>

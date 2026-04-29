@@ -11,6 +11,11 @@ actions:
   - submitMood
   - getMoodStats
   - clearMoodHistory
+routes:
+  - path: /mood-stats
+    jayHtml: ./lib/pages/mood-stats/page.jay-html
+    component: moodStatsPage
+    description: Mood statistics dashboard — view mood history and trends
 # Plugin initialization
 # Auto-discovers lib/init.ts which exports the makeJayInit constant
 # For compiled packages, specify the export name: init: "myPluginInit"

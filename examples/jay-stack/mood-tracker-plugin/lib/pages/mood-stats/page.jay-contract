@@ -1,0 +1,41 @@
+name: Page
+tags:
+  - tag: happyCount
+    type: data
+    dataType: number
+    phase: fast+interactive
+    description: Number of happy mood entries
+
+  - tag: neutralCount
+    type: data
+    dataType: number
+    phase: fast+interactive
+    description: Number of neutral mood entries
+
+  - tag: sadCount
+    type: data
+    dataType: number
+    phase: fast+interactive
+    description: Number of sad mood entries
+
+  - tag: total
+    type: data
+    dataType: number
+    phase: fast+interactive
+    description: Total mood entries
+
+  - tag: streak
+    type: data
+    dataType: number
+    phase: fast+interactive
+    description: Current streak of same moods
+
+  - tag: refreshBtn
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Refresh statistics
+
+  - tag: clearBtn
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Clear mood history

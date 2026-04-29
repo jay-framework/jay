@@ -33,3 +33,6 @@ plugins:
         description: A mood tracker component with happy, neutral, and sad states
         type: static
         path: ./../mood-tracker-plugin/dist/mood-tracker.jay-contract
+    routes:
+      - path: /mood-stats
+        description: Mood statistics dashboard — view mood history and trends

@@ -282,15 +282,45 @@ NPM plugin routes declare the page component's export name in `plugin.yaml` (e.g
 Plugin routes have `jayHtmlPath` inside `node_modules/`. The dev server computed output directories via `path.relative(pagesRootFolder, jayHtmlPath)`, which produced `../../../node_modules/...` paths that escaped the build folder — writing server elements, CSS, and cache files back into the NPM package.
 
 **Affected:**
+
 - Server element output (`compileAndLoadServerElement`) — via `routeDir` param
 - CSS output — written alongside server elements
 - Slow render cache (`computeCachePath`, `scanAndDeleteCacheFiles`)
 
 **Fix:**
+
 - `sendResponse` and `handleFrozenRequest` — `routeDir` now derived from `route.rawRoute` (the declared route path, e.g., `/aiditor`) instead of filesystem-relative path
 - `SlowRenderCache` — when `path.relative()` produces a `..` path, falls back to `_plugins/<hash>` subdirectory inside the cache folder
 
-| File | Change |
-| --- | --- |
-| `dev-server/lib/dev-server.ts` | `routeDir` from `route.rawRoute`; passed as parameter to `sendResponse` |
-| `stack-server-runtime/lib/slow-render-cache.ts` | `computeCachePath` and `scanAndDeleteCacheFiles` use `_plugins/<hash>` for external paths |
+| File                                                    | Change                                                                                     |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `dev-server/lib/dev-server.ts`                          | `routeDir` from `route.rawRoute`; passed as parameter to `sendResponse`                    |
+| `stack-server-runtime/lib/slow-render-cache.ts`         | `computeCachePath` and `scanAndDeleteCacheFiles` use `_plugins/<hash>` for external paths  |
+| `rollup-plugin/lib/definitions/definitions-compiler.ts` | Skip `.d.ts` generation for files outside project root (NPM and workspace-linked packages) |
+| `rollup-plugin/lib/common/files.ts`                     | `writeGeneratedFile` redirects external paths under `pages/` segment in build folder       |
+
+### Fix: unified routeDir for all build artifacts
+
+The earlier fixes addressed server elements and slow render cache separately — server elements used `route.rawRoute` while the cache used a `_plugins/<hash>` fallback. This produced split output: server elements in `build/pre-rendered/mood-stats/` but cache files in `build/pre-rendered/_plugins/9ad49b25b2ea/`.
+
+**Fix:** Unified all paths through `getRouteDir(route)` helper (returns `route.rawRoute` without leading `/`). The slow render cache now accepts an optional `routeDir` parameter threaded through `get`, `set`, `has`, and `computeCachePath`. All build artifacts for a plugin route land in the same directory (e.g., `build/pre-rendered/mood-stats/`).
+
+Also fixed `writeGeneratedFile` in the rollup plugin — for workspace-linked plugin files outside the project root, extracts the path after the last `pages/` segment to produce a deterministic build-relative path.
+
+### Example: mood-tracker plugin page route
+
+Added a `/mood-stats` dashboard page to the mood-tracker plugin to validate the plugin route pipeline end-to-end:
+
+- `lib/pages/mood-stats/page.jay-html` — stat cards grid with happy/neutral/sad counts
+- `lib/pages/mood-stats/page.ts` — fast render calls `getMoodStats()`, interactive wires refresh/clear
+- Export: `moodStatsPage` (plugin export name convention, not `page`)
+- `plugin.yaml` — `routes:` section with `component: moodStatsPage`
+- `package.json` — exports `./pages/mood-stats/page.jay-html`
+- `lib/index.ts` — re-exports `moodStatsPage`
+
+| File                                            | Change                                                              |
+| ----------------------------------------------- | ------------------------------------------------------------------- |
+| `stack-server-runtime/lib/slow-render-cache.ts` | `routeDir` param on `get`, `set`, `has`, `computeCachePath`         |
+| `dev-server/lib/dev-server.ts`                  | `getRouteDir()` helper; all cache calls pass `routeDir`             |
+| `rollup-plugin/lib/common/files.ts`             | `writeGeneratedFile` handles external paths via `pages/` segment    |
+| `mood-tracker-plugin/`                          | New `/mood-stats` page route (jay-html, contract, page.ts, exports) |

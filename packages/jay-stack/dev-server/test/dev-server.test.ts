@@ -316,6 +316,11 @@ function clearScriptForTest(script: string) {
     const cmd = process.cwd();
     return (
         script
+            // Strip Vite HMR preamble (added by Vite to inline HTML scripts)
+            .replace(
+                /import \{ createHotContext as __vite__createHotContext \} from ".*?";import\.meta\.hot = __vite__createHotContext\(".*?"\);/,
+                '',
+            )
             .replace(cmd, '')
             .replace(/\/\/\#.*/, '// source-map')
             .replace(
@@ -331,7 +336,7 @@ function clearScriptForTest(script: string) {
                 /from "(\/@fs\/.*?view-state-merge.*?)"/g,
                 'from "@jay-framework/view-state-merge"',
             )
-            .replace(/\/build\/pre-rendered\//g, '/')
+            .replace(/\/build\/pre-rendered\/[^/]*\//g, '/')
             .split('\n')
             .map((line) => line.trim())
             .join('\n')

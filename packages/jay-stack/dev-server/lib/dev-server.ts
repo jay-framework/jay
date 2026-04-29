@@ -372,7 +372,11 @@ function mkRoute(
             } else {
                 // SSR: always use full pipeline with slow render cache
                 // get() reads from disk — returns undefined if file is missing or has no metadata
-                const cachedEntry = await slowRenderCache.get(route.jayHtmlPath, pageParams);
+                const cachedEntry = await slowRenderCache.get(
+                    route.jayHtmlPath,
+                    pageParams,
+                    getRouteDir(route),
+                );
 
                 if (cachedEntry) {
                     await handleCachedRequest(
@@ -515,11 +519,6 @@ async function handleCachedRequest(
     // Only fast+interactive viewState (slow is baked into jay-html)
     // Use the pre-rendered file path so Vite compiles it
     // Pass slowViewState so automation can show full merged state
-    // Use route's declared path for build output directory (DL#130 fix).
-    // For plugin routes in node_modules, path.relative(pagesRoot, jayHtmlPath) would
-    // produce ../../../node_modules/... which escapes the build folder.
-    const routeDir = route.rawRoute.replace(/^\//, '') || 'index';
-
     await sendResponse(
         vite,
         res,
@@ -534,7 +533,7 @@ async function handleCachedRequest(
         pluginsForPage,
         options,
         routeToExpressRoute(route),
-        routeDir,
+        getRouteDir(route),
         cachedEntry.slowViewState,
         timing,
         cachedEntry.preRenderedContent,
@@ -648,6 +647,7 @@ async function handlePreRenderRequest(
         preRenderResult.preRenderedJayHtml,
         renderedSlowly.rendered,
         carryForward,
+        getRouteDir(route),
     );
     getLogger().info(`[SlowRender] Cached pre-rendered jay-html at ${cachedEntry.preRenderedPath}`);
 
@@ -953,14 +953,14 @@ async function handleFrozenRequest(
         // Use the pre-rendered jay-html (with slowForEach items unrolled)
         // so the server element sees the same structure as the client hydrate.
         // Fall back to the original jay-html if no pre-rendered version exists.
-        const cachedEntry = await slowRenderCache.get(route.jayHtmlPath, pageParams);
+        const routeDir = getRouteDir(route);
+        const cachedEntry = await slowRenderCache.get(route.jayHtmlPath, pageParams, routeDir);
         const jayHtmlPath = cachedEntry?.preRenderedPath ?? route.jayHtmlPath;
         const jayHtmlContent =
             cachedEntry?.preRenderedContent ?? (await fs.readFile(jayHtmlPath, 'utf-8'));
         const jayHtmlFilename = path.basename(jayHtmlPath);
         const jayHtmlDir = path.dirname(jayHtmlPath);
         const sourceDir = path.dirname(route.jayHtmlPath);
-        const routeDir = route.rawRoute.replace(/^\//, '') || 'index';
 
         // Inject headfull FS templates (component jay-html)
         const { injectHeadfullFSTemplates } = await import('@jay-framework/compiler-jay-html');
@@ -1465,6 +1465,10 @@ function setupFreezeEndpoint(vite: ViteDevServer, freezeStore: FreezeStore): voi
  * Strips dynamic segments ([param], [[param]]) to get the static prefix.
  * Example: src/pages/products/kitan/[[category]]/page.jay-html → /products/kitan
  */
+function getRouteDir(route: JayRoute): string {
+    return route.rawRoute.replace(/^\//, '') || 'index';
+}
+
 function getRoutePrefix(jayHtmlPath: string, pagesRootFolder: string): string {
     const rel = path.relative(pagesRootFolder, path.dirname(jayHtmlPath));
     const segments = rel.split(path.sep).filter(Boolean);

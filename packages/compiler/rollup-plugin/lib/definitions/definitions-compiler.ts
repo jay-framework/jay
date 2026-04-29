@@ -91,6 +91,14 @@ export function jayDefinitions(projectRoot: string) {
             return null;
         },
         async transform(code: string, id: string): Promise<TransformResult> {
+            // Skip .d.ts generation for files outside the project root (DL#130 plugin routes fix).
+            // This covers NPM packages in node_modules/ AND workspace-linked packages
+            // resolved through symlinks. Both already ship pre-built .d.ts files.
+            const resolvedId = fs.realpathSync(id);
+            if (!resolvedId.startsWith(projectRoot)) {
+                return null;
+            }
+
             if (hasExtension(id, JAY_EXTENSION)) {
                 const context = this as PluginContext;
                 const { filename, dirname } = getFileContext(id);

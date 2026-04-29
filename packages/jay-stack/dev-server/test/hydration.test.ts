@@ -278,13 +278,14 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
             const dirPath = path.resolve(__dirname, dirName);
             const pagesRoot = opts.pagesSubdir ? path.join(dirPath, opts.pagesSubdir) : dirPath;
             const routeSubPath = routePath === '/' ? '' : routePath.replace(/^\//, '');
+            const routeDir = routeSubPath || 'index';
             const pageDir = routeSubPath ? path.join(pagesRoot, routeSubPath) : pagesRoot;
             // Use pre-rendered path if available (slow-rendered pages have
             // slow bindings resolved — hydrate script should not adopt them)
             const preRenderedPath = path.join(
                 dirPath,
                 'build/pre-rendered',
-                routeSubPath,
+                routeDir,
                 'page.jay-html',
             );
             const hydrateSourcePath = fs.existsSync(preRenderedPath)

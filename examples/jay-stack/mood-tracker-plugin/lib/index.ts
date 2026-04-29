@@ -1,5 +1,6 @@
 export * from './mood-tracker';
 export * from './mood-actions';
+export { moodStatsPage } from './pages/mood-stats/page';
 
 // Init export - consolidated server/client initialization using makeJayInit
 export {
