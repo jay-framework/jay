@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/webmcp-plugin",
-  "version": "0.16.1",
+  "version": "0.16.2",
   "type": "module",
   "license": "Apache-2.0",
   "description": "WebMCP plugin for jay-stack — automatically exposes page interactions as WebMCP tools, resources, and prompts",
