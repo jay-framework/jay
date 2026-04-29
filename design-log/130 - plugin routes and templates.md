@@ -271,8 +271,8 @@ NPM plugin routes declare the page component's export name in `plugin.yaml` (e.g
 - Dev server — passes `route.component` as `componentExport` for NPM plugin routes (where the component field is an export name, not a file path)
 - `loadPageParts()` — uses `route.componentExport || 'page'` for both SSR load and client import generation
 
-| File | Change |
-| --- | --- |
-| `route-scanner/lib/route-scanner.ts` | `JayRoute.componentExport` field; `createRoute()` 4th arg |
-| `dev-server/lib/dev-server.ts` | Pass `componentExport` for NPM plugin routes |
-| `stack-server-runtime/lib/load-page-parts.ts` | Use `componentExport` instead of hardcoded `'page'` |
+| File                                          | Change                                                    |
+| --------------------------------------------- | --------------------------------------------------------- |
+| `route-scanner/lib/route-scanner.ts`          | `JayRoute.componentExport` field; `createRoute()` 4th arg |
+| `dev-server/lib/dev-server.ts`                | Pass `componentExport` for NPM plugin routes              |
+| `stack-server-runtime/lib/load-page-parts.ts` | Use `componentExport` instead of hardcoded `'page'`       |

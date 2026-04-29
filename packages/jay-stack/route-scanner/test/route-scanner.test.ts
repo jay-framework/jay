@@ -221,7 +221,11 @@ describe('jay-params parsing', () => {
 
 describe('createRoute', () => {
     it('should create a route without componentExport (defaults to page)', () => {
-        const route = createRoute('/products', '/src/pages/products/page.jay-html', '/src/pages/products/page.ts');
+        const route = createRoute(
+            '/products',
+            '/src/pages/products/page.jay-html',
+            '/src/pages/products/page.ts',
+        );
         expect(route.rawRoute).toBe('/products');
         expect(route.compPath).toBe('/src/pages/products/page.ts');
         expect(route.componentExport).toBeUndefined();
