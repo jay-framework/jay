@@ -297,8 +297,12 @@ export class SlowRenderCache {
      */
     private computeCachePath(jayHtmlPath: string, params: Record<string, string>): string {
         const relativePath = path.relative(this.pagesRoot, jayHtmlPath);
-        const dir = path.dirname(relativePath);
-        const basename = path.basename(relativePath, '.jay-html');
+        // If the path escapes pagesRoot (e.g., plugin routes in node_modules),
+        // use a hash-based directory to keep artifacts inside the cache folder.
+        const dir = relativePath.startsWith('..')
+            ? path.join('_plugins', crypto.createHash('md5').update(jayHtmlPath).digest('hex').slice(0, 12))
+            : path.dirname(relativePath);
+        const basename = path.basename(jayHtmlPath, '.jay-html');
         const paramsHash = hashParams(params);
         const cacheFileName = `${basename}${paramsHash}.jay-html`;
         return path.join(this.cacheDir, dir, cacheFileName);
@@ -320,8 +324,10 @@ export class SlowRenderCache {
      */
     private async scanAndDeleteCacheFiles(jayHtmlPath: string): Promise<void> {
         const relativePath = path.relative(this.pagesRoot, jayHtmlPath);
-        const dir = path.dirname(relativePath);
-        const basename = path.basename(relativePath, '.jay-html');
+        const dir = relativePath.startsWith('..')
+            ? path.join('_plugins', crypto.createHash('md5').update(jayHtmlPath).digest('hex').slice(0, 12))
+            : path.dirname(relativePath);
+        const basename = path.basename(jayHtmlPath, '.jay-html');
         const cacheSubDir = path.join(this.cacheDir, dir);
 
         try {

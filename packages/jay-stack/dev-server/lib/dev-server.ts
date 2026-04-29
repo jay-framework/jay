@@ -515,6 +515,11 @@ async function handleCachedRequest(
     // Only fast+interactive viewState (slow is baked into jay-html)
     // Use the pre-rendered file path so Vite compiles it
     // Pass slowViewState so automation can show full merged state
+    // Use route's declared path for build output directory (DL#130 fix).
+    // For plugin routes in node_modules, path.relative(pagesRoot, jayHtmlPath) would
+    // produce ../../../node_modules/... which escapes the build folder.
+    const routeDir = route.rawRoute.replace(/^\//, '') || 'index';
+
     await sendResponse(
         vite,
         res,
@@ -529,6 +534,7 @@ async function handleCachedRequest(
         pluginsForPage,
         options,
         routeToExpressRoute(route),
+        routeDir,
         cachedEntry.slowViewState,
         timing,
         cachedEntry.preRenderedContent,
@@ -829,14 +835,13 @@ async function sendResponse(
     pluginsForPage: PluginClientInitInfo[],
     options: DevServerOptions,
     routePattern: string,
+    routeDir: string,
     slowViewState?: object,
     timing?: RequestTiming,
     preLoadedContent?: string,
     headTags?: import('@jay-framework/fullstack-component').HeadTag[],
 ): Promise<void> {
     let pageHtml: string;
-
-    const routeDir = path.dirname(path.relative(options.pagesRootFolder!, sourceJayHtmlPath));
 
     try {
         // Try SSR: server-render HTML + hydration script
@@ -955,7 +960,7 @@ async function handleFrozenRequest(
         const jayHtmlFilename = path.basename(jayHtmlPath);
         const jayHtmlDir = path.dirname(jayHtmlPath);
         const sourceDir = path.dirname(route.jayHtmlPath);
-        const routeDir = path.dirname(path.relative(options.pagesRootFolder!, route.jayHtmlPath));
+        const routeDir = route.rawRoute.replace(/^\//, '') || 'index';
 
         // Inject headfull FS templates (component jay-html)
         const { injectHeadfullFSTemplates } = await import('@jay-framework/compiler-jay-html');

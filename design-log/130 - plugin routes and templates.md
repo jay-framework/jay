@@ -276,3 +276,21 @@ NPM plugin routes declare the page component's export name in `plugin.yaml` (e.g
 | `route-scanner/lib/route-scanner.ts`          | `JayRoute.componentExport` field; `createRoute()` 4th arg |
 | `dev-server/lib/dev-server.ts`                | Pass `componentExport` for NPM plugin routes              |
 | `stack-server-runtime/lib/load-page-parts.ts` | Use `componentExport` instead of hardcoded `'page'`       |
+
+### Fix: build artifacts written into node_modules for plugin routes
+
+Plugin routes have `jayHtmlPath` inside `node_modules/`. The dev server computed output directories via `path.relative(pagesRootFolder, jayHtmlPath)`, which produced `../../../node_modules/...` paths that escaped the build folder — writing server elements, CSS, and cache files back into the NPM package.
+
+**Affected:**
+- Server element output (`compileAndLoadServerElement`) — via `routeDir` param
+- CSS output — written alongside server elements
+- Slow render cache (`computeCachePath`, `scanAndDeleteCacheFiles`)
+
+**Fix:**
+- `sendResponse` and `handleFrozenRequest` — `routeDir` now derived from `route.rawRoute` (the declared route path, e.g., `/aiditor`) instead of filesystem-relative path
+- `SlowRenderCache` — when `path.relative()` produces a `..` path, falls back to `_plugins/<hash>` subdirectory inside the cache folder
+
+| File | Change |
+| --- | --- |
+| `dev-server/lib/dev-server.ts` | `routeDir` from `route.rawRoute`; passed as parameter to `sendResponse` |
+| `stack-server-runtime/lib/slow-render-cache.ts` | `computeCachePath` and `scanAndDeleteCacheFiles` use `_plugins/<hash>` for external paths |
