@@ -161,21 +161,100 @@ my-project/
 
 See `examples/jay-stack/fake-shop` for a working example.
 
+## Dual Entry Points
+
+Jay plugins are fullstack — they run on both server and client. The build produces two bundles:
+
+- **Server** (`dist/index.js`) — actions, services, SSR rendering, `init()`. Built with `vite build --ssr`.
+- **Client** (`dist/index.client.js`) — components for hydration, context tokens, `init()`. Built with `vite build`.
+
+Create two entry files:
+
+| File                  | Exports                                                    |
+| --------------------- | ---------------------------------------------------------- |
+| `lib/index.ts`        | Actions, services, components (SSR), init, service markers |
+| `lib/index.client.ts` | Components (hydration), context markers, init              |
+
+Actions and service providers are server-only. Components appear in **both** entries.
+
+## Build Scripts
+
+```json
+{
+  "scripts": {
+    "build": "npm run clean && npm run definitions && npm run build:client && npm run build:server && npm run build:copy-assets && npm run build:types && npm run validate",
+    "definitions": "jay-cli definitions lib",
+    "build:client": "vite build",
+    "build:server": "vite build --ssr",
+    "build:copy-assets": "cp lib/*.jay-contract* dist/",
+    "build:types": "tsup lib/index.ts lib/index.client.ts --dts-only --format esm",
+    "validate": "jay-stack-cli validate-plugin",
+    "clean": "rimraf dist"
+  }
+}
+```
+
+The `vite.config.ts` uses `isSsrBuild` to switch entry points:
+
+```typescript
+import { resolve } from 'path';
+import { defineConfig } from 'vite';
+import { jayStackCompiler } from '@jay-framework/compiler-jay-stack';
+
+const jayOptions = { tsConfigFilePath: resolve(__dirname, 'tsconfig.json'), outputDir: 'build' };
+
+export default defineConfig(({ isSsrBuild }) => ({
+  plugins: [...jayStackCompiler(jayOptions)],
+  build: {
+    minify: false,
+    ssr: isSsrBuild,
+    emptyOutDir: false,
+    lib: {
+      entry: isSsrBuild
+        ? { index: resolve(__dirname, 'lib/index.ts') }
+        : { 'index.client': resolve(__dirname, 'lib/index.client.ts') },
+      formats: ['es'],
+    },
+    rollupOptions: {
+      external: [
+        '@jay-framework/component',
+        '@jay-framework/fullstack-component',
+        '@jay-framework/stack-client-runtime',
+        '@jay-framework/stack-server-runtime',
+        '@jay-framework/reactive',
+        '@jay-framework/runtime',
+      ],
+    },
+  },
+}));
+```
+
 ## package.json Exports
 
-For NPM packages, declare exports so the framework can resolve the plugin:
+For NPM packages, declare exports for both server and client entry points:
 
 ```json
 {
   "name": "@my-org/my-plugin",
   "type": "module",
+  "main": "dist/index.js",
   "exports": {
-    ".": "./dist/index.js",
-    "./plugin.yaml": "./plugin.yaml"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/index.client.d.ts",
+      "default": "./dist/index.client.js"
+    },
+    "./plugin.yaml": "./plugin.yaml",
+    "./my-contract.jay-contract": "./dist/my-contract.jay-contract"
   },
-  "files": ["dist", "plugin.yaml", "lib/contracts", "lib/actions"]
+  "files": ["dist", "plugin.yaml"]
 }
 ```
+
+The `./client` export is required — the framework uses it for browser-side hydration code. The `.` export handles server-side rendering and action execution.
 
 ## Plugin-Contributed Agent-Kit Guides
 

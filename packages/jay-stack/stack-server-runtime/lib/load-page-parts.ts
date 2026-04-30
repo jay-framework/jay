@@ -101,9 +101,14 @@ export async function loadPageParts(
         // (client code is stripped because ssrLoadModule sets ssr: true)
         const exportName = route.componentExport || 'page';
         const pageComponent = (await vite.ssrLoadModule(route.compPath))[exportName];
+        // For NPM plugin routes (componentExport set), use the /client entry for browser imports.
+        // The server entry (compPath) contains server-only code (actions, services).
+        const clientImportPath = route.componentExport
+            ? route.compPath.replace(/index\.js$/, 'index.client.js')
+            : route.compPath;
         parts.push({
             compDefinition: pageComponent,
-            clientImport: `import {${exportName}} from '${route.compPath}'`,
+            clientImport: `import {${exportName}} from '${clientImportPath}'`,
             clientPart: `{comp: ${exportName}.comp, contextMarkers: ${exportName}.contexts || []}`,
         });
     }

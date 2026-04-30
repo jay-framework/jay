@@ -173,6 +173,25 @@ function resolvePluginModule(plugin: {
     pluginPath: string;
     manifest: { module?: string };
 }): string {
+    // For NPM packages: read main/exports from package.json
+    const pkgJsonPath = path.join(plugin.pluginPath, 'package.json');
+    if (fsSync.existsSync(pkgJsonPath)) {
+        try {
+            const pkg = JSON.parse(fsSync.readFileSync(pkgJsonPath, 'utf-8'));
+            const mainExport = pkg.exports?.['.'];
+            const mainPath =
+                typeof mainExport === 'string'
+                    ? mainExport
+                    : mainExport?.default || mainExport?.import || pkg.main;
+            if (mainPath) {
+                const resolved = path.join(plugin.pluginPath, mainPath);
+                if (fsSync.existsSync(resolved)) return resolved;
+            }
+        } catch {
+            /* fall through to manual resolution */
+        }
+    }
+
     const modulePath = plugin.manifest.module || 'index';
     for (const ext of ['.ts', '.js', '/index.ts', '/index.js']) {
         const candidate = path.join(plugin.pluginPath, modulePath + ext);

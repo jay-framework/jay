@@ -827,6 +827,19 @@ async function validatePackageJson(
                 });
             }
 
+            // Check for client entry point (required for browser-side hydration)
+            if (!packageJson.exports['./client']) {
+                result.warnings.push({
+                    type: 'export-mismatch',
+                    message: 'package.json exports missing "./client" entry point',
+                    location: packageJsonPath,
+                    suggestion:
+                        'Add "./client": "./dist/index.client.js" to exports. ' +
+                        'The client bundle provides components for hydration and client-side contexts. ' +
+                        'Build with: vite build (client) + vite build --ssr (server)',
+                });
+            }
+
             // Check for contract exports if contracts are defined
             if (context.manifest.contracts) {
                 for (const contract of context.manifest.contracts) {

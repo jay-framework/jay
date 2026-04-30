@@ -13,7 +13,8 @@ A plugin provides headless components (data + interactions, no UI) that project 
 3. **Define actions** with `.jay-action` metadata
 4. **Optionally add routes** — pages for admin tools and dashboards
 5. **Set up `plugin.yaml`** — list contracts, actions, services, contexts, routes
-6. **Validate** with `jay-stack validate-plugin`
+6. **Configure build** — dual entry points (server + client), vite.config.ts, package.json exports
+7. **Validate** with `jay-stack validate-plugin`
 
 ## Guides
 
