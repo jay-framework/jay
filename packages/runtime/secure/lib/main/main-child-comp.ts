@@ -12,7 +12,7 @@ import { currentConstructionContext, PrivateRef } from '@jay-framework/runtime';
 export interface SecureCoordinateContext {
     coordinate: Coordinate;
 }
-export const SECURE_COORDINATE_MARKER = createJayContext<SecureCoordinateContext>();
+export const SECURE_COORDINATE_MARKER = createJayContext<SecureCoordinateContext>('scm');
 
 export function secureChildComp<
     ParentVS,

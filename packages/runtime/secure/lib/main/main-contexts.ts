@@ -8,4 +8,4 @@ export interface SecureComponentContext {
     port: IJayPort;
     funcRepository?: FunctionsRepository;
 }
-export const SECURE_COMPONENT_MARKER = createJayContext<SecureComponentContext>();
+export const SECURE_COMPONENT_MARKER = createJayContext<SecureComponentContext>('secm');

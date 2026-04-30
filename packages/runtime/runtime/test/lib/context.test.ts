@@ -5,8 +5,8 @@ describe('context', () => {
     interface TestContext {
         name: string;
     }
-    const TEST_CONTEXT = createJayContext<TestContext>();
-    const TEST_CONTEXT_2 = createJayContext<TestContext>();
+    const TEST_CONTEXT = createJayContext<TestContext>('test1');
+    const TEST_CONTEXT_2 = createJayContext<TestContext>('test2');
     const CONTEXT_VALUE = { name: 'Jay' };
     const CONTEXT_VALUE_2 = { name: 'Smith' };
 

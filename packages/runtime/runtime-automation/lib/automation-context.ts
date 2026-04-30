@@ -18,4 +18,4 @@ import type { AutomationAPI } from './types';
  * export const MyComp = makeJayComponent(render, MyComponent, AUTOMATION_CONTEXT);
  * ```
  */
-export const AUTOMATION_CONTEXT = createJayContext<AutomationAPI>();
+export const AUTOMATION_CONTEXT = createJayContext<AutomationAPI>('ac');

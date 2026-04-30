@@ -59,6 +59,22 @@ export async function createViteServer(options: CreateViteServerOptions): Promis
         base,
         // Root directory for module resolution
         root: pagesRoot,
+        // Force singleton resolution for all runtime packages.
+        // Without this, pre-bundled deps (in .vite/deps/) inline their own copy
+        // of these packages, while plugin client bundles (served as raw ESM via /@fs/)
+        // resolve to a separate instance → duplicate createJayContext() → runtime crash.
+        resolve: {
+            dedupe: [
+                '@jay-framework/runtime',
+                '@jay-framework/reactive',
+                '@jay-framework/component',
+                '@jay-framework/fullstack-component',
+                '@jay-framework/stack-client-runtime',
+                '@jay-framework/runtime-automation',
+                '@jay-framework/view-state-merge',
+                '@jay-framework/json-patch',
+            ],
+        },
         // SSR configuration
         ssr: {
             // Mark jay-framework packages as external so Vite uses Node's require
@@ -66,7 +82,10 @@ export async function createViteServer(options: CreateViteServerOptions): Promis
             external: ['@jay-framework/stack-server-runtime', '@jay-framework/fullstack-component'],
         },
         // Disable automatic entry point discovery for pre-bundling —
-        // we run in middleware mode with no HTML files, so Vite can't auto-detect entries
+        // we run in middleware mode with no HTML files, so Vite can't auto-detect entries.
+        // Explicitly include singleton packages so Vite pre-bundles them as separate entries.
+        // Without this, stack-client-runtime inlines its own copy of component/reactive/runtime
+        // into the .vite/deps/ chunk, while plugin client bundles import the raw ESM copy → duplicates.
         optimizeDeps: {
             entries: [],
         },

@@ -15,7 +15,7 @@ export interface SandboxContext {
     compId: number;
     coordinate: Coordinate;
 }
-export const SANDBOX_BRIDGE_CONTEXT = createJayContext<SandboxContext>();
+export const SANDBOX_BRIDGE_CONTEXT = createJayContext<SandboxContext>('sbc');
 export type Refs = Record<
     string,
     | HTMLElementCollectionProxy<any, any>
@@ -33,4 +33,4 @@ export interface SandboxCreationContext<ViewState> {
     parentComponentReactive?: Reactive;
 }
 
-export const SANDBOX_CREATION_CONTEXT = createJayContext<SandboxCreationContext<any>>();
+export const SANDBOX_CREATION_CONTEXT = createJayContext<SandboxCreationContext<any>>('scc');

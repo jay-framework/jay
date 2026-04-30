@@ -71,8 +71,8 @@ export function useGlobalContext<ContextType>(
     return globalContextRegistry.get(marker as symbol);
 }
 
-export function createJayContext<ContextType = unknown>(): ContextMarker<ContextType> {
-    return Symbol();
+export function createJayContext<ContextType = unknown>(name: string): ContextMarker<ContextType> {
+    return Symbol.for('jay:' + name);
 }
 
 export function withContext<ContextType, Returns>(
@@ -133,7 +133,7 @@ export function restoreContext<Returns>(
     }
 }
 
-export const CONSTRUCTION_CONTEXT_MARKER = createJayContext<ConstructContext<any>>();
+export const CONSTRUCTION_CONTEXT_MARKER = createJayContext<ConstructContext<any>>('ccm');
 
 export function currentConstructionContext() {
     return useContext(CONSTRUCTION_CONTEXT_MARKER);

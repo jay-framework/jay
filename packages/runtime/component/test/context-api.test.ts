@@ -118,7 +118,7 @@ describe('context api', () => {
                 value: () => number;
                 setValue: (v: number) => void;
             }
-            const TEST_CTX = createJayContext<TestContext>();
+            const TEST_CTX = createJayContext<TestContext>('test-ctx');
 
             const ctx = registerReactiveGlobalContext(TEST_CTX, () => {
                 const [value, setValue] = createSignal(42);
@@ -137,7 +137,7 @@ describe('context api', () => {
                 count: () => number;
                 increment: () => void;
             }
-            const COUNTER_CTX = createJayContext<CounterContext>();
+            const COUNTER_CTX = createJayContext<CounterContext>('counter-ctx');
 
             const ctx = registerReactiveGlobalContext(COUNTER_CTX, () => {
                 const [count, setCount] = createSignal(0);
@@ -163,7 +163,7 @@ describe('context api', () => {
                 data: () => string | null;
                 init: () => Promise<void>;
             }
-            const ASYNC_CTX = createJayContext<AsyncContext>();
+            const ASYNC_CTX = createJayContext<AsyncContext>('async-ctx');
 
             const ctx = registerReactiveGlobalContext(ASYNC_CTX, () => {
                 const [ready, setReady] = createSignal(false);

@@ -7,7 +7,7 @@ export interface CountContext {
     setCount: Setter<number>;
     inc: () => void;
 }
-export const COUNT_CONTEXT = createJayContext<CountContext>();
+export const COUNT_CONTEXT = createJayContext<CountContext>('count-ctx');
 export const mkContext = () =>
     createReactiveContext(() => {
         const [count, setCount] = createSignal(12);

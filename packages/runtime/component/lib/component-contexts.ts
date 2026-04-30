@@ -12,5 +12,5 @@ export interface ComponentContext extends HookContext {
     mountedSignal: [Getter<boolean>, Setter<boolean>];
 }
 
-export const COMPONENT_CONTEXT = createJayContext<ComponentContext>();
-export const CONTEXT_CREATION_CONTEXT = createJayContext<HookContext>();
+export const COMPONENT_CONTEXT = createJayContext<ComponentContext>('cc');
+export const CONTEXT_CREATION_CONTEXT = createJayContext<HookContext>('ccc');

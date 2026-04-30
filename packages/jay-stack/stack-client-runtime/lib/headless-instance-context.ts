@@ -44,7 +44,7 @@ export interface HeadlessInstancesData {
  * Provided by makeCompositeJayComponent, consumed by makeHeadlessInstanceComponent.
  */
 export const HEADLESS_INSTANCES: ContextMarker<HeadlessInstancesData> =
-    createJayContext<HeadlessInstancesData>();
+    createJayContext<HeadlessInstancesData>('hi');
 
 function makeSignals<T extends object>(obj: T): Signals<T> {
     return Object.keys(obj).reduce((signals, key) => {
