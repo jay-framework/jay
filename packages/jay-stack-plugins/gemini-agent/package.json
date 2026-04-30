@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/gemini-agent-plugin",
-  "version": "0.16.2",
+  "version": "0.16.3",
   "type": "module",
   "license": "Apache-2.0",
   "description": "Gemini AI agent plugin for jay-stack — embedded chat agent with page automation and server action calling",
