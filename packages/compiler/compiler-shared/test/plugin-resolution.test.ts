@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { resolvePluginComponent, resolvePluginManifest } from '../lib';
+import { resolvePluginComponent, resolvePluginManifest, findDynamicContract } from '../lib';
+import type { PluginManifest } from '../lib';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
@@ -593,3 +594,48 @@ contracts:
     );
     fs.writeFileSync(path.join(npmCustomModule, 'dist', 'components.js'), '// Component file');
 }
+
+describe('findDynamicContract', () => {
+    const manifest: PluginManifest = {
+        name: 'test-plugin',
+        dynamic_contracts: [
+            { prefix: 'list', component: 'dynamicList', generator: 'listGen' },
+            { prefix: 'product-page', component: 'productPage', generator: 'productPageGen' },
+        ],
+    };
+
+    it('should match prefix/name format', () => {
+        const result = findDynamicContract(manifest, 'list/recipes');
+        expect(result).not.toBeNull();
+        expect(result!.prefix).toBe('list');
+        expect(result!.component).toBe('dynamicList');
+    });
+
+    it('should match prefix-only for single contracts', () => {
+        const result = findDynamicContract(manifest, 'product-page');
+        expect(result).not.toBeNull();
+        expect(result!.prefix).toBe('product-page');
+        expect(result!.component).toBe('productPage');
+    });
+
+    it('should return null for unknown prefix', () => {
+        expect(findDynamicContract(manifest, 'unknown/something')).toBeNull();
+    });
+
+    it('should return null for unknown single name', () => {
+        expect(findDynamicContract(manifest, 'unknown')).toBeNull();
+    });
+
+    it('should return null when no dynamic_contracts defined', () => {
+        expect(findDynamicContract({ name: 'empty' }, 'anything')).toBeNull();
+    });
+
+    it('should handle single dynamic_contracts config (not array)', () => {
+        const single: PluginManifest = {
+            name: 'test',
+            dynamic_contracts: { prefix: 'cms', component: 'cmsList', generator: 'cmsGen' },
+        };
+        expect(findDynamicContract(single, 'cms/posts')?.prefix).toBe('cms');
+        expect(findDynamicContract(single, 'cms')?.prefix).toBe('cms');
+    });
+});

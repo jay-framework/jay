@@ -19,6 +19,16 @@ contracts:
     component: productSearch
     description: Product listing with filters and pagination
 
+dynamic_contracts:
+  # Single contract: prefix used as the contract name directly
+  - prefix: product-page
+    component: productPage
+    generator: productPageContractGenerator
+  # Multiple contracts: prefix/name format (e.g., list/recipes, list/articles)
+  - prefix: list
+    component: dynamicList
+    generator: listContractGenerator
+
 actions:
   - name: searchProducts
     action: search-products.jay-action
@@ -55,6 +65,38 @@ setup:
 - `contract` — Path to `.jay-contract` file (relative to plugin root)
 - `component` — Export name of the component (e.g., `productPage`)
 - `description` — What this component does and when to use it
+
+### Dynamic Contract Entry Fields
+
+Dynamic contracts are generated at setup time from site-specific data (e.g., CMS collection schemas, extended product fields).
+
+- `prefix` — Identifier for this dynamic contract group. Used as the contract name for single contracts, or as `prefix/name` for multiple.
+- `component` — Export name of the headless component that serves these contracts
+- `generator` — Export name of the generator function that produces contract YAML
+
+**Single contract** — generator returns one `{ yaml }` without a name:
+
+```yaml
+dynamic_contracts:
+  - prefix: product-page
+    component: productPage
+    generator: productPageContractGenerator
+```
+
+Referenced as `contract="product-page"` in jay-html.
+
+**Multiple contracts** — generator yields `{ name, yaml }` for each:
+
+```yaml
+dynamic_contracts:
+  - prefix: list
+    component: dynamicList
+    generator: listContractGenerator
+```
+
+Referenced as `contract="list/recipes"`, `contract="list/articles"` etc.
+
+Contracts are materialized by `jay-stack agent-kit` or `jay-stack setup` and stored in `agent-kit/materialized-contracts/`.
 
 ### Action Entry Fields
 

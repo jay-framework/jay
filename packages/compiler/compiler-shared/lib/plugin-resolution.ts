@@ -32,7 +32,9 @@ export interface DynamicContractConfig {
     generator: string;
     /** Path to the headless component (relative to plugin root) */
     component: string;
-    /** Prefix for generated contract names (e.g., "cms" -> "cms/blog-posts") */
+    /** Prefix for generated contract names.
+     *  When the generator returns multiple contracts: used as prefix (e.g., "list" → "list/recipes").
+     *  When the generator returns a single contract: the name can be omitted, using just the prefix as the contract name (e.g., "product-page"). */
     prefix: string;
 }
 
@@ -172,21 +174,20 @@ export function findDynamicContract(
         return null;
     }
 
-    // Extract prefix from contract name (e.g., "list" from "list/recipes-list")
-    const slashIndex = contractName.indexOf('/');
-    if (slashIndex === -1) {
-        return null; // Not a dynamic contract format
-    }
-
-    const prefix = contractName.substring(0, slashIndex);
-
     // Normalize to array
     const dynamicConfigs = Array.isArray(manifest.dynamic_contracts)
         ? manifest.dynamic_contracts
         : [manifest.dynamic_contracts];
 
-    // Find matching config by prefix
-    return dynamicConfigs.find((config) => config.prefix === prefix) || null;
+    // Multi-contract match: "prefix/name" (e.g., "list/recipes-list" → prefix "list")
+    const slashIndex = contractName.indexOf('/');
+    if (slashIndex !== -1) {
+        const prefix = contractName.substring(0, slashIndex);
+        return dynamicConfigs.find((config) => config.prefix === prefix) || null;
+    }
+
+    // Single-contract match: contractName equals the prefix itself (e.g., "product-page")
+    return dynamicConfigs.find((config) => config.prefix === contractName) || null;
 }
 
 /**
@@ -292,13 +293,13 @@ function resolveLocalPlugin(
 
     // No matching contract found
     const availableContracts = manifest.contracts?.map((c) => c.name) || [];
-    const dynamicPrefixes = manifest.dynamic_contracts
+    const dynamicLabels = manifest.dynamic_contracts
         ? (Array.isArray(manifest.dynamic_contracts)
               ? manifest.dynamic_contracts
               : [manifest.dynamic_contracts]
           ).map((c) => `${c.prefix}/*`)
         : [];
-    const allAvailable = [...availableContracts, ...dynamicPrefixes].join(', ');
+    const allAvailable = [...availableContracts, ...dynamicLabels].join(', ');
 
     return new WithValidations(null as any, [
         `Contract "${contractName}" not found in local plugin "${pluginName}". Available: ${allAvailable}`,
@@ -475,13 +476,13 @@ function resolveNpmPlugin(
 
     // No matching contract found
     const availableContracts = manifest.contracts?.map((c) => c.name) || [];
-    const dynamicPrefixes = manifest.dynamic_contracts
+    const dynamicLabels = manifest.dynamic_contracts
         ? (Array.isArray(manifest.dynamic_contracts)
               ? manifest.dynamic_contracts
               : [manifest.dynamic_contracts]
           ).map((c) => `${c.prefix}/*`)
         : [];
-    const allAvailable = [...availableContracts, ...dynamicPrefixes].join(', ');
+    const allAvailable = [...availableContracts, ...dynamicLabels].join(', ');
 
     return new WithValidations(null as any, [
         `Contract "${contractName}" not found in NPM package "${pluginName}". Available: ${allAvailable}`,

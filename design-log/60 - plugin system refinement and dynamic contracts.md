@@ -2604,3 +2604,28 @@ Updated `examples/jay-stack/mood-tracker-plugin` and `examples/jay-stack/fake-sh
 - ✅ Migration from old format is straightforward
 - ✅ Dynamic contracts maintain full type safety
 - ✅ Documentation is comprehensive and includes examples
+
+## Addendum: Optional name for single dynamic contracts
+
+### Problem
+
+Dynamic contracts required both a `prefix` and a `name` from the generator (e.g., `list/recipes-list`). For plugins like wix-stores where one generator produces a single contract extending a base page, the `prefix/name` format is redundant — `product-page/product-page`.
+
+### Design
+
+Keep `prefix` mandatory (it identifies the config in `findDynamicContract`). Make the generator's returned `name` optional:
+
+- **Single contract** — generator returns `{ yaml }` without `name` → materialized as `product-page.jay-contract`, referenced as `contract="product-page"`
+- **Multiple contracts** — generator returns `{ name, yaml }` for each → materialized as `list/recipes.jay-contract`, referenced as `contract="list/recipes"`
+
+`findDynamicContract` matches both formats:
+
+- `list/recipes` → finds config with `prefix: 'list'` (slash-based prefix match)
+- `product-page` → finds config with `prefix: 'product-page'` (exact prefix match)
+
+### Files changed
+
+| File                                                | Change                                                                       |
+| --------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `compiler-shared/lib/plugin-resolution.ts`          | `findDynamicContract` matches `contractName === prefix` for single contracts |
+| `stack-server-runtime/lib/contract-materializer.ts` | Skip name in fullName/fileName when generator omits it                       |

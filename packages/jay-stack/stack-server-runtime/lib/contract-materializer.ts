@@ -484,9 +484,24 @@ export async function materializeContracts(
 
                     const prefix = config.prefix;
 
+                    // Validate: multiple contracts require names
+                    if (generatedContracts.length > 1) {
+                        const missing = generatedContracts.filter((c) => !c.name);
+                        if (missing.length > 0) {
+                            getLogger().error(
+                                `   ❌ Dynamic contract generator for "${prefix}" returned ${generatedContracts.length} contracts but ${missing.length} are missing a name. ` +
+                                    `Names are required when a generator returns multiple contracts.`,
+                            );
+                            continue;
+                        }
+                    }
+
                     for (const generated of generatedContracts) {
-                        const fullName = `${prefix}/${toKebabCase(generated.name)}`;
-                        const fileName = `${prefix}-${toKebabCase(generated.name)}.jay-contract`;
+                        const kebabName = generated.name ? toKebabCase(generated.name) : null;
+                        const fullName = kebabName ? `${prefix}/${kebabName}` : prefix;
+                        const fileName = kebabName
+                            ? `${prefix}-${kebabName}.jay-contract`
+                            : `${prefix}.jay-contract`;
                         const filePath = path.join(pluginOutputDir, fileName);
 
                         // Write the contract file
