@@ -98,6 +98,17 @@ Referenced as `contract="list/recipes"`, `contract="list/articles"` etc.
 
 Contracts are materialized by `jay-stack agent-kit` or `jay-stack setup` and stored in `agent-kit/materialized-contracts/`.
 
+**Linking to static contracts from generated YAML** — materialized contracts live in a different directory than the plugin source. Use the plugin's package path (not relative paths) for `link:` references to static contracts:
+
+```yaml
+# In the generated contract YAML:
+tags:
+  - tag: gallery
+    type: sub-contract
+    link: "@my-org/my-plugin/media-gallery"   # package path — works from any directory
+    # NOT: link: ./media-gallery            # relative path — breaks in materialized location
+```
+
 ### Action Entry Fields
 
 - `name` — Action name (used with `jay-stack action <plugin>/<action>`)
