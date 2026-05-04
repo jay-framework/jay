@@ -249,8 +249,8 @@ export type AnyJayStackComponentDefinition = JayStackComponentDefinition<
  * ```
  */
 export interface GeneratedContractYaml {
-    /** Contract name (PascalCase, e.g., "BlogPostsList") */
-    name: string;
+    /** Contract name (PascalCase, e.g., "BlogPostsList"). Optional for single-contract generators — omit to use the prefix as the contract name. */
+    name?: string;
     /** Contract definition in YAML format */
     yaml: string;
     /** Optional description for the contract */
