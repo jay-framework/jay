@@ -11,9 +11,6 @@ export const scrollCarousel = makeJayStackComponent<ScrollCarouselContract>()
     .withFastRender(async () =>
         phaseOutput<ScrollCarouselFastViewState, {}>({ atStart: true, atEnd: false }, {}),
     )
-    .withClientDefaults(() => ({
-        viewState: { atStart: true, atEnd: false },
-    }))
     .withInteractive(function ScrollCarousel(props: Props<{}>, refs: ScrollCarouselRefs) {
         const [atStart, setAtStart] = createSignal(true);
         const [atEnd, setAtEnd] = createSignal(false);

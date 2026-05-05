@@ -12,9 +12,6 @@ export const clipboardCopy = makeJayStackComponent<ClipboardCopyContract>()
     .withFastRender(async (props: ClipboardCopyProps) =>
         phaseOutput<ClipboardCopyFastViewState, {}>({ text: props.text ?? '', copied: false }, {}),
     )
-    .withClientDefaults((props) => ({
-        viewState: { text: props.text ?? '', copied: false },
-    }))
     .withInteractive(function ClipboardCopy(
         props: Props<ClipboardCopyProps>,
         refs: ClipboardCopyRefs,
