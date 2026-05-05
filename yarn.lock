@@ -4362,9 +4362,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@jay-framework/gemini-agent-plugin@workspace:packages/jay-stack-plugins/gemini-agent":
+"@jay-framework/gemini-agent-plugin@workspace:packages/plugins/gemini-agent":
   version: 0.0.0-use.local
-  resolution: "@jay-framework/gemini-agent-plugin@workspace:packages/jay-stack-plugins/gemini-agent"
+  resolution: "@jay-framework/gemini-agent-plugin@workspace:packages/plugins/gemini-agent"
   dependencies:
     "@google/genai": "npm:^0.14.0"
     "@jay-framework/compiler-jay-stack": "workspace:^"
@@ -4751,9 +4751,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@jay-framework/webmcp-plugin@workspace:^, @jay-framework/webmcp-plugin@workspace:packages/jay-stack-plugins/webmcp":
+"@jay-framework/webmcp-plugin@workspace:^, @jay-framework/webmcp-plugin@workspace:packages/plugins/webmcp":
   version: 0.0.0-use.local
-  resolution: "@jay-framework/webmcp-plugin@workspace:packages/jay-stack-plugins/webmcp"
+  resolution: "@jay-framework/webmcp-plugin@workspace:packages/plugins/webmcp"
   dependencies:
     "@jay-framework/compiler-jay-stack": "workspace:^"
     "@jay-framework/dev-environment": "workspace:^"

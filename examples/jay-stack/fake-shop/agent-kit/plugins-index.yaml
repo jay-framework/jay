@@ -24,7 +24,7 @@ plugins:
         type: static
         path: ./src/plugins/stock-status/stock-status.jay-contract
   - name: webmcp
-    path: ./../../../packages/jay-stack-plugins/webmcp
+    path: ./../../../packages/plugins/webmcp
     contracts: []
   - name: mood-tracker-plugin
     path: ./../mood-tracker-plugin

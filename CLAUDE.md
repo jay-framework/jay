@@ -67,7 +67,7 @@ Yarn workspaces with `wsrun` for cross-package commands. All publishable package
   - `editor-server`, `editor-client`, `editor-protocol` — Design tool integration
   - `stack-cli`, `route-scanner`, `plugin-validator`, `logger`
 
-- **`packages/jay-stack-plugins/`** — Plugin implementations (`gemini-agent`, `webmcp`)
+- **`packages/plugins/`** — Plugin implementations (`gemini-agent`, `webmcp`)
 
 ## Key Architectural Concepts
 
