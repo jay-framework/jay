@@ -96,7 +96,7 @@
     <div class="section">
       <h2>Scroll Carousel</h2>
       <p>Prev/next buttons scroll the container. Buttons disable at edges.</p>
-      <jay:scroll-carousel key="carousel">
+      <jay:scroll-carousel>
         <div class="carousel">
           <button ref="prev" class="carousel-btn prev" disabled="atStart">&#8249;</button>
           <div ref="container" class="carousel-track">
@@ -115,7 +115,7 @@
     <div class="section">
       <h2>Clipboard Copy</h2>
       <p>Click to copy the URL. Button shows "Copied!" for 2 seconds.</p>
-      <jay:clipboard-copy key="clip" text="{shareUrl}">
+      <jay:clipboard-copy text="{shareUrl}">
         <div class="copy-row">
           <div class="copy-url">{text}</div>
           <button ref="copyBtn" class="copy-btn" class-if-copied="copied:copied">
