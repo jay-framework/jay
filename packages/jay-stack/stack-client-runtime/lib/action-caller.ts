@@ -103,6 +103,25 @@ export interface CreateActionCallerOptions {
     acceptsFiles?: boolean;
 }
 
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value) && !(value instanceof Blob);
+}
+
+/**
+ * One-level record of Blobs only (e.g. `extraFiles` on submit-task). Nested File maps
+ * must not be JSON-stringified into `_json` — that strips binaries and breaks server
+ * handlers (clipboard images, etc.).
+ */
+function isRecordOfBlobs(value: unknown): value is Record<string, Blob> {
+    if (!isPlainRecord(value)) return false;
+    const vals = Object.values(value);
+    if (vals.length === 0) return false;
+    for (const v of vals) {
+        if (!(v instanceof Blob)) return false;
+    }
+    return true;
+}
+
 /**
  * Build a FormData body from an input object (DL#131).
  * File/Blob values become file fields; everything else goes into a `_json` field.
@@ -128,6 +147,11 @@ function buildFormData(input: any): FormData {
             if (nonFiles.length > 0) {
                 jsonFields[key] = nonFiles;
             }
+        } else if (isRecordOfBlobs(value)) {
+            for (const [subKey, blob] of Object.entries(value)) {
+                const name = blob instanceof File ? blob.name : `${subKey}.bin`;
+                formData.append(`${key}.${subKey}`, blob, name);
+            }
         } else {
             jsonFields[key] = value;
         }
@@ -148,6 +172,7 @@ function hasFiles(input: any): boolean {
     for (const value of Object.values(input)) {
         if (value instanceof Blob) return true;
         if (Array.isArray(value) && value.some((v) => v instanceof Blob)) return true;
+        if (isRecordOfBlobs(value)) return true;
     }
     return false;
 }

@@ -469,6 +469,56 @@ describe('Action Router', () => {
             expect(fs.existsSync(receivedInput.screenshot.path!)).toBe(false);
         });
 
+        it('should merge dotted multipart keys into nested JayFile records (extraFiles)', async () => {
+            let receivedInput: any = null;
+
+            const action = makeJayAction('test.uploadNested')
+                .withFiles()
+                .withHandler(
+                    async (input: { notes: string; extraFiles: Record<string, JayFile> }) => {
+                        receivedInput = input;
+                        const clip = input.extraFiles['attachment_1_0']!;
+                        const content = fs.readFileSync(clip.path!, 'utf-8');
+                        return { content, notes: input.notes };
+                    },
+                );
+
+            registry.register(action);
+            const url = await startServer(registry);
+
+            const boundary = '----TestBoundaryNested' + Date.now();
+            const clipContent = 'clipboard image bytes';
+
+            const parts = [
+                `--${boundary}\r\n` +
+                    `Content-Disposition: form-data; name="_json"\r\n\r\n` +
+                    `{"notes":"Use attached ref"}\r\n`,
+                `--${boundary}\r\n` +
+                    `Content-Disposition: form-data; name="extraFiles.attachment_1_0"; filename="image.png"\r\n` +
+                    `Content-Type: image/png\r\n\r\n` +
+                    `${clipContent}\r\n`,
+                `--${boundary}--\r\n`,
+            ];
+
+            const body = parts.join('');
+
+            const response = await fetch(`${url}${ACTION_ENDPOINT_BASE}/test.uploadNested`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': `multipart/form-data; boundary=${boundary}`,
+                },
+                body,
+            });
+
+            const data = await response.json();
+
+            expect(response.status).toBe(200);
+            expect(data.success).toBe(true);
+            expect(data.data.content).toBe(clipContent);
+            expect(receivedInput.extraFiles['attachment_1_0']!.name).toBe('image.png');
+            expect(fs.existsSync(receivedInput.extraFiles['attachment_1_0']!.path!)).toBe(false);
+        });
+
         it('should reject multipart for actions without withFiles', async () => {
             const action = makeJayAction('test.nofiles').withHandler(
                 async (input: { text: string }) => ({
