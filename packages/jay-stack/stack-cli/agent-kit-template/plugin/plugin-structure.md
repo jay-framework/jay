@@ -105,7 +105,7 @@ Contracts are materialized by `jay-stack agent-kit` or `jay-stack setup` and sto
 tags:
   - tag: gallery
     type: sub-contract
-    link: "@my-org/my-plugin/media-gallery"   # package path — works from any directory
+    link: '@my-org/my-plugin/media-gallery' # package path — works from any directory
     # NOT: link: ./media-gallery            # relative path — breaks in materialized location
 ```
 
@@ -323,6 +323,16 @@ my-plugin/
     └── plugin/
         └── my-plugin-extending.md  # How to extend the plugin
 ```
+
+For NPM packages, include `agent-kit` in the `files` array:
+
+```json
+{
+  "files": ["dist", "plugin.yaml", "agent-kit"]
+}
+```
+
+No `plugin.yaml` declaration needed — the CLI discovers guides by scanning the `agent-kit/` directory. Files are copied as-is into the project's `agent-kit/{role}/`.
 
 ## Reference Declarations
 

@@ -83,7 +83,7 @@ Linked (reference another contract file):
 ```yaml
 - tag: author
   type: sub-contract
-  link: ./author.jay-contract          # relative path (same package)
+  link: ./author.jay-contract # relative path (same package)
 ```
 
 For dynamic/materialized contracts linking to static contracts in a plugin package, use the package path:
@@ -91,7 +91,7 @@ For dynamic/materialized contracts linking to static contracts in a plugin packa
 ```yaml
 - tag: gallery
   type: sub-contract
-  link: "@my-org/my-plugin/media-gallery"  # package path (cross-directory)
+  link: '@my-org/my-plugin/media-gallery' # package path (cross-directory)
 ```
 
 ### `sub-contract` with `repeated: true` — Arrays

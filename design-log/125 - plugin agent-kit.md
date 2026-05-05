@@ -390,3 +390,34 @@ Services and contexts provide APIs that allow one plugin to provide functionalit
    ```
    - Referenced from `plugin.yaml` and `plugins-index.yaml`
    - Validated: if `doc` is specified, the file must exist and be exported from the package
+
+## Addendum: Plugin-contributed agent-kit guides
+
+### Problem
+
+Plugins need to ship guides for AI agents — how to use the plugin's components in jay-html (designer role), how to configure the plugin (developer role), etc. The framework's built-in agent-kit only covers generic patterns.
+
+### Design
+
+Plugins include an `agent-kit/` folder with role subfolders. During `jay-stack agent-kit`, the CLI scans all installed plugins for `agent-kit/{role}/*.md` files and copies them into the project's `agent-kit/{role}/` alongside the framework guides.
+
+```
+my-plugin/
+├── agent-kit/
+│   ├── designer/
+│   │   └── my-plugin-usage.md
+│   └── developer/
+│       └── my-plugin-config.md
+├── plugin.yaml
+└── package.json   # files: ["dist", "plugin.yaml", "agent-kit"]
+```
+
+No plugin.yaml declaration needed — the CLI discovers guides by scanning the directory.
+
+### Implementation
+
+Added `mergePluginAgentKitGuides()` in `stack-cli/lib/cli.ts`. Called after `ensureAgentKitDocs()` in the `agent-kit` command. Uses `scanPlugins()` to find all installed plugins, checks each for `agent-kit/{role}/` directories, copies `.md` files to the project's agent-kit.
+
+### Notes on INSTRUCTIONS.md
+
+Plugin-contributed guides are NOT automatically added to the role's `INSTRUCTIONS.md` table. The framework's `INSTRUCTIONS.md` is overwritten each time `agent-kit` runs (from the template). Plugin guides are discovered by the agent through file listing or the plugins-index — they don't need explicit INSTRUCTIONS.md entries.

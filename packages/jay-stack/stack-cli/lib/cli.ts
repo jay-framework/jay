@@ -7,8 +7,13 @@ import { validateJayFiles, printJayValidationResult } from './validate';
 import {
     materializeContracts,
     listContracts,
+    scanPlugins,
     type PluginsIndex,
 } from '@jay-framework/stack-server-runtime';
+import path from 'node:path';
+import fs from 'node:fs/promises';
+import fsSync from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { createViteForCli } from '@jay-framework/dev-server';
 import { setDevLogger, createDevLogger, getLogger, type LogLevel } from '@jay-framework/logger';
 import { initializeServicesForCli } from './cli-services';
@@ -132,10 +137,6 @@ async function ensureAgentKitDocs(
     _force?: boolean,
     mode?: string,
 ): Promise<void> {
-    const path = await import('node:path');
-    const fs = await import('node:fs/promises');
-    const { fileURLToPath } = await import('node:url');
-
     const agentKitDir = path.join(projectRoot, 'agent-kit');
 
     // Resolve template folder: ../agent-kit-template/ relative to dist/index.js (or lib/ in dev)
@@ -166,6 +167,75 @@ async function ensureAgentKitDocs(
             );
             getLogger().info(chalk.gray(`   Created agent-kit/${role}/${filename}`));
         }
+    }
+}
+
+/**
+ * Copies agent-kit guides from installed plugins into the project's agent-kit folder,
+ * then appends them to the role's INSTRUCTIONS.md so agents discover them.
+ */
+async function mergePluginAgentKitGuides(projectRoot: string, mode?: string): Promise<void> {
+    const plugins = await scanPlugins({ projectRoot });
+    const agentKitDir = path.join(projectRoot, 'agent-kit');
+    const roles: AgentKitRole[] =
+        mode && ALL_ROLES.includes(mode as AgentKitRole) ? [mode as AgentKitRole] : ALL_ROLES;
+
+    // Track copied files per role for INSTRUCTIONS.md
+    const copiedPerRole = new Map<string, Array<{ filename: string; pluginName: string }>>();
+
+    for (const [, plugin] of plugins) {
+        const pluginAgentKitDir = path.join(plugin.pluginPath, 'agent-kit');
+        if (!fsSync.existsSync(pluginAgentKitDir)) continue;
+
+        for (const role of roles) {
+            const roleSourceDir = path.join(pluginAgentKitDir, role);
+            let files: string[];
+            try {
+                files = (await fs.readdir(roleSourceDir)).filter(
+                    (f) => f.endsWith('.md') && f !== 'INSTRUCTIONS.md',
+                );
+            } catch {
+                continue;
+            }
+            if (files.length === 0) continue;
+
+            const roleOutputDir = path.join(agentKitDir, role);
+            await fs.mkdir(roleOutputDir, { recursive: true });
+
+            for (const filename of files) {
+                await fs.copyFile(
+                    path.join(roleSourceDir, filename),
+                    path.join(roleOutputDir, filename),
+                );
+                if (!copiedPerRole.has(role)) copiedPerRole.set(role, []);
+                copiedPerRole.get(role)!.push({ filename, pluginName: plugin.name });
+                getLogger().info(
+                    chalk.gray(
+                        `   Copied agent-kit/${role}/${filename} from plugin "${plugin.name}"`,
+                    ),
+                );
+            }
+        }
+    }
+
+    // Append plugin guide entries to INSTRUCTIONS.md for each role
+    for (const [role, entries] of copiedPerRole) {
+        const instructionsPath = path.join(agentKitDir, role, 'INSTRUCTIONS.md');
+        if (!fsSync.existsSync(instructionsPath)) continue;
+
+        const lines = [
+            '',
+            '## Plugin-Contributed Guides',
+            '',
+            '| File | Plugin |',
+            '| --- | --- |',
+        ];
+        for (const { filename, pluginName } of entries) {
+            lines.push(`| [${filename}](${filename}) | ${pluginName} |`);
+        }
+        lines.push('');
+
+        await fs.appendFile(instructionsPath, lines.join('\n'));
     }
 }
 
@@ -384,6 +454,7 @@ program
         try {
             if (!options.list) {
                 await ensureAgentKitDocs(projectRoot, options.force, options.mode);
+                await mergePluginAgentKitGuides(projectRoot, options.mode);
                 // Generate plugin reference data (Design Log #87)
                 if (options.references !== false) {
                     await generatePluginReferences(projectRoot, options, initErrors, viteServer);
