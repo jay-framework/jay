@@ -1032,3 +1032,16 @@ Also fixed kebab-to-camelCase resolution in `getComponentName` — `<jay:scroll-
 | `compiler-jay-html/lib/jay-target/jay-html-helpers.ts`          | `kebabToCamel` helper; `getComponentName` checks camelCase against `importedSymbols` |
 | `compiler-jay-html/lib/jay-target/jay-html-compiler.ts`         | Validation error for keyed headless used as inline `<jay:>`                          |
 | `compiler-jay-html/lib/jay-target/jay-html-compiler-hydrate.ts` | Same validation; `headlessContractNames` includes all contracts for detection        |
+
+### Fix: discover headless instances with unresolved prop bindings
+
+**Problem:** `discoverHeadlessInstances` skipped instances whose props contained bindings (e.g., `text="{shareUrl}"`). The `hasUnresolvedProps` check filtered them out, so their `withFastRender` never ran and the SSR template had no ViewState to render — producing empty output.
+
+**Root cause:** The check was designed for the slow phase (bindings can't be resolved at slow time). But discovery also feeds the fast phase, which CAN resolve bindings from the page ViewState. Skipping discovery meant the instance was invisible to the entire SSR pipeline.
+
+**Fix:** Removed the `hasUnresolvedProps` gate in `discoverHeadlessInstances`. All static instances are now discovered regardless of whether their props contain bindings. Props with bindings (like `{shareUrl}`) are passed through as-is — the fast runner resolves them.
+
+| File                                                               | Change                                                                                      |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| `compiler-jay-html/lib/slow-render/slow-render-transform.ts`       | Removed `hasUnresolvedProps` check; all instances discovered                                |
+| `compiler-jay-html/test/slow-render/slow-render-transform.test.ts` | Updated test: "should discover instances with unresolved prop bindings" (was "should skip") |
