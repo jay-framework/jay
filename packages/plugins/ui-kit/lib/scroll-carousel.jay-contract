@@ -1,0 +1,28 @@
+name: scroll-carousel
+tags:
+  - tag: container
+    type: interactive
+    elementType: HTMLElement
+    description: Scrollable container with overflow-x auto and scroll-snap
+
+  - tag: prev
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Scroll to previous item
+
+  - tag: next
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Scroll to next item
+
+  - tag: atStart
+    type: data
+    dataType: boolean
+    phase: fast+interactive
+    description: True when scrolled to the beginning
+
+  - tag: atEnd
+    type: data
+    dataType: boolean
+    phase: fast+interactive
+    description: True when scrolled to the end

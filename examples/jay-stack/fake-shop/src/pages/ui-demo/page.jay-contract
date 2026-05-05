@@ -1,0 +1,7 @@
+name: Page
+tags:
+  - tag: shareUrl
+    type: data
+    dataType: string
+    phase: fast+interactive
+    description: URL to copy in the clipboard demo

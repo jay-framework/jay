@@ -23,6 +23,24 @@ plugins:
         description: Stock status badge showing availability (fast-only, no slow phase)
         type: static
         path: ./src/plugins/stock-status/stock-status.jay-contract
+  - name: ui-kit
+    path: ./../../../packages/plugins/ui-kit
+    contracts:
+      - name: popover-menu
+        description: Hover-triggered popover using the Popover API — adds showPopover()
+          on mouseenter
+        type: static
+        path: ./../../../packages/plugins/ui-kit/dist/popover-menu.jay-contract
+      - name: scroll-carousel
+        description: Prev/next scroll buttons for CSS scroll-snap containers — tracks
+          atStart/atEnd
+        type: static
+        path: ./../../../packages/plugins/ui-kit/dist/scroll-carousel.jay-contract
+      - name: clipboard-copy
+        description: Copy text to clipboard with visual feedback — toggles copied state
+          for 2 seconds
+        type: static
+        path: ./../../../packages/plugins/ui-kit/dist/clipboard-copy.jay-contract
   - name: webmcp
     path: ./../../../packages/plugins/webmcp
     contracts: []

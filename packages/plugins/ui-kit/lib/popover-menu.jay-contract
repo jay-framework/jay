@@ -1,0 +1,11 @@
+name: popover-menu
+tags:
+  - tag: trigger
+    type: interactive
+    elementType: HTMLElement
+    description: Element that opens the popover on hover
+
+  - tag: popover
+    type: interactive
+    elementType: HTMLElement
+    description: Element with popover attribute to show/hide

@@ -27,6 +27,7 @@
     "@jay-framework/runtime": "workspace:^",
     "@jay-framework/stack-client-runtime": "workspace:^",
     "@jay-framework/stack-server-runtime": "workspace:^",
+    "@jay-framework/ui-kit": "workspace:^",
     "@jay-framework/webmcp-plugin": "workspace:^",
     "compression": "^1.7.5",
     "example-jay-mood-tracker-plugin": "workspace:^",

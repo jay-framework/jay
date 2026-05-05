@@ -1,0 +1,16 @@
+name: ui-kit
+contracts:
+  - name: popover-menu
+    contract: popover-menu.jay-contract
+    component: popoverMenu
+    description: Hover-triggered popover using the Popover API — adds showPopover() on mouseenter
+
+  - name: scroll-carousel
+    contract: scroll-carousel.jay-contract
+    component: scrollCarousel
+    description: Prev/next scroll buttons for CSS scroll-snap containers — tracks atStart/atEnd
+
+  - name: clipboard-copy
+    contract: clipboard-copy.jay-contract
+    component: clipboardCopy
+    description: Copy text to clipboard with visual feedback — toggles copied state for 2 seconds

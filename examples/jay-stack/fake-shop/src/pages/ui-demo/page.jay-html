@@ -1,0 +1,211 @@
+<html>
+<head>
+  <script type="application/jay-headless"
+          plugin="@jay-framework/ui-kit"
+          contract="popover-menu"
+  ></script>
+  <script type="application/jay-headless"
+          plugin="@jay-framework/ui-kit"
+          contract="scroll-carousel"
+          key="carousel"
+  ></script>
+  <script type="application/jay-headless"
+          plugin="@jay-framework/ui-kit"
+          contract="clipboard-copy"
+          key="clip"
+  ></script>
+  <style>
+    .demo-page { max-width: 700px; margin: 40px auto; font-family: sans-serif; }
+    .section { margin: 40px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+    .section h2 { margin-top: 0; color: #333; }
+    .section h3 { color: #666; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-top: 24px; }
+
+    /* Popover Menu styles */
+    .nav-bar { display: flex; gap: 24px; }
+    .nav-link { text-decoration: none; color: #333; font-weight: 500; cursor: pointer; }
+    .dropdown { padding: 12px; border-radius: 8px; border: 1px solid #ddd; min-width: 150px; }
+    .dropdown { opacity: 0; transition: opacity 0.15s; }
+    .dropdown:popover-open { opacity: 1; }
+    .dropdown a { display: block; padding: 6px 8px; text-decoration: none; color: #333; border-radius: 4px; }
+    .dropdown a:hover { background: #f0f0f0; }
+
+    /* Carousel styles */
+    .carousel { position: relative; }
+    .carousel-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; gap: 12px; padding: 8px 0; scrollbar-width: none; }
+    .carousel-track::-webkit-scrollbar { display: none; }
+    .slide { scroll-snap-align: start; flex: 0 0 calc(33.33% - 8px); background: #f5f5f5; border-radius: 8px; padding: 40px 20px; text-align: center; font-size: 18px; }
+    .carousel-btn { position: absolute; top: 50%; transform: translateY(-50%); background: white; border: 1px solid #ccc; border-radius: 50%; width: 36px; height: 36px; font-size: 20px; cursor: pointer; z-index: 1; }
+    .carousel-btn:disabled { opacity: 0.3; cursor: default; }
+    .carousel-btn.prev { left: -18px; }
+    .carousel-btn.next { right: -18px; }
+
+    /* Clipboard styles */
+    .copy-row { display: flex; gap: 8px; align-items: center; }
+    .copy-url { flex: 1; padding: 8px 12px; background: #f5f5f5; border-radius: 4px; font-family: monospace; font-size: 13px; overflow: hidden; text-overflow: ellipsis; }
+    .copy-btn { padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background: white; min-width: 100px; }
+    .copy-btn.copied { background: #e8f5e9; border-color: #4caf50; color: #2e7d32; }
+
+    /* Tabs (pure CSS) */
+    .tabs-demo .panel { display: none; padding: 16px; border: 1px solid #ddd; border-top: none; }
+    #tab-details:checked ~ .tab-panels #panel-details { display: block; }
+    #tab-reviews:checked ~ .tab-panels #panel-reviews { display: block; }
+    #tab-specs:checked ~ .tab-panels #panel-specs { display: block; }
+    .tab-bar { display: flex; border-bottom: 1px solid #ddd; }
+    .tab-label { padding: 10px 20px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+    #tab-details:checked ~ .tab-bar label[for="tab-details"],
+    #tab-reviews:checked ~ .tab-bar label[for="tab-reviews"],
+    #tab-specs:checked ~ .tab-bar label[for="tab-specs"] { border-bottom-color: #333; font-weight: bold; }
+
+    /* Accordion */
+    .accordion details { border: 1px solid #ddd; border-radius: 4px; margin-bottom: 8px; }
+    .accordion summary { padding: 12px 16px; cursor: pointer; font-weight: 500; }
+    .accordion .acc-content { padding: 0 16px 12px; }
+
+    /* Tooltip */
+    .has-tooltip { position: relative; cursor: help; border-bottom: 1px dashed #999; }
+    .has-tooltip::after { content: attr(data-tooltip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); padding: 6px 10px; background: #333; color: white; border-radius: 4px; font-size: 13px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .has-tooltip:hover::after { opacity: 1; }
+  </style>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+  <div class="demo-page">
+    <h1>UI Kit Demo</h1>
+    <p>Headless components + pure CSS/HTML patterns</p>
+
+    <!-- ============================================ -->
+    <!-- HEADLESS COMPONENTS (need JS)                -->
+    <!-- ============================================ -->
+
+    <div class="section">
+      <h2>Popover Menu</h2>
+      <p>Hover to open. Click outside to close (light-dismiss).</p>
+      <jay:popover-menu>
+        <nav class="nav-bar">
+          <a ref="trigger" class="nav-link">Products &#x25BE;</a>
+          <div popover ref="popover" class="dropdown">
+            <a href="/products">All Products</a>
+            <a href="#">Shoes</a>
+            <a href="#">Bags</a>
+            <a href="#">Accessories</a>
+          </div>
+          <a href="/" class="nav-link">Home</a>
+          <a href="/checkout" class="nav-link">Checkout</a>
+        </nav>
+      </jay:popover-menu>
+    </div>
+
+    <div class="section">
+      <h2>Scroll Carousel</h2>
+      <p>Prev/next buttons scroll the container. Buttons disable at edges.</p>
+      <jay:scroll-carousel key="carousel">
+        <div class="carousel">
+          <button ref="carousel.prev" class="carousel-btn prev" disabled="carousel.atStart">&#8249;</button>
+          <div ref="carousel.container" class="carousel-track">
+            <div class="slide">Slide 1</div>
+            <div class="slide">Slide 2</div>
+            <div class="slide">Slide 3</div>
+            <div class="slide">Slide 4</div>
+            <div class="slide">Slide 5</div>
+            <div class="slide">Slide 6</div>
+          </div>
+          <button ref="carousel.next" class="carousel-btn next" disabled="carousel.atEnd">&#8250;</button>
+        </div>
+      </jay:scroll-carousel>
+    </div>
+
+    <div class="section">
+      <h2>Clipboard Copy</h2>
+      <p>Click to copy the URL. Button shows "Copied!" for 2 seconds.</p>
+      <jay:clipboard-copy key="clip" text="{shareUrl}">
+        <div class="copy-row">
+          <div class="copy-url">{clip.text}</div>
+          <button ref="clip.copyBtn" class="copy-btn" class-if-copied="clip.copied:copied">
+            <span if="!clip.copied">Copy Link</span>
+            <span if="clip.copied">Copied!</span>
+          </button>
+        </div>
+      </jay:clipboard-copy>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- PURE CSS/HTML (no components)                -->
+    <!-- ============================================ -->
+
+    <div class="section">
+      <h2>Tabs (Pure CSS)</h2>
+      <p>No JavaScript. Uses radio inputs + :checked selectors.</p>
+      <div class="tabs-demo">
+        <input type="radio" name="tab" id="tab-details" checked hidden />
+        <input type="radio" name="tab" id="tab-reviews" hidden />
+        <input type="radio" name="tab" id="tab-specs" hidden />
+        <nav class="tab-bar">
+          <label for="tab-details" class="tab-label">Details</label>
+          <label for="tab-reviews" class="tab-label">Reviews</label>
+          <label for="tab-specs" class="tab-label">Specs</label>
+        </nav>
+        <div class="tab-panels">
+          <div class="panel" id="panel-details">
+            <p>This is the details panel. Switching tabs requires zero JavaScript — it's all CSS :checked selectors and sibling combinators.</p>
+          </div>
+          <div class="panel" id="panel-reviews">
+            <p>Customer reviews would go here. The radio input state drives the visibility.</p>
+          </div>
+          <div class="panel" id="panel-specs">
+            <p>Technical specifications. Each label's for= attribute targets a hidden radio input.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Accordion (Pure HTML)</h2>
+      <p>Native &lt;details&gt; / &lt;summary&gt;. The name attribute ensures only one is open.</p>
+      <div class="accordion">
+        <details name="faq" open>
+          <summary>Shipping Information</summary>
+          <div class="acc-content">
+            <p>Free shipping on orders over $50. Standard delivery takes 3-5 business days.</p>
+          </div>
+        </details>
+        <details name="faq">
+          <summary>Return Policy</summary>
+          <div class="acc-content">
+            <p>30-day return policy. Items must be in original condition with tags attached.</p>
+          </div>
+        </details>
+        <details name="faq">
+          <summary>Size Guide</summary>
+          <div class="acc-content">
+            <p>Check our size chart for accurate measurements. When in doubt, size up.</p>
+          </div>
+        </details>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Tooltip (Pure CSS)</h2>
+      <p>Hover over the underlined text to see tooltips. No JavaScript involved.</p>
+      <p>
+        Our products come with
+        <span class="has-tooltip" data-tooltip="Ships in 2-3 business days">free shipping</span>
+        and a
+        <span class="has-tooltip" data-tooltip="Full refund within 30 days">money-back guarantee</span>.
+        All items are
+        <span class="has-tooltip" data-tooltip="100% authentic, sourced directly">genuine products</span>.
+      </p>
+    </div>
+
+    <div class="section">
+      <h2>Click Popover (Pure HTML)</h2>
+      <p>Click the button. Uses popovertarget — no JS needed for click triggers.</p>
+      <button popovertarget="info-popup">Show Product Info</button>
+      <div id="info-popup" popover style="padding: 20px; border-radius: 8px; border: 1px solid #ddd; max-width: 300px;">
+        <h3 style="margin-top: 0;">Product Info</h3>
+        <p>This popup uses the native Popover API with popovertarget. Click outside to dismiss.</p>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
