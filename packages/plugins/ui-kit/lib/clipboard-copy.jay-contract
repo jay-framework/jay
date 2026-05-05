@@ -1,10 +1,13 @@
 name: clipboard-copy
+props:
+  - name: text
+    kind: required
 tags:
   - tag: text
     type: data
     dataType: string
     phase: fast+interactive
-    description: Text to copy
+    description: Text to copy (from props)
 
   - tag: copied
     type: data

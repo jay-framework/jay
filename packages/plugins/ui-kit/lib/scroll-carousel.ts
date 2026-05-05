@@ -1,24 +1,10 @@
-import { makeJayStackComponent, phaseOutput, Signals } from '@jay-framework/fullstack-component';
-import type {
-    ScrollCarouselContract,
-    ScrollCarouselRefs,
-    ScrollCarouselFastViewState,
-} from './scroll-carousel.jay-contract';
+import { makeJayStackComponent } from '@jay-framework/fullstack-component';
+import type { ScrollCarouselContract, ScrollCarouselRefs } from './scroll-carousel.jay-contract';
 import { Props, createSignal } from '@jay-framework/component';
-
-async function renderFast() {
-    return phaseOutput<ScrollCarouselFastViewState, {}>({ atStart: true, atEnd: false }, {});
-}
 
 export const scrollCarousel = makeJayStackComponent<ScrollCarouselContract>()
     .withProps<{}>()
-    .withFastRender(renderFast)
-    .withInteractive(function ScrollCarousel(
-        props: Props<{}>,
-        refs: ScrollCarouselRefs,
-        fastViewState: Signals<ScrollCarouselFastViewState>,
-        _cf: {},
-    ) {
+    .withInteractive(function ScrollCarousel(props: Props<{}>, refs: ScrollCarouselRefs) {
         const [atStart, setAtStart] = createSignal(true);
         const [atEnd, setAtEnd] = createSignal(false);
 
@@ -42,7 +28,6 @@ export const scrollCarousel = makeJayStackComponent<ScrollCarouselContract>()
         };
 
         refs.container.onscroll(updateScrollState);
-        // updateScrollState();
 
         return {
             render: () => ({

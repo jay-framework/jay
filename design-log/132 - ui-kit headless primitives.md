@@ -23,11 +23,11 @@ Designers building jay-html pages need common UI patterns. Some need a developer
 2. **Scroll carousels** — CSS scroll-snap handles snapping, but prev/next buttons need `el.scrollBy()`
 3. **Copy-to-clipboard** — `navigator.clipboard.writeText()` is the only option
 
-**Pure CSS/HTML (skill / guide only):** 
+**Pure CSS/HTML (skill / guide only):**
 
-4. **Tabs** — radio inputs + `:checked` selector + CSS sibling combinators 
-5. **Accordions** — `<details>` / `<summary>` with CSS transitions 
-6. **Tooltips** — CSS `:hover` + `::after` pseudo-elements or Popover API with `popovertarget` (click-triggered) 
+4. **Tabs** — radio inputs + `:checked` selector + CSS sibling combinators
+5. **Accordions** — `<details>` / `<summary>` with CSS transitions
+6. **Tooltips** — CSS `:hover` + `::after` pseudo-elements or Popover API with `popovertarget` (click-triggered)
 7. **Responsive navigation** — checkbox toggle + CSS media queries
 
 ## Design Principles

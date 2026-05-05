@@ -19,10 +19,15 @@ export interface ClipboardCopyRepeatedRefs {
     copyBtn: HTMLElementCollectionProxy<ClipboardCopyViewState, HTMLButtonElement>;
 }
 
+export interface ClipboardCopyProps {
+    text?: string;
+}
+
 export type ClipboardCopyContract = JayContract<
     ClipboardCopyViewState,
     ClipboardCopyRefs,
     ClipboardCopySlowViewState,
     ClipboardCopyFastViewState,
-    ClipboardCopyInteractiveViewState
+    ClipboardCopyInteractiveViewState,
+    ClipboardCopyProps
 >;
