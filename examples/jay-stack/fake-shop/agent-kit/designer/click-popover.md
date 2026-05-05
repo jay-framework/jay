@@ -1,6 +1,6 @@
-# Click Popover (pure HTML — no component needed)
+# Click Popover
 
-Click-triggered popover using `popovertarget`. Light-dismiss (click outside) closes it. No JavaScript required.
+Popup dialog on button click with auto-dismiss on click outside. Pure HTML using `popovertarget`, no component needed.
 
 For **hover** triggers, use the `popover-menu` headless component instead.
 

@@ -181,7 +181,10 @@ async function mergePluginAgentKitGuides(projectRoot: string, mode?: string): Pr
         mode && ALL_ROLES.includes(mode as AgentKitRole) ? [mode as AgentKitRole] : ALL_ROLES;
 
     // Track copied files per role for INSTRUCTIONS.md
-    const copiedPerRole = new Map<string, Array<{ filename: string; pluginName: string }>>();
+    const copiedPerRole = new Map<
+        string,
+        Array<{ filename: string; pluginName: string; description: string }>
+    >();
 
     for (const [, plugin] of plugins) {
         const pluginAgentKitDir = path.join(plugin.pluginPath, 'agent-kit');
@@ -203,12 +206,31 @@ async function mergePluginAgentKitGuides(projectRoot: string, mode?: string): Pr
             await fs.mkdir(roleOutputDir, { recursive: true });
 
             for (const filename of files) {
-                await fs.copyFile(
-                    path.join(roleSourceDir, filename),
-                    path.join(roleOutputDir, filename),
-                );
+                const sourcePath = path.join(roleSourceDir, filename);
+                await fs.copyFile(sourcePath, path.join(roleOutputDir, filename));
+
+                // Extract description: first non-empty line after the # heading
+                let description = '';
+                try {
+                    const content = await fs.readFile(sourcePath, 'utf-8');
+                    const lines = content.split('\n');
+                    let pastHeading = false;
+                    for (const line of lines) {
+                        if (line.startsWith('# ')) {
+                            pastHeading = true;
+                            continue;
+                        }
+                        if (pastHeading && line.trim()) {
+                            description = line.trim();
+                            break;
+                        }
+                    }
+                } catch {
+                    /* skip */
+                }
+
                 if (!copiedPerRole.has(role)) copiedPerRole.set(role, []);
-                copiedPerRole.get(role)!.push({ filename, pluginName: plugin.name });
+                copiedPerRole.get(role)!.push({ filename, pluginName: plugin.name, description });
                 getLogger().info(
                     chalk.gray(
                         `   Copied agent-kit/${role}/${filename} from plugin "${plugin.name}"`,
@@ -227,11 +249,11 @@ async function mergePluginAgentKitGuides(projectRoot: string, mode?: string): Pr
             '',
             '## Plugin-Contributed Guides',
             '',
-            '| File | Plugin |',
-            '| --- | --- |',
+            '| File | Plugin | Description |',
+            '| --- | --- | --- |',
         ];
-        for (const { filename, pluginName } of entries) {
-            lines.push(`| [${filename}](${filename}) | ${pluginName} |`);
+        for (const { filename, pluginName, description } of entries) {
+            lines.push(`| [${filename}](${filename}) | ${pluginName} | ${description} |`);
         }
         lines.push('');
 

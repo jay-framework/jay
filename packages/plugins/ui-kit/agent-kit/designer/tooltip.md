@@ -1,13 +1,11 @@
-# Tooltip (pure CSS — no component needed)
+# Tooltip
 
-Hover tooltip using `::after` pseudo-element and `data-tooltip` attribute. No JavaScript required.
+Hover tooltip showing extra info. Pure CSS using `::after` pseudo-element, no component needed.
 
 ## Usage
 
 ```html
-<span class="has-tooltip" data-tooltip="Ships in 2-3 business days">
-  Shipping info &#9432;
-</span>
+<span class="has-tooltip" data-tooltip="Ships in 2-3 business days"> Shipping info &#9432; </span>
 ```
 
 ## CSS

@@ -1,14 +1,15 @@
-# Scroll Carousel (headless component)
+# Scroll Carousel
 
-Prev/next buttons for a CSS scroll-snap container. Tracks scroll position for disabling buttons at edges.
+Horizontal slider with prev/next buttons and edge detection. Headless component — requires import.
 
 ## Import
 
 ```html
 <head>
-  <script type="application/jay-headless"
-          plugin="@jay-framework/ui-kit"
-          contract="scroll-carousel"
+  <script
+    type="application/jay-headless"
+    plugin="@jay-framework/ui-kit"
+    contract="scroll-carousel"
   ></script>
 </head>
 ```

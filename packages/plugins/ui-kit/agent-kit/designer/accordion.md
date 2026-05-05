@@ -1,6 +1,6 @@
-# Accordion (pure HTML — no component needed)
+# Accordion
 
-Native `<details>` / `<summary>` accordion. No JavaScript required.
+Collapsible sections using native `<details>` / `<summary>`. Pure HTML, no component needed.
 
 ## Usage
 
@@ -45,8 +45,12 @@ summary {
 .accordion-content {
   padding: 0 16px 12px;
 }
-summary::marker { content: '+ '; }
-details[open] summary::marker { content: '- '; }
+summary::marker {
+  content: '+ ';
+}
+details[open] summary::marker {
+  content: '- ';
+}
 ```
 
 ## Single-open accordion

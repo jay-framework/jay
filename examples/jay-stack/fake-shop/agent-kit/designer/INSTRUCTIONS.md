@@ -124,12 +124,12 @@ jay-stack dev
 
 ## Plugin-Contributed Guides
 
-| File | Plugin |
-| --- | --- |
-| [accordion.md](accordion.md) | ui-kit |
-| [click-popover.md](click-popover.md) | ui-kit |
-| [clipboard-copy.md](clipboard-copy.md) | ui-kit |
-| [popover-menu.md](popover-menu.md) | ui-kit |
-| [scroll-carousel.md](scroll-carousel.md) | ui-kit |
-| [tabs.md](tabs.md) | ui-kit |
-| [tooltip.md](tooltip.md) | ui-kit |
+| File                                     | Plugin | Description                                                                                                                                      |
+| ---------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [accordion.md](accordion.md)             | ui-kit | Collapsible sections using native `<details>` / `<summary>`. Pure HTML, no component needed.                                                     |
+| [click-popover.md](click-popover.md)     | ui-kit | Popup dialog on button click with auto-dismiss on click outside. Pure HTML using `popovertarget`, no component needed.                           |
+| [clipboard-copy.md](clipboard-copy.md)   | ui-kit | Copy-to-clipboard button with "Copied!" feedback. Headless component — requires import.                                                          |
+| [popover-menu.md](popover-menu.md)       | ui-kit | Dropdown menu that opens on hover. Headless component — requires import. For click-triggered popups, use `click-popover.md` instead (pure HTML). |
+| [scroll-carousel.md](scroll-carousel.md) | ui-kit | Horizontal slider with prev/next buttons and edge detection. Headless component — requires import.                                               |
+| [tabs.md](tabs.md)                       | ui-kit | Switch between content panels with tab buttons. Pure CSS using radio inputs, no component needed.                                                |
+| [tooltip.md](tooltip.md)                 | ui-kit | Hover tooltip showing extra info. Pure CSS using `::after` pseudo-element, no component needed.                                                  |

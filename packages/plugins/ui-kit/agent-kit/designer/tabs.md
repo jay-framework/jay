@@ -1,6 +1,6 @@
-# Tabs (pure CSS/HTML — no component needed)
+# Tabs
 
-Use hidden radio inputs + CSS `:checked` sibling selectors to switch between panels. No JavaScript required.
+Switch between content panels with tab buttons. Pure CSS using radio inputs, no component needed.
 
 ## Usage
 
@@ -33,20 +33,28 @@ Use hidden radio inputs + CSS `:checked` sibling selectors to switch between pan
 ## CSS
 
 ```css
-.panel { display: none; }
+.panel {
+  display: none;
+}
 
-#tab-details:checked ~ .tab-panels #panel-details { display: block; }
-#tab-reviews:checked ~ .tab-panels #panel-reviews { display: block; }
-#tab-specs:checked ~ .tab-panels #panel-specs { display: block; }
+#tab-details:checked ~ .tab-panels #panel-details {
+  display: block;
+}
+#tab-reviews:checked ~ .tab-panels #panel-reviews {
+  display: block;
+}
+#tab-specs:checked ~ .tab-panels #panel-specs {
+  display: block;
+}
 
 .tab-label {
   cursor: pointer;
   padding: 8px 16px;
   border-bottom: 2px solid transparent;
 }
-#tab-details:checked ~ .tab-bar label[for="tab-details"],
-#tab-reviews:checked ~ .tab-bar label[for="tab-reviews"],
-#tab-specs:checked ~ .tab-bar label[for="tab-specs"] {
+#tab-details:checked ~ .tab-bar label[for='tab-details'],
+#tab-reviews:checked ~ .tab-bar label[for='tab-reviews'],
+#tab-specs:checked ~ .tab-bar label[for='tab-specs'] {
   border-bottom-color: #333;
   font-weight: bold;
 }

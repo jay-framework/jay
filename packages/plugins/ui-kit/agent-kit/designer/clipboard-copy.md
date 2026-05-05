@@ -1,14 +1,15 @@
-# Clipboard Copy (headless component)
+# Clipboard Copy
 
-Copies text to clipboard with a brief "Copied!" visual feedback state.
+Copy-to-clipboard button with "Copied!" feedback. Headless component — requires import.
 
 ## Import
 
 ```html
 <head>
-  <script type="application/jay-headless"
-          plugin="@jay-framework/ui-kit"
-          contract="clipboard-copy"
+  <script
+    type="application/jay-headless"
+    plugin="@jay-framework/ui-kit"
+    contract="clipboard-copy"
   ></script>
 </head>
 ```

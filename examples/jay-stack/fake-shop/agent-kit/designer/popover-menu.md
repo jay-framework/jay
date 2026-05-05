@@ -1,14 +1,15 @@
-# Popover Menu (headless component)
+# Popover Menu
 
-Opens a popover on hover using the Popover API. Light-dismiss (click outside) handles closing. No JS needed for click triggers — use `popovertarget` instead (see `click-popover.md`).
+Dropdown menu that opens on hover. Headless component — requires import. For click-triggered popups, use `click-popover.md` instead (pure HTML).
 
 ## Import
 
 ```html
 <head>
-  <script type="application/jay-headless"
-          plugin="@jay-framework/ui-kit"
-          contract="popover-menu"
+  <script
+    type="application/jay-headless"
+    plugin="@jay-framework/ui-kit"
+    contract="popover-menu"
   ></script>
 </head>
 ```
