@@ -157,6 +157,15 @@ describe('generate jay-html element hydrate', () => {
                 await readFixtureElementHydrateFile(folder),
             );
         });
+
+        it('kebab-case component names resolve to camelCase imports', async () => {
+            const folder = 'components/kebab-case-component';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
     });
 
     describe('headless instances', () => {

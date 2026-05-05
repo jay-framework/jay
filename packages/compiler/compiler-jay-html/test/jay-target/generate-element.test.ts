@@ -237,6 +237,15 @@ describe('generate jay-html element', () => {
                 );
             }, 10000);
 
+            it('kebab-case component names resolve to camelCase imports', async () => {
+                const folder = 'components/kebab-case-component';
+                const elementFile = await readFileAndGenerateElementFile(folder, { importerMode });
+                expect(elementFile.validations).toEqual([]);
+                expect(await prettify(elementFile.val)).toEqual(
+                    await readFixtureFile(folder, 'generated-element-main-trusted'),
+                );
+            });
+
             it('dynamic nesting components in other components', async () => {
                 const folder = 'components/dynamic-component-in-component';
                 const elementFile = await readFileAndGenerateElementFile(folder, { importerMode });

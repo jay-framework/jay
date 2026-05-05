@@ -1,0 +1,15 @@
+<html>
+<head>
+    <script type="application/jay-headfull" src="../counter/counter" names="Counter as myCounter"></script>
+    <script type="application/jay-data">
+data:
+  count: number
+    </script>
+</head>
+<body>
+<div>
+    <h1>{count}</h1>
+    <jay:my-counter ref="counter1" initialValue="{count}" />
+</div>
+</body>
+</html>

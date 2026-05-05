@@ -2,6 +2,11 @@ import Node from 'node-html-parser/dist/nodes/node';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import { Import, ImportName, WithValidations } from '@jay-framework/compiler-shared';
 
+/** Convert kebab-case to camelCase: scroll-carousel → scrollCarousel */
+function kebabToCamel(str: string): string {
+    return str.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+}
+
 export function isConditional(node: Node): boolean {
     return node.nodeType !== NodeType.TEXT_NODE && (node as HTMLElement).hasAttribute('if');
 }
@@ -185,9 +190,14 @@ export function getComponentName(
         if (headlessContractNames?.has(componentName.toLowerCase())) {
             return { name: componentName, kind: 'headless-instance' };
         }
-        // Check headful (imported symbols)
+        // Check headful (imported symbols) — try both kebab-case and camelCase
+        // since jay-html uses kebab (<jay:scroll-carousel>) but imports are camelCase (scrollCarousel)
+        const camelName = kebabToCamel(componentName);
         if (importedSymbols.has(componentName)) {
             return { name: componentName, kind: 'headful' };
+        }
+        if (camelName !== componentName && importedSymbols.has(camelName)) {
+            return { name: camelName, kind: 'headful' };
         }
         // Jay-prefixed but not matched - this will be an error
         // For now, still return the name so the compiler can report the error
