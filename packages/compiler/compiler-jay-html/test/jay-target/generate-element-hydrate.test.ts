@@ -166,6 +166,10 @@ describe('generate jay-html element hydrate', () => {
                 await readFixtureElementHydrateFile(folder),
             );
         });
+
+        // Note: keyed headless validation is tested in generate-element.test.ts (standard compiler).
+        // The hydrate compiler has the same validation but the test resolver doesn't support
+        // keyed headless plugin resolution in the hydrate fixture setup.
     });
 
     describe('headless instances', () => {

@@ -8,6 +8,7 @@
     "setup": "jay-stack-cli setup",
     "agent-kit": "jay-stack-cli agent-kit",
     "dev": "jay-stack-cli dev",
+    "validate": "jay-stack-cli validate",
     "contracts": "jay-stack-cli contracts",
     "contracts:list": "jay-stack-cli contracts --list",
     "clean": "rimraf dist && rimraf build && rimraf -g 'src/**/*.d.ts'",

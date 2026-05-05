@@ -1,0 +1,18 @@
+<html>
+<head>
+    <script type="application/jay-headless"
+            plugin="test-counter"
+            contract="counter"
+            key="ct"></script>
+    <script type="application/jay-data" contract="./page-with-keyed-headless-element.jay-contract"></script>
+</head>
+<body>
+<div>
+    <h1>{title}</h1>
+    <jay:counter key="ct">
+        <div>Counter value: {ct.count}</div>
+        <button ref="ct.add">Add</button>
+    </jay:counter>
+</div>
+</body>
+</html>

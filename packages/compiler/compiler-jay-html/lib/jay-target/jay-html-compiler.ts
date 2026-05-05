@@ -544,6 +544,17 @@ export function renderNode(node: Node, context: RenderContext): RenderFragment {
         );
         if (componentMatch !== null) {
             if (componentMatch.kind === 'headless-instance') {
+                // Keyed headless components merge into the page — they cannot be used as inline <jay:> elements
+                const keyedImport = newContext.headlessImports.find(
+                    (h) => h.key && h.contractName === componentMatch!.name.toLowerCase(),
+                );
+                if (keyedImport) {
+                    return new RenderFragment('', Imports.none(), [
+                        `<jay:${componentMatch.name}> cannot be used as an inline element because it was imported with key="${keyedImport.key}". ` +
+                            `Keyed headless components merge their ViewState into the page — use {${keyedImport.key}.fieldName} bindings instead, ` +
+                            `or remove the key to use it as an inline instance.`,
+                    ]);
+                }
                 return renderHeadlessInstance(htmlElement, newContext, componentMatch.name);
             }
             return renderNestedComponent(htmlElement, newContext, componentMatch.name);

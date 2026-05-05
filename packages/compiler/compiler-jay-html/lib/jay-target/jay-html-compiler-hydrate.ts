@@ -173,6 +173,19 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         context.headlessContractNames,
     );
     if (componentMatch !== null && componentMatch.kind === 'headless-instance') {
+        // Keyed headless components merge into the page — they cannot be used as inline <jay:> elements.
+        // Detect: contract is in headlessContractNames (all) but not in context.headlessImports (instance-only).
+        const contractNameLower = componentMatch.name.toLowerCase();
+        const isInstanceImport = context.headlessImports.some(
+            (h) => h.contractName === contractNameLower,
+        );
+        if (!isInstanceImport) {
+            return new RenderFragment('', Imports.none(), [
+                `<jay:${componentMatch.name}> cannot be used as an inline element because it was imported with a key. ` +
+                    `Keyed headless components merge their ViewState into the page — ` +
+                    `remove the key to use it as an inline instance.`,
+            ]);
+        }
         return renderHydrateHeadlessInstance(element, context, renderContext, componentMatch.name);
     }
 
@@ -1301,7 +1314,8 @@ export function renderHydrate(
     const importedRefNameToRef = processImportedHeadless(headlessImports);
     const { importedSymbols } = processImportedComponents(importStatements);
     const instanceHeadlessImports = headlessImports.filter((h) => !h.key);
-    const headlessContractNames = new Set(instanceHeadlessImports.map((h) => h.contractName));
+    // Include ALL headless names for tag detection (so keyed ones get a validation error, not silent fallthrough)
+    const headlessContractNames = new Set(headlessImports.map((h) => h.contractName));
     // Pre-process: assign coordinates to all elements (DL#103)
     assignCoordinates(body, { headlessContractNames });
 

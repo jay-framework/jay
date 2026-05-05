@@ -1012,3 +1012,23 @@ No deviations.
 **Fix:** In `adoptDynamicElement` (runtime `hydrate.ts`), claim the actual direct child DOM node from `significantChildren[significantIndex]` instead of `child.dom`. The dynamic descendants' update/mount functions are still collected via `collectChild`. This ensures `getOffsetFor` correctly counts every direct child position.
 
 **Test:** 3 new tests in `hydrate-conditional.test.ts` — `hydrateConditional ordering — static wrapper with nested dynamic content`. Verified tests fail without the fix (conditional appears at beginning instead of correct position).
+
+### Validation: keyed headless components cannot be used as inline `<jay:>` elements
+
+**Problem:** When a headless component is imported with `key="..."` (keyed), using it as an inline `<jay:contract-name>` element in the body produces broken output — the standard compiler silently generates incorrect code, and the hydrate compiler emits `childComp` instead of `childCompHydrate`.
+
+Keyed headless components merge their ViewState/refs into the page's composite component. They're not inline instances — they don't render their own template. Using both patterns simultaneously is a misuse.
+
+**Fix:** Both compilers (standard and hydrate) now validate: if a `<jay:contract-name>` element matches a keyed headless import, emit a validation error:
+
+> `<jay:counter> cannot be used as an inline element because it was imported with key="ct". Keyed headless components merge their ViewState into the page — use {ct.fieldName} bindings instead, or remove the key to use it as an inline instance.`
+
+Also fixed kebab-to-camelCase resolution in `getComponentName` — `<jay:scroll-carousel>` now correctly resolves to the `scrollCarousel` import symbol.
+
+**Test:** `page-with-keyed-headless-element` fixture in `compiler-jay-html/test/fixtures/contracts/`. Validates both compilers reject the pattern with a clear error.
+
+| File                                                            | Change                                                                               |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `compiler-jay-html/lib/jay-target/jay-html-helpers.ts`          | `kebabToCamel` helper; `getComponentName` checks camelCase against `importedSymbols` |
+| `compiler-jay-html/lib/jay-target/jay-html-compiler.ts`         | Validation error for keyed headless used as inline `<jay:>`                          |
+| `compiler-jay-html/lib/jay-target/jay-html-compiler-hydrate.ts` | Same validation; `headlessContractNames` includes all contracts for detection        |

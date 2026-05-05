@@ -7,12 +7,10 @@
   <script type="application/jay-headless"
           plugin="@jay-framework/ui-kit"
           contract="scroll-carousel"
-          key="carousel"
   ></script>
   <script type="application/jay-headless"
           plugin="@jay-framework/ui-kit"
           contract="clipboard-copy"
-          key="clip"
   ></script>
   <style>
     .demo-page { max-width: 700px; margin: 40px auto; font-family: sans-serif; }
@@ -100,8 +98,8 @@
       <p>Prev/next buttons scroll the container. Buttons disable at edges.</p>
       <jay:scroll-carousel key="carousel">
         <div class="carousel">
-          <button ref="carousel.prev" class="carousel-btn prev" disabled="carousel.atStart">&#8249;</button>
-          <div ref="carousel.container" class="carousel-track">
+          <button ref="prev" class="carousel-btn prev" disabled="atStart">&#8249;</button>
+          <div ref="container" class="carousel-track">
             <div class="slide">Slide 1</div>
             <div class="slide">Slide 2</div>
             <div class="slide">Slide 3</div>
@@ -109,7 +107,7 @@
             <div class="slide">Slide 5</div>
             <div class="slide">Slide 6</div>
           </div>
-          <button ref="carousel.next" class="carousel-btn next" disabled="carousel.atEnd">&#8250;</button>
+          <button ref="next" class="carousel-btn next" disabled="atEnd">&#8250;</button>
         </div>
       </jay:scroll-carousel>
     </div>
@@ -119,10 +117,10 @@
       <p>Click to copy the URL. Button shows "Copied!" for 2 seconds.</p>
       <jay:clipboard-copy key="clip" text="{shareUrl}">
         <div class="copy-row">
-          <div class="copy-url">{clip.text}</div>
-          <button ref="clip.copyBtn" class="copy-btn" class-if-copied="clip.copied:copied">
-            <span if="!clip.copied">Copy Link</span>
-            <span if="clip.copied">Copied!</span>
+          <div class="copy-url">{text}</div>
+          <button ref="copyBtn" class="copy-btn" class-if-copied="copied:copied">
+            <span if="!copied">Copy Link</span>
+            <span if="copied">Copied!</span>
           </button>
         </div>
       </jay:clipboard-copy>
