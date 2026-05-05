@@ -944,7 +944,7 @@ tags:
             ]);
         });
 
-        it('should skip instances with unresolved prop bindings', () => {
+        it('should discover instances with unresolved prop bindings', () => {
             const jayHtml = `<!DOCTYPE html>
 <html>
 <head></head>
@@ -960,12 +960,17 @@ tags:
 
             const { instances } = discoverHeadlessInstances(jayHtml);
 
-            // Only the first instance (second has unresolved binding)
+            // Both instances discovered — bindings are resolved at fast render time
             expect(instances).toEqual([
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-123' },
                     coordinate: ['product-card:AR0'],
+                },
+                {
+                    contractName: 'product-card',
+                    props: { productId: '{dynamicId}' },
+                    coordinate: ['product-card:AR1'],
                 },
             ]);
         });

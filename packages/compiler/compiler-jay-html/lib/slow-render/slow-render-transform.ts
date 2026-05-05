@@ -749,35 +749,32 @@ export function discoverHeadlessInstances(
             }
 
             if (!insidePreservedForEach) {
-                // Static instance (outside forEach) — existing behavior
-                const hasUnresolvedProps = Object.values(props).some((v) => hasBindings(v));
-
-                if (!hasUnresolvedProps) {
-                    // Use explicit ref or auto-generate one with AR prefix
-                    let ref = element.getAttribute('ref');
-                    if (!ref) {
-                        const prefix = buildCoordinatePrefix(element);
-                        const counterKey = [...prefix, contractName].join('/');
-                        const localIndex = coordinateCounters.get(counterKey) ?? 0;
-                        coordinateCounters.set(counterKey, localIndex + 1);
-                        ref = `AR${localIndex}`;
-                        element.setAttribute('ref', ref);
-                    }
-
-                    // With scoped coordinates (DL#126), read the coordinate from
-                    // jay-coordinate-base (assigned by assignCoordinatesToJayHtml).
-                    // Fall back to buildCoordinatePrefix for backward compatibility.
-                    const coordBase = element.getAttribute('jay-coordinate-base');
-                    const coordinate = coordBase
-                        ? coordBase.split('/')
-                        : [...buildCoordinatePrefix(element), `${contractName}:${ref}`];
-
-                    instances.push({
-                        contractName,
-                        props,
-                        coordinate,
-                    });
+                // Static instance (outside forEach).
+                // Always discover — even with unresolved prop bindings (e.g., text="{shareUrl}").
+                // The fast runner resolves bindings from the page ViewState.
+                let ref = element.getAttribute('ref');
+                if (!ref) {
+                    const prefix = buildCoordinatePrefix(element);
+                    const counterKey = [...prefix, contractName].join('/');
+                    const localIndex = coordinateCounters.get(counterKey) ?? 0;
+                    coordinateCounters.set(counterKey, localIndex + 1);
+                    ref = `AR${localIndex}`;
+                    element.setAttribute('ref', ref);
                 }
+
+                // With scoped coordinates (DL#126), read the coordinate from
+                // jay-coordinate-base (assigned by assignCoordinatesToJayHtml).
+                // Fall back to buildCoordinatePrefix for backward compatibility.
+                const coordBase = element.getAttribute('jay-coordinate-base');
+                const coordinate = coordBase
+                    ? coordBase.split('/')
+                    : [...buildCoordinatePrefix(element), `${contractName}:${ref}`];
+
+                instances.push({
+                    contractName,
+                    props,
+                    coordinate,
+                });
             } else {
                 // Instance inside preserved forEach — collect for server-time validation
                 // Use the innermost forEach context for path/trackBy
