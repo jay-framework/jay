@@ -96,16 +96,19 @@ Runs on each request. Receives props (including `query` for query parameters) an
 })
 ```
 
-### `.withClientDefaults(fn)` — Default client ViewState
+### `.withClientDefaults(fn)` — Defaults for dynamically created forEach items
 
-Provides default values for client-side ViewState before hydration:
+Required only when the component is used inside a `forEach` where new items can be added on the client. When a user adds a new item to a forEach array, the new instance has no server data — `withClientDefaults` provides the initial ViewState.
 
 ```typescript
-.withClientDefaults(() => ({
-    quantity: 1,
-    selectedVariant: 'default',
+.withClientDefaults((props) => ({
+    viewState: { label: `Item ${props.itemId}`, value: 0 },
+    carryForward: {},
 }))
 ```
+
+**When to use:** Component inside `forEach` + items can be added client-side.
+**When NOT to use:** Components outside forEach, or forEach with server-only items. Use `withFastRender` instead for SSR initial state.
 
 ### `.withInteractive(ComponentConstructor)` — Client-side logic
 

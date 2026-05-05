@@ -226,3 +226,28 @@ A: Props are the same on server and client. The page's fast render does the quer
 6. 6c forEach interactivity test passes (add item, increment, remove)
 7. All existing compiler fixture tests pass (updated for new call signature)
 8. All existing hydration tests pass (no regressions)
+
+## Addendum: withClientDefaults lifecycle clarification
+
+### Investigation
+
+Explored whether `withClientDefaults` should be removed from the framework. Analysis found:
+
+- Every usage in test fixtures was an exact copy of `withFastRender` output — appeared redundant
+- The builder only allows `withClientDefaults` after `withFastRender`, making it unavailable for components without server phases
+
+### Conclusion: keep withClientDefaults
+
+`withClientDefaults` serves a legitimate purpose that `withFastRender` cannot: **providing initial ViewState for forEach items created on the client**. When a user adds a new item to a forEach array, `makeHeadlessInstanceComponent` creates a new instance with no server data. `clientDefaults` provides the initial ViewState for these dynamically-created items.
+
+This is NOT a safety net for framework bugs — it's a required feature for dynamic client-side item creation.
+
+### What withClientDefaults is NOT for
+
+- Fallback when server data delivery fails (that's a framework bug to fix)
+- Default ViewState for components without `withFastRender` (use `withFastRender` instead)
+- Components outside forEach that have static props (server always provides data)
+
+### UI Kit components
+
+The ui-kit components (`scroll-carousel`, `clipboard-copy`) use `withFastRender` for SSR initial state and do NOT need `withClientDefaults` — they're not used inside forEach.

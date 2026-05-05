@@ -234,6 +234,23 @@ makeJayStackComponent<ProductContract>().withServices(INVENTORY_SERVICE).withFas
 2. **slowCarryForward** - Carry forward data from slow render (injected as **first service**)
 3. **...requestedServices** - Services specified via `withServices()`
 
+#### `.withClientDefaults(fn)` — Defaults for forEach items
+
+Required only when the component is used inside a `forEach` where new items can be added on the client. When a new forEach item is created client-side (e.g., "Add Item" button), the new headless instance has no server data. `withClientDefaults` provides the initial ViewState for these dynamically-created items.
+
+```typescript
+.withFastRender(async (props) =>
+    phaseOutput({ label: `Item ${props.itemId}`, value: 0 }, {}),
+)
+.withClientDefaults((props) => ({
+    viewState: { label: `Item ${props.itemId}`, value: 0 },
+    carryForward: {},
+}))
+```
+
+**When to use:** Headless component inside `forEach` + items can be added on the client.
+**When NOT to use:** Components outside forEach, or static forEach where all items are server-rendered. Use `withFastRender` alone for SSR initial state — server data is always delivered for statically-discovered instances.
+
 #### `.withInteractive(componentConstructor)`
 
 Defines the client-side interactive component:

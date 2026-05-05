@@ -211,8 +211,10 @@ export interface JayStackComponentDefinition<
     slowlyRender: RenderSlowly<Services, PropsT, SlowVS, any>;
     fastRender: RenderFast<Services, PropsT, FastVS, any>;
     comp: ComponentConstructor<PropsT, Refs, InteractiveVS, Contexts, CompCore>;
-    /** Client-side defaults for when server fast ViewState is not available
-     *  (e.g., new forEach items created on the client). Client-only. */
+    /** Initial ViewState for headless instances created dynamically on the client
+     *  (e.g., new forEach items added via "Add Item" button). Only needed when the
+     *  component is used inside forEach with client-side item creation. Not needed
+     *  for components outside forEach — use withFastRender for SSR initial state. */
     clientDefaults?: (props: PropsT) => { viewState: FastVS; carryForward?: any };
 }
 

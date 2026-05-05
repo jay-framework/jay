@@ -125,6 +125,15 @@ src/pages/products/[slug]/
 
 The jay-html template uses unprefixed bindings for page data and key-prefixed bindings for plugin data.
 
+## Note on `.withClientDefaults()`
+
+`withClientDefaults` is only needed when a headless component is used **inside a `forEach`** and new items can be added on the client (e.g., "Add Item" button). It provides initial ViewState for instances that don't exist during SSR.
+
+You do NOT need it for:
+- Components outside forEach — `withFastRender` provides SSR initial state
+- Components inside a conditional (`if=`) — server data is computed for all discovered instances regardless of the condition's SSR value
+- Static forEach where all items come from the server
+
 ## Builder API Reference
 
 See the plugin [component-structure.md](../plugin/component-structure.md) for the full builder API: `.withProps()`, `.withServices()`, `.withContexts()`, phase rendering, and render results.

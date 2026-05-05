@@ -704,6 +704,9 @@ class BuilderImplementation<
         >;
     }
 
+    /** Provide initial ViewState for headless instances created dynamically on the client
+     *  (e.g., new forEach items). Only needed when used inside forEach with client-side
+     *  item creation. Not needed for components outside forEach. */
     withClientDefaults(
         fn: (props: PropsT) => { viewState: FastVS; carryForward?: any },
     ): Builder<
