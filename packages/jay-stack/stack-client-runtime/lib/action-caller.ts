@@ -103,8 +103,35 @@ export interface CreateActionCallerOptions {
     acceptsFiles?: boolean;
 }
 
+/**
+ * True for native Blob/File and for objects that quack like a Blob (some reactive
+ * proxies fail `instanceof Blob`, which would otherwise send uploads through `_json`
+ * and strip binaries).
+ */
+function isBlobLike(value: unknown): value is Blob {
+    if (typeof value !== 'object' || value === null) return false;
+    if (typeof Blob !== 'undefined' && value instanceof Blob) return true;
+    const b = value as Partial<Blob>;
+    return (
+        typeof b.size === 'number' &&
+        !Number.isNaN(b.size) &&
+        typeof b.arrayBuffer === 'function' &&
+        typeof b.slice === 'function'
+    );
+}
+
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value) && !(value instanceof Blob);
+    return (
+        typeof value === 'object' &&
+        value !== null &&
+        !Array.isArray(value) &&
+        !isBlobLike(value)
+    );
+}
+
+function blobPartFilename(blob: Blob, fallback: string): string {
+    if (typeof File !== 'undefined' && blob instanceof File && blob.name) return blob.name;
+    return fallback;
 }
 
 /**
@@ -117,7 +144,7 @@ function isRecordOfBlobs(value: unknown): value is Record<string, Blob> {
     const vals = Object.values(value);
     if (vals.length === 0) return false;
     for (const v of vals) {
-        if (!(v instanceof Blob)) return false;
+        if (!isBlobLike(v)) return false;
     }
     return true;
 }
@@ -131,14 +158,14 @@ function buildFormData(input: any): FormData {
     const jsonFields: Record<string, any> = {};
 
     for (const [key, value] of Object.entries(input)) {
-        if (value instanceof Blob) {
-            const name = value instanceof File ? value.name : `${key}.bin`;
+        if (isBlobLike(value)) {
+            const name = blobPartFilename(value, `${key}.bin`);
             formData.append(key, value, name);
-        } else if (Array.isArray(value) && value.some((v) => v instanceof Blob)) {
+        } else if (Array.isArray(value) && value.some((v) => isBlobLike(v))) {
             const nonFiles: any[] = [];
             for (const item of value) {
-                if (item instanceof Blob) {
-                    const name = item instanceof File ? item.name : `${key}.bin`;
+                if (isBlobLike(item)) {
+                    const name = blobPartFilename(item, `${key}.bin`);
                     formData.append(key, item, name);
                 } else {
                     nonFiles.push(item);
@@ -149,7 +176,7 @@ function buildFormData(input: any): FormData {
             }
         } else if (isRecordOfBlobs(value)) {
             for (const [subKey, blob] of Object.entries(value)) {
-                const name = blob instanceof File ? blob.name : `${subKey}.bin`;
+                const name = blobPartFilename(blob, `${subKey}.bin`);
                 formData.append(`${key}.${subKey}`, blob, name);
             }
         } else {
@@ -170,8 +197,8 @@ function buildFormData(input: any): FormData {
 function hasFiles(input: any): boolean {
     if (typeof input !== 'object' || input === null) return false;
     for (const value of Object.values(input)) {
-        if (value instanceof Blob) return true;
-        if (Array.isArray(value) && value.some((v) => v instanceof Blob)) return true;
+        if (isBlobLike(value)) return true;
+        if (Array.isArray(value) && value.some((v) => isBlobLike(v))) return true;
         if (isRecordOfBlobs(value)) return true;
     }
     return false;

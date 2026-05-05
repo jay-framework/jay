@@ -235,6 +235,30 @@ const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const DEFAULT_MAX_FILES = 10;
 
 /**
+ * Reconstruct nested objects from multipart field names like `extraFiles.attachment_1_0`
+ * (emitted by buildFormData for Record<string, Blob> values). Mutates `body` in place.
+ */
+function mergeDottedMultipartKeys(body: Record<string, any>): void {
+    const keys = Object.keys(body);
+    for (const key of keys) {
+        if (!key.includes('.')) continue;
+        const val = body[key];
+        delete body[key];
+        const parts = key.split('.');
+        let cur: any = body;
+        for (let i = 0; i < parts.length - 1; i++) {
+            const p = parts[i]!;
+            const next = cur[p];
+            if (typeof next !== 'object' || next === null || Array.isArray(next)) {
+                cur[p] = {};
+            }
+            cur = cur[p];
+        }
+        cur[parts[parts.length - 1]!] = val;
+    }
+}
+
+/**
  * Parse a multipart/form-data request using busboy (DL#131).
  * File fields are written to a temp directory and returned as JayFile objects.
  * The `_json` field contains JSON-serialized text data.
@@ -334,7 +358,11 @@ function parseMultipart(
             if (errored) return;
             // Wait for all file write streams to finish before resolving
             Promise.all(pendingWrites)
-                .then(() => resolve({ body: { ...jsonData, ...files }, tempDir }))
+                .then(() => {
+                    const body: Record<string, any> = { ...jsonData, ...files };
+                    mergeDottedMultipartKeys(body);
+                    resolve({ body, tempDir });
+                })
                 .catch((err) => reject(err));
         });
 
