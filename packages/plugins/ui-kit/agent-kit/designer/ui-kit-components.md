@@ -8,9 +8,10 @@ Add headless component imports in the jay-html `<head>` via `<script type="appli
 
 ```html
 <head>
-  <script type="application/jay-headless"
-          plugin="@jay-framework/ui-kit"
-          contract="popover-menu"
+  <script
+    type="application/jay-headless"
+    plugin="@jay-framework/ui-kit"
+    contract="popover-menu"
   ></script>
 </head>
 ```
@@ -18,10 +19,11 @@ Add headless component imports in the jay-html `<head>` via `<script type="appli
 For keyed components (when you need to reference their ViewState from the page), add a `key`:
 
 ```html
-<script type="application/jay-headless"
-        plugin="@jay-framework/ui-kit"
-        contract="scroll-carousel"
-        key="carousel"
+<script
+  type="application/jay-headless"
+  plugin="@jay-framework/ui-kit"
+  contract="scroll-carousel"
+  key="carousel"
 ></script>
 ```
 
@@ -33,9 +35,10 @@ Opens a popover on hover. Light-dismiss (click outside) handles closing.
 
 ```html
 <head>
-  <script type="application/jay-headless"
-          plugin="@jay-framework/ui-kit"
-          contract="popover-menu"
+  <script
+    type="application/jay-headless"
+    plugin="@jay-framework/ui-kit"
+    contract="popover-menu"
   ></script>
 </head>
 <body>
@@ -71,10 +74,11 @@ Prev/next buttons for a CSS scroll-snap container. Tracks scroll position for bu
 
 ```html
 <head>
-  <script type="application/jay-headless"
-          plugin="@jay-framework/ui-kit"
-          contract="scroll-carousel"
-          key="carousel"
+  <script
+    type="application/jay-headless"
+    plugin="@jay-framework/ui-kit"
+    contract="scroll-carousel"
+    key="carousel"
   ></script>
 </head>
 <body>
@@ -118,10 +122,11 @@ Copies text to clipboard with a brief "Copied!" feedback state.
 
 ```html
 <head>
-  <script type="application/jay-headless"
-          plugin="@jay-framework/ui-kit"
-          contract="clipboard-copy"
-          key="clip"
+  <script
+    type="application/jay-headless"
+    plugin="@jay-framework/ui-kit"
+    contract="clipboard-copy"
+    key="clip"
   ></script>
 </head>
 <body>

@@ -152,25 +152,15 @@ function resolvePluginInit(
         return null;
     }
 
-    // For NPM plugins (compiled), init is exported from main package entry
-    // Check if package.json exists and has proper exports
-    const packageJsonPath = path.join(pluginPath, 'package.json');
-    if (!fs.existsSync(packageJsonPath)) {
+    // For NPM plugins (compiled), init must be declared in plugin.yaml.
+    // Without an explicit `init` config, we don't assume the package exports init —
+    // many plugins (e.g., ui-kit) have no initialization logic.
+    if (!initConfig) {
         return null;
     }
 
     try {
-        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
-
-        // Check if this package exports 'init' (or custom name from plugin.yaml)
-        // This is a heuristic - the actual export check happens at runtime
-        const hasMain = packageJson.main || packageJson.exports;
-        if (!hasMain && !initConfig) {
-            return null;
-        }
-
-        // For NPM packages, module path is empty (import from package root)
-        // Export name comes from plugin.yaml or defaults to 'init'
+        // Export name comes from plugin.yaml
         const exportName = typeof initConfig === 'string' ? initConfig : defaultExport;
         return { module: '', export: exportName };
     } catch {

@@ -34,18 +34,30 @@ Hidden radio inputs drive tab switching via CSS `:checked` selectors.
 
 ```css
 /* Hide all panels by default */
-.panel { display: none; }
+.panel {
+  display: none;
+}
 
 /* Show panel matching the checked radio */
-#tab-details:checked ~ .tab-panels #panel-details { display: block; }
-#tab-reviews:checked ~ .tab-panels #panel-reviews { display: block; }
-#tab-specs:checked ~ .tab-panels #panel-specs { display: block; }
+#tab-details:checked ~ .tab-panels #panel-details {
+  display: block;
+}
+#tab-reviews:checked ~ .tab-panels #panel-reviews {
+  display: block;
+}
+#tab-specs:checked ~ .tab-panels #panel-specs {
+  display: block;
+}
 
 /* Active tab styling */
-.tab-label { cursor: pointer; padding: 8px 16px; border-bottom: 2px solid transparent; }
-#tab-details:checked ~ .tab-bar label[for="tab-details"],
-#tab-reviews:checked ~ .tab-bar label[for="tab-reviews"],
-#tab-specs:checked ~ .tab-bar label[for="tab-specs"] {
+.tab-label {
+  cursor: pointer;
+  padding: 8px 16px;
+  border-bottom: 2px solid transparent;
+}
+#tab-details:checked ~ .tab-bar label[for='tab-details'],
+#tab-reviews:checked ~ .tab-bar label[for='tab-reviews'],
+#tab-specs:checked ~ .tab-bar label[for='tab-specs'] {
   border-bottom-color: #333;
   font-weight: bold;
 }
@@ -100,8 +112,12 @@ summary {
 }
 
 /* Marker customization */
-summary::marker { content: '+ '; }
-details[open] summary::marker { content: '- '; }
+summary::marker {
+  content: '+ ';
+}
+details[open] summary::marker {
+  content: '- ';
+}
 ```
 
 **Single-open accordion:** Use the `name` attribute (same name = only one open at a time):
@@ -122,9 +138,7 @@ details[open] summary::marker { content: '- '; }
 Hover tooltip using `::after` pseudo-element and `data-` attribute.
 
 ```html
-<span class="has-tooltip" data-tooltip="Ships in 2-3 business days">
-  Shipping info &#9432;
-</span>
+<span class="has-tooltip" data-tooltip="Ships in 2-3 business days"> Shipping info &#9432; </span>
 ```
 
 ```css

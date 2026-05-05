@@ -25,7 +25,9 @@
     "build:client": "vite build",
     "build:server": "vite build --ssr",
     "build:copy-assets": "cp lib/*.jay-contract* dist/",
+    "build:check-types": "tsc",
     "clean": "rimraf dist",
+    "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
     "test": ":"
   },
   "dependencies": {

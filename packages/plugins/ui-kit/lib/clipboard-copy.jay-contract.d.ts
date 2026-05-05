@@ -1,9 +1,8 @@
-import {HTMLElementCollectionProxy, HTMLElementProxy, JayContract} from "@jay-framework/runtime";
-
+import { HTMLElementCollectionProxy, HTMLElementProxy, JayContract } from '@jay-framework/runtime';
 
 export interface ClipboardCopyViewState {
-  text: string,
-  copied: boolean
+    text: string;
+    copied: boolean;
 }
 
 export type ClipboardCopySlowViewState = {};
@@ -12,14 +11,18 @@ export type ClipboardCopyFastViewState = Pick<ClipboardCopyViewState, 'text' | '
 
 export type ClipboardCopyInteractiveViewState = Pick<ClipboardCopyViewState, 'text' | 'copied'>;
 
-
 export interface ClipboardCopyRefs {
-  copyBtn: HTMLElementProxy<ClipboardCopyViewState, HTMLButtonElement>
+    copyBtn: HTMLElementProxy<ClipboardCopyViewState, HTMLButtonElement>;
 }
-
 
 export interface ClipboardCopyRepeatedRefs {
-  copyBtn: HTMLElementCollectionProxy<ClipboardCopyViewState, HTMLButtonElement>
+    copyBtn: HTMLElementCollectionProxy<ClipboardCopyViewState, HTMLButtonElement>;
 }
 
-export type ClipboardCopyContract = JayContract<ClipboardCopyViewState, ClipboardCopyRefs, ClipboardCopySlowViewState, ClipboardCopyFastViewState, ClipboardCopyInteractiveViewState>
+export type ClipboardCopyContract = JayContract<
+    ClipboardCopyViewState,
+    ClipboardCopyRefs,
+    ClipboardCopySlowViewState,
+    ClipboardCopyFastViewState,
+    ClipboardCopyInteractiveViewState
+>;
