@@ -122,10 +122,7 @@ function isBlobLike(value: unknown): value is Blob {
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
     return (
-        typeof value === 'object' &&
-        value !== null &&
-        !Array.isArray(value) &&
-        !isBlobLike(value)
+        typeof value === 'object' && value !== null && !Array.isArray(value) && !isBlobLike(value)
     );
 }
 
