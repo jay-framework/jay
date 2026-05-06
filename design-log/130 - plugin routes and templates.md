@@ -324,3 +324,21 @@ Added a `/mood-stats` dashboard page to the mood-tracker plugin to validate the 
 | `dev-server/lib/dev-server.ts`                  | `getRouteDir()` helper; all cache calls pass `routeDir`             |
 | `rollup-plugin/lib/common/files.ts`             | `writeGeneratedFile` handles external paths via `pages/` segment    |
 | `mood-tracker-plugin/`                          | New `/mood-stats` page route (jay-html, contract, page.ts, exports) |
+
+### Fix: plugin init auto-discovery without explicit plugin.yaml declaration
+
+**Problem:** An earlier fix required NPM plugins to explicitly declare `init: init` in `plugin.yaml`. This broke existing plugins (e.g., wix-stores) that export `init` by convention without declaring it.
+
+**Root cause:** `resolvePluginInit` returned `null` for NPM plugins without `initConfig`, preventing the runtime from even attempting to load the `init` export.
+
+**Fix:** NPM plugins always resolve to `{ module: '', export: 'init' }` (attempt the default export). The runtime loads the module and checks if the export exists:
+
+- **Found:** `initConfirmed = true` → server init runs, client init includes the plugin
+- **Not found + not declared:** skip silently (no warning, no client import)
+- **Not found + explicitly declared:** warn (likely a misconfiguration)
+
+`preparePluginClientInits` filters to only `initConfirmed` plugins, preventing client import errors for plugins without init (like ui-kit).
+
+| File | Change |
+| --- | --- |
+| `stack-server-runtime/lib/plugin-init-discovery.ts` | `resolvePluginInit` always returns for NPM plugins; `initConfirmed` flag; silent skip for missing auto-discovered init; `preparePluginClientInits` filters by `initConfirmed` |

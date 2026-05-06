@@ -40,6 +40,8 @@ export interface PluginWithInit {
      * Can be overridden via `init` property in plugin.yaml (for compiled packages).
      */
     initExport: string;
+    /** Whether init was explicitly declared or confirmed to exist */
+    initConfirmed: boolean;
     /** Dependencies from package.json (for ordering) */
     dependencies: string[];
     /** When true, plugin is loaded on every page regardless of usage in jay-html */
@@ -96,6 +98,7 @@ export async function discoverPluginsWithInit(
             isLocal: scanned.isLocal,
             initModule: initConfig.module,
             initExport: initConfig.export,
+            initConfirmed: initConfig.explicit,
             dependencies: scanned.dependencies,
             global: scanned.manifest.global === true,
         });
@@ -126,7 +129,7 @@ function resolvePluginInit(
     pluginPath: string,
     initConfig: string | undefined,
     isLocal: boolean,
-): { module: string; export: string } | null {
+): { module: string; export: string; explicit: boolean } | null {
     const defaultExport = 'init';
 
     if (isLocal) {
@@ -144,7 +147,7 @@ function resolvePluginInit(
                 const relativePath = path.relative(pluginPath, initPath);
                 const modulePath = relativePath.replace(/\.(ts|js)$/, '');
                 const exportName = typeof initConfig === 'string' ? initConfig : defaultExport;
-                return { module: modulePath, export: exportName };
+                return { module: modulePath, export: exportName, explicit: true };
             }
         }
 
@@ -152,20 +155,10 @@ function resolvePluginInit(
         return null;
     }
 
-    // For NPM plugins (compiled), init must be declared in plugin.yaml.
-    // Without an explicit `init` config, we don't assume the package exports init —
-    // many plugins (e.g., ui-kit) have no initialization logic.
-    if (!initConfig) {
-        return null;
-    }
-
-    try {
-        // Export name comes from plugin.yaml
-        const exportName = typeof initConfig === 'string' ? initConfig : defaultExport;
-        return { module: '', export: exportName };
-    } catch {
-        return null;
-    }
+    // For NPM plugins: try the default 'init' export, or use the name from plugin.yaml.
+    // If the package doesn't export init, the runtime skips silently.
+    const exportName = typeof initConfig === 'string' ? initConfig : defaultExport;
+    return { module: '', export: exportName, explicit: !!initConfig };
 }
 
 /**
@@ -257,11 +250,16 @@ export async function executePluginServerInits(
             const jayInit = pluginModule[plugin.initExport] as JayInit<any> | undefined;
 
             if (!jayInit || jayInit.__brand !== 'JayInit') {
-                getLogger().warn(
-                    `[PluginInit] Plugin "${plugin.name}" init module doesn't export a valid JayInit at "${plugin.initExport}"`,
-                );
+                if (plugin.initConfirmed) {
+                    getLogger().warn(
+                        `[PluginInit] Plugin "${plugin.name}" init module doesn't export a valid JayInit at "${plugin.initExport}"`,
+                    );
+                }
                 continue;
             }
+
+            // Init export confirmed — mark so client init includes this plugin
+            plugin.initConfirmed = true;
 
             // Execute server init if defined
             if (typeof jayInit._serverInit === 'function') {
@@ -312,7 +310,9 @@ export interface PluginClientInitInfo {
  * information needed to generate client-side imports and execution.
  */
 export function preparePluginClientInits(plugins: PluginWithInit[]): PluginClientInitInfo[] {
-    return plugins.map((plugin) => {
+    // Only include plugins confirmed to have init (explicit declaration or verified during server init).
+    // Auto-discovered plugins without actual init export are filtered out to avoid client import errors.
+    return plugins.filter((p) => p.initConfirmed).map((plugin) => {
         let importPath: string;
 
         if (plugin.isLocal) {
