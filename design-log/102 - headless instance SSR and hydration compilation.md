@@ -1045,3 +1045,17 @@ Also fixed kebab-to-camelCase resolution in `getComponentName` — `<jay:scroll-
 | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
 | `compiler-jay-html/lib/slow-render/slow-render-transform.ts`       | Removed `hasUnresolvedProps` check; all instances discovered                                |
 | `compiler-jay-html/test/slow-render/slow-render-transform.test.ts` | Updated test: "should discover instances with unresolved prop bindings" (was "should skip") |
+
+### Fix: forEach inside headless instance template fails in hydrate compiler
+
+**Problem:** `{text}` inside `<jay:word-split><span forEach="words">{text}</span></jay:word-split>` threw "the data field [text] not found in Jay data" during hydrate compilation. The standard and server element compilers handled it correctly.
+
+**Root cause:** In `renderHydrateHeadlessInstance`, the single-child path called `renderHydrateElementContent` directly. This function processes element content (attributes, text, children) but doesn't handle directives like `forEach` or `if`. The `forEach` was ignored and `{text}` was resolved against the page's type scope instead of the forEach item scope.
+
+**Fix:** Check if the single child has `forEach` or `if` directives. If so, route through `renderHydrateNode` which processes directives before element content, creating the correct child scope.
+
+**Test:** `page-with-headless-foreach-template` fixture — headless instance with `forEach="words"` in its inline template. Verified in hydrate, standard, and server element compilers.
+
+| File                                                            | Change                                                                                               |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `compiler-jay-html/lib/jay-target/jay-html-compiler-hydrate.ts` | Single-child headless instance: check for forEach/if, route through `renderHydrateNode` when present |

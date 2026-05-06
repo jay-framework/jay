@@ -339,6 +339,6 @@ Added a `/mood-stats` dashboard page to the mood-tracker plugin to validate the 
 
 `preparePluginClientInits` filters to only `initConfirmed` plugins, preventing client import errors for plugins without init (like ui-kit).
 
-| File | Change |
-| --- | --- |
+| File                                                | Change                                                                                                                                                                        |
+| --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `stack-server-runtime/lib/plugin-init-discovery.ts` | `resolvePluginInit` always returns for NPM plugins; `initConfirmed` flag; silent skip for missing auto-discovered init; `preparePluginClientInits` filters by `initConfirmed` |

@@ -146,6 +146,11 @@ describe('generate jay-html server element', () => {
                 await readFixtureServerElementFile(folder),
             );
         });
+        it('for headless instance with forEach in template', async () => {
+            const folder = 'contracts/page-with-headless-foreach-template';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+        });
     });
 
     describe('slowForEach', () => {

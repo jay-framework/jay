@@ -1,0 +1,17 @@
+name: word-split
+props:
+  - name: text
+    kind: required
+tags:
+  - tag: words
+    type: sub-contract
+    repeated: true
+    trackBy: index
+    phase: fast+interactive
+    tags:
+      - tag: index
+        type: data
+        dataType: number
+      - tag: text
+        type: data
+        dataType: string

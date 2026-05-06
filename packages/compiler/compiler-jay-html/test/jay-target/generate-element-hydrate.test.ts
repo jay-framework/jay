@@ -173,6 +173,12 @@ describe('generate jay-html element hydrate', () => {
     });
 
     describe('headless instances', () => {
+        it('headless instance with forEach in template resolves bindings', async () => {
+            const folder = 'contracts/page-with-headless-foreach-template';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+        });
+
         it('for page-level headless component', async () => {
             const folder = 'contracts/page-using-counter';
             const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);

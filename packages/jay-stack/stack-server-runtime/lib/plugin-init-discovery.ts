@@ -312,24 +312,26 @@ export interface PluginClientInitInfo {
 export function preparePluginClientInits(plugins: PluginWithInit[]): PluginClientInitInfo[] {
     // Only include plugins confirmed to have init (explicit declaration or verified during server init).
     // Auto-discovered plugins without actual init export are filtered out to avoid client import errors.
-    return plugins.filter((p) => p.initConfirmed).map((plugin) => {
-        let importPath: string;
+    return plugins
+        .filter((p) => p.initConfirmed)
+        .map((plugin) => {
+            let importPath: string;
 
-        if (plugin.isLocal) {
-            // Local plugins: full path to the init file
-            importPath = path.join(plugin.pluginPath, plugin.initModule);
-        } else if (plugin.initModule) {
-            // NPM plugins with explicit sub-path
-            importPath = `${plugin.packageName}/${plugin.initModule}`;
-        } else {
-            // NPM plugins: import from /client subpath (client bundle)
-            importPath = `${plugin.packageName}/client`;
-        }
+            if (plugin.isLocal) {
+                // Local plugins: full path to the init file
+                importPath = path.join(plugin.pluginPath, plugin.initModule);
+            } else if (plugin.initModule) {
+                // NPM plugins with explicit sub-path
+                importPath = `${plugin.packageName}/${plugin.initModule}`;
+            } else {
+                // NPM plugins: import from /client subpath (client bundle)
+                importPath = `${plugin.packageName}/client`;
+            }
 
-        return {
-            name: plugin.name,
-            importPath,
-            initExport: plugin.initExport,
-        };
-    });
+            return {
+                name: plugin.name,
+                importPath,
+                initExport: plugin.initExport,
+            };
+        });
 }

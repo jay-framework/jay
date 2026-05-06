@@ -754,7 +754,7 @@ function renderHydrateHeadlessInstance(
 
     // Render adopt inline template children
     let adoptInlineBody: RenderFragment;
-    if (childNodes.length === 1) {
+    if (childNodes.length === 1 && !isForEach(childNodes[0]) && !isConditional(childNodes[0])) {
         adoptInlineBody = renderHydrateElementContent(
             childNodes[0] as HTMLElement,
             adoptItemContext,
@@ -762,6 +762,10 @@ function renderHydrateHeadlessInstance(
             null,
             true, // forceAdopt
         );
+    } else if (childNodes.length === 1) {
+        // Single child with directives (forEach, if) — must go through renderHydrateNode
+        // so the directive is handled before element content rendering.
+        adoptInlineBody = renderHydrateNode(childNodes[0], adoptItemContext);
     } else {
         // Multiple children — wrap in adoptElement with the wrapper's scoped coordinate
         // so the callback returns a single element (comma expression would return only the last).

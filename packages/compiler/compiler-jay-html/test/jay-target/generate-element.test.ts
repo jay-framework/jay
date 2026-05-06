@@ -246,6 +246,12 @@ describe('generate jay-html element', () => {
                 );
             });
 
+            it('headless instance with forEach in template resolves bindings correctly', async () => {
+                const folder = 'contracts/page-with-headless-foreach-template';
+                const elementFile = await readFileAndGenerateElementFile(folder, { importerMode });
+                expect(elementFile.validations).toEqual([]);
+            });
+
             it('keyed headless used as inline element produces validation error', async () => {
                 const folder = 'contracts/page-with-keyed-headless-element';
                 const elementFile = await readFileAndGenerateElementFile(folder, { importerMode });

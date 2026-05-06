@@ -30,6 +30,10 @@ export const TEST_IMPORT_RESOLVER: JayImportResolver = {
                 file: 'duplicate-ref-headless',
             },
             'test-product-card:product-card': { dir: 'product-card', file: 'product-card' },
+            'test-word-split:word-split': {
+                dir: 'page-with-headless-foreach-template',
+                file: 'word-split',
+            },
         };
 
         const key = `${pluginName}:${contractName}`;
@@ -126,6 +130,23 @@ export const TEST_IMPORT_RESOLVER: JayImportResolver = {
                     ),
                     componentPath: path.resolve(projectRoot, 'contracts/product-card/product-card'),
                     componentName: 'productCard',
+                    isNpmPackage: false,
+                },
+                [],
+            );
+        }
+        if (pluginName === 'test-word-split' && contractName === 'word-split') {
+            return new WithValidations(
+                {
+                    contractPath: path.resolve(
+                        projectRoot,
+                        'contracts/page-with-headless-foreach-template/word-split.jay-contract',
+                    ),
+                    componentPath: path.resolve(
+                        projectRoot,
+                        'contracts/page-with-headless-foreach-template/word-split',
+                    ),
+                    componentName: 'wordSplit',
                     isNpmPackage: false,
                 },
                 [],

@@ -12,6 +12,7 @@ import {
     parseJayFile,
     JAY_IMPORT_RESOLVER,
     generateElementFile,
+    generateServerElementFile,
     parseContract,
     htmlElementTagNameMap,
     type ContractTag,
@@ -852,6 +853,19 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                 }
             } else if (options.verbose) {
                 getLogger().info(chalk.green(`✓ ${relativePath}`));
+            }
+
+            // Also validate server element compilation (SSR) —
+            // catches binding errors inside headless instance templates
+            const serverElementFile = generateServerElementFile(parsedFile.val!);
+            if (serverElementFile.validations.length > 0) {
+                for (const validation of serverElementFile.validations) {
+                    errors.push({
+                        file: relativePath,
+                        message: `[SSR] ${validation}`,
+                        stage: 'generate',
+                    });
+                }
             }
         } catch (error: any) {
             errors.push({
