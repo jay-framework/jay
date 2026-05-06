@@ -54,9 +54,9 @@ export interface AppConfig {
 // Context Definitions (client-only)
 // ============================================================================
 
-export const STORE_CONFIG_CONTEXT = createJayContext<StoreConfig>();
-export const FEATURE_FLAGS_CONTEXT = createJayContext<FeatureFlags>();
-export const UI_SETTINGS_CONTEXT = createJayContext<UISettings>();
+export const STORE_CONFIG_CONTEXT = createJayContext<StoreConfig>('store-config');
+export const FEATURE_FLAGS_CONTEXT = createJayContext<FeatureFlags>('feature-flags');
+export const UI_SETTINGS_CONTEXT = createJayContext<UISettings>('ui-settings');
 
 // ============================================================================
 // Project Initialization

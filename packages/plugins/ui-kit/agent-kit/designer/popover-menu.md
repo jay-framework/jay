@@ -6,9 +6,10 @@ Dropdown menu that opens on hover. Headless component — requires import. For c
 
 ```html
 <head>
-  <script type="application/jay-headless"
-          plugin="@jay-framework/ui-kit"
-          contract="popover-menu"
+  <script
+    type="application/jay-headless"
+    plugin="@jay-framework/ui-kit"
+    contract="popover-menu"
   ></script>
 </head>
 ```
@@ -52,7 +53,7 @@ Position the popover below the trigger using CSS Anchor Positioning. The compone
   padding: 12px;
   border-radius: 8px;
   border: 1px solid #ddd;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   opacity: 0;
   transition: opacity 0.2s;
 }
@@ -64,10 +65,18 @@ Position the popover below the trigger using CSS Anchor Positioning. The compone
 **Multiple menus:** Each trigger needs a unique `anchor-name`. Use different names per menu:
 
 ```css
-.products-trigger { anchor-name: --products-menu; }
-.checkout-trigger { anchor-name: --checkout-menu; }
-.products-dropdown { position-anchor: --products-menu; }
-.checkout-dropdown { position-anchor: --checkout-menu; }
+.products-trigger {
+  anchor-name: --products-menu;
+}
+.checkout-trigger {
+  anchor-name: --checkout-menu;
+}
+.products-dropdown {
+  position-anchor: --products-menu;
+}
+.checkout-dropdown {
+  position-anchor: --checkout-menu;
+}
 ```
 
 **Browser support:** CSS Anchor Positioning works in Chrome 125+. The component automatically falls back to JS-based `position: fixed` positioning in browsers without support.

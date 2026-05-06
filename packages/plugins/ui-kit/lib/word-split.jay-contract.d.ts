@@ -1,13 +1,12 @@
-import {JayContract} from "@jay-framework/runtime";
-
+import { JayContract } from '@jay-framework/runtime';
 
 export interface WordOfWordSplitViewState {
-  index: number,
-  text: string
+    index: number;
+    text: string;
 }
 
 export interface WordSplitViewState {
-  words: Array<WordOfWordSplitViewState>
+    words: Array<WordOfWordSplitViewState>;
 }
 
 export type WordSplitSlowViewState = {};
@@ -25,7 +24,14 @@ export interface WordSplitRefs {}
 export interface WordSplitRepeatedRefs {}
 
 export interface WordSplitProps {
-  text?: string;
+    text?: string;
 }
 
-export type WordSplitContract = JayContract<WordSplitViewState, WordSplitRefs, WordSplitSlowViewState, WordSplitFastViewState, WordSplitInteractiveViewState, WordSplitProps>
+export type WordSplitContract = JayContract<
+    WordSplitViewState,
+    WordSplitRefs,
+    WordSplitSlowViewState,
+    WordSplitFastViewState,
+    WordSplitInteractiveViewState,
+    WordSplitProps
+>;

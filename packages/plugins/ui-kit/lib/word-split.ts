@@ -6,7 +6,10 @@ import type {
 } from './word-split.jay-contract';
 
 function splitWords(text: string) {
-    return text.split(/\s+/).filter(Boolean).map((word, i) => ({ index: i, text: word }));
+    return text
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((word, i) => ({ index: i, text: word }));
 }
 
 export const wordSplit = makeJayStackComponent<WordSplitContract>()

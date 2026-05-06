@@ -83,7 +83,7 @@ function createRatingsService(): RatingsService {
  * Global context for rating UI configuration.
  * Components can access this via useContext(RATING_UI_CONFIG_CONTEXT).
  */
-export const RATING_UI_CONFIG_CONTEXT = createJayContext<ProductRatingConfig>();
+export const RATING_UI_CONFIG_CONTEXT = createJayContext<ProductRatingConfig>('rating-ui-config');
 
 // ============================================================================
 // Plugin Initialization

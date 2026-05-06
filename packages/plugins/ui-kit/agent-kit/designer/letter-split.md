@@ -6,9 +6,10 @@ Splits dynamic text into one span per letter for individual character styling. H
 
 ```html
 <head>
-  <script type="application/jay-headless"
-          plugin="@jay-framework/ui-kit"
-          contract="letter-split"
+  <script
+    type="application/jay-headless"
+    plugin="@jay-framework/ui-kit"
+    contract="letter-split"
   ></script>
 </head>
 ```
@@ -30,13 +31,27 @@ Splits dynamic text into one span per letter for individual character styling. H
 Rainbow text:
 
 ```css
-.letter:nth-child(7n+1) { color: red; }
-.letter:nth-child(7n+2) { color: orange; }
-.letter:nth-child(7n+3) { color: yellow; }
-.letter:nth-child(7n+4) { color: green; }
-.letter:nth-child(7n+5) { color: blue; }
-.letter:nth-child(7n+6) { color: indigo; }
-.letter:nth-child(7n+7) { color: violet; }
+.letter:nth-child(7n + 1) {
+  color: red;
+}
+.letter:nth-child(7n + 2) {
+  color: orange;
+}
+.letter:nth-child(7n + 3) {
+  color: yellow;
+}
+.letter:nth-child(7n + 4) {
+  color: green;
+}
+.letter:nth-child(7n + 5) {
+  color: blue;
+}
+.letter:nth-child(7n + 6) {
+  color: indigo;
+}
+.letter:nth-child(7n + 7) {
+  color: violet;
+}
 ```
 
 Typewriter animation:
@@ -47,13 +62,21 @@ Typewriter animation:
   opacity: 0;
   animation: typeIn 0.05s forwards;
 }
-.letter:nth-child(1) { animation-delay: 0s; }
-.letter:nth-child(2) { animation-delay: 0.05s; }
-.letter:nth-child(3) { animation-delay: 0.1s; }
+.letter:nth-child(1) {
+  animation-delay: 0s;
+}
+.letter:nth-child(2) {
+  animation-delay: 0.05s;
+}
+.letter:nth-child(3) {
+  animation-delay: 0.1s;
+}
 /* scale with calc or CSS custom properties */
 
 @keyframes typeIn {
-  to { opacity: 1; }
+  to {
+    opacity: 1;
+  }
 }
 ```
 

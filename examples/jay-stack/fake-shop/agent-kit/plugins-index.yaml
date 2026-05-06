@@ -41,6 +41,14 @@ plugins:
           for 2 seconds
         type: static
         path: ./../../../packages/plugins/ui-kit/dist/clipboard-copy.jay-contract
+      - name: word-split
+        description: Splits text into a span per word for individual word styling
+        type: static
+        path: ./../../../packages/plugins/ui-kit/dist/word-split.jay-contract
+      - name: letter-split
+        description: Splits text into a span per letter for individual letter styling
+        type: static
+        path: ./../../../packages/plugins/ui-kit/dist/letter-split.jay-contract
   - name: webmcp
     path: ./../../../packages/plugins/webmcp
     contracts: []
