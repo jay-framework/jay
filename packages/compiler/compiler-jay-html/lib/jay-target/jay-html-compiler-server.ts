@@ -337,7 +337,13 @@ function renderServerHeadlessInstance(
     const renderedChildren = mergeServerFragments(
         childNodes.map((child) => {
             if (child.nodeType === NodeType.ELEMENT_NODE) {
-                return renderServerElementContent(child as HTMLElement, instanceContext, {
+                const el = child as HTMLElement;
+                // Use renderServerElement for children with directives (forEach, if)
+                // so they're handled before element content rendering.
+                if (isForEach(el) || isConditional(el)) {
+                    return renderServerElement(el, instanceContext);
+                }
+                return renderServerElementContent(el, instanceContext, {
                     isRoot: true,
                 });
             }

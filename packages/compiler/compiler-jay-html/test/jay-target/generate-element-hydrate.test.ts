@@ -177,6 +177,9 @@ describe('generate jay-html element hydrate', () => {
             const folder = 'contracts/page-with-headless-foreach-template';
             const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
             expect(hydrateFile.validations).toEqual([]);
+            // Must contain hydrateForEach for the words array — not a direct adoptText
+            expect(hydrateFile.val).toMatch(/hydrateForEach|forEach/);
+            expect(hydrateFile.val).toMatch(/\.words/);
         });
 
         it('for page-level headless component', async () => {

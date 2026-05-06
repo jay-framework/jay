@@ -150,6 +150,10 @@ describe('generate jay-html server element', () => {
             const folder = 'contracts/page-with-headless-foreach-template';
             const serverFile = await readFileAndGenerateServerElementFile(folder);
             expect(serverFile.validations).toEqual([]);
+            // Must contain a for loop iterating the words array — not a direct field access
+            expect(serverFile.val).toMatch(/for \(const \w+ of/);
+            expect(serverFile.val).toMatch(/\.words/);
+            expect(serverFile.val).toMatch(/\.text\b/);
         });
     });
 
