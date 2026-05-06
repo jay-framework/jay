@@ -67,3 +67,14 @@ Use the `name` attribute — same name means only one section open at a time:
   <p>Answer 2</p>
 </details>
 ```
+
+## Collapsible text (single section)
+
+A standalone `<details>` works as a "read more" / "show details" toggle — no wrapper needed:
+
+```html
+<details>
+  <summary>Read more</summary>
+  <p>Extended content that's hidden by default...</p>
+</details>
+```

@@ -12,6 +12,14 @@
           plugin="@jay-framework/ui-kit"
           contract="clipboard-copy"
   ></script>
+  <script type="application/jay-headless"
+          plugin="@jay-framework/ui-kit"
+          contract="word-split"
+  ></script>
+  <script type="application/jay-headless"
+          plugin="@jay-framework/ui-kit"
+          contract="letter-split"
+  ></script>
   <style>
     .demo-page { max-width: 700px; margin: 40px auto; font-family: sans-serif; }
     .section { margin: 40px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
@@ -68,6 +76,24 @@
     .has-tooltip { position: relative; cursor: help; border-bottom: 1px dashed #999; }
     .has-tooltip::after { content: attr(data-tooltip); position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); padding: 6px 10px; background: #333; color: white; border-radius: 4px; font-size: 13px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
     .has-tooltip:hover::after { opacity: 1; }
+
+    /* Toggle Switch */
+    .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; inset: 0; background: #ccc; border-radius: 24px; cursor: pointer; transition: background 0.2s; }
+    .slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: transform 0.2s; }
+    input:checked + .slider { background: #4caf50; }
+    input:checked + .slider::before { transform: translateX(20px); }
+    .switch-row { display: flex; align-items: center; gap: 12px; cursor: pointer; margin: 8px 0; }
+
+    /* Word Split */
+    .word-demo .word { display: inline-block; margin-right: 0.3em; }
+    .word-demo .word:nth-child(odd) { color: #e91e63; }
+    .word-demo .word:nth-child(even) { color: #2196f3; }
+
+    /* Letter Split */
+    .letter-demo .letter { display: inline-block; transition: transform 0.2s, color 0.2s; }
+    .letter-demo .letter:hover { transform: translateY(-4px) scale(1.3); color: #e91e63; }
   </style>
   <script type="application/jay-data" contract="./page.jay-contract"></script>
 </head>
@@ -218,6 +244,45 @@
         <h3 style="margin-top: 0;">Product Info</h3>
         <p>This popup uses the native Popover API with popovertarget. Click outside to dismiss.</p>
       </div>
+    </div>
+
+    <div class="section">
+      <h2>Word Split</h2>
+      <p>Each word is a separate span — styled alternating colors.</p>
+      <div class="word-demo" style="font-size: 24px; font-weight: bold;">
+        <jay:word-split text="Welcome to the Fake Shop Demo Page">
+          <span forEach="words" trackBy="index" class="word">{text}</span>
+        </jay:word-split>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Letter Split</h2>
+      <p>Each letter is a separate span — hover to see the effect.</p>
+      <div class="letter-demo" style="font-size: 32px; font-weight: bold; letter-spacing: 2px; cursor: default;">
+        <jay:letter-split text="FAKE SHOP">
+          <span forEach="letters" trackBy="index" class="letter">{text}</span>
+        </jay:letter-split>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Toggle Switch (Pure CSS)</h2>
+      <p>Checkbox styled as a switch. No JavaScript.</p>
+      <label class="switch-row">
+        <span>Dark mode</span>
+        <span class="switch">
+          <input type="checkbox" />
+          <span class="slider"></span>
+        </span>
+      </label>
+      <label class="switch-row">
+        <span>Notifications</span>
+        <span class="switch">
+          <input type="checkbox" checked />
+          <span class="slider"></span>
+        </span>
+      </label>
     </div>
 
   </div>

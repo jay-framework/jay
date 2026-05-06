@@ -17,7 +17,9 @@
     "./plugin.yaml": "./plugin.yaml",
     "./popover-menu.jay-contract": "./dist/popover-menu.jay-contract",
     "./scroll-carousel.jay-contract": "./dist/scroll-carousel.jay-contract",
-    "./clipboard-copy.jay-contract": "./dist/clipboard-copy.jay-contract"
+    "./clipboard-copy.jay-contract": "./dist/clipboard-copy.jay-contract",
+    "./word-split.jay-contract": "./dist/word-split.jay-contract",
+    "./letter-split.jay-contract": "./dist/letter-split.jay-contract"
   },
   "scripts": {
     "build": "npm run definitions && npm run build:client && npm run build:server && npm run build:copy-assets",

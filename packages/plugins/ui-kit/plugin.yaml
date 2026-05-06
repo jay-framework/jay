@@ -14,3 +14,13 @@ contracts:
     contract: clipboard-copy.jay-contract
     component: clipboardCopy
     description: Copy text to clipboard with visual feedback — toggles copied state for 2 seconds
+
+  - name: word-split
+    contract: word-split.jay-contract
+    component: wordSplit
+    description: Splits text into a span per word for individual word styling
+
+  - name: letter-split
+    contract: letter-split.jay-contract
+    component: letterSplit
+    description: Splits text into a span per letter for individual letter styling
