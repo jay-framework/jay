@@ -19,9 +19,14 @@
     .section h3 { color: #666; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin-top: 24px; }
 
     /* Popover Menu styles */
-    .nav-bar { display: flex; gap: 24px; }
+    .nav-bar { display: flex; gap: 24px; align-items: center; }
+    .nav-item { position: relative; }
     .nav-link { text-decoration: none; color: #333; font-weight: 500; cursor: pointer; }
-    .dropdown { padding: 12px; border-radius: 8px; border: 1px solid #ddd; min-width: 150px; }
+    .products-trigger { anchor-name: --products-menu; }
+    .checkout-trigger { anchor-name: --checkout-menu; }
+    .dropdown { position: absolute; inset: unset; margin: 0; top: anchor(bottom); left: anchor(left); padding: 12px; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 4px 12px rgba(0,0,0,0.1); min-width: 150px; }
+    .products-dropdown { position-anchor: --products-menu; }
+    .checkout-dropdown { position-anchor: --checkout-menu; }
     .dropdown { opacity: 0; transition: opacity 0.15s; }
     .dropdown:popover-open { opacity: 1; }
     .dropdown a { display: block; padding: 6px 8px; text-decoration: none; color: #333; border-radius: 4px; }
@@ -78,19 +83,30 @@
     <div class="section">
       <h2>Popover Menu</h2>
       <p>Hover to open. Click outside to close (light-dismiss).</p>
-      <jay:popover-menu>
-        <nav class="nav-bar">
-          <a ref="trigger" class="nav-link">Products &#x25BE;</a>
-          <div popover ref="popover" class="dropdown">
-            <a href="/products">All Products</a>
-            <a href="#">Shoes</a>
-            <a href="#">Bags</a>
-            <a href="#">Accessories</a>
+      <nav class="nav-bar">
+        <jay:popover-menu>
+          <div class="nav-item">
+            <a ref="trigger" class="nav-link products-trigger">Products &#x25BE;</a>
+            <div popover ref="popover" class="dropdown products-dropdown">
+              <a href="/products">All Products</a>
+              <a href="#">Shoes</a>
+              <a href="#">Bags</a>
+              <a href="#">Accessories</a>
+            </div>
           </div>
-          <a href="/" class="nav-link">Home</a>
-          <a href="/checkout" class="nav-link">Checkout</a>
-        </nav>
-      </jay:popover-menu>
+        </jay:popover-menu>
+        <a href="/" class="nav-link">Home</a>
+        <jay:popover-menu>
+          <div class="nav-item">
+            <a ref="trigger" class="nav-link checkout-trigger">Checkout &#x25BE;</a>
+            <div popover ref="popover" class="dropdown checkout-dropdown">
+              <a href="/checkout">View Cart</a>
+              <a href="#">Express Checkout</a>
+              <a href="#">Gift Cards</a>
+            </div>
+          </div>
+        </jay:popover-menu>
+      </nav>
     </div>
 
     <div class="section">

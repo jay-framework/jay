@@ -16,5 +16,5 @@ routes:
     jayHtml: ./lib/pages/mood-stats/page.jay-html
     component: moodStatsPage
     description: Mood statistics dashboard — view mood history and trends
-# Plugin initialization — export name for the makeJayInit constant
-init: init
+# Plugin initialization — auto-discovered from the default 'init' export.
+# Explicit declaration (init: myCustomInit) only needed for non-default export names.
