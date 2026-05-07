@@ -282,7 +282,7 @@ The examples are organized into 5 categories
 - Jay Context
   - [scrum-board-with-context](examples%2Fjay-context%2Fscrum-board-with-context) - the same scrum board example using jay context
   - [todo-with-context](examples%2Fjay-context%2Ftodo-with-context) - the same todo list example using jay context
-- Jay Low Leven APIs
+- Jay Low Level APIs
   - [counter-raw](examples%2Fjay-low-level-apis%2Fcounter-raw) - counter example not using the Jay Component APIs. Only using @jay-framework/runtime.
   - [todo-raw](examples%2Fjay-low-level-apis%2Ftodo-raw) - todo list not using the Jay Component APIs. Only using @jay-framework/runtime.
 - Jay Stack
