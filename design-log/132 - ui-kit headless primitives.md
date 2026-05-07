@@ -348,3 +348,29 @@ Ensure designer guides are merged during `jay-stack agent-kit`.
 - **Skills vs components**: Some patterns (tabs) could be either. The CSS-only approach avoids a runtime dependency but requires more designer knowledge. The skill guide bridges this gap.
 - **Popover API support**: Chrome 114+, Firefox 125+, Safari 17+. Graceful degradation for older browsers.
 - **No visual output**: Headless components add zero DOM. If a designer forgets a `ref`, nothing happens. The agent-kit guides document required refs clearly.
+
+## Accessibility & SEO Guidelines
+
+Each agent-kit designer guide includes accessibility and SEO instructions. The key patterns:
+
+| Component | Accessibility approach | SEO impact |
+| --- | --- | --- |
+| word-split | `aria-label` on container with full text, `aria-hidden` on spans | No impact — text in DOM |
+| letter-split | Same — critical since screen readers spell each letter | No impact — text in DOM |
+| popover-menu | `aria-haspopup`, `aria-expanded`; add `popovertarget` for keyboard | Menu content in DOM |
+| scroll-carousel | `role="region"`, `aria-label`; `aria-label` on prev/next buttons | All slides in DOM |
+| clipboard-copy | `aria-live="polite"` on "Copied!" feedback | N/A |
+| tooltip | `aria-label` duplicating `data-tooltip` (CSS `::after` not in a11y tree) | N/A |
+| tabs | `role="tablist"`, `role="tab"`, `role="tabpanel"` | All panels in DOM |
+| toggle-switch | `role="switch"` on checkbox | N/A |
+| accordion | Natively accessible via `<details>` | Content in DOM |
+| click-popover | Natively accessible via Popover API | Content in DOM |
+
+### Principles
+
+- **Split text**: always provide `aria-label` with the full unsplit text and `aria-hidden` on individual spans
+- **Interactive controls**: label with `aria-label` when visual label is an icon (prev/next arrows, copy button)
+- **State feedback**: use `aria-live="polite"` for transient state changes (copied, loading)
+- **CSS-only tooltips**: `::after` pseudo-elements are invisible to assistive technology — duplicate the content in `aria-label`
+- **Native HTML**: prefer `<details>`, `popover`, radio inputs — they're accessible by default
+- **SEO**: all ui-kit patterns keep content in the DOM (CSS scroll, CSS show/hide, forEach rendering) — search engines see everything

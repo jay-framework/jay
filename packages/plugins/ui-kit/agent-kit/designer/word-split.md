@@ -26,6 +26,20 @@ Splits dynamic text into one span per word for individual word styling. Headless
 
 **ViewState:** `words` — array of `{ index: number, text: string }`
 
+## Accessibility & SEO
+
+Screen readers may pause between spans, making split text sound unnatural. Add `aria-label` with the full text on the container and hide the individual spans:
+
+```html
+<jay:word-split text="{title}">
+  <div aria-label="{title}" role="text">
+    <span forEach="words" trackBy="index" class="word" aria-hidden="true">{text} </span>
+  </div>
+</jay:word-split>
+```
+
+For SEO, the full text is still in the HTML (each word in a span) — search engines read it normally. The `aria-label` ensures assistive technology reads the unsplit version.
+
 ## Styling examples
 
 Highlight every other word:

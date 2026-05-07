@@ -76,3 +76,17 @@ input:checked + .slider::before {
 ```
 
 **How it works:** A hidden checkbox drives the state. CSS `:checked` selector moves the slider knob and changes the background color.
+
+## Accessibility
+
+The hidden checkbox is keyboard-accessible (Space to toggle) when wrapped in a `<label>`. Add `role="switch"` for screen readers:
+
+```html
+<label class="switch-row">
+  <span>Dark mode</span>
+  <span class="switch">
+    <input type="checkbox" role="switch" />
+    <span class="slider"></span>
+  </span>
+</label>
+```

@@ -68,6 +68,10 @@ Use the `name` attribute — same name means only one section open at a time:
 </details>
 ```
 
+## Accessibility & SEO
+
+`<details>` / `<summary>` is natively accessible — keyboard (Enter/Space to toggle), screen readers announce expanded/collapsed state. All content is in the DOM — search engines index it regardless of open/closed state.
+
 ## Collapsible text (single section)
 
 A standalone `<details>` works as a "read more" / "show details" toggle — no wrapper needed:

@@ -80,3 +80,20 @@ Position the popover below the trigger using CSS Anchor Positioning. The compone
 ```
 
 **Browser support:** CSS Anchor Positioning works in Chrome 125+. The component automatically falls back to JS-based `position: fixed` positioning in browsers without support.
+
+## Accessibility
+
+Add `aria-haspopup` and `aria-expanded` on the trigger. The Popover API handles focus trapping and Escape-to-close natively:
+
+```html
+<a ref="trigger" class="nav-link" aria-haspopup="true" aria-expanded="false">Products &#x25BE;</a>
+```
+
+Note: this component opens on hover only. Keyboard users can activate the popover via `popovertarget` (add it alongside the ref for click/keyboard access):
+
+```html
+<a ref="trigger" class="nav-link" popovertarget="products-menu">Products &#x25BE;</a>
+<div popover ref="popover" id="products-menu" class="dropdown-menu" role="menu">
+  <a href="/products/shoes" role="menuitem">Shoes</a>
+</div>
+```

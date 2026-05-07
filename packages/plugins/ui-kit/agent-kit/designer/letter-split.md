@@ -26,6 +26,20 @@ Splits dynamic text into one span per letter for individual character styling. H
 
 **ViewState:** `letters` — array of `{ index: number, text: string }` (spaces are included as entries)
 
+## Accessibility & SEO
+
+Screen readers will spell out each letter individually. Always add `aria-label` with the full text and hide the spans:
+
+```html
+<jay:letter-split text="{heroTitle}">
+  <div aria-label="{heroTitle}" role="text">
+    <span forEach="letters" trackBy="index" class="letter" aria-hidden="true">{text}</span>
+  </div>
+</jay:letter-split>
+```
+
+For SEO, search engines read the text content of all spans combined — no impact on indexing.
+
 ## Styling examples
 
 Rainbow text:

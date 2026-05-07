@@ -34,6 +34,20 @@ Horizontal slider with prev/next buttons and edge detection. Headless component 
 
 **ViewState:** `atStart` (boolean), `atEnd` (boolean) — use for disabling buttons or hiding arrows
 
+## Accessibility
+
+Label the carousel region and navigation buttons:
+
+```html
+<div class="carousel" role="region" aria-label="Product gallery">
+  <button ref="prev" disabled="atStart" aria-label="Previous slide">&#8249;</button>
+  <div ref="container" class="carousel-track">...</div>
+  <button ref="next" disabled="atEnd" aria-label="Next slide">&#8250;</button>
+</div>
+```
+
+All slides remain in the DOM (CSS scroll, not JS hide/show), so screen readers and search engines see all content.
+
 ## CSS
 
 The container must have scroll-snap:
