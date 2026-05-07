@@ -7,9 +7,11 @@ Hover tooltip showing extra info. Pure CSS using `::after` pseudo-element, no co
 ## Usage
 
 ```html
-<span class="has-tooltip"
-      data-tooltip="Ships in 2-3 business days"
-      aria-label="Ships in 2-3 business days">
+<span
+  class="has-tooltip"
+  data-tooltip="Ships in 2-3 business days"
+  aria-label="Ships in 2-3 business days"
+>
   Shipping info &#9432;
 </span>
 ```

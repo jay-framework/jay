@@ -353,18 +353,18 @@ Ensure designer guides are merged during `jay-stack agent-kit`.
 
 Each agent-kit designer guide includes accessibility and SEO instructions. The key patterns:
 
-| Component | Accessibility approach | SEO impact |
-| --- | --- | --- |
-| word-split | `aria-label` on container with full text, `aria-hidden` on spans | No impact — text in DOM |
-| letter-split | Same — critical since screen readers spell each letter | No impact — text in DOM |
-| popover-menu | `aria-haspopup`, `aria-expanded`; add `popovertarget` for keyboard | Menu content in DOM |
-| scroll-carousel | `role="region"`, `aria-label`; `aria-label` on prev/next buttons | All slides in DOM |
-| clipboard-copy | `aria-live="polite"` on "Copied!" feedback | N/A |
-| tooltip | `aria-label` duplicating `data-tooltip` (CSS `::after` not in a11y tree) | N/A |
-| tabs | `role="tablist"`, `role="tab"`, `role="tabpanel"` | All panels in DOM |
-| toggle-switch | `role="switch"` on checkbox | N/A |
-| accordion | Natively accessible via `<details>` | Content in DOM |
-| click-popover | Natively accessible via Popover API | Content in DOM |
+| Component       | Accessibility approach                                                   | SEO impact              |
+| --------------- | ------------------------------------------------------------------------ | ----------------------- |
+| word-split      | `aria-label` on container with full text, `aria-hidden` on spans         | No impact — text in DOM |
+| letter-split    | Same — critical since screen readers spell each letter                   | No impact — text in DOM |
+| popover-menu    | `aria-haspopup`, `aria-expanded`; add `popovertarget` for keyboard       | Menu content in DOM     |
+| scroll-carousel | `role="region"`, `aria-label`; `aria-label` on prev/next buttons         | All slides in DOM       |
+| clipboard-copy  | `aria-live="polite"` on "Copied!" feedback                               | N/A                     |
+| tooltip         | `aria-label` duplicating `data-tooltip` (CSS `::after` not in a11y tree) | N/A                     |
+| tabs            | `role="tablist"`, `role="tab"`, `role="tabpanel"`                        | All panels in DOM       |
+| toggle-switch   | `role="switch"` on checkbox                                              | N/A                     |
+| accordion       | Natively accessible via `<details>`                                      | Content in DOM          |
+| click-popover   | Natively accessible via Popover API                                      | Content in DOM          |
 
 ### Principles
 
