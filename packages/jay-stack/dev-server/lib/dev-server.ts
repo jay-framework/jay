@@ -70,7 +70,7 @@ import { DevServerService, DEV_SERVER_SERVICE } from './dev-server-service';
 import { registerService } from '@jay-framework/stack-server-runtime';
 
 /** Callback to register linked files for watching. Set by setupSlowRenderCacheInvalidation. */
-let _watchLinkedFiles: (files: string[]) => void = () => {};
+let _watchLinkedFiles: (files: string[], route?: JayRoute) => void = () => {};
 
 async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
     return await scanRoutes(pagesBaseFolder, {
@@ -492,7 +492,7 @@ async function handleCachedRequest(
     } = pagePartsResult.val;
 
     // Register linked files for watching (absolute paths from jay-html parser)
-    _watchLinkedFiles([...(linkedCssFiles || []), ...(linkedComponentFiles || [])]);
+    _watchLinkedFiles([...(linkedCssFiles || []), ...(linkedComponentFiles || [])], route);
 
     const pluginsForPage = filterPluginsForPage(
         allPluginClientInits,
@@ -600,7 +600,7 @@ async function handlePreRenderRequest(
 
     // Register linked files for watching
     const { linkedCssFiles: initCss, linkedComponentFiles: initComps } = initialPartsResult.val;
-    _watchLinkedFiles([...(initCss || []), ...(initComps || [])]);
+    _watchLinkedFiles([...(initCss || []), ...(initComps || [])], route);
 
     // Run slow phase to get slowViewState and carryForward
     // Includes key-based parts slow render + pre-render pipeline (instance slow render)
@@ -739,7 +739,7 @@ async function handleClientOnlyRequest(
     } = pagePartsResult.val;
 
     // Register linked files for watching
-    _watchLinkedFiles([...(linkedCssFiles || []), ...(linkedComponentFiles || [])]);
+    _watchLinkedFiles([...(linkedCssFiles || []), ...(linkedComponentFiles || [])], route);
 
     const pluginsForPage = filterPluginsForPage(
         allPluginClientInits,
@@ -1518,23 +1518,31 @@ function setupSlowRenderCacheInvalidation(
     cache: SlowRenderCache,
     pagesRootFolder: string,
     projectRootFolder: string,
-): (files: string[]) => void {
+): (files: string[], route?: JayRoute) => void {
     // Track watched files (CSS, component jay-html) to avoid re-adding.
     // Vite's root is pagesRootFolder (e.g., src/pages/), so files outside it
     // (src/styles/, src/components/) are invisible to the watcher unless
     // explicitly added with absolute paths.
     const watchedFiles = new Set<string>();
+    // Reverse map: linked file → routes that use it (for targeted reload)
+    const fileToRoutes = new Map<string, Set<string>>();
 
     /**
      * Register linked files for watching. Called after loadPageParts()
      * so we watch exactly the files referenced by jay-html pages.
      */
-    const watchLinkedFiles = (files: string[]) => {
+    const watchLinkedFiles = (files: string[], route?: JayRoute) => {
+        const routePrefix = route ? getRoutePrefix(route.jayHtmlPath, pagesRootFolder) : undefined;
         for (const file of files) {
-            if (watchedFiles.has(file)) continue;
-            watchedFiles.add(file);
-            vite.watcher.add(file);
-            getLogger().info(`[SlowRender] Watching: ${file}`);
+            if (!watchedFiles.has(file)) {
+                watchedFiles.add(file);
+                vite.watcher.add(file);
+                getLogger().info(`[SlowRender] Watching: ${file}`);
+            }
+            if (routePrefix) {
+                if (!fileToRoutes.has(file)) fileToRoutes.set(file, new Set());
+                fileToRoutes.get(file)!.add(routePrefix);
+            }
         }
     };
 
@@ -1548,7 +1556,19 @@ function setupSlowRenderCacheInvalidation(
                 getLogger().info(
                     `[SlowRender] Cache cleared (linked file changed: ${changedPath})`,
                 );
-                vite.ws.send({ type: 'full-reload' });
+                // Send targeted reload for routes that use this file
+                const routes = fileToRoutes.get(changedPath);
+                if (routes && routes.size > 0) {
+                    for (const routePrefix of routes) {
+                        vite.ws.send({
+                            type: 'custom',
+                            event: 'jay:page-reload',
+                            data: { routePrefix },
+                        });
+                    }
+                } else {
+                    vite.ws.send({ type: 'full-reload' });
+                }
             });
             return;
         }
