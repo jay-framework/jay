@@ -174,7 +174,7 @@ The Vite build needs to:
 
 ### Concern 4: Slow Phase Execution — Build Time and Data Change
 
-**Initial Build (sequential per instance):**
+**Initial Build (per-instance pipeline):**
 
 ```
 For each route in project:
@@ -182,15 +182,23 @@ For each route in project:
     1. Run slowlyRender(params) → slowViewState + carryForward
     2. Pre-render jay-html with slow ViewState → instance-specific jay-html
     3. Compile server element from pre-rendered jay-html → server-element.js
-    4. Compile hydration script from pre-rendered jay-html → hydrate entry
-    5. Write all artifacts to build/
-
-Then:
-  6. Vite build — bundle all hydration entries into optimized client bundles
-     (shared chunks for jay framework + plugins, per-instance entries)
+    4. Compile + bundle hydration script (per-instance Vite build) → instance-[hash].js
+    5. Write all artifacts to build/v{version}/
 ```
 
-This is what the dev server does on first request, but done eagerly for all routes. Steps 1-5 can run concurrently across instances (bounded parallelism). Step 6 runs once after all instances are compiled.
+The Vite build is **scoped per instance**, not per project. This means:
+- Each instance is independently buildable — no waiting for all routes to finish
+- A data change only triggers the pipeline for the affected instance
+- Shared chunks (jay framework, plugins) are built once and referenced by all instances
+- Instances can be built concurrently with bounded parallelism
+
+**Shared chunks** are pre-built before instance builds begin:
+
+```
+Phase 0: Build shared chunks (jay framework, plugins) → build/v{version}/shared/
+Phase 1: Per-instance pipeline (steps 1-5 above, concurrent) → build/v{version}/instances/
+Phase 2: Write route-manifest.json → build/v{version}/
+```
 
 **Data Change Re-render:**
 
@@ -201,9 +209,9 @@ Plugin webhook receives change notification
   │
   ├── Plugin resolves: item ID → contract + param value
   ├── Slow render server finds routes using that contract + params
-  ├── Re-runs slow phase for affected instances only
-  ├── Re-compiles server element + hydration script
-  ├── Re-runs Vite build for affected entries
+  ├── Re-runs per-instance pipeline for affected instances only
+  │   (slow render → compile → per-instance Vite build)
+  ├── Updates instance artifacts in current version bucket
   └── Main server picks up new artifacts on next request
 ```
 
@@ -224,18 +232,42 @@ External data change (e.g., product updated in CMS)
 
 **Q8.1: How do we handle load on startup with many param combinations?**
 
-**A8.1:** On first build, all param combinations need slow rendering + compilation. For large sites this can be expensive. Options:
-- Parallel slow renders (worker pool or bounded concurrency)
-- Priority queue (render most-visited routes first, if analytics available)
-- Incremental startup: start the main server with existing artifacts, slow render server re-renders in background
-
 **Q8.2: What if the slow render server restarts? How do we know when to re-run all param combinations vs reuse previous build files?**
 
-**A8.2:** Build artifacts on disk include enough metadata to determine validity. DL#110 already embeds `slowViewState` and `carryForward` in pre-rendered jay-html files. On restart:
-- If source code hasn't changed (check source file timestamps or git hash against a `build-metadata.json`), previous artifacts are valid — skip re-rendering
-- If source code changed, artifacts are stale — need full rebuild
-- If only data changed (webhook-triggered), only affected routes are stale — selective re-render
-- The `build-metadata.json` stores: source hash, build timestamp, list of compiled artifacts with their source dependencies
+**A8.1 + A8.2 — Versioned storage buckets:**
+
+A global version number increments on each deployment (code change). Artifacts are stored in versioned buckets: `build/v1/`, `build/v2/`, etc.
+
+**Deployment (version change):**
+```
+1. New code deployed → version increments from v1 to v2
+2. Slow render server builds all instances into build/v2/
+   (build/v1/ continues serving via main server)
+3. When build completes, update route-manifest pointer to v2
+4. Main server picks up v2 on next request — atomic transition
+5. Old bucket (v1) can be cleaned up
+```
+
+**Restart (same version):**
+```
+1. Slow render server starts, reads current version from build-metadata.json
+2. Version unchanged → all artifacts in build/v{current}/ are valid
+3. No rebuild needed — immediate startup
+4. Resume listening for data change webhooks
+```
+
+**Data change (within version):**
+```
+1. Webhook triggers re-render of specific instance
+2. Instance artifacts updated in-place within build/v{current}/
+3. Main server picks up changes on next request
+```
+
+This ensures:
+- First startup with a new version: full build, but old version keeps serving throughout
+- Subsequent restarts: instant, no rebuild
+- Data changes: targeted per-instance rebuild, no full build
+- Clean atomic transitions between code versions
 
 **Q9: How does the main server know artifacts were updated? Options: filesystem polling, IPC signal, shared event bus, artifact versioning.**
 
@@ -247,15 +279,15 @@ External data change (e.g., product updated in CMS)
 
 **Q11: Can slow render and Vite build run in parallel, or does the Vite build depend on pre-rendered jay-html?**
 
-**A11:** The Vite build depends on the slow render. The pipeline is strictly sequential:
+**A11:** The Vite build depends on the slow render. Within a single instance, the pipeline is strictly sequential:
 
 ```
-1. Slow render (per instance) → pre-rendered jay-html
-2. Compile server elements + hydration scripts (from pre-rendered jay-html)
-3. Vite build (bundles hydration scripts into optimized client bundles)
+1. Slow render → pre-rendered jay-html
+2. Compile server element + hydration script
+3. Per-instance Vite build (references pre-built shared chunks)
 ```
 
-Step 2 and 3 could potentially overlap across instances (Vite builds instance A while slow-rendering instance B), but within a single instance the order is fixed.
+Since the Vite build is per-instance, instances can be fully built independently and concurrently. No cross-instance dependency.
 
 ### Concern 5: Action Execution and Data Mutation
 
@@ -352,33 +384,32 @@ The `build/` directory is the interface between the two servers. Its structure i
 
 ```
 build/
-  build-metadata.json              # Source hash, build timestamp, artifact index
-  route-manifest.json              # Routes, params, artifact paths per instance
-  pre-rendered/                    # Slow-rendered jay-html per instance
-    home/page.jay-html
-    products/[slug]/
-      page_abc123.jay-html         # slug=blue-widget (slow conditional true)
-      page_def456.jay-html         # slug=red-gadget  (slow conditional false)
-  server-elements/                 # Compiled SSR render functions (per instance)
-    home/page.server-element.js
-    products/[slug]/
-      page_abc123.server-element.js
-      page_def456.server-element.js
-  server/                          # Compiled page.ts, actions, services
-    pages/
-      home/page.js
-      products/[slug]/page.js
-    actions/
-      addToCart.js
-    init.js
-  client/                          # Vite build output
-    assets/
-      home-[hash].js               # Per-instance entry bundles
-      products-slug-abc123-[hash].js
-      products-slug-def456-[hash].js
-      jay-framework-[hash].js      # Shared chunk: jay runtime + component
-      vendor-[hash].js             # Shared chunk: 3rd party deps
-    manifest.json                  # Vite manifest mapping entries to assets
+  build-metadata.json              # Current version, source hash, build timestamp
+  v1/                              # Versioned storage bucket (one per deployment)
+    route-manifest.json            # Routes, params, artifact paths per instance
+    shared/                        # Pre-built shared chunks (once per version)
+      jay-framework-[hash].js      # Jay runtime + component + stack-client-runtime
+      vendor-[hash].js             # 3rd party deps (plugins, etc.)
+      shared-manifest.json         # Maps chunk names to hashed filenames
+    server/                        # Compiled page.ts, actions, services
+      pages/
+        home/page.js
+        products/[slug]/page.js
+      actions/
+        addToCart.js
+      init.js
+    instances/                     # Per-instance artifacts
+      home/
+        page.jay-html              # Pre-rendered jay-html (slow data baked in)
+        page.server-element.js     # Compiled SSR render function
+        page-[hash].js             # Per-instance client bundle
+      products/[slug]/
+        page_abc123.jay-html       # slug=blue-widget (slow conditional true)
+        page_abc123.server-element.js
+        page_abc123-[hash].js
+        page_def456.jay-html       # slug=red-gadget  (slow conditional false)
+        page_def456.server-element.js
+        page_def456-[hash].js
 ```
 
 ### No Vite in the main server
@@ -390,9 +421,11 @@ The main server is a plain Node.js HTTP server. It loads pre-compiled JS modules
 | Decision | Pro | Con |
 |---|---|---|
 | Two servers (same codebase) | Clear separation of build-time vs request-time; independent scaling | Operational complexity; need to coordinate artifact updates |
-| Build directory as interface | Simple, filesystem-based; easy to inspect and debug | Doesn't scale to distributed deployments without shared storage |
+| Build directory as interface | Simple, filesystem-based; easy to inspect and debug | Doesn't scale to distributed deployments without shared storage (mitigated by artifact service abstraction) |
+| Per-instance Vite builds | Each instance independently buildable; data changes only rebuild affected instances; no global rebundle bottleneck | Many small Vite builds instead of one optimized global build; shared chunks must be pre-built separately |
+| Versioned storage buckets | Atomic code deployments; instant restart on same version; clean rollback by pointing to old bucket | Disk usage: multiple versions coexist during transition; need cleanup strategy for old versions |
 | No Vite in main server | Fast startup, predictable performance, smaller runtime footprint | Need separate compilation step for server-side TS; can't use Vite's resolve/transform |
-| Pre-compile everything | Zero cold-start latency | Longer build times; need rebuild for code changes |
+| Pre-compile everything | Zero cold-start latency | Longer initial build; need rebuild for code changes |
 | `jay-stack build` as one-shot | CI/CD friendly; deterministic output | Still need the renderer role for data change re-renders |
 
 ## Verification Criteria
