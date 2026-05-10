@@ -1,6 +1,6 @@
 # Popover Menu
 
-Dropdown menu that opens on hover. Headless component — requires import. For click-triggered popups, use `click-popover.md` instead (pure HTML).
+Dropdown menu that opens on hover and closes when the mouse leaves. Headless component — requires import. For click-triggered popups, use `click-popover.md` instead (pure HTML).
 
 ## Import
 
@@ -32,7 +32,7 @@ Dropdown menu that opens on hover. Headless component — requires import. For c
 
 ## CSS
 
-Position the popover below the trigger using CSS Anchor Positioning. The component handles `showPopover()` on hover and provides a JS fallback for browsers without anchor support.
+Position the popover below the trigger using CSS Anchor Positioning. The component shows the popover on hover and hides it with a short delay (150ms) when the mouse leaves both the trigger and the popover. Moving from the trigger into the popover keeps it open. A JS fallback handles positioning in browsers without anchor support.
 
 ```css
 /* Anchor the trigger */

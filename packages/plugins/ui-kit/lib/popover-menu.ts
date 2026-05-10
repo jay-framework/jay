@@ -7,7 +7,27 @@ const supportsAnchor = typeof CSS !== 'undefined' && CSS.supports('anchor-name',
 export const popoverMenu = makeJayStackComponent<PopoverMenuContract>()
     .withProps<{}>()
     .withInteractive(function PopoverMenu(props: Props<{}>, refs: PopoverMenuRefs) {
+        let closeTimer: ReturnType<typeof setTimeout> | null = null;
+
+        function cancelClose() {
+            if (closeTimer) {
+                clearTimeout(closeTimer);
+                closeTimer = null;
+            }
+        }
+
+        function scheduleClose() {
+            cancelClose();
+            closeTimer = setTimeout(() => {
+                refs.popover.exec$((el) => {
+                    el.hidePopover();
+                });
+                closeTimer = null;
+            }, 150);
+        }
+
         refs.trigger.onmouseenter(async () => {
+            cancelClose();
             if (!supportsAnchor) {
                 const rect = await refs.trigger.exec$((el) => {
                     return el.getBoundingClientRect();
@@ -23,6 +43,18 @@ export const popoverMenu = makeJayStackComponent<PopoverMenuContract>()
             refs.popover.exec$((el) => {
                 el.showPopover();
             });
+        });
+
+        refs.trigger.onmouseleave(() => {
+            scheduleClose();
+        });
+
+        refs.popover.onmouseenter(() => {
+            cancelClose();
+        });
+
+        refs.popover.onmouseleave(() => {
+            scheduleClose();
         });
 
         return { render: () => ({}) };
