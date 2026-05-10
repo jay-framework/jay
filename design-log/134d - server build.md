@@ -9,7 +9,9 @@
 
 The production build pipeline (DL#134a Phase 0) needs to compile all server-side TypeScript into production JS. The main server loads these compiled modules via `import()` to run fast-phase rendering and action execution — no Vite at runtime.
 
-Today, the dev server loads server code via `vite.ssrLoadModule()`, which handles TypeScript transpilation, import resolution, and hot reloading. The `jayStackCompiler` already supports SSR builds — the `jay-stack:code-split` plugin strips client code when `options.ssr = true`. Plugin packages are already pre-compiled to JS.
+Today, the dev server loads server code via `vite.ssrLoadModule()`, which handles TypeScript transpilation, import resolution, and hot reloading. The `jayStackCompiler` already supports SSR builds — the `jay-stack:code-split` plugin strips client code when `options.ssr = true`.
+
+**The project server build is the same pattern as plugin package builds.** Plugin packages already use `jayStackCompiler` with `vite build --ssr` to produce `dist/index.js` (server) and `dist/index.client.js` (client). The project server build follows the same process — the difference is that plugins are published packages while the project build is deployment-specific.
 
 ## What Needs Compiling
 
@@ -160,37 +162,46 @@ async function discoverServerEntries(projectRoot: string): Promise<ServerBuildEn
 
 ### Production Server Startup
 
-The main server initializes without Vite:
+The main server initializes without Vite. Plugin and project code follow the same loading pattern — the only difference is where the compiled JS lives (node_modules vs build dir):
 
 ```typescript
-async function initializeProductionServer(buildDir: string) {
-  // 1. Load and run init
-  const { init } = await import(path.join(buildDir, 'init.js'));
-  if (init._serverInit) {
-    const clientInitData = await init._serverInit();
-  }
+async function initializeProductionServer(buildDir: string, manifest: RouteManifest) {
+  // 1. Discover and sort plugins (same topological sort as dev server)
+  const plugins = await discoverPlugins(manifest.plugins);
+  const sortedPlugins = sortPluginsByDependencies(plugins);
 
-  // 2. Load plugin inits (from pre-compiled packages)
+  // 2. Run plugin inits in dependency order (from pre-compiled packages)
   for (const plugin of sortedPlugins) {
     const pluginModule = await import(plugin.packageName);
     if (pluginModule.init?._serverInit) {
-      await pluginModule.init._serverInit();
+      const data = await pluginModule.init._serverInit();
+      setClientInitData(plugin.name, data);
     }
   }
 
-  // 3. Register action handlers
-  const manifest = JSON.parse(await fs.readFile(path.join(buildDir, '../route-manifest.json')));
+  // 3. Run project init (from compiled build)
+  const { init } = await import(path.join(buildDir, 'init.js'));
+  if (init._serverInit) {
+    const data = await init._serverInit();
+    setClientInitData('project', data);
+  }
+
+  // 4. Register action handlers — both plugin and project actions
   for (const actionEntry of manifest.actions) {
-    const actionModule = await import(path.join(buildDir, actionEntry.serverModule));
-    for (const [name, action] of Object.entries(actionModule)) {
+    const actionModule = await import(
+      actionEntry.isPlugin
+        ? actionEntry.packageName  // plugin: from node_modules
+        : path.join(buildDir, actionEntry.serverModule)  // project: from build dir
+    );
+    for (const [, action] of Object.entries(actionModule)) {
       if (action?.__brand === 'JayAction') {
         actionRegistry.register(action);
       }
     }
   }
 
-  // 4. Service resolver available globally
-  // (registerService calls in init._serverInit already set this up)
+  // 5. Service resolver available globally
+  // (registerService calls in _serverInit already set this up)
 }
 ```
 
@@ -207,31 +218,48 @@ async function initializeProductionServer(buildDir: string) {
 
 ### Action Registration in Route Manifest
 
-The route manifest includes action entries so the main server knows what to load:
+The route manifest includes action entries for both project and plugin actions:
 
 ```typescript
 interface RouteManifest {
   // ... routes, instances (from DL#134a)
+  plugins: PluginEntry[];
   actions: ActionEntry[];
 }
 
+interface PluginEntry {
+  name: string;
+  packageName: string;
+}
+
 interface ActionEntry {
-  serverModule: string;   // relative path: "actions/cart.js"
-  actionNames: string[];  // ["cart.addToCart", "cart.removeFromCart"]
+  serverModule: string;     // relative path: "actions/cart.js" (project)
+  packageName?: string;     // "@wix/stores" (plugin — alternative to serverModule)
+  isPlugin: boolean;
+  actionNames: string[];    // ["cart.addToCart", "cart.removeFromCart"]
 }
 ```
 
-Action names are discovered during the build by statically analyzing the action source files — the `extractActionsFromSource()` function in `transform-action-imports.ts` already does this (it parses `makeJayAction('name')` calls).
+Project action names are discovered during the build by statically analyzing the action source files — `extractActionsFromSource()` in `transform-action-imports.ts` already does this. Plugin action names are discovered by loading the plugin's `dist/index.js` and scanning for `JayAction`-branded exports.
 
-### Plugin Server Code
+### Plugin Server Artifacts
 
-Plugins are pre-compiled (DL#134 Q15). They export:
+Plugins are pre-compiled (DL#134 Q15) using the same `jayStackCompiler` build process as the project. They export:
 - `dist/index.js` — server code (init, component definitions, actions)
 - `dist/index.client.js` — client code
 
-In the server build, plugin imports are externalized — they resolve at runtime from `node_modules`. The main server `import('plugin-package')` loads the pre-compiled JS directly.
+In the project server build, plugin imports are externalized — they resolve at runtime from `node_modules`. The production server must load and integrate plugin server artifacts:
+
+| Plugin Artifact | How Loaded | Production Behavior |
+|---|---|---|
+| **Init** (`_serverInit`) | `import(pluginPkg).init` | Runs at startup, registers services. Sorted topologically by dependencies. |
+| **Component definitions** | `import(pluginPkg).componentName` | Loaded by page route handler when page uses `<jay:plugin-contract>` headless instances |
+| **Actions** | `import(pluginPkg).actionName` | Registered in action router at startup |
+| **Routes** (plugin pages) | `plugin.yaml` → `jayHtml` + `component` exports | Merged with project routes. Plugin pages go through the same per-instance build pipeline as project pages. |
 
 Plugin init order is determined by reading `plugin.yaml` dependency declarations and topologically sorting, same as the dev server's `sortPluginsByDependencies()`.
+
+**Plugin routes in production:** When a plugin provides page routes (DL#130), those routes are discovered during the build via `scanPluginRoutes()`. Plugin page components are already compiled in the plugin's `dist/index.js`. Plugin jay-html templates are resolved via the package's `exports` field in `package.json`. These plugin pages go through the same per-instance pipeline as project pages — slow render, server element compilation, hydration entry generation, Vite build.
 
 ### Service Lifecycle Differences
 
