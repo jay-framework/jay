@@ -255,87 +255,60 @@ Output: `build/v{n}/instances/{route}/page_{hash}.server-element.js` — a stand
 
 Today: `generateHydrationScript()` in `generate-ssr-response.ts` produces an inline `<script>` with imports that Vite resolves.
 
-Production: Generate a **TS file** with the same content, which becomes the Vite build entry:
+Production: Generate a **TS file** per instance, which becomes the Vite build entry.
+
+**What's known at build time vs request time:**
+
+| Data | Known at | Embedded in |
+|---|---|---|
+| Slow ViewState | Build time (per instance) | Hydration entry (bundled) |
+| Fast ViewState | Request time | SSR inline JSON |
+| CarryForward | Request time | SSR inline JSON |
+| TrackByMap | Build time | Hydration entry (bundled) |
+| Hydrate function | Build time (per instance, depends on pre-rendered jay-html) | Hydration entry (bundled) |
+| Page parts (interactive) | Build time | Hydration entry (bundled) |
+
+The slow ViewState is different per instance — it's the output of slow rendering, which produced the pre-rendered jay-html that this instance is compiled from. It must be embedded in the hydration entry so the client can merge it with the fast ViewState for a complete picture.
 
 ```typescript
-// build/v{n}/instances/products/[slug]/page_abc123.hydrate-entry.ts
-import { hydrateCompositeJayComponent } from '@jay-framework/stack-client-runtime';
-import { hydrate } from './page_abc123.jay-html?jay-hydrate';
-import { default as part0 } from '../../../../server/pages/products/[slug]/page.js';
-
-const viewState = __JAY_VIEW_STATE__; // placeholder, replaced at SSR time
-const fastCarryForward = __JAY_CARRY_FORWARD__; // placeholder
-const trackByMap = {"items": "id"};
-
-const target = document.getElementById('target');
-const rootElement = target.firstElementChild;
-const pageComp = hydrateCompositeJayComponent(
-  hydrate, viewState, fastCarryForward,
-  [{ comp: part0.comp, contexts: part0.contexts }],
-  trackByMap, rootElement
-);
-const instance = pageComp({});
-```
-
-Wait — the ViewState and carryForward are not known at build time. They're computed at request time by the fast phase. The hydration entry can't embed them.
-
-**Key insight: The hydration entry is the same regardless of ViewState values.** What changes per-instance is the jay-html structure (slow conditionals), which affects the `hydrate` function. But ViewState/carryForward are always injected by the SSR response as inline JSON.
-
-So the production hydration entry is:
-
-```typescript
-// page_abc123.hydrate-entry.ts — per-instance (depends on pre-rendered jay-html)
-import { hydrateCompositeJayComponent } from '@jay-framework/stack-client-runtime';
-import { hydrate } from './page_abc123.jay-html?jay-hydrate';
-
-export { hydrateCompositeJayComponent, hydrate };
-// Page parts, plugin inits, etc. are also exported
-```
-
-The SSR HTML then includes:
-```html
-<script type="module">
-  import { hydrateCompositeJayComponent, hydrate } from '/assets/page_abc123-[hash].js';
-  // ViewState and carryForward injected inline by SSR
-  const viewState = ${JSON.stringify(viewState)};
-  // ... wiring code
-</script>
-```
-
-Or better — the instance bundle exports an `init(viewState, carryForward, trackByMap)` function that the SSR inline script calls:
-
-```typescript
-// page_abc123.hydrate-entry.ts
+// page_abc123.hydrate-entry.ts — per-instance
 import { hydrateCompositeJayComponent } from '@jay-framework/stack-client-runtime';
 import { hydrate } from './page_abc123.jay-html?jay-hydrate';
 // Part imports (client-side only, code-split by jay-stack:code-split)
 import pagePart from '../../../pages/products/[slug]/page';
 
-export function init(viewState, fastCarryForward, trackByMap) {
+// Slow ViewState — known at build time, baked into this instance's bundle
+const slowViewState = {"title":"Blue Widget","inStock":true,"variants":[...]};
+const trackByMap = {"variants": "id"};
+
+export function init(fastViewState, fastCarryForward) {
   const target = document.getElementById('target');
   const rootElement = target.firstElementChild;
   const parts = [pagePart].filter(p => p.comp).map(p => ({
     comp: p.comp, contexts: p.contexts || []
   }));
   const pageComp = hydrateCompositeJayComponent(
-    hydrate, viewState, fastCarryForward, parts, trackByMap, rootElement
+    hydrate, slowViewState, fastViewState, fastCarryForward,
+    parts, trackByMap, rootElement
   );
   return pageComp({});
 }
 ```
 
-SSR response:
+The SSR response at request time only injects fast-phase data:
+
 ```html
 <script type="importmap">{ "imports": { ... } }</script>
 <script type="module">
   import { init } from '/assets/page_abc123-a1b2c3.js';
   init(
-    ${JSON.stringify(viewState)},
-    ${JSON.stringify(fastCarryForward)},
-    ${JSON.stringify(trackByMap)}
+    ${JSON.stringify(fastViewState)},
+    ${JSON.stringify(fastCarryForward)}
   );
 </script>
 ```
+
+This means the SSR inline script is minimal — just the `init()` call with fast-phase data. All build-time knowledge (slow ViewState, hydrate function, page parts, trackByMap) is bundled in the instance JS.
 
 #### Step 5: Per-Instance Vite Build
 
@@ -441,14 +414,21 @@ async function handleRequest(req, res) {
 
   // Load pre-compiled page component, run fast phase
   const pageModule = await import(route.serverModule);
+  const carryForward = instance.carryForward; // from slow render, stored in manifest or cache file
   const fastResult = await pageModule.default.fastRender(carryForward, ...services);
-  const viewState = mergeViewStates(instance.slowViewState, fastResult.rendered);
 
-  // SSR render
+  // Merge slow + fast ViewState for SSR rendering
+  const fullViewState = mergeViewStates(instance.slowViewState, fastResult.rendered);
+
+  // SSR render — server element needs the full merged ViewState
   const htmlChunks = [];
-  renderToStream(viewState, { write: c => htmlChunks.push(c), onAsync: ... });
+  renderToStream(fullViewState, {
+    write: c => htmlChunks.push(c),
+    onAsync: (promise, id, templates) => { /* ... */ }
+  });
 
-  // Build response
+  // Build response — init() only receives fast-phase data
+  // (slow ViewState + trackByMap are already embedded in the client bundle)
   const importMap = buildImportMap(sharedManifest, publicBasePath);
   res.write(`<!doctype html><html><head>
     <script type="importmap">${JSON.stringify(importMap)}</script>
@@ -457,11 +437,13 @@ async function handleRequest(req, res) {
     <div id="target">${htmlChunks.join('')}</div>
     <script type="module">
       import { init } from '${publicBasePath}/${instance.clientBundle}';
-      init(${JSON.stringify(viewState)}, ${JSON.stringify(carryForward)}, ${JSON.stringify(trackByMap)});
+      init(${JSON.stringify(fastResult.rendered)}, ${JSON.stringify(fastResult.carryForward)});
     </script>
   </body></html>`);
 }
 ```
+
+The SSR server element renders with the **full merged ViewState** (slow + fast) to produce correct HTML. But the client `init()` only receives **fast-phase data** — the slow ViewState is already baked into the client bundle at build time. The client merges them internally before hydrating.
 
 ## Implementation Plan
 
