@@ -137,6 +137,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 134 | production build                       | Two-server production architecture: main server + slow render server |
 | 134a| build pipeline                         | Per-instance compilation, shared chunks, Vite build strategy         |
 | 134b| main server                            | Production request handling: fast phase + SSR with pre-built artifacts |
+| 134c| slow render server                     | Webhook invalidation, per-instance rebuild, versioned bucket building |
 | 134d| server build                           | Compiling page.ts, actions, services, init.ts to production JS       |
 
 ---

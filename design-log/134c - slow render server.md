@@ -87,124 +87,146 @@ jay-stack serve --role=renderer --version=2
 External system (CMS, database, etc.)
   │
   ├── Sends webhook to slow render server
-  │   POST /_jay/webhooks/wix-stores
+  │   POST /_jay/webhooks/wix-stores.product-change
   │   Body: { "type": "product.updated", "itemId": "prod-123" }
   │
-  ├── Plugin webhook handler resolves:
-  │   itemId "prod-123" → contract "product-page" + params { slug: "blue-widget" }
+  ├── Plugin webhook handler (makeWebhook) executes:
+  │   1. Parses event, resolves itemId to slug
+  │   2. Calls invalidate('/products/[slug]', { slug: 'blue-widget' })
   │
-  ├── Slow render server finds affected instances:
-  │   Route /products/[slug], instance with params { slug: "blue-widget" }
-  │
-  ├── Re-runs per-instance pipeline for affected instance:
+  ├── Framework invalidation runs per-instance pipeline:
   │   1. Slow render (with fresh data from plugin service)
   │   2. Compare new pre-rendered jay-html with existing
   │   3. If unchanged → skip remaining steps
   │   4. If changed → compile server element + hydration entry + Vite build
-  │   5. Update route-manifest.json with new artifact paths
+  │   5. Atomic update of route-manifest.json
   │
   └── Main server picks up changes on next request
       (timestamp-based caching detects file changes)
 ```
 
-### Plugin Webhook Handler
+### Plugin Webhook Registration
 
-Plugins register webhook handlers that know how to resolve external change events to Jay routes:
-
-```typescript
-interface PluginWebhookHandler {
-  pluginName: string;
-  handleWebhook(event: WebhookEvent): Promise<InvalidationResult>;
-}
-
-interface WebhookEvent {
-  type: string;                              // e.g., "product.updated"
-  itemId: string;                            // External system's item ID
-  payload?: Record<string, unknown>;         // Optional additional data
-}
-
-interface InvalidationResult {
-  affectedInstances: AffectedInstance[];
-}
-
-interface AffectedInstance {
-  contractName: string;                      // e.g., "product-page"
-  params: Record<string, string>;            // e.g., { slug: "blue-widget" }
-}
-```
-
-The plugin resolves the external item ID to Jay-level concepts (contract name + params). The slow render server then maps those to actual route instances in the manifest.
-
-**Plugin.yaml extension:**
-
-```yaml
-name: wix-stores
-webhook:
-  handler: ./webhook-handler.js
-  events:
-    - product.updated
-    - product.created
-    - product.deleted
-```
-
-### Resolving Affected Routes
-
-Given an `InvalidationResult` from a plugin, the slow render server finds which instances to re-render:
+Plugins register webhooks using a builder pattern similar to `makeJayAction`:
 
 ```typescript
-function findAffectedInstances(
-  manifest: RouteManifest,
-  invalidation: InvalidationResult,
-): Array<{ route: RouteEntry; instance: InstanceEntry }> {
-  const affected = [];
-  for (const { contractName, params } of invalidation.affectedInstances) {
-    for (const route of manifest.routes) {
-      // Check if this route uses the affected contract
-      if (!routeUsesContract(route, contractName)) continue;
-      // Find the instance with matching params
-      const instance = route.instances.find(i => paramsMatch(i.params, params));
-      if (instance) {
-        affected.push({ route, instance });
-      }
-    }
+// In plugin's actions or init file
+import { makeWebhook, type InvalidateRoute } from '@jay-framework/fullstack-component';
+
+export const onProductChange = makeWebhook('wix-stores.product-change',
+  async (req: HttpRequest, invalidate: InvalidateRoute): Promise<HttpResponse> => {
+    const event = await req.json();
+    const { type, itemId } = event;
+    const slug = await resolveProductSlug(itemId);
+
+    // Re-render the specific product page
+    await invalidate('/products/[slug]', { slug });
+
+    // Re-render all search pages (any product change could affect search results)
+    await invalidate('/search/[query]');
+
+    return { status: 200, body: { ok: true } };
   }
-  return affected;
+);
+```
+
+The `invalidate` API is injected by the framework:
+
+```typescript
+type InvalidateRoute = (
+  routePattern: string,
+  params?: Record<string, string>,
+) => Promise<void>;
+```
+
+- `invalidate('/products/[slug]', { slug: 'blue-widget' })` — re-render one specific instance. If no instance exists for these params (new product), build a new instance for this route.
+- `invalidate('/search/[query]')` — re-render **all instances** of the route
+
+The paramless form is important for cases where a data change affects routes that can't easily map to specific params. For example, a search page at `/search/[query]` shows multiple products — when a product changes, the plugin doesn't know which search queries include it. Calling `invalidate('/search/[query]')` re-renders all search page instances.
+
+**Future: reverse dependency map.** A more fine-grained approach would track which data items each instance depends on during slow render (e.g., instance `/search/[query=shoes]` consumed products A, B, C). On product A change, only instances that consumed product A are re-rendered. This is an optimization that can be added later without changing the `invalidate` API — it would refine the paramless `invalidate('/search/[query]')` to only rebuild affected instances instead of all.
+
+Webhooks are automatically exposed at `/_jay/webhooks/{webhookName}`:
+- `POST /_jay/webhooks/wix-stores.product-change` → calls `onProductChange`
+
+Discovery works the same as actions — scan exports for `JayWebhook`-branded constants, register at startup. The webhook is a server-only construct (no client transform needed).
+
+### Invalidation Implementation
+
+The `invalidate` function provided to webhook handlers is implemented by the slow render server:
+
+```typescript
+async function createInvalidator(
+  manifest: RouteManifest,
+  buildContext: BuildContext,
+): Promise<InvalidateRoute> {
+  return async (routePattern: string, params?: Record<string, string>) => {
+    const route = manifest.routes.find(r => r.pattern === routePattern);
+    if (!route) return;
+
+    if (params) {
+      // Specific instance — re-render just this one
+      await rebuildInstance(route, params, buildContext);
+    } else {
+      // Entire route — re-run loadParams to discover all current params
+      // This handles new items, deleted items, and bulk changes
+      await rebuildRoute(route, buildContext);
+    }
+  };
 }
 ```
 
-### New Instance Creation (e.g., new product)
-
-When a plugin reports a new item (e.g., `product.created`), the plugin resolves it to params that don't yet have an instance. The slow render server:
-
-1. Runs `loadParams` for the affected route to discover the new param combination
-2. Runs the full per-instance pipeline (slow render → compile → Vite build)
-3. Adds the new instance to the route manifest
-4. Main server picks up the new instance on next manifest read
+**Specific instance invalidation** (`invalidate('/products/[slug]', { slug: 'blue-widget' })`):
 
 ```typescript
-async function handleNewInstance(
+async function rebuildInstance(
   route: RouteEntry,
   params: Record<string, string>,
-  buildContext: BuildContext,
-): Promise<InstanceEntry> {
-  // Run the per-instance pipeline
-  const instance = await buildInstance(route, params, buildContext);
-  
-  // Update manifest
-  route.instances.push(instance);
-  await writeManifest(buildContext.manifest, buildContext.buildDir);
-  
-  return instance;
+  ctx: BuildContext,
+): Promise<void> {
+  const existing = route.instances.find(i => paramsMatch(i.params, params));
+
+  // Run per-instance pipeline (slow render → compare → compile if changed)
+  const result = await buildInstance(route, params, ctx);
+
+  if (existing) {
+    // Update existing instance in manifest
+    Object.assign(existing, result);
+  } else {
+    // New instance (e.g., new product) — add to manifest
+    route.instances.push(result);
+  }
+
+  await atomicManifestUpdate(ctx);
 }
 ```
 
-### Instance Deletion (e.g., product removed)
+**Full route invalidation** (`invalidate('/products/[slug]')`):
 
-When a plugin reports a deleted item:
+```typescript
+async function rebuildRoute(
+  route: RouteEntry,
+  ctx: BuildContext,
+): Promise<void> {
+  // Re-run loadParams to discover current param combinations
+  const pageModule = await ctx.artifacts.loadPageModule(route.serverModule);
+  const currentParams = await collectLoadParams(pageModule);
 
-1. Remove the instance from the route manifest
-2. Optionally clean up artifact files (or leave for next full build)
-3. Main server returns 404 for deleted params on next manifest read
+  // Find new, existing, and deleted instances
+  const existingParams = new Set(route.instances.map(i => paramKey(i.params)));
+  const currentParamSet = new Set(currentParams.map(p => paramKey(p)));
+
+  // Rebuild existing + new instances
+  for (const params of currentParams) {
+    await rebuildInstance(route, params, ctx);
+  }
+
+  // Remove deleted instances
+  route.instances = route.instances.filter(i => currentParamSet.has(paramKey(i.params)));
+
+  await atomicManifestUpdate(ctx);
+}
+```
 
 ### Optimistic Skip: Compare Pre-rendered Output
 
@@ -383,34 +405,36 @@ Implement `validateExistingBuild()`:
 - Build metadata comparison
 - Decision: rebuild / skip / partial
 
-### Step 4: Webhook HTTP Server
+### Step 4: `makeWebhook` Builder
 
-Create webhook endpoint handler:
-- Route `POST /_jay/webhooks/:pluginName`
-- Load plugin webhook handler
-- Execute resolution
-- Trigger per-instance rebuild
+Create `makeWebhook(name, handler)` in `fullstack-component`:
+- Similar pattern to `makeJayAction`
+- Handler receives `(req: HttpRequest, invalidate: InvalidateRoute)`
+- Returns branded `JayWebhook` constant
+- Discovery via export scanning (same as actions)
 
-### Step 5: Plugin Webhook Handler Interface
+### Step 5: Webhook HTTP Server
 
-Define `PluginWebhookHandler` interface and `plugin.yaml` extension:
-- Plugin resolves item ID → contract + params
-- Slow render server maps to route instances
+Create webhook endpoint routing:
+- Route `POST /_jay/webhooks/:webhookName`
+- Load registered webhook handler
+- Inject `invalidate` function
+- Execute handler, return response
 
-### Step 6: Incremental Instance Rebuild
+### Step 6: Invalidation Engine
 
-Implement single-instance re-render:
+Implement `invalidate(routePattern, params?)`:
+- With params: rebuild specific instance (slow render → compare → compile if changed)
+- Without params: re-run loadParams, rebuild all instances, remove deleted
+- Atomic manifest update after each invalidation
+
+### Step 7: Incremental Instance Rebuild
+
+Implement `buildInstance` with optimistic skip:
 - Slow render with fresh data
-- Optimistic skip (compare pre-rendered output)
-- Compile + Vite build if changed
-- Atomic manifest update
-
-### Step 7: New/Deleted Instance Handling
-
-Handle `product.created` and `product.deleted`:
-- Run loadParams for new params discovery
-- Add/remove instance from manifest
-- Build new instance artifacts
+- Compare pre-rendered output with existing
+- Skip compilation if unchanged
+- Full pipeline if changed
 
 ## Questions
 
@@ -432,7 +456,8 @@ Not required — the main server's timestamp-based caching detects file changes 
 |---|---|---|
 | Optimistic skip (compare output) | Avoids unnecessary compilation when data changes don't affect template structure | Extra comparison step; must read existing file |
 | Bounded concurrency for builds | Predictable resource usage; doesn't overwhelm external APIs or CPU | Slower than unbounded parallelism for small builds |
-| Plugin-owned webhook resolution | Plugins know their data model; framework stays generic | Each plugin must implement webhook handler; no default behavior |
+| `makeWebhook` pattern (like actions) | Consistent with existing patterns; webhook logic in code not config; plugins own their data model | Each plugin must implement webhook handler; no default behavior |
+| `invalidate` API injected into handlers | Clean separation — plugin resolves what changed, framework handles rebuild | Plugin must know route patterns to invalidate |
 | Atomic manifest updates | Main server never reads a partial manifest | Extra write (temp file + rename) |
 | Source hash for startup validation | Fast rebuild skip when code unchanged; reliable staleness detection | Hash computation adds startup time; must include all relevant source files |
 
