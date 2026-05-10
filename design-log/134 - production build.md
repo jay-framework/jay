@@ -302,7 +302,11 @@ In production:
 
 **Q12: When an action mutates data, how does the main server notify the slow render server? Options: direct HTTP call, shared event bus, the mutation itself triggers re-render (if watching the data source).**
 
+**A12:** The primary path is: action mutates data in the system of record → system of record sends event/callback to slow render server (same webhook mechanism as Q8). For setups without a system of record that sends events, the action can call the slow render server's webhook HTTP endpoint directly as a fallback.
+
 **Q13: Should actions be code-split from page components, or bundled together in the server build?**
+
+**A13:** Same bundle on the server. Actions and pages use the same services — no need to complicate things with code splitting on the server side.
 
 ### Concern 6: Service Lifecycle in Two Servers
 
@@ -312,11 +316,13 @@ Services (`makeJayInit`, service markers) are initialized once and injected into
 - **Main server** needs services for `fastRender()` and action execution
 - Both import the same `init.ts`
 
-This means services are initialized independently on each server. For stateless services (API clients, database connections), this is fine. For stateful services (in-memory caches, connection pools), each server has its own instance.
+Both servers are **stateless**. Services are initialized independently on each server from the same `init.ts`. The renderer server itself may have multiple instances (redundancy, multiple regions, edge locations), which further requires stateless architecture. Any shared state lives in external systems (databases, caches, etc.), not in-process.
 
 **Questions:**
 
 **Q14: Are there services that need to be shared between the two servers? If so, we need an external state store.**
+
+**A14:** No in-process shared state. Both servers are stateless — any state that needs sharing goes through external systems (database, Redis, etc.). The renderer can run as multiple instances (regions, edges) which reinforces this constraint.
 
 ### Concern 7: Plugin System in Production
 
@@ -337,30 +343,32 @@ In production:
 
 **Q15: Are plugin packages pre-compiled (published as JS), or do they need compilation during the production build?**
 
+**A15:** Plugins are pre-compiled and export two scripts: `index.js` (server) and `index.client.js` (client). The production build uses these directly — no plugin compilation needed. Client scripts can be bundled into shared chunks when it makes sense.
+
 ### Concern 8: Static Asset Serving
 
-Dev server uses Vite middleware to serve all assets. Production options:
-
-1. **Main server serves everything** — simplest, but adds load to the server
-2. **CDN for client bundles** — main server serves HTML, CDN serves JS/CSS/images
-3. **Reverse proxy** — nginx/CloudFront in front, main server only handles SSR + actions
+Dev server uses Vite middleware to serve all assets. In production, a **CDN serves client assets** (JS, CSS, images). The main server only handles SSR HTML responses and action endpoints.
 
 **Questions:**
 
 **Q16: Should the build produce assets with content hashes for cache busting?**
 
+**A16:** Yes. All client assets use content hashes — standard CDN cache-busting strategy.
+
 **Q17: Should the main server support a `publicBasePath` for CDN-hosted assets (e.g., `https://cdn.example.com/assets/`)?**
+
+**A17:** Yes. Configurable `publicBasePath`, defaults to the main server itself (self-hosting as fallback). When a CDN is configured, all `<script>` and `<link>` tags in SSR output use the CDN URL prefix.
 
 ## Child Design Logs Needed
 
-Each concern above maps to a potential child design log. Many questions are now answered — child logs focus on detailed design and implementation.
+All 17 questions resolved. Each concern maps to a child design log focused on detailed design and implementation.
 
-| # | Focus Area | Resolved | Open |
-|---|---|---|---|
-| A | **Build Pipeline** — compiler-jay-stack production build, per-instance compilation, Vite bundling with shared chunks | Q1, Q2, Q7, Q11 | Q6 (gap analysis vs compiler-jay-html) |
-| B | **Main Server** — request handling without Vite, artifact storage service, route manifest loading | Q3, Q4, Q5, Q5.5, Q9 | Q16, Q17 |
-| C | **Slow Render Server & Data Change** — webhook-based invalidation, plugin resolution, restart resilience, load management | Q8, Q8.2, Q10 | Q8.1 (parallelism strategy), Q12 |
-| D | **Server Build** — compiling page.ts, actions, services, plugins to production JS | Q4 | Q13, Q14, Q15 |
+| # | Focus Area | Key Decisions |
+|---|---|---|
+| A | **Build Pipeline** — per-instance compilation, per-instance Vite build, shared chunks, gap analysis vs compiler-jay-html | Q1, Q2, Q6, Q7, Q11 |
+| B | **Main Server** — stateless request handling, artifact storage service, route manifest, CDN base path | Q3, Q4, Q5, Q5.5, Q9, Q16, Q17 |
+| C | **Slow Render Server & Data Change** — webhook invalidation, plugin resolution, versioned buckets, restart resilience | Q8, Q8.1, Q8.2, Q10, Q12 |
+| D | **Server Build** — compiling page.ts + actions together, stateless services, pre-compiled plugins | Q13, Q14, Q15 |
 
 Suggested order: **A → D → B → C** — build pipeline first (defines artifact format), then server build (compiles the server code), then main server (consumes artifacts), then slow render server (produces artifacts on change).
 
