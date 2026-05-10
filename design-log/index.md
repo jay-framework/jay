@@ -148,6 +148,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 30  | Jay Context API                    | Context API design          |
 | 31  | rename createState to createSignal | Signal-based reactivity     |
 | 32  | Reactive Pairing fixes             | Reactive pairing fixes      |
+| 133 | html entities in text nodes        | HTML entities decoded by SSR but not by client-side createTextNode/textContent |
 
 ---
 
