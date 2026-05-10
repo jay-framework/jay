@@ -95,7 +95,7 @@ Add an `html-string` dataType to contracts alongside the existing `string`:
 ```
 
 - **`string`** (default): Runtime uses `textContent`. Safe against XSS. HTML entities in the value appear literally — this is correct behavior for plain strings.
-- **`html-string`**: Runtime uses `innerHTML`. The value is treated as HTML markup. Entities are decoded, tags are rendered.
+- **`html-string`**: Runtime uses `innerHTML`. The value is treated as HTML markup. Entities are decoded, tags are rendered. This is also the natural type for rich text content (e.g., WYSIWYG editor output, CMS rich text fields) which is typically stored as HTML.
 
 ### Sanitization for html-string
 
