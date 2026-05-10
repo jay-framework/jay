@@ -375,4 +375,4 @@ All 6 phases implemented. Tests: 647 compiler tests + 269 runtime tests passing.
 ### Deviations from design
 
 - **dynamicHtml approach**: Design proposed `dynamicHtml(parentElement, accessor)` taking parent directly. Implementation uses `HtmlContent` marker object in children array instead — cleaner integration with existing element/children pattern, no need for multi-statement compiled output.
-- **Static subtree optimization**: Deferred as planned — Phase 1 uses compile-time entity decoding instead of full innerHTML constructor.
+- **Static subtree optimization**: Not implemented. Phase 1 uses compile-time entity decoding instead of the full innerHTML constructor described in the design. The entity bug is fixed, but the performance optimization of collapsing static subtrees into a single `innerHTML` call remains a future opportunity.
