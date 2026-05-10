@@ -147,6 +147,166 @@ Static template HTML does not go through the sanitizer — it is author-controll
 └─────────────────┴───────────────┴────────────┴──────────────┘
 ```
 
+## Implementation Plan
+
+### Phase 1: Fix static text entities (bug fix)
+
+**Goal:** Static text like `&times;` in jay-html templates renders correctly after client-side re-creation.
+
+**Approach:** Decode HTML entities at compile time. The compiler emits the decoded Unicode character in the JS string literal, so `createTextNode` receives the actual character.
+
+**Files:**
+- `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts` — In `renderTextNode()` (line ~169), decode HTML entities in the static text before passing to `parseTextExpression()`. Add a `decodeHtmlEntities()` utility that converts `&times;` → `×`, `&amp;` → `&`, `&nbsp;` → ` `, etc.
+- `packages/compiler/compiler-jay-html/lib/expressions/expression-compiler.ts` — OR decode entities here inside `parseTextExpression()` for the static-string portions only (not inside `{bindings}`)
+
+**Key detail:** Only decode entities in the *static portions* of text expressions. Dynamic `{binding}` values pass through as-is — they are plain strings, not HTML.
+
+**Verification:** Compile a template containing `<button>&times;</button>`, confirm the compiled JS output contains the Unicode `×` character, not `&times;`.
+
+---
+
+### Phase 2: Add `html-string` dataType to contracts
+
+**Goal:** Contracts can declare a property as HTML content.
+
+**Files:**
+- `packages/compiler/compiler-shared/lib/jay-type.ts` (line ~35)
+  - Add `JayHtmlString = new JayAtomicType('string')` (maps to `string` in TypeScript — it's still a string, just treated differently by the compiler)
+  - Add `'html-string': JayHtmlString` to `typesMap`
+  - **Note:** `JayHtmlString` maps to TS `string` but needs to be distinguishable from `JayString` so the compiler can emit different code. Options: (a) use a separate instance `new JayAtomicType('html-string')` and handle the TS mapping in type generation, or (b) create a marker subclass.
+
+- `packages/compiler/compiler-jay-html/lib/contract/contract-parser.ts` — No changes needed; `resolvePrimitiveType()` picks it up automatically.
+
+- Type generation (contract → `.d.ts`): Ensure `html-string` maps to `string` in the emitted TypeScript interface. Check `contract-to-view-state-and-refs.ts` to see if atomic type names are emitted directly — if so, we need to map `html-string` → `string` there.
+
+**Verification:** A contract with `dataType: html-string` parses without error and generates a TypeScript type with `string`.
+
+---
+
+### Phase 3: Runtime `dynamicHtml` + sanitizer plumbing
+
+**Goal:** A runtime function that updates DOM content as HTML, with optional sanitization.
+
+**Constraint:** `html-string` bindings can only appear as the sole child of an element: `<element>{htmlBinding}</element>`. Mixed content like `<element>text {htmlBinding} more</element>` is not allowed. This means the parent element is always the container — no wrapper element needed. The runtime sets `innerHTML` directly on the parent.
+
+**Files:**
+- `packages/runtime/runtime/lib/element.ts`
+  - `dynamicHtml` is not a standalone child constructor like `dynamicText`. Instead, it's an **attribute-like** modifier on the parent element — it takes over the element's children via `innerHTML`. It can be passed as a special attribute or applied after element creation:
+    ```typescript
+    export function dynamicHtml<ViewState>(
+        parentElement: HTMLElement,
+        htmlContent: (vs: ViewState) => string,
+    ): updateFunc<ViewState> {
+        let context = currentConstructionContext();
+        let content = htmlContent(context.currData);
+        const sanitize = context.sanitizeHtml;
+        parentElement.innerHTML = sanitize ? sanitize(content) : content;
+        return (newData: ViewState) => {
+            let newContent = htmlContent(newData);
+            if (newContent !== content) {
+                parentElement.innerHTML = sanitize ? sanitize(newContent) : newContent;
+                content = newContent;
+            }
+        };
+    }
+    ```
+  - The compiled output would look like: `e('div', {}, [])` followed by a `dynamicHtml` call on the created element, or integrated into the element construction.
+
+- `packages/runtime/runtime/lib/element-types.ts` (line ~67)
+  - Extend `RenderElementOptions`:
+    ```typescript
+    export interface RenderElementOptions {
+        eventWrapper?: JayEventHandlerWrapper<any, any, any>;
+        sanitizeHtml?: (html: string) => string;
+    }
+    ```
+
+- `packages/runtime/runtime/lib/context.ts`
+  - `ConstructContext` (line ~156) currently does not receive `RenderElementOptions`. Options flow only to `ReferencesManager.for()`. Need to thread `sanitizeHtml` through:
+    - Option A: Add `sanitizeHtml` to `ConstructContext` constructor, pass from compiled preRender
+    - Option B: Store in a module-level variable set during preRender, read by `dynamicHtml`
+    - Option A is cleaner.
+
+- `packages/runtime/runtime/lib/index.ts` — Export `dynamicHtml`
+
+**Verification:** `dynamicHtml(vs => vs.richText)` creates an element whose innerHTML is the value, and updates when ViewState changes.
+
+---
+
+### Phase 4: Compiler — emit `dynamicHtml` for html-string bindings
+
+**Goal:** When a `{binding}` references an `html-string` typed property, the compiler emits `dh()` (dynamicHtml) instead of `dt()` (dynamicText).
+
+**Files:**
+- `packages/compiler/compiler-shared/lib/imports.ts` (after line ~68)
+  - Add import entry:
+    ```typescript
+    dynamicHtml: importStatementFragment(JAY_RUNTIME, 'dynamicHtml as dh', ImportsFor.implementation),
+    ```
+
+- `packages/compiler/compiler-jay-html/lib/expressions/expression-compiler.ts`
+  - Since `html-string` must be the sole child of its parent element, this is handled at the element level, not the text expression level. The compiler detects when an element's only child is a `{binding}` to an `html-string` property and emits `dynamicHtml` on the parent element instead of creating a child text node.
+
+- `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts`
+  - In element rendering, when the element has a single child that is a text node containing only a `{binding}` to an `html-string` typed property: emit the element with no children, then apply `dynamicHtml` to it.
+  - This check happens at the element level where `variables: Variables` provides type context.
+
+- **Validation:** The compiler should emit an error if an `html-string` binding appears in mixed content (e.g., `<div>text {htmlBinding} more</div>`) or alongside sibling elements.
+
+**Verification:** `<div>{richDescription}</div>` where `richDescription` is `html-string` compiles to `e('div', {})` with a `dh(el, vs => vs.richDescription)` call, not `e('div', {}, [dt(vs => vs.richDescription)])`.
+
+---
+
+### Phase 5: SSR for html-string
+
+**Goal:** Server-side rendering emits html-string values without escaping.
+
+**Files:**
+- `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler-server.ts` (line ~94-112)
+  - Currently, dynamic text is wrapped with `escapeHtml(String(...))`. For `html-string` bindings, skip the `escapeHtml` wrapper — the value is already HTML.
+  - Same challenge as Phase 4: the server compiler needs type awareness for bindings.
+
+- `packages/runtime/ssr-runtime/lib/escape.ts` — No changes needed; we just conditionally skip calling `escapeHtml`.
+
+**Verification:** A server-rendered page with `html-string` binding emits the raw HTML value (e.g., `<b>bold</b>`) without escaping to `&lt;b&gt;bold&lt;/b&gt;`.
+
+---
+
+### Phase 6: Hydration for html-string
+
+**Goal:** Client-side hydration correctly adopts server-rendered html-string content.
+
+Since `html-string` is always the sole child of its parent element, hydration is simpler: adopt the parent element (which already works via `adoptElement`), then attach a `dynamicHtml` updater to it. The existing innerHTML from SSR is correct on first render — `dynamicHtml` just needs to take over future updates.
+
+**Files:**
+- `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler-hydrate.ts`
+  - When hydrating an element whose sole child is an `html-string` binding: adopt the element normally, skip adopting children (they're raw HTML, not structured nodes), and attach `dynamicHtml` updater.
+
+- `packages/runtime/runtime/lib/hydrate.ts` — No new `adoptHtml()` needed. The parent element is adopted, and `dynamicHtml(parentEl, accessor)` handles updates.
+
+---
+
+### Phase 7: Tests
+
+Each phase should include tests:
+
+- **Phase 1:** Compiler test — template with `&times;`, `&amp;`, `&nbsp;` produces decoded characters in compiled output
+- **Phase 2:** Contract parser test — `dataType: html-string` parses to correct type, generates `string` in TypeScript
+- **Phase 3:** Runtime test — `dynamicHtml` creates element with innerHTML, updates correctly
+- **Phase 4:** Compiler test — html-string binding emits `dh()` import and call
+- **Phase 5:** SSR test — html-string value not escaped in server output
+- **Phase 6:** Hydration test — html-string content adopted correctly from SSR
+
+---
+
+### Implementation Order
+
+Phase 1 is independent and fixes the immediate bug. Phases 2–6 build on each other sequentially. Phase 7 is parallel to each phase.
+
+Suggested order: **1 → 2 → 3 → 4 → 5 → 6**, each phase verified before proceeding.
+
+**Future optimization:** Static subtree → single innerHTML constructor (collapse multiple static createElement calls into one innerHTML). This is a performance optimization independent of the html-string type and can be done separately.
+
 ## Trade-offs
 
 | Aspect | Benefit | Cost |
