@@ -135,6 +135,9 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 74  | watch linked style files in dev server | Dev server file watching                                |
 | 118 | jay-html-compiler refactor             | Extract shared algorithms + split by compilation target |
 | 134 | production build                       | Two-server production architecture: main server + slow render server |
+| 134a| build pipeline                         | Per-instance compilation, shared chunks, Vite build strategy         |
+| 134b| main server                            | Production request handling: fast phase + SSR with pre-built artifacts |
+| 134d| server build                           | Compiling page.ts, actions, services, init.ts to production JS       |
 
 ---
 

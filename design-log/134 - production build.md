@@ -242,11 +242,13 @@ A global version number increments on each deployment (code change). Artifacts a
 ```
 1. New code deployed → version increments from v1 to v2
 2. Slow render server builds all instances into build/v2/
-   (build/v1/ continues serving via main server)
-3. When build completes, update route-manifest pointer to v2
-4. Main server picks up v2 on next request — atomic transition
-5. Old bucket (v1) can be cleaned up
+   (build/v1/ continues serving via old main server instance)
+3. When build completes, deploy new main server instance with JAY_BUILD_VERSION=2
+4. Traffic shifts to new server instance (blue-green, rolling restart)
+5. Old server instance + bucket (v1) can be cleaned up
 ```
+
+The version is hardcoded in the deployed server instance — no dynamic version switching. Version transitions are standard server instance replacements.
 
 **Restart (same version):**
 ```
