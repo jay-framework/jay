@@ -153,25 +153,20 @@ Discovery works the same as actions — scan exports for `JayWebhook`-branded co
 
 ### Invalidation Implementation
 
-The `invalidate` function provided to webhook handlers is implemented by the slow render server:
+The `invalidate` function provided to webhook handlers enqueues rebuild requests rather than rebuilding directly. The webhook returns immediately; rebuilds happen asynchronously via the invalidation queue:
 
 ```typescript
-async function createInvalidator(
-  manifest: RouteManifest,
-  buildContext: BuildContext,
-): Promise<InvalidateRoute> {
+function createInvalidator(
+  queue: InvalidationQueue,
+  webhookName: string,
+): InvalidateRoute {
   return async (routePattern: string, params?: Record<string, string>) => {
-    const route = manifest.routes.find(r => r.pattern === routePattern);
-    if (!route) return;
-
-    if (params) {
-      // Specific instance — re-render just this one
-      await rebuildInstance(route, params, buildContext);
-    } else {
-      // Entire route — re-run loadParams to discover all current params
-      // This handles new items, deleted items, and bulk changes
-      await rebuildRoute(route, buildContext);
-    }
+    await queue.enqueue({
+      routePattern,
+      params,
+      source: webhookName,
+      timestamp: Date.now(),
+    });
   };
 }
 ```
@@ -308,6 +303,89 @@ async function buildAllInstances(
 
 For data change re-renders, the concurrency is typically 1 (single instance rebuild), but batch webhooks (many products updated at once) benefit from parallelism.
 
+### Error Handling During Data Changes
+
+If a re-render fails (slow render throws, Vite build fails, etc.), the slow render server:
+
+1. **Keeps existing artifacts** — the previous working version of the instance remains on disk
+2. **Does not update the manifest** — the main server continues serving the old instance
+3. **Returns error in webhook response** — `{ affected: 1, rebuilt: 0, errors: [{ params: {...}, error: "..." }] }`
+4. **Logs the error** for monitoring/alerting
+
+This is safe because each instance is rebuilt independently. A failed rebuild of one instance doesn't affect other instances or the overall manifest.
+
+### Invalidation Queue
+
+Webhook handlers don't rebuild directly — they enqueue invalidation requests. A worker pool drains the queue with bounded concurrency:
+
+```typescript
+interface InvalidationRequest {
+  routePattern: string;
+  params?: Record<string, string>;         // undefined = all instances
+  source: string;                          // webhook name, for logging
+  timestamp: number;
+}
+
+interface InvalidationQueue {
+  enqueue(request: InvalidationRequest): Promise<void>;
+  drain(): AsyncIterable<InvalidationRequest>;
+  depth(): number;
+}
+```
+
+The queue provides:
+- **Deduplication** — multiple invalidations for the same route+params within a short window collapse into one rebuild
+- **Bounded concurrency** — N workers process queue items in parallel (configurable via `JAY_BUILD_CONCURRENCY`)
+- **Serialization per route** — items for the same route are processed sequentially (prevents half-written artifacts)
+- **Backpressure** — webhooks return immediately after enqueue; rebuild happens asynchronously
+
+```typescript
+class InMemoryInvalidationQueue implements InvalidationQueue {
+  private pending = new Map<string, InvalidationRequest>();  // key = route+params
+  private processing = new Set<string>();                     // routes currently rebuilding
+  private signal = new EventEmitter();
+
+  async enqueue(request: InvalidationRequest) {
+    const key = request.params
+      ? `${request.routePattern}:${paramKey(request.params)}`
+      : request.routePattern;
+
+    // Dedup: newer request replaces older for same key
+    this.pending.set(key, request);
+    this.signal.emit('enqueued');
+  }
+
+  depth() { return this.pending.size; }
+}
+```
+
+**Initial implementation:** In-memory queue (simple, no external dependencies). The queue interface is pluggable — can be swapped for a disk-based queue (survives restarts) or an infrastructure queue (Redis, SQS) for distributed renderer deployments.
+
+**Worker loop:**
+
+```typescript
+async function startWorkers(queue: InvalidationQueue, ctx: BuildContext) {
+  const concurrency = parseInt(process.env.JAY_BUILD_CONCURRENCY || '4');
+
+  for (let i = 0; i < concurrency; i++) {
+    (async () => {
+      for await (const request of queue.drain()) {
+        try {
+          if (request.params) {
+            await rebuildInstance(findRoute(request.routePattern), request.params, ctx);
+          } else {
+            await rebuildRoute(findRoute(request.routePattern), ctx);
+          }
+        } catch (err) {
+          // Error handling: log, keep existing artifacts, continue draining
+          logger.error(`Rebuild failed: ${request.routePattern}`, err);
+        }
+      }
+    })();
+  }
+}
+```
+
 ### Manifest Updates During Data Changes
 
 When the slow render server updates instance artifacts, it must also update the route manifest. Since the main server reads the manifest per-request (with timestamp caching), the update must be atomic:
@@ -340,9 +418,9 @@ Both servers initialize services independently. Since services are stateless (DL
 ### Renderer HTTP API
 
 ```
-POST /_jay/webhooks/:pluginName
-  Body: WebhookEvent
-  Response: { affected: number, rebuilt: number, skipped: number }
+POST /_jay/webhooks/:webhookName
+  Body: (plugin-defined, passed as HttpRequest)
+  Response: (plugin-defined HttpResponse, plus rebuild stats in headers)
 
 POST /_jay/render/:routePattern
   Body: { params?: Record<string, string> }
@@ -359,7 +437,8 @@ GET /_jay/status
     buildTimestamp: string,
     instanceCount: number,
     uptime: number,
-    lastWebhook?: { pluginName: string, timestamp: string, affected: number }
+    queueDepth: number,
+    lastWebhook?: { webhookName: string, timestamp: string }
   }
 ```
 

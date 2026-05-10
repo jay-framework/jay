@@ -372,25 +372,40 @@ Per-route seems like the right default — instances of the same route share mos
 ### Phase 2: Route Manifest
 
 ```typescript
+// Canonical definition — used by all DL#134 child logs
 interface RouteManifest {
   version: number;
   buildTimestamp: string;
   sourceHash: string;
+  publicBasePath: string;                    // CDN URL or "/" for self-hosting
+  sharedManifest: Record<string, string>;    // module name → hashed filename
   routes: RouteEntry[];
+  actions: ActionEntry[];                    // from DL#134d
+  plugins: PluginEntry[];                    // from DL#134d
 }
 
 interface RouteEntry {
-  pattern: string;           // e.g., "/products/[slug]"
-  serverModule: string;      // relative path to compiled page.js
+  pattern: string;                           // e.g., "/products/[slug]"
+  segments: RouteSegment[];                  // parsed segments for matching
+  serverModule: string;                      // relative path to compiled page.js
+  trackByMap?: Record<string, string>;       // for ViewState merging
   instances: InstanceEntry[];
+  isPlugin?: boolean;
+  pluginName?: string;
 }
 
 interface InstanceEntry {
-  params: Record<string, string>;  // e.g., { slug: "blue-widget" }
-  preRenderedHtml: string;         // relative path to pre-rendered jay-html
-  serverElement: string;           // relative path to server-element.js
-  clientBundle: string;            // relative path to instance-[hash].js
-  clientCss?: string;              // relative path to instance-[hash].css
+  params: Record<string, string>;            // e.g., { slug: "blue-widget" }
+  preRenderedPath: string;                   // relative path to pre-rendered jay-html
+  serverElementPath: string;                 // relative path to server-element.js
+  clientBundlePath: string;                  // relative path to instance-[hash].js
+  clientCssPath?: string;                    // relative path to instance-[hash].css
+}
+
+interface PreRenderedEntry {
+  content: string;                           // jay-html with cache tag stripped
+  slowViewState: object;                     // from <script type="application/jay-cache">
+  carryForward: object;                      // includes __instances for headless components
 }
 ```
 

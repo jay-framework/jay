@@ -287,24 +287,39 @@ Reuses `renderFastChangingData()` from `stack-server-runtime`. The function is n
 async function runFastPhase(
   pageModule: PageModule,
   params: Record<string, string>,
-  carryForward: object,
+  preRendered: PreRenderedEntry,
   services: ServiceRegistry,
   query: Record<string, string>,
+  manifest: RouteManifest,
 ): Promise<AnyFastRenderResult> {
-  const parts = extractParts(pageModule);  // Get DevServerPagePart-like objects
+  const parts = extractParts(pageModule);
+  const instancePhaseData = preRendered.carryForward.__instances;
+
+  // Headless instance components are loaded from plugin packages
+  // or compiled page modules — same resolution as dev server's loadPageParts
+  const headlessInstanceComponents = await resolveHeadlessComponents(
+    instancePhaseData, manifest, services
+  );
+
   return renderFastChangingData(
     params,
     { params, query },
-    carryForward,
+    preRendered.carryForward,
     parts,
-    carryForward.__instances,  // Instance phase data from slow render
-    /* forEachInstances */ undefined,
-    /* headlessInstanceComponents */ [],
-    /* mergedSlowViewState */ undefined,
+    instancePhaseData,
+    instancePhaseData?.forEachInstances,
+    headlessInstanceComponents,
+    preRendered.slowViewState,
     query,
   );
 }
 ```
+
+**Headless components in production:** The slow render populates `carryForward.__instances` with discovered headless instances, their slow ViewState, and their carryForward — same as in dev. The fast phase needs the headless component definitions to call their `fastRender()`. These come from:
+- Plugin packages (pre-compiled `dist/index.js`) — for plugin-provided headless components
+- Compiled page modules (`build/v{n}/server/`) — for project-defined headless components
+
+The resolution is the same as `loadPageParts()` in dev, but using `import()` instead of `vite.ssrLoadModule()`.
 
 ### Action Router
 
