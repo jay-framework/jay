@@ -20,6 +20,7 @@ import { NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
 import { AsyncDirectiveTypes } from './jay-html-helpers';
 import { Accessor, parseAccessor, Variables } from '../expressions/expression-compiler';
+import { decode as decodeEntities } from 'he';
 
 /**
  * Filter child nodes, removing whitespace-only text nodes.
@@ -43,6 +44,10 @@ export function filterContentNodes(childNodes: Node[], onlyIfMultiple: boolean =
 
 export function textEscape(s: string): string {
     return s.replace(/'/g, "\\'");
+}
+
+export function decodeHtmlEntities(s: string): string {
+    return decodeEntities(s);
 }
 
 /** Escape a static attribute value for embedding in a JS single-quoted string literal. */

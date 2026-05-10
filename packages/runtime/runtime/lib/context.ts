@@ -157,6 +157,7 @@ export class ConstructContext<ViewState> {
     private readonly _coordinateMap?: Map<string, Element[]>;
     private readonly _rootElement?: Element;
     private readonly _dataIds: Coordinate;
+    readonly sanitizeHtml?: (html: string) => string;
 
     constructor(
         private readonly data: ViewState,
@@ -165,10 +166,12 @@ export class ConstructContext<ViewState> {
         coordinateMap?: Map<string, Element[]>,
         rootElement?: Element,
         dataIds?: Coordinate,
+        sanitizeHtml?: (html: string) => string,
     ) {
         this._coordinateMap = coordinateMap;
         this._rootElement = rootElement;
         this._dataIds = dataIds ?? coordinateBase;
+        this.sanitizeHtml = sanitizeHtml;
     }
 
     get currData() {
@@ -202,6 +205,7 @@ export class ConstructContext<ViewState> {
             this._coordinateMap,
             this._rootElement,
             [...this._dataIds, id],
+            this.sanitizeHtml,
         );
     }
     /**
@@ -221,6 +225,7 @@ export class ConstructContext<ViewState> {
             localMap,
             scopeRootElement,
             this._dataIds,
+            this.sanitizeHtml,
         );
     }
 
@@ -232,6 +237,7 @@ export class ConstructContext<ViewState> {
             this._coordinateMap,
             this._rootElement,
             this._dataIds,
+            this.sanitizeHtml,
         );
     }
 
@@ -280,8 +286,17 @@ export class ConstructContext<ViewState> {
         viewState: ViewState,
         refManager: ReferencesManager,
         elementConstructor: () => BaseJayElement<ViewState>,
+        sanitizeHtml?: (html: string) => string,
     ): JayElement<ViewState, Refs> {
-        let context = new ConstructContext(viewState);
+        let context = new ConstructContext(
+            viewState,
+            true,
+            [],
+            undefined,
+            undefined,
+            undefined,
+            sanitizeHtml,
+        );
         let element = withContext(CONSTRUCTION_CONTEXT_MARKER, context, () =>
             wrapWithModifiedCheck(currentConstructionContext().currData, elementConstructor()),
         );

@@ -42,6 +42,7 @@
     "@jay-framework/secure": "workspace:^",
     "@types/js-yaml": "^4.0.9",
     "change-case": "^4.1.2",
+    "he": "^1.2.0",
     "js-yaml": "^4.1.0",
     "node-html-parser": "^6.1.12",
     "pegjs": "^0.10.0",

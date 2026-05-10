@@ -15,6 +15,15 @@ describe('generate jay-html element hydrate', () => {
             );
         });
 
+        it('for html-string binding', async () => {
+            const folder = 'basics/html-string-binding';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+
         it('for composite with dynamic text', async () => {
             const folder = 'basics/composite';
             const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);

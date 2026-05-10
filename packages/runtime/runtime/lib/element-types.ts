@@ -66,6 +66,7 @@ export type RenderElement<
 
 export interface RenderElementOptions {
     eventWrapper?: JayEventHandlerWrapper<any, any, any>;
+    sanitizeHtml?: (html: string) => string;
 }
 export type JayEventHandlerWrapper<EventType, ViewState, Returns> = (
     orig: JayEventHandler<EventType, ViewState, Returns>,

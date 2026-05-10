@@ -4,6 +4,7 @@ import {
     ImportsFor,
     isArrayType,
     isEnumType,
+    isHtmlStringType,
     isPromiseType,
     JayComponentType,
     JayPromiseType,
@@ -103,6 +104,7 @@ import {
     propertyMapping,
     resolveHeadlessImport,
     textEscape,
+    decodeHtmlEntities,
     validateAsyncAccessor,
     validateForEachAccessor,
     validateSlowForEachAccessor,
@@ -167,7 +169,28 @@ function renderFunctionDeclaration(preRenderType: string): string {
 }
 
 function renderTextNode(variables: Variables, text: string, indent: Indent): RenderFragment {
-    return parseTextExpression(textEscape(text), variables).map((_) => indent.firstLine + _);
+    return parseTextExpression(textEscape(decodeHtmlEntities(text)), variables).map(
+        (_) => indent.firstLine + _,
+    );
+}
+
+function tryRenderHtmlStringChild(
+    childNodes: Node[],
+    variables: Variables,
+    indent: Indent,
+): RenderFragment | null {
+    if (childNodes.length !== 1 || childNodes[0].nodeType !== NodeType.TEXT_NODE) return null;
+    const text = (childNodes[0].innerText || '').trim();
+    const bindingMatch = text.match(/^\{([^}]+)\}$/);
+    if (!bindingMatch) return null;
+    const accessor = parseAccessor(bindingMatch[1], variables);
+    if (!isHtmlStringType(accessor.resolvedType)) return null;
+    const accessorCode = accessor.render();
+    return new RenderFragment(
+        `${indent.firstLine}dh(${variables.currentVar} => ${accessorCode.rendered})`,
+        Imports.for(Import.dynamicHtml).plus(accessorCode.imports),
+        [...accessor.validations, ...accessorCode.validations],
+    );
 }
 
 /**
@@ -577,6 +600,23 @@ export function renderNode(node: Node, context: RenderContext): RenderFragment {
         }
 
         let childNodes = filterContentNodes(node.childNodes, true);
+
+        const htmlStringChild = tryRenderHtmlStringChild(
+            childNodes,
+            contextForChildren.variables,
+            contextForChildren.indent.child().noFirstLineBreak(),
+        );
+        if (htmlStringChild) {
+            let attributes = renderAttributes(htmlElement, contextForChildren);
+            let renderedRef = renderElementRef(htmlElement, contextForChildren);
+            return e(
+                htmlElement.rawTagName,
+                attributes,
+                htmlStringChild,
+                renderedRef,
+                newContext.indent,
+            );
+        }
 
         let childIndent = contextForChildren.indent.child();
         if (childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE)

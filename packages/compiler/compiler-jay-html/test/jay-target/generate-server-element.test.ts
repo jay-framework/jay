@@ -15,6 +15,15 @@ describe('generate jay-html server element', () => {
             );
         });
 
+        it('for html-string binding', async () => {
+            const folder = 'basics/html-string-binding';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
+
         it('for composite with dynamic text', async () => {
             const folder = 'basics/composite';
             const serverFile = await readFileAndGenerateServerElementFile(folder);

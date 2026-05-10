@@ -613,8 +613,45 @@ export function dynamicText<ViewState>(
     };
 }
 
+interface HtmlContent<ViewState> {
+    __htmlContent: true;
+    htmlAccessor: (vs: ViewState) => string;
+}
+
+export function dynamicHtml<ViewState>(
+    htmlContent: (vs: ViewState) => string,
+): HtmlContent<ViewState> {
+    return { __htmlContent: true, htmlAccessor: htmlContent };
+}
+
+export function isHtmlContent(child: any): child is HtmlContent<any> {
+    return child && child.__htmlContent;
+}
+
+export function applyHtmlContent<ViewState>(
+    child: HtmlContent<ViewState>,
+    parentElement: Element,
+    updates: updateFunc<ViewState>[],
+    skipInitial: boolean = false,
+): void {
+    const accessor = child.htmlAccessor;
+    const context = currentConstructionContext();
+    const sanitize = context.sanitizeHtml;
+    let content = accessor(context.currData);
+    if (!skipInitial) {
+        parentElement.innerHTML = sanitize ? sanitize(content) : content;
+    }
+    updates.push((newData: ViewState) => {
+        const newContent = accessor(newData);
+        if (newContent !== content) {
+            parentElement.innerHTML = sanitize ? sanitize(newContent) : newContent;
+            content = newContent;
+        }
+    });
+}
+
 type ElementChildren<ViewState> = Array<
-    BaseJayElement<ViewState> | TextElement<ViewState> | string
+    BaseJayElement<ViewState> | TextElement<ViewState> | HtmlContent<ViewState> | string
 >;
 const elementNS =
     (ns: string) =>
@@ -627,6 +664,10 @@ const elementNS =
         let { e, updates, mounts, unmounts } = createBaseElement(ns, tagName, attributes, ref);
 
         children.forEach((child) => {
+            if (isHtmlContent(child)) {
+                applyHtmlContent(child, e, updates);
+                return;
+            }
             if (typeof child === 'string') child = text(child);
             e.append(child.dom);
             if (child.update !== noopUpdate) updates.push(child.update);
@@ -656,6 +697,7 @@ type DynamicElementChildren<ViewState> = Array<
     | WithData<ViewState, any>
     | TextElement<ViewState>
     | BaseJayElement<ViewState>
+    | HtmlContent<ViewState>
     | When<ViewState, any>
     | string
 >;
@@ -672,6 +714,10 @@ export const dynamicElementNS =
 
         let kindergarten = new Kindergarten(e);
         children.forEach((child) => {
+            if (isHtmlContent(child)) {
+                applyHtmlContent(child, e, updates);
+                return;
+            }
             if (typeof child === 'string') child = text(child);
             let group = kindergarten.newGroup();
             let update = noopUpdate,

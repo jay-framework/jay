@@ -1,0 +1,15 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+   s1: string
+    </script>
+</head>
+<body>
+<div>
+    <button>&times;</button>
+    <span>&amp; &lt; &gt;</span>
+    <div>{s1} &mdash; footer</div>
+</div>
+</body>
+</html>

@@ -5,6 +5,7 @@
 import {
     Import,
     Imports,
+    isHtmlStringType,
     JayErrorType,
     JayImportLink,
     JayPromiseType,
@@ -1056,6 +1057,17 @@ function renderHydrateElementContent(
         }
     }
 
+    // Check for html-string binding (sole child is {htmlStringBinding})
+    let isHtmlStringChild = false;
+    if (childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE) {
+        const text = (childNodes[0].innerText || '').trim();
+        const bindingMatch = text.match(/^\{([^}]+)\}$/);
+        if (bindingMatch) {
+            const accessor = parseAccessor(bindingMatch[1], variables);
+            isHtmlStringChild = isHtmlStringType(accessor.resolvedType);
+        }
+    }
+
     // Check if children contain interactive conditionals or forEach (makes parent a container).
     // Non-interactive conditionals (slow/fast-only) are resolved at SSR and don't need adoption.
     const hasInteractiveChildren = childNodes.some(
@@ -1214,6 +1226,25 @@ function renderHydrateElementContent(
                 .plus(renderedRef.imports),
             [...attributes.validations, ...childValidations, ...renderedRef.validations],
             mergeRefsTrees(...childRefs, renderedRef.refs),
+        );
+    }
+
+    if (isHtmlStringChild && textFragment && !hasDynamicAttrs) {
+        const accessor = textFragment.rendered.replace(/^dt\(/, '').replace(/\)$/, '');
+        const refSuffix = renderedRef.rendered ? `, ${renderedRef.rendered}` : '';
+        return new RenderFragment(
+            `${indent.firstLine}adoptElement("${coordinate}", ${attributes.rendered}, [dh(${accessor})]${refSuffix})`,
+            Imports.for(Import.adoptElement)
+                .plus(Import.dynamicHtml)
+                .plus(textFragment.imports.minus(Import.dynamicText))
+                .plus(renderedRef.imports)
+                .plus(attributes.imports),
+            [
+                ...textFragment.validations,
+                ...renderedRef.validations,
+                ...attributes.validations,
+            ],
+            renderedRef.refs,
         );
     }
 

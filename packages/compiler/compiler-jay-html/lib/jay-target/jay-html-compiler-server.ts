@@ -3,6 +3,7 @@
 import {
     Import,
     Imports,
+    isHtmlStringType,
     JayErrorType,
     JayPromiseType,
     RenderFragment,
@@ -12,6 +13,7 @@ import {
 import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
 import {
+    parseAccessor,
     parseClassExpression,
     parseServerCondition,
     parseServerTemplateExpression,
@@ -89,6 +91,15 @@ function getCoordinateExpr(element: HTMLElement): string | null {
 /** Helper: create a single-line w() statement as a RenderFragment */
 function w(indent: Indent, code: string, imports: Imports = Imports.none()): RenderFragment {
     return new RenderFragment(`${indent.firstLine}w(${code});`, imports);
+}
+
+function isHtmlStringBinding(childNodes: Node[], variables: Variables): boolean {
+    if (childNodes.length !== 1 || childNodes[0].nodeType !== NodeType.TEXT_NODE) return false;
+    const text = (childNodes[0].innerText || '').trim();
+    const bindingMatch = text.match(/^\{([^}]+)\}$/);
+    if (!bindingMatch) return false;
+    const accessor = parseAccessor(bindingMatch[1], variables);
+    return isHtmlStringType(accessor.resolvedType);
 }
 
 function renderServerNode(node: Node, context: ServerContext): RenderFragment {
@@ -893,13 +904,18 @@ function renderServerElementContent(
 
     // Children
     if (dynamicTextFragment) {
-        parts.push(
-            w(
-                indent,
-                `escapeHtml(String(${dynamicTextFragment.rendered}))`,
-                Imports.for(Import.escapeHtml),
-            ),
-        );
+        const isHtmlString = isHtmlStringBinding(childNodes, variables);
+        if (isHtmlString) {
+            parts.push(w(indent, `String(${dynamicTextFragment.rendered})`));
+        } else {
+            parts.push(
+                w(
+                    indent,
+                    `escapeHtml(String(${dynamicTextFragment.rendered}))`,
+                    Imports.for(Import.escapeHtml),
+                ),
+            );
+        }
     } else {
         const childContext: ServerContext = {
             ...context,

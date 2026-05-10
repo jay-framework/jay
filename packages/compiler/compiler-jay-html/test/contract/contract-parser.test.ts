@@ -3,6 +3,7 @@ import {
     JAY_CONTRACT_EXTENSION,
     JayBoolean,
     JayEnumType,
+    JayHtmlString,
     JayNumber,
     JayString,
     JayPromiseType,
@@ -64,6 +65,25 @@ describe('parse contract', () => {
                     type: [ContractTagType.variant],
                     dataType: new JayEnumType('Variant', ['one', 'two', 'three']),
                 },
+            ],
+        });
+    });
+
+    it('should parse html-string dataType', () => {
+        const contract = `
+        name: content
+        tags:
+          - tag: richText
+            type: data
+            dataType: html-string
+        `;
+
+        const result = parseContract(contract, 'contract.jay-contract');
+        expect(result.validations).toEqual([]);
+        expect(result.val).toEqual({
+            name: 'content',
+            tags: [
+                { tag: 'richText', type: [ContractTagType.data], dataType: JayHtmlString },
             ],
         });
     });

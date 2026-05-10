@@ -29,6 +29,20 @@ describe('generate jay-html element', () => {
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
+        it('for html entities in text', async () => {
+            const folder = 'basics/html-entities';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
+        it('for html-string binding', async () => {
+            const folder = 'basics/html-string-binding';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
         it('for an empty element', async () => {
             const folder = 'basics/empty-element';
             const elementFile = await readFileAndGenerateElementFile(folder);

@@ -315,3 +315,41 @@ Suggested order: **1 → 2 → 3 → 4 → 5 → 6**, each phase verified before
 | Contract html-string type | Explicit opt-in for rich content, clear security boundary | New dataType to support in contracts, compiler, and runtime |
 | Sanitization callout | Pluggable, secure-context aware | Added complexity, sanitizer dependency, performance cost on html-string updates |
 | string as default | Safe by default, no behavior change for existing contracts | Dynamic values with entities won't decode (correct — they're strings, not HTML) |
+
+## Implementation Results
+
+All 6 phases implemented. Tests: 647 compiler tests + 269 runtime tests passing.
+
+### Phase 1: Static entity decoding
+- Added `he` as direct dependency to `compiler-jay-html`
+- `decodeHtmlEntities()` in `jay-html-compiler-shared.ts` wraps `he.decode()`
+- Called in `renderTextNode()` before `textEscape()` — decodes entities at compile time
+- Static text `&times;` compiles to Unicode `×` in the JS output
+
+### Phase 2: html-string dataType
+- `JayHtmlString = new JayAtomicType('string')` — distinct instance from `JayString`, same TS output
+- `isHtmlStringType()` checks by reference equality (`=== JayHtmlString`)
+- Added to `typesMap` as `'html-string'`
+
+### Phase 3: Runtime dynamicHtml + sanitizer
+- `dynamicHtml()` returns `HtmlContent` marker object (not a DOM element)
+- `elementNS` and `dynamicElementNS` detect `HtmlContent` in children array, set `innerHTML` on parent
+- `sanitizeHtml` optional field on `RenderElementOptions` → threaded through `ConstructContext` to all child contexts
+- `ConstructContext.withRootContext` accepts optional `sanitizeHtml` parameter
+
+### Phase 4: Compiler emits dh() for html-string
+- `Import.dynamicHtml` added to imports registry
+- `tryRenderHtmlStringChild()` in `jay-html-compiler.ts` detects sole-child html-string binding
+- Emits `e('div', {}, [dh(vs => vs.richContent)])` — fits natural children array pattern
+
+### Phase 5: SSR skips escapeHtml
+- `isHtmlStringBinding()` in `jay-html-compiler-server.ts` detects html-string bindings
+- SSR emits `w(String(vs.richContent))` without `escapeHtml` wrapper
+
+### Phase 6: Hydration
+- `adoptElement` in `hydrate.ts` handles `HtmlContent` children — skips initial innerHTML (SSR content correct), wires update
+- Hydration compiler emits `adoptElement("coord", {}, [dh(vs => vs.richContent)])` for html-string
+
+### Deviations from design
+- **dynamicHtml approach**: Design proposed `dynamicHtml(parentElement, accessor)` taking parent directly. Implementation uses `HtmlContent` marker object in children array instead — cleaner integration with existing element/children pattern, no need for multi-statement compiled output.
+- **Static subtree optimization**: Deferred as planned — Phase 1 uses compile-time entity decoding instead of full innerHTML constructor.

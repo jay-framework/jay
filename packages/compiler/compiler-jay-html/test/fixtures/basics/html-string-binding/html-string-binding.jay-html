@@ -1,0 +1,15 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+   title: string
+   richContent: html-string
+    </script>
+</head>
+<body>
+<div>
+    <h1>{title}</h1>
+    <div class="content">{richContent}</div>
+</div>
+</body>
+</html>

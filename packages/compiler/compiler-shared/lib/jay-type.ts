@@ -26,6 +26,7 @@ export class JayAtomicType implements JayType {
 }
 
 export const JayString = new JayAtomicType('string');
+export const JayHtmlString = new JayAtomicType('string');
 export const JayNumber = new JayAtomicType('number');
 export const JayBoolean = new JayAtomicType('boolean');
 export const JayDate = new JayAtomicType('Date');
@@ -34,6 +35,7 @@ export const JayUnknown = new JayAtomicType('Unknown');
 
 const typesMap = {
     string: JayString,
+    'html-string': JayHtmlString,
     number: JayNumber,
     boolean: JayBoolean,
     date: JayDate,
@@ -222,6 +224,10 @@ export function isPromiseType(aType: JayType): aType is JayPromiseType {
 
 export function isRecursiveType(aType: JayType): aType is JayRecursiveType {
     return aType.kind === JayTypeKind.recursive;
+}
+
+export function isHtmlStringType(aType: JayType): boolean {
+    return aType === JayHtmlString;
 }
 
 export function isCurrencyType(aType: JayType): aType is JayAtomicType {

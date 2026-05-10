@@ -66,6 +66,11 @@ export const Import = {
         'dynamicText as dt',
         ImportsFor.implementation,
     ),
+    dynamicHtml: importStatementFragment(
+        JAY_RUNTIME,
+        'dynamicHtml as dh',
+        ImportsFor.implementation,
+    ),
     dynamicAttribute: importStatementFragment(
         JAY_RUNTIME,
         'dynamicAttribute as da',

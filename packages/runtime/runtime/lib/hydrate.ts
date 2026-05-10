@@ -18,7 +18,13 @@ import {
     noopMount,
     noopUpdate,
 } from './element-types';
-import { normalizeMount, normalizeUpdates, type Attributes } from './element';
+import {
+    normalizeMount,
+    normalizeUpdates,
+    isHtmlContent,
+    applyHtmlContent,
+    type Attributes,
+} from './element';
 import type { PrivateRef } from './node-reference';
 
 const STYLE = 'style';
@@ -214,7 +220,7 @@ function collectChild<ViewState>(
 export function adoptElement<ViewState>(
     coordinate: string,
     attributes: Attributes<ViewState>,
-    children: BaseJayElement<ViewState>[] = [],
+    children: (BaseJayElement<ViewState> | any)[] = [],
     ref?: PrivateRef<ViewState, BaseJayElement<ViewState>>,
 ): BaseJayElement<ViewState> {
     const base = adoptBase(coordinate, attributes, ref);
@@ -222,6 +228,10 @@ export function adoptElement<ViewState>(
     const { element, updates, mounts, unmounts } = base;
 
     for (const child of children) {
+        if (isHtmlContent(child)) {
+            applyHtmlContent(child, element, updates, true);
+            continue;
+        }
         collectChild(child, updates, mounts, unmounts);
     }
 
