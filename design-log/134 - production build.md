@@ -79,9 +79,15 @@ The dev server today produces these artifacts on-the-fly:
 
 **Q1: Should server element modules be compiled to plain JS or kept as TS loaded through a lightweight transformer?**
 
+**A1:** Plain JS. No need for a complex runtime architecture — compile everything ahead of time.
+
 **Q2: Should the Vite build produce a single entry per page, or a shared chunk strategy?**
 
+**A2:** Shared chunks for Jay framework and plugin dependencies. Page-specific code is **per slow-rendered instance**, not per route — because slow-phase conditionals can produce different pre-rendered jay-html per param combination, which compiles to different hydration scripts. Two instances of the same route may have structurally different client bundles if a slow conditional evaluates differently.
+
 **Q3: Where do pre-rendered files live in deployment — local filesystem, object storage, or embedded in the server?**
+
+**A3:** Start with local filesystem. Artifact storage should be behind an abstraction (a service) so it can be swapped for object storage or other backends later without changing the server code.
 
 ### Concern 2: Main Server Runtime — Request Handling Without Vite
 
@@ -116,7 +122,21 @@ Key differences from dev server:
 
 **Q4: How does the main server load page components (`page.ts`) for the fast phase? In dev, Vite's SSR module loading handles TypeScript + imports. In production, these need to be pre-compiled to JS too.**
 
+**A4:** The route manifest (`route-manifest.json`) includes references to compiled `page.js` files. The main server loads them via `import()` at startup or on first use.
+
 **Q5: Should the main server use Express like the dev server, or something lighter?**
+
+**A5:** Use whatever makes sense — something lighter than Express is fine since we don't need Vite middleware.
+
+**Q5.5: How does the route manifest get updated when data changes?**
+
+**A5.5:** The route manifest needs to change when param combinations change (new product added, old one removed — `loadParams` returns different results). The slow render server is responsible for updating it. For the main server to pick up changes without downtime, options:
+
+1. **Atomic file swap** — slow render writes `route-manifest.next.json`, atomically renames over `route-manifest.json`. Main server detects the change (poll or filesystem watch).
+2. **Re-read on request** — main server reads the manifest from the artifact store on each request (or with a short TTL cache). Simple and works with any storage backend.
+3. **Signal-based reload** — slow render calls an HTTP endpoint on the main server to trigger a manifest reload.
+
+Option 2 fits best with the artifact storage abstraction (A3) — the artifact service can handle caching internally.
 
 ### Concern 3: Vite Build — Client-Side Bundle Production
 
@@ -146,47 +166,96 @@ The Vite build needs to:
 
 **Q6: The existing `compiler-jay-stack` Vite plugin handles on-demand compilation. Does it work for `vite build` as-is, or does it need a production mode?**
 
+**A6:** `compiler-jay-html` already supports production builds for non-jay-stack examples. The preference is to do the same with `compiler-jay-stack` — use the existing compiler infrastructure for production. Need to map the gaps between what compiler-jay-html supports today and what jay-stack needs (slow-rendered input, composite components, headless instances, etc.).
+
 **Q7: How do we handle pages with dynamic params (`[slug]`)? Each param combination shares the same client bundle but has different SSR output.**
+
+**A7:** Each param combination can have a **different client bundle**. If a slowly-rendered conditional (`if="slowProp"`) evaluates to true for one param set and false for another, the pre-rendered jay-html is structurally different, producing different SSR server elements and different hydration scripts. The Vite build must produce per-instance bundles for pages where slow rendering affects template structure.
 
 ### Concern 4: Slow Phase Execution — Build Time and Data Change
 
-**Initial Build:**
+**Initial Build (sequential per instance):**
 
 ```
 For each route in project:
   For each param combination (from loadParams):
     1. Run slowlyRender(params) → slowViewState + carryForward
-    2. Pre-render jay-html with slow ViewState
-    3. Write pre-rendered file to build/
-    4. Compile server element from pre-rendered jay-html
-    5. Write server element to build/
+    2. Pre-render jay-html with slow ViewState → instance-specific jay-html
+    3. Compile server element from pre-rendered jay-html → server-element.js
+    4. Compile hydration script from pre-rendered jay-html → hydrate entry
+    5. Write all artifacts to build/
+
+Then:
+  6. Vite build — bundle all hydration entries into optimized client bundles
+     (shared chunks for jay framework + plugins, per-instance entries)
 ```
 
-This is what the dev server does on first request, but done eagerly for all routes.
+This is what the dev server does on first request, but done eagerly for all routes. Steps 1-5 can run concurrently across instances (bounded parallelism). Step 6 runs once after all instances are compiled.
 
 **Data Change Re-render:**
 
 When external data changes (product updated, content edited):
 
 ```
-Slow Render Server receives data change event
+Plugin webhook receives change notification
   │
-  ├── Identify affected routes (by contract dependency?)
-  ├── Re-run slow phase for those routes
-  ├── Write updated pre-rendered jay-html
-  ├── Re-compile server element
-  └── Signal main server to reload affected artifacts
+  ├── Plugin resolves: item ID → contract + param value
+  ├── Slow render server finds routes using that contract + params
+  ├── Re-runs slow phase for affected instances only
+  ├── Re-compiles server element + hydration script
+  ├── Re-runs Vite build for affected entries
+  └── Main server picks up new artifacts on next request
 ```
 
 **Questions:**
 
 **Q8: How does the slow render server receive data change events? Options: HTTP webhook endpoint, message queue, polling, filesystem watcher.**
 
+**A8:** HTTP webhook exposed by plugins. Each plugin provides a webhook handler that resolves: changed item ID → plugin component + param value. The slow render server then invalidates routes that use that plugin component with that param value. The invalidation flow:
+
+```
+External data change (e.g., product updated in CMS)
+  → HTTP webhook hits slow render server
+  → Plugin resolves: item ID "prod-123" → contract "product-page" + params { slug: "blue-widget" }
+  → Slow render server finds routes using "product-page" contract
+  → Re-renders those routes with the specific params
+  → Updates artifacts
+```
+
+**Q8.1: How do we handle load on startup with many param combinations?**
+
+**A8.1:** On first build, all param combinations need slow rendering + compilation. For large sites this can be expensive. Options:
+- Parallel slow renders (worker pool or bounded concurrency)
+- Priority queue (render most-visited routes first, if analytics available)
+- Incremental startup: start the main server with existing artifacts, slow render server re-renders in background
+
+**Q8.2: What if the slow render server restarts? How do we know when to re-run all param combinations vs reuse previous build files?**
+
+**A8.2:** Build artifacts on disk include enough metadata to determine validity. DL#110 already embeds `slowViewState` and `carryForward` in pre-rendered jay-html files. On restart:
+- If source code hasn't changed (check source file timestamps or git hash against a `build-metadata.json`), previous artifacts are valid — skip re-rendering
+- If source code changed, artifacts are stale — need full rebuild
+- If only data changed (webhook-triggered), only affected routes are stale — selective re-render
+- The `build-metadata.json` stores: source hash, build timestamp, list of compiled artifacts with their source dependencies
+
 **Q9: How does the main server know artifacts were updated? Options: filesystem polling, IPC signal, shared event bus, artifact versioning.**
+
+**A9:** The main server reads artifacts from the artifact storage service (A3) on each request. No in-memory caching of artifact content required — read from files each time. For compiled JS modules loaded via `import()`, the main server can check file timestamps to avoid re-evaluating unchanged modules. This keeps the main server stateless w.r.t. artifacts and naturally picks up updates from the slow render server.
 
 **Q10: Should the slow render server also re-run the Vite client build on data change? Client bundles shouldn't change on data change (only on code change), so probably not.**
 
+**A10:** Yes, client bundles **do** change on data change. If a slow-rendered conditional changes value for a param combination, the pre-rendered jay-html is structurally different, producing a different hydration script. The Vite client build must re-run for affected instances after slow re-rendering.
+
 **Q11: Can slow render and Vite build run in parallel, or does the Vite build depend on pre-rendered jay-html?**
+
+**A11:** The Vite build depends on the slow render. The pipeline is strictly sequential:
+
+```
+1. Slow render (per instance) → pre-rendered jay-html
+2. Compile server elements + hydration scripts (from pre-rendered jay-html)
+3. Vite build (bundles hydration scripts into optimized client bundles)
+```
+
+Step 2 and 3 could potentially overlap across instances (Vite builds instance A while slow-rendering instance B), but within a single instance the order is fixed.
 
 ### Concern 5: Action Execution and Data Mutation
 
@@ -252,14 +321,14 @@ Dev server uses Vite middleware to serve all assets. Production options:
 
 ## Child Design Logs Needed
 
-Each concern above maps to a potential child design log:
+Each concern above maps to a potential child design log. Many questions are now answered — child logs focus on detailed design and implementation.
 
-| # | Focus Area | Key Questions |
-|---|---|---|
-| A | **Build Pipeline** — Vite production build, server element compilation, artifact layout | Q1, Q2, Q6, Q7, Q11 |
-| B | **Main Server** — Request handling without Vite, route manifest, artifact loading | Q3, Q4, Q5, Q16, Q17 |
-| C | **Slow Render Server** — Build-time rendering, data change re-render, artifact updates | Q8, Q9, Q10, Q12 |
-| D | **Server Build** — Compiling page.ts, actions, services, plugins to production JS | Q4, Q13, Q14, Q15 |
+| # | Focus Area | Resolved | Open |
+|---|---|---|---|
+| A | **Build Pipeline** — compiler-jay-stack production build, per-instance compilation, Vite bundling with shared chunks | Q1, Q2, Q7, Q11 | Q6 (gap analysis vs compiler-jay-html) |
+| B | **Main Server** — request handling without Vite, artifact storage service, route manifest loading | Q3, Q4, Q5, Q5.5, Q9 | Q16, Q17 |
+| C | **Slow Render Server & Data Change** — webhook-based invalidation, plugin resolution, restart resilience, load management | Q8, Q8.2, Q10 | Q8.1 (parallelism strategy), Q12 |
+| D | **Server Build** — compiling page.ts, actions, services, plugins to production JS | Q4 | Q13, Q14, Q15 |
 
 Suggested order: **A → D → B → C** — build pipeline first (defines artifact format), then server build (compiles the server code), then main server (consumes artifacts), then slow render server (produces artifacts on change).
 
@@ -283,15 +352,18 @@ The `build/` directory is the interface between the two servers. Its structure i
 
 ```
 build/
-  route-manifest.json              # Routes, params, artifact paths
-  pre-rendered/                    # Slow-rendered jay-html per route/params
+  build-metadata.json              # Source hash, build timestamp, artifact index
+  route-manifest.json              # Routes, params, artifact paths per instance
+  pre-rendered/                    # Slow-rendered jay-html per instance
     home/page.jay-html
     products/[slug]/
-      page_abc123.jay-html
-      page_def456.jay-html
-  server-elements/                 # Compiled SSR render functions
+      page_abc123.jay-html         # slug=blue-widget (slow conditional true)
+      page_def456.jay-html         # slug=red-gadget  (slow conditional false)
+  server-elements/                 # Compiled SSR render functions (per instance)
     home/page.server-element.js
-    products/[slug]/page.server-element.js
+    products/[slug]/
+      page_abc123.server-element.js
+      page_def456.server-element.js
   server/                          # Compiled page.ts, actions, services
     pages/
       home/page.js
@@ -301,11 +373,12 @@ build/
     init.js
   client/                          # Vite build output
     assets/
-      home-[hash].js
-      products-slug-[hash].js
-      shared-[hash].js
-      vendor-[hash].js
-    manifest.json                  # Vite manifest for asset references
+      home-[hash].js               # Per-instance entry bundles
+      products-slug-abc123-[hash].js
+      products-slug-def456-[hash].js
+      jay-framework-[hash].js      # Shared chunk: jay runtime + component
+      vendor-[hash].js             # Shared chunk: 3rd party deps
+    manifest.json                  # Vite manifest mapping entries to assets
 ```
 
 ### No Vite in the main server
