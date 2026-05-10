@@ -24,6 +24,7 @@ import {
     isHtmlContent,
     applyHtmlContent,
     type Attributes,
+    type HtmlContent,
 } from './element';
 import type { PrivateRef } from './node-reference';
 
@@ -220,7 +221,7 @@ function collectChild<ViewState>(
 export function adoptElement<ViewState>(
     coordinate: string,
     attributes: Attributes<ViewState>,
-    children: (BaseJayElement<ViewState> | any)[] = [],
+    children: (BaseJayElement<ViewState> | HtmlContent<ViewState>)[] = [],
     ref?: PrivateRef<ViewState, BaseJayElement<ViewState>>,
 ): BaseJayElement<ViewState> {
     const base = adoptBase(coordinate, attributes, ref);

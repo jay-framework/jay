@@ -2,10 +2,7 @@ import {
     Import,
     Imports,
     ImportsFor,
-    isArrayType,
     isEnumType,
-    isHtmlStringType,
-    isPromiseType,
     JayComponentType,
     JayPromiseType,
     JayErrorType,
@@ -24,20 +21,10 @@ import {
     RenderFragment,
     RuntimeMode,
     WithValidations,
-    computeInstanceKey,
-    compileForEachInstanceKeyExpr,
-    compileCoordinateExpr,
-    isStaticCoordinate,
 } from '@jay-framework/compiler-shared';
 import { assignCoordinates } from './assign-coordinates';
 import { generateAllPhaseViewStateTypes } from '../contract/phase-type-generator';
-import {
-    Contract,
-    ContractProp,
-    ContractTag,
-    ContractTagType,
-    getEffectivePhase,
-} from '../contract';
+import { ContractProp } from '../contract';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
 import {
@@ -48,8 +35,6 @@ import {
     parseComponentPropExpression,
     parseCondition,
     parsePropertyExpression,
-    parseServerCondition,
-    parseServerTemplateExpression,
     parseStyleDeclarations,
     parseTextExpression,
     Variables,
@@ -76,7 +61,6 @@ import {
     isRecurseWithData,
     isWithData,
     getComponentName,
-    extractComponentName,
 } from './jay-html-helpers';
 import { generateTypes } from './jay-html-compile-types';
 import { Indent } from './indent';
@@ -94,9 +78,7 @@ import {
     attributesRequiresQuotes,
     BOOLEAN_ATTRIBUTE,
     buildContractRefMap,
-    COORD_ATTR,
     expandContractType,
-    extractHeadlessCoordinate,
     filterContentNodes,
     isDirectiveAttribute,
     isValidationError,
@@ -105,16 +87,11 @@ import {
     resolveHeadlessImport,
     textEscape,
     decodeHtmlEntities,
+    findHtmlStringBindings,
     validateAsyncAccessor,
     validateForEachAccessor,
     validateSlowForEachAccessor,
 } from './jay-html-compiler-shared';
-import {
-    buildInteractivePaths,
-    conditionIsInteractive,
-    simplifyConditionForHydrate,
-    textHasInteractiveBindings,
-} from './jay-html-compiler-phase';
 import { renderBridge, renderSandboxRoot } from './jay-html-compiler-bridge';
 import { renderHydrate } from './jay-html-compiler-hydrate';
 
@@ -179,12 +156,23 @@ function tryRenderHtmlStringChild(
     variables: Variables,
     indent: Indent,
 ): RenderFragment | null {
-    if (childNodes.length !== 1 || childNodes[0].nodeType !== NodeType.TEXT_NODE) return null;
+    const htmlStringBindings = findHtmlStringBindings(childNodes, variables);
+    if (htmlStringBindings.length === 0) return null;
+
+    if (childNodes.length !== 1 || childNodes[0].nodeType !== NodeType.TEXT_NODE) {
+        return new RenderFragment('', Imports.none(), [
+            `html-string binding {${htmlStringBindings[0]}} must be the sole child of its parent element, not mixed with sibling elements`,
+        ]);
+    }
+
     const text = (childNodes[0].innerText || '').trim();
-    const bindingMatch = text.match(/^\{([^}]+)\}$/);
-    if (!bindingMatch) return null;
-    const accessor = parseAccessor(bindingMatch[1], variables);
-    if (!isHtmlStringType(accessor.resolvedType)) return null;
+    if (text !== `{${htmlStringBindings[0]}}`) {
+        return new RenderFragment('', Imports.none(), [
+            `html-string binding {${htmlStringBindings[0]}} must be the sole child of its parent element, not mixed with other content`,
+        ]);
+    }
+
+    const accessor = parseAccessor(htmlStringBindings[0], variables);
     const accessorCode = accessor.render();
     return new RenderFragment(
         `${indent.firstLine}dh(${variables.currentVar} => ${accessorCode.rendered})`,
@@ -512,7 +500,7 @@ export function renderChildCompRef(
 }
 
 export function renderNode(node: Node, context: RenderContext): RenderFragment {
-    let { variables, importedSymbols, importedSandboxedSymbols, indent, importerMode } = context;
+    let { variables, importedSandboxedSymbols, indent, importerMode } = context;
 
     function de(
         tagName: string,
@@ -1451,7 +1439,7 @@ ${Indent.forceIndent(code, 4)},
         );
     }
 
-    const { renderedRefsManager, refsManagerImport } = renderReferenceManager(
+    const { renderedRefsManager } = renderReferenceManager(
         renderedRoot.refs,
         ReferenceManagerTarget.element,
     );

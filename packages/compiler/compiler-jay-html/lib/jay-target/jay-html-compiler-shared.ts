@@ -6,6 +6,7 @@
 import {
     Imports,
     isArrayType,
+    isHtmlStringType,
     isPromiseType,
     JayUnknown,
     mkRef,
@@ -48,6 +49,19 @@ export function textEscape(s: string): string {
 
 export function decodeHtmlEntities(s: string): string {
     return decodeEntities(s);
+}
+
+export function findHtmlStringBindings(childNodes: Node[], variables: Variables): string[] {
+    const found: string[] = [];
+    for (const child of childNodes) {
+        if (child.nodeType !== NodeType.TEXT_NODE) continue;
+        const text = (child.innerText || '').trim();
+        for (const m of text.matchAll(/\{([^}]+)\}/g)) {
+            const accessor = parseAccessor(m[1], variables);
+            if (isHtmlStringType(accessor.resolvedType)) found.push(m[1]);
+        }
+    }
+    return found;
 }
 
 /** Escape a static attribute value for embedding in a JS single-quoted string literal. */

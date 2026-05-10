@@ -82,9 +82,7 @@ describe('parse contract', () => {
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'content',
-            tags: [
-                { tag: 'richText', type: [ContractTagType.data], dataType: JayHtmlString },
-            ],
+            tags: [{ tag: 'richText', type: [ContractTagType.data], dataType: JayHtmlString }],
         });
     });
 

@@ -3,24 +3,20 @@
 import {
     Import,
     Imports,
-    isHtmlStringType,
     JayErrorType,
     JayPromiseType,
     RenderFragment,
     WithValidations,
-    computeInstanceKey,
 } from '@jay-framework/compiler-shared';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
 import {
-    parseAccessor,
     parseClassExpression,
     parseServerCondition,
     parseServerTemplateExpression,
     Variables,
 } from '../expressions/expression-compiler';
 import { camelCase } from '../case-utils';
-import { Contract } from '../contract';
 import { JayHeadlessImports, JayHtmlSourceFile } from './jay-html-source-file';
 import {
     AsyncDirectiveTypes,
@@ -50,6 +46,7 @@ import {
     validateAsyncAccessor,
     validateForEachAccessor,
     validateSlowForEachAccessor,
+    findHtmlStringBindings,
 } from './jay-html-compiler-shared';
 import {
     buildInteractivePaths,
@@ -77,29 +74,9 @@ interface ServerContext {
     interactivePaths: Set<string>;
 }
 
-/**
- * Read pre-assigned coordinate from jay-coordinate-base attribute.
- * Returns a quoted string literal for the coordinate value, or null if no coordinate.
- * With scoped coordinates (DL#126), all coordinates are static.
- */
-function getCoordinateExpr(element: HTMLElement): string | null {
-    const template = element.getAttribute(COORD_ATTR);
-    if (!template) return null;
-    return `'${template}'`;
-}
-
 /** Helper: create a single-line w() statement as a RenderFragment */
 function w(indent: Indent, code: string, imports: Imports = Imports.none()): RenderFragment {
     return new RenderFragment(`${indent.firstLine}w(${code});`, imports);
-}
-
-function isHtmlStringBinding(childNodes: Node[], variables: Variables): boolean {
-    if (childNodes.length !== 1 || childNodes[0].nodeType !== NodeType.TEXT_NODE) return false;
-    const text = (childNodes[0].innerText || '').trim();
-    const bindingMatch = text.match(/^\{([^}]+)\}$/);
-    if (!bindingMatch) return false;
-    const accessor = parseAccessor(bindingMatch[1], variables);
-    return isHtmlStringType(accessor.resolvedType);
 }
 
 function renderServerNode(node: Node, context: ServerContext): RenderFragment {
@@ -210,7 +187,7 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
     if (isSlowForEach(element)) {
         const slowForEachInfo = getSlowForEachInfo(element);
         if (slowForEachInfo) {
-            const { arrayName, jayIndex, jayTrackBy } = slowForEachInfo;
+            const { arrayName, jayIndex } = slowForEachInfo;
             const slowValidated = validateSlowForEachAccessor(arrayName, variables);
             if (isValidationError(slowValidated)) return slowValidated;
             const { accessor: arrayAccessor, childVariables: slowForEachVariables } = slowValidated;
@@ -288,7 +265,7 @@ function renderServerHeadlessInstance(
     // Read instance coordinate from pre-assigned jay-coordinate-base (DL#103)
     const coordResult = extractHeadlessCoordinate(element, contractName);
     if (isValidationError(coordResult)) return coordResult;
-    const { instanceCoord, coordSegments, coordinateSuffix } = coordResult;
+    const { instanceCoord, coordinateSuffix } = coordResult;
 
     // Compute __headlessInstances lookup key (DL#126).
     // With scoped coordinates, the key is the full jay-coordinate-base value
@@ -903,9 +880,14 @@ function renderServerElementContent(
     if (isVoid) return mergeServerFragments(parts);
 
     // Children
+    const htmlStringBindings = findHtmlStringBindings(childNodes, variables);
+    if (htmlStringBindings.length > 0 && !dynamicTextFragment) {
+        return new RenderFragment('', Imports.none(), [
+            `html-string binding {${htmlStringBindings[0]}} must be the sole child of its parent element, not mixed with sibling elements`,
+        ]);
+    }
     if (dynamicTextFragment) {
-        const isHtmlString = isHtmlStringBinding(childNodes, variables);
-        if (isHtmlString) {
+        if (htmlStringBindings.length > 0) {
             parts.push(w(indent, `String(${dynamicTextFragment.rendered})`));
         } else {
             parts.push(

@@ -5,10 +5,7 @@
 import {
     Import,
     Imports,
-    isHtmlStringType,
-    JayErrorType,
     JayImportLink,
-    JayPromiseType,
     JayType,
     JayTypeAlias,
     JayUnknown,
@@ -20,23 +17,15 @@ import {
     RefsTree,
     RenderFragment,
     RuntimeMode,
-    computeInstanceKey,
 } from '@jay-framework/compiler-shared';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
-import {
-    parseAccessor,
-    parseClassExpression,
-    parseCondition,
-    parseTextExpression,
-    Variables,
-} from '../expressions/expression-compiler';
+import { parseCondition, parseTextExpression, Variables } from '../expressions/expression-compiler';
 import { camelCase } from '../case-utils';
 import { pascalCase } from 'change-case';
 import { Contract } from '../contract';
-import { JayHeadlessImports, JayHtmlNamespace } from './jay-html-source-file';
+import { JayHeadlessImports } from './jay-html-source-file';
 import {
-    AsyncDirectiveTypes,
     checkAsync,
     ensureSingleChildElement,
     getComponentName,
@@ -47,7 +36,6 @@ import {
 } from './jay-html-helpers';
 import { Indent } from './indent';
 import {
-    elementNameToJayType,
     optimizeRefs,
     ReferenceManagerTarget,
     RefNameGenerator,
@@ -56,19 +44,16 @@ import {
 import { processImportedComponents } from './jay-html-compile-imports';
 import { assignCoordinates } from './assign-coordinates';
 import {
-    BOOLEAN_ATTRIBUTE,
     buildContractRefMap,
     COORD_ATTR,
     extractHeadlessCoordinate,
     filterContentNodes,
     isValidationError,
-    PROPERTY,
-    propertyMapping,
     resolveHeadlessImport,
     textEscape,
-    validateAsyncAccessor,
     validateForEachAccessor,
     validateSlowForEachAccessor,
+    findHtmlStringBindings,
 } from './jay-html-compiler-shared';
 import {
     buildInteractivePaths,
@@ -76,12 +61,6 @@ import {
     simplifyConditionForHydrate,
     textHasInteractiveBindings,
 } from './jay-html-compiler-phase';
-import {
-    hasDynamicAttributeBindings,
-    hasInteractiveChildElements,
-    hasMixedContentDynamicText,
-    hasMixedContentDynamicTextInteractive,
-} from './jay-html-compiler-server';
 import {
     type HeadlessInstanceDefinition,
     type RenderContext,
@@ -303,7 +282,6 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         // Adopt callback: render item children and return as an array.
         // hydrateForEach combines them into a single BaseJayElement internally.
         const itemChildNodes = filterContentNodes(element.childNodes);
-        const trackByExpr = `${forEachVariables.currentVar}.${trackBy}`;
         const itemContext: HydrateContext = {
             ...context,
             variables: forEachVariables,
@@ -541,7 +519,6 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
             dynamicRef: true,
             insideSlowForEach: true,
         };
-        const renderContext2 = buildRenderContext(itemContext);
         // Process children individually to determine if wrapping is needed (DL#115).
         // slowForEachItem's callback must return a single BaseJayElement. When there are
         // multiple dynamic children, wrap in adoptElement to provide a single return value.
@@ -708,7 +685,7 @@ function renderHydrateHeadlessInstance(
     // Read instance coordinate from pre-assigned jay-coordinate-base (DL#103)
     const coordResult = extractHeadlessCoordinate(element, contractName);
     if (isValidationError(coordResult)) return coordResult;
-    const { instanceCoord, coordSegments, coordinateSuffix, childScopeId } = coordResult;
+    const { instanceCoord, coordinateSuffix, childScopeId } = coordResult;
     const isInsideForEach = context.insideFastForEach;
 
     // Compute instance key for __headlessInstances lookup.
@@ -1058,13 +1035,22 @@ function renderHydrateElementContent(
     }
 
     // Check for html-string binding (sole child is {htmlStringBinding})
-    let isHtmlStringChild = false;
-    if (childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE) {
+    const htmlStringBindings = findHtmlStringBindings(childNodes, variables);
+    const isHtmlStringChild = htmlStringBindings.length > 0;
+    if (
+        isHtmlStringChild &&
+        (childNodes.length !== 1 || childNodes[0].nodeType !== NodeType.TEXT_NODE)
+    ) {
+        return new RenderFragment('', Imports.none(), [
+            `html-string binding {${htmlStringBindings[0]}} must be the sole child of its parent element, not mixed with sibling elements`,
+        ]);
+    }
+    if (isHtmlStringChild) {
         const text = (childNodes[0].innerText || '').trim();
-        const bindingMatch = text.match(/^\{([^}]+)\}$/);
-        if (bindingMatch) {
-            const accessor = parseAccessor(bindingMatch[1], variables);
-            isHtmlStringChild = isHtmlStringType(accessor.resolvedType);
+        if (text !== `{${htmlStringBindings[0]}}`) {
+            return new RenderFragment('', Imports.none(), [
+                `html-string binding {${htmlStringBindings[0]}} must be the sole child of its parent element, not mixed with other content`,
+            ]);
         }
     }
 
@@ -1186,7 +1172,7 @@ function renderHydrateElementContent(
         const childValidations: string[] = [];
         const childRefs: RefsTree[] = [];
         // First pass: elements (including refs)
-        childNodes.forEach((child, index) => {
+        childNodes.forEach((child) => {
             if (child.nodeType === NodeType.ELEMENT_NODE) {
                 const frag = renderHydrateNode(child, context);
                 if (frag.rendered.trim()) {
@@ -1239,11 +1225,7 @@ function renderHydrateElementContent(
                 .plus(textFragment.imports.minus(Import.dynamicText))
                 .plus(renderedRef.imports)
                 .plus(attributes.imports),
-            [
-                ...textFragment.validations,
-                ...renderedRef.validations,
-                ...attributes.validations,
-            ],
+            [...textFragment.validations, ...renderedRef.validations, ...attributes.validations],
             renderedRef.refs,
         );
     }

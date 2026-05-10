@@ -613,7 +613,7 @@ export function dynamicText<ViewState>(
     };
 }
 
-interface HtmlContent<ViewState> {
+export interface HtmlContent<ViewState> {
     __htmlContent: true;
     htmlAccessor: (vs: ViewState) => string;
 }
