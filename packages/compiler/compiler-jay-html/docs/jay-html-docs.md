@@ -15,6 +15,7 @@ Each property in the YAML becomes a property of the component's view state, supp
 | Type            | Example                                                                      | Description                          |
 | --------------- | ---------------------------------------------------------------------------- | ------------------------------------ |
 | `string`        | `text: string`                                                               | Text values                          |
+| `html-string`   | `richContent: html-string`                                                   | HTML content (rich text, CMS output) |
 | `number`        | `count: number`                                                              | Numeric values                       |
 | `boolean`       | `isVisible: boolean`                                                         | True/false values                    |
 | `object`        | <code>user: </br>&nbsp;&nbsp;name: string</br>&nbsp;&nbsp;age: number</code> | Nested object structures             |

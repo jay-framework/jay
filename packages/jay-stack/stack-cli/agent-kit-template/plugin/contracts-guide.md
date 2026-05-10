@@ -28,7 +28,7 @@ tags:
 ```yaml
 - tag: productName
   type: data
-  dataType: string # string (default), number, boolean, date
+  dataType: string # string (default), html-string, number, boolean, date
   required: true # optional, defaults to false
   phase: slow # slow, fast, or fast+interactive
   description: Display name
