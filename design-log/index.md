@@ -134,6 +134,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 73  | jay-stack validate command             | Plugin validation command                               |
 | 74  | watch linked style files in dev server | Dev server file watching                                |
 | 118 | jay-html-compiler refactor             | Extract shared algorithms + split by compilation target |
+| 134 | production build                       | Two-server production architecture: main server + slow render server |
 
 ---
 
@@ -286,6 +287,10 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 ### "I need to understand the full workflow lifecycle"
 
 → See #86 (full workflow lifecycle: setup → agent-kit → coding → slow → fast → interactive → refresh)
+
+### "I'm working on the production build"
+
+→ See #134 (production build: two-server architecture, build pipeline, artifact layout)
 
 ---
 
