@@ -47,6 +47,11 @@ export class FilesystemArtifactStore {
         return this.loadModule(relativePath);
     }
 
+    async readRawFile(relativePath: string): Promise<string> {
+        const fullPath = path.join(this.basePath, relativePath);
+        return await fs.readFile(fullPath, 'utf-8');
+    }
+
     getAssetPath(relativePath: string): string {
         return path.join(this.basePath, relativePath);
     }

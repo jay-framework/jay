@@ -53,6 +53,25 @@ export async function discoverServerEntries(
         // No actions directory
     }
 
+    // Discover local plugin component files (headless components)
+    const pluginsDir = path.join(projectRoot, 'src', 'plugins');
+    try {
+        const pluginDirs = await fs.readdir(pluginsDir, { withFileTypes: true });
+        for (const dir of pluginDirs) {
+            if (!dir.isDirectory()) continue;
+            const pluginDir = path.join(pluginsDir, dir.name);
+            const pluginFiles = await fs.readdir(pluginDir);
+            for (const file of pluginFiles) {
+                if (file.endsWith('.ts') && file !== 'init.ts' && file !== 'page.ts') {
+                    const entryName = `plugins/${dir.name}/${file.replace(/\.ts$/, '')}`;
+                    pages[entryName] = path.join(pluginDir, file);
+                }
+            }
+        }
+    } catch {
+        // No plugins directory
+    }
+
     let init: string | undefined;
     const initPaths = [
         path.join(projectRoot, 'src', 'lib', 'init.ts'),

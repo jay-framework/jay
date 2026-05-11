@@ -4,6 +4,7 @@ export interface MatchResult {
     route: RouteEntry;
     instance: InstanceEntry;
     params: Record<string, string>;
+    pathname: string;
 }
 
 export function matchRequest(
@@ -17,7 +18,7 @@ export function matchRequest(
         if (params) {
             const instance = findInstance(route, params);
             if (instance) {
-                return { route, instance, params };
+                return { route, instance, params, pathname };
             }
         }
     }

@@ -1,26 +1,22 @@
 import {
     slowRenderTransform,
     parseContract,
-    parseJayFile,
     JAY_IMPORT_RESOLVER,
     injectHeadfullFSTemplates,
     discoverHeadlessInstances,
     assignCoordinatesToJayHtml,
     resolveHeadlessInstances,
-    type HeadlessContractInfo,
 } from '@jay-framework/compiler-jay-html';
-import { checkValidationErrors } from '@jay-framework/compiler-shared';
 import {
     DevSlowlyChangingPhase,
-    type DevServerPagePart,
-    type HeadlessInstanceComponent,
     slowRenderInstances,
 } from '@jay-framework/stack-server-runtime';
 import type { JayRollupConfig } from '@jay-framework/compiler-jay-stack';
 import type { JayRoute } from '@jay-framework/stack-route-scanner';
-import type { AnyJayStackComponentDefinition } from '@jay-framework/fullstack-component';
 import type { Contract } from '@jay-framework/compiler-jay-html';
 import type { InstanceEntry } from '../types';
+import type { InstancePhaseData } from '@jay-framework/stack-server-runtime';
+import { loadProductionPageParts } from './load-production-parts';
 import { compileServerElement } from './server-element-compile';
 import { generateHydrationEntry } from './hydration-entry-gen';
 import { buildInstanceClient } from './instance-client-build';
@@ -71,23 +67,28 @@ export async function buildInstance(
 
     await fs.mkdir(instanceDir, { recursive: true });
 
-    const compDefinition: AnyJayStackComponentDefinition = pageModule.page ?? pageModule.default;
-    const parts: DevServerPagePart[] = [
-        {
-            compDefinition,
-            clientImport: '',
-            clientPart: '',
-        },
-    ];
+    const jayHtmlContent = await fs.readFile(route.jayHtmlPath, 'utf-8');
+    const sourceDir = path.dirname(route.jayHtmlPath);
 
-    // 1. Slow render
+    // Load page parts including headless components
+    const serverBuildDir = path.join(ctx.buildDir, 'server');
+    const pageParts = await loadProductionPageParts(
+        route,
+        pageModule,
+        jayHtmlContent,
+        ctx.projectRoot,
+        ctx.tsConfigFilePath,
+        serverBuildDir,
+    );
+
+    // 1. Slow render (page + keyed headless components)
     const slowPhase = new DevSlowlyChangingPhase();
     const slowResult = await slowPhase.runSlowlyForPage(
         params,
         { params },
-        parts,
-        [],
-        [],
+        pageParts.parts,
+        pageParts.discoveredInstances,
+        pageParts.headlessInstanceComponents,
         route.jayHtmlPath,
     );
 
@@ -98,10 +99,7 @@ export async function buildInstance(
     const slowViewState = slowResult.rendered;
     const carryForward = slowResult.carryForward;
 
-    // 2. Pre-render jay-html
-    const jayHtmlContent = await fs.readFile(route.jayHtmlPath, 'utf-8');
-    const sourceDir = path.dirname(route.jayHtmlPath);
-
+    // 2. Pre-render jay-html (Pass 1: page bindings)
     let contract: Contract | undefined;
     const contractPath = route.jayHtmlPath.replace('.jay-html', '.jay-contract');
     try {
@@ -112,17 +110,13 @@ export async function buildInstance(
         // No contract file
     }
 
-    const jayHtmlWithTemplates = injectHeadfullFSTemplates(
-        jayHtmlContent,
-        sourceDir,
-        JAY_IMPORT_RESOLVER,
-    );
+    const jayHtmlWithTemplates = injectHeadfullFSTemplates(jayHtmlContent, sourceDir, JAY_IMPORT_RESOLVER);
 
     const transformResult = slowRenderTransform({
         jayHtmlContent: jayHtmlWithTemplates,
         slowViewState: slowViewState as Record<string, unknown>,
         contract,
-        headlessContracts: [],
+        headlessContracts: pageParts.headlessContracts,
         sourceDir,
         importResolver: JAY_IMPORT_RESOLVER,
     });
@@ -131,15 +125,43 @@ export async function buildInstance(
         throw new Error(`Slow render transform failed for ${route.rawRoute}: ${transformResult.validations.join(', ')}`);
     }
 
-    const preRenderedJayHtml = transformResult.val.preRenderedJayHtml;
+    let preRenderedJayHtml = transformResult.val.preRenderedJayHtml;
 
-    // Write clean pre-rendered file for compilation (Vite and esbuild read this)
+    // Pass 2: Headless instance bindings (same as dev server's preRenderJayHtml)
+    if (pageParts.headlessInstanceComponents.length > 0) {
+        const discoveryResult = discoverHeadlessInstances(preRenderedJayHtml);
+        const htmlWithRefs = discoveryResult.preRenderedJayHtml;
+        const contractNames = new Set(pageParts.headlessInstanceComponents.map((c) => c.contractName));
+        preRenderedJayHtml = assignCoordinatesToJayHtml(htmlWithRefs, contractNames);
+
+        const finalDiscovery = discoverHeadlessInstances(preRenderedJayHtml);
+
+        if (finalDiscovery.instances.length > 0) {
+            const instanceResolvedData = (carryForward as any).__instanceResolvedData;
+            if (instanceResolvedData) {
+                const pass2Result = resolveHeadlessInstances(
+                    preRenderedJayHtml,
+                    instanceResolvedData,
+                    JAY_IMPORT_RESOLVER,
+                );
+                if (pass2Result.val) {
+                    preRenderedJayHtml = pass2Result.val;
+                }
+            }
+        }
+    }
+
+    // Write clean pre-rendered file for compilation
     const preRenderedPath = path.join(instanceDir, `${instanceId}.jay-html`);
     await fs.writeFile(preRenderedPath, preRenderedJayHtml, 'utf-8');
 
-    // Write cache metadata file for the main server (slow ViewState + carryForward)
+    // Write cache metadata for the main server
     const cacheMetadataPath = path.join(instanceDir, `${instanceId}.cache.json`);
-    await fs.writeFile(cacheMetadataPath, JSON.stringify({ slowViewState, carryForward, sourcePath: route.jayHtmlPath }), 'utf-8');
+    await fs.writeFile(cacheMetadataPath, JSON.stringify({
+        slowViewState,
+        carryForward,
+        sourcePath: route.jayHtmlPath,
+    }), 'utf-8');
 
     logger.info(`[Build] Pre-rendered: ${routeDir}/${instanceId}`);
 
@@ -164,10 +186,10 @@ export async function buildInstance(
     );
 
     await generateHydrationEntry({
-        jayHtmlPath: './' + relativeJayHtmlPath.replace(/\.jay-html$/, '.jay-html'),
+        jayHtmlPath: './' + relativeJayHtmlPath,
         pageModulePath: './' + relativePageModule,
         slowViewState,
-        trackByMap: {},
+        trackByMap: pageParts.clientTrackByMap || {},
         outputPath: hydrateEntryPath,
     });
 
@@ -194,18 +216,4 @@ export async function buildInstance(
     };
 
     return { instanceEntry, slowViewState, carryForward };
-}
-
-function embedCacheTag(jayHtmlContent: string, cacheTag: string): string {
-    const headMatch = jayHtmlContent.match(/<head[^>]*>/i);
-    if (headMatch) {
-        const insertPos = headMatch.index! + headMatch[0].length;
-        return (
-            jayHtmlContent.substring(0, insertPos) +
-            '\n' +
-            cacheTag +
-            jayHtmlContent.substring(insertPos)
-        );
-    }
-    return `${cacheTag}\n${jayHtmlContent}`;
 }

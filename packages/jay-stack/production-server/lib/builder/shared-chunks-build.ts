@@ -29,36 +29,46 @@ export async function buildSharedChunks(
 
     await fs.mkdir(outputDir, { recursive: true });
 
-    // Resolve each package to its source lib/index.ts for proper deduplication.
-    // Using source instead of dist avoids pre-bundled duplicates.
+    // Create wrapper entry files that import by package name.
+    // This ensures Rollup deduplicates packages through its normal resolution.
     const entries: Record<string, string> = {};
     for (const pkg of SHARED_PACKAGES) {
         const varName = pkg.replace('@jay-framework/', '').replace(/-/g, '_');
-        const sourcePath = resolvePackageSource(pkg);
-        entries[varName] = sourcePath;
+        const entryPath = path.join(outputDir, `_entry_${varName}.js`);
+        await fs.writeFile(entryPath, `export * from '${pkg}';\n`);
+        entries[varName] = entryPath;
     }
+    const dedupePackages = [...SHARED_PACKAGES, '@jay-framework/list-compare'];
 
     await viteBuild({
         build: {
             outDir: outputDir,
             emptyOutDir: true,
-            minify: true,
+            minify: false,
             manifest: 'vite-manifest.json',
             rollupOptions: {
                 input: entries,
                 output: {
                     entryFileNames: '[name]-[hash].js',
-                    chunkFileNames: 'chunks/[name]-[hash].js',
+                    chunkFileNames: '[name]-[hash].js',
                     format: 'es',
                 },
-                // Preserve all exports from entry points
                 preserveEntrySignatures: 'exports-only',
             },
+        },
+        resolve: {
+            dedupe: dedupePackages,
         },
         logLevel: 'warn',
     });
 
-    const manifest = await parseViteManifest(outputDir, entries);
+    // Clean up wrapper entry files
+    for (const pkg of SHARED_PACKAGES) {
+        const varName = pkg.replace('@jay-framework/', '').replace(/-/g, '_');
+        await fs.rm(path.join(outputDir, `_entry_${varName}.js`), { force: true });
+    }
+
+    const manifest = await parseViteManifest(outputDir);
 
     logger.info(`[Build] Shared chunks built: ${Object.keys(manifest).length} entries`);
 
@@ -73,30 +83,21 @@ function resolvePackageSource(pkg: string): string {
     );
 
     try {
-        const pkgJson = JSON.parse(require('fs').readFileSync(pkgJsonPath, 'utf-8'));
         const pkgDir = path.dirname(pkgJsonPath);
-
-        // Try to find lib/index.ts (source) — for monorepo packages
         const libIndex = path.join(pkgDir, 'lib', 'index.ts');
         if (require('fs').existsSync(libIndex)) {
             return libIndex;
         }
-
-        // Fallback to dist entry
         return require.resolve(pkg);
     } catch {
         return require.resolve(pkg);
     }
 }
 
-async function parseViteManifest(
-    outputDir: string,
-    entries: Record<string, string>,
-): Promise<Record<string, string>> {
+async function parseViteManifest(outputDir: string): Promise<Record<string, string>> {
     const viteManifestPath = path.join(outputDir, 'vite-manifest.json');
     const raw = JSON.parse(await fs.readFile(viteManifestPath, 'utf-8'));
 
-    // Match entries by output filename pattern (varName-hash.js)
     const varNameToPackage = new Map<string, string>();
     for (const pkg of SHARED_PACKAGES) {
         const varName = pkg.replace('@jay-framework/', '').replace(/-/g, '_');
@@ -117,7 +118,6 @@ async function parseViteManifest(
 
     const sharedManifestPath = path.join(outputDir, 'shared-manifest.json');
     await fs.writeFile(sharedManifestPath, JSON.stringify(manifest, null, 2));
-
     await fs.rm(viteManifestPath, { force: true });
 
     return manifest;

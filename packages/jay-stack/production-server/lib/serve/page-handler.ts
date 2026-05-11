@@ -1,11 +1,47 @@
 import type { ServerResponse } from 'node:http';
+import path from 'node:path';
 import type { RouteManifest } from '../types';
 import type { MatchResult } from './route-matcher';
 import type { FilesystemArtifactStore } from './artifact-store';
 import { renderFastChangingData } from '@jay-framework/stack-server-runtime';
+import type { DevServerPagePart, HeadlessInstanceComponent } from '@jay-framework/stack-server-runtime';
 import { deepMergeViewStates } from '@jay-framework/view-state-merge';
-import { asyncSwapScript, type ServerRenderContext } from '@jay-framework/ssr-runtime';
+import { asyncSwapScript } from '@jay-framework/ssr-runtime';
 import { buildImportMap } from './import-map';
+import { loadProductionPageParts, type ProductionPageParts } from '../builder/load-production-parts';
+import type { RouteEntry } from '../types';
+
+const pagePartsCache = new Map<string, ProductionPageParts>();
+
+async function getPageParts(
+    route: RouteEntry,
+    pageModule: any,
+    artifacts: FilesystemArtifactStore,
+    preRenderedPath: string,
+    manifest: RouteManifest,
+): Promise<ProductionPageParts> {
+    const cacheKey = route.pattern;
+    const cached = pagePartsCache.get(cacheKey);
+    if (cached) return cached;
+
+    if (!route.jayHtmlPath) {
+        return { parts: [{ compDefinition: pageModule.page ?? pageModule.default, clientImport: '', clientPart: '' }],
+            headlessContracts: [], headlessInstanceComponents: [], discoveredInstances: [], forEachInstances: [] };
+    }
+
+    const jayHtmlContent = await artifacts.readRawFile(preRenderedPath);
+    const serverBuildDir = artifacts.getAssetPath('server');
+    const parts = await loadProductionPageParts(
+        { jayHtmlPath: route.jayHtmlPath },
+        pageModule,
+        jayHtmlContent,
+        manifest.projectRoot,
+        undefined,
+        serverBuildDir,
+    );
+    pagePartsCache.set(cacheKey, parts);
+    return parts;
+}
 
 export async function handlePageRequest(
     res: ServerResponse,
@@ -16,42 +52,44 @@ export async function handlePageRequest(
     const { route, instance } = match;
 
     const preRendered = await artifacts.readPreRenderedHtml(instance.preRenderedPath);
-
     const pageModule = await artifacts.loadPageModule(route.serverModule);
-    const compDefinition = pageModule.page ?? pageModule.default;
 
-    let fastViewState: object = {};
-    let fastCarryForward: object = {};
+    const pageParts = await getPageParts(
+        route,
+        pageModule,
+        artifacts,
+        instance.preRenderedPath,
+        manifest,
+    );
 
-    if (compDefinition?.fastRender) {
-        const { resolveServices } = await import('@jay-framework/stack-server-runtime');
-        const services = resolveServices(compDefinition.services || []);
-        const fastResult = compDefinition.slowlyRender
-            ? await compDefinition.fastRender(
-                  { params: match.params },
-                  preRendered.carryForward,
-                  ...services,
-              )
-            : await compDefinition.fastRender(
-                  { params: match.params },
-                  ...services,
-              );
+    const url = new URL(`http://localhost${match.pathname}`);
+    const query = Object.fromEntries(url.searchParams.entries());
 
-        if (fastResult.kind === 'Redirect3xx') {
-            res.writeHead(fastResult.status, { Location: fastResult.location });
-            res.end();
-            return;
-        }
-        if (fastResult.kind === 'ServerError5xx' || fastResult.kind === 'ClientError4xx') {
-            res.writeHead(fastResult.status);
-            res.end(fastResult.message || 'Error');
-            return;
-        }
-        if (fastResult.kind === 'PhaseOutput') {
-            fastViewState = fastResult.rendered;
-            fastCarryForward = fastResult.carryForward;
-        }
+    const fastResult = await renderFastChangingData(
+        match.params,
+        { params: match.params, query },
+        preRendered.carryForward,
+        pageParts.parts,
+        (preRendered.carryForward as any).__instances,
+        pageParts.forEachInstances,
+        pageParts.headlessInstanceComponents,
+        preRendered.slowViewState,
+        query,
+    );
+
+    if (fastResult.kind === 'Redirect3xx') {
+        res.writeHead((fastResult as any).status, { Location: (fastResult as any).location });
+        res.end();
+        return;
     }
+    if (fastResult.kind === 'ServerError5xx' || fastResult.kind === 'ClientError4xx') {
+        res.writeHead((fastResult as any).status);
+        res.end((fastResult as any).message || 'Error');
+        return;
+    }
+
+    const fastViewState = (fastResult as any).rendered || {};
+    const fastCarryForward = (fastResult as any).carryForward || {};
 
     const fullViewState = deepMergeViewStates(
         preRendered.slowViewState,

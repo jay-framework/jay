@@ -29,6 +29,7 @@ export function buildRouteEntry(
         pattern: route.rawRoute,
         segments: convertSegments(route.segments),
         serverModule: serverModulePath,
+        jayHtmlPath: route.jayHtmlPath,
         instances: [],
     };
 }

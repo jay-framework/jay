@@ -26,7 +26,7 @@ export async function buildInstanceClient(
         build: {
             outDir: outputDir,
             emptyOutDir: false,
-            minify: true,
+            minify: false,
             manifest: `${instanceId}-manifest.json`,
             rollupOptions: {
                 input: { [instanceId]: hydrateEntryPath },

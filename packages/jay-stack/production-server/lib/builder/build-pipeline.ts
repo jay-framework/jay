@@ -129,6 +129,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         version: options.version,
         buildTimestamp: new Date().toISOString(),
         sourceHash: '',
+        projectRoot: options.projectRoot,
         publicBasePath: options.publicBasePath,
         sharedManifest,
         routes: routeEntries.map((r) => r.entry),

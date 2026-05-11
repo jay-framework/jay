@@ -3,6 +3,7 @@ export interface RouteManifest {
     buildTimestamp: string;
     sourceHash: string;
     publicBasePath: string;
+    projectRoot: string;
     sharedManifest: Record<string, string>;
     routes: RouteEntry[];
     actions: ActionEntry[];
@@ -18,6 +19,7 @@ export interface RouteEntry {
     pattern: string;
     segments: RouteSegment[];
     serverModule: string;
+    jayHtmlPath?: string;
     trackByMap?: Record<string, string>;
     contracts?: string[];
     instances: InstanceEntry[];
