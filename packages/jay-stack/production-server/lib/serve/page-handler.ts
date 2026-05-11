@@ -26,11 +26,16 @@ export async function handlePageRequest(
     if (compDefinition?.fastRender) {
         const { resolveServices } = await import('@jay-framework/stack-server-runtime');
         const services = resolveServices(compDefinition.services || []);
-        const fastResult = await compDefinition.fastRender(
-            { params: match.params },
-            preRendered.carryForward,
-            ...services,
-        );
+        const fastResult = compDefinition.slowlyRender
+            ? await compDefinition.fastRender(
+                  { params: match.params },
+                  preRendered.carryForward,
+                  ...services,
+              )
+            : await compDefinition.fastRender(
+                  { params: match.params },
+                  ...services,
+              );
 
         if (fastResult.kind === 'Redirect3xx') {
             res.writeHead(fastResult.status, { Location: fastResult.location });
