@@ -12,5 +12,5 @@ export type {
     PageModule,
 } from './types';
 
-export { buildVersion } from './build/build-pipeline';
+export { buildVersion } from './builder/build-pipeline';
 export { startMainServer } from './serve/main-server';
