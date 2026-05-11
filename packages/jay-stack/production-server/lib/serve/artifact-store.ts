@@ -24,8 +24,19 @@ export class FilesystemArtifactStore {
 
     async readPreRenderedHtml(relativePath: string): Promise<PreRenderedEntry> {
         const fullPath = path.join(this.basePath, relativePath);
-        const fileContent = await fs.readFile(fullPath, 'utf-8');
-        return extractCacheMetadata(fileContent);
+        const content = await fs.readFile(fullPath, 'utf-8');
+
+        const cachePath = fullPath.replace(/\.jay-html$/, '.cache.json');
+        try {
+            const cacheData = JSON.parse(await fs.readFile(cachePath, 'utf-8'));
+            return {
+                content,
+                slowViewState: cacheData.slowViewState || {},
+                carryForward: cacheData.carryForward || {},
+            };
+        } catch {
+            return extractCacheMetadata(content);
+        }
     }
 
     async loadServerElement(relativePath: string): Promise<ServerElementModule> {

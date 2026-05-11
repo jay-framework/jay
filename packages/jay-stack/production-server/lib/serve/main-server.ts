@@ -5,6 +5,7 @@ import { FilesystemArtifactStore } from './artifact-store';
 import { matchRequest } from './route-matcher';
 import { handlePageRequest } from './page-handler';
 import { handleStaticRequest } from './static-handler';
+import { isActionRequest, handleActionRequest, registerActionsFromManifest } from './action-handler';
 
 export interface MainServerOptions {
     buildRoot: string;
@@ -30,10 +31,19 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
         }
     }
 
+    if (manifest.actions.length > 0) {
+        await registerActionsFromManifest(manifest.actions, buildDir);
+    }
+
     const server = http.createServer(async (req, res) => {
         const url = new URL(req.url || '/', `http://${req.headers.host}`);
 
         try {
+            if (isActionRequest(url.pathname)) {
+                await handleActionRequest(req, res);
+                return;
+            }
+
             const handled = await handleStaticRequest(req, res, path.join(buildDir, 'shared'), '/shared/');
             if (handled) return;
 
