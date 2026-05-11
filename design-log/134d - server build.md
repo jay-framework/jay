@@ -341,3 +341,18 @@ Yes. Using `entryFileNames: '[name].js'` with structured entry names (`pages/hom
 5. Plugin init order matches dev server behavior
 6. Action router handles requests identically to dev server
 7. No client code in server build output (interactive constructors stripped)
+
+## Implementation Results
+
+### Server Code Build
+
+- `discoverServerEntries()` scans pages, actions, init, and **local plugin components** (`src/plugins/*/*.ts`)
+- Rollup sanitizes `[slug]` to `_slug_` in output paths — build pipeline maps accordingly
+- Services must be initialized before slow render (init runs in Phase 0 before Phase 1)
+
+### Action Builder Stripping (compiler-jay-stack changes)
+
+- `jay-stack:code-split` quick check: skip `.jay-html` files (they contain builder names as HTML text like `<code>makeJayStream</code>`)
+- `jay-stack:action-transform`: new `transform` hook strips inline `makeJayAction`/`makeJayQuery`/`makeJayStream` statements from component files in client builds
+- `transformJayStackBuilder` extended with `stripBuilders` parameter — `findChainRootBuilderName` walks AST to identify action builder statements, removes them before method stripping
+- `analyzeUnusedStatements` cleans up now-unused builder imports

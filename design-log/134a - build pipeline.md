@@ -543,3 +543,75 @@ esbuild is simpler and faster for a single-file compilation with one small depen
 5. Per-instance CSS is correctly extracted and linked
 6. Incremental rebuild (single instance change) only rebuilds affected artifacts
 7. Build time scales linearly with instance count
+
+## Implementation Results
+
+### Package: `@jay-framework/production-server`
+
+New package at `packages/jay-stack/production-server/` with two modules:
+- `lib/builder/` — build pipeline (Phase 0-2)
+- `lib/serve/` — production HTTP server
+
+### Shared Chunks Build Strategy
+
+**Final approach: Wrapper entries + `resolve.dedupe`**
+
+Each shared package gets a wrapper entry file (`export * from '@jay-framework/...'`) that imports by package name. The Vite build uses `resolve.dedupe` to ensure all packages resolve to the same physical module.
+
+```typescript
+// Wrapper entry (temporary, deleted after build)
+export * from '@jay-framework/runtime';
+```
+
+```typescript
+await viteBuild({
+    rollupOptions: {
+        input: entries,         // wrapper files
+        preserveEntrySignatures: 'exports-only',
+    },
+    resolve: {
+        dedupe: [...SHARED_PACKAGES, '@jay-framework/list-compare'],
+    },
+});
+```
+
+**Key requirements for correctness:**
+
+1. **Package name imports, not source paths** — using `resolve.alias` or source paths as Rollup entries creates module duplication. Each module's closure variables (like `currentContext` for the context stack) get duplicated, breaking singleton patterns. Wrapper entries with package name imports + `resolve.dedupe` ensure Rollup shares module instances.
+
+2. **`preserveEntrySignatures: 'exports-only'`** — without this, Rollup tree-shakes entry exports that aren't consumed within the bundle (e.g., `adoptText` for hydration). This option preserves all exports from entry points.
+
+3. **Import maps in SSR HTML** — `<script type="importmap">` maps bare specifiers (`@jay-framework/runtime`) to content-hashed URLs. Instance bundles use standard ES module imports that the browser resolves via the map.
+
+**Approaches tried and rejected:**
+
+| Approach | Problem |
+|---|---|
+| Copy pre-built dist files | Code duplication — each package's dist bundles its own deps inline |
+| `resolve.alias` to source paths | Module duplication — separate closure variables for context state |
+| Source paths as Rollup entries | Same duplication — each entry creates its own module tree |
+| `manualChunks` forcing single chunk | Still duplicated — chunks share file but not closure state |
+| Single namespace entry (`export * as pkg`) | Complex wrapper generation, fragile export enumeration |
+
+### Per-Instance Client Build
+
+- Uses `jayStackCompiler()` with `preserveEntrySignatures: 'exports-only'` to keep `init()` export
+- Shared packages externalized — resolved at runtime via import maps
+- `jay-stack:code-split` skips `.jay-html` files (they contain builder names as HTML text)
+- `jay-stack:action-transform` strips inline `makeJayQuery`/`makeJayAction`/`makeJayStream` statements
+
+### Server Element Compilation
+
+- Uses esbuild (not Vite) for standalone JS compilation
+- Custom esbuild plugin handles `.jay-contract` imports by extracting enum types from contract YAML
+- PascalCase conversion for contract names with hyphens
+
+### Action Builder Stripping
+
+`jay-stack:action-transform` plugin extended with a `transform` hook that strips inline action builder statements (`makeJayQuery`, `makeJayAction`, `makeJayStream`) from component files in client builds. Uses `transformJayStackBuilder` with a `stripBuilders` parameter that removes entire statements rooted in action builders before the normal method-stripping transform runs.
+
+### Remaining Gaps
+
+1. **slowForEach headless instances** — forEach-discovered headless instances not included in `__headlessInstances` data during production fast render
+2. **Build folder conflict** — dev server and production server both use `build/` directory; need separate folders or move dev to `build/dev/`
+3. **Minification** — disabled for debugging; re-enable once hydration is stable

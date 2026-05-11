@@ -503,3 +503,24 @@ Wire everything together:
 7. Artifact updates picked up without server restart
 8. 404 for unknown routes, 404 for unknown params
 9. Redirect and error responses from fast phase handled correctly
+
+## Implementation Results
+
+### Production Server (`lib/serve/`)
+
+- **Plain Node.js HTTP server** — no Express, no Vite
+- **Streaming SSR** — `<head>` (import map, CSS) sent immediately, body streamed via `renderToStream`, hydration script last
+- **`renderFastChangingData()`** — full fast phase pipeline including headless instances (replaced direct `fastRender()` calls)
+- **Action router** — adapted from dev server's Express-based router to raw `http.IncomingMessage`/`ServerResponse`; uses `isJayAction`/`isJayStreamAction` brand detection
+- **Static asset serving** — content-hashed files get immutable cache headers
+- **Route matching** — segment-based matching from manifest (static > param > catchAll priority)
+- **Artifact store** — `FilesystemArtifactStore` with timestamp-based module caching; `?t=mtime` cache-busting for `import()`
+- **Page parts cached per-route** — `loadProductionPageParts` result cached to avoid re-parsing jay-html on each request
+
+### Key Fix: `fastRender` Signature
+
+`fastRender` signature depends on whether the component has a slow phase:
+- With `slowlyRender`: `fastRender(props, carryForward, ...services)`
+- Without `slowlyRender`: `fastRender(props, ...services)`
+
+This matches `renderFastChangingData()` lines 65-67 in `fast-changing-runner.ts`.

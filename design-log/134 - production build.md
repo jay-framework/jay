@@ -447,3 +447,41 @@ The main server is a plain Node.js HTTP server. It loads pre-compiled JS modules
 5. Action execution works identically in dev and production
 6. Data change re-render updates artifacts without restarting the main server
 7. Build time scales linearly with number of routes, not exponentially
+
+## Implementation Status
+
+### Working (verified on fake-shop)
+
+- `jay-stack build` — produces versioned bucket with all artifacts (15 instances: 5 static + 10 product slugs)
+- `jay-stack serve` — plain Node.js HTTP server, streaming SSR, import maps, no Vite
+- **SSR** — server-rendered HTML with product names, prices, stock status visible without JS
+- **CSS** — extracted from jay-html `<style>` blocks, served with correct cache headers
+- **Dynamic params** — `loadParams` discovers all slug combinations, per-instance build
+- **Actions** — action router handles GET/POST, streaming NDJSON, correct error codes
+- **Hydration** — client adopts server-rendered DOM, interactive elements work (buttons, etc.)
+- **Headless components** — slow render Pass 2 resolves instance bindings, `__headlessInstances` populated for client
+- **Shared chunks** — deduplicated via wrapper entries + `resolve.dedupe`, singleton context preserved
+- **Action stripping** — `makeJayQuery`/`makeJayAction`/`makeJayStream` stripped from client bundles
+
+### Remaining Work
+
+#### Must Fix
+
+1. **slowForEach headless instances** — forEach-discovered headless instances (e.g., `<jay:product-widget>` inside `slowForEach`) not included in `__headlessInstances` during production fast render. Static and keyed headless instances work.
+
+2. **Build folder conflict** — dev server (`jay-stack dev`) and production build (`jay-stack build`) both use `build/` directory. Running dev server after production build deletes production artifacts. Options:
+   - Move dev server to `build/dev/`
+   - Move production to `build/prod/`
+   - Make configurable via CLI flag
+
+3. **Minification flag** — add `--no-minify` CLI flag to `jay-stack build` (default: minify enabled). Useful for debugging production builds in other projects.
+
+#### Future Phases
+
+4. **Plugin routes** — plugin-provided pages (DL#130) not yet handled in production build
+5. **Plugin init at serve time** — plugin `_serverInit()` not called during production server startup
+6. **Head tags** — SEO head tags from fast phase not injected into SSR `<head>` (DL#127)
+7. **Slow render server** — `jay-stack serve --role=renderer` with webhook-based invalidation (DL#134c)
+8. **Source hash** — `build-metadata.json` source hash not computed yet (needed for restart validation)
+9. **Query parameters** — `props.query` not passed through to fast render properly
+10. **Error pages** — custom 404/500 pages not implemented
