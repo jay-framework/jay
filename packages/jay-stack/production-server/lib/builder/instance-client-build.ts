@@ -44,6 +44,7 @@ export async function buildInstanceClient(
                     assetFileNames: '[name]-[hash].[ext]',
                     format: 'es',
                 },
+                preserveEntrySignatures: 'exports-only',
             },
         },
         logLevel: 'warn',

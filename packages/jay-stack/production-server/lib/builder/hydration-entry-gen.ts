@@ -36,7 +36,7 @@ export function init(fastViewState, fastCarryForward) {
     const target = document.getElementById('target');
     const rootElement = target.firstElementChild;
     const parts = pagePart && pagePart.comp
-        ? [{ comp: pagePart.comp, contexts: pagePart.contexts || [] }]
+        ? [{ comp: pagePart.comp, contextMarkers: pagePart.contexts || [] }]
         : [];
     const pageComp = hydrateCompositeJayComponent(
         hydrate, viewState, fastCarryForward,
