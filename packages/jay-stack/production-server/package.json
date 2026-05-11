@@ -1,14 +1,11 @@
 {
-  "name": "@jay-framework/jay-stack-cli",
-  "version": "0.16.5",
+  "name": "@jay-framework/production-server",
+  "version": "0.1.0",
   "license": "Apache-2.0",
   "type": "module",
   "main": "dist/index.js",
-  "bin": "dist/index.js",
   "files": [
-    "dist",
-    "agent-kit-template",
-    "readme.md"
+    "dist"
   ],
   "scripts": {
     "build": "npm run build:js && npm run build:types",
@@ -16,8 +13,6 @@
     "build:js": "vite build",
     "build:types": "tsup lib/index.ts --dts-only --format esm",
     "build:check-types": "tsc",
-    "test-definitions": "jay-cli definitions test",
-    "test-runtime": "jay-cli runtime test",
     "clean": "rimraf dist",
     "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
     "test": "vitest run",
@@ -25,29 +20,20 @@
   },
   "dependencies": {
     "@jay-framework/compiler-jay-html": "workspace:^",
+    "@jay-framework/compiler-jay-stack": "workspace:^",
     "@jay-framework/compiler-shared": "workspace:^",
-    "@jay-framework/dev-server": "workspace:^",
-    "@jay-framework/editor-server": "workspace:^",
     "@jay-framework/fullstack-component": "workspace:^",
     "@jay-framework/logger": "workspace:^",
-    "@jay-framework/plugin-validator": "workspace:^",
-    "@jay-framework/production-server": "workspace:^",
+    "@jay-framework/ssr-runtime": "workspace:^",
+    "@jay-framework/stack-route-scanner": "workspace:^",
     "@jay-framework/stack-server-runtime": "workspace:^",
-    "chalk": "^4.1.2",
-    "commander": "^14.0.0",
-    "express": "^5.0.1",
-    "get-port": "^7.0.0",
-    "glob": "^10.3.10",
-    "node-html-parser": "^6.1.12",
-    "vite": "^5.0.11",
-    "yaml": "^2.3.4"
+    "@jay-framework/view-state-merge": "workspace:^",
+    "esbuild": "^0.25.0",
+    "vite": "^5.0.11"
   },
   "devDependencies": {
     "@jay-framework/dev-environment": "workspace:^",
-    "@types/express": "^5.0.2",
     "@types/node": "^22.15.21",
-    "nodemon": "^3.0.3",
-    "replace-in-file": "^7.1.0",
     "rimraf": "^5.0.5",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3",

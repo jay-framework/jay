@@ -92,7 +92,12 @@ External system (CMS, database, etc.)
   │
   ├── Plugin webhook handler (makeWebhook) executes:
   │   1. Parses event, resolves itemId to slug
-  │   2. Calls invalidate('/products/[slug]', { slug: 'blue-widget' })
+  │   2. Calls invalidate('product-page', { slug: 'blue-widget' })
+  │      (plugin invalidates by its own contract name, not route)
+  │
+  ├── Framework resolves contract → routes:
+  │   Finds all routes using the 'product-page' contract
+  │   (could be /products/[slug], /shop/[id], etc.)
   │
   ├── Framework invalidation runs per-instance pipeline:
   │   1. Slow render (with fresh data from plugin service)
@@ -111,40 +116,41 @@ Plugins register webhooks using a builder pattern similar to `makeJayAction`:
 
 ```typescript
 // In plugin's actions or init file
-import { makeWebhook, type InvalidateRoute } from '@jay-framework/fullstack-component';
+import { makeWebhook, type InvalidateContract } from '@jay-framework/fullstack-component';
 
 export const onProductChange = makeWebhook('wix-stores.product-change',
-  async (req: HttpRequest, invalidate: InvalidateRoute): Promise<HttpResponse> => {
+  async (req: HttpRequest, invalidate: InvalidateContract): Promise<HttpResponse> => {
     const event = await req.json();
     const { type, itemId } = event;
     const slug = await resolveProductSlug(itemId);
 
-    // Re-render the specific product page
-    await invalidate('/products/[slug]', { slug });
+    // Re-render pages using 'product-page' contract with this specific slug
+    await invalidate('product-page', { slug });
 
-    // Re-render all search pages (any product change could affect search results)
-    await invalidate('/search/[query]');
+    // Re-render all pages using 'search-results' contract
+    // (any product change could affect search results)
+    await invalidate('search-results');
 
     return { status: 200, body: { ok: true } };
   }
 );
 ```
 
-The `invalidate` API is injected by the framework:
+The `invalidate` API is contract-based — plugins invalidate by their own contract name, not by route patterns. The framework resolves which routes use each contract.
 
 ```typescript
-type InvalidateRoute = (
-  routePattern: string,
+type InvalidateContract = (
+  contractName: string,
   params?: Record<string, string>,
 ) => Promise<void>;
 ```
 
-- `invalidate('/products/[slug]', { slug: 'blue-widget' })` — re-render one specific instance. If no instance exists for these params (new product), build a new instance for this route.
-- `invalidate('/search/[query]')` — re-render **all instances** of the route
+- `invalidate('product-page', { slug: 'blue-widget' })` — find all routes using the `product-page` contract, re-render the instance with matching params. If no instance exists (new product), build a new one.
+- `invalidate('search-results')` — find all routes using the `search-results` contract, re-render **all instances** of those routes.
 
-The paramless form is important for cases where a data change affects routes that can't easily map to specific params. For example, a search page at `/search/[query]` shows multiple products — when a product changes, the plugin doesn't know which search queries include it. Calling `invalidate('/search/[query]')` re-renders all search page instances.
+**Why contract-based, not route-based:** A plugin defines contracts, not routes. The plugin `wix-stores` knows it provides the `product-page` contract, but doesn't know (and shouldn't know) that the project mapped it to `/products/[slug]` or `/shop/[id]`. The framework knows the mapping because the route manifest tracks which contracts each route uses.
 
-**Future: reverse dependency map.** A more fine-grained approach would track which data items each instance depends on during slow render (e.g., instance `/search/[query=shoes]` consumed products A, B, C). On product A change, only instances that consumed product A are re-rendered. This is an optimization that can be added later without changing the `invalidate` API — it would refine the paramless `invalidate('/search/[query]')` to only rebuild affected instances instead of all.
+**Future: reverse dependency map.** A more fine-grained approach would track which data items each instance depends on during slow render (e.g., instance `/search?q=shoes` consumed products A, B, C). On product A change, only instances that consumed product A are re-rendered. This is an optimization that can be added later without changing the `invalidate` API — it would refine the paramless `invalidate('search-results')` to only rebuild affected instances instead of all.
 
 Webhooks are automatically exposed at `/_jay/webhooks/{webhookName}`:
 - `POST /_jay/webhooks/wix-stores.product-change` → calls `onProductChange`
@@ -158,20 +164,29 @@ The `invalidate` function provided to webhook handlers enqueues rebuild requests
 ```typescript
 function createInvalidator(
   queue: InvalidationQueue,
+  manifest: RouteManifest,
   webhookName: string,
-): InvalidateRoute {
-  return async (routePattern: string, params?: Record<string, string>) => {
-    await queue.enqueue({
-      routePattern,
-      params,
-      source: webhookName,
-      timestamp: Date.now(),
-    });
+): InvalidateContract {
+  return async (contractName: string, params?: Record<string, string>) => {
+    // Resolve contract → affected routes
+    const affectedRoutes = manifest.routes.filter(r =>
+      r.contracts?.includes(contractName)
+    );
+    for (const route of affectedRoutes) {
+      await queue.enqueue({
+        routePattern: route.pattern,
+        params,
+        source: webhookName,
+        timestamp: Date.now(),
+      });
+    }
   };
 }
 ```
 
-**Specific instance invalidation** (`invalidate('/products/[slug]', { slug: 'blue-widget' })`):
+The framework resolves `contractName` to routes using the `contracts` field in each `RouteEntry`. This field is populated during the build by scanning which contracts each page's jay-html references (headless component tags, keyed components).
+
+**Specific instance invalidation** (`invalidate('product-page', { slug: 'blue-widget' })`):
 
 ```typescript
 async function rebuildInstance(
@@ -196,7 +211,7 @@ async function rebuildInstance(
 }
 ```
 
-**Full route invalidation** (`invalidate('/products/[slug]')`):
+**Full contract invalidation** (`invalidate('search-results')` — no params):
 
 ```typescript
 async function rebuildRoute(
@@ -319,6 +334,7 @@ This is safe because each instance is rebuilt independently. A failed rebuild of
 Webhook handlers don't rebuild directly — they enqueue invalidation requests. A worker pool drains the queue with bounded concurrency:
 
 ```typescript
+// Queue operates on routes (contract → route resolution happens in createInvalidator)
 interface InvalidationRequest {
   routePattern: string;
   params?: Record<string, string>;         // undefined = all instances
@@ -536,7 +552,7 @@ Not required — the main server's timestamp-based caching detects file changes 
 | Optimistic skip (compare output) | Avoids unnecessary compilation when data changes don't affect template structure | Extra comparison step; must read existing file |
 | Bounded concurrency for builds | Predictable resource usage; doesn't overwhelm external APIs or CPU | Slower than unbounded parallelism for small builds |
 | `makeWebhook` pattern (like actions) | Consistent with existing patterns; webhook logic in code not config; plugins own their data model | Each plugin must implement webhook handler; no default behavior |
-| `invalidate` API injected into handlers | Clean separation — plugin resolves what changed, framework handles rebuild | Plugin must know route patterns to invalidate |
+| Contract-based `invalidate` API | Plugin only knows its own contracts; framework resolves to routes; project can remap routes freely | Route manifest must track which contracts each route uses |
 | Atomic manifest updates | Main server never reads a partial manifest | Extra write (temp file + rename) |
 | Source hash for startup validation | Fast rebuild skip when code unchanged; reliable staleness detection | Hash computation adds startup time; must include all relevant source files |
 
