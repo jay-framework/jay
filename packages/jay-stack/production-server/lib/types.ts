@@ -69,6 +69,7 @@ export interface BuildOptions {
     publicBasePath: string;
     concurrency: number;
     tsConfigFilePath: string;
+    minify?: boolean;
 }
 
 export interface ServerElementModule {

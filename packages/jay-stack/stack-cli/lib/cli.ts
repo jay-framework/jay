@@ -68,6 +68,7 @@ program
     .command('build [path]')
     .description('Build production artifacts')
     .option('--version <n>', 'Build version number', '1')
+    .option('--no-minify', 'Disable minification (useful for debugging)')
     .option('-v, --verbose', 'Enable verbose logging output')
     .action(async (projectPath, options) => {
         try {
@@ -94,6 +95,7 @@ program
                 publicBasePath: '/',
                 concurrency: 4,
                 tsConfigFilePath: path.join(resolvedPath, 'tsconfig.json'),
+                minify: options.minify,
             });
         } catch (error: any) {
             getLogger().error(chalk.red('Build failed:') + ' ' + error.message);

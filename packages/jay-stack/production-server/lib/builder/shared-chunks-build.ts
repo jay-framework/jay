@@ -23,6 +23,7 @@ const SHARED_PACKAGES = [
 export async function buildSharedChunks(
     outputDir: string,
     _projectRoot: string,
+    minify: boolean = true,
 ): Promise<SharedChunksBuildResult> {
     const logger = getLogger();
     logger.info('[Build] Building shared client chunks...');
@@ -44,7 +45,7 @@ export async function buildSharedChunks(
         build: {
             outDir: outputDir,
             emptyOutDir: true,
-            minify: false,
+            minify,
             manifest: 'vite-manifest.json',
             rollupOptions: {
                 input: entries,

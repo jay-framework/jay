@@ -30,6 +30,7 @@ export interface InstanceBuildContext {
     buildDir: string;
     jayOptions: JayRollupConfig;
     tsConfigFilePath?: string;
+    minify?: boolean;
 }
 
 export interface InstanceBuildResult {
@@ -200,6 +201,7 @@ export async function buildInstance(
         instanceDir,
         ctx.projectRoot,
         ctx.jayOptions,
+        ctx.minify ?? true,
     );
 
     await fs.rm(hydrateEntryPath, { force: true });

@@ -39,6 +39,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
     const { manifest: sharedManifest } = await buildSharedChunks(
         sharedOutputDir,
         options.projectRoot,
+        options.minify ?? true,
     );
 
     // 0d. Discover actions for manifest
@@ -67,6 +68,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         buildDir,
         jayOptions: { tsConfigFilePath: options.tsConfigFilePath },
         tsConfigFilePath: options.tsConfigFilePath,
+        minify: options.minify ?? true,
     };
 
     const routeEntries = routes

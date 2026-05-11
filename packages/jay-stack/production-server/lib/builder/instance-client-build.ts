@@ -15,6 +15,7 @@ export async function buildInstanceClient(
     outputDir: string,
     projectRoot: string,
     jayOptions: JayRollupConfig,
+    minify: boolean = true,
 ): Promise<InstanceClientBuildResult> {
     const logger = getLogger();
 
@@ -26,7 +27,7 @@ export async function buildInstanceClient(
         build: {
             outDir: outputDir,
             emptyOutDir: false,
-            minify: false,
+            minify,
             manifest: `${instanceId}-manifest.json`,
             rollupOptions: {
                 input: { [instanceId]: hydrateEntryPath },
