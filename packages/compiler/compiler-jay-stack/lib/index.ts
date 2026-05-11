@@ -116,8 +116,11 @@ export function jayStackCompiler(options: JayStackCompilerOptions = {}): Plugin[
             enforce: 'pre', // Run before jay:runtime
 
             transform(code: string, id: string, options) {
-                // Only transform TypeScript files
+                // Only transform TypeScript files (skip jay-html compiled targets)
                 if (!id.endsWith('.ts') && !id.includes('.ts?')) {
+                    return null;
+                }
+                if (id.includes('.jay-html')) {
                     return null;
                 }
 
@@ -281,6 +284,21 @@ export function jayStackCompiler(options: JayStackCompilerOptions = {}): Plugin[
                     const result = lines.join('\n');
                     return result;
                 },
+
+                // Strip inline makeJayAction/makeJayQuery/makeJayStream statements
+                // from component files in client builds. These are server-only
+                // constructs that shouldn't appear in client bundles.
+                transform(code: string, id: string, options?: { ssr?: boolean }) {
+                    if (options?.ssr || isSSRBuild) return null;
+                    if (!id.endsWith('.ts') && !id.includes('.ts?')) return null;
+                    if (id.includes('.jay-html')) return null;
+                    if (isActionImport(id)) return null;
+
+                    const ACTION_BUILDERS = ['makeJayAction', 'makeJayQuery', 'makeJayStream'];
+                    if (!ACTION_BUILDERS.some((b) => code.includes(b))) return null;
+
+                    return stripInlineActionBuilders(code, ACTION_BUILDERS);
+                },
             } as Plugin;
         })(),
 
@@ -289,4 +307,15 @@ export function jayStackCompiler(options: JayStackCompilerOptions = {}): Plugin[
     );
 
     return plugins;
+}
+
+/**
+ * Strip inline action builder statements from code in client builds.
+ * Uses the same AST-based transform as code-split but focused on action builders.
+ */
+function stripInlineActionBuilders(
+    code: string,
+    builderNames: string[],
+): { code: string } | null {
+    return transformJayStackBuilder(code, 'action-strip.ts', 'client', new Set(builderNames));
 }

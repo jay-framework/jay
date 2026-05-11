@@ -24,6 +24,7 @@ export async function generateHydrationEntry(
     const hydrateImport = `${jayHtmlPath}?jay-hydrate`;
 
     const code = `import { hydrateCompositeJayComponent } from '@jay-framework/stack-client-runtime';
+import { deepMergeViewStates } from '@jay-framework/view-state-merge';
 import { hydrate } from '${hydrateImport}';
 import { page as pagePart } from '${pageModulePath}';
 
@@ -31,13 +32,14 @@ const slowViewState = ${JSON.stringify(slowViewState)};
 const trackByMap = ${JSON.stringify(trackByMap)};
 
 export function init(fastViewState, fastCarryForward) {
+    const viewState = deepMergeViewStates(slowViewState, fastViewState, trackByMap);
     const target = document.getElementById('target');
     const rootElement = target.firstElementChild;
     const parts = pagePart && pagePart.comp
         ? [{ comp: pagePart.comp, contexts: pagePart.contexts || [] }]
         : [];
     const pageComp = hydrateCompositeJayComponent(
-        hydrate, slowViewState, fastViewState, fastCarryForward,
+        hydrate, viewState, fastCarryForward,
         parts, trackByMap, rootElement
     );
     return pageComp({});

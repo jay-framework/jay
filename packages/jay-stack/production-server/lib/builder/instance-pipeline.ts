@@ -133,13 +133,13 @@ export async function buildInstance(
 
     const preRenderedJayHtml = transformResult.val.preRenderedJayHtml;
 
-    // Embed cache metadata in pre-rendered file (same format as dev server)
-    const metadata = JSON.stringify({ slowViewState, carryForward, sourcePath: route.jayHtmlPath });
-    const cacheTag = `<script type="application/jay-cache">${metadata}</script>`;
-    const preRenderedWithMeta = embedCacheTag(preRenderedJayHtml, cacheTag);
-
+    // Write clean pre-rendered file for compilation (Vite and esbuild read this)
     const preRenderedPath = path.join(instanceDir, `${instanceId}.jay-html`);
-    await fs.writeFile(preRenderedPath, preRenderedWithMeta, 'utf-8');
+    await fs.writeFile(preRenderedPath, preRenderedJayHtml, 'utf-8');
+
+    // Write cache metadata file for the main server (slow ViewState + carryForward)
+    const cacheMetadataPath = path.join(instanceDir, `${instanceId}.cache.json`);
+    await fs.writeFile(cacheMetadataPath, JSON.stringify({ slowViewState, carryForward, sourcePath: route.jayHtmlPath }), 'utf-8');
 
     logger.info(`[Build] Pre-rendered: ${routeDir}/${instanceId}`);
 
