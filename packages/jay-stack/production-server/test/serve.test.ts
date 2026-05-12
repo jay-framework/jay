@@ -85,7 +85,49 @@ describe('page responses', () => {
         const res = await fetch('/');
         expect(res.body).toMatch(/\.css/);
     });
+});
 
+describe('head tags (SEO)', () => {
+    it('injects title tag from fast render', async () => {
+        const res = await fetch('/');
+        expect(res.body).toMatch(/<title>Test Shop - Home<\/title>/);
+    });
+
+    it('injects meta description', async () => {
+        const res = await fetch('/');
+        expect(res.body).toMatch(/name="description" content="A test shop for production build testing"/);
+    });
+
+    it('injects og:title meta', async () => {
+        const res = await fetch('/');
+        expect(res.body).toMatch(/property="og:title" content="Test Shop"/);
+    });
+
+    it('injects canonical link', async () => {
+        const res = await fetch('/');
+        expect(res.body).toMatch(/rel="canonical" href="https:\/\/test-shop\.example\.com\/"/);
+    });
+
+    it('injects per-page title from slow render', async () => {
+        const res = await fetch('/items/widget-a');
+        expect(res.body).toMatch(/<title>Widget A<\/title>/);
+    });
+
+    it('injects per-page meta description', async () => {
+        const res = await fetch('/items/widget-a');
+        expect(res.body).toMatch(/content="Buy Widget A for \$9\.99"/);
+    });
+
+    it('head tags appear in <head> not <body>', async () => {
+        const res = await fetch('/');
+        const headEnd = res.body.indexOf('</head>');
+        const titlePos = res.body.indexOf('<title>Test Shop');
+        expect(titlePos).toBeGreaterThan(0);
+        expect(titlePos).toBeLessThan(headEnd);
+    });
+});
+
+describe('dynamic param pages', () => {
     it('serves dynamic param page', async () => {
         const res = await fetch('/items/widget-a');
         expect(res.status).toBe(200);

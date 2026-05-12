@@ -3,7 +3,7 @@ import path from 'node:path';
 import type { RouteManifest } from '../types';
 import type { MatchResult } from './route-matcher';
 import type { FilesystemArtifactStore } from './artifact-store';
-import { renderFastChangingData } from '@jay-framework/stack-server-runtime';
+import { renderFastChangingData, mergeHeadTags, serializeHeadTags } from '@jay-framework/stack-server-runtime';
 import type { DevServerPagePart, HeadlessInstanceComponent } from '@jay-framework/stack-server-runtime';
 import { deepMergeViewStates } from '@jay-framework/view-state-merge';
 import { asyncSwapScript } from '@jay-framework/ssr-runtime';
@@ -93,6 +93,16 @@ export async function handlePageRequest(
     const fastViewState = (fastResult as any).rendered || {};
     const fastCarryForward = (fastResult as any).carryForward || {};
 
+    // Collect head tags from slow (carryForward) and fast phases (DL#127)
+    const headTagSources: any[][] = [];
+    const slowHeadTags = (preRendered.carryForward as any).__slowHeadTags;
+    if (slowHeadTags) headTagSources.push(...slowHeadTags);
+    const fastHeadTags = (fastResult as any).headTags;
+    if (fastHeadTags) headTagSources.push(fastHeadTags);
+    const headTags = headTagSources.length > 0 ? mergeHeadTags(headTagSources) : [];
+    const headTagsHtml = headTags.length > 0 ? serializeHeadTags(headTags) + '\n' : '';
+    const hasCustomTitle = headTags.some((t: any) => t.tag.toLowerCase() === 'title');
+
     const fullViewState = deepMergeViewStates(
         preRendered.slowViewState,
         fastViewState,
@@ -117,7 +127,7 @@ export async function handlePageRequest(
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-${cssLink}    <script type="importmap">${JSON.stringify({ imports: importMap })}</script>
+${headTagsHtml}${cssLink}    <script type="importmap">${JSON.stringify({ imports: importMap })}</script>
   </head>
   <body>
     <div id="target">`);
