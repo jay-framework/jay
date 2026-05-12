@@ -1,0 +1,15 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    name: string
+    price: number
+    </script>
+</head>
+<body>
+    <div>
+        <h1>{name}</h1>
+        <span>{price}</span>
+    </div>
+</body>
+</html>

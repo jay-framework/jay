@@ -486,3 +486,22 @@ The main server is a plain Node.js HTTP server. It loads pre-compiled JS modules
 8. **Source hash** — `build-metadata.json` source hash not computed yet (needed for restart validation)
 9. **Query parameters** — `props.query` not passed through to fast render properly
 10. **Error pages** — custom 404/500 pages not implemented
+
+### Test Infrastructure
+
+**28 tests** across 2 suites in `production-server/test/`, using a minimal fixture project at `test/fixtures/basic-project/` (static page with slow+fast render, dynamic params with 2 slugs, one action, init).
+
+**Build tests** (`build.test.ts`, 15 tests):
+- Route manifest structure — correct routes, instances, actions, shared manifest
+- Server code compilation — init.js, page.js, cart.actions.js exist
+- Shared client chunks — all framework packages in shared-manifest.json
+- Per-instance artifacts — pre-rendered jay-html, server element (loadable, produces HTML), client bundle, CSS, cache metadata with correct slow ViewState per slug
+
+**Serve tests** (`serve.test.ts`, 13 tests):
+- SSR responses — correct content, import map, hydration script, CSS link
+- Dynamic params — per-slug content, 404 for unknown slugs
+- Static assets — shared chunks and instance bundles serve with correct MIME types and cache headers
+- Actions — JSON response from POST, 404 for unknown actions
+- Route matching — 404 for unknown routes
+
+Both suites use separate build directories (`build/` and `build-serve/`) to avoid conflicts when running in parallel.
