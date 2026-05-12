@@ -22,6 +22,21 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
     const manifest = await artifacts.readManifest();
     logger.important(`[Server] Loaded manifest: ${manifest.routes.length} routes, v${manifest.version}`);
 
+    // Run plugin inits (register plugin services before project init and actions)
+    for (const plugin of manifest.plugins) {
+        try {
+            const pluginModule = await import(plugin.packageName);
+            const init = pluginModule.init || pluginModule.default?.init;
+            if (init?._serverInit) {
+                logger.info(`[Server] Running plugin init: ${plugin.name}`);
+                await init._serverInit();
+            }
+        } catch {
+            // Plugin may not have init
+        }
+    }
+
+    // Run project init
     const initModule = await artifacts.loadPageModule('server/init.js').catch(() => null);
     if (initModule) {
         const init = initModule.init || initModule.default;
@@ -31,6 +46,7 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
         }
     }
 
+    // Register actions (project + plugin)
     if (manifest.actions.length > 0) {
         await registerActionsFromManifest(manifest.actions, buildDir);
     }
