@@ -22,6 +22,7 @@ export interface RouteEntry {
     jayHtmlPath?: string;
     trackByMap?: Record<string, string>;
     contracts?: string[];
+    componentExport?: string;
     instances: InstanceEntry[];
     isPlugin?: boolean;
     pluginName?: string;
