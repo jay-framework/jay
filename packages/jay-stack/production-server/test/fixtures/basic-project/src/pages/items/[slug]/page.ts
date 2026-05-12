@@ -1,6 +1,6 @@
 import {
     makeJayStackComponent,
-    partialRender,
+    phaseOutput,
     type PageProps,
     type UrlParams,
 } from '@jay-framework/fullstack-component';
@@ -21,6 +21,11 @@ export const page = makeJayStackComponent()
     })
     .withSlowlyRender(async (props: PageProps & ItemParams) => {
         const item = items[props.slug];
-        if (!item) return partialRender({}, {});
-        return partialRender({ name: item.name, price: item.price }, {});
+        if (!item) return phaseOutput({}, {});
+        const result = phaseOutput({ name: item.name, price: item.price }, {});
+        result.headTags = [
+            { tag: 'title', children: item.name },
+            { tag: 'meta', attrs: { name: 'description', content: `Buy ${item.name} for $${item.price}` } },
+        ];
+        return result;
     });
