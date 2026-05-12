@@ -26,7 +26,7 @@ async function getPageParts(
 
     if (!route.jayHtmlPath) {
         return { parts: [{ compDefinition: pageModule.page ?? pageModule.default, clientImport: '', clientPart: '' }],
-            headlessContracts: [], headlessInstanceComponents: [], discoveredInstances: [], forEachInstances: [] };
+            headlessContracts: [], headlessInstanceComponents: [], discoveredInstances: [], forEachInstances: [], keyedPartModules: [] };
     }
 
     const jayHtmlContent = await artifacts.readRawFile(preRenderedPath);

@@ -610,8 +610,18 @@ await viteBuild({
 
 `jay-stack:action-transform` plugin extended with a `transform` hook that strips inline action builder statements (`makeJayQuery`, `makeJayAction`, `makeJayStream`) from component files in client builds. Uses `transformJayStackBuilder` with a `stripBuilders` parameter that removes entire statements rooted in action builders before the normal method-stripping transform runs.
 
-### Remaining Gaps
+### slowForEach Instance Handling
 
-1. **slowForEach headless instances** — forEach-discovered headless instances not included in `__headlessInstances` data during production fast render
-2. **Build folder conflict** — dev server and production server both use `build/` directory; need separate folders or move dev to `build/dev/`
-3. **Minification** — disabled for debugging; re-enable once hydration is stable
+After Pass 1 (`slowRenderTransform`), `slowForEach` templates are unrolled into static `<jay:xxx>` instances with coordinate-based keys (e.g., `S3/0/0/product-widget:AR0`). Pass 2 discovers these static instances via `discoverHeadlessInstances` and runs `slowRenderInstances` on ALL of them — including the ones from unrolled forEach. Results are merged into `carryForward.__instances`.
+
+**Key insight:** Do NOT use the original source jay-html for forEach discovery at serve time. The pre-rendered jay-html has static instances with correct coordinate keys that match what the hydrate code expects. Using the original source would find forEach patterns and generate `trackBy,suffix` keys that don't match.
+
+### Keyed Headless Parts in Hydration Entry
+
+`loadProductionPageParts` tracks `keyedPartModules` for keyed headless components (e.g., mood tracker with `key="mt"`). These are passed to `generateHydrationEntry` which includes them as additional composite parts with `key` and `contextMarkers`. Module paths: NPM packages use `/client` entry, local plugins use absolute source path.
+
+### Resolved Gaps
+
+1. ~~slowForEach~~ — Fixed via Pass 2 `slowRenderInstances` for all discovered instances
+2. ~~Build folder conflict~~ — Dev server moved to `build/dev/`, production uses `build/v{n}/`
+3. ~~Minification~~ — `--no-minify` CLI flag, default enabled
