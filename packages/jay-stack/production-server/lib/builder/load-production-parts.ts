@@ -1,6 +1,7 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
+import { getLogger } from '@jay-framework/logger';
 import {
     parseJayFile,
     JAY_IMPORT_RESOLVER,
@@ -21,12 +22,19 @@ import type { JayRoute } from '@jay-framework/stack-route-scanner';
 
 const require = createRequire(import.meta.url);
 
+export interface KeyedPartModule {
+    key: string;
+    modulePath: string;
+    exportName: string;
+}
+
 export interface ProductionPageParts {
     parts: DevServerPagePart[];
     headlessContracts: HeadlessContractInfo[];
     headlessInstanceComponents: HeadlessInstanceComponent[];
     discoveredInstances: DiscoveredHeadlessInstance[];
     forEachInstances: ForEachHeadlessInstance[];
+    keyedPartModules: KeyedPartModule[];
     serverTrackByMap?: Record<string, string>;
     clientTrackByMap?: Record<string, string>;
 }
@@ -60,8 +68,12 @@ export async function loadProductionPageParts(
     const jayHtml = checkValidationErrors(jayHtmlWithValidations);
 
     const headlessInstanceComponents: HeadlessInstanceComponent[] = [];
+    const keyedPartModules: KeyedPartModule[] = [];
 
-    for (const headlessImport of (jayHtml as any).headlessImports ?? []) {
+    const headlessImports = (jayHtml as any).headlessImports ?? [];
+    getLogger().info(`[Build] headlessImports for ${fileName}: ${headlessImports.length}, keys: ${Object.keys(jayHtml as any).join(',')}`);
+
+    for (const headlessImport of headlessImports) {
         const module = headlessImport.codeLink.module;
         const name = headlessImport.codeLink.names[0].name;
         const isLocalModule = module[0] === '.' || module[0] === '/';
@@ -85,6 +97,10 @@ export async function loadProductionPageParts(
         const headlessCompDef = headlessModule[name];
 
         if (headlessImport.key) {
+            // For client import: NPM packages use /client entry, local uses absolute source path
+            const clientModulePath = isLocalModule
+                ? path.resolve(dirName, module)
+                : `${module}/client`;
             parts.push({
                 key: headlessImport.key,
                 compDefinition: headlessCompDef,
@@ -93,6 +109,11 @@ export async function loadProductionPageParts(
                 contractInfo: headlessImport.contract
                     ? { contractName: headlessImport.contract.name, metadata: headlessImport.metadata }
                     : undefined,
+            });
+            keyedPartModules.push({
+                key: headlessImport.key,
+                modulePath: clientModulePath,
+                exportName: name,
             });
         }
 
@@ -134,6 +155,7 @@ export async function loadProductionPageParts(
         headlessInstanceComponents,
         discoveredInstances,
         forEachInstances,
+        keyedPartModules,
         serverTrackByMap: (jayHtml as any).serverTrackByMap,
         clientTrackByMap: (jayHtml as any).clientTrackByMap,
     };

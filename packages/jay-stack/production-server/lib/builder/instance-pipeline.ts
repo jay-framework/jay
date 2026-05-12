@@ -212,12 +212,17 @@ export async function buildInstance(
         route.compPath || route.jayHtmlPath.replace('.jay-html', '.ts'),
     );
 
+    if (pageParts.keyedPartModules.length > 0) {
+        logger.info(`[Build] Keyed parts for ${routeDir}: ${pageParts.keyedPartModules.map(p => p.key).join(', ')}`);
+    }
+
     await generateHydrationEntry({
         jayHtmlPath: './' + relativeJayHtmlPath,
         pageModulePath: './' + relativePageModule,
         slowViewState,
         trackByMap: pageParts.clientTrackByMap || {},
         outputPath: hydrateEntryPath,
+        keyedParts: pageParts.keyedPartModules,
     });
 
     // 5. Per-instance Vite build

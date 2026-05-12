@@ -460,6 +460,8 @@ The main server is a plain Node.js HTTP server. It loads pre-compiled JS modules
 - **Actions** — action router handles GET/POST, streaming NDJSON, correct error codes
 - **Hydration** — client adopts server-rendered DOM, interactive elements work (buttons, etc.)
 - **Headless components** — slow render Pass 2 resolves instance bindings, `__headlessInstances` populated for client
+- **slowForEach instances** — unrolled forEach instances slow-rendered in Pass 2, coordinate keys match hydrate expectations
+- **Keyed headless parts** — keyed components (e.g., mood tracker `key="mt"`) included in hydration entry `parts` array with interactive constructors
 - **Shared chunks** — deduplicated via wrapper entries + `resolve.dedupe`, singleton context preserved
 - **Action stripping** — `makeJayQuery`/`makeJayAction`/`makeJayStream` stripped from client bundles
 
@@ -467,11 +469,13 @@ The main server is a plain Node.js HTTP server. It loads pre-compiled JS modules
 
 #### Must Fix
 
-1. ~~**slowForEach headless instances**~~ — Done. Fix: `loadProductionPageParts` now reads the ORIGINAL source jay-html for forEach discovery (not the pre-rendered content where forEach templates are already unrolled into static instances).
+1. ~~**slowForEach headless instances**~~ — Done. The build pipeline's Pass 2 now runs `slowRenderInstances` on ALL instances discovered from the post-Pass-1 jay-html (including unrolled slowForEach static instances), and merges their data into `carryForward.__instances`. The key insight: slowForEach templates are unrolled by Pass 1 into static `<jay:xxx>` instances with coordinate keys like `S3/0/0/product-widget:AR0` — these must be slow-rendered in Pass 2, not treated as forEach instances.
 
 2. ~~**Build folder conflict**~~ — Done. Dev server default changed from `build/` to `build/dev/`. Production uses `build/v{n}/`. Both can run without conflict.
 
 3. ~~**Minification flag**~~ — Done. `jay-stack build --no-minify` disables minification for shared chunks and instance bundles. Default: minified. Flag flows through `BuildOptions.minify` → `InstanceBuildContext.minify` → `buildSharedChunks`/`buildInstanceClient`.
+
+4. ~~**Keyed headless parts in hydration**~~ — Done. Hydration entry now includes keyed headless components (e.g., mood tracker `key="mt"`) as additional parts in the `parts` array. `loadProductionPageParts` tracks `keyedPartModules` (module path + export name + key) and passes them to `generateHydrationEntry`. NPM packages use `/client` entry path; local plugins use absolute source path (Vite resolves it during the instance build).
 
 #### Future Phases
 
