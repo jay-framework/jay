@@ -48,11 +48,11 @@ export async function loadProductionPageParts(
     serverBuildDir?: string,
 ): Promise<ProductionPageParts> {
     const exportName = (route as any).componentExport || 'page';
-    const compDefinition: AnyJayStackComponentDefinition = pageModule[exportName] ?? pageModule.default;
+    const compDefinition: AnyJayStackComponentDefinition | undefined = pageModule[exportName] ?? pageModule.default;
 
-    const parts: DevServerPagePart[] = [
-        { compDefinition, clientImport: '', clientPart: '' },
-    ];
+    const parts: DevServerPagePart[] = compDefinition
+        ? [{ compDefinition, clientImport: '', clientPart: '' }]
+        : [];
 
     const dirName = path.dirname(route.jayHtmlPath);
     const fileName = path.basename(route.jayHtmlPath);

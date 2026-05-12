@@ -2,6 +2,7 @@ import type { BuildOptions, BuildMetadata, RouteManifest } from '../types';
 import { discoverServerEntries, buildServerCode } from './server-code-build';
 import { buildSharedChunks } from './shared-chunks-build';
 import { buildInstance, type InstanceBuildContext } from './instance-pipeline';
+import { loadProductionPageParts } from './load-production-parts';
 import { buildRouteEntry, discoverActions, writeRouteManifest } from './route-manifest';
 import { scanPluginRoutes } from './plugin-routes';
 import { runLoadParams, type DevServerPagePart } from '@jay-framework/stack-server-runtime';
@@ -47,6 +48,28 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
     const { actions, plugins } = await discoverActions(entries.actions, serverOutputDir, buildDir, options.projectRoot);
 
     // 0e. Initialize services (needed for slow render)
+    // Run plugin inits in dependency order (plugins register services used by other plugins and pages)
+    const { discoverPluginsWithInit, sortPluginsByDependencies } = await import('@jay-framework/stack-server-runtime');
+    try {
+        const pluginsWithInit = sortPluginsByDependencies(
+            await discoverPluginsWithInit({ projectRoot: options.projectRoot }),
+        );
+        for (const pluginInit of pluginsWithInit) {
+            try {
+                const pluginModule = await import(pluginInit.packageName);
+                const init = pluginModule.init || pluginModule[pluginInit.initExport || 'init'];
+                if (init?._serverInit) {
+                    logger.info(`[Build] Running plugin init: ${pluginInit.name}`);
+                    await init._serverInit();
+                }
+            } catch (err: any) {
+                logger.warn(`[Build] Plugin init failed: ${pluginInit.name}: ${err.message}`);
+            }
+        }
+    } catch {
+        // No plugins with init
+    }
+    // Then run project init
     if (entries.init) {
         const initModulePath = path.join(serverOutputDir, 'init.js');
         try {
@@ -77,71 +100,97 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
 
     const allRoutes = [...routes, ...pluginRoutes];
 
-    const routeEntries = allRoutes
-        .filter((r) => r.compPath)
-        .map((route) => {
-            let serverModule: string;
+    const routeEntries = allRoutes.map((route) => {
+        let serverModule: string = '';
+        if (route.compPath) {
             if (route.componentExport) {
-                // NPM plugin route — component loaded from plugin package at runtime
-                serverModule = route.compPath!;
+                serverModule = route.compPath;
             } else {
-                const relativePath = path.relative(options.projectRoot, route.compPath!);
+                const relativePath = path.relative(options.projectRoot, route.compPath);
                 serverModule = relativePath
                     .replace(/^src\//, 'server/')
                     .replace(/\.ts$/, '.js')
                     .replace(/\[/g, '_')
                     .replace(/\]/g, '_');
             }
-            const entry = buildRouteEntry(route, serverModule);
-            if (route.componentExport) {
-                entry.isPlugin = true;
-            }
-            return { route, entry };
-        });
+        }
+        const entry = buildRouteEntry(route, serverModule);
+        if (route.componentExport) {
+            entry.isPlugin = true;
+        }
+        return { route, entry };
+    });
 
     let instanceCount = 0;
 
     for (const { route, entry } of routeEntries) {
-        let pageModule: any;
-        try {
-            if (entry.isPlugin) {
-                // NPM plugin route — load from plugin package
-                pageModule = await import(entry.serverModule);
-            } else {
-                const pageModulePath = path.join(serverOutputDir, entry.serverModule.replace('server/', ''));
-                pageModule = await import(pageModulePath);
+        let pageModule: any = {};
+        if (entry.serverModule) {
+            try {
+                if (entry.isPlugin) {
+                    pageModule = await import(entry.serverModule);
+                } else {
+                    const pageModulePath = path.join(serverOutputDir, entry.serverModule.replace('server/', ''));
+                    pageModule = await import(pageModulePath);
+                }
+            } catch (err) {
+                logger.error(`[Build] Failed to load page module ${entry.serverModule}: ${err}`);
+                continue;
             }
-        } catch (err) {
-            logger.error(`[Build] Failed to load page module ${entry.serverModule}: ${err}`);
+        }
+
+        const compDefinition = pageModule.page ?? pageModule.default ?? undefined;
+        const hasDynamicParams = route.segments.some((s) => typeof s !== 'string');
+
+        // Static override routes (e.g., /products/ceramic-flower-vase) have inferred params
+        const inferredParams = (route as any).inferredParams;
+        if (inferredParams) {
+            try {
+                const result = await buildInstance(route, inferredParams, pageModule, instanceCtx);
+                entry.instances.push(result.instanceEntry);
+                instanceCount++;
+            } catch (err: any) {
+                logger.error(`[Build] Failed to build ${route.rawRoute}: ${err.message}`);
+            }
             continue;
         }
 
-        const compDefinition = pageModule.page ?? pageModule.default;
-        const hasDynamicParams = route.segments.some((s) => typeof s !== 'string');
+        if (hasDynamicParams) {
+            // Check page component and keyed headless parts for loadParams
+            const pageParts = await loadProductionPageParts(
+                route, pageModule, await fs.readFile(route.jayHtmlPath, 'utf-8'),
+                options.projectRoot, options.tsConfigFilePath,
+                path.join(buildDir, 'server'),
+            );
+            const partsWithLoadParams = pageParts.parts.filter(p => p.compDefinition?.loadParams);
 
-        if (hasDynamicParams && compDefinition?.loadParams) {
-            const parts: DevServerPagePart[] = [
-                { compDefinition, clientImport: '', clientPart: '' },
-            ];
-            const allParams: Record<string, string>[] = [];
-            for await (const batch of runLoadParams(parts)) {
-                allParams.push(...batch);
-            }
-            logger.info(`[Build] Route ${route.rawRoute}: ${allParams.length} param combinations`);
-
-            for (const params of allParams) {
-                try {
-                    const result = await buildInstance(route, params, pageModule, instanceCtx);
-                    entry.instances.push(result.instanceEntry);
-                    instanceCount++;
-                } catch (err: any) {
-                    logger.error(`[Build] Failed to build ${route.rawRoute} with params ${JSON.stringify(params)}: ${err.message}`);
+            if (partsWithLoadParams.length > 0) {
+                const allParams: Record<string, string>[] = [];
+                for await (const batch of runLoadParams(partsWithLoadParams)) {
+                    allParams.push(...batch);
                 }
+                logger.info(`[Build] Route ${route.rawRoute}: ${allParams.length} param combinations`);
+
+                for (const params of allParams) {
+                    try {
+                        const result = await buildInstance(route, params, pageModule, instanceCtx);
+                        entry.instances.push(result.instanceEntry);
+                        instanceCount++;
+                    } catch (err: any) {
+                        logger.error(`[Build] Failed to build ${route.rawRoute} with params ${JSON.stringify(params)}: ${err.message}`);
+                    }
+                }
+            } else {
+                logger.info(`[Build] Skipping dynamic route ${route.rawRoute} — no loadParams available`);
             }
         } else {
-            const result = await buildInstance(route, {}, pageModule, instanceCtx);
-            entry.instances.push(result.instanceEntry);
-            instanceCount++;
+            try {
+                const result = await buildInstance(route, {}, pageModule, instanceCtx);
+                entry.instances.push(result.instanceEntry);
+                instanceCount++;
+            } catch (err: any) {
+                logger.error(`[Build] Failed to build ${route.rawRoute}: ${err.message}`);
+            }
         }
     }
 

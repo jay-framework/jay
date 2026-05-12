@@ -28,7 +28,7 @@
     "@jay-framework/stack-route-scanner": "workspace:^",
     "@jay-framework/stack-server-runtime": "workspace:^",
     "@jay-framework/view-state-merge": "workspace:^",
-    "esbuild": "^0.25.0",
+    "@jay-framework/vite-plugin": "workspace:^",
     "vite": "^5.0.11"
   },
   "devDependencies": {

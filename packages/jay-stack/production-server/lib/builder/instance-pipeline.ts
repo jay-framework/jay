@@ -228,9 +228,12 @@ export async function buildInstance(
         const pkgName = resolvePackageNameForRoute(route.compPath!);
         pageModulePath = pkgName ? `${pkgName}/client` : './' + path.relative(instanceDir, route.compPath!);
         pageExportName = route.componentExport;
-    } else {
-        pageModulePath = './' + path.relative(instanceDir, route.compPath || route.jayHtmlPath.replace('.jay-html', '.ts'));
+    } else if (route.compPath) {
+        pageModulePath = './' + path.relative(instanceDir, route.compPath);
         pageExportName = 'page';
+    } else {
+        pageModulePath = '';
+        pageExportName = '';
     }
 
     if (pageParts.keyedPartModules.length > 0) {

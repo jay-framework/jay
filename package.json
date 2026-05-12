@@ -19,6 +19,8 @@
     "format:prettier": "prettier . --write",
     "format:newlines": "node ./scripts/fix-trailing-newlines.js",
     "rebuild": "yarn run clean && yarn run build",
+    "sync:wix": "node scripts/sync-to-wix.cjs",
+    "sync:golf": "node scripts/sync-to-golf.cjs",
     "reinstall": "npm run clean:node_modules && yarn install && yarn run rebuild",
     "test": "wsrun -te --report test",
     "version:packages:patch": "wsrun -p '@jay-framework/*' -s -e --report --prefix version patch --deferred && yarn version apply --all",

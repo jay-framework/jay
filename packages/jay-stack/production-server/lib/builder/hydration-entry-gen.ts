@@ -37,17 +37,25 @@ export async function generateHydrationEntry(
         (p, i) => `import { ${p.exportName} as keyedPart${i} } from '${p.modulePath}';`,
     ).join('\n');
 
+    const hasPageModule = pageModulePath && pageExportName;
+    const pagePartExpr = hasPageModule
+        ? `pagePart && pagePart.comp ? { comp: pagePart.comp, contextMarkers: pagePart.contexts || [] } : null`
+        : `null`;
     const partsArray = [
-        `pagePart && pagePart.comp ? { comp: pagePart.comp, contextMarkers: pagePart.contexts || [] } : null`,
+        pagePartExpr,
         ...keyedParts.map(
             (p, i) => `keyedPart${i} && keyedPart${i}.comp ? { comp: keyedPart${i}.comp, contextMarkers: keyedPart${i}.contexts || [], key: '${p.key}' } : null`,
         ),
     ];
 
+    const pageImport = hasPageModule
+        ? `import { ${pageExportName} as pagePart } from '${pageModulePath}';`
+        : '';
+
     const code = `import { hydrateCompositeJayComponent } from '@jay-framework/stack-client-runtime';
 import { deepMergeViewStates } from '@jay-framework/view-state-merge';
 import { hydrate } from '${hydrateImport}';
-import { ${pageExportName} as pagePart } from '${pageModulePath}';
+${pageImport}
 ${partImports}
 
 const slowViewState = ${JSON.stringify(slowViewState)};

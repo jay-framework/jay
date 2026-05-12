@@ -52,9 +52,12 @@ export async function handlePageRequest(
     const { route, instance } = match;
 
     const preRendered = await artifacts.readPreRenderedHtml(instance.preRenderedPath);
-    const pageModule = route.isPlugin
-        ? await import(route.serverModule)
-        : await artifacts.loadPageModule(route.serverModule);
+    let pageModule: any = {};
+    if (route.serverModule) {
+        pageModule = route.isPlugin
+            ? await import(route.serverModule)
+            : await artifacts.loadPageModule(route.serverModule);
+    }
 
     const pageParts = await getPageParts(
         route,

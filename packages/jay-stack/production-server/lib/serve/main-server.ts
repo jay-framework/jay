@@ -22,18 +22,26 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
     const manifest = await artifacts.readManifest();
     logger.important(`[Server] Loaded manifest: ${manifest.routes.length} routes, v${manifest.version}`);
 
-    // Run plugin inits (register plugin services before project init and actions)
-    for (const plugin of manifest.plugins) {
-        try {
-            const pluginModule = await import(plugin.packageName);
-            const init = pluginModule.init || pluginModule.default?.init;
-            if (init?._serverInit) {
-                logger.info(`[Server] Running plugin init: ${plugin.name}`);
-                await init._serverInit();
+    // Run plugin inits in dependency order
+    const { discoverPluginsWithInit, sortPluginsByDependencies } = await import('@jay-framework/stack-server-runtime');
+    try {
+        const pluginsWithInit = sortPluginsByDependencies(
+            await discoverPluginsWithInit({ projectRoot: manifest.projectRoot }),
+        );
+        for (const pluginInit of pluginsWithInit) {
+            try {
+                const pluginModule = await import(pluginInit.packageName);
+                const init = pluginModule.init || pluginModule[pluginInit.initExport || 'init'];
+                if (init?._serverInit) {
+                    logger.info(`[Server] Running plugin init: ${pluginInit.name}`);
+                    await init._serverInit();
+                }
+            } catch (err: any) {
+                logger.warn(`[Server] Plugin init failed: ${pluginInit.name}: ${err.message}`);
             }
-        } catch {
-            // Plugin may not have init
         }
+    } catch {
+        // No plugins
     }
 
     // Run project init
