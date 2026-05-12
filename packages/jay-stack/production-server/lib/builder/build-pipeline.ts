@@ -3,6 +3,7 @@ import { discoverServerEntries, buildServerCode } from './server-code-build';
 import { buildSharedChunks } from './shared-chunks-build';
 import { buildInstance, type InstanceBuildContext } from './instance-pipeline';
 import { buildRouteEntry, discoverActions, writeRouteManifest } from './route-manifest';
+import { scanPluginRoutes } from './plugin-routes';
 import { runLoadParams, type DevServerPagePart } from '@jay-framework/stack-server-runtime';
 import { getLogger } from '@jay-framework/logger';
 import path from 'node:path';
@@ -71,28 +72,47 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         minify: options.minify ?? true,
     };
 
-    const routeEntries = routes
+    // 0f. Discover plugin routes
+    const pluginRoutes = await scanPluginRoutes(options.projectRoot, routes);
+
+    const allRoutes = [...routes, ...pluginRoutes];
+
+    const routeEntries = allRoutes
         .filter((r) => r.compPath)
         .map((route) => {
-            const relativePath = path.relative(options.projectRoot, route.compPath!);
-            const serverModule = relativePath
-                .replace(/^src\//, 'server/')
-                .replace(/\.ts$/, '.js')
-                .replace(/\[/g, '_')
-                .replace(/\]/g, '_');
-            return { route, entry: buildRouteEntry(route, serverModule) };
+            let serverModule: string;
+            if (route.componentExport) {
+                // NPM plugin route — component loaded from plugin package at runtime
+                serverModule = route.compPath!;
+            } else {
+                const relativePath = path.relative(options.projectRoot, route.compPath!);
+                serverModule = relativePath
+                    .replace(/^src\//, 'server/')
+                    .replace(/\.ts$/, '.js')
+                    .replace(/\[/g, '_')
+                    .replace(/\]/g, '_');
+            }
+            const entry = buildRouteEntry(route, serverModule);
+            if (route.componentExport) {
+                entry.isPlugin = true;
+            }
+            return { route, entry };
         });
 
     let instanceCount = 0;
 
     for (const { route, entry } of routeEntries) {
-        const pageModulePath = path.join(serverOutputDir, entry.serverModule.replace('server/', ''));
-
         let pageModule: any;
         try {
-            pageModule = await import(pageModulePath);
+            if (entry.isPlugin) {
+                // NPM plugin route — load from plugin package
+                pageModule = await import(entry.serverModule);
+            } else {
+                const pageModulePath = path.join(serverOutputDir, entry.serverModule.replace('server/', ''));
+                pageModule = await import(pageModulePath);
+            }
         } catch (err) {
-            logger.error(`[Build] Failed to load page module ${pageModulePath}: ${err}`);
+            logger.error(`[Build] Failed to load page module ${entry.serverModule}: ${err}`);
             continue;
         }
 

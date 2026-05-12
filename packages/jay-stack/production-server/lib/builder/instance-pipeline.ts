@@ -25,6 +25,19 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
 
+import fsSync from 'node:fs';
+
+function resolvePackageNameForRoute(compPath: string): string | undefined {
+    const dir = path.dirname(compPath);
+    for (const candidate of [dir, path.join(dir, '..')]) {
+        try {
+            const pkgJson = JSON.parse(fsSync.readFileSync(path.join(candidate, 'package.json'), 'utf-8'));
+            if (pkgJson.name) return pkgJson.name;
+        } catch { /* skip */ }
+    }
+    return undefined;
+}
+
 export interface InstanceBuildContext {
     projectRoot: string;
     buildDir: string;
@@ -207,10 +220,18 @@ export async function buildInstance(
     // 4. Generate hydration entry
     const hydrateEntryPath = path.join(instanceDir, `${instanceId}.hydrate-entry.ts`);
     const relativeJayHtmlPath = path.relative(instanceDir, preRenderedPath);
-    const relativePageModule = path.relative(
-        instanceDir,
-        route.compPath || route.jayHtmlPath.replace('.jay-html', '.ts'),
-    );
+
+    // For NPM plugin routes, use /client entry + component export name
+    let pageModulePath: string;
+    let pageExportName: string;
+    if (route.componentExport) {
+        const pkgName = resolvePackageNameForRoute(route.compPath!);
+        pageModulePath = pkgName ? `${pkgName}/client` : './' + path.relative(instanceDir, route.compPath!);
+        pageExportName = route.componentExport;
+    } else {
+        pageModulePath = './' + path.relative(instanceDir, route.compPath || route.jayHtmlPath.replace('.jay-html', '.ts'));
+        pageExportName = 'page';
+    }
 
     if (pageParts.keyedPartModules.length > 0) {
         logger.info(`[Build] Keyed parts for ${routeDir}: ${pageParts.keyedPartModules.map(p => p.key).join(', ')}`);
@@ -218,7 +239,8 @@ export async function buildInstance(
 
     await generateHydrationEntry({
         jayHtmlPath: './' + relativeJayHtmlPath,
-        pageModulePath: './' + relativePageModule,
+        pageModulePath,
+        pageExportName,
         slowViewState,
         trackByMap: pageParts.clientTrackByMap || {},
         outputPath: hydrateEntryPath,

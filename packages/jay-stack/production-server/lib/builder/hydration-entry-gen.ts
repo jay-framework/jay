@@ -11,6 +11,7 @@ export interface KeyedPartInfo {
 export interface HydrationEntryOptions {
     jayHtmlPath: string;
     pageModulePath: string;
+    pageExportName?: string;
     slowViewState: object;
     trackByMap: Record<string, string>;
     outputPath: string;
@@ -23,6 +24,7 @@ export async function generateHydrationEntry(
     const {
         jayHtmlPath,
         pageModulePath,
+        pageExportName = 'page',
         slowViewState,
         trackByMap,
         outputPath,
@@ -45,7 +47,7 @@ export async function generateHydrationEntry(
     const code = `import { hydrateCompositeJayComponent } from '@jay-framework/stack-client-runtime';
 import { deepMergeViewStates } from '@jay-framework/view-state-merge';
 import { hydrate } from '${hydrateImport}';
-import { page as pagePart } from '${pageModulePath}';
+import { ${pageExportName} as pagePart } from '${pageModulePath}';
 ${partImports}
 
 const slowViewState = ${JSON.stringify(slowViewState)};

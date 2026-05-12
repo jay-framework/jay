@@ -32,7 +32,7 @@ async function getPageParts(
     const jayHtmlContent = await artifacts.readRawFile(preRenderedPath);
     const serverBuildDir = artifacts.getAssetPath('server');
     const parts = await loadProductionPageParts(
-        { jayHtmlPath: route.jayHtmlPath },
+        { jayHtmlPath: route.jayHtmlPath, componentExport: route.componentExport },
         pageModule,
         jayHtmlContent,
         manifest.projectRoot,
@@ -52,7 +52,9 @@ export async function handlePageRequest(
     const { route, instance } = match;
 
     const preRendered = await artifacts.readPreRenderedHtml(instance.preRenderedPath);
-    const pageModule = await artifacts.loadPageModule(route.serverModule);
+    const pageModule = route.isPlugin
+        ? await import(route.serverModule)
+        : await artifacts.loadPageModule(route.serverModule);
 
     const pageParts = await getPageParts(
         route,
