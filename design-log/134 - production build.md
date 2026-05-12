@@ -505,3 +505,37 @@ The main server is a plain Node.js HTTP server. It loads pre-compiled JS modules
 - Route matching — 404 for unknown routes
 
 Both suites use separate build directories (`build/` and `build-serve/`) to avoid conflicts when running in parallel.
+
+### Server Element Compilation: esbuild → Vite
+
+Switched from esbuild to Vite SSR build for server element compilation. The esbuild approach had a custom `.jay-contract` plugin that reimplemented contract handling (enum extraction, ViewState interfaces). This broke on linked contracts with enums from sub-contracts (e.g., wix-stores `media-gallery.jay-contract` importing `Selected` from `./media`).
+
+The Vite approach reuses the existing `jayRuntime` plugin from `@jay-framework/vite-plugin` which already handles all contract edge cases — linked contracts, nested enums, sub-contracts, recursive types. Removed `esbuild` dependency entirely.
+
+### Pages Without Server Code (`page.ts`)
+
+Projects like wix store-light have pages with only jay-html (no `page.ts`). These pages rely entirely on plugin headless components for data. The build pipeline no longer filters routes by `compPath` — pages without server code are built with empty parts and no slow/fast render.
+
+Handling:
+- `loadProductionPageParts`: empty `parts` array when no `compDefinition`
+- `buildInstance`: skip slow/fast render when parts are empty
+- `generateHydrationEntry`: no page module import when `pageModulePath` is empty
+- Page handler: skip `loadPageModule` when `serverModule` is empty
+
+### Plugin Init Dependency Order
+
+Plugin inits must run in dependency order (e.g., `wix-server-client` before `wix-cart`). Both build and serve now use `discoverPluginsWithInit` + `sortPluginsByDependencies` from `stack-server-runtime` for topological sorting.
+
+### Dynamic Routes Without Page loadParams
+
+For dynamic routes where no page component provides `loadParams`, the build pipeline checks keyed headless components for `loadParams` (e.g., wix-stores provides `loadParams` on its keyed product-page component). Routes with no `loadParams` anywhere are skipped with an info message.
+
+### Static Override Routes
+
+Routes with `inferredParams` (from `<script type="application/jay-params">`, e.g., `/products/ceramic-flower-vase` → `{ slug: 'ceramic-flower-vase' }`) are built as specific instances with those params, skipping `loadParams`.
+
+### Sync Scripts
+
+Added `scripts/sync-to-wix.cjs` and `scripts/sync-to-golf.cjs` for syncing compiled packages to sibling monorepos. Copies `dist/` for published packages (preserving target's `package.json`), full package for `production-server` (not yet published). Skips `node_modules/`, `test/`, `build/`, `.git/`. Run via `yarn sync:wix` / `yarn sync:golf`.
+
+**Important:** Target dist directory should be cleaned before syncing (`rm -rf dist`) to avoid stale chunk files from previous syncs.
