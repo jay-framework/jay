@@ -43,7 +43,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
     );
 
     // 0d. Discover actions for manifest
-    const actions = await discoverActions(entries.actions, serverOutputDir, buildDir);
+    const { actions, plugins } = await discoverActions(entries.actions, serverOutputDir, buildDir, options.projectRoot);
 
     // 0e. Initialize services (needed for slow render)
     if (entries.init) {
@@ -136,7 +136,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         sharedManifest,
         routes: routeEntries.map((r) => r.entry),
         actions,
-        plugins: [],
+        plugins,
     };
 
     await writeRouteManifest(manifest, buildDir);
