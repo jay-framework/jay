@@ -113,6 +113,8 @@ export async function loadProductionPageParts(
             contractPath: hi.contractPath,
         }));
 
+    // Use pre-rendered jay-html for discovery — slowForEach items are already
+    // unrolled into static instances with coordinate keys matching carryForward.__instances.
     const jayHtmlForDiscovery = injectHeadfullFSTemplates(jayHtmlContent, dirName, JAY_IMPORT_RESOLVER);
     let discoveredInstances: DiscoveredHeadlessInstance[] = [];
     let forEachInstances: ForEachHeadlessInstance[] = [];

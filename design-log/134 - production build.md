@@ -467,14 +467,11 @@ The main server is a plain Node.js HTTP server. It loads pre-compiled JS modules
 
 #### Must Fix
 
-1. **slowForEach headless instances** — forEach-discovered headless instances (e.g., `<jay:product-widget>` inside `slowForEach`) not included in `__headlessInstances` during production fast render. Static and keyed headless instances work.
+1. ~~**slowForEach headless instances**~~ — Done. Fix: `loadProductionPageParts` now reads the ORIGINAL source jay-html for forEach discovery (not the pre-rendered content where forEach templates are already unrolled into static instances).
 
-2. **Build folder conflict** — dev server (`jay-stack dev`) and production build (`jay-stack build`) both use `build/` directory. Running dev server after production build deletes production artifacts. Options:
-   - Move dev server to `build/dev/`
-   - Move production to `build/prod/`
-   - Make configurable via CLI flag
+2. ~~**Build folder conflict**~~ — Done. Dev server default changed from `build/` to `build/dev/`. Production uses `build/v{n}/`. Both can run without conflict.
 
-3. **Minification flag** — add `--no-minify` CLI flag to `jay-stack build` (default: minify enabled). Useful for debugging production builds in other projects.
+3. ~~**Minification flag**~~ — Done. `jay-stack build --no-minify` disables minification for shared chunks and instance bundles. Default: minified. Flag flows through `BuildOptions.minify` → `InstanceBuildContext.minify` → `buildSharedChunks`/`buildInstanceClient`.
 
 #### Future Phases
 

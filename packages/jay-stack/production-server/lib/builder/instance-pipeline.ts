@@ -129,6 +129,8 @@ export async function buildInstance(
     let preRenderedJayHtml = transformResult.val.preRenderedJayHtml;
 
     // Pass 2: Headless instance bindings (same as dev server's preRenderJayHtml)
+    // After Pass 1, the jay-html still has <jay:xxx> tags — including unrolled
+    // slowForEach instances. We discover and slow-render ALL instances here.
     if (pageParts.headlessInstanceComponents.length > 0) {
         const discoveryResult = discoverHeadlessInstances(preRenderedJayHtml);
         const htmlWithRefs = discoveryResult.preRenderedJayHtml;
@@ -138,11 +140,35 @@ export async function buildInstance(
         const finalDiscovery = discoverHeadlessInstances(preRenderedJayHtml);
 
         if (finalDiscovery.instances.length > 0) {
-            const instanceResolvedData = (carryForward as any).__instanceResolvedData;
-            if (instanceResolvedData) {
+            // Slow-render ALL discovered instances (including unrolled slowForEach)
+            const slowResult = await slowRenderInstances(
+                finalDiscovery.instances,
+                pageParts.headlessInstanceComponents,
+            );
+
+            if (slowResult) {
+                // Merge instance phase data into carryForward
+                const existingInstances = (carryForward as any).__instances || { discovered: [], carryForwards: {} };
+                (carryForward as any).__instances = {
+                    discovered: [...existingInstances.discovered, ...slowResult.instancePhaseData.discovered],
+                    carryForwards: { ...existingInstances.carryForwards, ...slowResult.instancePhaseData.carryForwards },
+                    slowViewStates: { ...(existingInstances.slowViewStates || {}), ...(slowResult.instancePhaseData as any).slowViewStates },
+                };
+                (carryForward as any).__instanceSlowViewStates = {
+                    ...((carryForward as any).__instanceSlowViewStates || {}),
+                    ...Object.fromEntries(
+                        slowResult.resolvedData.map((d) => [d.coordinate.join('/'), d.slowViewState]),
+                    ),
+                };
+                (carryForward as any).__instanceResolvedData = [
+                    ...((carryForward as any).__instanceResolvedData || []),
+                    ...slowResult.resolvedData,
+                ];
+
+                // Resolve instance bindings in jay-html
                 const pass2Result = resolveHeadlessInstances(
                     preRenderedJayHtml,
-                    instanceResolvedData,
+                    slowResult.resolvedData,
                     JAY_IMPORT_RESOLVER,
                 );
                 if (pass2Result.val) {
