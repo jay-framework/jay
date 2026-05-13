@@ -11,7 +11,7 @@ export interface SharedChunksBuildResult {
     outputDir: string;
 }
 
-const SHARED_PACKAGES = [
+const FRAMEWORK_PACKAGES = [
     '@jay-framework/stack-client-runtime',
     '@jay-framework/component',
     '@jay-framework/reactive',
@@ -24,22 +24,23 @@ export async function buildSharedChunks(
     outputDir: string,
     _projectRoot: string,
     minify: boolean = true,
+    pluginClientPackages: string[] = [],
 ): Promise<SharedChunksBuildResult> {
     const logger = getLogger();
     logger.info('[Build] Building shared client chunks...');
 
     await fs.mkdir(outputDir, { recursive: true });
 
-    // Create wrapper entry files that import by package name.
-    // This ensures Rollup deduplicates packages through its normal resolution.
+    const allPackages = [...FRAMEWORK_PACKAGES, ...pluginClientPackages];
+
     const entries: Record<string, string> = {};
-    for (const pkg of SHARED_PACKAGES) {
-        const varName = pkg.replace('@jay-framework/', '').replace(/-/g, '_');
+    for (const pkg of allPackages) {
+        const varName = pkgToVarName(pkg);
         const entryPath = path.join(outputDir, `_entry_${varName}.js`);
         await fs.writeFile(entryPath, `export * from '${pkg}';\n`);
         entries[varName] = entryPath;
     }
-    const dedupePackages = [...SHARED_PACKAGES, '@jay-framework/list-compare'];
+    const dedupePackages = [...allPackages, '@jay-framework/list-compare'];
 
     await viteBuild({
         build: {
@@ -63,42 +64,32 @@ export async function buildSharedChunks(
         logLevel: 'warn',
     });
 
-    // Clean up wrapper entry files
-    for (const pkg of SHARED_PACKAGES) {
-        const varName = pkg.replace('@jay-framework/', '').replace(/-/g, '_');
+    for (const pkg of allPackages) {
+        const varName = pkgToVarName(pkg);
         await fs.rm(path.join(outputDir, `_entry_${varName}.js`), { force: true });
     }
 
-    const manifest = await parseViteManifest(outputDir);
+    const manifest = await parseViteManifest(outputDir, allPackages);
 
     logger.info(`[Build] Shared chunks built: ${Object.keys(manifest).length} entries`);
 
     return { manifest, outputDir };
 }
 
-function resolvePackageSource(pkg: string): string {
-    const pkgJsonPath = path.join(path.dirname(require.resolve(pkg)), '..', 'package.json');
-
-    try {
-        const pkgDir = path.dirname(pkgJsonPath);
-        const libIndex = path.join(pkgDir, 'lib', 'index.ts');
-        if (require('fs').existsSync(libIndex)) {
-            return libIndex;
-        }
-        return require.resolve(pkg);
-    } catch {
-        return require.resolve(pkg);
-    }
+function pkgToVarName(pkg: string): string {
+    return pkg.replace('@jay-framework/', '').replace(/[/-]/g, '_');
 }
 
-async function parseViteManifest(outputDir: string): Promise<Record<string, string>> {
+async function parseViteManifest(
+    outputDir: string,
+    packages: string[],
+): Promise<Record<string, string>> {
     const viteManifestPath = path.join(outputDir, 'vite-manifest.json');
     const raw = JSON.parse(await fs.readFile(viteManifestPath, 'utf-8'));
 
     const varNameToPackage = new Map<string, string>();
-    for (const pkg of SHARED_PACKAGES) {
-        const varName = pkg.replace('@jay-framework/', '').replace(/-/g, '_');
-        varNameToPackage.set(varName, pkg);
+    for (const pkg of packages) {
+        varNameToPackage.set(pkgToVarName(pkg), pkg);
     }
 
     const manifest: Record<string, string> = {};

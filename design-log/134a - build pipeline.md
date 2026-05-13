@@ -642,8 +642,53 @@ After Pass 1 (`slowRenderTransform`), `slowForEach` templates are unrolled into 
 
 `loadProductionPageParts` tracks `keyedPartModules` for keyed headless components (e.g., mood tracker with `key="mt"`). These are passed to `generateHydrationEntry` which includes them as additional composite parts with `key` and `contextMarkers`. Module paths: NPM packages use `/client` entry, local plugins use absolute source path.
 
+### Shared Chunks: Plugin Externalization (May 13)
+
+Instance bundles were **780 KB** each — mostly duplicated plugin code (Wix SDK, `wix-stores`, `wix-cart`) inlined into every instance. Framework packages (`@jay-framework/runtime`, etc.) were correctly externalized, but plugin packages were not.
+
+**Fix:** Externalize all `@jay-framework/*` packages, not just framework core.
+
+| Component | Change |
+|-----------|--------|
+| `instance-client-build.ts` | `external: (id) => id.startsWith('@jay-framework/')` — function instead of hardcoded list |
+| `shared-chunks-build.ts` | Accepts `pluginClientPackages` parameter, builds shared chunks for plugin `/client` entries alongside framework packages |
+| `build-pipeline.ts` | `discoverPluginClientPackages()` walks project `package.json` → transitive `@jay-framework/*` deps → filters to packages with `./client` export |
+| `page-handler.ts` | `<link rel="modulepreload">` tags for all shared chunks — eliminates import waterfall |
+
+**Discovery approach:** Uses `createRequire(projectRoot)` to resolve packages through Node's module resolution (handles hoisted monorepo `node_modules`), then walks up from the resolved main entry to find `package.json`. Filters to packages that declare `exports["./client"]`. Recursive — collects transitive `@jay-framework/*` dependencies.
+
+**Result (store-light):**
+- Instance bundles: 780 KB → **7-17 KB** (hydration + slowViewState only)
+- Shared chunks: 126 KB → **482 KB** (framework + plugins, loaded once, browser-cached)
+- Total JS per session: ~11.7 MB → **~600 KB**
+
+### `InstanceBuildResult` as Discriminated Union (May 13)
+
+Changed from returning `InstanceEntry | undefined` to a discriminated union:
+
+```typescript
+export type InstanceBuildResult =
+    | { status: 'success'; instanceEntry: InstanceEntry; slowViewState: object; carryForward: object }
+    | { status: 'skipped'; reason: string };
+```
+
+Non-fatal slow render outcomes (`ClientError`, `Redirect`) return `status: 'skipped'` instead of throwing. The `kind` discriminant values are `'ClientError'` and `'Redirect'` (not `'ClientError4xx'`/`'Redirect3xx'` — those are type names, not kind values).
+
+### Optional Route Parameter Matching (May 13)
+
+`findInstance()` in `route-matcher.ts` compared URL params by key count, which failed for optional `[[param]]` segments. URL `/kitan/products` produces `params: {}` but the instance has `params: { prefix: "kitan" }` — the `prefix` is an inferred param not from URL segments.
+
+Fix: match only on segment-derived param names (from `route.segments` where `type !== 'static'`), ignoring non-segment params like `prefix`.
+
+### Dynamic Routes with Inferred Params (May 13)
+
+Routes like `/kitan/products/[category]/[slug]` have both `inferredParams: { prefix: "kitan" }` AND dynamic segments. The old code treated `inferredParams` as "fully specified" and skipped `loadParams`. Fix: only use `inferredParams` alone for routes without dynamic segments. When both exist, run `loadParams` and merge inferred params into each result.
+
 ### Resolved Gaps
 
 1. ~~slowForEach~~ — Fixed via Pass 2 `slowRenderInstances` for all discovered instances
 2. ~~Build folder conflict~~ — Dev server moved to `build/dev/`, production uses `build/v{n}/`
 3. ~~Minification~~ — `--no-minify` CLI flag, default enabled
+4. ~~Plugin code duplication~~ — All `@jay-framework/*` packages externalized into shared chunks
+5. ~~Optional params~~ — Route matcher uses segment-derived param names only
+6. ~~Inferred + dynamic params~~ — `loadParams` runs with inferred params merged in

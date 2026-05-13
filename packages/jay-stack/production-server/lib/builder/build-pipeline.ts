@@ -7,8 +7,61 @@ import { buildRouteEntry, discoverActions, writeRouteManifest } from './route-ma
 import { scanPluginRoutes } from './plugin-routes';
 import { runLoadParams, type DevServerPagePart } from '@jay-framework/stack-server-runtime';
 import { getLogger } from '@jay-framework/logger';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+
+const require = createRequire(import.meta.url);
+
+async function discoverPluginClientPackages(projectRoot: string): Promise<string[]> {
+    const projectRequire = createRequire(path.join(projectRoot, 'package.json'));
+    const seen = new Set<string>();
+    const result: string[] = [];
+
+    async function walk(pkgName: string) {
+        if (seen.has(pkgName)) return;
+        seen.add(pkgName);
+        try {
+            const mainPath = projectRequire.resolve(pkgName);
+            let pkgDir = path.dirname(mainPath);
+            while (pkgDir !== path.dirname(pkgDir)) {
+                const candidate = path.join(pkgDir, 'package.json');
+                try {
+                    const pkgJson = JSON.parse(await fs.readFile(candidate, 'utf-8'));
+                    if (pkgJson.name === pkgName) {
+                        if (pkgJson.exports?.['./client']) {
+                            result.push(`${pkgName}/client`);
+                        }
+                        for (const dep of Object.keys(pkgJson.dependencies || {})) {
+                            if (dep.startsWith('@jay-framework/')) {
+                                await walk(dep);
+                            }
+                        }
+                        break;
+                    }
+                } catch { /* no package.json at this level */ }
+                pkgDir = path.dirname(pkgDir);
+            }
+        } catch { /* not resolvable */ }
+    }
+
+    try {
+        const projectPkg = JSON.parse(
+            await fs.readFile(path.join(projectRoot, 'package.json'), 'utf-8'),
+        );
+        const allDeps = {
+            ...projectPkg.dependencies,
+            ...projectPkg.devDependencies,
+        };
+        for (const dep of Object.keys(allDeps)) {
+            if (dep.startsWith('@jay-framework/')) {
+                await walk(dep);
+            }
+        }
+    } catch { /* no package.json */ }
+
+    return result;
+}
 
 export async function buildVersion(options: BuildOptions): Promise<RouteManifest> {
     const logger = getLogger();
@@ -33,12 +86,19 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         options.projectRoot,
     );
 
-    // 0c. Build shared client chunks
+    // 0c. Discover plugin client packages for shared chunks (project deps + transitive)
+    const pluginClientPackages = await discoverPluginClientPackages(options.projectRoot);
+    if (pluginClientPackages.length > 0) {
+        logger.important(`[Build] Plugin client packages: ${pluginClientPackages.join(', ')}`);
+    }
+
+    // 0d. Build shared client chunks
     const sharedOutputDir = path.join(buildDir, 'shared');
     const { manifest: sharedManifest } = await buildSharedChunks(
         sharedOutputDir,
         options.projectRoot,
         options.minify ?? true,
+        pluginClientPackages,
     );
 
     // 0d. Discover actions for manifest

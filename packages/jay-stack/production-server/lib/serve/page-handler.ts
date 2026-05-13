@@ -134,8 +134,11 @@ export async function handlePageRequest(
     const asyncPromises: Promise<string>[] = [];
 
     const importMap = buildImportMap(manifest.sharedManifest, manifest.publicBasePath);
+    const modulePreloads = Object.values(importMap)
+        .map((url) => `    <link rel="modulepreload" href="${url}" />`)
+        .join('\n');
     const cssLink = instance.clientCssPath
-        ? `    <link rel="stylesheet" href="${manifest.publicBasePath}${instance.clientCssPath}" />\n`
+        ? `    <link rel="stylesheet" href="${manifest.publicBasePath}${instance.clientCssPath}" />`
         : '';
 
     res.writeHead(200, {
@@ -143,12 +146,14 @@ export async function handlePageRequest(
         'Transfer-Encoding': 'chunked',
     });
 
+    const headParts = [headTagsHtml, modulePreloads, cssLink].filter(Boolean).join('\n');
     res.write(`<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-${headTagsHtml}${cssLink}    <script type="importmap">${JSON.stringify({ imports: importMap })}</script>
+${headParts}
+    <script type="importmap">${JSON.stringify({ imports: importMap })}</script>
   </head>
   <body>
     <div id="target">`);

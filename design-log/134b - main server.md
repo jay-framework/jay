@@ -545,3 +545,11 @@ Wire everything together:
 - Without `slowlyRender`: `fastRender(props, ...services)`
 
 This matches `renderFastChangingData()` lines 65-67 in `fast-changing-runner.ts`.
+
+### Module Preloading (May 13)
+
+Added `<link rel="modulepreload">` tags for all shared chunk URLs in the SSR HTML `<head>`. Without preloading, the browser discovers shared chunk dependencies only after downloading and parsing the instance bundle — a waterfall. With modulepreload, all shared chunks start downloading in parallel with the instance bundle.
+
+### Optional Route Matching Fix (May 13)
+
+`findInstance()` was comparing URL params by exact key count match. This failed for optional `[[param]]` segments where the URL omits the parameter (producing `{}`) but the instance has non-segment params like `prefix`. Fixed to match only on segment-derived parameter names.
