@@ -132,6 +132,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
 
     const instanceCtx: InstanceBuildContext = {
         projectRoot: options.projectRoot,
+        pagesRoot: options.pagesRoot,
         buildDir,
         jayOptions: { tsConfigFilePath: options.tsConfigFilePath },
         tsConfigFilePath: options.tsConfigFilePath,

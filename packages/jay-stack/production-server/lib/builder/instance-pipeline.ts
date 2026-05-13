@@ -46,6 +46,7 @@ export interface ClientInitEntry {
 
 export interface InstanceBuildContext {
     projectRoot: string;
+    pagesRoot: string;
     buildDir: string;
     jayOptions: JayRollupConfig;
     tsConfigFilePath?: string;
@@ -84,7 +85,7 @@ export async function buildInstance(
     const routeDir = route.rawRoute.replace(/^\//, '') || 'index';
     const paramHash = hashParams(params);
     const instanceId = `page${paramHash}`;
-    const instanceDir = path.join(ctx.buildDir, 'instances', routeDir);
+    const instanceDir = path.join(ctx.buildDir, 'pre-rendered', routeDir);
 
     await fs.mkdir(instanceDir, { recursive: true });
 
@@ -299,6 +300,8 @@ export async function buildInstance(
         ctx.projectRoot,
         ctx.jayOptions,
         ctx.minify ?? true,
+        ctx.pagesRoot,
+        ctx.buildDir,
     );
 
     await fs.rm(hydrateEntryPath, { force: true });

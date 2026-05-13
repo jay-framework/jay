@@ -16,14 +16,21 @@ export async function buildInstanceClient(
     projectRoot: string,
     jayOptions: JayRollupConfig,
     minify: boolean = true,
+    pagesRoot?: string,
+    buildDir?: string,
 ): Promise<InstanceClientBuildResult> {
     const logger = getLogger();
 
     await fs.mkdir(outputDir, { recursive: true });
 
+    const fullJayOptions = {
+        ...jayOptions,
+        ...(pagesRoot && buildDir ? { pagesRoot, buildFolder: buildDir } : {}),
+    };
+
     await viteBuild({
         root: projectRoot,
-        plugins: [...jayStackCompiler(jayOptions)],
+        plugins: [...jayStackCompiler(fullJayOptions)],
         build: {
             outDir: outputDir,
             emptyOutDir: false,

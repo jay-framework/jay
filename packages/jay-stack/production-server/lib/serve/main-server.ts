@@ -90,8 +90,8 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
             const handledInstances = await handleStaticRequest(
                 req,
                 res,
-                path.join(buildDir, 'instances'),
-                '/instances/',
+                path.join(buildDir, 'pre-rendered'),
+                '/pre-rendered/',
             );
             if (handledInstances) return;
 
