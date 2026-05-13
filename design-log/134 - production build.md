@@ -559,13 +559,19 @@ Added `scripts/sync-to-wix.cjs` and `scripts/sync-to-golf.cjs` for syncing compi
 
 Components and plugins use `_clientInit` to register browser-side contexts (store config, feature flags, etc.) that are read via `useContext` during hydration. Without client init, hydration fails with context-not-found errors.
 
-**Build time:** `discoverPluginsWithInit` + `sortPluginsByDependencies` discovers plugins with init. Each plugin gets a `clientInit` entry with `packageName/client` import path and init export name. Project init uses the source path. These are passed to the hydration entry generator.
+**Build time:** `discoverPluginsWithInit` + `sortPluginsByDependencies` discovers plugins with init. To determine which plugins have client init, the build loads each plugin's **client** module (`package/client`) and checks for `_clientInit` on the init export. This is necessary because the server module has `_clientInit` stripped by the code-split transform — only the client module preserves it.
 
-**Hydration entry:** Imports each init module, calls `_clientInit(clientInitData[key])` before hydrating. The `init()` function accepts `clientInitData` as a third parameter.
+**Key insight: check client module, not server module.** `preparePluginClientInits` from stack-server-runtime filters by `initConfirmed`, but this flag is false for plugins that auto-discover init (like all wix plugins). The production build bypasses this by directly importing the client module and checking `init._clientInit`.
 
-**SSR response:** `getClientInitData()` returns all namespaced data (populated during server startup via `setClientInitData`). Passed as the third argument to `init()` in the inline script.
+**Hydration entry:** Imports each init module with named imports (tree-shaking friendly), calls `await _clientInit(clientInitData[key])` before hydrating. The `init()` function is `async` and accepts `clientInitData` as a third parameter. The `await` is critical — `_clientInit` may be async (e.g., wix-cart initializes cart context asynchronously). Without `await`, hydration starts before contexts are registered, causing `useContext` failures.
+
+**SSR response:** `getClientInitData()` returns all namespaced data (populated during server startup via `setClientInitData`). Passed as the third argument to `await init()` in the inline `<script type="module">` (top-level await works in ES modules).
 
 **Server startup:** Both build and serve capture `_serverInit()` return values and store via `setClientInitData(key, data)` — matching what the dev server's `ServiceLifecycleManager` does.
+
+### Build Folder Separation
+
+Dev server changed from `build/` to `build/dev/` as default build folder. Production uses `build/v{n}/`. The dev server startup cleans `build/dev/` (except `freezes/`) without affecting production artifacts. Required updating 1 path in hydration tests and 3 inline expected strings in dev-server tests.
 
 ### Package Architecture Fix
 
