@@ -209,25 +209,25 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         const compDefinition = pageModule.page ?? pageModule.default ?? undefined;
         const hasDynamicParams = route.segments.some((s) => typeof s !== 'string');
 
-        // Static override routes (e.g., /products/ceramic-flower-vase) have inferred params
-        const inferredParams = (route as any).inferredParams;
-        if (inferredParams) {
+        const inferredParams: Record<string, string> | undefined = (route as any).inferredParams;
+
+        if (inferredParams && !hasDynamicParams) {
+            // Fully-specified static override (e.g., /products/ceramic-flower-vase)
             try {
                 const result = await buildInstance(route, inferredParams, pageModule, instanceCtx);
                 if (result.status === 'success') {
                     entry.instances.push(result.instanceEntry);
                     logInstance(route.rawRoute, inferredParams);
                 } else {
-                    logger.warn(`[Build] Skipped ${route.rawRoute}: ${result.reason}`);
+                    logger.warn(`[Build] Skipped ${route.rawRoute} (${JSON.stringify(inferredParams)}): ${result.reason}`);
                 }
             } catch (err: any) {
-                logger.error(`[Build] Failed to build ${route.rawRoute}: ${err.message}`);
+                logger.error(`[Build] Failed to build ${route.rawRoute} (${JSON.stringify(inferredParams)}): ${err.message}`);
             }
             continue;
         }
 
         if (hasDynamicParams) {
-            // Check page component and keyed headless parts for loadParams
             const pageParts = await loadProductionPageParts(
                 route,
                 pageModule,
@@ -239,9 +239,21 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
             const partsWithLoadParams = pageParts.parts.filter((p) => p.compDefinition?.loadParams);
 
             if (partsWithLoadParams.length > 0) {
+                logger.important(`[Build] Loading params for ${route.rawRoute}...`);
                 const allParams: Record<string, string>[] = [];
+                let batchIndex = 0;
                 for await (const batch of runLoadParams(partsWithLoadParams)) {
                     allParams.push(...batch);
+                    batchIndex++;
+                    if (batchIndex > 1) {
+                        logger.important(`[Build]   ...${allParams.length} params so far`);
+                    }
+                }
+                // Merge inferred params (e.g., prefix) into each loadParams result
+                if (inferredParams) {
+                    for (const p of allParams) {
+                        Object.assign(p, inferredParams);
+                    }
                 }
                 totalExpected += allParams.length;
                 logger.important(
