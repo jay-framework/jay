@@ -47,7 +47,7 @@ export async function compileServerElement(
     const jayOptions: JayRollupConfig = { tsConfigFilePath };
 
     await viteBuild({
-        root: outputDir,
+        root: projectRoot,
         plugins: [jayRuntime(jayOptions)],
         build: {
             outDir: outputDir,
