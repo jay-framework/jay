@@ -47,6 +47,7 @@ We need a production deployment model where:
 ```
 
 Both servers could be **the same codebase running in different modes** (e.g., `jay-stack serve --role=renderer` vs `jay-stack serve --role=main`), sharing:
+
 - Service initialization (`init.ts`)
 - Plugin loading
 - Component definitions (`page.ts`)
@@ -55,6 +56,7 @@ Both servers could be **the same codebase running in different modes** (e.g., `j
 ### Why Two Servers?
 
 The slow render can be expensive (database queries, API calls, template compilation). Keeping it off the request path means:
+
 - Main server startup is instant — just load pre-built artifacts
 - Request latency is predictable — no cache-miss slow renders
 - Slow renders can run on different hardware (more CPU, less memory)
@@ -66,14 +68,14 @@ The slow render can be expensive (database queries, API calls, template compilat
 
 The dev server today produces these artifacts on-the-fly:
 
-| Artifact | Dev Server | Production |
-|---|---|---|
-| Pre-rendered jay-html (slow data baked in) | `build/pre-rendered/*.jay-html` with `<script type="application/jay-cache">` metadata | Same format, all routes pre-rendered at build time |
-| Server element modules (for SSR) | `.ts` files in `build/server-elements/`, loaded via `vite.ssrLoadModule()` | Pre-compiled `.js` files, loaded via `import()` — no Vite |
-| Hydration scripts (client) | Served on-demand via Vite plugin (`?jay-hydrate` query) | Bundled into client JS by Vite build |
-| Client JS bundles | Unbundled ES modules via Vite dev server | Vite production build — tree-shaken, minified, code-split |
-| CSS | Written to build dir, served via `/@fs/` prefix | Extracted and optimized by Vite build |
-| Route manifest | In-memory `scanRoutes()` result | `route-manifest.json` — static file listing all routes, their params, and artifact paths |
+| Artifact                                   | Dev Server                                                                            | Production                                                                               |
+| ------------------------------------------ | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Pre-rendered jay-html (slow data baked in) | `build/pre-rendered/*.jay-html` with `<script type="application/jay-cache">` metadata | Same format, all routes pre-rendered at build time                                       |
+| Server element modules (for SSR)           | `.ts` files in `build/server-elements/`, loaded via `vite.ssrLoadModule()`            | Pre-compiled `.js` files, loaded via `import()` — no Vite                                |
+| Hydration scripts (client)                 | Served on-demand via Vite plugin (`?jay-hydrate` query)                               | Bundled into client JS by Vite build                                                     |
+| Client JS bundles                          | Unbundled ES modules via Vite dev server                                              | Vite production build — tree-shaken, minified, code-split                                |
+| CSS                                        | Written to build dir, served via `/@fs/` prefix                                       | Extracted and optimized by Vite build                                                    |
+| Route manifest                             | In-memory `scanRoutes()` result                                                       | `route-manifest.json` — static file listing all routes, their params, and artifact paths |
 
 **Questions:**
 
@@ -113,6 +115,7 @@ HTTP Request
 ```
 
 Key differences from dev server:
+
 - **No Vite** — server elements are pre-compiled JS, client assets are static files
 - **No slow phase on request path** — only fast phase + SSR
 - **Route manifest** — static JSON instead of filesystem scanning
@@ -155,6 +158,7 @@ Input:                           Output:
 ```
 
 The Vite build needs to:
+
 1. Discover all page entry points from routes
 2. Compile each page's jay-html hydration target as an entry
 3. Include the composite component wiring (from `generate-client-script.ts`)
@@ -187,6 +191,7 @@ For each route in project:
 ```
 
 The Vite build is **scoped per instance**, not per project. This means:
+
 - Each instance is independently buildable — no waiting for all routes to finish
 - A data change only triggers the pipeline for the affected instance
 - Shared chunks (jay framework, plugins) are built once and referenced by all instances
@@ -239,6 +244,7 @@ External data change (e.g., product updated in CMS)
 A global version number increments on each deployment (code change). Artifacts are stored in versioned buckets: `build/v1/`, `build/v2/`, etc.
 
 **Deployment (version change):**
+
 ```
 1. New code deployed → version increments from v1 to v2
 2. Slow render server builds all instances into build/v2/
@@ -251,6 +257,7 @@ A global version number increments on each deployment (code change). Artifacts a
 The version is hardcoded in the deployed server instance — no dynamic version switching. Version transitions are standard server instance replacements.
 
 **Restart (same version):**
+
 ```
 1. Slow render server starts, reads current version from build-metadata.json
 2. Version unchanged → all artifacts in build/v{current}/ are valid
@@ -259,6 +266,7 @@ The version is hardcoded in the deployed server instance — no dynamic version 
 ```
 
 **Data change (within version):**
+
 ```
 1. Webhook triggers re-render of specific instance
 2. Instance artifacts updated in-place within build/v{current}/
@@ -266,6 +274,7 @@ The version is hardcoded in the deployed server instance — no dynamic version 
 ```
 
 This ensures:
+
 - First startup with a new version: full build, but old version keeps serving throughout
 - Subsequent restarts: instant, no rebuild
 - Data changes: targeted per-instance rebuild, no full build
@@ -296,6 +305,7 @@ Since the Vite build is per-instance, instances can be fully built independently
 Actions (`makeJayAction`, `makeJayQuery`, `makeJayStream`) run on the main server. The action router (`action-router.ts`) is largely environment-agnostic — it receives HTTP requests, finds the action handler, executes it, returns the result.
 
 In production:
+
 - Actions run on the main server (same as dev)
 - Action handlers are pre-compiled JS (no Vite)
 - Actions that mutate data should trigger slow re-render
@@ -329,6 +339,7 @@ Both servers are **stateless**. Services are initialized independently on each s
 ### Concern 7: Plugin System in Production
 
 Plugins provide:
+
 - Headless components (contracts + component logic)
 - Actions
 - Routes (plugin pages)
@@ -336,6 +347,7 @@ Plugins provide:
 - Client init code
 
 In production:
+
 - Plugin routes merge with project routes (project takes precedence) — same as dev
 - Plugin components are compiled and bundled with the page that uses them
 - Plugin actions are registered in the action router
@@ -365,12 +377,12 @@ Dev server uses Vite middleware to serve all assets. In production, a **CDN serv
 
 All 17 questions resolved. Each concern maps to a child design log focused on detailed design and implementation.
 
-| # | Focus Area | Key Decisions |
-|---|---|---|
-| A | **Build Pipeline** — per-instance compilation, per-instance Vite build, shared chunks, gap analysis vs compiler-jay-html | Q1, Q2, Q6, Q7, Q11 |
-| B | **Main Server** — stateless request handling, artifact storage service, route manifest, CDN base path | Q3, Q4, Q5, Q5.5, Q9, Q16, Q17 |
-| C | **Slow Render Server & Data Change** — webhook invalidation, plugin resolution, versioned buckets, restart resilience | Q8, Q8.1, Q8.2, Q10, Q12 |
-| D | **Server Build** — compiling page.ts + actions together, stateless services, pre-compiled plugins | Q13, Q14, Q15 |
+| #   | Focus Area                                                                                                               | Key Decisions                  |
+| --- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------ |
+| A   | **Build Pipeline** — per-instance compilation, per-instance Vite build, shared chunks, gap analysis vs compiler-jay-html | Q1, Q2, Q6, Q7, Q11            |
+| B   | **Main Server** — stateless request handling, artifact storage service, route manifest, CDN base path                    | Q3, Q4, Q5, Q5.5, Q9, Q16, Q17 |
+| C   | **Slow Render Server & Data Change** — webhook invalidation, plugin resolution, versioned buckets, restart resilience    | Q8, Q8.1, Q8.2, Q10, Q12       |
+| D   | **Server Build** — compiling page.ts + actions together, stateless services, pre-compiled plugins                        | Q13, Q14, Q15                  |
 
 Suggested order: **A → D → B → C** — build pipeline first (defines artifact format), then server build (compiles the server code), then main server (consumes artifacts), then slow render server (produces artifacts on change).
 
@@ -428,15 +440,15 @@ The main server is a plain Node.js HTTP server. It loads pre-compiled JS modules
 
 ## Trade-offs
 
-| Decision | Pro | Con |
-|---|---|---|
-| Two servers (same codebase) | Clear separation of build-time vs request-time; independent scaling | Operational complexity; need to coordinate artifact updates |
-| Build directory as interface | Simple, filesystem-based; easy to inspect and debug | Doesn't scale to distributed deployments without shared storage (mitigated by artifact service abstraction) |
-| Per-instance Vite builds | Each instance independently buildable; data changes only rebuild affected instances; no global rebundle bottleneck | Many small Vite builds instead of one optimized global build; shared chunks must be pre-built separately |
-| Versioned storage buckets | Atomic code deployments; instant restart on same version; clean rollback by pointing to old bucket | Disk usage: multiple versions coexist during transition; need cleanup strategy for old versions |
-| No Vite in main server | Fast startup, predictable performance, smaller runtime footprint | Need separate compilation step for server-side TS; can't use Vite's resolve/transform |
-| Pre-compile everything | Zero cold-start latency | Longer initial build; need rebuild for code changes |
-| `jay-stack build` as one-shot | CI/CD friendly; deterministic output | Still need the renderer role for data change re-renders |
+| Decision                      | Pro                                                                                                                | Con                                                                                                         |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| Two servers (same codebase)   | Clear separation of build-time vs request-time; independent scaling                                                | Operational complexity; need to coordinate artifact updates                                                 |
+| Build directory as interface  | Simple, filesystem-based; easy to inspect and debug                                                                | Doesn't scale to distributed deployments without shared storage (mitigated by artifact service abstraction) |
+| Per-instance Vite builds      | Each instance independently buildable; data changes only rebuild affected instances; no global rebundle bottleneck | Many small Vite builds instead of one optimized global build; shared chunks must be pre-built separately    |
+| Versioned storage buckets     | Atomic code deployments; instant restart on same version; clean rollback by pointing to old bucket                 | Disk usage: multiple versions coexist during transition; need cleanup strategy for old versions             |
+| No Vite in main server        | Fast startup, predictable performance, smaller runtime footprint                                                   | Need separate compilation step for server-side TS; can't use Vite's resolve/transform                       |
+| Pre-compile everything        | Zero cold-start latency                                                                                            | Longer initial build; need rebuild for code changes                                                         |
+| `jay-stack build` as one-shot | CI/CD friendly; deterministic output                                                                               | Still need the renderer role for data change re-renders                                                     |
 
 ## Verification Criteria
 
@@ -492,12 +504,14 @@ The main server is a plain Node.js HTTP server. It loads pre-compiled JS modules
 **28 tests** across 2 suites in `production-server/test/`, using a minimal fixture project at `test/fixtures/basic-project/` (static page with slow+fast render, dynamic params with 2 slugs, one action, init).
 
 **Build tests** (`build.test.ts`, 15 tests):
+
 - Route manifest structure — correct routes, instances, actions, shared manifest
 - Server code compilation — init.js, page.js, cart.actions.js exist
 - Shared client chunks — all framework packages in shared-manifest.json
 - Per-instance artifacts — pre-rendered jay-html, server element (loadable, produces HTML), client bundle, CSS, cache metadata with correct slow ViewState per slug
 
 **Serve tests** (`serve.test.ts`, 13 tests):
+
 - SSR responses — correct content, import map, hydration script, CSS link
 - Dynamic params — per-slug content, 404 for unknown slugs
 - Static assets — shared chunks and instance bundles serve with correct MIME types and cache headers
@@ -517,6 +531,7 @@ The Vite approach reuses the existing `jayRuntime` plugin from `@jay-framework/v
 Projects like wix store-light have pages with only jay-html (no `page.ts`). These pages rely entirely on plugin headless components for data. The build pipeline no longer filters routes by `compPath` — pages without server code are built with empty parts and no slow/fast render.
 
 Handling:
+
 - `loadProductionPageParts`: empty `parts` array when no `compDefinition`
 - `buildInstance`: skip slow/fast render when parts are empty
 - `generateHydrationEntry`: no page module import when `pageModulePath` is empty
@@ -539,3 +554,25 @@ Routes with `inferredParams` (from `<script type="application/jay-params">`, e.g
 Added `scripts/sync-to-wix.cjs` and `scripts/sync-to-golf.cjs` for syncing compiled packages to sibling monorepos. Copies `dist/` for published packages (preserving target's `package.json`), full package for `production-server` (not yet published). Skips `node_modules/`, `test/`, `build/`, `.git/`. Run via `yarn sync:wix` / `yarn sync:golf`.
 
 **Important:** Target dist directory should be cleaned before syncing (`rm -rf dist`) to avoid stale chunk files from previous syncs.
+
+### Client Init Support
+
+Components and plugins use `_clientInit` to register browser-side contexts (store config, feature flags, etc.) that are read via `useContext` during hydration. Without client init, hydration fails with context-not-found errors.
+
+**Build time:** `discoverPluginsWithInit` + `sortPluginsByDependencies` discovers plugins with init. Each plugin gets a `clientInit` entry with `packageName/client` import path and init export name. Project init uses the source path. These are passed to the hydration entry generator.
+
+**Hydration entry:** Imports each init module, calls `_clientInit(clientInitData[key])` before hydrating. The `init()` function accepts `clientInitData` as a third parameter.
+
+**SSR response:** `getClientInitData()` returns all namespaced data (populated during server startup via `setClientInitData`). Passed as the third argument to `init()` in the inline script.
+
+**Server startup:** Both build and serve capture `_serverInit()` return values and store via `setClientInitData(key, data)` — matching what the dev server's `ServiceLifecycleManager` does.
+
+### Package Architecture Fix
+
+The `production-server` package was being **bundled into** the CLI dist instead of being externalized. This meant changes to production-server required rebuilding the CLI, and console logs in production-server weren't visible.
+
+Fix: Added `@jay-framework/production-server` and `@jay-framework/compiler-jay-stack` to the CLI's `vite.config.ts` externals list. The CLI now uses dynamic `import("@jay-framework/production-server")` at runtime. CLI dist went from 20K+ lines to 5K.
+
+### Wix Store-Light Verified
+
+Production build tested on `wix/examples/store-light` — a real wix-stores project with no `page.ts` files, plugin-provided data from Wix APIs, cart page, 12 product pages from live Wix catalog. Build produces 15 instances, serve returns SSR HTML with real product data, plugin client inits provide wix-server-client configuration for hydration.

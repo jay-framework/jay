@@ -1,14 +1,20 @@
 import type { ServerResponse } from 'node:http';
-import path from 'node:path';
 import type { RouteManifest } from '../types';
 import type { MatchResult } from './route-matcher';
 import type { FilesystemArtifactStore } from './artifact-store';
-import { renderFastChangingData, mergeHeadTags, serializeHeadTags } from '@jay-framework/stack-server-runtime';
-import type { DevServerPagePart, HeadlessInstanceComponent } from '@jay-framework/stack-server-runtime';
+import {
+    renderFastChangingData,
+    mergeHeadTags,
+    serializeHeadTags,
+    getClientInitData,
+} from '@jay-framework/stack-server-runtime';
 import { deepMergeViewStates } from '@jay-framework/view-state-merge';
 import { asyncSwapScript } from '@jay-framework/ssr-runtime';
 import { buildImportMap } from './import-map';
-import { loadProductionPageParts, type ProductionPageParts } from '../builder/load-production-parts';
+import {
+    loadProductionPageParts,
+    type ProductionPageParts,
+} from '../builder/load-production-parts';
 import type { RouteEntry } from '../types';
 
 const pagePartsCache = new Map<string, ProductionPageParts>();
@@ -25,8 +31,20 @@ async function getPageParts(
     if (cached) return cached;
 
     if (!route.jayHtmlPath) {
-        return { parts: [{ compDefinition: pageModule.page ?? pageModule.default, clientImport: '', clientPart: '' }],
-            headlessContracts: [], headlessInstanceComponents: [], discoveredInstances: [], forEachInstances: [], keyedPartModules: [] };
+        return {
+            parts: [
+                {
+                    compDefinition: pageModule.page ?? pageModule.default,
+                    clientImport: '',
+                    clientPart: '',
+                },
+            ],
+            headlessContracts: [],
+            headlessInstanceComponents: [],
+            discoveredInstances: [],
+            forEachInstances: [],
+            keyedPartModules: [],
+        };
     }
 
     const jayHtmlContent = await artifacts.readRawFile(preRenderedPath);
@@ -152,11 +170,12 @@ ${headTagsHtml}${cssLink}    <script type="importmap">${JSON.stringify({ imports
     const asyncScripts = (await Promise.all(asyncPromises)).filter((s) => s).join('');
     if (asyncScripts) res.write(asyncScripts);
 
+    const clientInitData = getClientInitData();
     const clientBundleUrl = `${manifest.publicBasePath}${instance.clientBundlePath}`;
     res.write(`
     <script type="module">
       import { init } from '${clientBundleUrl}';
-      init(${JSON.stringify(fastViewState)}, ${JSON.stringify(fastCarryForward)});
+      init(${JSON.stringify(fastViewState)}, ${JSON.stringify(fastCarryForward)}, ${JSON.stringify(clientInitData)});
     </script>
   </body>
 </html>`);

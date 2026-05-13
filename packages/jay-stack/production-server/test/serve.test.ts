@@ -12,7 +12,10 @@ const PORT = 4099;
 
 let server: http.Server | undefined;
 
-function fetch(urlPath: string, options?: { method?: string; body?: string; headers?: Record<string, string> }): Promise<{ status: number; body: string; headers: http.IncomingHttpHeaders }> {
+function fetch(
+    urlPath: string,
+    options?: { method?: string; body?: string; headers?: Record<string, string> },
+): Promise<{ status: number; body: string; headers: http.IncomingHttpHeaders }> {
     return new Promise((resolve, reject) => {
         const req = http.request(
             `http://localhost:${PORT}${urlPath}`,
@@ -20,11 +23,13 @@ function fetch(urlPath: string, options?: { method?: string; body?: string; head
             (res) => {
                 const chunks: Buffer[] = [];
                 res.on('data', (c) => chunks.push(c));
-                res.on('end', () => resolve({
-                    status: res.statusCode!,
-                    body: Buffer.concat(chunks).toString('utf-8'),
-                    headers: res.headers,
-                }));
+                res.on('end', () =>
+                    resolve({
+                        status: res.statusCode!,
+                        body: Buffer.concat(chunks).toString('utf-8'),
+                        headers: res.headers,
+                    }),
+                );
             },
         );
         req.on('error', reject);
@@ -95,7 +100,9 @@ describe('head tags (SEO)', () => {
 
     it('injects meta description', async () => {
         const res = await fetch('/');
-        expect(res.body).toMatch(/name="description" content="A test shop for production build testing"/);
+        expect(res.body).toMatch(
+            /name="description" content="A test shop for production build testing"/,
+        );
     });
 
     it('injects og:title meta', async () => {
@@ -124,6 +131,26 @@ describe('head tags (SEO)', () => {
         const titlePos = res.body.indexOf('<title>Test Shop');
         expect(titlePos).toBeGreaterThan(0);
         expect(titlePos).toBeLessThan(headEnd);
+    });
+});
+
+describe('client init', () => {
+    it('passes clientInitData in the init call', async () => {
+        const res = await fetch('/');
+        expect(res.body).toMatch(/shopName/);
+        expect(res.body).toMatch(/Test Shop/);
+    });
+
+    it('client bundle includes _clientInit call', async () => {
+        const routeManifest = JSON.parse(
+            await fs.readFile(path.join(buildRoot, 'v1/route-manifest.json'), 'utf-8'),
+        );
+        const home = routeManifest.routes.find((r: any) => r.pattern === '');
+        const bundleContent = await fs.readFile(
+            path.join(buildRoot, 'v1', home.instances[0].clientBundlePath),
+            'utf-8',
+        );
+        expect(bundleContent).toMatch(/_clientInit/);
     });
 });
 

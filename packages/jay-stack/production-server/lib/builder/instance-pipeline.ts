@@ -7,15 +7,11 @@ import {
     assignCoordinatesToJayHtml,
     resolveHeadlessInstances,
 } from '@jay-framework/compiler-jay-html';
-import {
-    DevSlowlyChangingPhase,
-    slowRenderInstances,
-} from '@jay-framework/stack-server-runtime';
+import { DevSlowlyChangingPhase, slowRenderInstances } from '@jay-framework/stack-server-runtime';
 import type { JayRollupConfig } from '@jay-framework/compiler-jay-stack';
 import type { JayRoute } from '@jay-framework/stack-route-scanner';
 import type { Contract } from '@jay-framework/compiler-jay-html';
 import type { InstanceEntry } from '../types';
-import type { InstancePhaseData } from '@jay-framework/stack-server-runtime';
 import { loadProductionPageParts } from './load-production-parts';
 import { compileServerElement } from './server-element-compile';
 import { generateHydrationEntry } from './hydration-entry-gen';
@@ -31,11 +27,21 @@ function resolvePackageNameForRoute(compPath: string): string | undefined {
     const dir = path.dirname(compPath);
     for (const candidate of [dir, path.join(dir, '..')]) {
         try {
-            const pkgJson = JSON.parse(fsSync.readFileSync(path.join(candidate, 'package.json'), 'utf-8'));
+            const pkgJson = JSON.parse(
+                fsSync.readFileSync(path.join(candidate, 'package.json'), 'utf-8'),
+            );
             if (pkgJson.name) return pkgJson.name;
-        } catch { /* skip */ }
+        } catch {
+            /* skip */
+        }
     }
     return undefined;
+}
+
+export interface ClientInitEntry {
+    modulePath: string;
+    exportName: string;
+    key: string;
 }
 
 export interface InstanceBuildContext {
@@ -44,6 +50,7 @@ export interface InstanceBuildContext {
     jayOptions: JayRollupConfig;
     tsConfigFilePath?: string;
     minify?: boolean;
+    clientInits?: ClientInitEntry[];
 }
 
 export interface InstanceBuildResult {
@@ -107,7 +114,9 @@ export async function buildInstance(
     );
 
     if (slowResult.kind !== 'PhaseOutput') {
-        throw new Error(`Slow render failed for ${route.rawRoute} with params ${JSON.stringify(params)}: ${slowResult.kind}`);
+        throw new Error(
+            `Slow render failed for ${route.rawRoute} with params ${JSON.stringify(params)}: ${slowResult.kind}`,
+        );
     }
 
     const slowViewState = slowResult.rendered;
@@ -124,7 +133,11 @@ export async function buildInstance(
         // No contract file
     }
 
-    const jayHtmlWithTemplates = injectHeadfullFSTemplates(jayHtmlContent, sourceDir, JAY_IMPORT_RESOLVER);
+    const jayHtmlWithTemplates = injectHeadfullFSTemplates(
+        jayHtmlContent,
+        sourceDir,
+        JAY_IMPORT_RESOLVER,
+    );
 
     const transformResult = slowRenderTransform({
         jayHtmlContent: jayHtmlWithTemplates,
@@ -136,7 +149,9 @@ export async function buildInstance(
     });
 
     if (!transformResult.val) {
-        throw new Error(`Slow render transform failed for ${route.rawRoute}: ${transformResult.validations.join(', ')}`);
+        throw new Error(
+            `Slow render transform failed for ${route.rawRoute}: ${transformResult.validations.join(', ')}`,
+        );
     }
 
     let preRenderedJayHtml = transformResult.val.preRenderedJayHtml;
@@ -147,7 +162,9 @@ export async function buildInstance(
     if (pageParts.headlessInstanceComponents.length > 0) {
         const discoveryResult = discoverHeadlessInstances(preRenderedJayHtml);
         const htmlWithRefs = discoveryResult.preRenderedJayHtml;
-        const contractNames = new Set(pageParts.headlessInstanceComponents.map((c) => c.contractName));
+        const contractNames = new Set(
+            pageParts.headlessInstanceComponents.map((c) => c.contractName),
+        );
         preRenderedJayHtml = assignCoordinatesToJayHtml(htmlWithRefs, contractNames);
 
         const finalDiscovery = discoverHeadlessInstances(preRenderedJayHtml);
@@ -161,16 +178,31 @@ export async function buildInstance(
 
             if (slowResult) {
                 // Merge instance phase data into carryForward
-                const existingInstances = (carryForward as any).__instances || { discovered: [], carryForwards: {} };
+                const existingInstances = (carryForward as any).__instances || {
+                    discovered: [],
+                    carryForwards: {},
+                };
                 (carryForward as any).__instances = {
-                    discovered: [...existingInstances.discovered, ...slowResult.instancePhaseData.discovered],
-                    carryForwards: { ...existingInstances.carryForwards, ...slowResult.instancePhaseData.carryForwards },
-                    slowViewStates: { ...(existingInstances.slowViewStates || {}), ...(slowResult.instancePhaseData as any).slowViewStates },
+                    discovered: [
+                        ...existingInstances.discovered,
+                        ...slowResult.instancePhaseData.discovered,
+                    ],
+                    carryForwards: {
+                        ...existingInstances.carryForwards,
+                        ...slowResult.instancePhaseData.carryForwards,
+                    },
+                    slowViewStates: {
+                        ...(existingInstances.slowViewStates || {}),
+                        ...(slowResult.instancePhaseData as any).slowViewStates,
+                    },
                 };
                 (carryForward as any).__instanceSlowViewStates = {
                     ...((carryForward as any).__instanceSlowViewStates || {}),
                     ...Object.fromEntries(
-                        slowResult.resolvedData.map((d) => [d.coordinate.join('/'), d.slowViewState]),
+                        slowResult.resolvedData.map((d) => [
+                            d.coordinate.join('/'),
+                            d.slowViewState,
+                        ]),
                     ),
                 };
                 (carryForward as any).__instanceResolvedData = [
@@ -197,11 +229,15 @@ export async function buildInstance(
 
     // Write cache metadata for the main server
     const cacheMetadataPath = path.join(instanceDir, `${instanceId}.cache.json`);
-    await fs.writeFile(cacheMetadataPath, JSON.stringify({
-        slowViewState,
-        carryForward,
-        sourcePath: route.jayHtmlPath,
-    }), 'utf-8');
+    await fs.writeFile(
+        cacheMetadataPath,
+        JSON.stringify({
+            slowViewState,
+            carryForward,
+            sourcePath: route.jayHtmlPath,
+        }),
+        'utf-8',
+    );
 
     logger.info(`[Build] Pre-rendered: ${routeDir}/${instanceId}`);
 
@@ -226,7 +262,9 @@ export async function buildInstance(
     let pageExportName: string;
     if (route.componentExport) {
         const pkgName = resolvePackageNameForRoute(route.compPath!);
-        pageModulePath = pkgName ? `${pkgName}/client` : './' + path.relative(instanceDir, route.compPath!);
+        pageModulePath = pkgName
+            ? `${pkgName}/client`
+            : './' + path.relative(instanceDir, route.compPath!);
         pageExportName = route.componentExport;
     } else if (route.compPath) {
         pageModulePath = './' + path.relative(instanceDir, route.compPath);
@@ -237,7 +275,9 @@ export async function buildInstance(
     }
 
     if (pageParts.keyedPartModules.length > 0) {
-        logger.info(`[Build] Keyed parts for ${routeDir}: ${pageParts.keyedPartModules.map(p => p.key).join(', ')}`);
+        logger.info(
+            `[Build] Keyed parts for ${routeDir}: ${pageParts.keyedPartModules.map((p) => p.key).join(', ')}`,
+        );
     }
 
     await generateHydrationEntry({
@@ -248,6 +288,7 @@ export async function buildInstance(
         trackByMap: pageParts.clientTrackByMap || {},
         outputPath: hydrateEntryPath,
         keyedParts: pageParts.keyedPartModules,
+        clientInits: ctx.clientInits,
     });
 
     // 5. Per-instance Vite build

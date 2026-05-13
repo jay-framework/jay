@@ -22,10 +22,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
     // ── Phase 0: Shared Artifacts ──
 
     // 0a. Discover entries + scan routes
-    const { entries, routes } = await discoverServerEntries(
-        options.projectRoot,
-        options.pagesRoot,
-    );
+    const { entries, routes } = await discoverServerEntries(options.projectRoot, options.pagesRoot);
 
     // 0b. Compile server code (Vite SSR build)
     const serverOutputDir = path.join(buildDir, 'server');
@@ -45,11 +42,18 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
     );
 
     // 0d. Discover actions for manifest
-    const { actions, plugins } = await discoverActions(entries.actions, serverOutputDir, buildDir, options.projectRoot);
+    const { actions, plugins } = await discoverActions(
+        entries.actions,
+        serverOutputDir,
+        buildDir,
+        options.projectRoot,
+    );
 
     // 0e. Initialize services (needed for slow render)
     // Run plugin inits in dependency order (plugins register services used by other plugins and pages)
-    const { discoverPluginsWithInit, sortPluginsByDependencies } = await import('@jay-framework/stack-server-runtime');
+    const { discoverPluginsWithInit, sortPluginsByDependencies } = await import(
+        '@jay-framework/stack-server-runtime'
+    );
     try {
         const pluginsWithInit = sortPluginsByDependencies(
             await discoverPluginsWithInit({ projectRoot: options.projectRoot }),
@@ -87,12 +91,43 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
 
     // ── Phase 1: Per-Instance Pipeline ──
 
+    // Discover client inits for hydration entries (plugins + project)
+    const clientInits: InstanceBuildContext['clientInits'] = [];
+    // Plugin client inits — use package/client entry for browser
+    try {
+        const allPluginsWithInit = sortPluginsByDependencies(
+            await discoverPluginsWithInit({ projectRoot: options.projectRoot }),
+        );
+        for (const pluginInit of allPluginsWithInit) {
+            if (pluginInit.isLocal) continue;
+            clientInits.push({
+                modulePath: `${pluginInit.packageName}/client`,
+                exportName: pluginInit.initExport || 'init',
+                key: pluginInit.name,
+            });
+        }
+    } catch (err: any) {
+        logger.warn(`[Build] Client init discovery failed: ${err.message}`);
+    }
+    if (clientInits.length > 0) {
+        logger.important(`[Build] Client inits: ${clientInits.map((ci) => ci.key).join(', ')}`);
+    }
+    // Project init — use the source path (Vite will compile it during instance build)
+    if (entries.init) {
+        clientInits.push({
+            modulePath: entries.init,
+            exportName: 'init',
+            key: 'project',
+        });
+    }
+
     const instanceCtx: InstanceBuildContext = {
         projectRoot: options.projectRoot,
         buildDir,
         jayOptions: { tsConfigFilePath: options.tsConfigFilePath },
         tsConfigFilePath: options.tsConfigFilePath,
         minify: options.minify ?? true,
+        clientInits,
     };
 
     // 0f. Discover plugin routes
@@ -133,9 +168,12 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
 
     function logInstance(route: string, params: Record<string, string>) {
         instanceCount++;
-        const paramStr = Object.keys(params).length > 0
-            ? ` (${Object.entries(params).map(([k, v]) => `${k}=${v}`).join(', ')})`
-            : '';
+        const paramStr =
+            Object.keys(params).length > 0
+                ? ` (${Object.entries(params)
+                      .map(([k, v]) => `${k}=${v}`)
+                      .join(', ')})`
+                : '';
         logger.important(`[Build] ${instanceCount}/${totalExpected} ${route}${paramStr}`);
     }
 
@@ -146,7 +184,10 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
                 if (entry.isPlugin) {
                     pageModule = await import(entry.serverModule);
                 } else {
-                    const pageModulePath = path.join(serverOutputDir, entry.serverModule.replace('server/', ''));
+                    const pageModulePath = path.join(
+                        serverOutputDir,
+                        entry.serverModule.replace('server/', ''),
+                    );
                     pageModule = await import(pageModulePath);
                 }
             } catch (err) {
@@ -174,11 +215,14 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         if (hasDynamicParams) {
             // Check page component and keyed headless parts for loadParams
             const pageParts = await loadProductionPageParts(
-                route, pageModule, await fs.readFile(route.jayHtmlPath, 'utf-8'),
-                options.projectRoot, options.tsConfigFilePath,
+                route,
+                pageModule,
+                await fs.readFile(route.jayHtmlPath, 'utf-8'),
+                options.projectRoot,
+                options.tsConfigFilePath,
                 path.join(buildDir, 'server'),
             );
-            const partsWithLoadParams = pageParts.parts.filter(p => p.compDefinition?.loadParams);
+            const partsWithLoadParams = pageParts.parts.filter((p) => p.compDefinition?.loadParams);
 
             if (partsWithLoadParams.length > 0) {
                 const allParams: Record<string, string>[] = [];
@@ -186,7 +230,9 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
                     allParams.push(...batch);
                 }
                 totalExpected += allParams.length;
-                logger.important(`[Build] Route ${route.rawRoute}: ${allParams.length} param combinations`);
+                logger.important(
+                    `[Build] Route ${route.rawRoute}: ${allParams.length} param combinations`,
+                );
 
                 for (const params of allParams) {
                     try {
@@ -195,11 +241,15 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
                         logInstance(route.rawRoute, params);
                     } catch (err: any) {
                         instanceCount++;
-                        logger.error(`[Build] ${instanceCount}/${totalExpected} FAILED ${route.rawRoute} (${JSON.stringify(params)}): ${err.message}`);
+                        logger.error(
+                            `[Build] ${instanceCount}/${totalExpected} FAILED ${route.rawRoute} (${JSON.stringify(params)}): ${err.message}`,
+                        );
                     }
                 }
             } else {
-                logger.info(`[Build] Skipping dynamic route ${route.rawRoute} — no loadParams available`);
+                logger.info(
+                    `[Build] Skipping dynamic route ${route.rawRoute} — no loadParams available`,
+                );
             }
         } else {
             try {
@@ -208,7 +258,9 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
                 logInstance(route.rawRoute || '/', {});
             } catch (err: any) {
                 instanceCount++;
-                logger.error(`[Build] ${instanceCount}/${totalExpected} FAILED ${route.rawRoute || '/'}: ${err.message}`);
+                logger.error(
+                    `[Build] ${instanceCount}/${totalExpected} FAILED ${route.rawRoute || '/'}: ${err.message}`,
+                );
             }
         }
     }

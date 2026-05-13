@@ -9,7 +9,7 @@ export interface DevServerOptions {
     /**
      * Folder where build artifacts are stored.
      * Pre-rendered jay-html files are written to `<buildFolder>/pre-rendered/`.
-     * Defaults to `<projectRootFolder>/build/dev`.
+     * Defaults to `<projectRootFolder>/build`.
      */
     buildFolder?: string;
     jayRollupConfig: JayRollupConfig;

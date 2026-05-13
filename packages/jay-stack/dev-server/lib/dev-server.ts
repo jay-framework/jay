@@ -222,7 +222,7 @@ function defaults(options: DevServerOptions): DevServerOptions {
         projectRootFolder,
         options.pagesRootFolder || './src/pages',
     );
-    const buildFolder = options.buildFolder || path.resolve(projectRootFolder, './build/dev');
+    const buildFolder = options.buildFolder || path.resolve(projectRootFolder, './build');
     const tsConfigFilePath =
         options.jayRollupConfig.tsConfigFilePath ||
         path.resolve(projectRootFolder, './tsconfig.json');

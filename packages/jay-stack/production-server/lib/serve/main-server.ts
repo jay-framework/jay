@@ -5,7 +5,12 @@ import { FilesystemArtifactStore } from './artifact-store';
 import { matchRequest } from './route-matcher';
 import { handlePageRequest } from './page-handler';
 import { handleStaticRequest } from './static-handler';
-import { isActionRequest, handleActionRequest, registerActionsFromManifest } from './action-handler';
+import {
+    isActionRequest,
+    handleActionRequest,
+    registerActionsFromManifest,
+} from './action-handler';
+import { setClientInitData } from '@jay-framework/stack-server-runtime';
 
 export interface MainServerOptions {
     buildRoot: string;
@@ -20,10 +25,14 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
     const artifacts = new FilesystemArtifactStore(buildDir);
 
     const manifest = await artifacts.readManifest();
-    logger.important(`[Server] Loaded manifest: ${manifest.routes.length} routes, v${manifest.version}`);
+    logger.important(
+        `[Server] Loaded manifest: ${manifest.routes.length} routes, v${manifest.version}`,
+    );
 
     // Run plugin inits in dependency order
-    const { discoverPluginsWithInit, sortPluginsByDependencies } = await import('@jay-framework/stack-server-runtime');
+    const { discoverPluginsWithInit, sortPluginsByDependencies } = await import(
+        '@jay-framework/stack-server-runtime'
+    );
     try {
         const pluginsWithInit = sortPluginsByDependencies(
             await discoverPluginsWithInit({ projectRoot: manifest.projectRoot }),
@@ -34,7 +43,8 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
                 const init = pluginModule.init || pluginModule[pluginInit.initExport || 'init'];
                 if (init?._serverInit) {
                     logger.info(`[Server] Running plugin init: ${pluginInit.name}`);
-                    await init._serverInit();
+                    const data = await init._serverInit();
+                    if (data) setClientInitData(pluginInit.name, data);
                 }
             } catch (err: any) {
                 logger.warn(`[Server] Plugin init failed: ${pluginInit.name}: ${err.message}`);
@@ -50,7 +60,8 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
         const init = initModule.init || initModule.default;
         if (init?._serverInit) {
             logger.important('[Server] Running server init...');
-            await init._serverInit();
+            const data = await init._serverInit();
+            if (data) setClientInitData('project', data);
         }
     }
 
@@ -68,10 +79,20 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
                 return;
             }
 
-            const handled = await handleStaticRequest(req, res, path.join(buildDir, 'shared'), '/shared/');
+            const handled = await handleStaticRequest(
+                req,
+                res,
+                path.join(buildDir, 'shared'),
+                '/shared/',
+            );
             if (handled) return;
 
-            const handledInstances = await handleStaticRequest(req, res, path.join(buildDir, 'instances'), '/instances/');
+            const handledInstances = await handleStaticRequest(
+                req,
+                res,
+                path.join(buildDir, 'instances'),
+                '/instances/',
+            );
             if (handledInstances) return;
 
             const currentManifest = await artifacts.readManifest();
@@ -94,6 +115,8 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
     });
 
     server.listen(options.port, () => {
-        logger.important(`[Server] Production server listening on http://localhost:${options.port}`);
+        logger.important(
+            `[Server] Production server listening on http://localhost:${options.port}`,
+        );
     });
 }
