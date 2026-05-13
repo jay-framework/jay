@@ -36,7 +36,7 @@ export async function buildSharedChunks(
     const entries: Record<string, string> = {};
     for (const pkg of allPackages) {
         const varName = pkgToVarName(pkg);
-        const entryPath = path.join(outputDir, `_entry_${varName}.js`);
+        const entryPath = path.join(outputDir, `_shared_${varName}.js`);
         await fs.writeFile(entryPath, `export * from '${pkg}';\n`);
         entries[varName] = entryPath;
     }
@@ -66,7 +66,7 @@ export async function buildSharedChunks(
 
     for (const pkg of allPackages) {
         const varName = pkgToVarName(pkg);
-        await fs.rm(path.join(outputDir, `_entry_${varName}.js`), { force: true });
+        await fs.rm(path.join(outputDir, `_shared_${varName}.js`), { force: true });
     }
 
     const manifest = await parseViteManifest(outputDir, allPackages);
