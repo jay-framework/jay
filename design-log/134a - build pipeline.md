@@ -648,16 +648,17 @@ Instance bundles were **780 KB** each — mostly duplicated plugin code (Wix SDK
 
 **Fix:** Externalize all `@jay-framework/*` packages, not just framework core.
 
-| Component | Change |
-|-----------|--------|
-| `instance-client-build.ts` | `external: (id) => id.startsWith('@jay-framework/')` — function instead of hardcoded list |
-| `shared-chunks-build.ts` | Accepts `pluginClientPackages` parameter, builds shared chunks for plugin `/client` entries alongside framework packages |
-| `build-pipeline.ts` | `discoverPluginClientPackages()` walks project `package.json` → transitive `@jay-framework/*` deps → filters to packages with `./client` export |
-| `page-handler.ts` | `<link rel="modulepreload">` tags for all shared chunks — eliminates import waterfall |
+| Component                  | Change                                                                                                                                          |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `instance-client-build.ts` | `external: (id) => id.startsWith('@jay-framework/')` — function instead of hardcoded list                                                       |
+| `shared-chunks-build.ts`   | Accepts `pluginClientPackages` parameter, builds shared chunks for plugin `/client` entries alongside framework packages                        |
+| `build-pipeline.ts`        | `discoverPluginClientPackages()` walks project `package.json` → transitive `@jay-framework/*` deps → filters to packages with `./client` export |
+| `page-handler.ts`          | `<link rel="modulepreload">` tags for all shared chunks — eliminates import waterfall                                                           |
 
 **Discovery approach:** Uses `createRequire(projectRoot)` to resolve packages through Node's module resolution (handles hoisted monorepo `node_modules`), then walks up from the resolved main entry to find `package.json`. Filters to packages that declare `exports["./client"]`. Recursive — collects transitive `@jay-framework/*` dependencies.
 
 **Result (store-light):**
+
 - Instance bundles: 780 KB → **7-17 KB** (hydration + slowViewState only)
 - Shared chunks: 126 KB → **482 KB** (framework + plugins, loaded once, browser-cached)
 - Total JS per session: ~11.7 MB → **~600 KB**
@@ -668,8 +669,8 @@ Changed from returning `InstanceEntry | undefined` to a discriminated union:
 
 ```typescript
 export type InstanceBuildResult =
-    | { status: 'success'; instanceEntry: InstanceEntry; slowViewState: object; carryForward: object }
-    | { status: 'skipped'; reason: string };
+  | { status: 'success'; instanceEntry: InstanceEntry; slowViewState: object; carryForward: object }
+  | { status: 'skipped'; reason: string };
 ```
 
 Non-fatal slow render outcomes (`ClientError`, `Redirect`) return `status: 'skipped'` instead of throwing. The `kind` discriminant values are `'ClientError'` and `'Redirect'` (not `'ClientError4xx'`/`'Redirect3xx'` — those are type names, not kind values).

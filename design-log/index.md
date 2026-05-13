@@ -189,7 +189,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 ## Server-Side Rendering (SSR) & Hydration
 
 | #   | Title                                                   | Description                                                                                            |
-|-----| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| --- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | 11  | server side rendering                                   | SSR design                                                                                             |
 | 23  | JSON compare and patch                                  | JSON diffing for SSR hydration                                                                         |
 | 48  | Jay Stack Services                                      | Service injection for SSR                                                                              |

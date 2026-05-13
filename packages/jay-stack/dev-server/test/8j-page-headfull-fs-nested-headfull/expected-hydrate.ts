@@ -37,7 +37,7 @@ function _headlessLayout0HydrateRender(options) {
             adoptElement('S1/0', {}, [
                 childCompHydrate(
                     _HeadlessHeader1,
-                    (vs) => ({ logoUrl: '/logo.png', style: 'display:contents' }),
+                    (vs) => ({ logoUrl: '/logo.png', style: 'display: contents' }),
                     'S2/0',
                     refAr0(),
                 ),
@@ -58,7 +58,7 @@ export function hydrate(rootElement, options) {
             adoptElement('S0/0', {}, [
                 childCompHydrate(
                     _HeadlessLayout0,
-                    (vs) => ({ style: 'display:contents' }),
+                    (vs) => ({ style: 'display: contents' }),
                     'S1/0',
                     refAr02(),
                 ),

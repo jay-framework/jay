@@ -55,7 +55,12 @@ export interface InstanceBuildContext {
 }
 
 export type InstanceBuildResult =
-    | { status: 'success'; instanceEntry: InstanceEntry; slowViewState: object; carryForward: object }
+    | {
+          status: 'success';
+          instanceEntry: InstanceEntry;
+          slowViewState: object;
+          carryForward: object;
+      }
     | { status: 'skipped'; reason: string };
 
 function hashParams(params: Record<string, string>): string {

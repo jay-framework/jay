@@ -33,7 +33,7 @@ export function hydrate(rootElement, options) {
             adoptElement('S0/0', {}, [
                 childCompHydrate(
                     _HeadlessHeader0,
-                    (vs) => ({ itemId: '1', style: 'display:contents' }),
+                    (vs) => ({ itemId: '1', style: 'display: contents' }),
                     'S1/0',
                     refAr0(),
                 ),

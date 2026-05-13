@@ -39,10 +39,14 @@ async function discoverPluginClientPackages(projectRoot: string): Promise<string
                         }
                         break;
                     }
-                } catch { /* no package.json at this level */ }
+                } catch {
+                    /* no package.json at this level */
+                }
                 pkgDir = path.dirname(pkgDir);
             }
-        } catch { /* not resolvable */ }
+        } catch {
+            /* not resolvable */
+        }
     }
 
     try {
@@ -58,7 +62,9 @@ async function discoverPluginClientPackages(projectRoot: string): Promise<string
                 await walk(dep);
             }
         }
-    } catch { /* no package.json */ }
+    } catch {
+        /* no package.json */
+    }
 
     return result;
 }
@@ -279,10 +285,14 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
                     entry.instances.push(result.instanceEntry);
                     logInstance(route.rawRoute, inferredParams);
                 } else {
-                    logger.warn(`[Build] Skipped ${route.rawRoute} (${JSON.stringify(inferredParams)}): ${result.reason}`);
+                    logger.warn(
+                        `[Build] Skipped ${route.rawRoute} (${JSON.stringify(inferredParams)}): ${result.reason}`,
+                    );
                 }
             } catch (err: any) {
-                logger.error(`[Build] Failed to build ${route.rawRoute} (${JSON.stringify(inferredParams)}): ${err.message}`);
+                logger.error(
+                    `[Build] Failed to build ${route.rawRoute} (${JSON.stringify(inferredParams)}): ${err.message}`,
+                );
             }
             continue;
         }
@@ -327,7 +337,9 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
                             entry.instances.push(result.instanceEntry);
                             logInstance(route.rawRoute, params);
                         } else {
-                            logger.warn(`[Build] Skipped ${route.rawRoute} (${JSON.stringify(params)}): ${result.reason}`);
+                            logger.warn(
+                                `[Build] Skipped ${route.rawRoute} (${JSON.stringify(params)}): ${result.reason}`,
+                            );
                             totalExpected--;
                         }
                     } catch (err: any) {
