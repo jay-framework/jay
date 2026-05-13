@@ -71,7 +71,7 @@ function _headlessProductCard0Render(
     );
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
-            e('div', {}, [
+            e('div', { style: { cssText: 'display:contents' } }, [
                 e('h2', {}, [dt((vs) => vs.name)]),
                 e('span', { class: 'price' }, [dt((vs) => vs.price)]),
                 e('button', {}, ['Add to Cart'], refAddToCart()),

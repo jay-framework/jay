@@ -66,7 +66,7 @@ export function hydrate(rootElement, options) {
                             adoptText('S1/0/0', (vs1) => vs1.name),
                             childCompHydrate(
                                 _HeadlessHeader0Adopt,
-                                (vs1) => ({ itemId: vs1._id }),
+                                (vs1) => ({ itemId: vs1._id, style: 'display:contents' }),
                                 'S2/0',
                                 refAr0(),
                             ),
@@ -77,7 +77,7 @@ export function hydrate(rootElement, options) {
                                     e('strong', {}, [dt((vs12) => vs12.name)]),
                                     childComp(
                                         _HeadlessHeader1,
-                                        (vs12) => ({ itemId: vs12._id }),
+                                        (vs12) => ({ itemId: vs12._id, style: 'display:contents' }),
                                         refAr0(),
                                     ),
                                 ]),

@@ -35,7 +35,7 @@ export function hydrate(rootElement, options) {
             adoptElement('S0/0', {}, [
                 childCompHydrate(
                     _HeadlessTestHeader0,
-                    (vs) => ({ logoUrl: '/logo.png' }),
+                    (vs) => ({ logoUrl: '/logo.png', style: 'display:contents' }),
                     'S1/0',
                     refAr0(),
                 ),
