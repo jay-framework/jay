@@ -54,11 +54,9 @@ export interface InstanceBuildContext {
     clientInits?: ClientInitEntry[];
 }
 
-export interface InstanceBuildResult {
-    instanceEntry: InstanceEntry;
-    slowViewState: object;
-    carryForward: object;
-}
+export type InstanceBuildResult =
+    | { status: 'success'; instanceEntry: InstanceEntry; slowViewState: object; carryForward: object }
+    | { status: 'skipped'; reason: string };
 
 function hashParams(params: Record<string, string>): string {
     const sorted = Object.keys(params)
@@ -115,6 +113,12 @@ export async function buildInstance(
     );
 
     if (slowResult.kind !== 'PhaseOutput') {
+        if (slowResult.kind === 'ClientError' || slowResult.kind === 'Redirect') {
+            return {
+                status: 'skipped',
+                reason: `${slowResult.kind} ${(slowResult as any).status ?? ''} ${(slowResult as any).message ?? ''}`.trim(),
+            };
+        }
         throw new Error(
             `Slow render failed for ${route.rawRoute} with params ${JSON.stringify(params)}: ${slowResult.kind}`,
         );
@@ -317,5 +321,5 @@ export async function buildInstance(
             : undefined,
     };
 
-    return { instanceEntry, slowViewState, carryForward };
+    return { status: 'success', instanceEntry, slowViewState, carryForward };
 }

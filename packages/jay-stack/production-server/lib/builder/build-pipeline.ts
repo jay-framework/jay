@@ -214,8 +214,12 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         if (inferredParams) {
             try {
                 const result = await buildInstance(route, inferredParams, pageModule, instanceCtx);
-                entry.instances.push(result.instanceEntry);
-                logInstance(route.rawRoute, inferredParams);
+                if (result.status === 'success') {
+                    entry.instances.push(result.instanceEntry);
+                    logInstance(route.rawRoute, inferredParams);
+                } else {
+                    logger.warn(`[Build] Skipped ${route.rawRoute}: ${result.reason}`);
+                }
             } catch (err: any) {
                 logger.error(`[Build] Failed to build ${route.rawRoute}: ${err.message}`);
             }
@@ -247,8 +251,13 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
                 for (const params of allParams) {
                     try {
                         const result = await buildInstance(route, params, pageModule, instanceCtx);
-                        entry.instances.push(result.instanceEntry);
-                        logInstance(route.rawRoute, params);
+                        if (result.status === 'success') {
+                            entry.instances.push(result.instanceEntry);
+                            logInstance(route.rawRoute, params);
+                        } else {
+                            logger.warn(`[Build] Skipped ${route.rawRoute} (${JSON.stringify(params)}): ${result.reason}`);
+                            totalExpected--;
+                        }
                     } catch (err: any) {
                         instanceCount++;
                         logger.error(
@@ -264,8 +273,13 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         } else {
             try {
                 const result = await buildInstance(route, {}, pageModule, instanceCtx);
-                entry.instances.push(result.instanceEntry);
-                logInstance(route.rawRoute || '/', {});
+                if (result.status === 'success') {
+                    entry.instances.push(result.instanceEntry);
+                    logInstance(route.rawRoute || '/', {});
+                } else {
+                    logger.warn(`[Build] Skipped ${route.rawRoute || '/'}: ${result.reason}`);
+                    totalExpected--;
+                }
             } catch (err: any) {
                 instanceCount++;
                 logger.error(
