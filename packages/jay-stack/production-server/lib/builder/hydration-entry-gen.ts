@@ -66,7 +66,7 @@ export async function generateHydrationEntry(options: HydrationEntryOptions): Pr
     const initCalls = clientInits
         .map(
             (ci, i) =>
-                `    if (clientInit${i}?._clientInit) clientInit${i}._clientInit(clientInitData['${ci.key}'] || {});`,
+                `    if (clientInit${i}?._clientInit) await clientInit${i}._clientInit(clientInitData['${ci.key}'] || {});`,
         )
         .join('\n');
 
@@ -82,7 +82,7 @@ ${initImports}
 const slowViewState = ${JSON.stringify(slowViewState)};
 const trackByMap = ${JSON.stringify(trackByMap)};
 
-export function init(fastViewState, fastCarryForward${hasClientInit ? ', clientInitData' : ''}) {
+export async function init(fastViewState, fastCarryForward${hasClientInit ? ', clientInitData' : ''}) {
 ${initCalls}
     const viewState = deepMergeViewStates(slowViewState, fastViewState, trackByMap);
     const target = document.getElementById('target');

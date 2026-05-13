@@ -175,7 +175,7 @@ ${headTagsHtml}${cssLink}    <script type="importmap">${JSON.stringify({ imports
     res.write(`
     <script type="module">
       import { init } from '${clientBundleUrl}';
-      init(${JSON.stringify(fastViewState)}, ${JSON.stringify(fastCarryForward)}, ${JSON.stringify(clientInitData)});
+      await init(${JSON.stringify(fastViewState)}, ${JSON.stringify(fastCarryForward)}, ${JSON.stringify(clientInitData)});
     </script>
   </body>
 </html>`);

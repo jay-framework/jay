@@ -93,19 +93,27 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
 
     // Discover client inits for hydration entries (plugins + project)
     const clientInits: InstanceBuildContext['clientInits'] = [];
-    // Plugin client inits — reuse preparePluginClientInits which filters to confirmed inits only
-    const { preparePluginClientInits } = await import('@jay-framework/stack-server-runtime');
+    // Plugin client inits — check which plugins have _clientInit by loading them
     try {
         const allPluginsWithInit = sortPluginsByDependencies(
             await discoverPluginsWithInit({ projectRoot: options.projectRoot }),
         );
-        const pluginClientInits = preparePluginClientInits(allPluginsWithInit);
-        for (const pci of pluginClientInits) {
-            clientInits.push({
-                modulePath: pci.importPath,
-                exportName: pci.initExport,
-                key: pci.name,
-            });
+        for (const pluginInit of allPluginsWithInit) {
+            if (pluginInit.isLocal) continue;
+            const clientImportPath = `${pluginInit.packageName}/client`;
+            try {
+                const clientModule = await import(clientImportPath);
+                const init = clientModule[pluginInit.initExport || 'init'] || clientModule.init;
+                if (init?._clientInit) {
+                    clientInits.push({
+                        modulePath: clientImportPath,
+                        exportName: pluginInit.initExport || 'init',
+                        key: pluginInit.name,
+                    });
+                }
+            } catch {
+                /* plugin may not have /client entry or init */
+            }
         }
     } catch (err: any) {
         logger.warn(`[Build] Client init discovery failed: ${err.message}`);
