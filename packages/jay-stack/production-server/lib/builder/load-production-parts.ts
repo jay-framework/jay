@@ -87,7 +87,16 @@ export async function loadProductionPageParts(
                 const relativeToSrc = path.relative(path.join(projectRoot, 'src'), sourcePath);
                 let compiledPath = path.join(serverBuildDir, relativeToSrc);
                 compiledPath = compiledPath.replace(/\.ts$/, '.js');
-                if (!compiledPath.endsWith('.js')) compiledPath += '.js';
+                if (!compiledPath.endsWith('.js')) {
+                    // Check for directory with index.js (e.g., components/kitan-header/index.js)
+                    const indexPath = path.join(compiledPath, 'index.js');
+                    try {
+                        await fs.access(indexPath);
+                        compiledPath = indexPath;
+                    } catch {
+                        compiledPath += '.js';
+                    }
+                }
                 modulePath = compiledPath;
             } else {
                 modulePath = sourcePath;
