@@ -122,6 +122,22 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
     });
 
     let instanceCount = 0;
+    let totalExpected = 0;
+
+    // Count static routes for initial estimate
+    for (const { route } of routeEntries) {
+        const hasDynamic = route.segments.some((s) => typeof s !== 'string');
+        const hasInferred = !!(route as any).inferredParams;
+        if (!hasDynamic || hasInferred) totalExpected++;
+    }
+
+    function logInstance(route: string, params: Record<string, string>) {
+        instanceCount++;
+        const paramStr = Object.keys(params).length > 0
+            ? ` (${Object.entries(params).map(([k, v]) => `${k}=${v}`).join(', ')})`
+            : '';
+        logger.important(`[Build] ${instanceCount}/${totalExpected} ${route}${paramStr}`);
+    }
 
     for (const { route, entry } of routeEntries) {
         let pageModule: any = {};
@@ -148,7 +164,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
             try {
                 const result = await buildInstance(route, inferredParams, pageModule, instanceCtx);
                 entry.instances.push(result.instanceEntry);
-                instanceCount++;
+                logInstance(route.rawRoute, inferredParams);
             } catch (err: any) {
                 logger.error(`[Build] Failed to build ${route.rawRoute}: ${err.message}`);
             }
@@ -169,15 +185,17 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
                 for await (const batch of runLoadParams(partsWithLoadParams)) {
                     allParams.push(...batch);
                 }
-                logger.info(`[Build] Route ${route.rawRoute}: ${allParams.length} param combinations`);
+                totalExpected += allParams.length;
+                logger.important(`[Build] Route ${route.rawRoute}: ${allParams.length} param combinations`);
 
                 for (const params of allParams) {
                     try {
                         const result = await buildInstance(route, params, pageModule, instanceCtx);
                         entry.instances.push(result.instanceEntry);
-                        instanceCount++;
+                        logInstance(route.rawRoute, params);
                     } catch (err: any) {
-                        logger.error(`[Build] Failed to build ${route.rawRoute} with params ${JSON.stringify(params)}: ${err.message}`);
+                        instanceCount++;
+                        logger.error(`[Build] ${instanceCount}/${totalExpected} FAILED ${route.rawRoute} (${JSON.stringify(params)}): ${err.message}`);
                     }
                 }
             } else {
@@ -187,9 +205,10 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
             try {
                 const result = await buildInstance(route, {}, pageModule, instanceCtx);
                 entry.instances.push(result.instanceEntry);
-                instanceCount++;
+                logInstance(route.rawRoute || '/', {});
             } catch (err: any) {
-                logger.error(`[Build] Failed to build ${route.rawRoute}: ${err.message}`);
+                instanceCount++;
+                logger.error(`[Build] ${instanceCount}/${totalExpected} FAILED ${route.rawRoute || '/'}: ${err.message}`);
             }
         }
     }
