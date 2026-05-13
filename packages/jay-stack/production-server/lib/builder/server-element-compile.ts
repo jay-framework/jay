@@ -34,9 +34,7 @@ export async function compileServerElement(
     );
     const parsedJayFile = checkValidationErrors(jayFile);
 
-    const serverElementCode = checkValidationErrors(
-        generateServerElementFile(parsedJayFile),
-    );
+    const serverElementCode = checkValidationErrors(generateServerElementFile(parsedJayFile));
 
     const outputDir = path.dirname(outputPath);
     await fs.mkdir(outputDir, { recursive: true });

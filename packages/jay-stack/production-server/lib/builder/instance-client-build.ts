@@ -55,9 +55,7 @@ export async function buildInstanceClient(
     const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf-8'));
     await fs.rm(manifestPath, { force: true });
 
-    const entryKey = Object.keys(manifest).find(
-        (k) => (manifest[k] as any).isEntry,
-    );
+    const entryKey = Object.keys(manifest).find((k) => (manifest[k] as any).isEntry);
     if (!entryKey) {
         throw new Error(`No entry found in instance build manifest for ${instanceId}`);
     }

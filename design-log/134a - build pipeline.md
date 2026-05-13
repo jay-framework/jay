@@ -10,12 +10,14 @@
 Design Log #134 establishes a two-server production architecture where a slow render server produces build artifacts and a main server consumes them. This child design log covers the **build pipeline** — the process of turning source code into production artifacts.
 
 The pipeline must produce, per instance (route + param combination):
+
 1. Pre-rendered jay-html (slow data baked in)
 2. Compiled server element JS (for SSR at request time)
 3. Compiled + bundled client JS (hydration script)
 4. CSS
 
 Plus shared artifacts built once per version:
+
 - Jay framework shared chunks
 - Plugin shared chunks
 - Compiled server code (page.ts, actions, services, init.ts)
@@ -27,12 +29,12 @@ Plus shared artifacts built once per version:
 
 The compiler produces four targets from a single `.jay-html` file (`jay-html-compiler.ts`, `jay-html-compiler-server.ts`):
 
-| Target | Generator | Output | Used By |
-|---|---|---|---|
-| **Element** | `generateElementFile()` | `render()` — creates DOM from scratch | Client-only rendering (no SSR) |
-| **Hydrate** | `generateElementHydrateFile()` | `hydrate()` — adopts existing DOM | Client after SSR |
-| **Server Element** | `generateServerElementFile()` | `renderToStream(vs, ctx)` — writes HTML strings | SSR on server |
-| **Bridge** | `generateElementBridgeFile()` | Worker sandbox communication | Secure mode (not relevant here) |
+| Target             | Generator                      | Output                                          | Used By                         |
+| ------------------ | ------------------------------ | ----------------------------------------------- | ------------------------------- |
+| **Element**        | `generateElementFile()`        | `render()` — creates DOM from scratch           | Client-only rendering (no SSR)  |
+| **Hydrate**        | `generateElementHydrateFile()` | `hydrate()` — adopts existing DOM               | Client after SSR                |
+| **Server Element** | `generateServerElementFile()`  | `renderToStream(vs, ctx)` — writes HTML strings | SSR on server                   |
+| **Bridge**         | `generateElementBridgeFile()`  | Worker sandbox communication                    | Secure mode (not relevant here) |
 
 ### compiler-jay-stack — Vite Plugin Composition
 
@@ -47,6 +49,7 @@ The compiler produces four targets from a single `.jay-html` file (`jay-html-com
 ### Plugin Packages — Already Pre-compiled
 
 Plugins use the same `jayStackCompiler` for their builds (`examples/jay-stack/mood-tracker-plugin/vite.config.ts`):
+
 - Server build: `vite build --ssr` → `dist/index.js` (server code)
 - Client build: `vite build` → `dist/index.client.js` (client code)
 - Jay framework packages are externalized — they become shared chunks in the consuming project
@@ -65,6 +68,7 @@ Plugins use the same `jayStackCompiler` for their builds (`examples/jay-stack/mo
 ```
 
 The hydration script is an inline `<script type="module">` that imports:
+
 - `hydrateCompositeJayComponent` from `@jay-framework/stack-client-runtime`
 - `hydrate` from `page.jay-html?jay-hydrate` (compiled on-demand by Vite plugin)
 - Each page part's client export
@@ -151,8 +155,8 @@ await build({
     rollupOptions: {
       input: {
         init: 'src/lib/init.ts',
-        ...pageEntries,    // { 'pages/home/page': 'src/pages/home/page.ts', ... }
-        ...actionEntries,  // { 'actions/addToCart': 'src/lib/actions/addToCart.actions.ts', ... }
+        ...pageEntries, // { 'pages/home/page': 'src/pages/home/page.ts', ... }
+        ...actionEntries, // { 'actions/addToCart': 'src/lib/actions/addToCart.actions.ts', ... }
       },
       external: [
         '@jay-framework/fullstack-component',
@@ -178,9 +182,9 @@ await build({
     lib: {
       entry: {
         'stack-client-runtime': '@jay-framework/stack-client-runtime',
-        'component': '@jay-framework/component',
-        'reactive': '@jay-framework/reactive',
-        'runtime': '@jay-framework/runtime',
+        component: '@jay-framework/component',
+        reactive: '@jay-framework/reactive',
+        runtime: '@jay-framework/runtime',
         // plugin client entries
         ...pluginClientEntries,
       },
@@ -205,6 +209,7 @@ Output: `build/v{n}/shared/shared-manifest.json` mapping module names to hashed 
 Vite library mode externalizes dependencies and produces one file per entry. A custom chunk strategy (`manualChunks`) can deduplicate shared code between entries. For shared chunks that multiple instance bundles reference, library mode with `external` seems right — each shared module becomes a standalone file that instance bundles import.
 
 However, instance bundles need to resolve these imports at runtime. Options:
+
 - **Import maps** — browser-native, `<script type="importmap">` maps bare specifiers to hashed URLs
 - **Rollup `paths` option** — rewrite imports at bundle time to absolute URLs
 - **Pre-bundled with externals** — instance bundles include only page-specific code, shared code loaded via separate `<script>` tags
@@ -226,10 +231,12 @@ Today: `generateServerElementFile()` → TS → `vite.ssrLoadModule()`.
 Production: `generateServerElementFile()` → TS → compile to JS without Vite.
 
 The server element TS is simple — it imports only from `@jay-framework/ssr-runtime` (which is a small package with `escapeHtml`, `escapeAttr`, `ServerRenderContext`). Compiling it requires:
+
 - TypeScript → JS transpilation (no type checking needed, just strip types)
 - Import resolution for `@jay-framework/ssr-runtime`
 
 Options:
+
 - **esbuild** — fast TS-to-JS transpilation, can bundle the single import
 - **Vite build in SSR mode** — heavier but consistent with the rest of the pipeline
 - **`tsc --noEmit false`** — standard TS compiler
@@ -259,14 +266,14 @@ Production: Generate a **TS file** per instance, which becomes the Vite build en
 
 **What's known at build time vs request time:**
 
-| Data | Known at | Embedded in |
-|---|---|---|
-| Slow ViewState | Build time (per instance) | Hydration entry (bundled) |
-| Fast ViewState | Request time | SSR inline JSON |
-| CarryForward | Request time | SSR inline JSON |
-| TrackByMap | Build time | Hydration entry (bundled) |
-| Hydrate function | Build time (per instance, depends on pre-rendered jay-html) | Hydration entry (bundled) |
-| Page parts (interactive) | Build time | Hydration entry (bundled) |
+| Data                     | Known at                                                    | Embedded in               |
+| ------------------------ | ----------------------------------------------------------- | ------------------------- |
+| Slow ViewState           | Build time (per instance)                                   | Hydration entry (bundled) |
+| Fast ViewState           | Request time                                                | SSR inline JSON           |
+| CarryForward             | Request time                                                | SSR inline JSON           |
+| TrackByMap               | Build time                                                  | Hydration entry (bundled) |
+| Hydrate function         | Build time (per instance, depends on pre-rendered jay-html) | Hydration entry (bundled) |
+| Page parts (interactive) | Build time                                                  | Hydration entry (bundled) |
 
 The slow ViewState is different per instance — it's the output of slow rendering, which produced the pre-rendered jay-html that this instance is compiled from. It must be embedded in the hydration entry so the client can merge it with the fast ViewState for a complete picture.
 
@@ -298,7 +305,9 @@ export function init(fastViewState, fastCarryForward) {
 The SSR response at request time only injects fast-phase data:
 
 ```html
-<script type="importmap">{ "imports": { ... } }</script>
+<script type="importmap">
+  { "imports": { ... } }
+</script>
 <script type="module">
   import { init } from '/assets/page_abc123-a1b2c3.js';
   init(
@@ -340,6 +349,7 @@ await build({
 The `?jay-hydrate` import is resolved by the `jay:runtime` plugin, which compiles the pre-rendered jay-html into hydrate code. The `jay-stack:code-split` plugin strips server phases. The `jay-stack:action-transform` replaces action imports with client callers.
 
 Output per instance:
+
 - `page_abc123-[hash].js` — bundled hydration entry
 - `page_abc123-[hash].css` — extracted CSS (if any)
 
@@ -353,8 +363,8 @@ Yes — Vite supports multiple entry points. We can batch instances within the s
 await build({
   rollupOptions: {
     input: {
-      'page_abc123': 'instances/products/[slug]/page_abc123.hydrate-entry.ts',
-      'page_def456': 'instances/products/[slug]/page_def456.hydrate-entry.ts',
+      page_abc123: 'instances/products/[slug]/page_abc123.hydrate-entry.ts',
+      page_def456: 'instances/products/[slug]/page_def456.hydrate-entry.ts',
     },
   },
 });
@@ -363,6 +373,7 @@ await build({
 This allows Rollup to deduplicate code shared between instances of the same route. For data change re-renders, only the affected instance's entry is rebuilt.
 
 Batching strategy:
+
 - **Full build:** All instances in one Vite build (maximum deduplication, slower for incremental)
 - **Per-route build:** Instances of the same route in one build (good balance)
 - **Per-instance build:** One build per instance (maximum incrementality, more overhead)
@@ -377,39 +388,40 @@ interface RouteManifest {
   version: number;
   buildTimestamp: string;
   sourceHash: string;
-  publicBasePath: string;                    // CDN URL or "/" for self-hosting
-  sharedManifest: Record<string, string>;    // module name → hashed filename
+  publicBasePath: string; // CDN URL or "/" for self-hosting
+  sharedManifest: Record<string, string>; // module name → hashed filename
   routes: RouteEntry[];
-  actions: ActionEntry[];                    // from DL#134d
-  plugins: PluginEntry[];                    // from DL#134d
+  actions: ActionEntry[]; // from DL#134d
+  plugins: PluginEntry[]; // from DL#134d
 }
 
 interface RouteEntry {
-  pattern: string;                           // e.g., "/products/[slug]"
-  segments: RouteSegment[];                  // parsed segments for matching
-  serverModule: string;                      // relative path to compiled page.js
-  trackByMap?: Record<string, string>;       // for ViewState merging
+  pattern: string; // e.g., "/products/[slug]"
+  segments: RouteSegment[]; // parsed segments for matching
+  serverModule: string; // relative path to compiled page.js
+  trackByMap?: Record<string, string>; // for ViewState merging
   instances: InstanceEntry[];
   isPlugin?: boolean;
   pluginName?: string;
 }
 
 interface InstanceEntry {
-  params: Record<string, string>;            // e.g., { slug: "blue-widget" }
-  preRenderedPath: string;                   // relative path to pre-rendered jay-html
-  serverElementPath: string;                 // relative path to server-element.js
-  clientBundlePath: string;                  // relative path to instance-[hash].js
-  clientCssPath?: string;                    // relative path to instance-[hash].css
+  params: Record<string, string>; // e.g., { slug: "blue-widget" }
+  preRenderedPath: string; // relative path to pre-rendered jay-html
+  serverElementPath: string; // relative path to server-element.js
+  clientBundlePath: string; // relative path to instance-[hash].js
+  clientCssPath?: string; // relative path to instance-[hash].css
 }
 
 interface PreRenderedEntry {
-  content: string;                           // jay-html with cache tag stripped
-  slowViewState: object;                     // from <script type="application/jay-cache">
-  carryForward: object;                      // includes __instances for headless components
+  content: string; // jay-html with cache tag stripped
+  slowViewState: object; // from <script type="application/jay-cache">
+  carryForward: object; // includes __instances for headless components
 }
 ```
 
 The main server reads this manifest to:
+
 - Match incoming requests to routes
 - Find the correct instance for a given set of params
 - Load the right server element for SSR
@@ -438,8 +450,10 @@ async function handleRequest(req, res) {
   // SSR render — server element needs the full merged ViewState
   const htmlChunks = [];
   renderToStream(fullViewState, {
-    write: c => htmlChunks.push(c),
-    onAsync: (promise, id, templates) => { /* ... */ }
+    write: (c) => htmlChunks.push(c),
+    onAsync: (promise, id, templates) => {
+      /* ... */
+    },
   });
 
   // Build response — init() only receives fast-phase data
@@ -465,6 +479,7 @@ The SSR server element renders with the **full merged ViewState** (slow + fast) 
 ### Step 1: Server Code Compilation
 
 Create a build function that compiles all server-side TypeScript using Vite SSR build:
+
 - Input: scanned routes (page.ts paths), action files, init.ts
 - Output: `build/v{n}/server/` with compiled JS
 - Test: compiled page modules can be `import()`-ed and their `fastRender` called
@@ -472,6 +487,7 @@ Create a build function that compiles all server-side TypeScript using Vite SSR 
 ### Step 2: Shared Client Chunks
 
 Create a build function that produces shared chunks:
+
 - Input: list of framework packages + plugin client entries
 - Output: `build/v{n}/shared/` with hashed JS files + `shared-manifest.json`
 - Test: import map can be constructed from manifest, modules load correctly in browser
@@ -479,6 +495,7 @@ Create a build function that produces shared chunks:
 ### Step 3: Server Element Compilation (without Vite)
 
 Extract `compileAndLoadServerElement` logic into a production variant:
+
 - Input: pre-rendered jay-html content
 - Output: standalone `.server-element.js` via esbuild
 - Test: `renderToStream` produces identical HTML to dev server for same ViewState
@@ -486,6 +503,7 @@ Extract `compileAndLoadServerElement` logic into a production variant:
 ### Step 4: Hydration Entry Generation
 
 Create a function that generates a `.hydrate-entry.ts` file per instance:
+
 - Input: pre-rendered jay-html path, page parts, plugin inits
 - Output: TS file exporting `init(viewState, carryForward, trackByMap)`
 - Test: generated file is valid TS, imports resolve
@@ -493,6 +511,7 @@ Create a function that generates a `.hydrate-entry.ts` file per instance:
 ### Step 5: Per-Instance Vite Build
 
 Create a build function that compiles hydration entries:
+
 - Input: one or more `.hydrate-entry.ts` files
 - Output: bundled JS + CSS per entry
 - Test: bundle loads in browser, hydration works
@@ -500,6 +519,7 @@ Create a build function that compiles hydration entries:
 ### Step 6: Route Manifest Generation
 
 Create a function that assembles the route manifest:
+
 - Input: all instance build results
 - Output: `route-manifest.json`
 - Test: manifest correctly maps routes → instances → artifact paths
@@ -507,6 +527,7 @@ Create a function that assembles the route manifest:
 ### Step 7: Build Orchestrator
 
 Wire all steps together into `jay-stack build`:
+
 - Phase 0: steps 1-2 + route scanning (parallel)
 - Phase 1: slow render + steps 3-5 per instance (concurrent with bounded parallelism)
 - Phase 2: step 6
@@ -527,12 +548,12 @@ esbuild is simpler and faster for a single-file compilation with one small depen
 
 ## Trade-offs
 
-| Decision | Pro | Con |
-|---|---|---|
-| Import maps for shared chunks | Standard ES modules; browser-native; clean separation | Requires modern browsers; extra `<script>` tag in HTML |
-| esbuild for server elements | Fast; already a dependency; simple for single-file compilation | Different tool than rest of pipeline; potential edge cases |
-| Per-route Vite batching | Good dedup within route; reasonable incremental rebuild | Less dedup across routes; more builds than full-project |
-| `init()` export pattern | Clean separation of build-time vs request-time data | Extra indirection; ViewState still inlined as JSON |
+| Decision                      | Pro                                                            | Con                                                        |
+| ----------------------------- | -------------------------------------------------------------- | ---------------------------------------------------------- |
+| Import maps for shared chunks | Standard ES modules; browser-native; clean separation          | Requires modern browsers; extra `<script>` tag in HTML     |
+| esbuild for server elements   | Fast; already a dependency; simple for single-file compilation | Different tool than rest of pipeline; potential edge cases |
+| Per-route Vite batching       | Good dedup within route; reasonable incremental rebuild        | Less dedup across routes; more builds than full-project    |
+| `init()` export pattern       | Clean separation of build-time vs request-time data            | Extra indirection; ViewState still inlined as JSON         |
 
 ## Verification Criteria
 
@@ -549,6 +570,7 @@ esbuild is simpler and faster for a single-file compilation with one small depen
 ### Package: `@jay-framework/production-server`
 
 New package at `packages/jay-stack/production-server/` with two modules:
+
 - `lib/builder/` — build pipeline (Phase 0-2)
 - `lib/serve/` — production HTTP server
 
@@ -565,13 +587,13 @@ export * from '@jay-framework/runtime';
 
 ```typescript
 await viteBuild({
-    rollupOptions: {
-        input: entries,         // wrapper files
-        preserveEntrySignatures: 'exports-only',
-    },
-    resolve: {
-        dedupe: [...SHARED_PACKAGES, '@jay-framework/list-compare'],
-    },
+  rollupOptions: {
+    input: entries, // wrapper files
+    preserveEntrySignatures: 'exports-only',
+  },
+  resolve: {
+    dedupe: [...SHARED_PACKAGES, '@jay-framework/list-compare'],
+  },
 });
 ```
 
@@ -585,13 +607,13 @@ await viteBuild({
 
 **Approaches tried and rejected:**
 
-| Approach | Problem |
-|---|---|
-| Copy pre-built dist files | Code duplication — each package's dist bundles its own deps inline |
-| `resolve.alias` to source paths | Module duplication — separate closure variables for context state |
-| Source paths as Rollup entries | Same duplication — each entry creates its own module tree |
-| `manualChunks` forcing single chunk | Still duplicated — chunks share file but not closure state |
-| Single namespace entry (`export * as pkg`) | Complex wrapper generation, fragile export enumeration |
+| Approach                                   | Problem                                                            |
+| ------------------------------------------ | ------------------------------------------------------------------ |
+| Copy pre-built dist files                  | Code duplication — each package's dist bundles its own deps inline |
+| `resolve.alias` to source paths            | Module duplication — separate closure variables for context state  |
+| Source paths as Rollup entries             | Same duplication — each entry creates its own module tree          |
+| `manualChunks` forcing single chunk        | Still duplicated — chunks share file but not closure state         |
+| Single namespace entry (`export * as pkg`) | Complex wrapper generation, fragile export enumeration             |
 
 ### Per-Instance Client Build
 

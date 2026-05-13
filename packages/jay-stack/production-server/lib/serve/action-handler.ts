@@ -1,6 +1,10 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { ActionRegistry, actionRegistry } from '@jay-framework/stack-server-runtime';
-import { isJayAction, isJayStreamAction, type HttpMethod } from '@jay-framework/fullstack-component';
+import {
+    isJayAction,
+    isJayStreamAction,
+    type HttpMethod,
+} from '@jay-framework/fullstack-component';
 import { getLogger } from '@jay-framework/logger';
 
 const ACTION_PREFIX = '/_jay/actions/';
@@ -20,7 +24,11 @@ export async function handleActionRequest(
     if (!actionName) {
         jsonResponse(res, 400, {
             success: false,
-            error: { code: 'MISSING_ACTION_NAME', message: 'Action name is required', isActionError: false },
+            error: {
+                code: 'MISSING_ACTION_NAME',
+                message: 'Action name is required',
+                isActionError: false,
+            },
         });
         return;
     }
@@ -29,7 +37,11 @@ export async function handleActionRequest(
     if (!action) {
         jsonResponse(res, 404, {
             success: false,
-            error: { code: 'ACTION_NOT_FOUND', message: `Action '${actionName}' is not registered`, isActionError: false },
+            error: {
+                code: 'ACTION_NOT_FOUND',
+                message: `Action '${actionName}' is not registered`,
+                isActionError: false,
+            },
         });
         return;
     }
@@ -38,7 +50,11 @@ export async function handleActionRequest(
     if (requestMethod !== action.method) {
         jsonResponse(res, 405, {
             success: false,
-            error: { code: 'METHOD_NOT_ALLOWED', message: `Action '${actionName}' expects ${action.method}, got ${requestMethod}`, isActionError: false },
+            error: {
+                code: 'METHOD_NOT_ALLOWED',
+                message: `Action '${actionName}' expects ${action.method}, got ${requestMethod}`,
+                isActionError: false,
+            },
         });
         return;
     }
@@ -59,7 +75,11 @@ export async function handleActionRequest(
     } catch {
         jsonResponse(res, 400, {
             success: false,
-            error: { code: 'INVALID_INPUT', message: 'Failed to parse request input', isActionError: false },
+            error: {
+                code: 'INVALID_INPUT',
+                message: 'Failed to parse request input',
+                isActionError: false,
+            },
         });
         return;
     }
@@ -99,7 +119,12 @@ export async function handleActionRequest(
 }
 
 export async function registerActionsFromManifest(
-    actions: Array<{ serverModule: string; isPlugin: boolean; actionNames: string[]; packageName?: string }>,
+    actions: Array<{
+        serverModule: string;
+        isPlugin: boolean;
+        actionNames: string[];
+        packageName?: string;
+    }>,
     buildDir: string,
     registry: ActionRegistry = actionRegistry,
 ): Promise<void> {
@@ -123,7 +148,9 @@ export async function registerActionsFromManifest(
                 }
             }
         } catch (err: any) {
-            logger.error(`[Server] Failed to load action module ${entry.serverModule}: ${err.message}`);
+            logger.error(
+                `[Server] Failed to load action module ${entry.serverModule}: ${err.message}`,
+            );
         }
     }
 
@@ -145,9 +172,15 @@ function parseBody(req: IncomingMessage): Promise<unknown> {
         req.on('data', (chunk) => chunks.push(chunk));
         req.on('end', () => {
             const raw = Buffer.concat(chunks).toString('utf-8');
-            if (!raw) { resolve({}); return; }
-            try { resolve(JSON.parse(raw)); }
-            catch { reject(new Error('Invalid JSON body')); }
+            if (!raw) {
+                resolve({});
+                return;
+            }
+            try {
+                resolve(JSON.parse(raw));
+            } catch {
+                reject(new Error('Invalid JSON body'));
+            }
         });
         req.on('error', reject);
     });
@@ -156,11 +189,16 @@ function parseBody(req: IncomingMessage): Promise<unknown> {
 function getStatusCode(code: string, isActionError: boolean): number {
     if (isActionError) return 422;
     switch (code) {
-        case 'ACTION_NOT_FOUND': return 404;
+        case 'ACTION_NOT_FOUND':
+            return 404;
         case 'INVALID_INPUT':
-        case 'VALIDATION_ERROR': return 400;
-        case 'UNAUTHORIZED': return 401;
-        case 'FORBIDDEN': return 403;
-        default: return 500;
+        case 'VALIDATION_ERROR':
+            return 400;
+        case 'UNAUTHORIZED':
+            return 401;
+        case 'FORBIDDEN':
+            return 403;
+        default:
+            return 500;
     }
 }

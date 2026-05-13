@@ -77,11 +77,7 @@ export async function buildSharedChunks(
 }
 
 function resolvePackageSource(pkg: string): string {
-    const pkgJsonPath = path.join(
-        path.dirname(require.resolve(pkg)),
-        '..',
-        'package.json',
-    );
+    const pkgJsonPath = path.join(path.dirname(require.resolve(pkg)), '..', 'package.json');
 
     try {
         const pkgDir = path.dirname(pkgJsonPath);

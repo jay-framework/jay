@@ -74,7 +74,10 @@ export interface BuildOptions {
 }
 
 export interface ServerElementModule {
-    renderToStream: (vs: object, ctx: import('@jay-framework/ssr-runtime').ServerRenderContext) => void;
+    renderToStream: (
+        vs: object,
+        ctx: import('@jay-framework/ssr-runtime').ServerRenderContext,
+    ) => void;
 }
 
 export interface PageModule {

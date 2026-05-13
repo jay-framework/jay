@@ -25,7 +25,10 @@ export const page = makeJayStackComponent()
         const result = phaseOutput({ name: item.name, price: item.price }, {});
         result.headTags = [
             { tag: 'title', children: item.name },
-            { tag: 'meta', attrs: { name: 'description', content: `Buy ${item.name} for $${item.price}` } },
+            {
+                tag: 'meta',
+                attrs: { name: 'description', content: `Buy ${item.name} for $${item.price}` },
+            },
         ];
         return result;
     });

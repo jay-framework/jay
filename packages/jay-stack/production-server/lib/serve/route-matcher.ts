@@ -7,10 +7,7 @@ export interface MatchResult {
     pathname: string;
 }
 
-export function matchRequest(
-    manifest: RouteManifest,
-    pathname: string,
-): MatchResult | undefined {
+export function matchRequest(manifest: RouteManifest, pathname: string): MatchResult | undefined {
     const urlSegments = pathname.split('/').filter((s) => s.length > 0);
 
     for (const route of manifest.routes) {

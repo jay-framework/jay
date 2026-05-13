@@ -313,9 +313,6 @@ export function jayStackCompiler(options: JayStackCompilerOptions = {}): Plugin[
  * Strip inline action builder statements from code in client builds.
  * Uses the same AST-based transform as code-split but focused on action builders.
  */
-function stripInlineActionBuilders(
-    code: string,
-    builderNames: string[],
-): { code: string } | null {
+function stripInlineActionBuilders(code: string, builderNames: string[]): { code: string } | null {
     return transformJayStackBuilder(code, 'action-strip.ts', 'client', new Set(builderNames));
 }

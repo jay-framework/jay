@@ -1,5 +1,9 @@
 import type { RouteManifest, RouteEntry, RouteSegment, ActionEntry, PluginEntry } from '../types';
-import { type JayRoute, type JayRouteSegment, JayRouteParamType } from '@jay-framework/stack-route-scanner';
+import {
+    type JayRoute,
+    type JayRouteSegment,
+    JayRouteParamType,
+} from '@jay-framework/stack-route-scanner';
 import { extractActionsFromSource } from '@jay-framework/compiler-jay-stack';
 import { scanPlugins } from '@jay-framework/stack-server-runtime';
 import { getLogger } from '@jay-framework/logger';
@@ -22,10 +26,7 @@ function convertSegments(segments: JayRouteSegment[]): RouteSegment[] {
     });
 }
 
-export function buildRouteEntry(
-    route: JayRoute,
-    serverModulePath: string,
-): RouteEntry {
+export function buildRouteEntry(route: JayRoute, serverModulePath: string): RouteEntry {
     return {
         pattern: route.rawRoute,
         segments: convertSegments(route.segments),
@@ -52,7 +53,10 @@ export async function discoverActions(
             const extracted = extractActionsFromSource(code, sourcePath);
             if (extracted.length > 0) {
                 actions.push({
-                    serverModule: path.relative(buildDir, path.join(serverOutputDir, entryName + '.js')),
+                    serverModule: path.relative(
+                        buildDir,
+                        path.join(serverOutputDir, entryName + '.js'),
+                    ),
                     isPlugin: false,
                     actionNames: extracted.map((a) => a.actionName),
                 });
@@ -78,7 +82,9 @@ export async function discoverActions(
                         typeof a === 'string' ? a : a.name,
                     ),
                 });
-                getLogger().info(`[Build] Plugin actions from ${packageName}: ${pluginActions.length}`);
+                getLogger().info(
+                    `[Build] Plugin actions from ${packageName}: ${pluginActions.length}`,
+                );
             }
         }
     } catch (err: any) {
@@ -88,11 +94,10 @@ export async function discoverActions(
     return { actions, plugins };
 }
 
-export async function writeRouteManifest(
-    manifest: RouteManifest,
-    buildDir: string,
-): Promise<void> {
+export async function writeRouteManifest(manifest: RouteManifest, buildDir: string): Promise<void> {
     const manifestPath = path.join(buildDir, 'route-manifest.json');
     await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
-    getLogger().info(`[Build] Route manifest written: ${manifest.routes.length} routes, ${manifest.routes.reduce((n, r) => n + r.instances.length, 0)} instances`);
+    getLogger().info(
+        `[Build] Route manifest written: ${manifest.routes.length} routes, ${manifest.routes.reduce((n, r) => n + r.instances.length, 0)} instances`,
+    );
 }

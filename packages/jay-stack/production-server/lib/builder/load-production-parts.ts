@@ -48,7 +48,8 @@ export async function loadProductionPageParts(
     serverBuildDir?: string,
 ): Promise<ProductionPageParts> {
     const exportName = (route as any).componentExport || 'page';
-    const compDefinition: AnyJayStackComponentDefinition | undefined = pageModule[exportName] ?? pageModule.default;
+    const compDefinition: AnyJayStackComponentDefinition | undefined =
+        pageModule[exportName] ?? pageModule.default;
 
     const parts: DevServerPagePart[] = compDefinition
         ? [{ compDefinition, clientImport: '', clientPart: '' }]
@@ -71,7 +72,9 @@ export async function loadProductionPageParts(
     const keyedPartModules: KeyedPartModule[] = [];
 
     const headlessImports = (jayHtml as any).headlessImports ?? [];
-    getLogger().info(`[Build] headlessImports for ${fileName}: ${headlessImports.length}, keys: ${Object.keys(jayHtml as any).join(',')}`);
+    getLogger().info(
+        `[Build] headlessImports for ${fileName}: ${headlessImports.length}, keys: ${Object.keys(jayHtml as any).join(',')}`,
+    );
 
     for (const headlessImport of headlessImports) {
         const module = headlessImport.codeLink.module;
@@ -107,7 +110,10 @@ export async function loadProductionPageParts(
                 clientImport: '',
                 clientPart: '',
                 contractInfo: headlessImport.contract
-                    ? { contractName: headlessImport.contract.name, metadata: headlessImport.metadata }
+                    ? {
+                          contractName: headlessImport.contract.name,
+                          metadata: headlessImport.metadata,
+                      }
                     : undefined,
             });
             keyedPartModules.push({
@@ -136,14 +142,21 @@ export async function loadProductionPageParts(
 
     // Use pre-rendered jay-html for discovery — slowForEach items are already
     // unrolled into static instances with coordinate keys matching carryForward.__instances.
-    const jayHtmlForDiscovery = injectHeadfullFSTemplates(jayHtmlContent, dirName, JAY_IMPORT_RESOLVER);
+    const jayHtmlForDiscovery = injectHeadfullFSTemplates(
+        jayHtmlContent,
+        dirName,
+        JAY_IMPORT_RESOLVER,
+    );
     let discoveredInstances: DiscoveredHeadlessInstance[] = [];
     let forEachInstances: ForEachHeadlessInstance[] = [];
 
     if (headlessInstanceComponents.length > 0) {
         const firstDiscovery = discoverHeadlessInstances(jayHtmlForDiscovery);
         const contractNames = new Set(headlessInstanceComponents.map((c) => c.contractName));
-        const withCoords = assignCoordinatesToJayHtml(firstDiscovery.preRenderedJayHtml, contractNames);
+        const withCoords = assignCoordinatesToJayHtml(
+            firstDiscovery.preRenderedJayHtml,
+            contractNames,
+        );
         const finalDiscovery = discoverHeadlessInstances(withCoords);
         discoveredInstances = finalDiscovery.instances;
         forEachInstances = finalDiscovery.forEachInstances;

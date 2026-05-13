@@ -32,9 +32,7 @@ export async function discoverServerEntries(
     for (const route of routes) {
         if (route.compPath) {
             const relativePath = path.relative(projectRoot, route.compPath);
-            const entryName = relativePath
-                .replace(/^src\//, '')
-                .replace(/\.ts$/, '');
+            const entryName = relativePath.replace(/^src\//, '').replace(/\.ts$/, '');
             pages[entryName] = route.compPath;
         }
     }

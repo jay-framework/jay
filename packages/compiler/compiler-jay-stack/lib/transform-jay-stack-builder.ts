@@ -50,7 +50,9 @@ export function transformJayStackBuilder(
     const sourceFile = createSourceFile(filePath, code, ScriptTarget.Latest, true);
 
     // Transform using mkTransformer pattern
-    const transformers = [mkTransformer(mkJayStackCodeSplitTransformer, { environment, stripBuilders })];
+    const transformers = [
+        mkTransformer(mkJayStackCodeSplitTransformer, { environment, stripBuilders }),
+    ];
 
     const printer = createPrinter();
     const result = tsBridge.transform(sourceFile, transformers);
@@ -94,7 +96,11 @@ function mkJayStackCodeSplitTransformer({
     }
 
     // Step 2: Find all builder methods that should be removed
-    const { callsToRemove } = findBuilderMethodsToRemove(workingSourceFile, bindingResolver, environment);
+    const { callsToRemove } = findBuilderMethodsToRemove(
+        workingSourceFile,
+        bindingResolver,
+        environment,
+    );
 
     // Step 3: Transform the AST - remove identified method calls
     // We compare flattened access chains to identify calls that should be removed

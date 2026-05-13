@@ -50,7 +50,7 @@ The version number is provided as a CLI argument or derived automatically (git c
 ```typescript
 interface BuildMetadata {
   version: string;
-  sourceHash: string;          // Hash of source files at build time
+  sourceHash: string; // Hash of source files at build time
   buildTimestamp: string;
   nodeVersion: string;
   instanceCount: number;
@@ -60,6 +60,7 @@ interface BuildMetadata {
 ### Renderer Mode (`jay-stack serve --role=renderer`)
 
 Long-running process that:
+
 1. On startup, verifies/builds the current version bucket
 2. Listens for data change webhooks
 3. Re-renders affected instances on data change
@@ -118,7 +119,8 @@ Plugins register webhooks using a builder pattern similar to `makeJayAction`:
 // In plugin's actions or init file
 import { makeWebhook, type InvalidateContract } from '@jay-framework/fullstack-component';
 
-export const onProductChange = makeWebhook('wix-stores.product-change',
+export const onProductChange = makeWebhook(
+  'wix-stores.product-change',
   async (req: HttpRequest, invalidate: InvalidateContract): Promise<HttpResponse> => {
     const event = await req.json();
     const { type, itemId } = event;
@@ -132,17 +134,14 @@ export const onProductChange = makeWebhook('wix-stores.product-change',
     await invalidate('search-results');
 
     return { status: 200, body: { ok: true } };
-  }
+  },
 );
 ```
 
 The `invalidate` API is contract-based — plugins invalidate by their own contract name, not by route patterns. The framework resolves which routes use each contract.
 
 ```typescript
-type InvalidateContract = (
-  contractName: string,
-  params?: Record<string, string>,
-) => Promise<void>;
+type InvalidateContract = (contractName: string, params?: Record<string, string>) => Promise<void>;
 ```
 
 - `invalidate('product-page', { slug: 'blue-widget' })` — find all routes using the `product-page` contract, re-render the instance with matching params. If no instance exists (new product), build a new one.
@@ -153,6 +152,7 @@ type InvalidateContract = (
 **Future: reverse dependency map.** A more fine-grained approach would track which data items each instance depends on during slow render (e.g., instance `/search?q=shoes` consumed products A, B, C). On product A change, only instances that consumed product A are re-rendered. This is an optimization that can be added later without changing the `invalidate` API — it would refine the paramless `invalidate('search-results')` to only rebuild affected instances instead of all.
 
 Webhooks are automatically exposed at `/_jay/webhooks/{webhookName}`:
+
 - `POST /_jay/webhooks/wix-stores.product-change` → calls `onProductChange`
 
 Discovery works the same as actions — scan exports for `JayWebhook`-branded constants, register at startup. The webhook is a server-only construct (no client transform needed).
@@ -169,9 +169,7 @@ function createInvalidator(
 ): InvalidateContract {
   return async (contractName: string, params?: Record<string, string>) => {
     // Resolve contract → affected routes
-    const affectedRoutes = manifest.routes.filter(r =>
-      r.contracts?.includes(contractName)
-    );
+    const affectedRoutes = manifest.routes.filter((r) => r.contracts?.includes(contractName));
     for (const route of affectedRoutes) {
       await queue.enqueue({
         routePattern: route.pattern,
@@ -194,7 +192,7 @@ async function rebuildInstance(
   params: Record<string, string>,
   ctx: BuildContext,
 ): Promise<void> {
-  const existing = route.instances.find(i => paramsMatch(i.params, params));
+  const existing = route.instances.find((i) => paramsMatch(i.params, params));
 
   // Run per-instance pipeline (slow render → compare → compile if changed)
   const result = await buildInstance(route, params, ctx);
@@ -214,17 +212,14 @@ async function rebuildInstance(
 **Full contract invalidation** (`invalidate('search-results')` — no params):
 
 ```typescript
-async function rebuildRoute(
-  route: RouteEntry,
-  ctx: BuildContext,
-): Promise<void> {
+async function rebuildRoute(route: RouteEntry, ctx: BuildContext): Promise<void> {
   // Re-run loadParams to discover current param combinations
   const pageModule = await ctx.artifacts.loadPageModule(route.serverModule);
   const currentParams = await collectLoadParams(pageModule);
 
   // Find new, existing, and deleted instances
-  const existingParams = new Set(route.instances.map(i => paramKey(i.params)));
-  const currentParamSet = new Set(currentParams.map(p => paramKey(p)));
+  const existingParams = new Set(route.instances.map((i) => paramKey(i.params)));
+  const currentParamSet = new Set(currentParams.map((p) => paramKey(p)));
 
   // Rebuild existing + new instances
   for (const params of currentParams) {
@@ -232,7 +227,7 @@ async function rebuildRoute(
   }
 
   // Remove deleted instances
-  route.instances = route.instances.filter(i => currentParamSet.has(paramKey(i.params)));
+  route.instances = route.instances.filter((i) => currentParamSet.has(paramKey(i.params)));
 
   await atomicManifestUpdate(ctx);
 }
@@ -270,20 +265,21 @@ async function validateExistingBuild(
   sourceHash: string,
 ): Promise<'valid' | 'stale' | 'missing'> {
   const metadataPath = path.join(buildDir, 'build-metadata.json');
-  
+
   try {
     const metadata = JSON.parse(await fs.readFile(metadataPath, 'utf-8'));
     if (metadata.sourceHash === sourceHash) {
-      return 'valid';  // Same code → artifacts are good
+      return 'valid'; // Same code → artifacts are good
     }
-    return 'stale';    // Code changed → need full rebuild
+    return 'stale'; // Code changed → need full rebuild
   } catch {
-    return 'missing';  // No build exists
+    return 'missing'; // No build exists
   }
 }
 ```
 
 Source hash is computed from source files that affect the build:
+
 - `src/pages/**/*.ts`, `src/pages/**/*.jay-html`, `src/pages/**/*.jay-contract`
 - `src/actions/**/*.ts`
 - `src/lib/init.ts`
@@ -296,12 +292,9 @@ The per-instance pipeline is CPU-intensive (slow render calls external APIs, esb
 ```typescript
 const CONCURRENCY = parseInt(process.env.JAY_BUILD_CONCURRENCY || '4');
 
-async function buildAllInstances(
-  routes: RouteEntry[],
-  buildContext: BuildContext,
-): Promise<void> {
-  const allInstances = routes.flatMap(route =>
-    route.paramCombinations.map(params => ({ route, params }))
+async function buildAllInstances(routes: RouteEntry[], buildContext: BuildContext): Promise<void> {
+  const allInstances = routes.flatMap((route) =>
+    route.paramCombinations.map((params) => ({ route, params })),
   );
 
   // Bounded concurrency — process N instances at a time
@@ -337,8 +330,8 @@ Webhook handlers don't rebuild directly — they enqueue invalidation requests. 
 // Queue operates on routes (contract → route resolution happens in createInvalidator)
 interface InvalidationRequest {
   routePattern: string;
-  params?: Record<string, string>;         // undefined = all instances
-  source: string;                          // webhook name, for logging
+  params?: Record<string, string>; // undefined = all instances
+  source: string; // webhook name, for logging
   timestamp: number;
 }
 
@@ -350,6 +343,7 @@ interface InvalidationQueue {
 ```
 
 The queue provides:
+
 - **Deduplication** — multiple invalidations for the same route+params within a short window collapse into one rebuild
 - **Bounded concurrency** — N workers process queue items in parallel (configurable via `JAY_BUILD_CONCURRENCY`)
 - **Serialization per route** — items for the same route are processed sequentially (prevents half-written artifacts)
@@ -357,8 +351,8 @@ The queue provides:
 
 ```typescript
 class InMemoryInvalidationQueue implements InvalidationQueue {
-  private pending = new Map<string, InvalidationRequest>();  // key = route+params
-  private processing = new Set<string>();                     // routes currently rebuilding
+  private pending = new Map<string, InvalidationRequest>(); // key = route+params
+  private processing = new Set<string>(); // routes currently rebuilding
   private signal = new EventEmitter();
 
   async enqueue(request: InvalidationRequest) {
@@ -371,7 +365,9 @@ class InMemoryInvalidationQueue implements InvalidationQueue {
     this.signal.emit('enqueued');
   }
 
-  depth() { return this.pending.size; }
+  depth() {
+    return this.pending.size;
+  }
 }
 ```
 
@@ -474,6 +470,7 @@ jay-stack serve --role=renderer --version=2
 ```
 
 Both use the same build pipeline code. The difference:
+
 - `build` runs once and exits
 - `renderer` runs once, then keeps running for incremental updates
 
@@ -482,6 +479,7 @@ Both use the same build pipeline code. The difference:
 ### Step 1: Build Orchestrator
 
 Create `buildVersion(version, options)`:
+
 - Wire Phase 0 → Phase 1 → Phase 2 from DL#134a
 - Bounded concurrency for per-instance pipeline
 - Progress reporting (instance N/M built)
@@ -490,12 +488,14 @@ Create `buildVersion(version, options)`:
 ### Step 2: CLI Commands
 
 Add to `stack-cli`:
+
 - `jay-stack build --version=N` — one-shot build
 - `jay-stack serve --role=renderer --version=N` — long-running renderer
 
 ### Step 3: Startup Validation
 
 Implement `validateExistingBuild()`:
+
 - Source hash computation
 - Build metadata comparison
 - Decision: rebuild / skip / partial
@@ -503,6 +503,7 @@ Implement `validateExistingBuild()`:
 ### Step 4: `makeWebhook` Builder
 
 Create `makeWebhook(name, handler)` in `fullstack-component`:
+
 - Similar pattern to `makeJayAction`
 - Handler receives `(req: HttpRequest, invalidate: InvalidateRoute)`
 - Returns branded `JayWebhook` constant
@@ -511,6 +512,7 @@ Create `makeWebhook(name, handler)` in `fullstack-component`:
 ### Step 5: Webhook HTTP Server
 
 Create webhook endpoint routing:
+
 - Route `POST /_jay/webhooks/:webhookName`
 - Load registered webhook handler
 - Inject `invalidate` function
@@ -519,6 +521,7 @@ Create webhook endpoint routing:
 ### Step 6: Invalidation Engine
 
 Implement `invalidate(routePattern, params?)`:
+
 - With params: rebuild specific instance (slow render → compare → compile if changed)
 - Without params: re-run loadParams, rebuild all instances, remove deleted
 - Atomic manifest update after each invalidation
@@ -526,6 +529,7 @@ Implement `invalidate(routePattern, params?)`:
 ### Step 7: Incremental Instance Rebuild
 
 Implement `buildInstance` with optimistic skip:
+
 - Slow render with fresh data
 - Compare pre-rendered output with existing
 - Skip compilation if unchanged
@@ -547,14 +551,14 @@ Not required — the main server's timestamp-based caching detects file changes 
 
 ## Trade-offs
 
-| Decision | Pro | Con |
-|---|---|---|
-| Optimistic skip (compare output) | Avoids unnecessary compilation when data changes don't affect template structure | Extra comparison step; must read existing file |
-| Bounded concurrency for builds | Predictable resource usage; doesn't overwhelm external APIs or CPU | Slower than unbounded parallelism for small builds |
-| `makeWebhook` pattern (like actions) | Consistent with existing patterns; webhook logic in code not config; plugins own their data model | Each plugin must implement webhook handler; no default behavior |
-| Contract-based `invalidate` API | Plugin only knows its own contracts; framework resolves to routes; project can remap routes freely | Route manifest must track which contracts each route uses |
-| Atomic manifest updates | Main server never reads a partial manifest | Extra write (temp file + rename) |
-| Source hash for startup validation | Fast rebuild skip when code unchanged; reliable staleness detection | Hash computation adds startup time; must include all relevant source files |
+| Decision                             | Pro                                                                                                | Con                                                                        |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Optimistic skip (compare output)     | Avoids unnecessary compilation when data changes don't affect template structure                   | Extra comparison step; must read existing file                             |
+| Bounded concurrency for builds       | Predictable resource usage; doesn't overwhelm external APIs or CPU                                 | Slower than unbounded parallelism for small builds                         |
+| `makeWebhook` pattern (like actions) | Consistent with existing patterns; webhook logic in code not config; plugins own their data model  | Each plugin must implement webhook handler; no default behavior            |
+| Contract-based `invalidate` API      | Plugin only knows its own contracts; framework resolves to routes; project can remap routes freely | Route manifest must track which contracts each route uses                  |
+| Atomic manifest updates              | Main server never reads a partial manifest                                                         | Extra write (temp file + rename)                                           |
+| Source hash for startup validation   | Fast rebuild skip when code unchanged; reliable staleness detection                                | Hash computation adds startup time; must include all relevant source files |
 
 ## Verification Criteria
 

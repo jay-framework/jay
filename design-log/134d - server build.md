@@ -17,21 +17,23 @@ Today, the dev server loads server code via `vite.ssrLoadModule()`, which handle
 
 ### Server-side modules in a Jay Stack project:
 
-| Module | Source | Exports | Used By |
-|---|---|---|---|
-| **Page components** | `src/pages/*/page.ts` | `page: JayStackComponentDefinition` with `slowlyRender`, `fastRender`, `loadParams`, `services` | Slow render server (slow phase), main server (fast phase) |
-| **Actions** | `src/actions/*.actions.ts` | Named `JayAction` constants with `handler`, `services`, `method` | Main server (action router) |
-| **Init** | `src/lib/init.ts` | `init: JayInit` with `_serverInit` | Both servers (service initialization) |
-| **Service markers** | Various `src/lib/*.ts` | `createJayService()` constants | Imported by page.ts and actions |
-| **Plugin server code** | `node_modules/@plugin/*/dist/index.js` | `init`, actions, component definitions | Both servers |
+| Module                 | Source                                 | Exports                                                                                         | Used By                                                   |
+| ---------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| **Page components**    | `src/pages/*/page.ts`                  | `page: JayStackComponentDefinition` with `slowlyRender`, `fastRender`, `loadParams`, `services` | Slow render server (slow phase), main server (fast phase) |
+| **Actions**            | `src/actions/*.actions.ts`             | Named `JayAction` constants with `handler`, `services`, `method`                                | Main server (action router)                               |
+| **Init**               | `src/lib/init.ts`                      | `init: JayInit` with `_serverInit`                                                              | Both servers (service initialization)                     |
+| **Service markers**    | Various `src/lib/*.ts`                 | `createJayService()` constants                                                                  | Imported by page.ts and actions                           |
+| **Plugin server code** | `node_modules/@plugin/*/dist/index.js` | `init`, actions, component definitions                                                          | Both servers                                              |
 
 ### What the code-split transform does for server build:
 
 Strips from `makeJayStackComponent` chains:
+
 - `.withInteractive(constructor)` — client-side component
 - `.withContexts(...)` — client-side contexts
 
 Strips from `makeJayInit` chains:
+
 - `.withClient(fn)` — client-side initialization
 
 Keeps everything else: `.withServices()`, `.withSlowlyRender()`, `.withFastRender()`, `.withLoadParams()`, `.withServer()`
@@ -39,6 +41,7 @@ Keeps everything else: `.withServices()`, `.withSlowlyRender()`, `.withFastRende
 ## Current State: How Dev Server Loads Server Code
 
 ### Page components
+
 ```
 vite.ssrLoadModule('src/pages/products/[slug]/page.ts')
   → jayStackCompiler code-splits for server
@@ -46,6 +49,7 @@ vite.ssrLoadModule('src/pages/products/[slug]/page.ts')
 ```
 
 ### Actions
+
 ```
 ServiceLifecycleManager.initialize()
   → glob scan: src/actions/*.actions.ts
@@ -55,6 +59,7 @@ ServiceLifecycleManager.initialize()
 ```
 
 ### Init + services
+
 ```
 ServiceLifecycleManager.initialize()
   → discover plugin inits (topological sort by dependencies)
@@ -81,7 +86,7 @@ await build({
     rollupOptions: {
       input: {
         // Init
-        'init': 'src/lib/init.ts',
+        init: 'src/lib/init.ts',
         // Pages (one entry per route, not per instance)
         'pages/home/page': 'src/pages/home/page.ts',
         'pages/products/[slug]/page': 'src/pages/products/[slug]/page.ts',
@@ -112,6 +117,7 @@ await build({
 ```
 
 Output:
+
 ```
 build/v{n}/server/
   init.js
@@ -131,9 +137,9 @@ Before running the build, scan the project to find all entries:
 
 ```typescript
 interface ServerBuildEntries {
-  init: string;                           // src/lib/init.ts
-  pages: Record<string, string>;          // route → source path
-  actions: Record<string, string>;        // action name → source path
+  init: string; // src/lib/init.ts
+  pages: Record<string, string>; // route → source path
+  actions: Record<string, string>; // action name → source path
 }
 
 async function discoverServerEntries(projectRoot: string): Promise<ServerBuildEntries> {
@@ -190,8 +196,8 @@ async function initializeProductionServer(buildDir: string, manifest: RouteManif
   for (const actionEntry of manifest.actions) {
     const actionModule = await import(
       actionEntry.isPlugin
-        ? actionEntry.packageName  // plugin: from node_modules
-        : path.join(buildDir, actionEntry.serverModule)  // project: from build dir
+        ? actionEntry.packageName // plugin: from node_modules
+        : path.join(buildDir, actionEntry.serverModule) // project: from build dir
     );
     for (const [, action] of Object.entries(actionModule)) {
       if (action?.__brand === 'JayAction') {
@@ -207,14 +213,14 @@ async function initializeProductionServer(buildDir: string, manifest: RouteManif
 
 ### What Changes from Dev Server
 
-| Concern | Dev Server | Production |
-|---|---|---|
-| Loading modules | `vite.ssrLoadModule(tsPath)` | `import(jsPath)` |
-| Code splitting | `jay-stack:code-split` transform at load time | Pre-applied during build |
-| Action discovery | Glob scan + dynamic load at startup | Pre-discovered, paths in route manifest |
-| Service init | Vite-loaded init.ts with hot reload support | Static import, no hot reload |
-| Plugin init order | Topological sort at startup | Same sort, but modules pre-compiled |
-| Hot reload | File watcher → re-import module | Not applicable (restart server for code changes) |
+| Concern           | Dev Server                                    | Production                                       |
+| ----------------- | --------------------------------------------- | ------------------------------------------------ |
+| Loading modules   | `vite.ssrLoadModule(tsPath)`                  | `import(jsPath)`                                 |
+| Code splitting    | `jay-stack:code-split` transform at load time | Pre-applied during build                         |
+| Action discovery  | Glob scan + dynamic load at startup           | Pre-discovered, paths in route manifest          |
+| Service init      | Vite-loaded init.ts with hot reload support   | Static import, no hot reload                     |
+| Plugin init order | Topological sort at startup                   | Same sort, but modules pre-compiled              |
+| Hot reload        | File watcher → re-import module               | Not applicable (restart server for code changes) |
 
 ### Action Registration in Route Manifest
 
@@ -233,10 +239,10 @@ interface PluginEntry {
 }
 
 interface ActionEntry {
-  serverModule: string;     // relative path: "actions/cart.js" (project)
-  packageName?: string;     // "@wix/stores" (plugin — alternative to serverModule)
+  serverModule: string; // relative path: "actions/cart.js" (project)
+  packageName?: string; // "@wix/stores" (plugin — alternative to serverModule)
   isPlugin: boolean;
-  actionNames: string[];    // ["cart.addToCart", "cart.removeFromCart"]
+  actionNames: string[]; // ["cart.addToCart", "cart.removeFromCart"]
 }
 ```
 
@@ -245,16 +251,17 @@ Project action names are discovered during the build by statically analyzing the
 ### Plugin Server Artifacts
 
 Plugins are pre-compiled (DL#134 Q15) using the same `jayStackCompiler` build process as the project. They export:
+
 - `dist/index.js` — server code (init, component definitions, actions)
 - `dist/index.client.js` — client code
 
 In the project server build, plugin imports are externalized — they resolve at runtime from `node_modules`. The production server must load and integrate plugin server artifacts:
 
-| Plugin Artifact | How Loaded | Production Behavior |
-|---|---|---|
-| **Init** (`_serverInit`) | `import(pluginPkg).init` | Runs at startup, registers services. Sorted topologically by dependencies. |
-| **Component definitions** | `import(pluginPkg).componentName` | Loaded by page route handler when page uses `<jay:plugin-contract>` headless instances |
-| **Actions** | `import(pluginPkg).actionName` | Registered in action router at startup |
+| Plugin Artifact           | How Loaded                                      | Production Behavior                                                                                        |
+| ------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Init** (`_serverInit`)  | `import(pluginPkg).init`                        | Runs at startup, registers services. Sorted topologically by dependencies.                                 |
+| **Component definitions** | `import(pluginPkg).componentName`               | Loaded by page route handler when page uses `<jay:plugin-contract>` headless instances                     |
+| **Actions**               | `import(pluginPkg).actionName`                  | Registered in action router at startup                                                                     |
 | **Routes** (plugin pages) | `plugin.yaml` → `jayHtml` + `component` exports | Merged with project routes. Plugin pages go through the same per-instance build pipeline as project pages. |
 
 Plugin init order is determined by reading `plugin.yaml` dependency declarations and topologically sorting, same as the dev server's `sortPluginsByDependencies()`.
@@ -264,11 +271,13 @@ Plugin init order is determined by reading `plugin.yaml` dependency declarations
 ### Service Lifecycle Differences
 
 **Dev server (`service-lifecycle.ts`):**
+
 - Hot reload support: watches init.ts, re-runs on change
 - Graceful shutdown handlers (SIGTERM, SIGINT)
 - Vite-based module loading
 
 **Production:**
+
 - No hot reload — restart for code changes
 - Same graceful shutdown handlers
 - Static `import()` — modules loaded once at startup
@@ -281,6 +290,7 @@ The production service lifecycle is simpler — it's a subset of the dev server'
 ### Step 1: Entry Discovery
 
 Create `discoverServerEntries()`:
+
 - Reuse `scanRoutes()` for page discovery
 - Glob scan for action files
 - Fixed path for init.ts
@@ -289,6 +299,7 @@ Create `discoverServerEntries()`:
 ### Step 2: Server Build Function
 
 Create `buildServerCode(entries, options)`:
+
 - Configure Vite SSR build with discovered entries
 - Externalize framework packages + plugins
 - Output to `build/v{n}/server/`
@@ -297,6 +308,7 @@ Create `buildServerCode(entries, options)`:
 ### Step 3: Production Service Lifecycle
 
 Create a production variant of `ServiceLifecycleManager`:
+
 - `import()` instead of `vite.ssrLoadModule()`
 - No file watching or hot reload
 - Same topological sort for plugin init order
@@ -305,6 +317,7 @@ Create a production variant of `ServiceLifecycleManager`:
 ### Step 4: Production Action Router
 
 Adapt `action-router.ts` for production:
+
 - Load action modules from compiled JS (pre-discovered paths from manifest)
 - Same HTTP handling logic (request parsing, response formatting, streaming, multipart)
 - Same service resolution via `__JAY_SERVICE_RESOLVER__`
@@ -325,12 +338,12 @@ Yes. Using `entryFileNames: '[name].js'` with structured entry names (`pages/hom
 
 ## Trade-offs
 
-| Decision | Pro | Con |
-|---|---|---|
-| Single Vite SSR build for all server code | One build step; Rollup deduplicates shared code between pages/actions | Rebuilds everything on any server code change |
-| Externalize framework + plugins | Smaller output; uses pre-compiled packages; easier debugging | Requires node_modules available at deployment |
-| Static action discovery (build-time) | No glob scanning at startup; action list in manifest | Must rebuild to add/remove actions |
-| No hot reload in production | Simpler lifecycle; predictable behavior | Restart required for code changes (acceptable for production) |
+| Decision                                  | Pro                                                                   | Con                                                           |
+| ----------------------------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Single Vite SSR build for all server code | One build step; Rollup deduplicates shared code between pages/actions | Rebuilds everything on any server code change                 |
+| Externalize framework + plugins           | Smaller output; uses pre-compiled packages; easier debugging          | Requires node_modules available at deployment                 |
+| Static action discovery (build-time)      | No glob scanning at startup; action list in manifest                  | Must rebuild to add/remove actions                            |
+| No hot reload in production               | Simpler lifecycle; predictable behavior                               | Restart required for code changes (acceptable for production) |
 
 ## Verification Criteria
 

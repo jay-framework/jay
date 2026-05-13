@@ -49,29 +49,30 @@ interface RouteManifest {
   routes: RouteEntry[];
   actions: ActionEntry[];
   plugins: PluginEntry[];
-  sharedManifest: Record<string, string>;  // module name → hashed filename
-  publicBasePath: string;                   // CDN URL or "/" for self-hosting
+  sharedManifest: Record<string, string>; // module name → hashed filename
+  publicBasePath: string; // CDN URL or "/" for self-hosting
 }
 
 interface RouteEntry {
-  pattern: string;                          // "/products/[slug]"
-  segments: RouteSegment[];                 // Parsed segments for matching
-  serverModule: string;                     // "pages/products/[slug]/page.js"
+  pattern: string; // "/products/[slug]"
+  segments: RouteSegment[]; // Parsed segments for matching
+  serverModule: string; // "pages/products/[slug]/page.js"
   instances: InstanceEntry[];
   isPlugin?: boolean;
   pluginName?: string;
 }
 
 interface InstanceEntry {
-  params: Record<string, string>;           // { slug: "blue-widget" }
-  preRenderedPath: string;                   // "instances/products/[slug]/page_abc123.jay-html"
-  serverElementPath: string;                // "instances/products/[slug]/page_abc123.server-element.js"
-  clientBundlePath: string;                 // "instances/products/[slug]/page_abc123-a1b2c3.js"
-  clientCssPath?: string;                   // "instances/products/[slug]/page_abc123-d4e5f6.css"
+  params: Record<string, string>; // { slug: "blue-widget" }
+  preRenderedPath: string; // "instances/products/[slug]/page_abc123.jay-html"
+  serverElementPath: string; // "instances/products/[slug]/page_abc123.server-element.js"
+  clientBundlePath: string; // "instances/products/[slug]/page_abc123-a1b2c3.js"
+  clientCssPath?: string; // "instances/products/[slug]/page_abc123-d4e5f6.css"
 }
 ```
 
 Route matching reuses the same segment-matching logic from `route-scanner`:
+
 1. Sort routes by specificity (static > single param > catch-all)
 2. Match URL path against route segments
 3. Extract param values
@@ -82,7 +83,7 @@ function matchRequest(manifest: RouteManifest, pathname: string): MatchResult | 
   for (const route of manifest.routes) {
     const params = matchSegments(route.segments, pathname);
     if (params) {
-      const instance = route.instances.find(i => paramsMatch(i.params, params));
+      const instance = route.instances.find((i) => paramsMatch(i.params, params));
       return { route, instance, params };
     }
   }
@@ -120,7 +121,7 @@ Version transitions are handled by replacing the server instance (blue-green dep
 
 ```typescript
 class FilesystemArtifactStore implements ArtifactStore {
-  private basePath: string;  // build/v{n}/ — fixed for the lifetime of this server
+  private basePath: string; // build/v{n}/ — fixed for the lifetime of this server
   private manifestCache?: { manifest: RouteManifest; mtime: number };
   private moduleCache = new Map<string, { module: any; mtime: number }>();
 
@@ -197,7 +198,11 @@ async function handlePageRequest(
   const pageModule = await artifacts.loadPageModule(route.serverModule);
   const query = parseQueryString(req.url);
   const fastResult = await runFastPhase(
-    pageModule, params, preRendered.carryForward, services, query
+    pageModule,
+    params,
+    preRendered.carryForward,
+    services,
+    query,
   );
 
   // 3. Handle non-success results
@@ -216,7 +221,7 @@ async function handlePageRequest(
   const fullViewState = mergeViewStates(
     preRendered.slowViewState,
     fastResult.rendered,
-    route.trackByMap
+    route.trackByMap,
   );
 
   // 5. Load server element, stream HTML response
@@ -250,17 +255,19 @@ ${headTags}${cssLink}    <script type="importmap">${JSON.stringify({ imports: im
   serverElement.renderToStream(fullViewState, {
     write: (chunk: string) => res.write(chunk),
     onAsync: (promise, id, templates) => {
-      asyncPromises.push(promise.then(
-        val => asyncSwapScript(id, templates.resolved(val)),
-        err => asyncSwapScript(id, templates.rejected(err)),
-      ));
+      asyncPromises.push(
+        promise.then(
+          (val) => asyncSwapScript(id, templates.resolved(val)),
+          (err) => asyncSwapScript(id, templates.rejected(err)),
+        ),
+      );
     },
   });
 
   res.write('</div>');
 
   // Wait for async promises, stream swap scripts as they resolve
-  const asyncScripts = (await Promise.all(asyncPromises)).filter(s => s).join('');
+  const asyncScripts = (await Promise.all(asyncPromises)).filter((s) => s).join('');
   if (asyncScripts) res.write(asyncScripts);
 
   // Hydration script — last, after all async content is in the DOM
@@ -298,7 +305,9 @@ async function runFastPhase(
   // Headless instance components are loaded from plugin packages
   // or compiled page modules — same resolution as dev server's loadPageParts
   const headlessInstanceComponents = await resolveHeadlessComponents(
-    instancePhaseData, manifest, services
+    instancePhaseData,
+    manifest,
+    services,
   );
 
   return renderFastChangingData(
@@ -316,6 +325,7 @@ async function runFastPhase(
 ```
 
 **Headless components in production:** The slow render populates `carryForward.__instances` with discovered headless instances, their slow ViewState, and their carryForward — same as in dev. The fast phase needs the headless component definitions to call their `fastRender()`. These come from:
+
 - Plugin packages (pre-compiled `dist/index.js`) — for plugin-provided headless components
 - Compiled page modules (`build/v{n}/server/`) — for project-defined headless components
 
@@ -348,6 +358,7 @@ function createProductionActionRouter(
 Client bundles and CSS are served either by the main server or a CDN:
 
 **Self-hosted (default):**
+
 ```typescript
 // Serve from build/v{n}/shared/ and build/v{n}/instances/
 app.use('/assets', express.static(path.join(buildDir, 'shared')));
@@ -355,6 +366,7 @@ app.use('/assets', express.static(path.join(buildDir, 'instances')));
 ```
 
 **CDN-hosted:**
+
 ```typescript
 // publicBasePath = "https://cdn.example.com/v1/"
 // Client bundles reference this URL prefix
@@ -381,14 +393,17 @@ function buildImportMap(
 ```
 
 Example output:
+
 ```html
-<script type="importmap">{
-  "imports": {
-    "@jay-framework/stack-client-runtime": "/assets/stack-client-runtime-a1b2c3.js",
-    "@jay-framework/component": "/assets/component-d4e5f6.js",
-    "@jay-framework/reactive": "/assets/reactive-g7h8i9.js"
+<script type="importmap">
+  {
+    "imports": {
+      "@jay-framework/stack-client-runtime": "/assets/stack-client-runtime-a1b2c3.js",
+      "@jay-framework/component": "/assets/component-d4e5f6.js",
+      "@jay-framework/reactive": "/assets/reactive-g7h8i9.js"
+    }
   }
-}</script>
+</script>
 ```
 
 Instance bundles use bare `import` specifiers (`import { hydrateCompositeJayComponent } from '@jay-framework/stack-client-runtime'`), and the browser resolves them via the import map.
@@ -440,6 +455,7 @@ async function startMainServer(options: MainServerOptions) {
 ### Step 1: Route Matching
 
 Extract route matching logic from `route-scanner` into a reusable function:
+
 - Input: route manifest + URL pathname
 - Output: matched route + instance + extracted params
 - Test: matches static routes, param routes, catch-all, returns undefined for no match
@@ -447,6 +463,7 @@ Extract route matching logic from `route-scanner` into a reusable function:
 ### Step 2: Artifact Store
 
 Implement `FilesystemArtifactStore`:
+
 - Timestamp-based caching for modules and manifest
 - Pre-rendered HTML parsing (extract cache metadata tag)
 - Test: reads artifacts, caches correctly, detects file changes
@@ -454,18 +471,21 @@ Implement `FilesystemArtifactStore`:
 ### Step 3: Page Request Handler
 
 Implement `handlePageRequest()`:
+
 - Load artifacts, run fast phase, merge ViewState, render SSR, assemble HTML
 - Test: produces correct HTML for known ViewState inputs
 
 ### Step 4: Production Action Router
 
 Adapt action router for production:
+
 - Same HTTP handling, load from compiled modules
 - Test: action execution produces same results as dev server
 
 ### Step 5: Server Startup + Static Assets
 
 Wire everything together:
+
 - Service initialization → action registration → HTTP server
 - Static file serving with cache headers
 - Import map generation from shared manifest
@@ -483,14 +503,14 @@ Wire everything together:
 
 ## Trade-offs
 
-| Decision | Pro | Con |
-|---|---|---|
-| Timestamp-based module caching | Simple; naturally picks up artifact updates; no coordination needed | `stat()` syscall on every request per module; Node `import()` cache busting via query param |
-| Import maps for shared chunks | Standard browser feature; clean module resolution; CDN-friendly | Requires modern browsers (Chrome 89+, Safari 16.4+) |
-| Artifact store abstraction | Swappable backends (filesystem, S3, etc.) | Extra indirection; filesystem is likely the only implementation for now |
-| Streaming SSR | Fast TTFB; browser starts parsing `<head>` (CSS, import map) immediately; async swap scripts stream as promises resolve | Cannot change HTTP status after streaming begins — fast phase errors must be checked before streaming starts |
-| Hardcoded version | No dynamic version logic; no race conditions; clean deployment model | Requires server instance replacement for version transitions (standard for production) |
-| Minimal HTTP server (no Express) | Lighter footprint; fewer dependencies | Less middleware ecosystem; manual routing |
+| Decision                         | Pro                                                                                                                     | Con                                                                                                          |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Timestamp-based module caching   | Simple; naturally picks up artifact updates; no coordination needed                                                     | `stat()` syscall on every request per module; Node `import()` cache busting via query param                  |
+| Import maps for shared chunks    | Standard browser feature; clean module resolution; CDN-friendly                                                         | Requires modern browsers (Chrome 89+, Safari 16.4+)                                                          |
+| Artifact store abstraction       | Swappable backends (filesystem, S3, etc.)                                                                               | Extra indirection; filesystem is likely the only implementation for now                                      |
+| Streaming SSR                    | Fast TTFB; browser starts parsing `<head>` (CSS, import map) immediately; async swap scripts stream as promises resolve | Cannot change HTTP status after streaming begins — fast phase errors must be checked before streaming starts |
+| Hardcoded version                | No dynamic version logic; no race conditions; clean deployment model                                                    | Requires server instance replacement for version transitions (standard for production)                       |
+| Minimal HTTP server (no Express) | Lighter footprint; fewer dependencies                                                                                   | Less middleware ecosystem; manual routing                                                                    |
 
 ## Verification Criteria
 
@@ -520,6 +540,7 @@ Wire everything together:
 ### Key Fix: `fastRender` Signature
 
 `fastRender` signature depends on whether the component has a slow phase:
+
 - With `slowlyRender`: `fastRender(props, carryForward, ...services)`
 - Without `slowlyRender`: `fastRender(props, ...services)`
 

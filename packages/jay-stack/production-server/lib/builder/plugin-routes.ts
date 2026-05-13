@@ -1,5 +1,9 @@
 import { scanPlugins } from '@jay-framework/stack-server-runtime';
-import { parseRouteSegments, type JayRoute, type JayRoutes } from '@jay-framework/stack-route-scanner';
+import {
+    parseRouteSegments,
+    type JayRoute,
+    type JayRoutes,
+} from '@jay-framework/stack-route-scanner';
 import { getLogger } from '@jay-framework/logger';
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -22,13 +26,17 @@ export async function scanPluginRoutes(
 
         for (const route of plugin.manifest.routes) {
             if (projectPaths.has(route.path)) {
-                logger.info(`[Routes] Plugin "${plugin.manifest.name}" route ${route.path} skipped — project route takes precedence`);
+                logger.info(
+                    `[Routes] Plugin "${plugin.manifest.name}" route ${route.path} skipped — project route takes precedence`,
+                );
                 continue;
             }
 
             const jayHtmlPath = resolvePluginExport(plugin.pluginPath, route.jayHtml);
             if (!jayHtmlPath) {
-                logger.warn(`[Routes] Plugin "${plugin.manifest.name}" route ${route.path}: jayHtml "${route.jayHtml}" not found`);
+                logger.warn(
+                    `[Routes] Plugin "${plugin.manifest.name}" route ${route.path}: jayHtml "${route.jayHtml}" not found`,
+                );
                 continue;
             }
 
@@ -66,14 +74,18 @@ function resolvePluginExport(pluginPath: string, exportSubpath: string): string 
                 if (resolved) return path.join(pluginPath, resolved);
             }
         }
-    } catch { /* skip */ }
+    } catch {
+        /* skip */
+    }
 
     for (const dir of ['dist', 'lib', '']) {
         const candidate = path.join(pluginPath, dir, normalized);
         try {
             fs.accessSync(candidate);
             return candidate;
-        } catch { /* skip */ }
+        } catch {
+            /* skip */
+        }
     }
     return undefined;
 }
@@ -91,7 +103,9 @@ function resolvePluginModule(pluginPath: string): string {
             const resolved = path.join(pluginPath, mainPath);
             if (fs.existsSync(resolved)) return resolved;
         }
-    } catch { /* skip */ }
+    } catch {
+        /* skip */
+    }
 
     return path.join(pluginPath, 'dist', 'index.js');
 }

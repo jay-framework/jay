@@ -42,13 +42,22 @@ describe('build artifacts', () => {
     });
 
     it('compiles server code', async () => {
-        const initExists = await fs.access(path.join(buildDir, 'server/init.js')).then(() => true).catch(() => false);
+        const initExists = await fs
+            .access(path.join(buildDir, 'server/init.js'))
+            .then(() => true)
+            .catch(() => false);
         expect(initExists).toBe(true);
 
-        const pageExists = await fs.access(path.join(buildDir, 'server/pages/page.js')).then(() => true).catch(() => false);
+        const pageExists = await fs
+            .access(path.join(buildDir, 'server/pages/page.js'))
+            .then(() => true)
+            .catch(() => false);
         expect(pageExists).toBe(true);
 
-        const actionExists = await fs.access(path.join(buildDir, 'server/actions/cart.actions.js')).then(() => true).catch(() => false);
+        const actionExists = await fs
+            .access(path.join(buildDir, 'server/actions/cart.actions.js'))
+            .then(() => true)
+            .catch(() => false);
         expect(actionExists).toBe(true);
     });
 
@@ -91,9 +100,10 @@ describe('route manifest', () => {
 describe('per-instance artifacts', () => {
     it('produces pre-rendered jay-html for home page', async () => {
         const home = manifest.routes.find((r) => r.pattern === '')!;
-        const exists = await fs.access(
-            path.join(buildDir, home.instances[0].preRenderedPath),
-        ).then(() => true).catch(() => false);
+        const exists = await fs
+            .access(path.join(buildDir, home.instances[0].preRenderedPath))
+            .then(() => true)
+            .catch(() => false);
         expect(exists).toBe(true);
     });
 
@@ -106,7 +116,10 @@ describe('per-instance artifacts', () => {
     it('produces client bundle for home page', async () => {
         const home = manifest.routes.find((r) => r.pattern === '')!;
         const bundlePath = path.join(buildDir, home.instances[0].clientBundlePath);
-        const exists = await fs.access(bundlePath).then(() => true).catch(() => false);
+        const exists = await fs
+            .access(bundlePath)
+            .then(() => true)
+            .catch(() => false);
         expect(exists).toBe(true);
     });
 
@@ -128,14 +141,18 @@ describe('per-instance artifacts', () => {
         const widgetA = items.instances.find((i) => i.params.slug === 'widget-a')!;
         const widgetB = items.instances.find((i) => i.params.slug === 'widget-b')!;
 
-        const cacheA = JSON.parse(await fs.readFile(
-            path.join(buildDir, widgetA.preRenderedPath.replace('.jay-html', '.cache.json')),
-            'utf-8',
-        ));
-        const cacheB = JSON.parse(await fs.readFile(
-            path.join(buildDir, widgetB.preRenderedPath.replace('.jay-html', '.cache.json')),
-            'utf-8',
-        ));
+        const cacheA = JSON.parse(
+            await fs.readFile(
+                path.join(buildDir, widgetA.preRenderedPath.replace('.jay-html', '.cache.json')),
+                'utf-8',
+            ),
+        );
+        const cacheB = JSON.parse(
+            await fs.readFile(
+                path.join(buildDir, widgetB.preRenderedPath.replace('.jay-html', '.cache.json')),
+                'utf-8',
+            ),
+        );
 
         expect(cacheA.slowViewState.name).toBe('Widget A');
         expect(cacheB.slowViewState.name).toBe('Widget B');
