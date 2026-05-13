@@ -284,7 +284,7 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
             // slow bindings resolved — hydrate script should not adopt them)
             const preRenderedPath = path.join(
                 dirPath,
-                'build/pre-rendered',
+                'build/dev/pre-rendered',
                 routeDir,
                 'page.jay-html',
             );

@@ -93,17 +93,18 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
 
     // Discover client inits for hydration entries (plugins + project)
     const clientInits: InstanceBuildContext['clientInits'] = [];
-    // Plugin client inits — use package/client entry for browser
+    // Plugin client inits — reuse preparePluginClientInits which filters to confirmed inits only
+    const { preparePluginClientInits } = await import('@jay-framework/stack-server-runtime');
     try {
         const allPluginsWithInit = sortPluginsByDependencies(
             await discoverPluginsWithInit({ projectRoot: options.projectRoot }),
         );
-        for (const pluginInit of allPluginsWithInit) {
-            if (pluginInit.isLocal) continue;
+        const pluginClientInits = preparePluginClientInits(allPluginsWithInit);
+        for (const pci of pluginClientInits) {
             clientInits.push({
-                modulePath: `${pluginInit.packageName}/client`,
-                exportName: pluginInit.initExport || 'init',
-                key: pluginInit.name,
+                modulePath: pci.importPath,
+                exportName: pci.initExport,
+                key: pci.name,
             });
         }
     } catch (err: any) {

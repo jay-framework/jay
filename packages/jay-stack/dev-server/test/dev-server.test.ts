@@ -64,7 +64,7 @@ import { wrapWithAutomation, AUTOMATION_CONTEXT } from "@jay-framework/runtime-a
 import { registerGlobalContext } from "@jay-framework/runtime";
 
 
-import { hydrate } from "/page.jay-html?import&jay-hydrate.ts";
+import { hydrate } from "/build/dev/pre-rendered/index/page.jay-html?import&jay-hydrate.ts";
 
 const viewState = {};
 const fastCarryForward = {};
@@ -150,7 +150,7 @@ import { registerGlobalContext } from "@jay-framework/runtime";
 import { deepMergeViewStates } from "@jay-framework/view-state-merge";
 
 
-import { render } from "/page.jay-html.ts";
+import { render } from "/build/dev/pre-rendered/index/page.jay-html.ts";
 import {page} from "/page.ts"
 const slowViewState = {"title":"Page with Code","content":"This page has both a jay-html file and a code file"};
 const viewState = {};
