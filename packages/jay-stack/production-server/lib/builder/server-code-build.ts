@@ -51,23 +51,30 @@ export async function discoverServerEntries(
         // No actions directory
     }
 
-    // Discover local plugin component files (headless components)
-    const pluginsDir = path.join(projectRoot, 'src', 'plugins');
-    try {
-        const pluginDirs = await fs.readdir(pluginsDir, { withFileTypes: true });
-        for (const dir of pluginDirs) {
-            if (!dir.isDirectory()) continue;
-            const pluginDir = path.join(pluginsDir, dir.name);
-            const pluginFiles = await fs.readdir(pluginDir);
-            for (const file of pluginFiles) {
-                if (file.endsWith('.ts') && file !== 'init.ts' && file !== 'page.ts') {
-                    const entryName = `plugins/${dir.name}/${file.replace(/\.ts$/, '')}`;
-                    pages[entryName] = path.join(pluginDir, file);
+    // Discover local plugin and component files (headless/headfull components)
+    for (const subDir of ['plugins', 'components']) {
+        const scanDir = path.join(projectRoot, 'src', subDir);
+        try {
+            const dirs = await fs.readdir(scanDir, { withFileTypes: true });
+            for (const dir of dirs) {
+                if (!dir.isDirectory()) continue;
+                const dirPath = path.join(scanDir, dir.name);
+                const files = await fs.readdir(dirPath);
+                for (const file of files) {
+                    if (
+                        file.endsWith('.ts') &&
+                        !file.endsWith('.d.ts') &&
+                        file !== 'init.ts' &&
+                        file !== 'page.ts'
+                    ) {
+                        const entryName = `${subDir}/${dir.name}/${file.replace(/\.ts$/, '')}`;
+                        pages[entryName] = path.join(dirPath, file);
+                    }
                 }
             }
+        } catch {
+            // Directory may not exist
         }
-    } catch {
-        // No plugins directory
     }
 
     let init: string | undefined;
