@@ -68,10 +68,18 @@ function findInstance(
     route: RouteEntry,
     params: Record<string, string>,
 ): InstanceEntry | undefined {
+    const paramNames = new Set(
+        route.segments
+            .filter((s) => s.type !== 'static')
+            .map((s) => s.value),
+    );
     return route.instances.find((instance) => {
-        const iKeys = Object.keys(instance.params);
-        const pKeys = Object.keys(params);
-        if (iKeys.length !== pKeys.length) return false;
-        return iKeys.every((k) => instance.params[k] === params[k]);
+        for (const name of paramNames) {
+            const urlVal = params[name];
+            const instVal = instance.params[name];
+            if (urlVal === undefined && instVal === undefined) continue;
+            if (urlVal !== instVal) return false;
+        }
+        return true;
     });
 }
