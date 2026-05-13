@@ -874,6 +874,7 @@ function injectHeadfullFSTemplatesRecursive(
         for (const jayTag of jayTags) {
             if (!jayTag.innerHTML.trim()) {
                 jayTag.set_content(jayHtmlBody.innerHTML);
+                jayTag.setAttribute('style', 'display:contents');
             }
         }
     }

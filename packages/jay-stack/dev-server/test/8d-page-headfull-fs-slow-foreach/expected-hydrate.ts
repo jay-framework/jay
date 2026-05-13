@@ -58,7 +58,7 @@ export function hydrate(rootElement, options) {
                     () =>
                         childCompHydrate(
                             _HeadlessHeader0,
-                            (vs1) => ({ itemId: '1' }),
+                            (vs1) => ({ itemId: '1', style: 'display:contents' }),
                             'S2/0',
                             refAr0(),
                         ),
@@ -70,7 +70,7 @@ export function hydrate(rootElement, options) {
                     () =>
                         childCompHydrate(
                             _HeadlessHeader1,
-                            (vs1) => ({ itemId: '2' }),
+                            (vs1) => ({ itemId: '2', style: 'display:contents' }),
                             'S4/0',
                             refAr0(),
                         ),

@@ -53,8 +53,18 @@ export function hydrate(rootElement, options) {
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('S0/0', {}, [
-                childCompHydrate(_HeadlessHeader0, (vs) => ({ itemId: '1' }), 'S1/0', refAr0()),
-                childCompHydrate(_HeadlessHeader1, (vs) => ({ itemId: '3' }), 'S2/0', refAr1()),
+                childCompHydrate(
+                    _HeadlessHeader0,
+                    (vs) => ({ itemId: '1', style: 'display:contents' }),
+                    'S1/0',
+                    refAr0(),
+                ),
+                childCompHydrate(
+                    _HeadlessHeader1,
+                    (vs) => ({ itemId: '3', style: 'display:contents' }),
+                    'S2/0',
+                    refAr1(),
+                ),
             ]),
         );
     return [refManager.getPublicAPI(), render];

@@ -396,12 +396,12 @@ tags:
 
 ### Basic Types
 
-| Type          | Example                  | Description                                              |
-| ------------- | ------------------------ | -------------------------------------------------------- |
-| `string`      | `dataType: string`       | Text values                                              |
-| `html-string` | `dataType: html-string`  | HTML content (rich text, CMS output) — rendered via innerHTML |
-| `number`      | `dataType: number`       | Numeric values                                           |
-| `boolean`     | `dataType: boolean`      | True/false values                                        |
+| Type          | Example                 | Description                                                   |
+| ------------- | ----------------------- | ------------------------------------------------------------- |
+| `string`      | `dataType: string`      | Text values                                                   |
+| `html-string` | `dataType: html-string` | HTML content (rich text, CMS output) — rendered via innerHTML |
+| `number`      | `dataType: number`      | Numeric values                                                |
+| `boolean`     | `dataType: boolean`     | True/false values                                             |
 
 ### Enum Types
 

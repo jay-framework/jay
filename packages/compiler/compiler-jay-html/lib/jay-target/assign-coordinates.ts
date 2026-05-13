@@ -221,6 +221,7 @@ function assignHeadlessInstance(
     );
     if (significantChildren.length > 1) {
         const wrapper = parse('<div></div>').querySelector('div')!;
+        wrapper.setAttribute('style', 'display:contents');
         const children = [...element.childNodes];
         element.innerHTML = '';
         children.forEach((child) => wrapper.appendChild(child as any));
