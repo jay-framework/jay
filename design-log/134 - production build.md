@@ -579,6 +579,22 @@ The `production-server` package was being **bundled into** the CLI dist instead 
 
 Fix: Added `@jay-framework/production-server` and `@jay-framework/compiler-jay-stack` to the CLI's `vite.config.ts` externals list. The CLI now uses dynamic `import("@jay-framework/production-server")` at runtime. CLI dist went from 20K+ lines to 5K.
 
-### Wix Store-Light Verified
+### Headfull FS Component Resolution
 
-Production build tested on `wix/examples/store-light` — a real wix-stores project with no `page.ts` files, plugin-provided data from Wix APIs, cart page, 12 product pages from live Wix catalog. Build produces 15 instances, serve returns SSR HTML with real product data, plugin client inits provide wix-server-client configuration for hydration.
+Headfull FS components (e.g., `kitan-header` in the golf project) have their jay-html templates inlined during slow rendering via `injectHeadfullFSTemplates`. The Vite client build (`jayRuntime` plugin) re-runs this resolution during hydrate compilation — requiring the headfull component's jay-html file to be resolvable.
+
+For pre-rendered files in the build directory, relative paths like `../../components/kitan-header` don't resolve because they're relative to the source tree, not the build tree. The `jayRuntime` plugin's `JayPluginContext.resolveSourceDir` maps pre-rendered file paths back to source paths — but only when `buildFolder` and `pagesRoot` are configured.
+
+**Fix:** Renamed `instances/` directory to `pre-rendered/` — matching the dev server's naming convention. Configured the per-instance Vite build with `buildFolder: buildDir` and `pagesRoot` so `resolveSourceDir` maps `build/v{n}/pre-rendered/{routeDir}` → `pagesRoot/{routeDir}`. This reuses the existing resolution logic without any changes to the compiler.
+
+### Component Discovery (`src/components/`)
+
+Projects can have headfull/headless components in `src/components/` (not just `src/plugins/`). The server build now scans both `src/plugins/` and `src/components/` for TypeScript files to compile. Also handles `index.ts` entry points in component directories (resolves `components/kitan-header/index.js` instead of `components/kitan-header.js`).
+
+### Wix Store-Light & Golf Verified
+
+Production build tested on:
+
+- `wix/examples/store-light` — wix-stores project with no `page.ts` files, plugin-provided data from Wix APIs, 15 instances
+- `wix/examples/store` — full wix-stores project with page components, 20+ instances
+- `golf` — multi-tenant project with headfull FS components (`kitan-header`, `polgat-header`), shared components directory
