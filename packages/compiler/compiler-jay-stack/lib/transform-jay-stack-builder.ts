@@ -7,6 +7,7 @@ import {
     flattenVariable,
     FlattenedAccessChain,
     areFlattenedAccessChainsEqual,
+    isImportModuleVariableRoot,
 } from '@jay-framework/compiler';
 import { findBuilderMethodsToRemove } from './building-blocks/find-builder-methods-to-remove';
 import { analyzeUnusedStatements } from './building-blocks/analyze-unused-statements';
@@ -21,12 +22,14 @@ const {
     isImportDeclaration,
     isNamedImports,
     isIdentifier,
+    isStringLiteral,
 } = tsBridge;
 
 export type BuildEnvironment = 'client' | 'server';
 
 type JayStackTransformerConfig = SourceFileTransformerContext & {
     environment: BuildEnvironment;
+    stripBuilders?: Set<string>;
 };
 
 /**
@@ -41,12 +44,15 @@ export function transformJayStackBuilder(
     code: string,
     filePath: string,
     environment: BuildEnvironment,
+    stripBuilders?: Set<string>,
 ): { code: string; map?: any } {
     // Parse to AST
     const sourceFile = createSourceFile(filePath, code, ScriptTarget.Latest, true);
 
     // Transform using mkTransformer pattern
-    const transformers = [mkTransformer(mkJayStackCodeSplitTransformer, { environment })];
+    const transformers = [
+        mkTransformer(mkJayStackCodeSplitTransformer, { environment, stripBuilders }),
+    ];
 
     const printer = createPrinter();
     const result = tsBridge.transform(sourceFile, transformers);
@@ -72,12 +78,29 @@ function mkJayStackCodeSplitTransformer({
     sourceFile,
     context,
     environment,
+    stripBuilders,
 }: JayStackTransformerConfig): ts.SourceFile {
     // Step 1: Create binding resolver
     const bindingResolver = new SourceFileBindingResolver(sourceFile);
 
+    // Step 1b: If stripBuilders is set, remove entire statements rooted in those builders
+    let workingSourceFile = sourceFile;
+    if (stripBuilders && stripBuilders.size > 0) {
+        const filtered = sourceFile.statements.filter((statement) => {
+            const rootName = findChainRootBuilderName(statement, bindingResolver);
+            return !rootName || !stripBuilders.has(rootName);
+        });
+        if (filtered.length !== sourceFile.statements.length) {
+            workingSourceFile = factory.updateSourceFile(sourceFile, filtered);
+        }
+    }
+
     // Step 2: Find all builder methods that should be removed
-    const { callsToRemove } = findBuilderMethodsToRemove(sourceFile, bindingResolver, environment);
+    const { callsToRemove } = findBuilderMethodsToRemove(
+        workingSourceFile,
+        bindingResolver,
+        environment,
+    );
 
     // Step 3: Transform the AST - remove identified method calls
     // We compare flattened access chains to identify calls that should be removed
@@ -100,17 +123,17 @@ function mkJayStackCodeSplitTransformer({
     };
 
     let transformedSourceFile = visitEachChild(
-        sourceFile,
+        workingSourceFile,
         transformVisitor,
         context,
     ) as ts.SourceFile;
 
-    // Step 4: Analyze the transformed file and recursively remove unused statements
+    // Step 5: Analyze the transformed file and recursively remove unused statements
     // NOTE: analyzeUnusedStatements uses forEachChild (not getChildren) because
     // transformed nodes don't have parent references required by getChildren
     const { statementsToRemove, unusedImports } = analyzeUnusedStatements(transformedSourceFile);
 
-    // Step 5: Remove unused statements and filter imports
+    // Step 6: Remove unused statements and filter imports
     const transformedStatements = transformedSourceFile.statements
         .map((statement) => {
             // Remove statements that are no longer needed
@@ -168,4 +191,51 @@ function filterImportDeclaration(
         statement.moduleSpecifier,
         statement.assertClause,
     );
+}
+
+/**
+ * Find the root builder function name of a statement's call chain.
+ * Returns the builder name (e.g., 'makeJayQuery') if the statement is
+ * a variable declaration or expression statement rooted in a builder call,
+ * or undefined if it's not a builder chain.
+ */
+function findChainRootBuilderName(
+    statement: ts.Statement,
+    bindingResolver: SourceFileBindingResolver,
+): string | undefined {
+    let expr: ts.Expression | undefined;
+
+    if (tsBridge.isVariableStatement(statement)) {
+        for (const decl of statement.declarationList.declarations) {
+            if (decl.initializer && isCallExpression(decl.initializer)) {
+                expr = decl.initializer;
+            }
+        }
+    }
+    if (tsBridge.isExpressionStatement(statement) && isCallExpression(statement.expression)) {
+        expr = statement.expression;
+    }
+
+    if (!expr) return undefined;
+
+    let current: ts.Expression = expr;
+    while (true) {
+        if (isCallExpression(current) && isPropertyAccessExpression(current.expression)) {
+            current = current.expression.expression;
+        } else if (isCallExpression(current) && isIdentifier(current.expression)) {
+            const variable = bindingResolver.explain(current.expression);
+            const flattened = flattenVariable(variable);
+            if (
+                flattened.path.length === 1 &&
+                isImportModuleVariableRoot(flattened.root) &&
+                isStringLiteral(flattened.root.module) &&
+                flattened.root.module.text === '@jay-framework/fullstack-component'
+            ) {
+                return flattened.path[0];
+            }
+            return undefined;
+        } else {
+            return undefined;
+        }
+    }
 }

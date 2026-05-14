@@ -63,6 +63,73 @@ program
         }
     });
 
+// Production build command
+program
+    .command('build [path]')
+    .description('Build production artifacts')
+    .option('--version <n>', 'Build version number', '1')
+    .option('--no-minify', 'Disable minification (useful for debugging)')
+    .option('-v, --verbose', 'Enable verbose logging output')
+    .action(async (projectPath, options) => {
+        try {
+            const logLevel: LogLevel = options.verbose ? 'verbose' : 'info';
+            setDevLogger(createDevLogger(logLevel));
+
+            const resolvedPath = path.resolve(projectPath || process.cwd());
+            const jayConfigPath = path.join(resolvedPath, '.jay');
+            let pagesBase = './src/pages';
+
+            try {
+                const jayConfig = YAML.parse(await fs.readFile(jayConfigPath, 'utf-8'));
+                pagesBase = jayConfig?.devServer?.pagesBase || pagesBase;
+            } catch {
+                // No .jay config, use defaults
+            }
+
+            const { buildVersion } = await import('@jay-framework/production-server');
+            await buildVersion({
+                version: parseInt(options.version, 10),
+                projectRoot: resolvedPath,
+                pagesRoot: path.resolve(resolvedPath, pagesBase),
+                buildRoot: path.join(resolvedPath, 'build'),
+                publicBasePath: '/',
+                concurrency: 4,
+                tsConfigFilePath: path.join(resolvedPath, 'tsconfig.json'),
+                minify: options.minify,
+            });
+        } catch (error: any) {
+            getLogger().error(chalk.red('Build failed:') + ' ' + error.message);
+            if (error.stack) getLogger().error(error.stack);
+            process.exit(1);
+        }
+    });
+
+// Production serve command
+program
+    .command('serve [path]')
+    .description('Start production server')
+    .option('--version <n>', 'Build version to serve', '1')
+    .option('--port <n>', 'Port number', '3000')
+    .action(async (projectPath, options) => {
+        try {
+            setDevLogger(createDevLogger('info'));
+
+            const resolvedPath = path.resolve(projectPath || process.cwd());
+
+            const { startMainServer } = await import('@jay-framework/production-server');
+            await startMainServer({
+                buildRoot: path.join(resolvedPath, 'build'),
+                version: parseInt(options.version, 10),
+                port: parseInt(options.port, 10),
+                publicBasePath: '/',
+            });
+        } catch (error: any) {
+            getLogger().error(chalk.red('Server failed:') + ' ' + error.message);
+            if (error.stack) getLogger().error(error.stack);
+            process.exit(1);
+        }
+    });
+
 // Jay file validation command
 program
     .command('validate [path]')

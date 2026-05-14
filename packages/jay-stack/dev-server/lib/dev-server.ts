@@ -222,7 +222,7 @@ function defaults(options: DevServerOptions): DevServerOptions {
         projectRootFolder,
         options.pagesRootFolder || './src/pages',
     );
-    const buildFolder = options.buildFolder || path.resolve(projectRootFolder, './build');
+    const buildFolder = options.buildFolder || path.resolve(projectRootFolder, './build/dev');
     const tsConfigFilePath =
         options.jayRollupConfig.tsConfigFilePath ||
         path.resolve(projectRootFolder, './tsconfig.json');
@@ -1257,7 +1257,7 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     // Clean build folder on startup, preserving freezes/.
     // Server elements, CSS files, and pre-rendered cache all live here and go
     // stale when package code or jay-html templates change between restarts.
-    // Frozen ViewState snapshots (build/freezes/) are preserved across restarts.
+    // Frozen ViewState snapshots (build/dev/freezes/) are preserved across restarts.
     if (buildFolder) {
         try {
             const entries = await fs.readdir(buildFolder).catch(() => []);

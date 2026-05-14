@@ -844,6 +844,7 @@ Previously CSS loaded twice in SSR dev mode: once as inline `<style>` in the SSR
 **Root cause:** The server element compiler generated `for (const vs1 of vs.p?.extendedFields?.sizesExtraData)` without guarding against `undefined`. The client-side and hydrate compilers don't have this issue because they pass the accessor as a callback to the runtime `forEach` function, which handles `undefined` internally.
 
 **Fix:** In `jay-html-compiler-server.ts`, both `for...of` generation (line 180) and `.map().join('')` generation (line 569) now detect optional chaining in the array expression and wrap it with `?? []`:
+
 - `for (const vs1 of (vs.p?.extendedFields?.sizesExtraData ?? []))` — iterates empty array if path is undefined
 - `(vs.p?.extendedFields?.sizesExtraData ?? []).map(...)` — maps over empty array if path is undefined
 

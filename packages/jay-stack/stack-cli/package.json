@@ -31,6 +31,7 @@
     "@jay-framework/fullstack-component": "workspace:^",
     "@jay-framework/logger": "workspace:^",
     "@jay-framework/plugin-validator": "workspace:^",
+    "@jay-framework/production-server": "workspace:^",
     "@jay-framework/stack-server-runtime": "workspace:^",
     "chalk": "^4.1.2",
     "commander": "^14.0.0",

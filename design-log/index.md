@@ -124,16 +124,22 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ## Compiler & Build System
 
-| #   | Title                                  | Description                                             |
-| --- | -------------------------------------- | ------------------------------------------------------- |
-| 04  | compiler                               | Initial compiler design                                 |
-| 20  | component compiler                     | Component compilation                                   |
-| 25  | building the compiler                  | Compiler architecture, code splitting                   |
-| 28  | runtime compiler                       | Runtime compilation                                     |
-| 29  | algorithm to split safe code           | Safe code splitting algorithm                           |
-| 73  | jay-stack validate command             | Plugin validation command                               |
-| 74  | watch linked style files in dev server | Dev server file watching                                |
-| 118 | jay-html-compiler refactor             | Extract shared algorithms + split by compilation target |
+| #    | Title                                  | Description                                                            |
+| ---- | -------------------------------------- | ---------------------------------------------------------------------- |
+| 04   | compiler                               | Initial compiler design                                                |
+| 20   | component compiler                     | Component compilation                                                  |
+| 25   | building the compiler                  | Compiler architecture, code splitting                                  |
+| 28   | runtime compiler                       | Runtime compilation                                                    |
+| 29   | algorithm to split safe code           | Safe code splitting algorithm                                          |
+| 73   | jay-stack validate command             | Plugin validation command                                              |
+| 74   | watch linked style files in dev server | Dev server file watching                                               |
+| 118  | jay-html-compiler refactor             | Extract shared algorithms + split by compilation target                |
+| 134  | production build                       | Two-server production architecture: main server + slow render server   |
+| 134a | build pipeline                         | Per-instance compilation, shared chunks, Vite build strategy           |
+| 134b | main server                            | Production request handling: fast phase + SSR with pre-built artifacts |
+| 134c | slow render server                     | Webhook invalidation, per-instance rebuild, versioned bucket building  |
+| 134d | server build                           | Compiling page.ts, actions, services, init.ts to production JS         |
+| 136  | loadParams route context               | Passing inferred/route params to loadParams for multi-prefix filtering |
 
 ---
 
@@ -208,7 +214,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 119 | async data SSR and hydration                            | Fix async data (Promise types) through SSR swap scripts, hydrate compiler, and ViewState serialization |
 | 126 | coordinate assignment rules                             | Complete rules for coordinate assignment across forEach, slowForEach, headless, headfull nesting       |
 | 127 | SEO head injection                                      | Render SEO data (title, meta, OG tags) from ViewState into `<head>` during SSR                         |
-| 134 | display contents for wrapper elements                   | Add `display:contents` to compiler-generated wrappers so they don't break sticky/flex/grid             |
+| 135 | display contents for wrapper elements                   | Add `display:contents` to compiler-generated wrappers so they don't break sticky/flex/grid             |
 
 ---
 
@@ -287,6 +293,10 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 ### "I need to understand the full workflow lifecycle"
 
 → See #86 (full workflow lifecycle: setup → agent-kit → coding → slow → fast → interactive → refresh)
+
+### "I'm working on the production build"
+
+→ See #134 (production build: two-server architecture, build pipeline, artifact layout)
 
 ---
 
