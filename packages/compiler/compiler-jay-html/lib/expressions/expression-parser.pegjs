@@ -305,7 +305,7 @@ dynamicAttribute
 }
 
 dynamicComponentProp
-  = num:integer {
+  = num:integer !. {
     return new RenderFragment(num)
   }
   / template:template {

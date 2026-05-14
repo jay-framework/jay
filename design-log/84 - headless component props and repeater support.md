@@ -2646,3 +2646,30 @@ This caused two issues in the generated `.jay-html.ts`:
 
 - compiler-jay-html: 564 passed, 4 skipped (568 total)
 - stack-client-runtime: 19 passed, builds cleanly with correct types
+
+### Bug Fix — Static UUID Props Fail to Parse After Slow Rendering (Resolved)
+
+**Problem:** When a headless component prop is bound to a slow-phase value like `productId="{productId}"`, slow rendering bakes the value into the jay-html as `productId="42941ee7-1707-4b5d-a7d7-41e12da6ab9e"`. The subsequent compilation pass tries to parse this static value via `parseComponentPropExpression`, which uses the `dynamicComponentProp` PEG rule. That rule tries `integer` first (line 308), which greedily matches the leading digits `42941`, then the parser expects end-of-input but finds `ee7...`, producing: `Parse error: Expected end of input but "e" found.`
+
+**Root cause:** PEG.js uses ordered choice (`/`). The `integer` rule matched the leading digits, and since it succeeded, the parser never tried the `template` alternative which would have handled the full UUID as a static string. The `integer` rule existed as first alternative to preserve numeric literals as numbers (e.g., `count="5"` → `5` not `'5'`).
+
+**Fix:** Added `!.` (negative lookahead for any character) after `integer` in the `dynamicComponentProp` rule, ensuring `integer` only matches when it consumes the entire input:
+
+```
+dynamicComponentProp
+  = num:integer !. { return new RenderFragment(num) }
+  / template:template { ... }
+```
+
+When the input is `42941ee7-...`, `integer` matches `42941` but `!.` fails (there's more input), so PEG.js backtracks to the `template` alternative which handles it as a static string `'42941ee7-1707-4b5d-a7d7-41e12da6ab9e'`.
+
+**Files modified:**
+
+- `compiler-jay-html/lib/expressions/expression-parser.pegjs` — Added `!.` after `integer` in `dynamicComponentProp` rule
+- `compiler-jay-html/lib/expressions/expression-parser.cjs` — Regenerated
+
+**Test added:**
+
+- `test/expressions/expression-compiler.unit.test.ts` — "static UUID string (digits followed by non-digit chars)"
+
+**Test results:** 653/653 passing (649 compiler-jay-html + 4 skipped), 0 regressions.

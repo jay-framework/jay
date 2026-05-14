@@ -582,6 +582,15 @@ describe('expression-compiler', () => {
             expect(actual.imports.has(Import.dynamicProperty)).toBeFalsy();
         });
 
+        it('static UUID string (digits followed by non-digit chars)', () => {
+            const actual = parseComponentPropExpression(
+                '42941ee7-1707-4b5d-a7d7-41e12da6ab9e',
+                defaultVars,
+            );
+            expect(actual.rendered).toEqual("'42941ee7-1707-4b5d-a7d7-41e12da6ab9e'");
+            expect(actual.imports.has(Import.dynamicProperty)).toBeFalsy();
+        });
+
         // it("single accessor", () => {
         //     const actual = parseComponentPropExpression('{string1}', defaultVars);
         //     expect(actual.rendered).toEqual('dp(vs => vs.string1)')
