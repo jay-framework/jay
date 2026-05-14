@@ -163,13 +163,77 @@ loadParams returns: [..., { slug: "ceramic-flower-vase" }, ...]
 Splitting: ceramic-flower-vase matches static override → skip
 ```
 
+### Multiple Components with loadParams (Cross-Product)
+
+A route can have multiple headless components, each with its own `loadParams`:
+
+```
+Route: /[lang]/products/[slug]
+
+Part A (i18n plugin):    loadParams yields [{ lang: "en" }, { lang: "fr" }]
+Part B (product plugin): loadParams yields [{ slug: "shirt" }, { slug: "hat" }]
+```
+
+Each component provides a subset of the route's params. The build pipeline must compute the **cross product**:
+
+```
+Result: [
+  { lang: "en", slug: "shirt" },
+  { lang: "en", slug: "hat" },
+  { lang: "fr", slug: "shirt" },
+  { lang: "fr", slug: "hat" },
+]
+```
+
+**Note:** The current `runLoadParams` concatenates batches sequentially — it doesn't cross-product. This is a pre-existing gap that needs fixing regardless of the route-splitting work.
+
+#### Detection
+
+Each `loadParams` result has a set of keys it provides. If two parts provide **disjoint** key sets, they need cross-producting. If they provide **overlapping** keys, it's a conflict (warn).
+
+```typescript
+// Collect results per part, grouped by the param keys they provide
+const paramsByPart: { keys: Set<string>; values: Record<string, string>[] }[] = [];
+
+for (const part of partsWithLoadParams) {
+    const services = resolveServices(part.compDefinition.services);
+    const partParams: Record<string, string>[] = [];
+    for await (const batch of part.compDefinition.loadParams(services)) {
+        partParams.push(...batch);
+    }
+    const keys = new Set(partParams.flatMap(p => Object.keys(p)));
+    paramsByPart.push({ keys, values: partParams });
+}
+
+// Cross-product all parts with disjoint key sets
+const allParams = crossProduct(paramsByPart);
+```
+
+#### Impact on Route Splitting
+
+The grouping key for the "run once, split" optimization must be the **set of `loadParams` providers**, not a single component. Two routes share work only if they use the exact same set of components with `loadParams`.
+
+```
+Route A: /kitan/products/[slug]   — uses product-page (loadParams: slug)
+Route B: /polgat/products/[slug]  — uses product-page (loadParams: slug)
+Route C: /[lang]/products/[slug]  — uses i18n + product-page (loadParams: lang, slug)
+
+Groups:
+  { product-page } → routes A, B — run loadParams once, split by prefix
+  { i18n, product-page } → route C alone — run both, cross-product
+```
+
 ### What Stays the Same
 
 - `LoadParams` type signature — unchanged
 - Plugin `loadParams` implementations — unchanged
-- `runLoadParams` in `stack-server-runtime` — unchanged
 - Dev server — doesn't use `loadParams` at all
-- Single-route components — handled by existing per-route loop (no grouping needed)
+- Single-route, single-component cases — handled by existing per-route loop
+
+### What Changes
+
+- `runLoadParams` — needs cross-product support for multiple parts with disjoint params
+- Build pipeline — groups routes by loadParams provider set, runs once per group, splits results
 
 ### Edge Cases
 
@@ -185,6 +249,53 @@ Build under the route without `inferredParams`. If no such route exists, warn an
 
 **Multiple `inferredParams` keys:**
 All keys must match for a route to claim an item. Partial matches don't count.
+
+**Overlapping param keys from multiple components:**
+Two components both providing `slug` is a conflict. Warn and use the first component's value.
+
+### Testability
+
+The algorithm has three distinct pure functions that can be unit tested independently, without Vite, services, or real components:
+
+**1. `groupRoutesByLoadParamsProviders(routeEntries) → Map<string, RouteEntry[]>`**
+
+Input: route entries with component paths and `inferredParams`.
+Output: groups of routes sharing the same `loadParams` provider set.
+
+```typescript
+// Test: two routes with same component → same group
+// Test: route with different component → separate group
+// Test: route with two components → separate group from route with one
+// Test: static routes (no dynamic segments) → not grouped
+```
+
+**2. `crossProductParams(paramsByPart: { keys: Set<string>; values: Record<string, string>[] }[]) → Record<string, string>[]`**
+
+Input: arrays of param sets from each component, each with its key set.
+Output: cartesian product of all parts with disjoint keys.
+
+```typescript
+// Test: single part → pass through
+// Test: two parts, disjoint keys → cross product
+// Test: two parts, overlapping keys → warn, use first
+// Test: empty part → empty result
+// Test: one part returns 3 items × other returns 2 → 6 items
+```
+
+**3. `splitParamsByRoute(allParams, routeEntries) → Map<RouteEntry, Record<string, string>[]>`**
+
+Input: all param combinations + route entries with `inferredParams`.
+Output: params assigned to each route.
+
+```typescript
+// Test: params matching inferredParams → assigned to that route
+// Test: params not matching any → assigned to catch-all (no inferredParams)
+// Test: params matching static override → excluded
+// Test: multiple inferredParams keys → all must match
+// Test: no catch-all route, no match → warned and skipped
+```
+
+Each function is pure — takes data in, returns data out. No filesystem, no Vite, no services. The build pipeline calls them in sequence and handles the I/O (loading modules, running `loadParams`, building instances).
 
 ## Verification
 
