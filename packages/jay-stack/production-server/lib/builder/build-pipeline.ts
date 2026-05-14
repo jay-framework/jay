@@ -14,7 +14,7 @@ import {
     type ParamPart,
 } from './param-routing';
 import { getLogger } from '@jay-framework/logger';
-import type { JayRoute } from '@jay-framework/stack-route-scanner';
+import { JayRouteParamType, type JayRoute } from '@jay-framework/stack-route-scanner';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import fs from 'node:fs/promises';
@@ -269,12 +269,18 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
 
     // ── Step 1: Collect loadParams (run each unique one once) ──
 
-    const routeInfos: BuildRouteInfo[] = routeEntries.map((re) => ({
-        rawRoute: re.route.rawRoute,
-        inferredParams: re.route.inferredParams,
-        hasDynamicParams: re.route.segments.some((s) => typeof s !== 'string'),
-        routeEntry: re,
-    }));
+    const routeInfos: BuildRouteInfo[] = routeEntries.map((re) => {
+        const optionalNames = re.route.segments
+            .filter((s) => typeof s !== 'string' && s.type === JayRouteParamType.optional)
+            .map((s) => (s as { name: string }).name);
+        return {
+            rawRoute: re.route.rawRoute,
+            inferredParams: re.route.inferredParams,
+            optionalSegments: optionalNames.length > 0 ? new Set(optionalNames) : undefined,
+            hasDynamicParams: re.route.segments.some((s) => typeof s !== 'string'),
+            routeEntry: re,
+        };
+    });
 
     type LoadParamsFn = (...args: unknown[]) => AsyncIterable<Record<string, string>[]>;
     const loadParamsCache = new Map<LoadParamsFn, Record<string, string>[]>();

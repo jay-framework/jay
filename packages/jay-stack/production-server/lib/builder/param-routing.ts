@@ -3,6 +3,7 @@ import { getLogger } from '@jay-framework/logger';
 export interface RouteInfo {
     rawRoute: string;
     inferredParams?: Record<string, string>;
+    optionalSegments?: Set<string>;
     hasDynamicParams: boolean;
 }
 
@@ -53,8 +54,12 @@ export function crossProductParams(parts: ParamPart[]): Record<string, string>[]
 function paramsMatchInferred(
     params: Record<string, string>,
     inferredParams: Record<string, string>,
+    optionalSegments?: Set<string>,
 ): boolean {
-    return Object.entries(inferredParams).every(([k, v]) => params[k] === v);
+    return Object.entries(inferredParams).every(([k, v]) => {
+        if (optionalSegments?.has(k)) return true;
+        return params[k] === v;
+    });
 }
 
 export function computeSpecificity(route: RouteInfo): number {
@@ -65,7 +70,16 @@ export function computeSpecificity(route: RouteInfo): number {
 }
 
 function buildUrl(route: RouteInfo, params: Record<string, string>): string {
-    return route.rawRoute.replace(/\[\[?(\w+)\]?\]/g, (_, name) => params[name] || '');
+    return route.rawRoute
+        .replace(/\[\[(\w+)\]\]/g, (_, name) => {
+            const value = params[name];
+            if (!value) return '';
+            if (route.inferredParams?.[name] === value) return '';
+            return value;
+        })
+        .replace(/\[(\w+)\]/g, (_, name) => params[name] || '')
+        .replace(/\/\/+/g, '/')
+        .replace(/\/$/, '') || '/';
 }
 
 export function materializeRouteParams<R extends RouteInfo>(
@@ -85,10 +99,21 @@ export function materializeRouteParams<R extends RouteInfo>(
 
         const allParams = loadParamsResults.get(route) || [];
         for (const params of allParams) {
-            if (route.inferredParams && !paramsMatchInferred(params, route.inferredParams)) {
+            if (
+                route.inferredParams &&
+                !paramsMatchInferred(params, route.inferredParams, route.optionalSegments)
+            ) {
                 continue;
             }
-            const mergedParams = route.inferredParams ? { ...params, ...route.inferredParams } : params;
+            let mergedParams = params;
+            if (route.inferredParams) {
+                mergedParams = { ...params };
+                for (const [k, v] of Object.entries(route.inferredParams)) {
+                    if (!(k in mergedParams)) {
+                        mergedParams[k] = v;
+                    }
+                }
+            }
             const url = buildUrl(route, mergedParams);
             entries.push({ route, params: mergedParams, url, specificity });
         }

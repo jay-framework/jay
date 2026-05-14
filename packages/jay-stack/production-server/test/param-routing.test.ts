@@ -61,11 +61,13 @@ describe('computeSpecificity', () => {
     });
 
     it('should return 0 for a fully-resolved dynamic route (all params inferred)', () => {
-        expect(computeSpecificity({
-            rawRoute: '/[prefix]/products/[category]/[slug]',
-            inferredParams: { prefix: 'kitan', category: 'shoes', slug: 'shirt' },
-            hasDynamicParams: true,
-        })).toBe(0);
+        expect(
+            computeSpecificity({
+                rawRoute: '/[prefix]/products/[category]/[slug]',
+                inferredParams: { prefix: 'kitan', category: 'shoes', slug: 'shirt' },
+                hasDynamicParams: true,
+            }),
+        ).toBe(0);
     });
 
     it('should score static override same as fully-resolved dynamic route', () => {
@@ -182,6 +184,88 @@ describe('materializeRouteParams', () => {
         expect(result[0].params).toEqual({ slug: 'shirt', prefix: 'kitan' });
     });
 
+    it('should reject params missing required inferred keys', () => {
+        const route: RouteInfo = {
+            rawRoute: '/polgat/products/[slug]',
+            inferredParams: { prefix: 'polgat' },
+            hasDynamicParams: true,
+        };
+        const loadParams = new Map<RouteInfo, Record<string, string>[]>([
+            [route, [{ slug: 'shirt' }]],
+        ]);
+        const result = materializeRouteParams([route], loadParams);
+        expect(result).toHaveLength(0);
+    });
+
+    it('should not filter on optional segment inferred params', () => {
+        const route: RouteInfo = {
+            rawRoute: '/polgat/products/[[category]]',
+            inferredParams: { prefix: 'polgat', category: 'polgat' },
+            optionalSegments: new Set(['category']),
+            hasDynamicParams: true,
+        };
+        const loadParams = new Map<RouteInfo, Record<string, string>[]>([
+            [route, [
+                { prefix: 'polgat', category: 'shoes' },
+                { prefix: 'polgat', category: 'polgat' },
+            ]],
+        ]);
+        const result = materializeRouteParams([route], loadParams);
+        expect(result).toHaveLength(2);
+    });
+
+    it('should omit optional segment from URL when value matches inferred default', () => {
+        const route: RouteInfo = {
+            rawRoute: '/polgat/products/[[category]]',
+            inferredParams: { prefix: 'polgat', category: 'polgat' },
+            optionalSegments: new Set(['category']),
+            hasDynamicParams: true,
+        };
+        const loadParams = new Map<RouteInfo, Record<string, string>[]>([
+            [route, [
+                { prefix: 'polgat', category: 'shoes' },
+                { prefix: 'polgat', category: 'polgat' },
+            ]],
+        ]);
+        const result = materializeRouteParams([route], loadParams);
+        const shoesEntry = result.find((e) => e.params.category === 'shoes')!;
+        const rootEntry = result.find((e) => e.params.category === 'polgat')!;
+        expect(shoesEntry.url).toBe('/polgat/products/shoes');
+        expect(rootEntry.url).toBe('/polgat/products');
+    });
+
+    it('should split across routes using required inferred params while sharing optional', () => {
+        const kitan: RouteInfo = {
+            rawRoute: '/kitan/products/[[category]]',
+            inferredParams: { prefix: 'kitan', category: 'kitan' },
+            optionalSegments: new Set(['category']),
+            hasDynamicParams: true,
+        };
+        const polgat: RouteInfo = {
+            rawRoute: '/polgat/products/[[category]]',
+            inferredParams: { prefix: 'polgat', category: 'polgat' },
+            optionalSegments: new Set(['category']),
+            hasDynamicParams: true,
+        };
+        const categories = [
+            { prefix: 'kitan', category: 'shoes' },
+            { prefix: 'kitan', category: 'kitan' },
+            { prefix: 'polgat', category: 'shirts' },
+            { prefix: 'polgat', category: 'polgat' },
+        ];
+        const loadParams = new Map<RouteInfo, Record<string, string>[]>([
+            [kitan, categories],
+            [polgat, categories],
+        ]);
+        const result = materializeRouteParams([kitan, polgat], loadParams);
+        const kitanEntries = result.filter((e) => e.route === kitan);
+        const polgatEntries = result.filter((e) => e.route === polgat);
+        expect(kitanEntries).toHaveLength(2);
+        expect(polgatEntries).toHaveLength(2);
+        expect(kitanEntries.map((e) => e.url)).toEqual(['/kitan/products/shoes', '/kitan/products']);
+        expect(polgatEntries.map((e) => e.url)).toEqual(['/polgat/products/shirts', '/polgat/products']);
+    });
+
     it('should pass through dynamic route without inferredParams', () => {
         const route: RouteInfo = {
             rawRoute: '/products/[slug]',
@@ -249,8 +333,18 @@ describe('dedupeByUrl', () => {
             hasDynamicParams: true,
         };
         const entries = [
-            { route: dynamicRoute, params: { slug: 'shirt' }, url: '/products/shirt', specificity: 0 },
-            { route: staticRoute, params: { slug: 'shirt' }, url: '/products/shirt', specificity: 1000 },
+            {
+                route: dynamicRoute,
+                params: { slug: 'shirt' },
+                url: '/products/shirt',
+                specificity: 0,
+            },
+            {
+                route: staticRoute,
+                params: { slug: 'shirt' },
+                url: '/products/shirt',
+                specificity: 1000,
+            },
         ];
         const result = dedupeByUrl(entries);
         expect(result).toHaveLength(1);
@@ -269,7 +363,12 @@ describe('dedupeByUrl', () => {
         };
         const entries = [
             { route: catchAll, params: { slug: 'shirt' }, url: '/products/shirt', specificity: 0 },
-            { route: withInferred, params: { slug: 'shirt', category: 'shoes' }, url: '/products/shirt', specificity: 1 },
+            {
+                route: withInferred,
+                params: { slug: 'shirt', category: 'shoes' },
+                url: '/products/shirt',
+                specificity: 1,
+            },
         ];
         const result = dedupeByUrl(entries);
         expect(result).toHaveLength(1);

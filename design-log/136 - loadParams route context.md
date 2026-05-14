@@ -9,9 +9,7 @@
 `loadParams` is a component method that enumerates all param combinations for a dynamic route at build time. Its current signature:
 
 ```typescript
-type LoadParams<Services, Params> = (
-    contexts: Services,
-) => AsyncIterable<Params[]>;
+type LoadParams<Services, Params> = (contexts: Services) => AsyncIterable<Params[]>;
 ```
 
 It receives resolved services but **no information about the route it's being called for**.
@@ -55,6 +53,7 @@ Multiple routes may reference the same headless component with `loadParams` (by 
 **Step 2 — Materialize URLs**
 
 For each route, generate all `(url, params, route)` tuples:
+
 - **Static routes** (no dynamic segments, has `inferredParams`): one tuple from the inferred params
 - **Dynamic routes**: for each cached `loadParams` result compatible with the route's `inferredParams`, generate a tuple. Compatibility = all `inferredParams` keys match the result's values.
 
@@ -63,6 +62,7 @@ This naturally splits kitan/polgat — a product with `prefix: "polgat"` is inco
 **Step 3 — Dedupe by URL**
 
 When multiple routes produce the same URL, the most specific route wins:
+
 1. More `inferredParams` keys = more specific
 2. Fewer dynamic segments = more specific
 3. Static override > dynamic route
@@ -154,20 +154,42 @@ If two parts provide overlapping keys, warn and use the first provider's value.
 - Dev server — doesn't use `loadParams` at all
 - Agent-kit docs — unchanged
 
+### Optional Segment Defaults
+
+When a route has an optional segment (`[[category]]`) and declares an inferred param for it, the inferred value is a **default**, not a filter.
+
+```
+Route: /polgat/products/[[category]]
+jay-params:
+  prefix: polgat
+  category: polgat      ← default value for the optional segment
+```
+
+**Filtering:** Inferred params for required segments (like `prefix`) are strict filters — `loadParams` results must include the key with a matching value. Inferred params for optional segments (like `category`) are skipped during filtering — all values pass.
+
+**URL building:** When an optional segment's param value equals its inferred default, the segment is omitted from the URL:
+- `{ prefix: "polgat", category: "shoes" }` → `/polgat/products/shoes`
+- `{ prefix: "polgat", category: "polgat" }` → `/polgat/products` (category matches default → omitted)
+
+**Param merging:** `loadParams` values take precedence. Inferred params only fill in keys not provided by `loadParams`. This prevents the inferred `category: "polgat"` from overwriting `category: "shoes"`.
+
+**Plugin requirement:** `loadParams` must return the inferred default value as one of its entries to build the root page. E.g., `loadSearchParams` must yield `{ prefix: "polgat", category: "polgat" }` to produce `/polgat/products`.
+
 ### Edge Cases
 
 **Route with `inferredParams` AND dynamic segments:**
-`inferredParams` acts as a filter — only `loadParams` results matching all inferred keys materialize under this route.
+Inferred params for required segments act as filters. Inferred params for optional segments are defaults (not filters).
 
 **`loadParams` result matching no route's `inferredParams`:**
 Falls to the catch-all (route without `inferredParams`). If none exists, warn and skip.
 
-**Multiple `inferredParams` keys:**
-All keys must match for compatibility. `{ prefix: "kitan", category: "shoes" }` only matches params with both values.
+**Multiple required `inferredParams` keys:**
+All required inferred keys must match for compatibility.
 
 ## Verification
 
 After implementation:
+
 - Golf build should produce ~1900 kitan products + ~1900 polgat products (not ~3800 each)
 - No product should appear under the wrong prefix
 - Build time should roughly halve (fewer instances, single API call instead of two)
