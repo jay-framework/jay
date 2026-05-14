@@ -1,11 +1,11 @@
-import type { BuildOptions, BuildMetadata, RouteManifest } from '../types';
+import type { BuildOptions, BuildMetadata, RouteManifest, RouteEntry } from '../types';
 import { discoverServerEntries, buildServerCode } from './server-code-build';
 import { buildSharedChunks } from './shared-chunks-build';
 import { buildInstance, type InstanceBuildContext } from './instance-pipeline';
 import { loadProductionPageParts } from './load-production-parts';
 import { buildRouteEntry, discoverActions, writeRouteManifest } from './route-manifest';
 import { scanPluginRoutes } from './plugin-routes';
-import { runLoadParams, type DevServerPagePart } from '@jay-framework/stack-server-runtime';
+import { runLoadParams } from '@jay-framework/stack-server-runtime';
 import {
     crossProductParams,
     materializeRouteParams,
@@ -14,11 +14,19 @@ import {
     type ParamPart,
 } from './param-routing';
 import { getLogger } from '@jay-framework/logger';
+import type { JayRoute } from '@jay-framework/stack-route-scanner';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 
-const require = createRequire(import.meta.url);
+interface BuildRouteEntry {
+    route: JayRoute;
+    entry: RouteEntry;
+}
+
+interface BuildRouteInfo extends RouteInfo {
+    routeEntry: BuildRouteEntry;
+}
 
 async function discoverPluginClientPackages(projectRoot: string): Promise<string[]> {
     const projectRequire = createRequire(path.join(projectRoot, 'package.json'));
@@ -218,7 +226,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
 
     const allRoutes = [...routes, ...pluginRoutes];
 
-    const routeEntries = allRoutes.map((route) => {
+    const routeEntries: BuildRouteEntry[] = allRoutes.map((route) => {
         let serverModule: string = '';
         if (route.compPath) {
             if (route.componentExport) {
@@ -253,7 +261,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         logger.important(`[Build] ${instanceCount}/${totalExpected} ${routeName}${paramStr}`);
     }
 
-    async function loadPageModule(entry: { serverModule: string; isPlugin?: boolean }) {
+    async function loadPageModule(entry: RouteEntry): Promise<Record<string, unknown>> {
         if (!entry.serverModule) return {};
         if (entry.isPlugin) return import(entry.serverModule);
         return import(path.join(serverOutputDir, entry.serverModule.replace('server/', '')));
@@ -261,23 +269,22 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
 
     // ── Step 1: Collect loadParams (run each unique one once) ──
 
-    type RouteInfoExt = RouteInfo & { routeEntry: (typeof routeEntries)[0] };
-
-    const routeInfos: RouteInfoExt[] = routeEntries.map((re) => ({
+    const routeInfos: BuildRouteInfo[] = routeEntries.map((re) => ({
         rawRoute: re.route.rawRoute,
-        inferredParams: (re.route as any).inferredParams,
+        inferredParams: re.route.inferredParams,
         hasDynamicParams: re.route.segments.some((s) => typeof s !== 'string'),
         routeEntry: re,
     }));
 
-    const loadParamsCache = new Map<any, Record<string, string>[]>();
-    const loadParamsResults = new Map<RouteInfoExt, Record<string, string>[]>();
+    type LoadParamsFn = (...args: unknown[]) => AsyncIterable<Record<string, string>[]>;
+    const loadParamsCache = new Map<LoadParamsFn, Record<string, string>[]>();
+    const loadParamsResults = new Map<BuildRouteInfo, Record<string, string>[]>();
 
     for (const info of routeInfos) {
         if (!info.hasDynamicParams) continue;
         const { route, entry } = info.routeEntry;
 
-        let pageModule: any;
+        let pageModule: Record<string, unknown>;
         try {
             pageModule = await loadPageModule(entry);
         } catch (err) {
@@ -296,10 +303,9 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         const partsWithLoadParams = pageParts.parts.filter((p) => p.compDefinition?.loadParams);
         if (partsWithLoadParams.length === 0) continue;
 
-        // Run each unique loadParams once (dedup by function identity)
         const paramParts: ParamPart[] = [];
         for (const part of partsWithLoadParams) {
-            const fn = part.compDefinition!.loadParams!;
+            const fn = part.compDefinition!.loadParams! as LoadParamsFn;
             if (!loadParamsCache.has(fn)) {
                 logger.important(`[Build] Loading params for ${route.rawRoute}...`);
                 const partParams: Record<string, string>[] = [];
@@ -330,12 +336,11 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
     const deduped = dedupeByUrl(materialized);
     totalExpected = deduped.length;
 
-    // Group by route for ordered building
-    const byRoute = new Map<RouteInfoExt, Record<string, string>[]>();
-    for (const entry of deduped) {
-        const info = entry.route as RouteInfoExt;
+    const byRoute = new Map<BuildRouteInfo, Record<string, string>[]>();
+    for (const materialized of deduped) {
+        const info = materialized.route as BuildRouteInfo;
         if (!byRoute.has(info)) byRoute.set(info, []);
-        byRoute.get(info)!.push(entry.params);
+        byRoute.get(info)!.push(materialized.params);
     }
 
     // ── Step 4: Build ──
@@ -343,7 +348,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
     for (const [info, paramsList] of byRoute) {
         const { route, entry } = info.routeEntry;
 
-        let pageModule: any;
+        let pageModule: Record<string, unknown>;
         try {
             pageModule = await loadPageModule(entry);
         } catch (err) {

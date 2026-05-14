@@ -57,10 +57,11 @@ function paramsMatchInferred(
     return Object.entries(inferredParams).every(([k, v]) => params[k] === v);
 }
 
-function computeSpecificity(route: RouteInfo): number {
+export function computeSpecificity(route: RouteInfo): number {
+    const dynamicCount = (route.rawRoute.match(/\[/g) || []).length;
     const inferredCount = route.inferredParams ? Object.keys(route.inferredParams).length : 0;
-    const isStatic = !route.hasDynamicParams ? 1000 : 0;
-    return isStatic + inferredCount;
+    const unresolvedCount = Math.max(0, dynamicCount - inferredCount);
+    return 0 - unresolvedCount;
 }
 
 function buildUrl(route: RouteInfo, params: Record<string, string>): string {

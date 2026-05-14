@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     crossProductParams,
+    computeSpecificity,
     materializeRouteParams,
     dedupeByUrl,
     type RouteInfo,
@@ -51,6 +52,61 @@ describe('crossProductParams', () => {
             { a: '2', b: 'x', c: 'p' },
             { a: '2', b: 'x', c: 'q' },
         ]);
+    });
+});
+
+describe('computeSpecificity', () => {
+    it('should return 0 for a static route with no params', () => {
+        expect(computeSpecificity({ rawRoute: '/about', hasDynamicParams: false })).toBe(0);
+    });
+
+    it('should return 0 for a fully-resolved dynamic route (all params inferred)', () => {
+        expect(computeSpecificity({
+            rawRoute: '/[prefix]/products/[category]/[slug]',
+            inferredParams: { prefix: 'kitan', category: 'shoes', slug: 'shirt' },
+            hasDynamicParams: true,
+        })).toBe(0);
+    });
+
+    it('should score static override same as fully-resolved dynamic route', () => {
+        const staticOverride = computeSpecificity({
+            rawRoute: '/products/shirt',
+            inferredParams: { slug: 'shirt' },
+            hasDynamicParams: false,
+        });
+        const fullyResolved = computeSpecificity({
+            rawRoute: '/products/[slug]',
+            inferredParams: { slug: 'shirt' },
+            hasDynamicParams: true,
+        });
+        expect(staticOverride).toBe(fullyResolved);
+    });
+
+    it('should rank more inferred params higher', () => {
+        const oneInferred = computeSpecificity({
+            rawRoute: '/[prefix]/products/[slug]',
+            inferredParams: { prefix: 'kitan' },
+            hasDynamicParams: true,
+        });
+        const twoInferred = computeSpecificity({
+            rawRoute: '/[prefix]/products/[slug]',
+            inferredParams: { prefix: 'kitan', slug: 'shirt' },
+            hasDynamicParams: true,
+        });
+        expect(twoInferred).toBeGreaterThan(oneInferred);
+    });
+
+    it('should rank catch-all lowest', () => {
+        const catchAll = computeSpecificity({
+            rawRoute: '/products/[slug]',
+            hasDynamicParams: true,
+        });
+        const withInferred = computeSpecificity({
+            rawRoute: '/products/[slug]',
+            inferredParams: { prefix: 'kitan' },
+            hasDynamicParams: true,
+        });
+        expect(withInferred).toBeGreaterThan(catchAll);
     });
 });
 
@@ -201,10 +257,10 @@ describe('dedupeByUrl', () => {
         expect(result[0].route).toBe(staticRoute);
     });
 
-    it('should prefer route with more inferredParams', () => {
-        const specific: RouteInfo = {
-            rawRoute: '/kitan/products/[slug]',
-            inferredParams: { prefix: 'kitan' },
+    it('should prefer route with more inferredParams when URLs collide', () => {
+        const withInferred: RouteInfo = {
+            rawRoute: '/products/[slug]',
+            inferredParams: { category: 'shoes' },
             hasDynamicParams: true,
         };
         const catchAll: RouteInfo = {
@@ -212,12 +268,12 @@ describe('dedupeByUrl', () => {
             hasDynamicParams: true,
         };
         const entries = [
-            { route: catchAll, params: { slug: 'shirt', prefix: 'kitan' }, url: '/products/shirt', specificity: 0 },
-            { route: specific, params: { slug: 'shirt', prefix: 'kitan' }, url: '/products/shirt', specificity: 1 },
+            { route: catchAll, params: { slug: 'shirt' }, url: '/products/shirt', specificity: 0 },
+            { route: withInferred, params: { slug: 'shirt', category: 'shoes' }, url: '/products/shirt', specificity: 1 },
         ];
         const result = dedupeByUrl(entries);
         expect(result).toHaveLength(1);
-        expect(result[0].route).toBe(specific);
+        expect(result[0].route).toBe(withInferred);
     });
 
     it('should handle no duplicates', () => {
