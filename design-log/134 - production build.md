@@ -598,3 +598,64 @@ Production build tested on:
 - `wix/examples/store-light` — wix-stores project with no `page.ts` files, plugin-provided data from Wix APIs, 15 instances
 - `wix/examples/store` — full wix-stores project with page components, 20+ instances
 - `golf` — multi-tenant project with headfull FS components (`kitan-header`, `polgat-header`), shared components directory
+
+## Implementation Status (May 14, 2026)
+
+### Completed
+
+**Build pipeline (`lib/builder/`):**
+- Server code compilation (Vite SSR build)
+- Shared client chunks with plugin externalization — all `@jay-framework/*` packages externalized, discovered by walking project `package.json` transitive deps
+- Per-instance pipeline: slow render → pre-render jay-html → compile server element → generate hydration entry → Vite client build
+- Route manifest generation with actions (project + NPM plugins)
+- Plugin route discovery from `plugin.yaml`
+- Client init discovery and hydration entry generation
+- Service initialization (plugin + project init order)
+- `InstanceBuildResult` discriminated union for graceful error handling (`ClientError`, `Redirect` → skipped)
+- loadParams dedup by function identity (run once, cache results)
+- Cross-product params from multiple loadParams providers
+- Materialize → dedupe → build pipeline (DL#136) with inferredParams filtering and URL-based deduplication
+- Optional segment defaults — inferred params for `[[param]]` segments act as defaults, not filters
+- 62 unit tests (param routing, build artifacts, serve responses)
+
+**Main server (`lib/serve/`):**
+- Plain Node.js HTTP server (no Vite, no Express)
+- Streaming SSR with fast phase execution
+- Route matching with optional/catchAll segment support
+- Action handler adapted from dev server
+- Static asset serving with cache headers
+- Import maps for shared chunks
+- `<link rel="modulepreload">` for all shared chunks (eliminates import waterfall)
+- Head tags (SEO) from slow + fast phases
+- Client init data passed via inline script
+
+**Tooling:**
+- CLI commands: `jay-stack build --version=N`, `jay-stack serve --version=N --port=P`
+- `sync-to-wix.cjs` and `sync-to-golf.cjs` scripts (golf syncs from jay-production + wix + aiditor)
+
+**Bundle optimization:**
+- Instance bundles: ~780 KB → ~8-17 KB (plugin code externalized to shared chunks)
+- Shared chunks: framework + plugin client packages, browser-cached
+- Total JS per session: ~11.7 MB → ~600 KB (store-light)
+
+### Remaining
+
+**DL#136 — loadParams route deduplication (in progress):**
+- `wix-stores` `loadSearchParams` needs to return `prefix` in results for correct route splitting
+- `wix-stores` `loadSearchParams` needs to return default category entry (e.g., `{ prefix: "polgat", category: "polgat" }`) for root listing pages
+- Golf project `jay-params` needs `category` default values added
+- End-to-end verification on golf (kitan/polgat split producing ~1900 each, not ~3800 each)
+
+**DL#134c — Slow render server (not started):**
+- Long-running renderer mode for handling data change webhooks
+- `makeWebhook()` builder for invalidation
+- Per-contract invalidation triggering targeted re-renders
+- `jay-stack serve --role=renderer` mode
+
+**Production hardening:**
+- Error pages (custom 404/500 templates)
+- Compression (gzip/brotli for static assets)
+- HTTPS / reverse proxy configuration guide
+- Graceful shutdown and health checks
+- Build parallelism (concurrent instance builds within bounded parallelism)
+- Incremental builds (rebuild only changed instances)
