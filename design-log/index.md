@@ -139,6 +139,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 134b | main server                            | Production request handling: fast phase + SSR with pre-built artifacts |
 | 134c | slow render server                     | Webhook invalidation, per-instance rebuild, versioned bucket building  |
 | 134d | server build                           | Compiling page.ts, actions, services, init.ts to production JS         |
+| 136  | loadParams route context               | Passing inferred/route params to loadParams for multi-prefix filtering |
 
 ---
 
