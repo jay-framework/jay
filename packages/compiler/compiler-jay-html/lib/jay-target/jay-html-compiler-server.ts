@@ -176,8 +176,9 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
 
         const itemBody = mergeServerFragments([openTag, coordinateW, children, closeTag]);
 
+        const safeArrayExpr = arrayExpr.includes('?.') ? `(${arrayExpr} ?? [])` : arrayExpr;
         return new RenderFragment(
-            `${indent.firstLine}for (const ${forEachVariables.currentVar} of ${arrayExpr}) {\n${itemBody.rendered}\n${indent.firstLine}}`,
+            `${indent.firstLine}for (const ${forEachVariables.currentVar} of ${safeArrayExpr}) {\n${itemBody.rendered}\n${indent.firstLine}}`,
             itemBody.imports,
             itemBody.validations,
         );
@@ -565,8 +566,9 @@ function renderServerForEachAsString(element: HTMLElement, context: ServerContex
     // Render the element content (not the forEach wrapper) as a string
     const itemContent = renderServerElementAsString(element, itemContext);
 
+    const safeArrayExpr = arrayExpr.includes('?.') ? `(${arrayExpr} ?? [])` : arrayExpr;
     return new RenderFragment(
-        `${arrayExpr}.map((${forEachVariables.currentVar}) => ${itemContent.rendered}).join('')`,
+        `${safeArrayExpr}.map((${forEachVariables.currentVar}) => ${itemContent.rendered}).join('')`,
         itemContent.imports,
         itemContent.validations,
     );

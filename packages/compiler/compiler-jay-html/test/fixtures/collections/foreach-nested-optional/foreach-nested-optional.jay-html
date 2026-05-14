@@ -1,0 +1,21 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    p:
+        extendedFields:
+            sizesExtraData:
+            -   label: string
+                id: string
+    </script>
+</head>
+<body>
+<div>
+    <h1>{title}</h1>
+    <ul>
+        <li forEach="p.extendedFields.sizesExtraData" trackBy="id">{label}</li>
+    </ul>
+</div>
+</body>
+</html>
