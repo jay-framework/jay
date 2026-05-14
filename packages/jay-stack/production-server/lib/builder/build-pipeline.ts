@@ -6,6 +6,13 @@ import { loadProductionPageParts } from './load-production-parts';
 import { buildRouteEntry, discoverActions, writeRouteManifest } from './route-manifest';
 import { scanPluginRoutes } from './plugin-routes';
 import { runLoadParams, type DevServerPagePart } from '@jay-framework/stack-server-runtime';
+import {
+    crossProductParams,
+    materializeRouteParams,
+    dedupeByUrl,
+    type RouteInfo,
+    type ParamPart,
+} from './param-routing';
 import { getLogger } from '@jay-framework/logger';
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -235,14 +242,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
     let instanceCount = 0;
     let totalExpected = 0;
 
-    // Count static routes for initial estimate
-    for (const { route } of routeEntries) {
-        const hasDynamic = route.segments.some((s) => typeof s !== 'string');
-        const hasInferred = !!(route as any).inferredParams;
-        if (!hasDynamic || hasInferred) totalExpected++;
-    }
-
-    function logInstance(route: string, params: Record<string, string>) {
+    function logInstance(routeName: string, params: Record<string, string>) {
         instanceCount++;
         const paramStr =
             Object.keys(params).length > 0
@@ -250,124 +250,129 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
                       .map(([k, v]) => `${k}=${v}`)
                       .join(', ')})`
                 : '';
-        logger.important(`[Build] ${instanceCount}/${totalExpected} ${route}${paramStr}`);
+        logger.important(`[Build] ${instanceCount}/${totalExpected} ${routeName}${paramStr}`);
     }
 
-    for (const { route, entry } of routeEntries) {
-        let pageModule: any = {};
-        if (entry.serverModule) {
-            try {
-                if (entry.isPlugin) {
-                    pageModule = await import(entry.serverModule);
-                } else {
-                    const pageModulePath = path.join(
-                        serverOutputDir,
-                        entry.serverModule.replace('server/', ''),
-                    );
-                    pageModule = await import(pageModulePath);
-                }
-            } catch (err) {
-                logger.error(`[Build] Failed to load page module ${entry.serverModule}: ${err}`);
-                continue;
-            }
-        }
+    async function loadPageModule(entry: { serverModule: string; isPlugin?: boolean }) {
+        if (!entry.serverModule) return {};
+        if (entry.isPlugin) return import(entry.serverModule);
+        return import(path.join(serverOutputDir, entry.serverModule.replace('server/', '')));
+    }
 
-        const compDefinition = pageModule.page ?? pageModule.default ?? undefined;
-        const hasDynamicParams = route.segments.some((s) => typeof s !== 'string');
+    // ── Step 1: Collect loadParams (run each unique one once) ──
 
-        const inferredParams: Record<string, string> | undefined = (route as any).inferredParams;
+    type RouteInfoExt = RouteInfo & { routeEntry: (typeof routeEntries)[0] };
 
-        if (inferredParams && !hasDynamicParams) {
-            // Fully-specified static override (e.g., /products/ceramic-flower-vase)
-            try {
-                const result = await buildInstance(route, inferredParams, pageModule, instanceCtx);
-                if (result.status === 'success') {
-                    entry.instances.push(result.instanceEntry);
-                    logInstance(route.rawRoute, inferredParams);
-                } else {
-                    logger.warn(
-                        `[Build] Skipped ${route.rawRoute} (${JSON.stringify(inferredParams)}): ${result.reason}`,
-                    );
-                }
-            } catch (err: any) {
-                logger.error(
-                    `[Build] Failed to build ${route.rawRoute} (${JSON.stringify(inferredParams)}): ${err.message}`,
-                );
-            }
+    const routeInfos: RouteInfoExt[] = routeEntries.map((re) => ({
+        rawRoute: re.route.rawRoute,
+        inferredParams: (re.route as any).inferredParams,
+        hasDynamicParams: re.route.segments.some((s) => typeof s !== 'string'),
+        routeEntry: re,
+    }));
+
+    const loadParamsCache = new Map<any, Record<string, string>[]>();
+    const loadParamsResults = new Map<RouteInfoExt, Record<string, string>[]>();
+
+    for (const info of routeInfos) {
+        if (!info.hasDynamicParams) continue;
+        const { route, entry } = info.routeEntry;
+
+        let pageModule: any;
+        try {
+            pageModule = await loadPageModule(entry);
+        } catch (err) {
+            logger.error(`[Build] Failed to load page module ${entry.serverModule}: ${err}`);
             continue;
         }
 
-        if (hasDynamicParams) {
-            const pageParts = await loadProductionPageParts(
-                route,
-                pageModule,
-                await fs.readFile(route.jayHtmlPath, 'utf-8'),
-                options.projectRoot,
-                options.tsConfigFilePath,
-                path.join(buildDir, 'server'),
-            );
-            const partsWithLoadParams = pageParts.parts.filter((p) => p.compDefinition?.loadParams);
+        const pageParts = await loadProductionPageParts(
+            route,
+            pageModule,
+            await fs.readFile(route.jayHtmlPath, 'utf-8'),
+            options.projectRoot,
+            options.tsConfigFilePath,
+            path.join(buildDir, 'server'),
+        );
+        const partsWithLoadParams = pageParts.parts.filter((p) => p.compDefinition?.loadParams);
+        if (partsWithLoadParams.length === 0) continue;
 
-            if (partsWithLoadParams.length > 0) {
+        // Run each unique loadParams once (dedup by function identity)
+        const paramParts: ParamPart[] = [];
+        for (const part of partsWithLoadParams) {
+            const fn = part.compDefinition!.loadParams!;
+            if (!loadParamsCache.has(fn)) {
                 logger.important(`[Build] Loading params for ${route.rawRoute}...`);
-                const allParams: Record<string, string>[] = [];
+                const partParams: Record<string, string>[] = [];
                 let batchIndex = 0;
-                for await (const batch of runLoadParams(partsWithLoadParams)) {
-                    allParams.push(...batch);
+                for await (const batch of runLoadParams([part])) {
+                    partParams.push(...batch);
                     batchIndex++;
                     if (batchIndex > 1) {
-                        logger.important(`[Build]   ...${allParams.length} params so far`);
+                        logger.important(`[Build]   ...${partParams.length} params so far`);
                     }
                 }
-                // Merge inferred params (e.g., prefix) into each loadParams result
-                if (inferredParams) {
-                    for (const p of allParams) {
-                        Object.assign(p, inferredParams);
-                    }
-                }
-                totalExpected += allParams.length;
-                logger.important(
-                    `[Build] Route ${route.rawRoute}: ${allParams.length} param combinations`,
-                );
-
-                for (const params of allParams) {
-                    try {
-                        const result = await buildInstance(route, params, pageModule, instanceCtx);
-                        if (result.status === 'success') {
-                            entry.instances.push(result.instanceEntry);
-                            logInstance(route.rawRoute, params);
-                        } else {
-                            logger.warn(
-                                `[Build] Skipped ${route.rawRoute} (${JSON.stringify(params)}): ${result.reason}`,
-                            );
-                            totalExpected--;
-                        }
-                    } catch (err: any) {
-                        instanceCount++;
-                        logger.error(
-                            `[Build] ${instanceCount}/${totalExpected} FAILED ${route.rawRoute} (${JSON.stringify(params)}): ${err.message}`,
-                        );
-                    }
-                }
-            } else {
-                logger.info(
-                    `[Build] Skipping dynamic route ${route.rawRoute} — no loadParams available`,
-                );
+                loadParamsCache.set(fn, partParams);
             }
-        } else {
+            const cached = loadParamsCache.get(fn)!;
+            const keys = new Set(cached.flatMap((p) => Object.keys(p)));
+            paramParts.push({ keys, values: cached });
+        }
+
+        loadParamsResults.set(info, crossProductParams(paramParts));
+    }
+
+    // ── Step 2: Materialize all route+params combinations ──
+
+    const materialized = materializeRouteParams(routeInfos, loadParamsResults);
+
+    // ── Step 3: Dedupe by URL ──
+
+    const deduped = dedupeByUrl(materialized);
+    totalExpected = deduped.length;
+
+    // Group by route for ordered building
+    const byRoute = new Map<RouteInfoExt, Record<string, string>[]>();
+    for (const entry of deduped) {
+        const info = entry.route as RouteInfoExt;
+        if (!byRoute.has(info)) byRoute.set(info, []);
+        byRoute.get(info)!.push(entry.params);
+    }
+
+    // ── Step 4: Build ──
+
+    for (const [info, paramsList] of byRoute) {
+        const { route, entry } = info.routeEntry;
+
+        let pageModule: any;
+        try {
+            pageModule = await loadPageModule(entry);
+        } catch (err) {
+            logger.error(`[Build] Failed to load page module ${entry.serverModule}: ${err}`);
+            continue;
+        }
+
+        if (paramsList.length > 1 || info.hasDynamicParams) {
+            logger.important(
+                `[Build] Route ${route.rawRoute}: ${paramsList.length} param combinations`,
+            );
+        }
+
+        for (const params of paramsList) {
             try {
-                const result = await buildInstance(route, {}, pageModule, instanceCtx);
+                const result = await buildInstance(route, params, pageModule, instanceCtx);
                 if (result.status === 'success') {
                     entry.instances.push(result.instanceEntry);
-                    logInstance(route.rawRoute || '/', {});
+                    logInstance(route.rawRoute || '/', params);
                 } else {
-                    logger.warn(`[Build] Skipped ${route.rawRoute || '/'}: ${result.reason}`);
+                    logger.warn(
+                        `[Build] Skipped ${route.rawRoute} (${JSON.stringify(params)}): ${result.reason}`,
+                    );
                     totalExpected--;
                 }
             } catch (err: any) {
                 instanceCount++;
                 logger.error(
-                    `[Build] ${instanceCount}/${totalExpected} FAILED ${route.rawRoute || '/'}: ${err.message}`,
+                    `[Build] ${instanceCount}/${totalExpected} FAILED ${route.rawRoute || '/'} (${JSON.stringify(params)}): ${err.message}`,
                 );
             }
         }
