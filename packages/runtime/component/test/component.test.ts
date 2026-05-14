@@ -846,7 +846,7 @@ describe('state management', () => {
                 let instance = counterComponent({});
                 const myMock = vi.fn();
                 instance.onChange(myMock);
-                instance.onChange(undefined);
+                instance.removeEventListener('Change', myMock);
                 await instance.element.refs.inc.exec$((elem) => elem.click());
                 expect(myMock.mock.calls.length).toBe(0);
             });
@@ -876,6 +876,33 @@ describe('state management', () => {
                 instance.removeEventListener('Change', myMock);
                 await instance.element.refs.inc.exec$((elem) => elem.click());
                 expect(myMock.mock.calls.length).toBe(0);
+            });
+
+            it('should support multiple handlers called in registration order', async () => {
+                let instance = counterComponent({});
+                const handler1 = vi.fn();
+                const handler2 = vi.fn();
+                const callOrder: number[] = [];
+                handler1.mockImplementation(() => callOrder.push(1));
+                handler2.mockImplementation(() => callOrder.push(2));
+                instance.addEventListener('Change', handler1);
+                instance.addEventListener('Change', handler2);
+                await instance.element.refs.inc.exec$((elem) => elem.click());
+                expect(handler1.mock.calls.length).toBe(1);
+                expect(handler2.mock.calls.length).toBe(1);
+                expect(callOrder).toEqual([1, 2]);
+            });
+
+            it('should allow removing one handler while keeping others', async () => {
+                let instance = counterComponent({});
+                const handler1 = vi.fn();
+                const handler2 = vi.fn();
+                instance.addEventListener('Change', handler1);
+                instance.addEventListener('Change', handler2);
+                instance.removeEventListener('Change', handler1);
+                await instance.element.refs.inc.exec$((elem) => elem.click());
+                expect(handler1.mock.calls.length).toBe(0);
+                expect(handler2.mock.calls.length).toBe(1);
             });
         });
 

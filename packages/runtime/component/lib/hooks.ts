@@ -165,9 +165,17 @@ export function createDerivedArray<T extends object, U>(
 export function createEvent<EventType>(
     eventEffect?: (emitter: EventEmitter<EventType, any>) => void,
 ): EventEmitter<EventType, any> {
-    let handler;
-    let emitter: any = (h) => (handler = h);
-    emitter.emit = (event: EventType) => handler && handler({ event });
+    let handlers: Function[] = [];
+    let emitter: any = (h: Function) => {
+        handlers.push(h);
+    };
+    emitter.emit = (event: EventType) => {
+        for (const h of handlers) h({ event });
+    };
+    emitter.remove = (h: Function) => {
+        const idx = handlers.indexOf(h);
+        if (idx >= 0) handlers.splice(idx, 1);
+    };
     if (eventEffect) createEffect(() => eventEffect(emitter));
     return emitter;
 }

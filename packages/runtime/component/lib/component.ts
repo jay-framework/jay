@@ -189,7 +189,7 @@ export function makeJayComponent<
             };
 
             // Event handlers - viewStateChange is built-in, others come from component API
-            let events: Record<string, (handler: Function | undefined) => void> = {
+            let events: Record<string, any> = {
                 [VIEW_STATE_CHANGE_EVENT]: (handler) => {
                     viewStateChangeListener = handler;
                 },
@@ -201,7 +201,8 @@ export function makeJayComponent<
                 unmount,
                 addEventListener: (eventType: string, handler: Function) =>
                     events[eventType]?.(handler),
-                removeEventListener: (eventType: string) => events[eventType]?.(undefined),
+                removeEventListener: (eventType: string, handler: Function) =>
+                    events[eventType]?.remove(handler),
             };
 
             // todo validate not overriding main JayComponent APIs

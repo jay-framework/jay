@@ -47,17 +47,21 @@ export function jay2React<
     return (reactProps: Jay2React<CompConstructor>) => {
         const [props, events] = splitPropsEvents(reactProps);
         const myInstanceRef = useRef<JayComponent<PropsT, ViewState, JayElementT>>(null);
+        const eventHandlersRef = useRef<Record<string, Function>>({});
         if (!myInstanceRef.current) {
             myInstanceRef.current = comp()(props);
         } else {
             const reactViewStateState = useState<ViewState>(null);
             myInstanceRef.current.update({ ...props, reactViewStateState } as PropsT);
         }
-        Object.keys(events).forEach((eventName) =>
-            myInstanceRef.current.addEventListener(eventName.substring(2), ({ event }) =>
-                events[eventName](event),
-            ),
-        );
+        Object.keys(events).forEach((eventName) => {
+            const eventType = eventName.substring(2);
+            const prev = eventHandlersRef.current[eventType];
+            if (prev) myInstanceRef.current.removeEventListener(eventType, prev as any);
+            const handler = ({ event }) => events[eventName](event);
+            eventHandlersRef.current[eventType] = handler;
+            myInstanceRef.current.addEventListener(eventType, handler);
+        });
         return myInstanceRef.current.element['react'] as ReactElement;
     };
 }
