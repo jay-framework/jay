@@ -82,6 +82,8 @@ function convertToRoutePath(
     return { segments, jayHtmlPath, compPath, rawRoute };
 }
 
+const IGNORED_DIRS = new Set(['build', 'node_modules', 'dist', '.git']);
+
 async function scanDirectory(
     BASE_DIR: string,
     directory: string,
@@ -94,6 +96,7 @@ async function scanDirectory(
         const fullPath = path.join(directory, item.name);
 
         if (item.isDirectory()) {
+            if (IGNORED_DIRS.has(item.name)) continue;
             routes = [...routes, ...(await scanDirectory(BASE_DIR, fullPath, options))];
         } else if (item.name === options.jayHtmlFilename) {
             const route = convertToRoutePath(BASE_DIR, fullPath, options);

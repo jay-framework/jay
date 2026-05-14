@@ -205,10 +205,13 @@ describe('materializeRouteParams', () => {
             hasDynamicParams: true,
         };
         const loadParams = new Map<RouteInfo, Record<string, string>[]>([
-            [route, [
-                { prefix: 'polgat', category: 'shoes' },
-                { prefix: 'polgat', category: 'polgat' },
-            ]],
+            [
+                route,
+                [
+                    { prefix: 'polgat', category: 'shoes' },
+                    { prefix: 'polgat', category: 'polgat' },
+                ],
+            ],
         ]);
         const result = materializeRouteParams([route], loadParams);
         expect(result).toHaveLength(2);
@@ -222,10 +225,13 @@ describe('materializeRouteParams', () => {
             hasDynamicParams: true,
         };
         const loadParams = new Map<RouteInfo, Record<string, string>[]>([
-            [route, [
-                { prefix: 'polgat', category: 'shoes' },
-                { prefix: 'polgat', category: 'polgat' },
-            ]],
+            [
+                route,
+                [
+                    { prefix: 'polgat', category: 'shoes' },
+                    { prefix: 'polgat', category: 'polgat' },
+                ],
+            ],
         ]);
         const result = materializeRouteParams([route], loadParams);
         const shoesEntry = result.find((e) => e.params.category === 'shoes')!;
@@ -262,8 +268,14 @@ describe('materializeRouteParams', () => {
         const polgatEntries = result.filter((e) => e.route === polgat);
         expect(kitanEntries).toHaveLength(2);
         expect(polgatEntries).toHaveLength(2);
-        expect(kitanEntries.map((e) => e.url)).toEqual(['/kitan/products/shoes', '/kitan/products']);
-        expect(polgatEntries.map((e) => e.url)).toEqual(['/polgat/products/shirts', '/polgat/products']);
+        expect(kitanEntries.map((e) => e.url)).toEqual([
+            '/kitan/products/shoes',
+            '/kitan/products',
+        ]);
+        expect(polgatEntries.map((e) => e.url)).toEqual([
+            '/polgat/products/shirts',
+            '/polgat/products',
+        ]);
     });
 
     it('should pass through dynamic route without inferredParams', () => {

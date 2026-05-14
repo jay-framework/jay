@@ -604,6 +604,7 @@ Production build tested on:
 ### Completed
 
 **Build pipeline (`lib/builder/`):**
+
 - Server code compilation (Vite SSR build)
 - Shared client chunks with plugin externalization — all `@jay-framework/*` packages externalized, discovered by walking project `package.json` transitive deps
 - Per-instance pipeline: slow render → pre-render jay-html → compile server element → generate hydration entry → Vite client build
@@ -619,6 +620,7 @@ Production build tested on:
 - 62 unit tests (param routing, build artifacts, serve responses)
 
 **Main server (`lib/serve/`):**
+
 - Plain Node.js HTTP server (no Vite, no Express)
 - Streaming SSR with fast phase execution
 - Route matching with optional/catchAll segment support
@@ -630,10 +632,12 @@ Production build tested on:
 - Client init data passed via inline script
 
 **Tooling:**
+
 - CLI commands: `jay-stack build --version=N`, `jay-stack serve --version=N --port=P`
 - `sync-to-wix.cjs` and `sync-to-golf.cjs` scripts (golf syncs from jay-production + wix + aiditor)
 
 **Bundle optimization:**
+
 - Instance bundles: ~780 KB → ~8-17 KB (plugin code externalized to shared chunks)
 - Shared chunks: framework + plugin client packages, browser-cached
 - Total JS per session: ~11.7 MB → ~600 KB (store-light)
@@ -641,18 +645,21 @@ Production build tested on:
 ### Remaining
 
 **DL#136 — loadParams route deduplication (in progress):**
+
 - `wix-stores` `loadSearchParams` needs to return `prefix` in results for correct route splitting
 - `wix-stores` `loadSearchParams` needs to return default category entry (e.g., `{ prefix: "polgat", category: "polgat" }`) for root listing pages
 - Golf project `jay-params` needs `category` default values added
 - End-to-end verification on golf (kitan/polgat split producing ~1900 each, not ~3800 each)
 
 **DL#134c — Slow render server (not started):**
+
 - Long-running renderer mode for handling data change webhooks
 - `makeWebhook()` builder for invalidation
 - Per-contract invalidation triggering targeted re-renders
 - `jay-stack serve --role=renderer` mode
 
 **Production hardening:**
+
 - Error pages (custom 404/500 templates)
 - Compression (gzip/brotli for static assets)
 - HTTPS / reverse proxy configuration guide

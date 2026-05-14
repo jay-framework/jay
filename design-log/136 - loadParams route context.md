@@ -168,6 +168,7 @@ jay-params:
 **Filtering:** Inferred params for required segments (like `prefix`) are strict filters — `loadParams` results must include the key with a matching value. Inferred params for optional segments (like `category`) are skipped during filtering — all values pass.
 
 **URL building:** When an optional segment's param value equals its inferred default, the segment is omitted from the URL:
+
 - `{ prefix: "polgat", category: "shoes" }` → `/polgat/products/shoes`
 - `{ prefix: "polgat", category: "polgat" }` → `/polgat/products` (category matches default → omitted)
 

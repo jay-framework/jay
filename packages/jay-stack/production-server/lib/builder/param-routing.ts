@@ -70,16 +70,18 @@ export function computeSpecificity(route: RouteInfo): number {
 }
 
 function buildUrl(route: RouteInfo, params: Record<string, string>): string {
-    return route.rawRoute
-        .replace(/\[\[(\w+)\]\]/g, (_, name) => {
-            const value = params[name];
-            if (!value) return '';
-            if (route.inferredParams?.[name] === value) return '';
-            return value;
-        })
-        .replace(/\[(\w+)\]/g, (_, name) => params[name] || '')
-        .replace(/\/\/+/g, '/')
-        .replace(/\/$/, '') || '/';
+    return (
+        route.rawRoute
+            .replace(/\[\[(\w+)\]\]/g, (_, name) => {
+                const value = params[name];
+                if (!value) return '';
+                if (route.inferredParams?.[name] === value) return '';
+                return value;
+            })
+            .replace(/\[(\w+)\]/g, (_, name) => params[name] || '')
+            .replace(/\/\/+/g, '/')
+            .replace(/\/$/, '') || '/'
+    );
 }
 
 export function materializeRouteParams<R extends RouteInfo>(
