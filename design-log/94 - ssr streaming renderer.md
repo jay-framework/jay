@@ -836,3 +836,26 @@ Previously CSS loaded twice in SSR dev mode: once as inline `<style>` in the SSR
 **Result:** Single CSS load via real file — no FOUC (render-blocking link), no duplication.
 
 **Test results:** 627/627 compiler-jay-html tests passing, 47/47 rollup-plugin tests passing.
+
+### Bug Fix — forEach on Nested Optional Path Crashes SSR (Resolved)
+
+**Problem:** When a `forEach` iterates over a nested property path like `p.extendedFields.sizesExtraData`, the `Accessor.render()` method produces `vs.p?.extendedFields?.sizesExtraData` (using optional chaining between segments). When an intermediate property like `extendedFields` is `undefined`, the optional chaining correctly returns `undefined` — but `for...of undefined` throws `TypeError: undefined is not iterable`.
+
+**Root cause:** The server element compiler generated `for (const vs1 of vs.p?.extendedFields?.sizesExtraData)` without guarding against `undefined`. The client-side and hydrate compilers don't have this issue because they pass the accessor as a callback to the runtime `forEach` function, which handles `undefined` internally.
+
+**Fix:** In `jay-html-compiler-server.ts`, both `for...of` generation (line 180) and `.map().join('')` generation (line 569) now detect optional chaining in the array expression and wrap it with `?? []`:
+- `for (const vs1 of (vs.p?.extendedFields?.sizesExtraData ?? []))` — iterates empty array if path is undefined
+- `(vs.p?.extendedFields?.sizesExtraData ?? []).map(...)` — maps over empty array if path is undefined
+
+The guard is only added when the expression contains `?.` — simple paths like `vs.things` are left unchanged.
+
+**Files modified:**
+
+- `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler-server.ts` — Two locations: `renderServerElement()` forEach handler and `renderServerForEachAsString()`.
+
+**Test added:**
+
+- `test/jay-target/generate-server-element.test.ts` — "for forEach on nested optional path emits ?? [] guard"
+- `test/fixtures/collections/foreach-nested-optional/` — jay-html with `forEach="p.extendedFields.sizesExtraData"` and golden fixture verifying `?? []` in output.
+
+**Test results:** 648/648 passing, 0 regressions.

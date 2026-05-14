@@ -117,6 +117,15 @@ describe('generate jay-html server element', () => {
                 await readFixtureServerElementFile(folder),
             );
         });
+
+        it('for forEach on nested optional path emits ?? [] guard', async () => {
+            const folder = 'collections/foreach-nested-optional';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
     });
 
     describe('headless instances', () => {
