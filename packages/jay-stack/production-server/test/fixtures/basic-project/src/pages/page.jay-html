@@ -2,15 +2,17 @@
 <head>
     <script type="application/jay-data">
 data:
-    siteName: string
-    itemCount: number
+    welcomeMessage: string
     </script>
-    <style>.home { padding: 10px }</style>
 </head>
 <body>
-    <div class="home">
-        <h1>{siteName}</h1>
-        <p>Items: {itemCount}</p>
+    <div>
+        <h1>{welcomeMessage}</h1>
+        <nav>
+            <a href="/home">Home</a>
+            <a href="/featured">Featured</a>
+            <a href="/catalog">Catalog</a>
+        </nav>
     </div>
 </body>
 </html>

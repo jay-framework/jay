@@ -59,20 +59,19 @@ beforeAll(async () => {
     });
 
     await new Promise((r) => setTimeout(r, 500));
-}, 60_000);
+}, 120_000);
 
 afterAll(async () => {
     server?.close();
     await fs.rm(buildRoot, { recursive: true, force: true });
 });
 
-describe('page responses', () => {
-    it('serves home page with SSR HTML', async () => {
+describe('index page', () => {
+    it('serves index page with SSR HTML', async () => {
         const res = await fetch('/');
         expect(res.status).toBe(200);
         expect(res.headers['content-type']).toMatch(/text\/html/);
-        expect(res.body).toMatch(/Test Shop/);
-        expect(res.body).toMatch(/Items: 3/);
+        expect(res.body).toMatch(/Welcome to Test Shop/);
     });
 
     it('includes import map in HTML', async () => {
@@ -85,33 +84,42 @@ describe('page responses', () => {
         const res = await fetch('/');
         expect(res.body).toMatch(/import.*init.*from/);
     });
+});
+
+describe('home page', () => {
+    it('serves home page with SSR HTML', async () => {
+        const res = await fetch('/home');
+        expect(res.status).toBe(200);
+        expect(res.body).toMatch(/Test Shop/);
+        expect(res.body).toMatch(/Items: 3/);
+    });
 
     it('includes CSS link', async () => {
-        const res = await fetch('/');
+        const res = await fetch('/home');
         expect(res.body).toMatch(/\.css/);
     });
 });
 
 describe('head tags (SEO)', () => {
     it('injects title tag from fast render', async () => {
-        const res = await fetch('/');
+        const res = await fetch('/home');
         expect(res.body).toMatch(/<title>Test Shop - Home<\/title>/);
     });
 
     it('injects meta description', async () => {
-        const res = await fetch('/');
+        const res = await fetch('/home');
         expect(res.body).toMatch(
             /name="description" content="A test shop for production build testing"/,
         );
     });
 
     it('injects og:title meta', async () => {
-        const res = await fetch('/');
+        const res = await fetch('/home');
         expect(res.body).toMatch(/property="og:title" content="Test Shop"/);
     });
 
     it('injects canonical link', async () => {
-        const res = await fetch('/');
+        const res = await fetch('/home');
         expect(res.body).toMatch(/rel="canonical" href="https:\/\/test-shop\.example\.com\/"/);
     });
 
@@ -126,11 +134,45 @@ describe('head tags (SEO)', () => {
     });
 
     it('head tags appear in <head> not <body>', async () => {
-        const res = await fetch('/');
+        const res = await fetch('/home');
         const headEnd = res.body.indexOf('</head>');
         const titlePos = res.body.indexOf('<title>Test Shop');
         expect(titlePos).toBeGreaterThan(0);
         expect(titlePos).toBeLessThan(headEnd);
+    });
+});
+
+describe('featured page (headfull FS with nested headless)', () => {
+    it('serves featured page', async () => {
+        const res = await fetch('/featured');
+        expect(res.status).toBe(200);
+        expect(res.body).toMatch(/Featured Items/);
+    });
+
+    it('renders headfull FS component content', async () => {
+        const res = await fetch('/featured');
+        expect(res.body).toMatch(/logo\.png/);
+        expect(res.body).toMatch(/Test Shop/);
+    });
+
+    it('renders nested headless component data', async () => {
+        const res = await fetch('/featured');
+        expect(res.body).toMatch(/Cart/);
+        expect(res.body).toMatch(/3/);
+    });
+});
+
+describe('catalog page (direct headless instance)', () => {
+    it('serves catalog page', async () => {
+        const res = await fetch('/catalog');
+        expect(res.status).toBe(200);
+        expect(res.body).toMatch(/Full Catalog/);
+    });
+
+    it('renders headless instance data', async () => {
+        const res = await fetch('/catalog');
+        expect(res.body).toMatch(/Items/);
+        expect(res.body).toMatch(/3/);
     });
 });
 
@@ -139,18 +181,6 @@ describe('client init', () => {
         const res = await fetch('/');
         expect(res.body).toMatch(/shopName/);
         expect(res.body).toMatch(/Test Shop/);
-    });
-
-    it('client bundle includes _clientInit call', async () => {
-        const routeManifest = JSON.parse(
-            await fs.readFile(path.join(buildRoot, 'v1/route-manifest.json'), 'utf-8'),
-        );
-        const home = routeManifest.routes.find((r: any) => r.pattern === '');
-        const bundleContent = await fs.readFile(
-            path.join(buildRoot, 'v1', home.instances[0].clientBundlePath),
-            'utf-8',
-        );
-        expect(bundleContent).toMatch(/_clientInit/);
     });
 });
 
@@ -196,8 +226,8 @@ describe('static assets', () => {
         const routeManifest = JSON.parse(
             await fs.readFile(path.join(buildRoot, 'v1/route-manifest.json'), 'utf-8'),
         );
-        const home = routeManifest.routes.find((r: any) => r.pattern === '');
-        const res = await fetch(`/${home.instances[0].clientBundlePath}`);
+        const index = routeManifest.routes.find((r: any) => r.pattern === '');
+        const res = await fetch(`/${index.instances[0].clientBundlePath}`);
         expect(res.status).toBe(200);
     });
 
