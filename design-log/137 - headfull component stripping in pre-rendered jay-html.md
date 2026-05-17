@@ -135,6 +135,46 @@ All three are handled at build time by `parseHeadfullFSImports` (recursive for n
 
 No special serve-time handling needed. The config simply records the final resolved state.
 
+### Q8: The config is written "once per route, first instance writes it." How do we know the first instance's result is correct for all instances?
+
+All instances of a route share the same source jay-html — slow rendering changes data bindings, not template structure. The headless imports, forEach declarations, and component modules are structural. The config captures template structure, not data.
+
+Note on `ForEachHeadlessInstance` vs `DiscoveredHeadlessInstance`: slow forEach expansion (Pass 1) unrolls items into static `<jay:xxx>` tags, which become `DiscoveredHeadlessInstance` entries stored in `carryForward.__instances` (per-instance, in `cache.json`). Interactive forEach blocks stay as `ForEachHeadlessInstance` — template-structural, same for all instances. The `coordinateSuffix` (e.g., `product-card:AR0`) is a position-based suffix determined by template structure, not by data. It is safe per-route.
+
+### Q9: Module paths in the config — what if the build directory moves between build and serve (e.g., different mount point in Docker)?
+
+Paths must be relative to the build directory, not absolute. When serializing, store `server/components/kitan-header/index.js` (relative to buildDir), not `/Users/yoav/work/jay/golf/build/v1/server/...`. The serve-time loader resolves against its own buildDir. NPM module paths (e.g., `@wix/stores-plugin`) are package names, not filesystem paths — they resolve via `node_modules`.
+
+### Q10: Is there a race condition if instances of the same route build concurrently?
+
+Currently `buildInstance` runs sequentially per route (`for (const params of paramsList)` in build-pipeline.ts:371). The first instance writes the config, subsequent ones skip. No race. If concurrent builds are added later, last-writer-wins is safe because the config is identical for all instances of a route.
+
+### Q11: The serve-time loader casts `{ props: [...] } as any` to satisfy the `Contract` type. Is this safe?
+
+No — `as any` is fragile. If future code accesses other contract fields at serve time, it silently gets `undefined`. Instead, narrow the type. Introduce `ServeTimeContract`:
+
+```ts
+interface ServeTimeContract {
+    props: Array<{ name: string }>;
+}
+```
+
+Update `HeadlessInstanceComponent.contract` to accept `Contract | ServeTimeContract`, or use `Pick<Contract, 'props'>` if `Contract.props` has the right shape. This makes the contract boundary explicit and type-safe.
+
+### Q12: The serve-time loader uses `modulePath.startsWith('server/')` to distinguish local from NPM modules. Is this reliable?
+
+The heuristic works for the current naming convention (local modules are compiled to `server/...`), but it's implicit. Better: add a `source: 'npm' | 'local'` field to the config. Explicit is safer than convention-based.
+
+### Q13: When the slow render server re-renders an instance on data change (DL#134c), does it need to regenerate `page-parts.json`?
+
+No. Data changes only affect slow ViewState (stored in `cache.json`). The component structure (which modules, which contracts, which forEach declarations) is determined by the source jay-html, which doesn't change on data change — only on code deployment. The page-parts config is stable within a version.
+
+### Q14: `trackByMap` for `deepMergeViewStates` — is it populated in the route manifest?
+
+No — this is a latent bug. `buildRouteEntry` in route-manifest.ts does not set `trackByMap`, but `page-handler.ts:131` reads `route.trackByMap || {}` for `deepMergeViewStates`. The `pageParts.clientTrackByMap` from `loadProductionPageParts` is available at build time (passed to `generateHydrationEntry`) but not written to the manifest.
+
+This affects the `secure` package's deep merge behavior. Since jay-stack does not yet support the secure package, this can be fixed separately. For now, note it as a known gap: the page-parts config or route manifest should include `trackByMap` when secure package support is added.
+
 ## Design
 
 ### Pre-computed page config
@@ -144,11 +184,15 @@ Replace serve-time jay-html parsing with a build-time config file. The build pip
 #### Config schema
 
 ```ts
+interface PagePartsConfigEntry {
+    modulePath: string;    // e.g., "server/pages/product/page.js" or "@wix/stores-plugin"
+    exportName: string;    // e.g., "page" or "ProductCard"
+    source: 'npm' | 'local';
+}
+
 interface PagePartsConfig {
     /** Page component + keyed headless components */
-    parts: Array<{
-        modulePath: string;    // e.g., "server/pages/product/page.js" or "@wix/stores-plugin"
-        exportName: string;    // e.g., "page" or "ProductCard"
+    parts: Array<PagePartsConfigEntry & {
         key?: string;          // keyed headless namespace
         contractInfo?: {
             contractName: string;
@@ -157,14 +201,12 @@ interface PagePartsConfig {
     }>;
 
     /** Instance headless components (used as <jay:xxx> tags) */
-    instanceComponents: Array<{
+    instanceComponents: Array<PagePartsConfigEntry & {
         contractName: string;
-        modulePath: string;
-        exportName: string;
         propNames: string[];   // from contract.props, for forEach prop normalization
     }>;
 
-    /** forEach headless instances */
+    /** forEach headless instances (interactive forEach only — slow forEach is in carryForward) */
     forEachInstances: Array<{
         contractName: string;
         forEachPath: string;
@@ -176,6 +218,16 @@ interface PagePartsConfig {
 ```
 
 All fields are plain JSON. No parsed contracts, no function references, no file handles.
+
+For the contract type at serve time, introduce a narrow type instead of casting:
+
+```ts
+interface ServeTimeContract {
+    props: Array<{ name: string }>;
+}
+```
+
+`HeadlessInstanceComponent.contract` should accept `Contract | ServeTimeContract` so the serve-time loader can construct it type-safely from `propNames`.
 
 #### Build-time: write config
 
@@ -202,6 +254,15 @@ Replace `loadProductionPageParts` with a new function that:
 4. Returns the same shape as today — `handlePageRequest` doesn't change
 
 ```ts
+async function importModule(
+    entry: PagePartsConfigEntry,
+    artifacts: FilesystemArtifactStore,
+): Promise<any> {
+    return entry.source === 'local'
+        ? artifacts.loadPageModule(entry.modulePath)
+        : import(entry.modulePath);
+}
+
 async function loadPagePartsFromConfig(
     configPath: string,
     artifacts: FilesystemArtifactStore,
@@ -210,9 +271,7 @@ async function loadPagePartsFromConfig(
 
     const parts: DevServerPagePart[] = [];
     for (const entry of config.parts) {
-        const mod = entry.modulePath.startsWith('server/')
-            ? await artifacts.loadPageModule(entry.modulePath)
-            : await import(entry.modulePath);
+        const mod = await importModule(entry, artifacts);
         parts.push({
             compDefinition: mod[entry.exportName],
             key: entry.key,
@@ -223,13 +282,14 @@ async function loadPagePartsFromConfig(
 
     const headlessInstanceComponents: HeadlessInstanceComponent[] = [];
     for (const entry of config.instanceComponents) {
-        const mod = entry.modulePath.startsWith('server/')
-            ? await artifacts.loadPageModule(entry.modulePath)
-            : await import(entry.modulePath);
+        const mod = await importModule(entry, artifacts);
+        const serveTimeContract: ServeTimeContract = {
+            props: entry.propNames.map(name => ({ name })),
+        };
         headlessInstanceComponents.push({
             contractName: entry.contractName,
             compDefinition: mod[entry.exportName],
-            contract: { props: entry.propNames.map(name => ({ name })) } as any,
+            contract: serveTimeContract,
         });
     }
 
@@ -288,6 +348,88 @@ The config stores these resolved paths. At serve time, NPM modules import by pac
 
 ## Implementation Plan
 
+### Phase 0: Expand test fixture and establish baseline
+
+The existing `basic-project` fixture only tests two simple headfull pages — none of the configurations affected by DL#137. Expand it to cover all relevant component patterns, verify they work with the current build+serve pipeline, then verify they still work after implementation.
+
+#### Fixture structure
+
+```
+basic-project/
+├── src/
+│   ├── lib/init.ts                              [keep]
+│   ├── actions/cart.actions.ts                  [keep]
+│   ├── components/
+│   │   └── site-header/
+│   │       ├── index.ts                         headfull FS component
+│   │       ├── site-header.jay-html             template — includes <jay:cart-badge>
+│   │       └── site-header.jay-contract         contract
+│   ├── plugins/
+│   │   └── cart-badge/
+│   │       ├── index.ts                         headless component (local plugin)
+│   │       └── cart-badge.jay-contract          contract
+│   └── pages/
+│       ├── page.ts                              [NEW] index — simple page
+│       ├── page.jay-html
+│       ├── home/
+│       │   ├── page.ts                          [MOVED from /] original home page
+│       │   └── page.jay-html
+│       ├── featured/
+│       │   ├── page.ts                          [NEW] page with headfull FS component
+│       │   ├── page.jay-html                    imports site-header (headfull with nested headless)
+│       │   └── page.jay-contract
+│       ├── catalog/
+│       │   ├── page.ts                          [NEW] page with direct headless instance
+│       │   ├── page.jay-html                    uses <jay:cart-badge> directly
+│       │   └── page.jay-contract
+│       └── items/[slug]/
+│           ├── page.ts                          [keep] dynamic page with loadParams
+│           └── page.jay-html                    [keep]
+```
+
+#### What each page tests
+
+| Route | Configuration | DL#137 relevance |
+|-------|--------------|------------------|
+| `/` | Simple page, slow+fast, no headless/headfull | Baseline — no source file dependencies at serve time |
+| `/home` | Moved home page (same logic as current `/`) | Verifies non-root routes work |
+| `/featured` | Headfull FS component (site-header) containing nested headless (cart-badge) | **Gap 1 core case** — headfull source + nested headless hoisting |
+| `/catalog` | Direct headless instance `<jay:cart-badge>` on page | Headless without headfull wrapping |
+| `/items/[slug]` | Dynamic params + loadParams (2 slugs) | Per-instance builds, different slow ViewState |
+
+#### Components
+
+**`site-header`** (headfull FS):
+- Contract: `siteName: string (slow)`, ref: `menuButton`
+- Template includes `<jay:cart-badge>` — a nested headless instance
+- Has slow+interactive phases
+
+**`cart-badge`** (headless, local plugin):
+- Contract: `count: number (fast)`
+- Fast phase returns cart count
+- Used in two contexts: nested inside site-header (featured page) AND directly on catalog page
+
+#### Test strategy
+
+**Build tests** — for each new page:
+- Pre-rendered jay-html exists and contains expected content
+- Server element loads and produces HTML via `renderToStream`
+- Client bundle exists
+- Cache metadata has correct slow ViewState
+
+**Serve tests** — for each new page:
+- SSR response returns 200 with expected content
+- Headless component data appears in rendered output
+- Import map and hydration script present
+
+**Self-containment test** (the DL#137 litmus test):
+1. Build the project
+2. Remove/rename `src/` directory
+3. Start the production server from build artifacts only
+4. Hit each route — should all return 200
+
+This test should **FAIL with current code** (confirming the gap) and **PASS after implementation**.
+
 ### Phase 1: Write page-parts.json at build time
 
 1. In `instance-pipeline.ts`, after `loadProductionPageParts()` returns `pageParts`, serialize a `PagePartsConfig` to `page-parts.json`
@@ -327,11 +469,16 @@ The config stores these resolved paths. At serve time, NPM modules import by pac
 
 ## Verification
 
-1. Build a project with headfull FS components (golf: kitan-header with cart-indicator)
-2. Run production server WITHOUT `src/`, WITHOUT `agent-kit/` — all routes serve correctly
-3. Verify fast rendering works — headless instance data appears in SSR output
-4. Verify forEach instances work — prop name normalization uses pre-computed propNames
-5. Verify headfull component children of all types: nested headfull, keyed headless, instance headless
-6. Verify Dockerfile needs only `COPY build/v1`, `COPY config` — no `COPY src/...` or `COPY agent-kit/...`
-7. Verify no `sed` path rewriting needed in Dockerfile
-8. Compare SSR output between dev server and production server for the same route — should match
+### Automated (Phase 0 fixture)
+
+1. **Build tests pass** — all 5 routes build successfully with correct artifacts
+2. **Serve tests pass** — all routes return 200 with expected SSR content
+3. **Self-containment test** — build, remove `src/`, serve, all routes return 200
+4. Routes covering all configurations: simple page, headfull FS, headfull+nested headless, direct headless instance, dynamic params
+
+### Manual (golf project)
+
+5. Build golf project with headfull FS components (kitan-header with cart-indicator)
+6. Run production server WITHOUT `src/`, WITHOUT `agent-kit/` — all routes serve correctly
+7. Verify Dockerfile needs only `COPY build/v1`, `COPY config` — no `COPY src/...` or `COPY agent-kit/...`
+8. Verify no `sed` path rewriting needed in Dockerfile
