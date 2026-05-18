@@ -121,10 +121,16 @@ describe('per-instance artifacts', () => {
         const index = findRoute('');
         const inst = index.instances[0];
         expect(
-            await fs.access(path.join(buildDir, inst.preRenderedPath)).then(() => true, () => false),
+            await fs.access(path.join(buildDir, inst.preRenderedPath)).then(
+                () => true,
+                () => false,
+            ),
         ).toBe(true);
         expect(
-            await fs.access(path.join(buildDir, inst.clientBundlePath)).then(() => true, () => false),
+            await fs.access(path.join(buildDir, inst.clientBundlePath)).then(
+                () => true,
+                () => false,
+            ),
         ).toBe(true);
         const mod = await import(path.join(buildDir, inst.serverElementPath));
         expect(typeof mod.renderToStream).toBe('function');
@@ -134,7 +140,10 @@ describe('per-instance artifacts', () => {
         const home = findRoute('/home');
         const inst = home.instances[0];
         expect(
-            await fs.access(path.join(buildDir, inst.preRenderedPath)).then(() => true, () => false),
+            await fs.access(path.join(buildDir, inst.preRenderedPath)).then(
+                () => true,
+                () => false,
+            ),
         ).toBe(true);
         const cachePath = inst.preRenderedPath.replace('.jay-html', '.cache.json');
         const cache = JSON.parse(await fs.readFile(path.join(buildDir, cachePath), 'utf-8'));
@@ -145,7 +154,10 @@ describe('per-instance artifacts', () => {
         const featured = findRoute('/featured');
         const inst = featured.instances[0];
         expect(
-            await fs.access(path.join(buildDir, inst.preRenderedPath)).then(() => true, () => false),
+            await fs.access(path.join(buildDir, inst.preRenderedPath)).then(
+                () => true,
+                () => false,
+            ),
         ).toBe(true);
         const cachePath = inst.preRenderedPath.replace('.jay-html', '.cache.json');
         const cache = JSON.parse(await fs.readFile(path.join(buildDir, cachePath), 'utf-8'));
@@ -156,7 +168,10 @@ describe('per-instance artifacts', () => {
         const catalog = findRoute('/catalog');
         const inst = catalog.instances[0];
         expect(
-            await fs.access(path.join(buildDir, inst.preRenderedPath)).then(() => true, () => false),
+            await fs.access(path.join(buildDir, inst.preRenderedPath)).then(
+                () => true,
+                () => false,
+            ),
         ).toBe(true);
         const cachePath = inst.preRenderedPath.replace('.jay-html', '.cache.json');
         const cache = JSON.parse(await fs.readFile(path.join(buildDir, cachePath), 'utf-8'));
@@ -210,5 +225,56 @@ describe('per-instance artifacts', () => {
         const html = chunks.join('');
         expect(html).toMatch(/Test Shop/);
         expect(html).toMatch(/5/);
+    });
+});
+
+describe('page-parts.json (DL#137)', () => {
+    it('generates page-parts.json for each route', async () => {
+        for (const routeDir of ['index', 'home', 'featured', 'catalog', 'items/[slug]']) {
+            const configPath = path.join(buildDir, 'pre-rendered', routeDir, 'page-parts.json');
+            const exists = await fs.access(configPath).then(
+                () => true,
+                () => false,
+            );
+            expect(exists).toBe(true);
+        }
+    });
+
+    it('featured page config includes headfull-nested headless component', async () => {
+        const config = JSON.parse(
+            await fs.readFile(
+                path.join(buildDir, 'pre-rendered/featured/page-parts.json'),
+                'utf-8',
+            ),
+        );
+        expect(config.parts.length).toBe(1);
+        expect(config.parts[0].exportName).toBe('page');
+        expect(config.parts[0].source).toBe('local');
+
+        const cartBadge = config.instanceComponents.find(
+            (c: any) => c.contractName === 'cart-badge',
+        );
+        expect(cartBadge).toBeDefined();
+        expect(cartBadge.exportName).toBe('cartBadge');
+        expect(cartBadge.propNames).toEqual(['label']);
+    });
+
+    it('catalog page config includes direct headless component', async () => {
+        const config = JSON.parse(
+            await fs.readFile(path.join(buildDir, 'pre-rendered/catalog/page-parts.json'), 'utf-8'),
+        );
+        const cartBadge = config.instanceComponents.find(
+            (c: any) => c.contractName === 'cart-badge',
+        );
+        expect(cartBadge).toBeDefined();
+        expect(cartBadge.source).toBe('local');
+    });
+
+    it('simple page config has no instance components', async () => {
+        const config = JSON.parse(
+            await fs.readFile(path.join(buildDir, 'pre-rendered/index/page-parts.json'), 'utf-8'),
+        );
+        expect(config.instanceComponents.length).toBe(0);
+        expect(config.forEachInstances.length).toBe(0);
     });
 });

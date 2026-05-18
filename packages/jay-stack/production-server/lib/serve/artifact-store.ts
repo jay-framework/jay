@@ -56,6 +56,10 @@ export class FilesystemArtifactStore {
         return path.join(this.basePath, relativePath);
     }
 
+    getBuildDir(): string {
+        return this.basePath;
+    }
+
     private async loadModule(relativePath: string): Promise<any> {
         const fullPath = path.join(this.basePath, relativePath);
         const stat = await fs.stat(fullPath);

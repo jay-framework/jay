@@ -5,6 +5,4 @@ export const cartBadge = makeJayStackComponent()
     .withSlowlyRender(async (props: { label?: string }) =>
         phaseOutput({ badgeLabel: props.label || 'Cart' }, {}),
     )
-    .withFastRender(async (_props: {}, _carryForward: {}) =>
-        phaseOutput({ count: 3 }, {}),
-    );
+    .withFastRender(async (_props: {}, _carryForward: {}) => phaseOutput({ count: 3 }, {}));

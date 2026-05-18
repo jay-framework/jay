@@ -35,7 +35,7 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
     );
     try {
         const pluginsWithInit = sortPluginsByDependencies(
-            await discoverPluginsWithInit({ projectRoot: manifest.projectRoot }),
+            await discoverPluginsWithInit({ projectRoot: process.cwd() }),
         );
         for (const pluginInit of pluginsWithInit) {
             try {

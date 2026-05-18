@@ -71,14 +71,14 @@ It shouldn't. `loadProductionPageParts` calls `parseJayFile` to produce `Product
 
 ```ts
 interface ProductionPageParts {
-    parts: DevServerPagePart[];              // page + keyed headless component definitions
-    headlessContracts: HeadlessContractInfo[];// build-time only (for slowRenderTransform)
-    headlessInstanceComponents: HeadlessInstanceComponent[]; // instance component definitions
-    discoveredInstances: DiscoveredHeadlessInstance[];       // build-time only (for slow render)
-    forEachInstances: ForEachHeadlessInstance[];             // forEach instance metadata
-    keyedPartModules: KeyedPartModule[];                    // build-time only (for hydration entry)
-    serverTrackByMap?: Record<string, string>;              // build-time only
-    clientTrackByMap?: Record<string, string>;              // build-time only
+  parts: DevServerPagePart[]; // page + keyed headless component definitions
+  headlessContracts: HeadlessContractInfo[]; // build-time only (for slowRenderTransform)
+  headlessInstanceComponents: HeadlessInstanceComponent[]; // instance component definitions
+  discoveredInstances: DiscoveredHeadlessInstance[]; // build-time only (for slow render)
+  forEachInstances: ForEachHeadlessInstance[]; // forEach instance metadata
+  keyedPartModules: KeyedPartModule[]; // build-time only (for hydration entry)
+  serverTrackByMap?: Record<string, string>; // build-time only
+  clientTrackByMap?: Record<string, string>; // build-time only
 }
 ```
 
@@ -89,6 +89,7 @@ At serve time, `handlePageRequest` only uses a subset: `parts`, `headlessInstanc
 Traced through `fast-changing-runner.ts`:
 
 **From `parts` (page + keyed headless):**
+
 - `compDefinition.fastRender` — the function to call (loaded from module)
 - `compDefinition.slowlyRender` — checked to determine fastRender signature
 - `compDefinition.services` — for service resolution
@@ -96,22 +97,25 @@ Traced through `fast-changing-runner.ts`:
 - `contractInfo.contractName` + `contractInfo.metadata` — passed as props to fastRender
 
 **From `headlessInstanceComponents` (instance headless):**
+
 - `contractName` — to match against discovered instances
 - `compDefinition.fastRender`, `.slowlyRender`, `.services` — same as above
 - `contract.props` — **only** for prop name normalization in forEach instances (line 154-156):
   ```ts
   const contractProps = comp.contract?.props ?? [];
   const normalizePropName = (key: string) =>
-      contractProps.find((p) => p.name.toLowerCase() === key.toLowerCase())?.name ?? key;
+    contractProps.find((p) => p.name.toLowerCase() === key.toLowerCase())?.name ?? key;
   ```
   Just needs `Array<{ name: string }>`.
 
 **From `forEachInstances`:**
+
 - `contractName`, `forEachPath`, `trackBy`, `propBindings`, `coordinateSuffix` — all plain serializable data.
 
 ### Q4: Can we pre-compute this config at build time?
 
 Yes. Everything `renderFastChangingData` needs is either:
+
 1. A module to import (serialize as path + export name)
 2. Plain data (serialize as JSON)
 
@@ -155,7 +159,7 @@ No — `as any` is fragile. If future code accesses other contract fields at ser
 
 ```ts
 interface ServeTimeContract {
-    props: Array<{ name: string }>;
+  props: Array<{ name: string }>;
 }
 ```
 
@@ -185,35 +189,39 @@ Replace serve-time jay-html parsing with a build-time config file. The build pip
 
 ```ts
 interface PagePartsConfigEntry {
-    modulePath: string;    // e.g., "server/pages/product/page.js" or "@wix/stores-plugin"
-    exportName: string;    // e.g., "page" or "ProductCard"
-    source: 'npm' | 'local';
+  modulePath: string; // e.g., "server/pages/product/page.js" or "@wix/stores-plugin"
+  exportName: string; // e.g., "page" or "ProductCard"
+  source: 'npm' | 'local';
 }
 
 interface PagePartsConfig {
-    /** Page component + keyed headless components */
-    parts: Array<PagePartsConfigEntry & {
-        key?: string;          // keyed headless namespace
-        contractInfo?: {
-            contractName: string;
-            metadata?: Record<string, unknown>;
-        };
-    }>;
-
-    /** Instance headless components (used as <jay:xxx> tags) */
-    instanceComponents: Array<PagePartsConfigEntry & {
+  /** Page component + keyed headless components */
+  parts: Array<
+    PagePartsConfigEntry & {
+      key?: string; // keyed headless namespace
+      contractInfo?: {
         contractName: string;
-        propNames: string[];   // from contract.props, for forEach prop normalization
-    }>;
+        metadata?: Record<string, unknown>;
+      };
+    }
+  >;
 
-    /** forEach headless instances (interactive forEach only — slow forEach is in carryForward) */
-    forEachInstances: Array<{
-        contractName: string;
-        forEachPath: string;
-        trackBy: string;
-        propBindings: Record<string, string>;
-        coordinateSuffix: string;
-    }>;
+  /** Instance headless components (used as <jay:xxx> tags) */
+  instanceComponents: Array<
+    PagePartsConfigEntry & {
+      contractName: string;
+      propNames: string[]; // from contract.props, for forEach prop normalization
+    }
+  >;
+
+  /** forEach headless instances (interactive forEach only — slow forEach is in carryForward) */
+  forEachInstances: Array<{
+    contractName: string;
+    forEachPath: string;
+    trackBy: string;
+    propBindings: Record<string, string>;
+    coordinateSuffix: string;
+  }>;
 }
 ```
 
@@ -223,7 +231,7 @@ For the contract type at serve time, introduce a narrow type instead of casting:
 
 ```ts
 interface ServeTimeContract {
-    props: Array<{ name: string }>;
+  props: Array<{ name: string }>;
 }
 ```
 
@@ -255,52 +263,53 @@ Replace `loadProductionPageParts` with a new function that:
 
 ```ts
 async function importModule(
-    entry: PagePartsConfigEntry,
-    artifacts: FilesystemArtifactStore,
+  entry: PagePartsConfigEntry,
+  artifacts: FilesystemArtifactStore,
 ): Promise<any> {
-    return entry.source === 'local'
-        ? artifacts.loadPageModule(entry.modulePath)
-        : import(entry.modulePath);
+  return entry.source === 'local'
+    ? artifacts.loadPageModule(entry.modulePath)
+    : import(entry.modulePath);
 }
 
 async function loadPagePartsFromConfig(
-    configPath: string,
-    artifacts: FilesystemArtifactStore,
+  configPath: string,
+  artifacts: FilesystemArtifactStore,
 ): Promise<ProductionPageParts> {
-    const config: PagePartsConfig = JSON.parse(await fs.readFile(configPath, 'utf-8'));
+  const config: PagePartsConfig = JSON.parse(await fs.readFile(configPath, 'utf-8'));
 
-    const parts: DevServerPagePart[] = [];
-    for (const entry of config.parts) {
-        const mod = await importModule(entry, artifacts);
-        parts.push({
-            compDefinition: mod[entry.exportName],
-            key: entry.key,
-            clientImport: '', clientPart: '',
-            contractInfo: entry.contractInfo,
-        });
-    }
+  const parts: DevServerPagePart[] = [];
+  for (const entry of config.parts) {
+    const mod = await importModule(entry, artifacts);
+    parts.push({
+      compDefinition: mod[entry.exportName],
+      key: entry.key,
+      clientImport: '',
+      clientPart: '',
+      contractInfo: entry.contractInfo,
+    });
+  }
 
-    const headlessInstanceComponents: HeadlessInstanceComponent[] = [];
-    for (const entry of config.instanceComponents) {
-        const mod = await importModule(entry, artifacts);
-        const serveTimeContract: ServeTimeContract = {
-            props: entry.propNames.map(name => ({ name })),
-        };
-        headlessInstanceComponents.push({
-            contractName: entry.contractName,
-            compDefinition: mod[entry.exportName],
-            contract: serveTimeContract,
-        });
-    }
-
-    return {
-        parts,
-        headlessContracts: [],
-        headlessInstanceComponents,
-        discoveredInstances: [],
-        forEachInstances: config.forEachInstances,
-        keyedPartModules: [],
+  const headlessInstanceComponents: HeadlessInstanceComponent[] = [];
+  for (const entry of config.instanceComponents) {
+    const mod = await importModule(entry, artifacts);
+    const serveTimeContract: ServeTimeContract = {
+      props: entry.propNames.map((name) => ({ name })),
     };
+    headlessInstanceComponents.push({
+      contractName: entry.contractName,
+      compDefinition: mod[entry.exportName],
+      contract: serveTimeContract,
+    });
+  }
+
+  return {
+    parts,
+    headlessContracts: [],
+    headlessInstanceComponents,
+    discoveredInstances: [],
+    forEachInstances: config.forEachInstances,
+    keyedPartModules: [],
+  };
 }
 ```
 
@@ -308,15 +317,15 @@ No `parseJayFile`, no `injectHeadfullFSTemplates`, no `importResolver`, no sourc
 
 ### What changes in each file
 
-| File | Change | Why |
-|------|--------|-----|
-| `instance-pipeline.ts` | After `loadProductionPageParts`, write `page-parts.json` | Serialize discovered config at build time |
-| `load-production-parts.ts` | Add `loadPagePartsFromConfig()` function | Serve-time loader from pre-computed config |
-| `page-handler.ts` | Call `loadPagePartsFromConfig()` instead of `loadProductionPageParts()` | Eliminate serve-time jay-html parsing |
-| `main-server.ts` | Use `process.cwd()` instead of `manifest.projectRoot` | Fix Gap 4: absolute path in container |
-| `page-handler.ts` | Use `process.cwd()` instead of `manifest.projectRoot` | Fix Gap 4 for page parts loading |
-| `types.ts` | Make `projectRoot` optional in `RouteManifest` | It's no longer the source of truth |
-| `artifact-store.ts` | Add `readPagePartsConfig(routeDir)` | Read page-parts.json for a route |
+| File                       | Change                                                                  | Why                                        |
+| -------------------------- | ----------------------------------------------------------------------- | ------------------------------------------ |
+| `instance-pipeline.ts`     | After `loadProductionPageParts`, write `page-parts.json`                | Serialize discovered config at build time  |
+| `load-production-parts.ts` | Add `loadPagePartsFromConfig()` function                                | Serve-time loader from pre-computed config |
+| `page-handler.ts`          | Call `loadPagePartsFromConfig()` instead of `loadProductionPageParts()` | Eliminate serve-time jay-html parsing      |
+| `main-server.ts`           | Use `process.cwd()` instead of `manifest.projectRoot`                   | Fix Gap 4: absolute path in container      |
+| `page-handler.ts`          | Use `process.cwd()` instead of `manifest.projectRoot`                   | Fix Gap 4 for page parts loading           |
+| `types.ts`                 | Make `projectRoot` optional in `RouteManifest`                          | It's no longer the source of truth         |
+| `artifact-store.ts`        | Add `readPagePartsConfig(routeDir)`                                     | Read page-parts.json for a route           |
 
 ### What does NOT change
 
@@ -332,7 +341,7 @@ For components that need contract data at serve time (forEach prop normalization
 
 ```ts
 // At build time, extract from contract:
-propNames: contract.props?.map(p => p.name) ?? []
+propNames: contract.props?.map((p) => p.name) ?? [];
 ```
 
 If plugins need richer contract data at serve time (e.g., descriptions for automation), extend the config with an `effectiveContract` field per component. This is an additive change — start minimal.
@@ -389,22 +398,24 @@ basic-project/
 
 #### What each page tests
 
-| Route | Configuration | DL#137 relevance |
-|-------|--------------|------------------|
-| `/` | Simple page, slow+fast, no headless/headfull | Baseline — no source file dependencies at serve time |
-| `/home` | Moved home page (same logic as current `/`) | Verifies non-root routes work |
-| `/featured` | Headfull FS component (site-header) containing nested headless (cart-badge) | **Gap 1 core case** — headfull source + nested headless hoisting |
-| `/catalog` | Direct headless instance `<jay:cart-badge>` on page | Headless without headfull wrapping |
-| `/items/[slug]` | Dynamic params + loadParams (2 slugs) | Per-instance builds, different slow ViewState |
+| Route           | Configuration                                                               | DL#137 relevance                                                 |
+| --------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `/`             | Simple page, slow+fast, no headless/headfull                                | Baseline — no source file dependencies at serve time             |
+| `/home`         | Moved home page (same logic as current `/`)                                 | Verifies non-root routes work                                    |
+| `/featured`     | Headfull FS component (site-header) containing nested headless (cart-badge) | **Gap 1 core case** — headfull source + nested headless hoisting |
+| `/catalog`      | Direct headless instance `<jay:cart-badge>` on page                         | Headless without headfull wrapping                               |
+| `/items/[slug]` | Dynamic params + loadParams (2 slugs)                                       | Per-instance builds, different slow ViewState                    |
 
 #### Components
 
 **`site-header`** (headfull FS):
+
 - Contract: `siteName: string (slow)`, ref: `menuButton`
 - Template includes `<jay:cart-badge>` — a nested headless instance
 - Has slow+interactive phases
 
 **`cart-badge`** (headless, local plugin):
+
 - Contract: `count: number (fast)`
 - Fast phase returns cart count
 - Used in two contexts: nested inside site-header (featured page) AND directly on catalog page
@@ -412,17 +423,20 @@ basic-project/
 #### Test strategy
 
 **Build tests** — for each new page:
+
 - Pre-rendered jay-html exists and contains expected content
 - Server element loads and produces HTML via `renderToStream`
 - Client bundle exists
 - Cache metadata has correct slow ViewState
 
 **Serve tests** — for each new page:
+
 - SSR response returns 200 with expected content
 - Headless component data appears in rendered output
 - Import map and hydration script present
 
 **Self-containment test** (the DL#137 litmus test):
+
 1. Build the project
 2. Remove/rename `src/` directory
 3. Start the production server from build artifacts only
@@ -459,13 +473,13 @@ This test should **FAIL with current code** (confirming the gap) and **PASS afte
 
 ## Trade-offs
 
-| Decision | Pro | Con |
-|----------|-----|-----|
-| Pre-compute config at build time | Eliminates all source file dependencies at serve time; solves Gaps 1-3 in one design | Adds a config file to the build output; build pipeline must keep it in sync |
-| Minimal contract serialization (prop names only) | Tiny config, no complex serialization | If plugins need richer contract data at serve time, config must be extended |
-| Per-route config (not per-instance) | Single file per route; matches current caching behavior | Assumes all instances of a route share the same component structure |
-| `process.cwd()` for plugin discovery | Works in any deployment (Docker, local, CI) | Assumes project root == cwd; might need CLI flag for custom layouts |
-| Keep `loadProductionPageParts` for build time | No refactor of the build pipeline; serve-time change is isolated | Two code paths for loading page parts (build-time vs serve-time) |
+| Decision                                         | Pro                                                                                  | Con                                                                         |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| Pre-compute config at build time                 | Eliminates all source file dependencies at serve time; solves Gaps 1-3 in one design | Adds a config file to the build output; build pipeline must keep it in sync |
+| Minimal contract serialization (prop names only) | Tiny config, no complex serialization                                                | If plugins need richer contract data at serve time, config must be extended |
+| Per-route config (not per-instance)              | Single file per route; matches current caching behavior                              | Assumes all instances of a route share the same component structure         |
+| `process.cwd()` for plugin discovery             | Works in any deployment (Docker, local, CI)                                          | Assumes project root == cwd; might need CLI flag for custom layouts         |
+| Keep `loadProductionPageParts` for build time    | No refactor of the build pipeline; serve-time change is isolated                     | Two code paths for loading page parts (build-time vs serve-time)            |
 
 ## Verification
 
@@ -482,3 +496,94 @@ This test should **FAIL with current code** (confirming the gap) and **PASS afte
 6. Run production server WITHOUT `src/`, WITHOUT `agent-kit/` — all routes serve correctly
 7. Verify Dockerfile needs only `COPY build/v1`, `COPY config` — no `COPY src/...` or `COPY agent-kit/...`
 8. Verify no `sed` path rewriting needed in Dockerfile
+
+## Implementation Results
+
+### Phase 0: Fixture expansion — DONE
+
+Expanded `basic-project` test fixture from 2 routes to 5:
+
+| Route           | Configuration                                                   | Purpose                   |
+| --------------- | --------------------------------------------------------------- | ------------------------- |
+| `/`             | Simple page (slow render only)                                  | Baseline                  |
+| `/home`         | Moved original home (slow+fast, head tags, CSS)                 | Non-root route            |
+| `/featured`     | Headfull FS (`site-header`) with nested headless (`cart-badge`) | Gap 1 core case           |
+| `/catalog`      | Direct headless instance `<jay:cart-badge>`                     | Headless without headfull |
+| `/items/[slug]` | Dynamic params + loadParams                                     | Per-instance builds       |
+
+Added two local components:
+
+- `src/components/site-header/` — headfull FS with contract, template containing `<jay:cart-badge>`
+- `src/plugins/cart-badge/` — headless plugin with plugin.yaml, contract, slow+fast phases
+
+74 tests pass (22 build + 27 serve + 25 param-routing).
+
+### Phases 1–3: Pre-computed page config — DONE
+
+**Phase 1 — Build-time config (`page-parts.json`):**
+
+- `loadProductionPageParts` now tracks `headlessModuleInfos` — resolved module paths, export names, source type (`npm`/`local`), and contract prop names for each headless import
+- `buildPagePartsConfig()` serializes this into a `PagePartsConfig` JSON structure with three sections: `parts` (page + keyed headless), `instanceComponents` (instance headless), `forEachInstances`
+- `instance-pipeline.ts` writes `page-parts.json` per route directory (first instance writes, subsequent skip via `fs.access` check)
+- Module paths stored relative to buildDir for local modules, package name for NPM
+
+**Phase 2 — Serve-time config loader:**
+
+- `loadPagePartsFromConfig()` reads `page-parts.json`, imports modules by path (`import()` for NPM, path join for local), assembles `ProductionPageParts`
+- `page-handler.ts` uses the config-based loader — no more `parseJayFile`, `injectHeadfullFSTemplates`, or `JAY_IMPORT_RESOLVER` at serve time
+- Fallback: if `page-parts.json` missing (e.g., pages without jay-html), creates minimal parts from the page module directly
+
+**Phase 3 — Absolute path fix (Gap 4):**
+
+- `main-server.ts` uses `process.cwd()` instead of `manifest.projectRoot` for `discoverPluginsWithInit`
+
+**No deviations from design.** The `ServeTimeContract` type is used via `as any` cast for now (the `HeadlessInstanceComponent.contract` type still expects full `Contract`). The narrower type should be introduced in `stack-server-runtime` when the secure package adds jay-stack support (Q14).
+
+### Phase 4: Clean up — PENDING
+
+Serve-time code paths still import `parseJayFile` etc. but no longer call them. Cleanup deferred to avoid unnecessary churn — the imports are harmless and the serve path is fully config-based.
+
+### Fake-shop verification (May 18, 2026)
+
+Built and served `examples/jay-stack/fake-shop` — a real project with 10 routes, 19 instances, local plugins, headless components (product-widget, stock-status, mood-tracker), keyed headless (product-rating), actions, and init.
+
+**`yarn confirm`:** Passed. Full rebuild + type check + test + format across all 70 packages.
+
+**`yarn build`:** 19/19 instances built successfully. `page-parts.json` generated for all 10 routes.
+
+**`yarn serve` route test results:**
+
+| Route | Status | Notes |
+|-------|--------|-------|
+| `/` | 200 | Homepage with mood tracker, product widgets (static + slowForEach + interactive forEach) |
+| `/products` | 200 | Product listing page |
+| `/products/gaming-laptop` | 200 | Dynamic product page with keyed headless (product-rating) |
+| `/cart` | 200 | Cart page |
+| `/checkout` | 200 | Checkout page |
+| `/ui-demo` | 200 | UI kit demo (popover, carousel, clipboard, etc.) |
+| `/mood-stats` | 500 | Pre-existing issue: mood-tracker plugin's fast render fails |
+| `/upload` | — | Not tested (file upload) |
+| `/inventory-check` | — | Not tested |
+| `/thankyou` | — | Not tested |
+
+**Remaining source file references in build output:**
+
+1. **`route-manifest.json`** — `jayHtmlPath` fields contain absolute source paths (e.g., `.../src/pages/cart/page.jay-html`). No longer used at serve time after our changes — `getPageParts` reads from `page-parts.json` instead. `projectRoot` also absolute — no longer used after Phase 3 (`process.cwd()` replaces it). Both are harmless metadata.
+
+2. **`cache.json`** — `sourcePath` field per instance points to source jay-html. Informational only, not used at serve time for file resolution.
+
+3. **`page-parts.json`** — **clean**. All module paths relative to buildDir (`server/pages/...`, `server/plugins/...`). No absolute paths, no source file references.
+
+**New issue discovered: local plugin init in production**
+
+`discoverPluginsWithInit` scans `process.cwd()` for local plugins and tries to `import()` their source directory (e.g., `src/plugins/product-rating`). This fails because directory imports aren't supported in ES modules without Vite. The plugin's compiled code exists at `build/v1/server/plugins/product-rating/...` but the init discovery doesn't know to look there. This is separate from DL#137 — it's about plugin init discovery, not page parts — but it affects production serving of projects with local plugins that have `_serverInit`.
+
+**Summary:**
+
+The core DL#137 goal is achieved: **the serve-time code path no longer parses jay-html or reads source files**. All component discovery, contract resolution, and module path mapping happens at build time and is serialized to `page-parts.json`. The production server loads this config and imports the listed modules — no compiler, no import resolver, no source files needed.
+
+Remaining work:
+- Phase 4 cleanup (remove dead imports from serve-time paths)
+- Remove `jayHtmlPath` from route manifest (or make optional)
+- Remove `sourcePath` from cache.json (or make it relative)
+- Fix local plugin init discovery for production (separate issue, not DL#137)

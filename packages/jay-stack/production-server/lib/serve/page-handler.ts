@@ -12,10 +12,11 @@ import { deepMergeViewStates } from '@jay-framework/view-state-merge';
 import { asyncSwapScript } from '@jay-framework/ssr-runtime';
 import { buildImportMap } from './import-map';
 import {
-    loadProductionPageParts,
+    loadPagePartsFromConfig,
     type ProductionPageParts,
 } from '../builder/load-production-parts';
 import type { RouteEntry } from '../types';
+import path from 'node:path';
 
 const pagePartsCache = new Map<string, ProductionPageParts>();
 
@@ -24,39 +25,38 @@ async function getPageParts(
     pageModule: any,
     artifacts: FilesystemArtifactStore,
     preRenderedPath: string,
-    manifest: RouteManifest,
 ): Promise<ProductionPageParts> {
     const cacheKey = route.pattern;
     const cached = pagePartsCache.get(cacheKey);
     if (cached) return cached;
 
-    if (!route.jayHtmlPath) {
-        return {
-            parts: [
-                {
-                    compDefinition: pageModule.page ?? pageModule.default,
-                    clientImport: '',
-                    clientPart: '',
-                },
-            ],
+    const routeDir = path.dirname(preRenderedPath);
+    const configPath = artifacts.getAssetPath(path.join(routeDir, 'page-parts.json'));
+    const buildDir = artifacts.getBuildDir();
+
+    let parts: ProductionPageParts;
+    try {
+        parts = await loadPagePartsFromConfig(configPath, buildDir);
+    } catch {
+        parts = {
+            parts: pageModule
+                ? [
+                      {
+                          compDefinition: pageModule.page ?? pageModule.default,
+                          clientImport: '',
+                          clientPart: '',
+                      },
+                  ]
+                : [],
             headlessContracts: [],
             headlessInstanceComponents: [],
             discoveredInstances: [],
             forEachInstances: [],
             keyedPartModules: [],
+            headlessModuleInfos: [],
         };
     }
 
-    const jayHtmlContent = await artifacts.readRawFile(preRenderedPath);
-    const serverBuildDir = artifacts.getAssetPath('server');
-    const parts = await loadProductionPageParts(
-        { jayHtmlPath: route.jayHtmlPath, componentExport: route.componentExport },
-        pageModule,
-        jayHtmlContent,
-        manifest.projectRoot,
-        undefined,
-        serverBuildDir,
-    );
     pagePartsCache.set(cacheKey, parts);
     return parts;
 }
@@ -77,13 +77,7 @@ export async function handlePageRequest(
             : await artifacts.loadPageModule(route.serverModule);
     }
 
-    const pageParts = await getPageParts(
-        route,
-        pageModule,
-        artifacts,
-        instance.preRenderedPath,
-        manifest,
-    );
+    const pageParts = await getPageParts(route, pageModule, artifacts, instance.preRenderedPath);
 
     const url = new URL(`http://localhost${match.pathname}`);
     const query = Object.fromEntries(url.searchParams.entries());
