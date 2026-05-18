@@ -582,17 +582,22 @@ All 7 tested routes return 200. Verified in browser — pages render correctly w
 
 3. **`page-parts.json`** — **clean**. Local module paths relative to buildDir (`server/pages/...`, `server/plugins/...`). Plugin module paths are absolute (to the NPM package dist). No source file references.
 
-**Pre-existing issue: local plugin init in production**
+### Local plugin init in production — FIXED
 
-`discoverPluginsWithInit` scans `process.cwd()` for local plugins and tries to `import()` their source directory (e.g., `src/plugins/product-rating`). This fails because directory imports aren't supported in ES modules without Vite. The plugin's compiled code exists at `build/v1/server/plugins/product-rating/...` but the init discovery doesn't know to look there. This is separate from DL#137 — it's about plugin init discovery, not page parts — and it also fails on main branch.
+**Problem:** `main-server.ts` has its own inline plugin init loop (lines 40-51) that does `import(pluginInit.packageName)`. For NPM plugins, `packageName` is the npm package name (resolved via node_modules). For local plugins, `scanPlugins` sets `packageName: pluginPath` = the source directory path (e.g., `/Users/.../src/plugins/product-rating`). Node ESM rejects directory imports.
+
+The dev server avoids this because `executePluginServerInits` (plugin-init-discovery.ts:217) constructs `modulePath = path.join(plugin.pluginPath, plugin.initModule)` and loads via `viteServer.ssrLoadModule()`. The production server's inline loop skips this logic.
+
+**Root cause:** Same class of problem as DL#137's page parts — serve-time code accesses source files instead of compiled build output.
+
+**Fix:** In `main-server.ts`, for local plugins, redirect the import from the source directory to the compiled init module in `build/v1/server/plugins/{name}/{initModule}.js`. The compiled init exists because `server-code-build.ts` compiles `src/plugins/` to `build/v1/server/plugins/`.
+
+### Cleanup — DONE
+
+- Removed `sourcePath` from `cache.json` metadata (instance-pipeline.ts)
+- Removed `jayHtmlPath` from `RouteEntry` type and route manifest output
+- Serve-time code has no dead imports (no `parseJayFile`/`JAY_IMPORT_RESOLVER` in `lib/serve/`)
 
 **Summary:**
 
 The core DL#137 goal is achieved: **the serve-time code path no longer parses jay-html or reads source files**. All component discovery, contract resolution, and module path mapping happens at build time and is serialized to `page-parts.json`. The production server loads this config and imports the listed modules — no compiler, no import resolver, no source files needed.
-
-Remaining work:
-
-- Phase 4 cleanup (remove dead imports from serve-time paths)
-- Remove `jayHtmlPath` from route manifest (or make optional)
-- Remove `sourcePath` from cache.json (or make it relative)
-- Fix local plugin init discovery for production (separate issue, not DL#137)
