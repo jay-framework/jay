@@ -590,7 +590,11 @@ The dev server avoids this because `executePluginServerInits` (plugin-init-disco
 
 **Root cause:** Same class of problem as DL#137's page parts — serve-time code accesses source files instead of compiled build output.
 
-**Fix:** In `main-server.ts`, for local plugins, redirect the import from the source directory to the compiled init module in `build/v1/server/plugins/{name}/{initModule}.js`. The compiled init exists because `server-code-build.ts` compiles `src/plugins/` to `build/v1/server/plugins/`.
+**Fix:** Two changes:
+1. `main-server.ts` — for local plugins, redirect the import from the source directory to the compiled init module in `build/v1/server/plugins/{name}/{initModule}.js`
+2. `server-code-build.ts` — removed the `file !== 'init.ts'` exclusion so `init.ts` in plugin directories is compiled to the build output
+
+After fix: all plugin inits succeed — `[product-rating] Initializing ratings service...` appears in the server startup log.
 
 ### Cleanup — DONE
 
@@ -601,3 +605,5 @@ The dev server avoids this because `executePluginServerInits` (plugin-init-disco
 **Summary:**
 
 The core DL#137 goal is achieved: **the serve-time code path no longer parses jay-html or reads source files**. All component discovery, contract resolution, and module path mapping happens at build time and is serialized to `page-parts.json`. The production server loads this config and imports the listed modules — no compiler, no import resolver, no source files needed.
+
+All 7 tested routes return 200 in fake-shop. All plugin inits succeed. 74 unit tests pass.
