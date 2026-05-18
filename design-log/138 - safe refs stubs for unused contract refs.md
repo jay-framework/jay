@@ -206,7 +206,7 @@ Two options were considered:
 1. **Delay the call** — queue `exec$` calls and replay after mount. Adds complexity.
 2. **Agent-kit instruction** — document that `exec$` must only be used inside event handlers or effects, never at top-level component creation.
 
-**Decision: agent-kit instruction.** Top-level `exec$` is a misuse pattern. The null guard added for stub refs (Phase 1) makes it a silent no-op instead of a crash, and the agent-kit instructions should document the correct usage pattern.
+**Decision: agent-kit instruction.** Top-level `exec$` is a misuse pattern. The null guard added for stub refs makes it a silent no-op instead of a crash, and the agent-kit instructions should document the correct usage pattern. Note: effects also won't work for the first invocation — the effect runs before elements are mounted, so `exec$` silently does nothing. Only event handlers are guaranteed to have elements available.
 
 ## Trade-offs
 

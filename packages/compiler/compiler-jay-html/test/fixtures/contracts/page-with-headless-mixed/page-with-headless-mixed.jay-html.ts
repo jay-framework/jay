@@ -112,7 +112,13 @@ type _HeadlessProductCard1ElementPreRender = [ProductCardRefs, _HeadlessProductC
 function _headlessProductCard1Render(
     options?: RenderElementOptions,
 ): _HeadlessProductCard1ElementPreRender {
-    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [refManager, [refAddToCart]] = ReferencesManager.for(
+        options,
+        ['add to cart'],
+        [],
+        [],
+        [],
+    );
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', { class: 'promo' }, [
@@ -177,7 +183,13 @@ type _HeadlessProductCard3ElementPreRender = [ProductCardRefs, _HeadlessProductC
 function _headlessProductCard3Render(
     options?: RenderElementOptions,
 ): _HeadlessProductCard3ElementPreRender {
-    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [refManager, [refAddToCart]] = ReferencesManager.for(
+        options,
+        ['add to cart'],
+        [],
+        [],
+        [],
+    );
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('article', { class: 'card-b' }, [

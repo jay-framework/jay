@@ -31,9 +31,13 @@ refs.submitButton.onClick(() => {
   /* ... */
 });
 
-// exec$ gives direct access to the element and current ViewState
-refs.submitButton.exec$((element, viewState) => {
-  element.disabled = viewState.isSubmitting;
+// exec$ gives direct access to the element and current ViewState.
+// Only use exec$ inside event handlers — never at top-level component
+// creation or in effects, because elements don't exist yet at that point.
+refs.submitButton.onclick(() => {
+  refs.submitButton.exec$((element, viewState) => {
+    element.disabled = viewState.isSubmitting;
+  });
 });
 ```
 

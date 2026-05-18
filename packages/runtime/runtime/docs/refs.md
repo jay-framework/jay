@@ -101,7 +101,9 @@ interface HTMLElementProxy<ViewState, ElementType extends HTMLElement>
 - `addEventListener`: registers a new event handlers.
 - `removeEventListener`: registers a new event handlers.
 - `exec$`: runs a code function against the DOM element. The function must match compiler patterns (see the compiler security section)
-  to be property run in secure applications. In non-secure applications, the function just runs with the DOM element.
+  to be properly run in secure applications. In non-secure applications, the function just runs with the DOM element.
+  **Important:** `exec$` must only be used inside event handlers — never at top-level component creation or in effects,
+  because elements don't exist yet at that point. Top-level `exec$` calls silently resolve to `undefined`.
 
 ## HTMLElementCollectionProxy
 

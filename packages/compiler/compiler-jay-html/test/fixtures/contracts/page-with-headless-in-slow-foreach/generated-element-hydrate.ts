@@ -108,7 +108,13 @@ type _HeadlessProductCard1ElementPreRender = [ProductCardRefs, _HeadlessProductC
 function _headlessProductCard1HydrateRender(
     options?: RenderElementOptions,
 ): _HeadlessProductCard1ElementPreRender {
-    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [refManager, [refAddToCart]] = ReferencesManager.for(
+        options,
+        ['add to cart'],
+        [],
+        [],
+        [],
+    );
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
             adoptElement('S4/0', {}, [adoptText('S4/0/1', (vs) => vs.price)]),

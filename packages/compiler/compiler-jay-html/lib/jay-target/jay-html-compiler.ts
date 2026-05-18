@@ -82,6 +82,7 @@ import {
     filterContentNodes,
     isDirectiveAttribute,
     isValidationError,
+    mergeContractStubRefs,
     PROPERTY,
     propertyMapping,
     resolveHeadlessImport,
@@ -861,9 +862,10 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             }
         }
 
-        // Generate ReferencesManager from inline template refs
+        // Merge contract ref stubs into inline template refs (DL#138)
+        const mergedRefs = mergeContractStubRefs(inlineBody.refs, headlessImport.refs);
         const { renderedRefsManager, refsManagerImport } = renderReferenceManager(
-            inlineBody.refs,
+            mergedRefs,
             ReferenceManagerTarget.element,
         );
 
