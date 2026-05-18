@@ -37,7 +37,7 @@ This matters specifically for **instance-based headless components** (`<jay:xxx>
 - **Repeated instances (forEach)** — same problem, but with collection refs. A `<jay:product-card>` inside `forEach="products"` declares `ProductCardRepeatedRefs` with collection proxies for each ref, but the template may only use `ref="products.productLink"` and skip `ref="products.addToCartButton"`.
 - **Headfull components with headless instances** — a headfull component's template includes `<jay:xxx>` instances where the same mismatch occurs.
 
-**Keyed headless components** (with `key="..."` in the `<script>` tag) are NOT affected — they don't have inline templates with per-page ref subsets. Their refs are wired through the standard component rendering pipeline.
+**Keyed headless components** (with `key="..."` in the `<script>` tag) are NOT affected — even though they also use the page template (not their own), the compiler already handles this correctly. `processImportedHeadless()` adds ALL contract refs to the page's ref tree, and `optimizeRefs()` preserves them in the `ReferencesManager.for()` call regardless of whether they appear in the template. The `autoRef` flag only controls TypeScript type generation, not runtime ref creation. This is effectively the same fix that this design log proposes for inline instances.
 
 ### Real-world example (golf project)
 
@@ -196,6 +196,17 @@ function ProductCardComponent(props, refs) {
 ### After (safe no-op)
 
 Same component code and template — no changes needed. `refs.addToCartButton` returns a proxy whose `onclick()` is a no-op (listener stored but never fires since no element exists).
+
+## `exec$` During Component Creation
+
+There is a related issue: calling `refs.<name>.exec$()` at the top level of a component (during creation) also fails, because elements haven't been created yet — even for refs that ARE in the template. The element is only available after the render function completes and the DOM is built.
+
+Two options were considered:
+
+1. **Delay the call** — queue `exec$` calls and replay after mount. Adds complexity.
+2. **Agent-kit instruction** — document that `exec$` must only be used inside event handlers or effects, never at top-level component creation.
+
+**Decision: agent-kit instruction.** Top-level `exec$` is a misuse pattern. The null guard added for stub refs makes it a silent no-op instead of a crash, and the agent-kit instructions should document the correct usage pattern. Note: effects also won't work for the first invocation — the effect runs before elements are mounted, so `exec$` silently does nothing. Only event handlers are guaranteed to have elements available.
 
 ## Trade-offs
 

@@ -49,6 +49,7 @@ import {
     extractHeadlessCoordinate,
     filterContentNodes,
     isValidationError,
+    mergeContractStubRefs,
     resolveHeadlessImport,
     textEscape,
     validateForEachAccessor,
@@ -764,9 +765,10 @@ function renderHydrateHeadlessInstance(
         );
     }
 
-    // Generate ReferencesManager for the adopt inline template
+    // Merge contract ref stubs into adopt inline template refs (DL#138)
+    const adoptMergedRefs = mergeContractStubRefs(adoptInlineBody.refs, headlessImport.refs);
     const { renderedRefsManager, refsManagerImport } = renderReferenceManager(
-        adoptInlineBody.refs,
+        adoptMergedRefs,
         ReferenceManagerTarget.element,
     );
 
@@ -857,8 +859,9 @@ ${adoptInlineBody.rendered}
             createInlineBody = createRenderedChildren;
         }
 
+        const createMergedRefs = mergeContractStubRefs(createInlineBody.refs, headlessImport.refs);
         const { renderedRefsManager: createRefsManager, refsManagerImport: createRefsImport } =
-            renderReferenceManager(createInlineBody.refs, ReferenceManagerTarget.element);
+            renderReferenceManager(createMergedRefs, ReferenceManagerTarget.element);
 
         createRenderFnCode = `
 function ${createRenderFnName}(options?: RenderElementOptions): ${preRenderType} {

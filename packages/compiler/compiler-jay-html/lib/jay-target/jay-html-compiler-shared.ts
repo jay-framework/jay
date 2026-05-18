@@ -10,6 +10,7 @@ import {
     isPromiseType,
     JayUnknown,
     mkRef,
+    mkRefsTree,
     Ref,
     RefsTree,
     RenderFragment,
@@ -301,6 +302,40 @@ export function buildContractRefMap(refsTree: RefsTree): Map<string, Ref> {
     };
     walk(refsTree);
     return result;
+}
+
+/**
+ * Merge contract-declared refs into the template's RefsTree as autoRef stubs (DL#138).
+ * Refs already present in the template are kept as-is. Missing contract refs are added
+ * as autoRef entries so the runtime creates managed ref entries for them — identical to
+ * how keyed headless components handle unused refs via optimizeRefs().
+ */
+export function mergeContractStubRefs(templateRefs: RefsTree, contractRefs: RefsTree): RefsTree {
+    const templateRefNames = new Set(templateRefs.refs.map((r) => camelCase(r.ref)));
+    const stubRefs: Ref[] = [];
+    for (const contractRef of contractRefs.refs) {
+        if (!templateRefNames.has(camelCase(contractRef.ref))) {
+            stubRefs.push(
+                mkRef(
+                    contractRef.originalName,
+                    contractRef.originalName,
+                    camelCase(`ref ${contractRef.originalName}`),
+                    contractRef.repeated,
+                    true,
+                    contractRef.viewStateType,
+                    contractRef.elementType,
+                ),
+            );
+        }
+    }
+    if (stubRefs.length === 0) return templateRefs;
+    return mkRefsTree(
+        [...templateRefs.refs, ...stubRefs],
+        templateRefs.children,
+        templateRefs.repeated,
+        templateRefs.imported?.refsTypeName,
+        templateRefs.imported?.repeatedRefsTypeName,
+    );
 }
 
 export const COORD_ATTR = 'jay-coordinate-base';

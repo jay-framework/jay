@@ -177,7 +177,9 @@ References provide different APIs depending on whether they reference single ele
 
 #### Single Element References
 
-For single element references, use the `exec$` function to access the underlying DOM element:
+For single element references, use event handlers and the `exec$` function to access the underlying DOM element.
+
+**Important:** `exec$` must only be used inside event handlers — never at top-level component creation or in effects, because elements don't exist yet at that point. Top-level `exec$` calls silently do nothing.
 
 ```typescript
 function FormConstructor(props, refs: FormElementRefs) {
@@ -185,20 +187,12 @@ function FormConstructor(props, refs: FormElementRefs) {
   refs.submitButton.onclick(() => handleSubmit());
   refs.emailInput.oninput((event) => setEmail(event.target.value));
 
-  // DOM manipulation using exec$
-  refs.emailInput.exec$((element) => {
-    element.focus();
-    element.select();
-  });
-
-  refs.submitButton.exec$((element) => {
-    element.disabled = true;
-  });
-
-  // Property access using exec$
-  refs.emailInput.exec$((element) => {
-    const emailValue = element.value;
-    console.log('Email value:', emailValue);
+  // DOM manipulation using exec$ — inside an event handler
+  refs.submitButton.onclick(() => {
+    refs.emailInput.exec$((element) => {
+      element.focus();
+      element.select();
+    });
   });
 }
 ```
