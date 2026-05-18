@@ -658,6 +658,11 @@ Production build tested on:
 - `jay-stack serve --role=renderer` mode
 - CLI command to rebuild by contract + params: `jay-stack rebuild --contract=product-page --params='{"slug":"blue-widget"}'` (same invalidation model as webhooks — find routes using that contract with those params, re-run per-instance pipeline without a full rebuild)
 
+**Version derivation and artifact updates:**
+
+- Build version is currently hardcoded to `v1` — need to define how the version is derived (e.g., from project `package.json` version, git hash, or auto-incrementing). The version must represent the binary version of the software/deployment — data changes within the same code version don't bump the version, they update artifacts in-place within the current version bucket.
+- Main server needs a mechanism to learn about updated routes/artifacts after a rebuild (CLI or API). Options: the rebuild command/API notifies the main server to reload affected routes, or the main server watches `build-metadata.json` for changes. Currently the main server loads everything at startup and has no reload path.
+
 **Production hardening:**
 
 - Error pages (custom 404/500 templates)
