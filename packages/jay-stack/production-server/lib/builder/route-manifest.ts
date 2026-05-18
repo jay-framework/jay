@@ -31,7 +31,6 @@ export function buildRouteEntry(route: JayRoute, serverModulePath: string): Rout
         pattern: route.rawRoute,
         segments: convertSegments(route.segments),
         serverModule: serverModulePath,
-        jayHtmlPath: route.jayHtmlPath,
         componentExport: route.componentExport,
         instances: [],
     };

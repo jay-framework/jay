@@ -266,7 +266,6 @@ export async function buildInstance(
         JSON.stringify({
             slowViewState,
             carryForward,
-            sourcePath: route.jayHtmlPath,
         }),
         'utf-8',
     );

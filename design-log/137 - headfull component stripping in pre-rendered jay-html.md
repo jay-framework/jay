@@ -553,18 +553,18 @@ Built and served `examples/jay-stack/fake-shop` — a real project with 10 route
 
 **`yarn serve` route test results:**
 
-| Route | Status | Notes |
-|-------|--------|-------|
-| `/` | 200 | Homepage with mood tracker, product widgets (static + slowForEach + interactive forEach) |
-| `/products` | 200 | Product listing page |
-| `/products/gaming-laptop` | 200 | Dynamic product page with keyed headless (product-rating) |
-| `/cart` | 200 | Cart page |
-| `/checkout` | 200 | Checkout page |
-| `/ui-demo` | 200 | UI kit demo (popover, carousel, clipboard, etc.) |
-| `/mood-stats` | 200 | Plugin route (mood-tracker-plugin, external package) |
-| `/upload` | — | Not tested (file upload) |
-| `/inventory-check` | — | Not tested |
-| `/thankyou` | — | Not tested |
+| Route                     | Status | Notes                                                                                    |
+| ------------------------- | ------ | ---------------------------------------------------------------------------------------- |
+| `/`                       | 200    | Homepage with mood tracker, product widgets (static + slowForEach + interactive forEach) |
+| `/products`               | 200    | Product listing page                                                                     |
+| `/products/gaming-laptop` | 200    | Dynamic product page with keyed headless (product-rating)                                |
+| `/cart`                   | 200    | Cart page                                                                                |
+| `/checkout`               | 200    | Checkout page                                                                            |
+| `/ui-demo`                | 200    | UI kit demo (popover, carousel, clipboard, etc.)                                         |
+| `/mood-stats`             | 200    | Plugin route (mood-tracker-plugin, external package)                                     |
+| `/upload`                 | —      | Not tested (file upload)                                                                 |
+| `/inventory-check`        | —      | Not tested                                                                               |
+| `/thankyou`               | —      | Not tested                                                                               |
 
 All 7 tested routes return 200. Verified in browser — pages render correctly with interactive features.
 
@@ -591,6 +591,7 @@ All 7 tested routes return 200. Verified in browser — pages render correctly w
 The core DL#137 goal is achieved: **the serve-time code path no longer parses jay-html or reads source files**. All component discovery, contract resolution, and module path mapping happens at build time and is serialized to `page-parts.json`. The production server loads this config and imports the listed modules — no compiler, no import resolver, no source files needed.
 
 Remaining work:
+
 - Phase 4 cleanup (remove dead imports from serve-time paths)
 - Remove `jayHtmlPath` from route manifest (or make optional)
 - Remove `sourcePath` from cache.json (or make it relative)
