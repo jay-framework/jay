@@ -584,7 +584,7 @@ export function renderReferenceManager(
         const childRefManager =
             childRefManagerMembers.length > 0
                 ? `, {
-  ${childRefManagerMembers.join(',\n')}         
+  ${childRefManagerMembers.join(',\n')}
 }`
                 : '';
 

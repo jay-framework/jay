@@ -110,7 +110,13 @@ type _HeadlessProductCard1ElementPreRender = [ProductCardRefs, _HeadlessProductC
 function _headlessProductCard1Render(
     options?: RenderElementOptions,
 ): _HeadlessProductCard1ElementPreRender {
-    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [refManager, [refAddToCart]] = ReferencesManager.for(
+        options,
+        ['add to cart'],
+        [],
+        [],
+        [],
+    );
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('article', { class: 'compact-card' }, [

@@ -167,7 +167,9 @@ export class HTMLElementRefsImpl<ViewState, ElementType extends HTMLElement>
     }
 
     exec$<T>(handler: (elem: ElementType, viewState: ViewState) => T): Promise<T> {
-        return [...this.elements][0].exec$(handler);
+        const first = [...this.elements][0];
+        if (!first) return Promise.resolve(undefined);
+        return first.exec$(handler);
     }
 }
 
@@ -315,6 +317,7 @@ export class HTMLElementRefImpl<ViewState, ElementType extends HTMLElement>
     }
 
     exec$<T>(handler: (elem: ElementType, viewState: ViewState) => T): Promise<T> {
+        if (!this.element) return Promise.resolve(undefined);
         return new Promise((resolve, reject) => {
             try {
                 resolve(handler(this.element, this.viewState));

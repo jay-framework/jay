@@ -113,7 +113,13 @@ type _HeadlessProductCard1ElementPreRender = [ProductCardRefs, _HeadlessProductC
 function _headlessProductCard1HydrateRender(
     options?: RenderElementOptions,
 ): _HeadlessProductCard1ElementPreRender {
-    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [refManager, [refAddToCart]] = ReferencesManager.for(
+        options,
+        ['add to cart'],
+        [],
+        [],
+        [],
+    );
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
             adoptElement('S2/0', {}, [adoptText('S2/0/1', (vs) => vs.price)]),
@@ -129,7 +135,13 @@ const _HeadlessProductCard1 = makeHeadlessInstanceComponent(
 function _headlessProductCard1Render(
     options?: RenderElementOptions,
 ): _HeadlessProductCard1ElementPreRender {
-    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [refManager, [refAddToCart]] = ReferencesManager.for(
+        options,
+        ['add to cart'],
+        [],
+        [],
+        [],
+    );
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', { class: 'promo' }, [
@@ -192,7 +204,13 @@ type _HeadlessProductCard3ElementPreRender = [ProductCardRefs, _HeadlessProductC
 function _headlessProductCard3HydrateRender(
     options?: RenderElementOptions,
 ): _HeadlessProductCard3ElementPreRender {
-    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [refManager, [refAddToCart]] = ReferencesManager.for(
+        options,
+        ['add to cart'],
+        [],
+        [],
+        [],
+    );
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
             adoptElement('S6/0', {}, [adoptText('S6/0/1', (vs) => vs.price)]),
