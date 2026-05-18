@@ -561,10 +561,18 @@ Built and served `examples/jay-stack/fake-shop` — a real project with 10 route
 | `/cart` | 200 | Cart page |
 | `/checkout` | 200 | Checkout page |
 | `/ui-demo` | 200 | UI kit demo (popover, carousel, clipboard, etc.) |
-| `/mood-stats` | 500 | Pre-existing issue: mood-tracker plugin's fast render fails |
+| `/mood-stats` | 200 | Plugin route (mood-tracker-plugin, external package) |
 | `/upload` | — | Not tested (file upload) |
 | `/inventory-check` | — | Not tested |
 | `/thankyou` | — | Not tested |
+
+All 7 tested routes return 200. Verified in browser — pages render correctly with interactive features.
+
+**Bugs found and fixed during verification:**
+
+1. **Bracket escaping in module paths** — `page-parts.json` for dynamic routes (e.g., `/products/[slug]`) wrote `server/pages/products/[slug]/page.js` but the build pipeline escapes brackets to underscores (`server/pages/products/_slug_/page.js`). Fixed by adding `.replace(/\[/g, '_').replace(/\]/g, '_')` to match `build-pipeline.ts:239`. Symptom: `/products/gaming-laptop` rendered SSR HTML but client hydration crashed (keyed headless data missing from fast ViewState because the page module import failed silently).
+
+2. **Plugin route source type** — Plugin-provided pages (e.g., mood-stats from mood-tracker-plugin) had their module path stored as `source: 'local'` with an absolute filesystem path. The serve-time loader joined this with buildDir, creating a nonsensical path. Fixed by detecting plugin routes (`route.componentExport` set) and using `source: 'npm'` so the path is imported directly. Symptom: `/mood-stats` returned 500 ("Cannot read properties of undefined (reading 'fastRender')").
 
 **Remaining source file references in build output:**
 
@@ -572,11 +580,11 @@ Built and served `examples/jay-stack/fake-shop` — a real project with 10 route
 
 2. **`cache.json`** — `sourcePath` field per instance points to source jay-html. Informational only, not used at serve time for file resolution.
 
-3. **`page-parts.json`** — **clean**. All module paths relative to buildDir (`server/pages/...`, `server/plugins/...`). No absolute paths, no source file references.
+3. **`page-parts.json`** — **clean**. Local module paths relative to buildDir (`server/pages/...`, `server/plugins/...`). Plugin module paths are absolute (to the NPM package dist). No source file references.
 
-**New issue discovered: local plugin init in production**
+**Pre-existing issue: local plugin init in production**
 
-`discoverPluginsWithInit` scans `process.cwd()` for local plugins and tries to `import()` their source directory (e.g., `src/plugins/product-rating`). This fails because directory imports aren't supported in ES modules without Vite. The plugin's compiled code exists at `build/v1/server/plugins/product-rating/...` but the init discovery doesn't know to look there. This is separate from DL#137 — it's about plugin init discovery, not page parts — but it affects production serving of projects with local plugins that have `_serverInit`.
+`discoverPluginsWithInit` scans `process.cwd()` for local plugins and tries to `import()` their source directory (e.g., `src/plugins/product-rating`). This fails because directory imports aren't supported in ES modules without Vite. The plugin's compiled code exists at `build/v1/server/plugins/product-rating/...` but the init discovery doesn't know to look there. This is separate from DL#137 — it's about plugin init discovery, not page parts — and it also fails on main branch.
 
 **Summary:**
 
