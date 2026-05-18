@@ -1,0 +1,6 @@
+name: cart-badge
+module: ./index
+contracts:
+  - name: cart-badge
+    contract: ./cart-badge.jay-contract
+    component: cartBadge

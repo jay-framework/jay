@@ -19,7 +19,6 @@ export interface RouteEntry {
     pattern: string;
     segments: RouteSegment[];
     serverModule: string;
-    jayHtmlPath?: string;
     trackByMap?: Record<string, string>;
     contracts?: string[];
     componentExport?: string;

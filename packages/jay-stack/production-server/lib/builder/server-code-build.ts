@@ -64,7 +64,6 @@ export async function discoverServerEntries(
                     if (
                         file.endsWith('.ts') &&
                         !file.endsWith('.d.ts') &&
-                        file !== 'init.ts' &&
                         file !== 'page.ts'
                     ) {
                         const entryName = `${subDir}/${dir.name}/${file.replace(/\.ts$/, '')}`;

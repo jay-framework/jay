@@ -31,6 +31,9 @@ function fixTrailingNewlines(filePath) {
     try {
         const content = readFileSync(filePath, 'utf-8');
 
+        // Skip empty files — nothing to fix
+        if (content.length === 0 || content.trimEnd().length === 0) return false;
+
         // Remove all trailing whitespace (spaces, tabs, newlines) and add exactly one newline
         const fixed = content.trimEnd() + '\n';
 

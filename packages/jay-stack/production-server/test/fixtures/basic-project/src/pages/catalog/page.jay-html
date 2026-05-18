@@ -1,0 +1,17 @@
+<html>
+<head>
+    <script type="application/jay-headless"
+            plugin="cart-badge"
+            contract="cart-badge"></script>
+    <script type="application/jay-data" contract="./page.jay-contract">
+    </script>
+</head>
+<body>
+    <div>
+        <h1>{catalogTitle}</h1>
+        <jay:cart-badge label="Items">
+            <span class="badge">{badgeLabel}: {count}</span>
+        </jay:cart-badge>
+    </div>
+</body>
+</html>

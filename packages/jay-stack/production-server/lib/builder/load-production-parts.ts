@@ -28,6 +28,16 @@ export interface KeyedPartModule {
     exportName: string;
 }
 
+export interface HeadlessModuleInfo {
+    modulePath: string;
+    exportName: string;
+    isLocal: boolean;
+    contractName?: string;
+    key?: string;
+    propNames?: string[];
+    contractInfo?: { contractName: string; metadata?: Record<string, unknown> };
+}
+
 export interface ProductionPageParts {
     parts: DevServerPagePart[];
     headlessContracts: HeadlessContractInfo[];
@@ -35,6 +45,7 @@ export interface ProductionPageParts {
     discoveredInstances: DiscoveredHeadlessInstance[];
     forEachInstances: ForEachHeadlessInstance[];
     keyedPartModules: KeyedPartModule[];
+    headlessModuleInfos: HeadlessModuleInfo[];
     serverTrackByMap?: Record<string, string>;
     clientTrackByMap?: Record<string, string>;
 }
@@ -70,6 +81,7 @@ export async function loadProductionPageParts(
 
     const headlessInstanceComponents: HeadlessInstanceComponent[] = [];
     const keyedPartModules: KeyedPartModule[] = [];
+    const headlessModuleInfos: HeadlessModuleInfo[] = [];
 
     const headlessImports = (jayHtml as any).headlessImports ?? [];
     getLogger().info(
@@ -88,7 +100,6 @@ export async function loadProductionPageParts(
                 let compiledPath = path.join(serverBuildDir, relativeToSrc);
                 compiledPath = compiledPath.replace(/\.ts$/, '.js');
                 if (!compiledPath.endsWith('.js')) {
-                    // Check for directory with index.js (e.g., components/kitan-header/index.js)
                     const indexPath = path.join(compiledPath, 'index.js');
                     try {
                         await fs.access(indexPath);
@@ -109,26 +120,30 @@ export async function loadProductionPageParts(
         const headlessCompDef = headlessModule[name];
 
         if (headlessImport.key) {
-            // For client import: NPM packages use /client entry, local uses absolute source path
             const clientModulePath = isLocalModule
                 ? path.resolve(dirName, module)
                 : `${module}/client`;
+            const ci = headlessImport.contract
+                ? { contractName: headlessImport.contract.name, metadata: headlessImport.metadata }
+                : undefined;
             parts.push({
                 key: headlessImport.key,
                 compDefinition: headlessCompDef,
                 clientImport: '',
                 clientPart: '',
-                contractInfo: headlessImport.contract
-                    ? {
-                          contractName: headlessImport.contract.name,
-                          metadata: headlessImport.metadata,
-                      }
-                    : undefined,
+                contractInfo: ci,
             });
             keyedPartModules.push({
                 key: headlessImport.key,
                 modulePath: clientModulePath,
                 exportName: name,
+            });
+            headlessModuleInfos.push({
+                modulePath,
+                exportName: name,
+                isLocal: isLocalModule,
+                key: headlessImport.key,
+                contractInfo: ci,
             });
         }
 
@@ -137,6 +152,13 @@ export async function loadProductionPageParts(
                 contractName: headlessImport.contractName,
                 compDefinition: headlessCompDef,
                 contract: headlessImport.contract,
+            });
+            headlessModuleInfos.push({
+                modulePath,
+                exportName: name,
+                isLocal: isLocalModule,
+                contractName: headlessImport.contractName,
+                propNames: headlessImport.contract.props?.map((p: any) => p.name) ?? [],
             });
         }
     }
@@ -178,7 +200,150 @@ export async function loadProductionPageParts(
         discoveredInstances,
         forEachInstances,
         keyedPartModules,
+        headlessModuleInfos,
         serverTrackByMap: (jayHtml as any).serverTrackByMap,
         clientTrackByMap: (jayHtml as any).clientTrackByMap,
+    };
+}
+
+// ── Page Parts Config (DL#137) ──
+
+interface PagePartsConfigEntry {
+    modulePath: string;
+    exportName: string;
+    source: 'npm' | 'local';
+}
+
+export interface PagePartsConfig {
+    parts: Array<
+        PagePartsConfigEntry & {
+            key?: string;
+            contractInfo?: { contractName: string; metadata?: Record<string, unknown> };
+        }
+    >;
+    instanceComponents: Array<
+        PagePartsConfigEntry & {
+            contractName: string;
+            propNames: string[];
+        }
+    >;
+    forEachInstances: Array<{
+        contractName: string;
+        forEachPath: string;
+        trackBy: string;
+        propBindings: Record<string, string>;
+        coordinateSuffix: string;
+    }>;
+}
+
+export function buildPagePartsConfig(
+    pageParts: ProductionPageParts,
+    pageServerModule: string,
+    pageExportName: string,
+    buildDir: string,
+    pageIsPlugin: boolean = false,
+): PagePartsConfig {
+    const parts: PagePartsConfig['parts'] = [];
+
+    if (pageParts.parts.length > 0 && pageParts.parts[0].compDefinition) {
+        parts.push({
+            modulePath: pageServerModule,
+            exportName: pageExportName,
+            source: pageIsPlugin ? 'npm' : 'local',
+        });
+    }
+
+    for (const info of pageParts.headlessModuleInfos) {
+        if (info.key) {
+            parts.push({
+                modulePath: info.isLocal
+                    ? path.relative(buildDir, info.modulePath)
+                    : info.modulePath,
+                exportName: info.exportName,
+                source: info.isLocal ? 'local' : 'npm',
+                key: info.key,
+                contractInfo: info.contractInfo,
+            });
+        }
+    }
+
+    const instanceComponents: PagePartsConfig['instanceComponents'] = [];
+    for (const info of pageParts.headlessModuleInfos) {
+        if (info.contractName) {
+            instanceComponents.push({
+                modulePath: info.isLocal
+                    ? path.relative(buildDir, info.modulePath)
+                    : info.modulePath,
+                exportName: info.exportName,
+                source: info.isLocal ? 'local' : 'npm',
+                contractName: info.contractName,
+                propNames: info.propNames ?? [],
+            });
+        }
+    }
+
+    return {
+        parts,
+        instanceComponents,
+        forEachInstances: pageParts.forEachInstances.map((fi) => ({
+            contractName: fi.contractName,
+            forEachPath: fi.forEachPath,
+            trackBy: fi.trackBy,
+            propBindings: fi.propBindings,
+            coordinateSuffix: fi.coordinateSuffix,
+        })),
+    };
+}
+
+export interface ServeTimeContract {
+    props: Array<{ name: string }>;
+}
+
+export async function loadPagePartsFromConfig(
+    configPath: string,
+    buildDir: string,
+): Promise<ProductionPageParts> {
+    const config: PagePartsConfig = JSON.parse(await fs.readFile(configPath, 'utf-8'));
+
+    async function importModule(entry: PagePartsConfigEntry): Promise<any> {
+        if (entry.source === 'local') {
+            return import(path.join(buildDir, entry.modulePath));
+        }
+        return import(entry.modulePath);
+    }
+
+    const parts: DevServerPagePart[] = [];
+    for (const entry of config.parts) {
+        const mod = await importModule(entry);
+        parts.push({
+            compDefinition: mod[entry.exportName] ?? mod.default,
+            key: entry.key,
+            clientImport: '',
+            clientPart: '',
+            contractInfo: entry.contractInfo,
+        });
+    }
+
+    const headlessInstanceComponents: HeadlessInstanceComponent[] = [];
+    for (const entry of config.instanceComponents) {
+        const mod = await importModule(entry);
+        const serveTimeContract: ServeTimeContract = {
+            props: entry.propNames.map((name) => ({ name })),
+        };
+        headlessInstanceComponents.push({
+            contractName: entry.contractName,
+            compDefinition: mod[entry.exportName] ?? mod.default,
+            contract: serveTimeContract as any,
+        });
+    }
+
+    return {
+        parts,
+        headlessContracts: [],
+        headlessInstanceComponents,
+        discoveredInstances: [],
+        forEachInstances: config.forEachInstances as ForEachHeadlessInstance[],
+        keyedPartModules: [],
+        headlessModuleInfos: [],
     };
 }

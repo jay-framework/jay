@@ -12,7 +12,7 @@ import type { JayRollupConfig } from '@jay-framework/compiler-jay-stack';
 import type { JayRoute } from '@jay-framework/stack-route-scanner';
 import type { Contract } from '@jay-framework/compiler-jay-html';
 import type { InstanceEntry } from '../types';
-import { loadProductionPageParts } from './load-production-parts';
+import { loadProductionPageParts, buildPagePartsConfig } from './load-production-parts';
 import { compileServerElement } from './server-element-compile';
 import { generateHydrationEntry } from './hydration-entry-gen';
 import { buildInstanceClient } from './instance-client-build';
@@ -105,6 +105,38 @@ export async function buildInstance(
         ctx.tsConfigFilePath,
         serverBuildDir,
     );
+
+    // Write page-parts.json (DL#137) — once per route, first instance writes it
+    const pagePartsConfigPath = path.join(instanceDir, 'page-parts.json');
+    try {
+        await fs.access(pagePartsConfigPath);
+    } catch {
+        const exportName = (route as any).componentExport || 'page';
+        let pageServerModule = '';
+        let pageIsPlugin = false;
+        if (route.compPath) {
+            if (route.componentExport) {
+                pageServerModule = route.compPath;
+                pageIsPlugin = true;
+            } else {
+                const relativePath = path.relative(ctx.projectRoot, route.compPath);
+                pageServerModule = relativePath
+                    .replace(/^src\//, 'server/')
+                    .replace(/\.ts$/, '.js')
+                    .replace(/\[/g, '_')
+                    .replace(/\]/g, '_');
+            }
+        }
+        const config = buildPagePartsConfig(
+            pageParts,
+            pageServerModule,
+            exportName,
+            ctx.buildDir,
+            pageIsPlugin,
+        );
+        await fs.writeFile(pagePartsConfigPath, JSON.stringify(config, null, 2));
+        logger.info(`[Build] Page parts config: ${routeDir}/page-parts.json`);
+    }
 
     // 1. Slow render (page + keyed headless components)
     const slowPhase = new DevSlowlyChangingPhase();
@@ -244,7 +276,6 @@ export async function buildInstance(
         JSON.stringify({
             slowViewState,
             carryForward,
-            sourcePath: route.jayHtmlPath,
         }),
         'utf-8',
     );

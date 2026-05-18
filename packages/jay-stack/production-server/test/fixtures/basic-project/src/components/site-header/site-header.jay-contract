@@ -1,0 +1,14 @@
+name: SiteHeader
+props:
+  - name: logoUrl
+    type: string
+    required: true
+tags:
+  - tag: logoUrl
+    type: data
+    dataType: string
+    phase: slow
+  - tag: headerTitle
+    type: data
+    dataType: string
+    phase: slow
