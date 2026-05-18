@@ -491,9 +491,9 @@ The main server is a plain Node.js HTTP server. It loads pre-compiled JS modules
 
 #### Future Phases
 
-4. **Plugin routes** — plugin-provided pages (DL#130) not yet handled in production build
-5. **Plugin init at serve time** — plugin `_serverInit()` not called during production server startup
-6. **Head tags** — SEO head tags from fast phase not injected into SSR `<head>` (DL#127)
+4. ~~**Plugin routes**~~ — Done. `scanPluginRoutes()` discovers routes from `plugin.yaml`, full build + serve support.
+5. ~~**Plugin init at serve time**~~ — Done. `startMainServer()` runs `_serverInit()` in dependency order.
+6. ~~**Head tags**~~ — Done. SEO head tags from slow + fast phases injected into SSR `<head>`.
 7. **Slow render server** — `jay-stack serve --role=renderer` with webhook-based invalidation (DL#134c)
 8. **Source hash** — `build-metadata.json` source hash not computed yet (needed for restart validation)
 9. **Query parameters** — `props.query` not passed through to fast render properly
@@ -642,14 +642,13 @@ Production build tested on:
 - Shared chunks: framework + plugin client packages, browser-cached
 - Total JS per session: ~11.7 MB → ~600 KB (store-light)
 
+### Resolved (previously pending)
+
+- ~~**DL#136 — loadParams route deduplication**~~ — Complete. Materialize → dedupe → build pipeline implemented with 25 passing tests. `inferredParams` filtering, optional segment defaults, URL-based deduplication all working.
+- ~~**Plugin routes**~~ — Complete. `scanPluginRoutes()` discovers routes from `plugin.yaml`, merges with project routes (project takes precedence), full build + serve support.
+- ~~**Plugin `_serverInit()` at serve time**~~ — Complete. `startMainServer()` calls `discoverPluginsWithInit` + `sortPluginsByDependencies`, runs `_serverInit()` in dependency order, stores results via `setClientInitData`.
+
 ### Remaining
-
-**DL#136 — loadParams route deduplication (in progress):**
-
-- `wix-stores` `loadSearchParams` needs to return `prefix` in results for correct route splitting
-- `wix-stores` `loadSearchParams` needs to return default category entry (e.g., `{ prefix: "polgat", category: "polgat" }`) for root listing pages
-- Golf project `jay-params` needs `category` default values added
-- End-to-end verification on golf (kitan/polgat split producing ~1900 each, not ~3800 each)
 
 **DL#134c — Slow render server (not started):**
 
@@ -657,6 +656,7 @@ Production build tested on:
 - `makeWebhook()` builder for invalidation
 - Per-contract invalidation triggering targeted re-renders
 - `jay-stack serve --role=renderer` mode
+- CLI command to rebuild by contract + params: `jay-stack rebuild --contract=product-page --params='{"slug":"blue-widget"}'` (same invalidation model as webhooks — find routes using that contract with those params, re-run per-instance pipeline without a full rebuild)
 
 **Production hardening:**
 
