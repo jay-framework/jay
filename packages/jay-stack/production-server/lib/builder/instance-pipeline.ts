@@ -113,17 +113,27 @@ export async function buildInstance(
     } catch {
         const exportName = (route as any).componentExport || 'page';
         let pageServerModule = '';
+        let pageIsPlugin = false;
         if (route.compPath) {
             if (route.componentExport) {
                 pageServerModule = route.compPath;
+                pageIsPlugin = true;
             } else {
                 const relativePath = path.relative(ctx.projectRoot, route.compPath);
                 pageServerModule = relativePath
                     .replace(/^src\//, 'server/')
-                    .replace(/\.ts$/, '.js');
+                    .replace(/\.ts$/, '.js')
+                    .replace(/\[/g, '_')
+                    .replace(/\]/g, '_');
             }
         }
-        const config = buildPagePartsConfig(pageParts, pageServerModule, exportName, ctx.buildDir);
+        const config = buildPagePartsConfig(
+            pageParts,
+            pageServerModule,
+            exportName,
+            ctx.buildDir,
+            pageIsPlugin,
+        );
         await fs.writeFile(pagePartsConfigPath, JSON.stringify(config, null, 2));
         logger.info(`[Build] Page parts config: ${routeDir}/page-parts.json`);
     }

@@ -241,6 +241,7 @@ export function buildPagePartsConfig(
     pageServerModule: string,
     pageExportName: string,
     buildDir: string,
+    pageIsPlugin: boolean = false,
 ): PagePartsConfig {
     const parts: PagePartsConfig['parts'] = [];
 
@@ -248,7 +249,7 @@ export function buildPagePartsConfig(
         parts.push({
             modulePath: pageServerModule,
             exportName: pageExportName,
-            source: 'local',
+            source: pageIsPlugin ? 'npm' : 'local',
         });
     }
 
