@@ -1,22 +1,11 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
-import YAML from 'yaml';
-import { validatePlugin, type ValidationResult } from '@jay-framework/plugin-validator';
-import { startDevServer } from './server';
-import { validateJayFiles, printJayValidationResult } from './validate';
-import {
-    materializeContracts,
-    listContracts,
-    scanPlugins,
-    type PluginsIndex,
-} from '@jay-framework/stack-server-runtime';
-import path from 'node:path';
-import fs from 'node:fs/promises';
-import fsSync from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { createViteForCli } from '@jay-framework/dev-server';
-import { setDevLogger, createDevLogger, getLogger, type LogLevel } from '@jay-framework/logger';
+import { getLogger } from '@jay-framework/logger';
 import { initializeServicesForCli } from './cli-services';
+import { runDev } from './run-dev';
+import { runBuild, runServe, runRebuild } from './run-production';
+import { runValidate, runValidatePlugin } from './run-validate';
+import { runAgentKit } from './run-agent-kit';
 import { runAction } from './run-action';
 import { runParams } from './run-params';
 import { runSetup } from './run-setup';
@@ -28,75 +17,33 @@ program
     .description('Jay Stack CLI - Development server and plugin validation')
     .version('0.9.0');
 
-// Dev server command (existing functionality)
 program
-    .command('dev [path]')
+    .command('dev')
     .description('Start the Jay Stack development server')
+    .option('-p, --path <path>', 'Project root (default: cwd)')
     .option('-v, --verbose', 'Enable verbose logging output')
     .option('-q, --quiet', 'Suppress all non-error output')
     .option('--test-mode', 'Enable test endpoints (/_jay/health, /_jay/shutdown)')
     .option('--timeout <seconds>', 'Auto-shutdown after N seconds (implies --test-mode)', parseInt)
-    .action(async (path, options) => {
+    .action(async (options) => {
         try {
-            // Determine log level from flags
-            const logLevel: LogLevel = options.quiet
-                ? 'silent'
-                : options.verbose
-                  ? 'verbose'
-                  : 'info';
-
-            // Set up dev logger with timing support before anything else
-            setDevLogger(createDevLogger(logLevel));
-
-            // --timeout implies --test-mode
-            const testMode = options.testMode || options.timeout !== undefined;
-
-            await startDevServer({
-                projectPath: path || process.cwd(),
-                testMode,
-                timeout: options.timeout,
-                logLevel,
-            });
+            await runDev(options.path, options);
         } catch (error: any) {
             getLogger().error(chalk.red('Error starting dev server:') + ' ' + error.message);
             process.exit(1);
         }
     });
 
-// Production build command
 program
-    .command('build [path]')
+    .command('build')
     .description('Build production artifacts')
-    .option('--version <n>', 'Build version number', '1')
+    .option('-p, --path <path>', 'Project root (default: cwd)')
+    .option('--version <n>', 'Build version number (default: from package.json)')
     .option('--no-minify', 'Disable minification (useful for debugging)')
     .option('-v, --verbose', 'Enable verbose logging output')
-    .action(async (projectPath, options) => {
+    .action(async (options) => {
         try {
-            const logLevel: LogLevel = options.verbose ? 'verbose' : 'info';
-            setDevLogger(createDevLogger(logLevel));
-
-            const resolvedPath = path.resolve(projectPath || process.cwd());
-            const jayConfigPath = path.join(resolvedPath, '.jay');
-            let pagesBase = './src/pages';
-
-            try {
-                const jayConfig = YAML.parse(await fs.readFile(jayConfigPath, 'utf-8'));
-                pagesBase = jayConfig?.devServer?.pagesBase || pagesBase;
-            } catch {
-                // No .jay config, use defaults
-            }
-
-            const { buildVersion } = await import('@jay-framework/production-server');
-            await buildVersion({
-                version: parseInt(options.version, 10),
-                projectRoot: resolvedPath,
-                pagesRoot: path.resolve(resolvedPath, pagesBase),
-                buildRoot: path.join(resolvedPath, 'build'),
-                publicBasePath: '/',
-                concurrency: 4,
-                tsConfigFilePath: path.join(resolvedPath, 'tsconfig.json'),
-                minify: options.minify,
-            });
+            await runBuild(options.path, options);
         } catch (error: any) {
             getLogger().error(chalk.red('Build failed:') + ' ' + error.message);
             if (error.stack) getLogger().error(error.stack);
@@ -104,25 +51,17 @@ program
         }
     });
 
-// Production serve command
 program
-    .command('serve [path]')
+    .command('serve')
     .description('Start production server')
-    .option('--version <n>', 'Build version to serve', '1')
+    .option('-p, --path <path>', 'Project root (default: cwd)')
+    .option('--version <n>', 'Build version to serve (default: from package.json)')
     .option('--port <n>', 'Port number', '3000')
-    .action(async (projectPath, options) => {
+    .option('--role <role>', 'Server role: main (default) or renderer', 'main')
+    .option('-v, --verbose', 'Enable verbose logging output')
+    .action(async (options) => {
         try {
-            setDevLogger(createDevLogger('info'));
-
-            const resolvedPath = path.resolve(projectPath || process.cwd());
-
-            const { startMainServer } = await import('@jay-framework/production-server');
-            await startMainServer({
-                buildRoot: path.join(resolvedPath, 'build'),
-                version: parseInt(options.version, 10),
-                port: parseInt(options.port, 10),
-                publicBasePath: '/',
-            });
+            await runServe(options.path, options);
         } catch (error: any) {
             getLogger().error(chalk.red('Server failed:') + ' ' + error.message);
             if (error.stack) getLogger().error(error.stack);
@@ -130,25 +69,32 @@ program
         }
     });
 
-// Jay file validation command
 program
-    .command('validate [path]')
-    .description('Validate all .jay-html and .jay-contract files in the project')
+    .command('rebuild <contract>')
+    .description('Rebuild instances for a contract (e.g., jay-stack rebuild product-page)')
+    .option('--params <json>', 'JSON params to rebuild specific instance (e.g., \'{"slug":"x"}\')')
+    .option('--version <n>', 'Build version (default: from package.json)')
+    .option('-p, --path <path>', 'Project root (default: cwd)')
+    .option('-v, --verbose', 'Enable verbose logging output')
+    .action(async (contract, options) => {
+        try {
+            await runRebuild(options.path, { ...options, contract });
+        } catch (error: any) {
+            getLogger().error(chalk.red('Rebuild failed:') + ' ' + error.message);
+            if (error.stack) getLogger().error(error.stack);
+            process.exit(1);
+        }
+    });
+
+program
+    .command('validate')
+    .description('Validate all .jay-html and .jay-contract files')
+    .option('-p, --path <path>', 'Scan root (default: cwd)')
     .option('-v, --verbose', 'Show per-file validation status')
     .option('--json', 'Output results as JSON')
-    .action(async (scanPath, options) => {
+    .action(async (options) => {
         try {
-            const result = await validateJayFiles({
-                path: scanPath,
-                verbose: options.verbose,
-                json: options.json,
-            });
-
-            printJayValidationResult(result, options);
-
-            if (!result.valid) {
-                process.exit(1);
-            }
+            await runValidate(options.path, options);
         } catch (error: any) {
             if (options.json) {
                 getLogger().important(
@@ -161,363 +107,35 @@ program
         }
     });
 
-// Plugin validation command (new)
 program
-    .command('validate-plugin [path]')
+    .command('validate-plugin')
     .description('Validate a Jay Stack plugin package')
+    .option('-p, --path <path>', 'Plugin root (default: cwd)')
     .option('--local', 'Validate local plugins in src/plugins/')
     .option('-v, --verbose', 'Show detailed validation output')
     .option('--strict', 'Treat warnings as errors (for CI)')
     .option('--generate-types', 'Generate .d.ts files for contracts')
-    .action(async (pluginPath, options) => {
+    .action(async (options) => {
         try {
-            const result = await validatePlugin({
-                pluginPath: pluginPath || process.cwd(),
-                local: options.local,
-                verbose: options.verbose,
-                strict: options.strict,
-                generateTypes: options.generateTypes,
-            });
-
-            printValidationResult(result, options.verbose);
-
-            if (!result.valid || (options.strict && result.warnings.length > 0)) {
-                process.exit(1);
-            }
+            await runValidatePlugin(options.path, options);
         } catch (error: any) {
             getLogger().error(chalk.red('Validation error:') + ' ' + error.message);
             process.exit(1);
         }
     });
 
-/** Agent-kit role names. Design Log #125. */
-type AgentKitRole = 'designer' | 'developer' | 'plugin';
-const ALL_ROLES: AgentKitRole[] = ['designer', 'developer', 'plugin'];
-
-/**
- * Copies agent-kit documentation files from the template folder into role subfolders.
- * Framework-provided guides are always refreshed to ensure the latest content.
- * Template folder: stack-cli/agent-kit-template/{role}/ (Design Log #85, #125).
- */
-async function ensureAgentKitDocs(
-    projectRoot: string,
-    _force?: boolean,
-    mode?: string,
-): Promise<void> {
-    const agentKitDir = path.join(projectRoot, 'agent-kit');
-
-    // Resolve template folder: ../agent-kit-template/ relative to dist/index.js (or lib/ in dev)
-    const thisDir = path.dirname(fileURLToPath(import.meta.url));
-    const templateDir = path.resolve(thisDir, '..', 'agent-kit-template');
-
-    const roles: AgentKitRole[] =
-        mode && ALL_ROLES.includes(mode as AgentKitRole) ? [mode as AgentKitRole] : ALL_ROLES;
-
-    for (const role of roles) {
-        const roleTemplateDir = path.join(templateDir, role);
-        const roleOutputDir = path.join(agentKitDir, role);
-
-        let files: string[];
-        try {
-            files = (await fs.readdir(roleTemplateDir)).filter((f) => f.endsWith('.md'));
-        } catch {
-            // Role template folder doesn't exist yet — skip silently
-            continue;
-        }
-
-        await fs.mkdir(roleOutputDir, { recursive: true });
-
-        for (const filename of files) {
-            await fs.copyFile(
-                path.join(roleTemplateDir, filename),
-                path.join(roleOutputDir, filename),
-            );
-            getLogger().info(chalk.gray(`   Created agent-kit/${role}/${filename}`));
-        }
-    }
-}
-
-/**
- * Copies agent-kit guides from installed plugins into the project's agent-kit folder,
- * then appends them to the role's INSTRUCTIONS.md so agents discover them.
- */
-async function mergePluginAgentKitGuides(projectRoot: string, mode?: string): Promise<void> {
-    const plugins = await scanPlugins({ projectRoot });
-    const agentKitDir = path.join(projectRoot, 'agent-kit');
-    const roles: AgentKitRole[] =
-        mode && ALL_ROLES.includes(mode as AgentKitRole) ? [mode as AgentKitRole] : ALL_ROLES;
-
-    // Track copied files per role for INSTRUCTIONS.md
-    const copiedPerRole = new Map<
-        string,
-        Array<{ filename: string; pluginName: string; description: string }>
-    >();
-
-    for (const [, plugin] of plugins) {
-        const pluginAgentKitDir = path.join(plugin.pluginPath, 'agent-kit');
-        if (!fsSync.existsSync(pluginAgentKitDir)) continue;
-
-        for (const role of roles) {
-            const roleSourceDir = path.join(pluginAgentKitDir, role);
-            let files: string[];
-            try {
-                files = (await fs.readdir(roleSourceDir)).filter(
-                    (f) => f.endsWith('.md') && f !== 'INSTRUCTIONS.md',
-                );
-            } catch {
-                continue;
-            }
-            if (files.length === 0) continue;
-
-            const roleOutputDir = path.join(agentKitDir, role);
-            await fs.mkdir(roleOutputDir, { recursive: true });
-
-            for (const filename of files) {
-                const sourcePath = path.join(roleSourceDir, filename);
-                await fs.copyFile(sourcePath, path.join(roleOutputDir, filename));
-
-                // Extract description: first non-empty line after the # heading
-                let description = '';
-                try {
-                    const content = await fs.readFile(sourcePath, 'utf-8');
-                    const lines = content.split('\n');
-                    let pastHeading = false;
-                    for (const line of lines) {
-                        if (line.startsWith('# ')) {
-                            pastHeading = true;
-                            continue;
-                        }
-                        if (pastHeading && line.trim()) {
-                            description = line.trim();
-                            break;
-                        }
-                    }
-                } catch {
-                    /* skip */
-                }
-
-                if (!copiedPerRole.has(role)) copiedPerRole.set(role, []);
-                copiedPerRole.get(role)!.push({ filename, pluginName: plugin.name, description });
-                getLogger().info(
-                    chalk.gray(
-                        `   Copied agent-kit/${role}/${filename} from plugin "${plugin.name}"`,
-                    ),
-                );
-            }
-        }
-    }
-
-    // Append plugin guide entries to INSTRUCTIONS.md for each role
-    for (const [role, entries] of copiedPerRole) {
-        const instructionsPath = path.join(agentKitDir, role, 'INSTRUCTIONS.md');
-        if (!fsSync.existsSync(instructionsPath)) continue;
-
-        const lines = [
-            '',
-            '## Plugin-Contributed Guides',
-            '',
-            '| File | Plugin | Description |',
-            '| --- | --- | --- |',
-        ];
-        for (const { filename, pluginName, description } of entries) {
-            lines.push(`| [${filename}](${filename}) | ${pluginName} | ${description} |`);
-        }
-        lines.push('');
-
-        await fs.appendFile(instructionsPath, lines.join('\n'));
-    }
-}
-
-/**
- * Discovers and runs plugin reference generators (Design Log #87).
- * Called by agent-kit after materializing contracts.
- *
- * Must receive the same Vite server used during materialization — service markers
- * are Symbols, so loading a plugin module via a different mechanism (e.g. native
- * import() vs Vite SSR) creates different Symbols and breaks service lookup.
- */
-async function generatePluginReferences(
-    projectRoot: string,
-    options: { plugin?: string; force?: boolean; verbose?: boolean },
-    initErrors: Map<string, Error>,
-    viteServer?: Awaited<ReturnType<typeof createViteForCli>>,
-): Promise<void> {
-    const { discoverPluginsWithReferences, executePluginReferences } = await import(
-        '@jay-framework/stack-server-runtime'
-    );
-
-    const plugins = await discoverPluginsWithReferences({
-        projectRoot,
-        verbose: options.verbose,
-        pluginFilter: options.plugin,
-    });
-
-    if (plugins.length === 0) return;
-
-    const logger = getLogger();
-    logger.important('');
-    logger.important(chalk.bold('📚 Generating plugin references...'));
-
-    for (const plugin of plugins) {
-        // If this plugin had an init error, report it directly instead of
-        // running the handler (which would fail with a generic "service not available" message)
-        const pluginInitError = initErrors.get(plugin.name);
-        if (pluginInitError) {
-            logger.warn(
-                chalk.yellow(
-                    `   ⚠️  ${plugin.name}: references skipped — init failed: ${pluginInitError.message}`,
-                ),
-            );
-            continue;
-        }
-
-        try {
-            const result = await executePluginReferences(plugin, {
-                projectRoot,
-                force: options.force ?? false,
-                viteServer,
-                verbose: options.verbose,
-            });
-
-            if (result.referencesCreated.length > 0) {
-                logger.important(chalk.green(`   ✅ ${plugin.name}:`));
-                for (const ref of result.referencesCreated) {
-                    logger.important(chalk.gray(`      ${ref}`));
-                }
-                if (result.message) {
-                    logger.important(chalk.gray(`      ${result.message}`));
-                }
-            }
-        } catch (error: any) {
-            logger.warn(
-                chalk.yellow(`   ⚠️  ${plugin.name}: references skipped — ${error.message}`),
-            );
-        }
-    }
-}
-
-interface RunMaterializeResult {
-    initErrors: Map<string, Error>;
-    viteServer?: Awaited<ReturnType<typeof createViteForCli>>;
-}
-
-/**
- * Shared action for contract materialization (used by both contracts and agent-kit).
- *
- * When `keepViteAlive` is true, the Vite server is returned to the caller instead
- * of being closed. This is needed for agent-kit where the same Vite/module context
- * must be shared with references handlers (service markers are Symbols — loading a
- * plugin module twice creates different Symbols and breaks service lookup).
- */
-async function runMaterialize(
-    projectRoot: string,
-    options: {
-        output?: string;
-        yaml?: boolean;
-        list?: boolean;
-        plugin?: string;
-        dynamicOnly?: boolean;
-        force?: boolean;
-        verbose?: boolean;
-    },
-    /** Relative path from project root, e.g. 'agent-kit/materialized-contracts' */
-    defaultOutputRelative: string,
-    /** If true, keep the Vite server alive and return it (caller must close) */
-    keepViteAlive = false,
-): Promise<RunMaterializeResult> {
-    const path = await import('node:path');
-    const outputDir = options.output ?? path.join(projectRoot, defaultOutputRelative);
-    let viteServer: Awaited<ReturnType<typeof createViteForCli>> | undefined;
-    let initErrors = new Map<string, Error>();
-
-    try {
-        if (options.list) {
-            const index = await listContracts({
-                projectRoot,
-                dynamicOnly: options.dynamicOnly,
-                pluginFilter: options.plugin,
-            });
-
-            if (options.yaml) {
-                getLogger().important(YAML.stringify(index));
-            } else {
-                printContractList(index);
-            }
-            return { initErrors };
-        }
-
-        if (options.verbose) {
-            getLogger().info('Starting Vite for TypeScript support...');
-        }
-        viteServer = await createViteForCli({ projectRoot });
-
-        const { services, initErrors: errors } = await initializeServicesForCli(
-            projectRoot,
-            viteServer,
-        );
-        initErrors = errors;
-
-        const result = await materializeContracts(
-            {
-                projectRoot,
-                outputDir,
-                force: options.force,
-                dynamicOnly: options.dynamicOnly,
-                pluginFilter: options.plugin,
-                verbose: options.verbose,
-                viteServer,
-            },
-            services,
-        );
-
-        if (options.yaml) {
-            getLogger().important(YAML.stringify(result.pluginsIndex));
-        } else {
-            const totalContracts = result.pluginsIndex.plugins.reduce(
-                (sum, p) => sum + p.contracts.length,
-                0,
-            );
-            getLogger().important(chalk.green(`\n✅ Materialized ${totalContracts} contracts`));
-            getLogger().important(`   Static: ${result.staticCount}`);
-            getLogger().important(`   Dynamic: ${result.dynamicCount}`);
-            getLogger().important(`   Output: ${result.outputDir}`);
-        }
-
-        return { initErrors, viteServer: keepViteAlive ? viteServer : undefined };
-    } catch (error: any) {
-        getLogger().error(chalk.red('❌ Failed to materialize contracts:') + ' ' + error.message);
-        if (options.verbose) {
-            getLogger().error(error.stack);
-        }
-        process.exit(1);
-    } finally {
-        // Only close Vite if caller doesn't need it
-        if (viteServer && !keepViteAlive) {
-            await viteServer.close();
-        }
-    }
-
-    return { initErrors };
-}
-
-// Plugin setup command (Design Log #87): create config, validate services, generate references
 program
     .command('setup [plugin]')
-    .description(
-        'Run plugin setup: create config templates, validate credentials, generate reference data',
-    )
+    .description('Run plugin setup: config templates, credential validation, reference data')
     .option('--force', 'Force re-run (overwrite config templates and regenerate references)')
     .option('-v, --verbose', 'Show detailed output')
     .action(async (plugin: string | undefined, options) => {
         await runSetup(plugin, options, process.cwd(), initializeServicesForCli);
     });
 
-// Agent kit command (Design Log #85/#87): prepare agent-kit folder with contracts, docs, and references
 program
     .command('agent-kit')
-    .description(
-        'Prepare the agent kit: materialize contracts, generate references, and write docs to agent-kit/',
-    )
+    .description('Prepare agent kit: materialize contracts, generate references, write docs')
     .option('-o, --output <dir>', 'Output directory (default: agent-kit/materialized-contracts)')
     .option('--yaml', 'Output contract index as YAML to stdout')
     .option('--list', 'List contracts without writing files')
@@ -531,37 +149,12 @@ program
     )
     .option('-v, --verbose', 'Show detailed output')
     .action(async (options) => {
-        const projectRoot = process.cwd();
-        // Keep Vite alive — references handlers need the same module context
-        // (service markers are Symbols; different module loads = different Symbols)
-        const { initErrors, viteServer } = await runMaterialize(
-            projectRoot,
-            options,
-            'agent-kit/materialized-contracts',
-            /* keepViteAlive */ true,
-        );
-        try {
-            if (!options.list) {
-                await ensureAgentKitDocs(projectRoot, options.force, options.mode);
-                await mergePluginAgentKitGuides(projectRoot, options.mode);
-                // Generate plugin reference data (Design Log #87)
-                if (options.references !== false) {
-                    await generatePluginReferences(projectRoot, options, initErrors, viteServer);
-                }
-            }
-        } finally {
-            if (viteServer) {
-                await viteServer.close();
-            }
-        }
+        await runAgentKit(options);
     });
 
-// Action execution command (Design Log #84/#85/#86): run a plugin action from CLI for agent discovery
 program
     .command('action <plugin/action>')
-    .description(
-        'Run a plugin action (e.g., jay-stack action wix-stores/searchProducts --input \'{"query":""}\')',
-    )
+    .description('Run a plugin action (e.g., jay-stack action wix-stores/searchProducts)')
     .option('--input <json>', 'JSON input for the action (default: {})')
     .option('--yaml', 'Output result as YAML instead of JSON')
     .option('-v, --verbose', 'Show detailed output')
@@ -569,94 +162,17 @@ program
         await runAction(actionRef, options, process.cwd(), initializeServicesForCli);
     });
 
-// Params discovery command (Design Log #84/#86): discover load param values for a contract
 program
     .command('params <plugin/contract>')
-    .description(
-        'Discover load param values for a contract. Streams results as NDJSON (one JSON object per line) or YAML.',
-    )
+    .description('Discover load param values for a contract (NDJSON or YAML)')
     .option('--yaml', 'Output as YAML instead of NDJSON')
     .option('-v, --verbose', 'Show detailed output')
     .action(async (contractRef: string, options) => {
         await runParams(contractRef, options, process.cwd(), initializeServicesForCli);
     });
 
-// Parse arguments
 program.parse(process.argv);
 
-// If no command provided, show help
 if (!process.argv.slice(2).length) {
     program.outputHelp();
-}
-
-/**
- * Pretty prints validation results
- */
-function printValidationResult(result: ValidationResult, verbose: boolean): void {
-    const logger = getLogger();
-    if (result.valid && result.warnings.length === 0) {
-        logger.important(chalk.green('✅ Plugin validation successful!\n'));
-        if (verbose) {
-            logger.important('Plugin: ' + result.pluginName);
-            logger.important('  ✅ plugin.yaml valid');
-            logger.important(`  ✅ ${result.contractsChecked} contracts validated`);
-            if (result.typesGenerated) {
-                logger.important(`  ✅ ${result.typesGenerated} type definitions generated`);
-            }
-            logger.important(`  ✅ ${result.componentsChecked} components validated`);
-            if (result.packageJsonChecked) {
-                logger.important('  ✅ package.json valid');
-            }
-            logger.important('\nNo errors found.');
-        }
-    } else if (result.valid && result.warnings.length > 0) {
-        logger.important(chalk.yellow('⚠️  Plugin validation passed with warnings\n'));
-        logger.important('Warnings:');
-        result.warnings.forEach((warning) => {
-            logger.important(chalk.yellow(`  ⚠️  ${warning.message}`));
-            if (warning.location) {
-                logger.important(chalk.gray(`      Location: ${warning.location}`));
-            }
-            if (warning.suggestion) {
-                logger.important(chalk.gray(`      → ${warning.suggestion}`));
-            }
-            logger.important('');
-        });
-        logger.important(chalk.gray('Use --strict to treat warnings as errors.'));
-    } else {
-        logger.important(chalk.red('❌ Plugin validation failed\n'));
-        logger.important('Errors:');
-        result.errors.forEach((error) => {
-            logger.important(chalk.red(`  ❌ ${error.message}`));
-            if (error.location) {
-                logger.important(chalk.gray(`      Location: ${error.location}`));
-            }
-            if (error.suggestion) {
-                logger.important(chalk.gray(`      → ${error.suggestion}`));
-            }
-            logger.important('');
-        });
-        logger.important(chalk.red(`${result.errors.length} errors found.`));
-    }
-}
-
-/**
- * Pretty prints contract list
- */
-function printContractList(index: PluginsIndex): void {
-    const logger = getLogger();
-    logger.important('\nAvailable Contracts:\n');
-
-    for (const plugin of index.plugins) {
-        logger.important(chalk.bold(`📦 ${plugin.name}`));
-        for (const contract of plugin.contracts) {
-            const typeIcon = contract.type === 'static' ? '📄' : '⚡';
-            logger.important(`   ${typeIcon} ${contract.name}`);
-        }
-        logger.important('');
-    }
-
-    if (index.plugins.length === 0) {
-        logger.important(chalk.gray('No contracts found.'));
-    }
 }

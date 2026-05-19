@@ -60,6 +60,7 @@ export type InstanceBuildResult =
           instanceEntry: InstanceEntry;
           slowViewState: object;
           carryForward: object;
+          contracts: string[];
       }
     | { status: 'skipped'; reason: string };
 
@@ -105,6 +106,16 @@ export async function buildInstance(
         ctx.tsConfigFilePath,
         serverBuildDir,
     );
+
+    // Collect contract names used by this route (for invalidation resolution)
+    const contracts = [
+        ...new Set([
+            ...pageParts.headlessInstanceComponents.map((c) => c.contractName),
+            ...pageParts.parts
+                .filter((p) => p.contractInfo?.contractName)
+                .map((p) => p.contractInfo!.contractName),
+        ]),
+    ];
 
     // Write page-parts.json (DL#137) — once per route, first instance writes it
     const pagePartsConfigPath = path.join(instanceDir, 'page-parts.json');
@@ -357,5 +368,5 @@ export async function buildInstance(
             : undefined,
     };
 
-    return { status: 'success', instanceEntry, slowViewState, carryForward };
+    return { status: 'success', instanceEntry, slowViewState, carryForward, contracts };
 }

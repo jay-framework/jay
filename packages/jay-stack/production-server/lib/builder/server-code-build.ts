@@ -61,11 +61,7 @@ export async function discoverServerEntries(
                 const dirPath = path.join(scanDir, dir.name);
                 const files = await fs.readdir(dirPath);
                 for (const file of files) {
-                    if (
-                        file.endsWith('.ts') &&
-                        !file.endsWith('.d.ts') &&
-                        file !== 'page.ts'
-                    ) {
+                    if (file.endsWith('.ts') && !file.endsWith('.d.ts') && file !== 'page.ts') {
                         const entryName = `${subDir}/${dir.name}/${file.replace(/\.ts$/, '')}`;
                         pages[entryName] = path.join(dirPath, file);
                     }

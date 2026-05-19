@@ -572,3 +572,67 @@ Not required — the main server's timestamp-based caching detects file changes 
 8. Manifest updates are atomic (no partial reads)
 9. Build concurrency stays within configured bounds
 10. Renderer health endpoint reports accurate status
+
+## Implementation Results
+
+### Implemented (May 18, 2026)
+
+**`makeWebhook` builder** (`full-stack-component/lib/jay-webhook-builder.ts`):
+
+- Builder pattern matching `makeJayAction`: `makeWebhook(name).withServices(...).withHandler(fn)`
+- Handler receives `(event: WebhookEvent, invalidate: InvalidateContract, ...services)`
+- `isJayWebhook` type guard for discovery
+- 5 tests passing
+
+**Contracts field population** (`builder/instance-pipeline.ts`):
+
+- `RouteEntry.contracts` populated during build from headless component contract names
+- Collected from `pageParts.headlessInstanceComponents` and `pageParts.parts[].contractInfo`
+- 5 tests verifying contract population and contract→route resolution
+
+**Invalidation engine** (`invalidation/invalidation-engine.ts`):
+
+- `resolveContractToRoutes(manifest, contractName)` — finds routes by contract
+- `rebuildInstance(route, params, ctx)` — rebuilds single instance with optimistic skip
+- `invalidateContract(contractName, params?, ctx)` — full invalidation flow
+- `createInvalidator(ctx)` — creates `InvalidateContract` function for webhook handlers
+- Atomic manifest update via temp file + rename
+
+**Invalidation queue** (`invalidation/invalidation-queue.ts`):
+
+- Deduplication by contract+params key
+- Bounded concurrency with configurable worker count
+- Per-contract serialization (prevents concurrent rebuilds of same route)
+
+**Rebuild CLI** (`stack-cli/lib/cli.ts`):
+
+- `jay-stack rebuild --contract=product-page --params='{"slug":"x"}'`
+- Uses `rebuildContract()` from production-server
+- Loads existing manifest, initializes services, rebuilds only affected instances
+- Optimistic skip when pre-rendered output unchanged
+
+**Renderer server** (`renderer/renderer-server.ts`):
+
+- `jay-stack serve --role=renderer` starts HTTP server with:
+  - `POST /_jay/webhooks/:name` — dispatches to discovered webhook handlers
+  - `POST /_jay/rebuild` — accepts `{ contract, params }` for programmatic rebuild
+  - `GET /_jay/status` — reports version, uptime, webhook list, last webhook
+- Webhook discovery from NPM plugins and project `src/webhooks/` directory
+- Service initialization (same as main server)
+
+**Version derivation** (`stack-cli/lib/cli.ts`):
+
+- Default version derived from project `package.json` (major*10000 + minor*100 + patch)
+- `--version` flag overrides for all commands (build, serve, rebuild)
+
+### Test Coverage
+
+- 79 production-server tests (74 existing + 5 new contract/invalidation tests)
+- 5 webhook builder tests
+- Full monorepo build: 70 packages pass
+
+### Deviations from Design
+
+- `InvalidationContext` with `resolveJayRoute` and `loadRouteModule` callbacks was simplified — the `rebuildContract()` function handles route resolution internally using `page-parts.json` (DL#137) and manifest data
+- Webhook handler signature uses `WebhookEvent` (type, payload, headers) instead of raw `HttpRequest` — cleaner API, framework handles HTTP parsing
+- Startup validation (source hash comparison) not implemented yet — listed as remaining work

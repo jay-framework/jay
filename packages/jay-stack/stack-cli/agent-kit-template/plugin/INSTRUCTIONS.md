@@ -29,6 +29,7 @@ A plugin provides headless components (data + interactions, no UI) that project 
 | [component-context.md](component-context.md)     | Context hooks: provide, reactive, global                                |
 | [render-results.md](render-results.md)           | phaseOutput, RenderPipeline, errors, redirects                          |
 | [actions-guide.md](actions-guide.md)             | makeJayAction, makeJayQuery, .jay-action files                          |
+| [webhooks-guide.md](webhooks-guide.md)           | makeWebhook, data change invalidation, renderer server                  |
 | [services-guide.md](services-guide.md)           | createJayService, makeJayInit                                           |
 | [plugin-routes.md](plugin-routes.md)             | Plugin-provided pages: routes, jay-html templates, page components      |
 | [seo-guide.md](seo-guide.md)                     | SEO head tags: title, meta, OG, canonical via phaseOutput               |

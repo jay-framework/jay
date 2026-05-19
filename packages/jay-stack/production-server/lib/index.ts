@@ -14,3 +14,10 @@ export type {
 
 export { buildVersion } from './builder/build-pipeline';
 export { startMainServer } from './serve/main-server';
+export { startRendererServer, type RendererServerOptions } from './renderer/renderer-server';
+export {
+    rebuildContract,
+    resolveContractToRoutes,
+    type RebuildOptions,
+    type RebuildResult,
+} from './invalidation/index';

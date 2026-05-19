@@ -3,11 +3,9 @@ import { makeWebhook, isJayWebhook } from '../lib';
 
 describe('makeWebhook', () => {
     it('creates a webhook with name and handler', () => {
-        const webhook = makeWebhook('test.change').withHandler(
-            async (event, invalidate) => {
-                await invalidate('test-contract', { id: '123' });
-            },
-        );
+        const webhook = makeWebhook('test.change').withHandler(async (event, invalidate) => {
+            await invalidate('test-contract', { id: '123' });
+        });
 
         expect(webhook.webhookName).toBe('test.change');
         expect(webhook._brand).toBe('JayWebhook');
@@ -29,11 +27,9 @@ describe('makeWebhook', () => {
     it('handler receives event and invalidate', async () => {
         const invalidateMock = vi.fn();
 
-        const webhook = makeWebhook('product.updated').withHandler(
-            async (event, invalidate) => {
-                await invalidate('product-page', { slug: event.payload as string });
-            },
-        );
+        const webhook = makeWebhook('product.updated').withHandler(async (event, invalidate) => {
+            await invalidate('product-page', { slug: event.payload as string });
+        });
 
         await webhook.handler(
             { type: 'product.updated', payload: 'blue-widget', headers: {} },

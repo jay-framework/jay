@@ -167,6 +167,55 @@ If not found, lists available actions:
    Available actions: searchProducts, getProductBySlug, getCategories
 ```
 
+## jay-stack build
+
+Build production artifacts.
+
+```bash
+# Build with auto-detected version (from package.json)
+jay-stack build
+
+# Build with explicit version
+jay-stack build --version 2
+
+# Build without minification (debugging)
+jay-stack build --no-minify
+```
+
+## jay-stack serve
+
+Start the production server.
+
+```bash
+# Start main server (serves pages)
+jay-stack serve
+
+# Start renderer server (handles webhooks + rebuilds)
+jay-stack serve --role=renderer
+
+# Explicit version and port
+jay-stack serve --version 2 --port 8080
+```
+
+The main server handles HTTP requests using pre-built artifacts. The renderer server listens for data change webhooks and rebuilds affected instances.
+
+## jay-stack rebuild
+
+Rebuild instances for a specific contract without a full build.
+
+```bash
+# Rebuild specific instance
+jay-stack rebuild --contract=product-page --params='{"slug":"blue-widget"}'
+
+# Rebuild all instances using a contract
+jay-stack rebuild --contract=search-results
+
+# Explicit version
+jay-stack rebuild --contract=product-page --params='{"slug":"x"}' --version 2
+```
+
+Uses the same invalidation flow as webhooks — resolves contract to routes, rebuilds affected instances, skips unchanged ones.
+
 ## jay-stack dev
 
 Start the development server.
