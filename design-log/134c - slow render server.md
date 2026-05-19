@@ -645,6 +645,6 @@ Not required — the main server's timestamp-based caching detects file changes 
 - Added `--route` and `--url` rebuild modes beyond the original contract-only design — enables rebuilding routes with `page.ts` but no headless contracts
 - Startup validation (source hash comparison) not implemented yet — listed as remaining work
 
-### Known Issues
+### Known Issues / Future Optimization
 
-- **Optimistic skip runs too late.** The comparison happens after `buildInstance` completes the full pipeline (slow render → compile server element → hydration entry → Vite client build). The skip only avoids updating the manifest — the expensive compilation still runs. The comparison should be moved to right after slow render produces the pre-rendered jay-html, before server element compilation and Vite build. This requires splitting `buildInstance` or adding an early-exit path.
+- **Optimistic skip removed.** The original design compared pre-rendered HTML after `buildInstance` to skip unchanged instances. Two problems were found: (1) `stripCacheMetadata` stripped the `slowViewState` from the comparison, so data-only changes (e.g., price update that doesn't change template structure) were incorrectly reported as unchanged; (2) the comparison ran after the full pipeline completed, so no work was actually saved. The skip was removed entirely. A proper implementation would compare slowViewState + template content _before_ server element compilation and Vite build — requires splitting `buildInstance` or adding an early-exit path after slow render.

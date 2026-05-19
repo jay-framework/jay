@@ -1,4 +1,4 @@
-import type { RouteManifest, RouteEntry, InstanceEntry } from '../types';
+import type { RouteManifest, RouteEntry, InstanceEntry, BuildMetadata } from '../types';
 import type { JayRoute } from '@jay-framework/stack-route-scanner';
 import { buildInstance, type InstanceBuildContext } from '../builder/instance-pipeline';
 import { matchRequest } from '../serve/route-matcher';
@@ -25,7 +25,6 @@ export interface RebuildOptions {
 export interface RebuildResult {
     affected: number;
     rebuilt: number;
-    skipped: number;
     errors: Array<{ route: string; params?: Record<string, string>; error: string }>;
 }
 
@@ -43,16 +42,17 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
     const manifestPath = path.join(buildDir, 'route-manifest.json');
     const manifest: RouteManifest = JSON.parse(await fs.readFile(manifestPath, 'utf-8'));
 
-    const { routes: affectedRoutes, params: targetParams, label } = resolveTarget(
-        manifest,
-        options.target,
-    );
+    const {
+        routes: affectedRoutes,
+        params: targetParams,
+        label,
+    } = resolveTarget(manifest, options.target);
 
     logger.important(`[Rebuild] ${label} in v${options.version}`);
 
     if (affectedRoutes.length === 0) {
         logger.warn(`[Rebuild] No routes found for ${label}`);
-        return { affected: 0, rebuilt: 0, skipped: 0, errors: [] };
+        return { affected: 0, rebuilt: 0, errors: [] };
     }
 
     logger.important(
@@ -70,7 +70,7 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
         minify: options.minify ?? true,
     };
 
-    const result: RebuildResult = { affected: 0, rebuilt: 0, skipped: 0, errors: [] };
+    const result: RebuildResult = { affected: 0, rebuilt: 0, errors: [] };
 
     for (const route of affectedRoutes) {
         const instancesToRebuild = targetParams
@@ -84,18 +84,6 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
         for (const instance of instancesToRebuild) {
             result.affected++;
             const params = instance.params;
-
-            let existingContent: string | undefined;
-            if (instance.preRenderedPath) {
-                try {
-                    existingContent = await fs.readFile(
-                        path.join(buildDir, instance.preRenderedPath),
-                        'utf-8',
-                    );
-                } catch {
-                    // No existing file
-                }
-            }
 
             let pageModule: Record<string, unknown>;
             try {
@@ -122,26 +110,6 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
                     continue;
                 }
 
-                if (existingContent) {
-                    try {
-                        const newContent = await fs.readFile(
-                            path.join(buildDir, buildResult.instanceEntry.preRenderedPath),
-                            'utf-8',
-                        );
-                        if (
-                            stripCacheMetadata(newContent) === stripCacheMetadata(existingContent)
-                        ) {
-                            logger.important(
-                                `[Rebuild] ${route.pattern} (${JSON.stringify(params)}): unchanged, skipped`,
-                            );
-                            result.skipped++;
-                            continue;
-                        }
-                    } catch {
-                        // Can't compare, treat as changed
-                    }
-                }
-
                 const existingIdx = route.instances.findIndex((i) => paramsMatch(i.params, params));
                 if (existingIdx >= 0) {
                     route.instances[existingIdx] = buildResult.instanceEntry;
@@ -165,11 +133,39 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
         const tempPath = manifestPath + '.tmp';
         await fs.writeFile(tempPath, JSON.stringify(manifest, null, 2));
         await fs.rename(tempPath, manifestPath);
-        logger.important(`[Rebuild] Manifest updated`);
+
+        // Update build-metadata.json — triggers main server manifest reload
+        const metadataPath = path.join(buildDir, 'build-metadata.json');
+        try {
+            const metadata: BuildMetadata = JSON.parse(await fs.readFile(metadataPath, 'utf-8'));
+            metadata.buildTimestamp = new Date().toISOString();
+            metadata.instanceCount = manifest.routes.reduce(
+                (n, r) => n + r.instances.length,
+                0,
+            );
+            await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
+        } catch {
+            // No metadata file — write a new one
+            await fs.writeFile(
+                metadataPath,
+                JSON.stringify({
+                    version: options.version,
+                    sourceHash: '',
+                    buildTimestamp: new Date().toISOString(),
+                    nodeVersion: process.version,
+                    instanceCount: manifest.routes.reduce(
+                        (n, r) => n + r.instances.length,
+                        0,
+                    ),
+                } satisfies BuildMetadata, null, 2),
+            );
+        }
+
+        logger.important(`[Rebuild] Manifest and metadata updated`);
     }
 
     logger.important(
-        `[Rebuild] Done: ${result.affected} affected, ${result.rebuilt} rebuilt, ${result.skipped} unchanged, ${result.errors.length} errors`,
+        `[Rebuild] Done: ${result.affected} affected, ${result.rebuilt} rebuilt, ${result.errors.length} errors`,
     );
 
     return result;
@@ -279,8 +275,4 @@ function paramsMatch(
     targetParams: Record<string, string>,
 ): boolean {
     return Object.entries(targetParams).every(([key, value]) => instanceParams[key] === value);
-}
-
-function stripCacheMetadata(content: string): string {
-    return content.replace(/<script type="application\/jay-cache">[\s\S]*?<\/script>\n?/, '');
 }

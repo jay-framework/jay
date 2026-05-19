@@ -22,7 +22,13 @@ export async function initializeServices(
                 if (pluginInit.isLocal) {
                     const pluginDirName = path.basename(pluginInit.pluginPath);
                     const initModule = pluginInit.initModule || 'index';
-                    modulePath = path.join(buildDir, 'server', 'plugins', pluginDirName, initModule + '.js');
+                    modulePath = path.join(
+                        buildDir,
+                        'server',
+                        'plugins',
+                        pluginDirName,
+                        initModule + '.js',
+                    );
                 } else {
                     modulePath = pluginInit.packageName;
                 }
