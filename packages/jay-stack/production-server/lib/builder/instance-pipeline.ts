@@ -52,6 +52,8 @@ export interface InstanceBuildContext {
     tsConfigFilePath?: string;
     minify?: boolean;
     clientInits?: ClientInitEntry[];
+    /** When set, appended to instance ID hash to produce unique filenames per rebuild. */
+    rebuildSuffix?: string;
 }
 
 export type InstanceBuildResult =
@@ -64,7 +66,7 @@ export type InstanceBuildResult =
       }
     | { status: 'skipped'; reason: string };
 
-function hashParams(params: Record<string, string>): string {
+function hashParams(params: Record<string, string>, suffix?: string): string {
     const sorted = Object.keys(params)
         .sort()
         .reduce(
@@ -75,8 +77,9 @@ function hashParams(params: Record<string, string>): string {
             {} as Record<string, string>,
         );
     const json = JSON.stringify(sorted);
-    if (json === '{}') return '';
-    return '_' + crypto.createHash('md5').update(json).digest('hex').substring(0, 8);
+    if (json === '{}' && !suffix) return '';
+    const input = suffix ? json + ':' + suffix : json;
+    return '_' + crypto.createHash('md5').update(input).digest('hex').substring(0, 8);
 }
 
 export async function buildInstance(
@@ -87,7 +90,7 @@ export async function buildInstance(
 ): Promise<InstanceBuildResult> {
     const logger = getLogger();
     const routeDir = route.rawRoute.replace(/^\//, '') || 'index';
-    const paramHash = hashParams(params);
+    const paramHash = hashParams(params, ctx.rebuildSuffix);
     const instanceId = `page${paramHash}`;
     const instanceDir = path.join(ctx.buildDir, 'pre-rendered', routeDir);
 

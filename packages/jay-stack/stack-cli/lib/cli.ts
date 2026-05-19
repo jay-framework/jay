@@ -90,6 +90,24 @@ program
     });
 
 program
+    .command('cleanup')
+    .description('Delete orphaned files from previous rebuilds')
+    .option('--version <n>', 'Build version (default: from package.json)')
+    .option('-p, --path <path>', 'Project root (default: cwd)')
+    .action(async (options) => {
+        try {
+            const { initLogger, resolveProductionContext } = await import('./run-production');
+            initLogger();
+            const ctx = await resolveProductionContext(options.path, options.version);
+            const { cleanupOrphanedFiles } = await import('@jay-framework/production-server');
+            await cleanupOrphanedFiles(ctx.buildRoot, ctx.version);
+        } catch (error: any) {
+            getLogger().error(chalk.red('Cleanup failed:') + ' ' + error.message);
+            process.exit(1);
+        }
+    });
+
+program
     .command('validate')
     .description('Validate all .jay-html and .jay-contract files')
     .option('-p, --path <path>', 'Scan root (default: cwd)')

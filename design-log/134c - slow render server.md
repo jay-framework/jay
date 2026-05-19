@@ -645,6 +645,24 @@ Not required — the main server's timestamp-based caching detects file changes 
 - Added `--route` and `--url` rebuild modes beyond the original contract-only design — enables rebuilding routes with `page.ts` but no headless contracts
 - Startup validation (source hash comparison) not implemented yet — listed as remaining work
 
+### Atomic Rebuild Transition
+
+Rebuilds produce new files with unique names instead of overwriting existing ones. This prevents a race condition where the main server could serve mismatched files (new pre-rendered HTML with old server element, or vice versa).
+
+**Mechanism:** `InstanceBuildContext.rebuildSuffix` (a timestamp-based string) is appended to the params hash input during rebuild, producing a new `page_{newHash}` instance ID. The initial build has no suffix — same behavior as before.
+
+**Sequence:**
+1. `buildInstance` writes new files: `page_{newHash}.jay-html`, `.cache.json`, `.server-element.js`, `-{viteHash}.js`
+2. `route-manifest.json` updated atomically (temp file + rename) with new file paths
+3. `build-metadata.json` updated with new timestamp — triggers main server to reload manifest
+4. Main server reloads manifest → atomically switches to new files
+5. Old file paths appended to `cleanup-manifest.json`
+6. `jay-stack cleanup` (or async background task) deletes orphaned files
+
+**Main server reload trigger:** `FilesystemArtifactStore.readManifest()` checks `build-metadata.json` mtime. If changed, re-reads the manifest. This is cheaper than checking the manifest itself on every request and ensures the reload only happens after both manifest and metadata are fully written.
+
+**Cleanup manifest:** Each rebuild appends replaced file paths (pre-rendered HTML, cache JSON, server element, client bundle, CSS) to `build/v{n}/cleanup-manifest.json`. The `jay-stack cleanup` command reads this file, deletes the listed files, then removes the manifest itself. Cleanup is safe to run at any time — the main server only reads files referenced by the current route manifest, not orphaned ones.
+
 ### Known Issues / Future Optimization
 
-- **Optimistic skip removed.** The original design compared pre-rendered HTML after `buildInstance` to skip unchanged instances. Two problems were found: (1) `stripCacheMetadata` stripped the `slowViewState` from the comparison, so data-only changes (e.g., price update that doesn't change template structure) were incorrectly reported as unchanged; (2) the comparison ran after the full pipeline completed, so no work was actually saved. The skip was removed entirely. A proper implementation would compare slowViewState + template content _before_ server element compilation and Vite build — requires splitting `buildInstance` or adding an early-exit path after slow render.
+- **Optimistic skip removed.** The original design compared pre-rendered HTML after `buildInstance` to skip unchanged instances. Two problems were found: (1) `stripCacheMetadata` stripped the `slowViewState` from the comparison, so data-only changes (e.g., price update that doesn't change template structure) were incorrectly reported as unchanged; (2) the comparison ran after the full pipeline completed, so no work was actually saved. The skip was removed entirely. A proper implementation would compare slowViewState + template content *before* server element compilation and Vite build — requires splitting `buildInstance` or adding an early-exit path after slow render.

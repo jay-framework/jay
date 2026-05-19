@@ -61,6 +61,7 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
 
     await initializeServices(buildDir, options.projectRoot, 'Rebuild');
 
+    const rebuildSuffix = Date.now().toString(36);
     const instanceCtx: InstanceBuildContext = {
         projectRoot: options.projectRoot,
         pagesRoot: options.pagesRoot,
@@ -68,9 +69,11 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
         jayOptions: { tsConfigFilePath: options.tsConfigFilePath },
         tsConfigFilePath: options.tsConfigFilePath,
         minify: options.minify ?? true,
+        rebuildSuffix,
     };
 
     const result: RebuildResult = { affected: 0, rebuilt: 0, errors: [] };
+    const orphanedFiles: string[] = [];
 
     for (const route of affectedRoutes) {
         const instancesToRebuild = targetParams
@@ -84,6 +87,9 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
         for (const instance of instancesToRebuild) {
             result.affected++;
             const params = instance.params;
+
+            // Collect old file paths before rebuild replaces the instance
+            const oldFiles = collectInstanceFiles(instance);
 
             let pageModule: Record<string, unknown>;
             try {
@@ -113,6 +119,7 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
                 const existingIdx = route.instances.findIndex((i) => paramsMatch(i.params, params));
                 if (existingIdx >= 0) {
                     route.instances[existingIdx] = buildResult.instanceEntry;
+                    orphanedFiles.push(...oldFiles);
                 } else {
                     route.instances.push(buildResult.instanceEntry);
                 }
@@ -162,6 +169,12 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
         }
 
         logger.important(`[Rebuild] Manifest and metadata updated`);
+
+        // Append orphaned files to cleanup manifest
+        if (orphanedFiles.length > 0) {
+            await appendCleanupManifest(buildDir, orphanedFiles);
+            logger.info(`[Rebuild] ${orphanedFiles.length} orphaned file(s) queued for cleanup`);
+        }
     }
 
     logger.important(
@@ -275,4 +288,56 @@ function paramsMatch(
     targetParams: Record<string, string>,
 ): boolean {
     return Object.entries(targetParams).every(([key, value]) => instanceParams[key] === value);
+}
+
+function collectInstanceFiles(instance: InstanceEntry): string[] {
+    if (!instance.preRenderedPath) return [];
+    const files = [
+        instance.preRenderedPath,
+        instance.preRenderedPath.replace('.jay-html', '.cache.json'),
+        instance.serverElementPath,
+        instance.clientBundlePath,
+    ];
+    if (instance.clientCssPath) files.push(instance.clientCssPath);
+    return files.filter(Boolean);
+}
+
+async function appendCleanupManifest(buildDir: string, files: string[]): Promise<void> {
+    const cleanupPath = path.join(buildDir, 'cleanup-manifest.json');
+    let existing: string[] = [];
+    try {
+        existing = JSON.parse(await fs.readFile(cleanupPath, 'utf-8'));
+    } catch {
+        // No existing cleanup manifest
+    }
+    existing.push(...files);
+    await fs.writeFile(cleanupPath, JSON.stringify(existing, null, 2));
+}
+
+export async function cleanupOrphanedFiles(buildRoot: string, version: number): Promise<number> {
+    const logger = getLogger();
+    const buildDir = path.join(buildRoot, `v${version}`);
+    const cleanupPath = path.join(buildDir, 'cleanup-manifest.json');
+
+    let files: string[];
+    try {
+        files = JSON.parse(await fs.readFile(cleanupPath, 'utf-8'));
+    } catch {
+        logger.info('[Cleanup] No cleanup manifest found');
+        return 0;
+    }
+
+    let deleted = 0;
+    for (const file of files) {
+        try {
+            await fs.unlink(path.join(buildDir, file));
+            deleted++;
+        } catch {
+            // File already gone or never existed
+        }
+    }
+
+    await fs.unlink(cleanupPath);
+    logger.important(`[Cleanup] Deleted ${deleted}/${files.length} orphaned files`);
+    return deleted;
 }
