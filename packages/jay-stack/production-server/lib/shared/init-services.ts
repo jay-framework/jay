@@ -18,7 +18,15 @@ export async function initializeServices(
         );
         for (const pluginInit of pluginsWithInit) {
             try {
-                const pluginModule = await import(pluginInit.packageName);
+                let modulePath: string;
+                if (pluginInit.isLocal) {
+                    const pluginDirName = path.basename(pluginInit.pluginPath);
+                    const initModule = pluginInit.initModule || 'index';
+                    modulePath = path.join(buildDir, 'server', 'plugins', pluginDirName, initModule + '.js');
+                } else {
+                    modulePath = pluginInit.packageName;
+                }
+                const pluginModule = await import(modulePath);
                 const init = pluginModule.init || pluginModule[pluginInit.initExport || 'init'];
                 if (init?._serverInit) {
                     logger.info(`[${label}] Running plugin init: ${pluginInit.name}`);
