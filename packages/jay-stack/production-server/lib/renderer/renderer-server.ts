@@ -3,7 +3,7 @@ import path from 'node:path';
 import { getLogger } from '@jay-framework/logger';
 import { discoverWebhooks, type DiscoveredWebhook } from './webhook-discovery';
 import { initializeServices } from '../shared/init-services';
-import { rebuildContract } from '../invalidation';
+import { rebuild, rebuildContract, type RebuildTarget } from '../invalidation';
 import type { InvalidateContract, WebhookEvent } from '@jay-framework/fullstack-component';
 import type { RouteManifest } from '../types';
 import fs from 'node:fs/promises';
@@ -99,21 +99,31 @@ export async function startRendererServer(options: RendererServerOptions): Promi
             // POST /_jay/rebuild
             if (url.pathname === '/_jay/rebuild' && req.method === 'POST') {
                 const body = JSON.parse((await readBody(req)) || '{}');
-                const { contract, params } = body;
+                const { contract, route, url: rebuildUrl, params } = body;
 
-                if (!contract) {
+                let target: RebuildTarget;
+                if (contract) {
+                    target = { mode: 'contract', contractName: contract, params };
+                } else if (route) {
+                    target = { mode: 'route', routePattern: route, params };
+                } else if (rebuildUrl) {
+                    target = { mode: 'url', url: rebuildUrl };
+                } else {
                     res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ error: 'Missing "contract" field' }));
+                    res.end(
+                        JSON.stringify({
+                            error: 'One of "contract", "route", or "url" is required',
+                        }),
+                    );
                     return;
                 }
 
-                const result = await rebuildContract({
+                const result = await rebuild({
                     projectRoot: options.projectRoot,
                     pagesRoot: options.pagesRoot,
                     buildRoot: options.buildRoot,
                     version: options.version,
-                    contractName: contract,
-                    params,
+                    target,
                     tsConfigFilePath: options.tsConfigFilePath,
                     minify: options.minify,
                 });

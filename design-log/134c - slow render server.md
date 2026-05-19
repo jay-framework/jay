@@ -590,49 +590,61 @@ Not required — the main server's timestamp-based caching detects file changes 
 - Collected from `pageParts.headlessInstanceComponents` and `pageParts.parts[].contractInfo`
 - 5 tests verifying contract population and contract→route resolution
 
-**Invalidation engine** (`invalidation/invalidation-engine.ts`):
+**Rebuild engine** (`invalidation/rebuild.ts`):
 
+- `rebuild(options)` — unified rebuild with three target modes:
+  - `{ mode: 'contract', contractName, params? }` — rebuild all routes using a contract
+  - `{ mode: 'route', routePattern, params? }` — rebuild instances of a specific route
+  - `{ mode: 'url', url }` — resolve URL to route+params via route matcher, rebuild that instance
 - `resolveContractToRoutes(manifest, contractName)` — finds routes by contract
-- `rebuildInstance(route, params, ctx)` — rebuilds single instance with optimistic skip
-- `invalidateContract(contractName, params?, ctx)` — full invalidation flow
-- `createInvalidator(ctx)` — creates `InvalidateContract` function for webhook handlers
+- `rebuildContract(options)` — convenience wrapper for contract mode (used by webhook handlers)
+- Optimistic skip: compares pre-rendered output, skips compilation if unchanged
 - Atomic manifest update via temp file + rename
 
-**Invalidation queue** (`invalidation/invalidation-queue.ts`):
+**Rebuild CLI** (`stack-cli/lib/run-production.ts`):
 
-- Deduplication by contract+params key
-- Bounded concurrency with configurable worker count
-- Per-contract serialization (prevents concurrent rebuilds of same route)
-
-**Rebuild CLI** (`stack-cli/lib/cli.ts`):
-
-- `jay-stack rebuild --contract=product-page --params='{"slug":"x"}'`
-- Uses `rebuildContract()` from production-server
-- Loads existing manifest, initializes services, rebuilds only affected instances
-- Optimistic skip when pre-rendered output unchanged
+- Three modes via flags:
+  - `jay-stack rebuild --contract product-page --params '{"slug":"x"}'`
+  - `jay-stack rebuild --route /products/[slug]` (all instances)
+  - `jay-stack rebuild --url /products/blue-widget` (single instance by URL)
+- `--route` without `--params` rebuilds all instances of the route (useful for pages with `page.ts` and no contract)
+- `--url` resolves to route+params using the same matcher as the main server
 
 **Renderer server** (`renderer/renderer-server.ts`):
 
 - `jay-stack serve --role=renderer` starts HTTP server with:
   - `POST /_jay/webhooks/:name` — dispatches to discovered webhook handlers
-  - `POST /_jay/rebuild` — accepts `{ contract, params }` for programmatic rebuild
+  - `POST /_jay/rebuild` — accepts `{ contract, route, url, params }` (any one target mode)
   - `GET /_jay/status` — reports version, uptime, webhook list, last webhook
-- Webhook discovery from NPM plugins and project `src/webhooks/` directory
-- Service initialization (same as main server)
+- Webhook discovery from `plugin.yaml` declarations (matching actions pattern)
+- Service initialization via shared `init-services.ts`
 
 **Version derivation** (`stack-cli/lib/cli.ts`):
 
 - Default version derived from project `package.json` (major*10000 + minor*100 + patch)
 - `--version` flag overrides for all commands (build, serve, rebuild)
 
+**CLI refactor** (`stack-cli/lib/`):
+
+- All CLI commands extracted to dedicated files: `run-dev.ts`, `run-production.ts`, `run-validate.ts`, `run-agent-kit.ts`
+- `cli.ts` is now command registration only (~170 lines)
+- All commands use `-p, --path` option instead of positional `[path]`
+- Shared `resolveProductionContext` for build/serve/rebuild
+
 ### Test Coverage
 
-- 79 production-server tests (74 existing + 5 new contract/invalidation tests)
+- 85 production-server tests (74 existing + 11 new)
 - 5 webhook builder tests
 - Full monorepo build: 70 packages pass
 
 ### Deviations from Design
 
-- `InvalidationContext` with `resolveJayRoute` and `loadRouteModule` callbacks was simplified — the `rebuildContract()` function handles route resolution internally using `page-parts.json` (DL#137) and manifest data
+- `InvalidationContext` / `InvalidationQueue` from the design were not needed — `rebuild()` handles everything directly. The queue can be added later if batch webhooks need it.
 - Webhook handler signature uses `WebhookEvent` (type, payload, headers) instead of raw `HttpRequest` — cleaner API, framework handles HTTP parsing
+- Webhook discovery uses `plugin.yaml` declarations instead of export scanning — consistent with actions
+- Added `--route` and `--url` rebuild modes beyond the original contract-only design — enables rebuilding routes with `page.ts` but no headless contracts
 - Startup validation (source hash comparison) not implemented yet — listed as remaining work
+
+### Known Issues
+
+- **Optimistic skip runs too late.** The comparison happens after `buildInstance` completes the full pipeline (slow render → compile server element → hydration entry → Vite client build). The skip only avoids updating the manifest — the expensive compilation still runs. The comparison should be moved to right after slow render produces the pre-rendered jay-html, before server element compilation and Vite build. This requires splitting `buildInstance` or adding an early-exit path.

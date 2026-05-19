@@ -114,7 +114,14 @@ export async function runServe(
 
 export async function runRebuild(
     projectPath: string | undefined,
-    options: { contract: string; params?: string; version?: string; verbose?: boolean },
+    options: {
+        contract?: string;
+        route?: string;
+        url?: string;
+        params?: string;
+        version?: string;
+        verbose?: boolean;
+    },
 ): Promise<void> {
     initLogger(options.verbose);
 
@@ -125,14 +132,27 @@ export async function runRebuild(
         params = JSON.parse(options.params);
     }
 
-    const { rebuildContract } = await import('@jay-framework/production-server');
-    const result = await rebuildContract({
+    const { rebuild } = await import('@jay-framework/production-server');
+    type RebuildTarget = import('@jay-framework/production-server').RebuildTarget;
+
+    let target: RebuildTarget;
+    if (options.contract) {
+        target = { mode: 'contract', contractName: options.contract, params };
+    } else if (options.route) {
+        target = { mode: 'route', routePattern: options.route, params };
+    } else if (options.url) {
+        target = { mode: 'url', url: options.url };
+    } else {
+        getLogger().error(chalk.red('One of --contract, --route, or --url is required'));
+        process.exit(1);
+    }
+
+    const result = await rebuild({
         projectRoot: ctx.resolvedPath,
         pagesRoot: ctx.pagesRoot,
         buildRoot: ctx.buildRoot,
         version: ctx.version,
-        contractName: options.contract,
-        params,
+        target,
         tsConfigFilePath: ctx.tsConfigFilePath,
     });
 

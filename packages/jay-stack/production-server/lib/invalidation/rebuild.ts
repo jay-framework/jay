@@ -1,18 +1,23 @@
-import type { RouteManifest, RouteEntry } from '../types';
+import type { RouteManifest, RouteEntry, InstanceEntry } from '../types';
 import type { JayRoute } from '@jay-framework/stack-route-scanner';
 import { buildInstance, type InstanceBuildContext } from '../builder/instance-pipeline';
+import { matchRequest } from '../serve/route-matcher';
 import { initializeServices } from '../shared/init-services';
 import { getLogger } from '@jay-framework/logger';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+
+export type RebuildTarget =
+    | { mode: 'contract'; contractName: string; params?: Record<string, string> }
+    | { mode: 'route'; routePattern: string; params?: Record<string, string> }
+    | { mode: 'url'; url: string };
 
 export interface RebuildOptions {
     projectRoot: string;
     pagesRoot: string;
     buildRoot: string;
     version: number;
-    contractName: string;
-    params?: Record<string, string>;
+    target: RebuildTarget;
     tsConfigFilePath?: string;
     minify?: boolean;
 }
@@ -31,19 +36,22 @@ export function resolveContractToRoutes(
     return manifest.routes.filter((r) => r.contracts && r.contracts.includes(contractName));
 }
 
-export async function rebuildContract(options: RebuildOptions): Promise<RebuildResult> {
+export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
     const logger = getLogger();
     const buildDir = path.join(options.buildRoot, `v${options.version}`);
 
     const manifestPath = path.join(buildDir, 'route-manifest.json');
     const manifest: RouteManifest = JSON.parse(await fs.readFile(manifestPath, 'utf-8'));
 
-    logger.important(`[Rebuild] Contract "${options.contractName}" in v${options.version}`);
+    const { routes: affectedRoutes, params: targetParams, label } = resolveTarget(
+        manifest,
+        options.target,
+    );
 
-    const affectedRoutes = resolveContractToRoutes(manifest, options.contractName);
+    logger.important(`[Rebuild] ${label} in v${options.version}`);
 
     if (affectedRoutes.length === 0) {
-        logger.warn(`[Rebuild] No routes found for contract "${options.contractName}"`);
+        logger.warn(`[Rebuild] No routes found for ${label}`);
         return { affected: 0, rebuilt: 0, skipped: 0, errors: [] };
     }
 
@@ -65,12 +73,12 @@ export async function rebuildContract(options: RebuildOptions): Promise<RebuildR
     const result: RebuildResult = { affected: 0, rebuilt: 0, skipped: 0, errors: [] };
 
     for (const route of affectedRoutes) {
-        const instancesToRebuild = options.params
-            ? route.instances.filter((i) => paramsMatch(i.params, options.params!))
+        const instancesToRebuild = targetParams
+            ? route.instances.filter((i) => paramsMatch(i.params, targetParams))
             : [...route.instances];
 
-        if (instancesToRebuild.length === 0 && options.params) {
-            instancesToRebuild.push({ params: options.params } as any);
+        if (instancesToRebuild.length === 0 && targetParams) {
+            instancesToRebuild.push({ params: targetParams } as any);
         }
 
         for (const instance of instancesToRebuild) {
@@ -123,8 +131,8 @@ export async function rebuildContract(options: RebuildOptions): Promise<RebuildR
                         if (
                             stripCacheMetadata(newContent) === stripCacheMetadata(existingContent)
                         ) {
-                            logger.info(
-                                `[Rebuild] ${route.pattern} (${JSON.stringify(params)}): unchanged`,
+                            logger.important(
+                                `[Rebuild] ${route.pattern} (${JSON.stringify(params)}): unchanged, skipped`,
                             );
                             result.skipped++;
                             continue;
@@ -165,6 +173,58 @@ export async function rebuildContract(options: RebuildOptions): Promise<RebuildR
     );
 
     return result;
+}
+
+function resolveTarget(
+    manifest: RouteManifest,
+    target: RebuildTarget,
+): { routes: RouteEntry[]; params?: Record<string, string>; label: string } {
+    switch (target.mode) {
+        case 'contract': {
+            const routes = resolveContractToRoutes(manifest, target.contractName);
+            return {
+                routes,
+                params: target.params,
+                label: `contract "${target.contractName}"${target.params ? ` (${JSON.stringify(target.params)})` : ''}`,
+            };
+        }
+        case 'route': {
+            const route = manifest.routes.find((r) => r.pattern === target.routePattern);
+            return {
+                routes: route ? [route] : [],
+                params: target.params,
+                label: `route "${target.routePattern}"${target.params ? ` (${JSON.stringify(target.params)})` : ''}`,
+            };
+        }
+        case 'url': {
+            const match = matchRequest(manifest, target.url);
+            if (!match) {
+                return { routes: [], label: `url "${target.url}"` };
+            }
+            return {
+                routes: [match.route],
+                params: match.params,
+                label: `url "${target.url}" → ${match.route.pattern} (${JSON.stringify(match.params)})`,
+            };
+        }
+    }
+}
+
+/** Convenience wrapper for contract-based rebuild (used by renderer server webhooks). */
+export async function rebuildContract(options: {
+    projectRoot: string;
+    pagesRoot: string;
+    buildRoot: string;
+    version: number;
+    contractName: string;
+    params?: Record<string, string>;
+    tsConfigFilePath?: string;
+    minify?: boolean;
+}): Promise<RebuildResult> {
+    return rebuild({
+        ...options,
+        target: { mode: 'contract', contractName: options.contractName, params: options.params },
+    });
 }
 
 async function loadRouteModule(

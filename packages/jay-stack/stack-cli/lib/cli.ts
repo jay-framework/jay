@@ -70,15 +70,18 @@ program
     });
 
 program
-    .command('rebuild <contract>')
-    .description('Rebuild instances for a contract (e.g., jay-stack rebuild product-page)')
+    .command('rebuild')
+    .description('Rebuild instances by contract, route, or URL')
+    .option('--contract <name>', 'Rebuild by contract name (e.g., product-page)')
+    .option('--route <pattern>', 'Rebuild by route pattern (e.g., /products/[slug])')
+    .option('--url <url>', 'Rebuild by URL (e.g., /products/blue-widget)')
     .option('--params <json>', 'JSON params to rebuild specific instance (e.g., \'{"slug":"x"}\')')
     .option('--version <n>', 'Build version (default: from package.json)')
     .option('-p, --path <path>', 'Project root (default: cwd)')
     .option('-v, --verbose', 'Enable verbose logging output')
-    .action(async (contract, options) => {
+    .action(async (options) => {
         try {
-            await runRebuild(options.path, { ...options, contract });
+            await runRebuild(options.path, options);
         } catch (error: any) {
             getLogger().error(chalk.red('Rebuild failed:') + ' ' + error.message);
             if (error.stack) getLogger().error(error.stack);

@@ -64,7 +64,7 @@ Validate all `.jay-html` and `.jay-contract` files.
 jay-stack validate
 
 # Validate a specific path
-jay-stack validate src/pages/products/
+jay-stack validate -p src/pages/products/
 
 # Verbose (per-file status)
 jay-stack validate -v
@@ -180,6 +180,9 @@ jay-stack build --version 2
 
 # Build without minification (debugging)
 jay-stack build --no-minify
+
+# Build a project at a specific path
+jay-stack build -p /path/to/project
 ```
 
 ## jay-stack serve
@@ -201,20 +204,26 @@ The main server handles HTTP requests using pre-built artifacts. The renderer se
 
 ## jay-stack rebuild
 
-Rebuild instances for a specific contract without a full build.
+Rebuild instances without a full build. Three targeting modes:
 
 ```bash
-# Rebuild specific instance
-jay-stack rebuild --contract=product-page --params='{"slug":"blue-widget"}'
+# By contract — rebuild all routes using this contract
+jay-stack rebuild --contract product-page
 
-# Rebuild all instances using a contract
-jay-stack rebuild --contract=search-results
+# By contract + params — rebuild specific instance
+jay-stack rebuild --contract product-page --params '{"slug":"blue-widget"}'
 
-# Explicit version
-jay-stack rebuild --contract=product-page --params='{"slug":"x"}' --version 2
+# By route — rebuild all instances of a route
+jay-stack rebuild --route /products/[slug]
+
+# By route + params — rebuild one instance
+jay-stack rebuild --route /products/[slug] --params '{"slug":"blue-widget"}'
+
+# By URL — resolve to route+params, rebuild that instance
+jay-stack rebuild --url /products/blue-widget
 ```
 
-Uses the same invalidation flow as webhooks — resolves contract to routes, rebuilds affected instances, skips unchanged ones.
+`--contract` finds all routes using that contract (via the `contracts` field in the manifest). `--route` targets a route by its pattern. `--url` resolves the URL using the same route matcher as the production server, then rebuilds the matched instance.
 
 ## jay-stack dev
 

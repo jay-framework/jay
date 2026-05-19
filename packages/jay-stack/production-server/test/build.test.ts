@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { buildVersion } from '../lib/builder/build-pipeline';
 import { resolveContractToRoutes } from '../lib/invalidation/rebuild';
+import { matchRequest } from '../lib/serve/route-matcher';
 import { setDevLogger, createDevLogger } from '@jay-framework/logger';
 import path from 'node:path';
 import fs from 'node:fs/promises';
@@ -309,5 +310,44 @@ describe('contracts field (DL#134c)', () => {
     it('resolveContractToRoutes returns empty for unknown contract', () => {
         const routes = resolveContractToRoutes(manifest, 'nonexistent-contract');
         expect(routes.length).toBe(0);
+    });
+});
+
+describe('rebuild target resolution (DL#134c)', () => {
+    it('resolves route pattern to exact route', () => {
+        const route = manifest.routes.find((r) => r.pattern === '/items/[slug]');
+        expect(route).toBeDefined();
+        expect(route!.instances.length).toBe(2);
+    });
+
+    it('resolves URL to route and params via matchRequest', () => {
+        const match = matchRequest(manifest, '/items/widget-a');
+        expect(match).toBeDefined();
+        expect(match!.route.pattern).toBe('/items/[slug]');
+        expect(match!.params).toEqual({ slug: 'widget-a' });
+    });
+
+    it('resolves URL to correct instance', () => {
+        const match = matchRequest(manifest, '/items/widget-b');
+        expect(match).toBeDefined();
+        expect(match!.instance).toBeDefined();
+        expect(match!.instance.params.slug).toBe('widget-b');
+    });
+
+    it('returns undefined for unknown URL', () => {
+        const match = matchRequest(manifest, '/items/nonexistent');
+        expect(match).toBeUndefined();
+    });
+
+    it('returns undefined for unknown route pattern', () => {
+        const route = manifest.routes.find((r) => r.pattern === '/nonexistent');
+        expect(route).toBeUndefined();
+    });
+
+    it('resolves static route URL', () => {
+        const match = matchRequest(manifest, '/home');
+        expect(match).toBeDefined();
+        expect(match!.route.pattern).toBe('/home');
+        expect(Object.keys(match!.params).length).toBe(0);
     });
 });

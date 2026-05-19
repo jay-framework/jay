@@ -95,11 +95,20 @@ Project webhooks don't need plugin.yaml — they are discovered by scanning comp
 For manual or CI-triggered rebuilds without a webhook:
 
 ```bash
-# Rebuild specific instance
-jay-stack rebuild --contract=product-page --params='{"slug":"blue-widget"}'
+# By contract — rebuild all routes using this contract
+jay-stack rebuild --contract product-page
 
-# Rebuild all instances of a contract
-jay-stack rebuild --contract=search-results
+# By contract + params — rebuild specific instance
+jay-stack rebuild --contract product-page --params '{"slug":"blue-widget"}'
+
+# By route — rebuild all instances of a route (useful for pages with page.ts, no contract)
+jay-stack rebuild --route /products/[slug]
+
+# By route + params — rebuild specific instance
+jay-stack rebuild --route /products/[slug] --params '{"slug":"blue-widget"}'
+
+# By URL — resolve URL to route+params, rebuild that instance
+jay-stack rebuild --url /products/blue-widget
 ```
 
 ## Renderer Server
@@ -108,6 +117,8 @@ The renderer server (`jay-stack serve --role=renderer`) hosts webhook endpoints 
 
 ```
 POST /_jay/webhooks/:name    — Webhook handler (plugin-defined)
-POST /_jay/rebuild           — Programmatic rebuild { contract, params? }
+POST /_jay/rebuild           — Programmatic rebuild { contract, route, url, params }
 GET  /_jay/status            — Health check + build info
 ```
+
+The `POST /_jay/rebuild` endpoint accepts one of `contract`, `route`, or `url` in the JSON body.
