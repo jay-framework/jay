@@ -73,6 +73,7 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
             await handlePageRequest(res, match, currentManifest, url, artifacts);
         } catch (err: any) {
             logger.error(`[Server] Error handling ${url.pathname}: ${err.message}`);
+            if (err.stack) logger.error(err.stack);
             if (!res.headersSent) {
                 res.writeHead(500);
                 res.end('Internal Server Error');
