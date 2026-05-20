@@ -666,3 +666,12 @@ Rebuilds produce new files with unique names instead of overwriting existing one
 ### Known Issues / Future Optimization
 
 - **Optimistic skip removed.** The original design compared pre-rendered HTML after `buildInstance` to skip unchanged instances. Two problems were found: (1) `stripCacheMetadata` stripped the `slowViewState` from the comparison, so data-only changes (e.g., price update that doesn't change template structure) were incorrectly reported as unchanged; (2) the comparison ran after the full pipeline completed, so no work was actually saved. The skip was removed entirely. A proper implementation would compare slowViewState + template content *before* server element compilation and Vite build — requires splitting `buildInstance` or adding an early-exit path after slow render.
+
+### Bug Fixes During Testing
+
+- **Silent error swallowing in `getPageParts`** — `page-handler.ts` had a `try/catch` fallback around `loadPagePartsFromConfig` that silently caught errors and constructed a wrong parts object, causing `fastRender` crashes downstream. Removed the catch — errors now propagate with stack traces.
+- **Empty `modulePath` in `page-parts.json`** — `buildPagePartsConfig` wrote a page entry with empty `modulePath` for pages without `page.ts` (no server code). Guard changed from fragile `parts[0].compDefinition` check to `pageServerModule` truthiness.
+- **`compDefinition` undefined in `renderFastChangingData`** — added optional chaining (`compDefinition?.fastRender`) to guard against parts with no component definition.
+- **Stack traces not printed** — server error handler only logged `err.message`. Added `err.stack` logging to both main server and renderer server.
+- **Query params lost in production** — `page-handler.ts` constructed a new URL from `match.pathname` (path only), losing query string. Now receives the full request URL from the main server.
+- **Local plugin init directory import** — `initializeServices` (shared) was importing `pluginInit.packageName` for local plugins (a directory path). Fixed to load from compiled `server/plugins/` directory, matching the main server's existing fix.
