@@ -652,6 +652,7 @@ Rebuilds produce new files with unique names instead of overwriting existing one
 **Mechanism:** `InstanceBuildContext.rebuildSuffix` (a timestamp-based string) is appended to the params hash input during rebuild, producing a new `page_{newHash}` instance ID. The initial build has no suffix — same behavior as before.
 
 **Sequence:**
+
 1. `buildInstance` writes new files: `page_{newHash}.jay-html`, `.cache.json`, `.server-element.js`, `-{viteHash}.js`
 2. `route-manifest.json` updated atomically (temp file + rename) with new file paths
 3. `build-metadata.json` updated with new timestamp — triggers main server to reload manifest
@@ -665,7 +666,7 @@ Rebuilds produce new files with unique names instead of overwriting existing one
 
 ### Known Issues / Future Optimization
 
-- **Optimistic skip removed.** The original design compared pre-rendered HTML after `buildInstance` to skip unchanged instances. Two problems were found: (1) `stripCacheMetadata` stripped the `slowViewState` from the comparison, so data-only changes (e.g., price update that doesn't change template structure) were incorrectly reported as unchanged; (2) the comparison ran after the full pipeline completed, so no work was actually saved. The skip was removed entirely. A proper implementation would compare slowViewState + template content *before* server element compilation and Vite build — requires splitting `buildInstance` or adding an early-exit path after slow render.
+- **Optimistic skip removed.** The original design compared pre-rendered HTML after `buildInstance` to skip unchanged instances. Two problems were found: (1) `stripCacheMetadata` stripped the `slowViewState` from the comparison, so data-only changes (e.g., price update that doesn't change template structure) were incorrectly reported as unchanged; (2) the comparison ran after the full pipeline completed, so no work was actually saved. The skip was removed entirely. A proper implementation would compare slowViewState + template content _before_ server element compilation and Vite build — requires splitting `buildInstance` or adding an early-exit path after slow render.
 
 ### Bug Fixes During Testing
 

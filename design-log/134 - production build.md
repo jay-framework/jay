@@ -668,4 +668,4 @@ Production build tested on:
 - HTTPS / reverse proxy configuration guide
 - Graceful shutdown and health checks
 - Build parallelism (concurrent instance builds within bounded parallelism)
-- Optimistic skip for rebuild (compare slowViewState + template *before* compilation, requires splitting `buildInstance`)
+- Optimistic skip for rebuild (compare slowViewState + template _before_ compilation, requires splitting `buildInstance`)

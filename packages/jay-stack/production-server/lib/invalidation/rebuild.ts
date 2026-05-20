@@ -146,25 +146,23 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
         try {
             const metadata: BuildMetadata = JSON.parse(await fs.readFile(metadataPath, 'utf-8'));
             metadata.buildTimestamp = new Date().toISOString();
-            metadata.instanceCount = manifest.routes.reduce(
-                (n, r) => n + r.instances.length,
-                0,
-            );
+            metadata.instanceCount = manifest.routes.reduce((n, r) => n + r.instances.length, 0);
             await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
         } catch {
             // No metadata file — write a new one
             await fs.writeFile(
                 metadataPath,
-                JSON.stringify({
-                    version: options.version,
-                    sourceHash: '',
-                    buildTimestamp: new Date().toISOString(),
-                    nodeVersion: process.version,
-                    instanceCount: manifest.routes.reduce(
-                        (n, r) => n + r.instances.length,
-                        0,
-                    ),
-                } satisfies BuildMetadata, null, 2),
+                JSON.stringify(
+                    {
+                        version: options.version,
+                        sourceHash: '',
+                        buildTimestamp: new Date().toISOString(),
+                        nodeVersion: process.version,
+                        instanceCount: manifest.routes.reduce((n, r) => n + r.instances.length, 0),
+                    } satisfies BuildMetadata,
+                    null,
+                    2,
+                ),
             );
         }
 
