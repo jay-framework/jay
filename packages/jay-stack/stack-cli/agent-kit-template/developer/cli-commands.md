@@ -64,7 +64,7 @@ Validate all `.jay-html` and `.jay-contract` files.
 jay-stack validate
 
 # Validate a specific path
-jay-stack validate src/pages/products/
+jay-stack validate -p src/pages/products/
 
 # Verbose (per-file status)
 jay-stack validate -v
@@ -166,6 +166,64 @@ If not found, lists available actions:
 ❌ Action "badName" not found.
    Available actions: searchProducts, getProductBySlug, getCategories
 ```
+
+## jay-stack build
+
+Build production artifacts.
+
+```bash
+# Build with auto-detected version (from package.json)
+jay-stack build
+
+# Build with explicit version
+jay-stack build --version 2
+
+# Build without minification (debugging)
+jay-stack build --no-minify
+
+# Build a project at a specific path
+jay-stack build -p /path/to/project
+```
+
+## jay-stack serve
+
+Start the production server.
+
+```bash
+# Start main server (serves pages)
+jay-stack serve
+
+# Start renderer server (handles webhooks + rebuilds)
+jay-stack serve --role=renderer
+
+# Explicit version and port
+jay-stack serve --version 2 --port 8080
+```
+
+The main server handles HTTP requests using pre-built artifacts. The renderer server listens for data change webhooks and rebuilds affected instances.
+
+## jay-stack rebuild
+
+Rebuild instances without a full build. Three targeting modes:
+
+```bash
+# By contract — rebuild all routes using this contract
+jay-stack rebuild --contract product-page
+
+# By contract + params — rebuild specific instance
+jay-stack rebuild --contract product-page --params '{"slug":"blue-widget"}'
+
+# By route — rebuild all instances of a route
+jay-stack rebuild --route /products/[slug]
+
+# By route + params — rebuild one instance
+jay-stack rebuild --route /products/[slug] --params '{"slug":"blue-widget"}'
+
+# By URL — resolve to route+params, rebuild that instance
+jay-stack rebuild --url /products/blue-widget
+```
+
+`--contract` finds all routes using that contract (via the `contracts` field in the manifest). `--route` targets a route by its pattern. `--url` resolves the URL using the same route matcher as the production server, then rebuilds the matched instance.
 
 ## jay-stack dev
 

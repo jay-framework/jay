@@ -491,9 +491,9 @@ The main server is a plain Node.js HTTP server. It loads pre-compiled JS modules
 
 #### Future Phases
 
-4. **Plugin routes** — plugin-provided pages (DL#130) not yet handled in production build
-5. **Plugin init at serve time** — plugin `_serverInit()` not called during production server startup
-6. **Head tags** — SEO head tags from fast phase not injected into SSR `<head>` (DL#127)
+4. ~~**Plugin routes**~~ — Done. `scanPluginRoutes()` discovers routes from `plugin.yaml`, full build + serve support.
+5. ~~**Plugin init at serve time**~~ — Done. `startMainServer()` runs `_serverInit()` in dependency order.
+6. ~~**Head tags**~~ — Done. SEO head tags from slow + fast phases injected into SSR `<head>`.
 7. **Slow render server** — `jay-stack serve --role=renderer` with webhook-based invalidation (DL#134c)
 8. **Source hash** — `build-metadata.json` source hash not computed yet (needed for restart validation)
 9. **Query parameters** — `props.query` not passed through to fast render properly
@@ -642,21 +642,24 @@ Production build tested on:
 - Shared chunks: framework + plugin client packages, browser-cached
 - Total JS per session: ~11.7 MB → ~600 KB (store-light)
 
+### Resolved (previously pending)
+
+- ~~**DL#136 — loadParams route deduplication**~~ — Complete. Materialize → dedupe → build pipeline implemented with 25 passing tests. `inferredParams` filtering, optional segment defaults, URL-based deduplication all working.
+- ~~**Plugin routes**~~ — Complete. `scanPluginRoutes()` discovers routes from `plugin.yaml`, merges with project routes (project takes precedence), full build + serve support.
+- ~~**Plugin `_serverInit()` at serve time**~~ — Complete. `startMainServer()` calls `discoverPluginsWithInit` + `sortPluginsByDependencies`, runs `_serverInit()` in dependency order, stores results via `setClientInitData`.
+
+### Resolved (previously pending — batch 2)
+
+- ~~**DL#134c — Slow render server**~~ — Complete. `makeWebhook()` builder, webhook discovery via `plugin.yaml`, renderer server (`jay-stack serve --role=renderer`), rebuild CLI with three modes (`--contract`, `--route`, `--url`), invalidation engine, atomic rebuild with cleanup manifest.
+- ~~**Version derivation**~~ — Complete. Default version from `package.json` (major*10000+minor*100+patch), `--version` flag overrides.
+- ~~**Main server reload**~~ — Complete. Main server checks `build-metadata.json` mtime per request, reloads manifest when changed. Rebuild updates metadata after manifest write.
+
+### Resolved (previously pending — batch 3)
+
+- ~~**Source hash**~~ — Not needed. Build version derived from `package.json` already identifies the code version. Source hash was redundant — if the version hasn't changed, artifacts are valid.
+- ~~**Query parameters**~~ — Fixed. `requestUrl` (full URL with query string) now passed from main server to page handler. Query params extracted via `requestUrl.searchParams` and passed as 9th argument to `renderFastChangingData`. Previously `match.pathname` (no query) was used to construct a new URL, losing the query string.
+
 ### Remaining
-
-**DL#136 — loadParams route deduplication (in progress):**
-
-- `wix-stores` `loadSearchParams` needs to return `prefix` in results for correct route splitting
-- `wix-stores` `loadSearchParams` needs to return default category entry (e.g., `{ prefix: "polgat", category: "polgat" }`) for root listing pages
-- Golf project `jay-params` needs `category` default values added
-- End-to-end verification on golf (kitan/polgat split producing ~1900 each, not ~3800 each)
-
-**DL#134c — Slow render server (not started):**
-
-- Long-running renderer mode for handling data change webhooks
-- `makeWebhook()` builder for invalidation
-- Per-contract invalidation triggering targeted re-renders
-- `jay-stack serve --role=renderer` mode
 
 **Production hardening:**
 
@@ -665,4 +668,4 @@ Production build tested on:
 - HTTPS / reverse proxy configuration guide
 - Graceful shutdown and health checks
 - Build parallelism (concurrent instance builds within bounded parallelism)
-- Incremental builds (rebuild only changed instances)
+- Optimistic skip for rebuild (compare slowViewState + template _before_ compilation, requires splitting `buildInstance`)

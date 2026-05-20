@@ -35,6 +35,10 @@ actions:
   - name: addToCart
     action: add-to-cart.jay-action
 
+webhooks:
+  - name: onProductChange
+  - name: onInventoryUpdate
+
 services:
   - name: my-store
     marker: MY_STORE_SERVICE_MARKER
@@ -114,6 +118,12 @@ tags:
 - `name` — Action name (used with `jay-stack action <plugin>/<action>`)
 - `action` — Path to `.jay-action` metadata file
 
+### Webhook Entry Fields
+
+- `name` — Export name of the `makeWebhook()` constant (e.g., `onProductChange`)
+
+Webhooks are exposed at `POST /_jay/webhooks/{webhookName}` on the renderer server. The `webhookName` comes from the `makeWebhook('plugin.event-name')` call, not from the export name. The export name in plugin.yaml tells the framework which export to load from the plugin module.
+
 ### Service Entry Fields
 
 - `name` — Service name (for identification in plugins-index)
@@ -183,6 +193,8 @@ my-plugin/
 │   ├── actions/
 │   │   ├── search-products.jay-action
 │   │   └── add-to-cart.jay-action
+│   ├── webhooks/
+│   │   └── on-product-change.ts
 │   ├── components/
 │   │   ├── product-page.ts
 │   │   └── product-search.ts

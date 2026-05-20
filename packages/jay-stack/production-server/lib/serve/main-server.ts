@@ -10,7 +10,7 @@ import {
     handleActionRequest,
     registerActionsFromManifest,
 } from './action-handler';
-import { setClientInitData } from '@jay-framework/stack-server-runtime';
+import { initializeServices } from '../shared/init-services';
 
 export interface MainServerOptions {
     buildRoot: string;
@@ -29,49 +29,7 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
         `[Server] Loaded manifest: ${manifest.routes.length} routes, v${manifest.version}`,
     );
 
-    // Run plugin inits in dependency order
-    const { discoverPluginsWithInit, sortPluginsByDependencies } = await import(
-        '@jay-framework/stack-server-runtime'
-    );
-    try {
-        const pluginsWithInit = sortPluginsByDependencies(
-            await discoverPluginsWithInit({ projectRoot: process.cwd() }),
-        );
-        for (const pluginInit of pluginsWithInit) {
-            try {
-                let modulePath: string;
-                if (pluginInit.isLocal) {
-                    const pluginDirName = path.basename(pluginInit.pluginPath);
-                    const initModule = pluginInit.initModule || 'index';
-                    modulePath = path.join(buildDir, 'server', 'plugins', pluginDirName, initModule + '.js');
-                } else {
-                    modulePath = pluginInit.packageName;
-                }
-                const pluginModule = await import(modulePath);
-                const init = pluginModule.init || pluginModule[pluginInit.initExport || 'init'];
-                if (init?._serverInit) {
-                    logger.info(`[Server] Running plugin init: ${pluginInit.name}`);
-                    const data = await init._serverInit();
-                    if (data) setClientInitData(pluginInit.name, data);
-                }
-            } catch (err: any) {
-                logger.warn(`[Server] Plugin init failed: ${pluginInit.name}: ${err.message}`);
-            }
-        }
-    } catch {
-        // No plugins
-    }
-
-    // Run project init
-    const initModule = await artifacts.loadPageModule('server/init.js').catch(() => null);
-    if (initModule) {
-        const init = initModule.init || initModule.default;
-        if (init?._serverInit) {
-            logger.important('[Server] Running server init...');
-            const data = await init._serverInit();
-            if (data) setClientInitData('project', data);
-        }
-    }
+    await initializeServices(buildDir, process.cwd(), 'Server');
 
     // Register actions (project + plugin)
     if (manifest.actions.length > 0) {
@@ -112,9 +70,10 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
                 return;
             }
 
-            await handlePageRequest(res, match, currentManifest, artifacts);
+            await handlePageRequest(res, match, currentManifest, url, artifacts);
         } catch (err: any) {
             logger.error(`[Server] Error handling ${url.pathname}: ${err.message}`);
+            if (err.stack) logger.error(err.stack);
             if (!res.headersSent) {
                 res.writeHead(500);
                 res.end('Internal Server Error');

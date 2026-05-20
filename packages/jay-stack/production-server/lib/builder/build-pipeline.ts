@@ -373,6 +373,9 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
                 const result = await buildInstance(route, params, pageModule, instanceCtx);
                 if (result.status === 'success') {
                     entry.instances.push(result.instanceEntry);
+                    if (result.contracts.length > 0 && !entry.contracts) {
+                        entry.contracts = result.contracts;
+                    }
                     logInstance(route.rawRoute || '/', params);
                 } else {
                     logger.warn(

@@ -7,18 +7,28 @@ const CACHE_TAG_END = '</script>';
 
 export class FilesystemArtifactStore {
     private manifestCache?: { manifest: RouteManifest; mtime: number };
+    private metadataMtime?: number;
     private moduleCache = new Map<string, { module: any; mtime: number }>();
 
     constructor(private basePath: string) {}
 
     async readManifest(): Promise<RouteManifest> {
+        const metadataPath = path.join(this.basePath, 'build-metadata.json');
         const manifestPath = path.join(this.basePath, 'route-manifest.json');
-        const stat = await fs.stat(manifestPath);
-        if (this.manifestCache && stat.mtimeMs === this.manifestCache.mtime) {
-            return this.manifestCache.manifest;
+
+        try {
+            const metaStat = await fs.stat(metadataPath);
+            if (this.manifestCache && this.metadataMtime === metaStat.mtimeMs) {
+                return this.manifestCache.manifest;
+            }
+            this.metadataMtime = metaStat.mtimeMs;
+        } catch {
+            // No metadata file — fall through to read manifest directly
         }
+
         const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf-8'));
-        this.manifestCache = { manifest, mtime: stat.mtimeMs };
+        const manifestStat = await fs.stat(manifestPath);
+        this.manifestCache = { manifest, mtime: manifestStat.mtimeMs };
         return manifest;
     }
 

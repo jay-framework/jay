@@ -572,3 +572,107 @@ Not required — the main server's timestamp-based caching detects file changes 
 8. Manifest updates are atomic (no partial reads)
 9. Build concurrency stays within configured bounds
 10. Renderer health endpoint reports accurate status
+
+## Implementation Results
+
+### Implemented (May 18, 2026)
+
+**`makeWebhook` builder** (`full-stack-component/lib/jay-webhook-builder.ts`):
+
+- Builder pattern matching `makeJayAction`: `makeWebhook(name).withServices(...).withHandler(fn)`
+- Handler receives `(event: WebhookEvent, invalidate: InvalidateContract, ...services)`
+- `isJayWebhook` type guard for discovery
+- 5 tests passing
+
+**Contracts field population** (`builder/instance-pipeline.ts`):
+
+- `RouteEntry.contracts` populated during build from headless component contract names
+- Collected from `pageParts.headlessInstanceComponents` and `pageParts.parts[].contractInfo`
+- 5 tests verifying contract population and contract→route resolution
+
+**Rebuild engine** (`invalidation/rebuild.ts`):
+
+- `rebuild(options)` — unified rebuild with three target modes:
+  - `{ mode: 'contract', contractName, params? }` — rebuild all routes using a contract
+  - `{ mode: 'route', routePattern, params? }` — rebuild instances of a specific route
+  - `{ mode: 'url', url }` — resolve URL to route+params via route matcher, rebuild that instance
+- `resolveContractToRoutes(manifest, contractName)` — finds routes by contract
+- `rebuildContract(options)` — convenience wrapper for contract mode (used by webhook handlers)
+- Optimistic skip: compares pre-rendered output, skips compilation if unchanged
+- Atomic manifest update via temp file + rename
+
+**Rebuild CLI** (`stack-cli/lib/run-production.ts`):
+
+- Three modes via flags:
+  - `jay-stack rebuild --contract product-page --params '{"slug":"x"}'`
+  - `jay-stack rebuild --route /products/[slug]` (all instances)
+  - `jay-stack rebuild --url /products/blue-widget` (single instance by URL)
+- `--route` without `--params` rebuilds all instances of the route (useful for pages with `page.ts` and no contract)
+- `--url` resolves to route+params using the same matcher as the main server
+
+**Renderer server** (`renderer/renderer-server.ts`):
+
+- `jay-stack serve --role=renderer` starts HTTP server with:
+  - `POST /_jay/webhooks/:name` — dispatches to discovered webhook handlers
+  - `POST /_jay/rebuild` — accepts `{ contract, route, url, params }` (any one target mode)
+  - `GET /_jay/status` — reports version, uptime, webhook list, last webhook
+- Webhook discovery from `plugin.yaml` declarations (matching actions pattern)
+- Service initialization via shared `init-services.ts`
+
+**Version derivation** (`stack-cli/lib/cli.ts`):
+
+- Default version derived from project `package.json` (major*10000 + minor*100 + patch)
+- `--version` flag overrides for all commands (build, serve, rebuild)
+
+**CLI refactor** (`stack-cli/lib/`):
+
+- All CLI commands extracted to dedicated files: `run-dev.ts`, `run-production.ts`, `run-validate.ts`, `run-agent-kit.ts`
+- `cli.ts` is now command registration only (~170 lines)
+- All commands use `-p, --path` option instead of positional `[path]`
+- Shared `resolveProductionContext` for build/serve/rebuild
+
+### Test Coverage
+
+- 85 production-server tests (74 existing + 11 new)
+- 5 webhook builder tests
+- Full monorepo build: 70 packages pass
+
+### Deviations from Design
+
+- `InvalidationContext` / `InvalidationQueue` from the design were not needed — `rebuild()` handles everything directly. The queue can be added later if batch webhooks need it.
+- Webhook handler signature uses `WebhookEvent` (type, payload, headers) instead of raw `HttpRequest` — cleaner API, framework handles HTTP parsing
+- Webhook discovery uses `plugin.yaml` declarations instead of export scanning — consistent with actions
+- Added `--route` and `--url` rebuild modes beyond the original contract-only design — enables rebuilding routes with `page.ts` but no headless contracts
+- Startup validation (source hash comparison) not implemented yet — listed as remaining work
+
+### Atomic Rebuild Transition
+
+Rebuilds produce new files with unique names instead of overwriting existing ones. This prevents a race condition where the main server could serve mismatched files (new pre-rendered HTML with old server element, or vice versa).
+
+**Mechanism:** `InstanceBuildContext.rebuildSuffix` (a timestamp-based string) is appended to the params hash input during rebuild, producing a new `page_{newHash}` instance ID. The initial build has no suffix — same behavior as before.
+
+**Sequence:**
+
+1. `buildInstance` writes new files: `page_{newHash}.jay-html`, `.cache.json`, `.server-element.js`, `-{viteHash}.js`
+2. `route-manifest.json` updated atomically (temp file + rename) with new file paths
+3. `build-metadata.json` updated with new timestamp — triggers main server to reload manifest
+4. Main server reloads manifest → atomically switches to new files
+5. Old file paths appended to `cleanup-manifest.json`
+6. `jay-stack cleanup` (or async background task) deletes orphaned files
+
+**Main server reload trigger:** `FilesystemArtifactStore.readManifest()` checks `build-metadata.json` mtime. If changed, re-reads the manifest. This is cheaper than checking the manifest itself on every request and ensures the reload only happens after both manifest and metadata are fully written.
+
+**Cleanup manifest:** Each rebuild appends replaced file paths (pre-rendered HTML, cache JSON, server element, client bundle, CSS) to `build/v{n}/cleanup-manifest.json`. The `jay-stack cleanup` command reads this file, deletes the listed files, then removes the manifest itself. Cleanup is safe to run at any time — the main server only reads files referenced by the current route manifest, not orphaned ones.
+
+### Known Issues / Future Optimization
+
+- **Optimistic skip removed.** The original design compared pre-rendered HTML after `buildInstance` to skip unchanged instances. Two problems were found: (1) `stripCacheMetadata` stripped the `slowViewState` from the comparison, so data-only changes (e.g., price update that doesn't change template structure) were incorrectly reported as unchanged; (2) the comparison ran after the full pipeline completed, so no work was actually saved. The skip was removed entirely. A proper implementation would compare slowViewState + template content _before_ server element compilation and Vite build — requires splitting `buildInstance` or adding an early-exit path after slow render.
+
+### Bug Fixes During Testing
+
+- **Silent error swallowing in `getPageParts`** — `page-handler.ts` had a `try/catch` fallback around `loadPagePartsFromConfig` that silently caught errors and constructed a wrong parts object, causing `fastRender` crashes downstream. Removed the catch — errors now propagate with stack traces.
+- **Empty `modulePath` in `page-parts.json`** — `buildPagePartsConfig` wrote a page entry with empty `modulePath` for pages without `page.ts` (no server code). Guard changed from fragile `parts[0].compDefinition` check to `pageServerModule` truthiness.
+- **`compDefinition` undefined in `renderFastChangingData`** — added optional chaining (`compDefinition?.fastRender`) to guard against parts with no component definition.
+- **Stack traces not printed** — server error handler only logged `err.message`. Added `err.stack` logging to both main server and renderer server.
+- **Query params lost in production** — `page-handler.ts` constructed a new URL from `match.pathname` (path only), losing query string. Now receives the full request URL from the main server.
+- **Local plugin init directory import** — `initializeServices` (shared) was importing `pluginInit.packageName` for local plugins (a directory path). Fixed to load from compiled `server/plugins/` directory, matching the main server's existing fix.

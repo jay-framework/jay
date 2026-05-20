@@ -591,6 +591,7 @@ The dev server avoids this because `executePluginServerInits` (plugin-init-disco
 **Root cause:** Same class of problem as DL#137's page parts — serve-time code accesses source files instead of compiled build output.
 
 **Fix:** Two changes:
+
 1. `main-server.ts` — for local plugins, redirect the import from the source directory to the compiled init module in `build/v1/server/plugins/{name}/{initModule}.js`
 2. `server-code-build.ts` — removed the `file !== 'init.ts'` exclusion so `init.ts` in plugin directories is compiled to the build output
 

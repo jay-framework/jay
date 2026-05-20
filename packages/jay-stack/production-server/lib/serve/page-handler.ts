@@ -22,7 +22,6 @@ const pagePartsCache = new Map<string, ProductionPageParts>();
 
 async function getPageParts(
     route: RouteEntry,
-    pageModule: any,
     artifacts: FilesystemArtifactStore,
     preRenderedPath: string,
 ): Promise<ProductionPageParts> {
@@ -34,28 +33,7 @@ async function getPageParts(
     const configPath = artifacts.getAssetPath(path.join(routeDir, 'page-parts.json'));
     const buildDir = artifacts.getBuildDir();
 
-    let parts: ProductionPageParts;
-    try {
-        parts = await loadPagePartsFromConfig(configPath, buildDir);
-    } catch {
-        parts = {
-            parts: pageModule
-                ? [
-                      {
-                          compDefinition: pageModule.page ?? pageModule.default,
-                          clientImport: '',
-                          clientPart: '',
-                      },
-                  ]
-                : [],
-            headlessContracts: [],
-            headlessInstanceComponents: [],
-            discoveredInstances: [],
-            forEachInstances: [],
-            keyedPartModules: [],
-            headlessModuleInfos: [],
-        };
-    }
+    const parts = await loadPagePartsFromConfig(configPath, buildDir);
 
     pagePartsCache.set(cacheKey, parts);
     return parts;
@@ -65,22 +43,15 @@ export async function handlePageRequest(
     res: ServerResponse,
     match: MatchResult,
     manifest: RouteManifest,
+    requestUrl: URL,
     artifacts: FilesystemArtifactStore,
 ): Promise<void> {
     const { route, instance } = match;
 
     const preRendered = await artifacts.readPreRenderedHtml(instance.preRenderedPath);
-    let pageModule: any = {};
-    if (route.serverModule) {
-        pageModule = route.isPlugin
-            ? await import(route.serverModule)
-            : await artifacts.loadPageModule(route.serverModule);
-    }
+    const pageParts = await getPageParts(route, artifacts, instance.preRenderedPath);
 
-    const pageParts = await getPageParts(route, pageModule, artifacts, instance.preRenderedPath);
-
-    const url = new URL(`http://localhost${match.pathname}`);
-    const query = Object.fromEntries(url.searchParams.entries());
+    const query = Object.fromEntries(requestUrl.searchParams.entries());
 
     const fastResult = await renderFastChangingData(
         match.params,

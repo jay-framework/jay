@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { buildVersion } from '../lib/builder/build-pipeline';
+import { resolveContractToRoutes } from '../lib/invalidation/rebuild';
+import { matchRequest } from '../lib/serve/route-matcher';
 import { setDevLogger, createDevLogger } from '@jay-framework/logger';
 import path from 'node:path';
 import fs from 'node:fs/promises';
@@ -276,5 +278,76 @@ describe('page-parts.json (DL#137)', () => {
         );
         expect(config.instanceComponents.length).toBe(0);
         expect(config.forEachInstances.length).toBe(0);
+    });
+});
+
+describe('contracts field (DL#134c)', () => {
+    it('populates contracts for routes with headless components', () => {
+        const catalog = findRoute('/catalog');
+        expect(catalog.contracts).toBeDefined();
+        expect(catalog.contracts).toEqual(['cart-badge']);
+    });
+
+    it('populates multiple contracts when route uses multiple headless components', () => {
+        const featured = findRoute('/featured');
+        expect(featured.contracts).toBeDefined();
+        expect(featured.contracts!.length).toBeGreaterThanOrEqual(1);
+        expect(featured.contracts).toEqual(expect.arrayContaining(['cart-badge']));
+    });
+
+    it('does not set contracts for routes without headless components', () => {
+        const index = findRoute('');
+        expect(index.contracts).toBeUndefined();
+    });
+
+    it('resolveContractToRoutes finds routes by contract name', () => {
+        const routes = resolveContractToRoutes(manifest, 'cart-badge');
+        expect(routes.length).toBeGreaterThanOrEqual(2);
+        const patterns = routes.map((r) => r.pattern);
+        expect(patterns).toEqual(expect.arrayContaining(['/catalog', '/featured']));
+    });
+
+    it('resolveContractToRoutes returns empty for unknown contract', () => {
+        const routes = resolveContractToRoutes(manifest, 'nonexistent-contract');
+        expect(routes.length).toBe(0);
+    });
+});
+
+describe('rebuild target resolution (DL#134c)', () => {
+    it('resolves route pattern to exact route', () => {
+        const route = manifest.routes.find((r) => r.pattern === '/items/[slug]');
+        expect(route).toBeDefined();
+        expect(route!.instances.length).toBe(2);
+    });
+
+    it('resolves URL to route and params via matchRequest', () => {
+        const match = matchRequest(manifest, '/items/widget-a');
+        expect(match).toBeDefined();
+        expect(match!.route.pattern).toBe('/items/[slug]');
+        expect(match!.params).toEqual({ slug: 'widget-a' });
+    });
+
+    it('resolves URL to correct instance', () => {
+        const match = matchRequest(manifest, '/items/widget-b');
+        expect(match).toBeDefined();
+        expect(match!.instance).toBeDefined();
+        expect(match!.instance.params.slug).toBe('widget-b');
+    });
+
+    it('returns undefined for unknown URL', () => {
+        const match = matchRequest(manifest, '/items/nonexistent');
+        expect(match).toBeUndefined();
+    });
+
+    it('returns undefined for unknown route pattern', () => {
+        const route = manifest.routes.find((r) => r.pattern === '/nonexistent');
+        expect(route).toBeUndefined();
+    });
+
+    it('resolves static route URL', () => {
+        const match = matchRequest(manifest, '/home');
+        expect(match).toBeDefined();
+        expect(match!.route.pattern).toBe('/home');
+        expect(Object.keys(match!.params).length).toBe(0);
     });
 });

@@ -245,7 +245,7 @@ export function buildPagePartsConfig(
 ): PagePartsConfig {
     const parts: PagePartsConfig['parts'] = [];
 
-    if (pageParts.parts.length > 0 && pageParts.parts[0].compDefinition) {
+    if (pageServerModule) {
         parts.push({
             modulePath: pageServerModule,
             exportName: pageExportName,
@@ -306,6 +306,11 @@ export async function loadPagePartsFromConfig(
     const config: PagePartsConfig = JSON.parse(await fs.readFile(configPath, 'utf-8'));
 
     async function importModule(entry: PagePartsConfigEntry): Promise<any> {
+        if (!entry.modulePath) {
+            throw new Error(
+                `Empty modulePath in page-parts.json for "${entry.exportName}" (source: ${entry.source}). Rebuild required.`,
+            );
+        }
         if (entry.source === 'local') {
             return import(path.join(buildDir, entry.modulePath));
         }
