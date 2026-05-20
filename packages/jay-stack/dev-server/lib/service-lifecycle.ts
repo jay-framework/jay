@@ -23,6 +23,7 @@ import type { ProjectClientInitInfo } from '@jay-framework/stack-server-runtime'
 import * as path from 'node:path';
 import * as fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
+import type { JayDevServerInitContext } from '@jay-framework/fullstack-component';
 import type { ViteDevServer } from 'vite';
 import { getLogger } from '@jay-framework/logger';
 
@@ -109,7 +110,9 @@ export class ServiceLifecycleManager {
                         const { setClientInitData } = await import(
                             '@jay-framework/stack-server-runtime'
                         );
-                        const clientData = await module.init._serverInit();
+                        const clientData = await module.init._serverInit(
+                            this.viteServer as JayDevServerInitContext,
+                        );
                         if (clientData !== undefined && clientData !== null) {
                             setClientInitData('project', clientData);
                         }

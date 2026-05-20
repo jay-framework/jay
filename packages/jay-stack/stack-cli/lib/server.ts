@@ -95,6 +95,9 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
         httpServer,
     });
 
+    // Express-level mount runs before Vite — required for /_jay/reference-browse (#11)
+    await mountAiditorReferenceBrowseProxyIfPresent(app, viteServer);
+
     app.use(server);
 
     // Wire editor protocol handlers to DevServerService (DL#128)
@@ -253,4 +256,32 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
     // Handle graceful shutdown
     process.on('SIGTERM', shutdown);
     process.on('SIGINT', shutdown);
+}
+
+/** AIditor reference site browser (#11) — optional when @jay-framework/aiditor is installed. */
+async function mountAiditorReferenceBrowseProxyIfPresent(
+    app: Express,
+    viteServer: {
+        middlewares: { use: (fn: unknown) => void };
+        ssrLoadModule: (id: string) => Promise<Record<string, unknown>>;
+    },
+): Promise<void> {
+    try {
+        const aiditor = await viteServer.ssrLoadModule('@jay-framework/aiditor');
+        const createMiddleware = aiditor.createReferenceBrowseProxyMiddleware as
+            | (() => (req: unknown, res: unknown, next: () => void) => void)
+            | undefined;
+        const mountProxy = aiditor.mountReferenceBrowseProxy as
+            | ((vite: typeof viteServer) => void)
+            | undefined;
+        if (typeof createMiddleware === 'function') {
+            app.use(createMiddleware());
+            getLogger().info('[ReferenceBrowse] Proxy on Express at /_jay/reference-browse');
+        }
+        if (typeof mountProxy === 'function') {
+            mountProxy(viteServer);
+        }
+    } catch {
+        /* aiditor not a dependency of this project */
+    }
 }

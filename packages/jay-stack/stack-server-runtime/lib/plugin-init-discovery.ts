@@ -10,11 +10,24 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import type { JayInit } from '@jay-framework/fullstack-component';
+import type { JayDevServerInitContext, JayInit } from '@jay-framework/fullstack-component';
 import type { ViteSSRLoader } from './action-discovery';
 import { setClientInitData } from './services';
 import { scanPlugins, type ScannedPlugin } from './plugin-scanner';
 import { getLogger } from '@jay-framework/logger';
+
+/** Vite dev server exposes Connect middlewares; SSR-only loaders do not. */
+function viteServerInitContext(viteServer?: ViteSSRLoader): JayDevServerInitContext | undefined {
+    if (
+        viteServer &&
+        typeof viteServer === 'object' &&
+        'middlewares' in viteServer &&
+        typeof (viteServer as JayDevServerInitContext).middlewares?.use === 'function'
+    ) {
+        return viteServer as JayDevServerInitContext;
+    }
+    return undefined;
+}
 
 /**
  * Information about a discovered plugin with init.
@@ -267,8 +280,8 @@ export async function executePluginServerInits(
                     getLogger().info(`[DevServer] Running server init: ${plugin.name}`);
                 }
 
-                // Run server init and capture returned data
-                const clientData = await jayInit._serverInit();
+                // Run server init and capture returned data (vite optional — DL#11 reference browse)
+                const clientData = await jayInit._serverInit(viteServerInitContext(viteServer));
 
                 // Store client data if server init returned something
                 if (clientData !== undefined && clientData !== null) {

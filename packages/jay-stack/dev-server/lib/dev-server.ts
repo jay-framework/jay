@@ -1289,6 +1289,9 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
         httpServer: options.httpServer,
     });
 
+    // Reference site browser for AIditor (#11) — mount before other middleware
+    await tryMountAiditorReferenceBrowseProxy(vite);
+
     // Set the Vite server and initialize services
     lifecycleManager.setViteServer(vite);
     await lifecycleManager.initialize();
@@ -1439,6 +1442,24 @@ function setupActionRouter(vite: ViteDevServer, buildFolder: string): void {
 /**
  * Sets up the freeze POST endpoint for saving ViewState snapshots (DL#127).
  */
+/**
+ * Mount AIditor reference browse proxy when @jay-framework/aiditor is installed.
+ * Plugin init also mounts when stack-server-runtime passes vite to _serverInit.
+ */
+async function tryMountAiditorReferenceBrowseProxy(vite: ViteDevServer): Promise<void> {
+    try {
+        const mod = (await vite.ssrLoadModule('@jay-framework/aiditor')) as {
+            mountReferenceBrowseProxy?: (server: ViteDevServer) => void;
+        };
+        if (typeof mod.mountReferenceBrowseProxy === 'function') {
+            mod.mountReferenceBrowseProxy(vite);
+            getLogger().info('[ReferenceBrowse] Proxy mounted at /_jay/reference-browse');
+        }
+    } catch {
+        /* aiditor not installed or dist missing mount export */
+    }
+}
+
 function setupFreezeEndpoint(vite: ViteDevServer, freezeStore: FreezeStore): void {
     vite.middlewares.use((req: any, res: any, next: any) => {
         if (

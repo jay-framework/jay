@@ -20,6 +20,16 @@
 // ============================================================================
 
 /**
+ * Optional dev-server handle passed to `withServer` under jay-stack dev (#11 reference browse).
+ * Intentionally minimal — matches ViteDevServer.middlewares without a vite dependency here.
+ */
+export interface JayDevServerInitContext {
+    middlewares: {
+        use: (handler: unknown) => void;
+    };
+}
+
+/**
  * The compiled init object that contains server and/or client init functions.
  * The compiler transforms the builder chain into this object.
  */
@@ -28,7 +38,7 @@ export interface JayInit<T = void> {
     /** Key for namespacing (plugin name or 'project'). Filled in by framework. */
     readonly key: string;
     /** Server init function. Returns data to pass to client. */
-    readonly _serverInit?: () => T | Promise<T>;
+    readonly _serverInit?: (devServer?: JayDevServerInitContext) => T | Promise<T>;
     /** Client init function. Receives data from server. */
     readonly _clientInit?: (data: T) => void | Promise<void>;
 }
@@ -45,7 +55,7 @@ export interface JayInitBuilder<T = void> {
      * @returns Builder with client data type set to callback's return type
      */
     withServer<R extends Record<string, any>>(
-        callback: () => R | Promise<R>,
+        callback: (devServer?: JayDevServerInitContext) => R | Promise<R>,
     ): JayInitBuilderWithServer<R>;
 
     /**
@@ -116,7 +126,7 @@ export function makeJayInit(key?: string): JayInitBuilder<void> {
 
     return {
         withServer<R extends Record<string, any>>(
-            callback: () => R | Promise<R>,
+            callback: (devServer?: JayDevServerInitContext) => R | Promise<R>,
         ): JayInitBuilderWithServer<R> {
             // Return an object that is both a JayInit (for server-only use)
             // and has withClient method (for adding client init)
