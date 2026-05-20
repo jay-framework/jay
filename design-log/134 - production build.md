@@ -648,20 +648,18 @@ Production build tested on:
 - ~~**Plugin routes**~~ — Complete. `scanPluginRoutes()` discovers routes from `plugin.yaml`, merges with project routes (project takes precedence), full build + serve support.
 - ~~**Plugin `_serverInit()` at serve time**~~ — Complete. `startMainServer()` calls `discoverPluginsWithInit` + `sortPluginsByDependencies`, runs `_serverInit()` in dependency order, stores results via `setClientInitData`.
 
+### Resolved (previously pending — batch 2)
+
+- ~~**DL#134c — Slow render server**~~ — Complete. `makeWebhook()` builder, webhook discovery via `plugin.yaml`, renderer server (`jay-stack serve --role=renderer`), rebuild CLI with three modes (`--contract`, `--route`, `--url`), invalidation engine, atomic rebuild with cleanup manifest.
+- ~~**Version derivation**~~ — Complete. Default version from `package.json` (major*10000+minor*100+patch), `--version` flag overrides.
+- ~~**Main server reload**~~ — Complete. Main server checks `build-metadata.json` mtime per request, reloads manifest when changed. Rebuild updates metadata after manifest write.
+
+### Resolved (previously pending — batch 3)
+
+- ~~**Source hash**~~ — Not needed. Build version derived from `package.json` already identifies the code version. Source hash was redundant — if the version hasn't changed, artifacts are valid.
+- ~~**Query parameters**~~ — Fixed. `requestUrl` (full URL with query string) now passed from main server to page handler. Query params extracted via `requestUrl.searchParams` and passed as 9th argument to `renderFastChangingData`. Previously `match.pathname` (no query) was used to construct a new URL, losing the query string.
+
 ### Remaining
-
-**DL#134c — Slow render server (not started):**
-
-- Long-running renderer mode for handling data change webhooks
-- `makeWebhook()` builder for invalidation
-- Per-contract invalidation triggering targeted re-renders
-- `jay-stack serve --role=renderer` mode
-- CLI command to rebuild by contract + params: `jay-stack rebuild --contract=product-page --params='{"slug":"blue-widget"}'` (same invalidation model as webhooks — find routes using that contract with those params, re-run per-instance pipeline without a full rebuild)
-
-**Version derivation and artifact updates:**
-
-- Build version is currently hardcoded to `v1` — need to define how the version is derived (e.g., from project `package.json` version, git hash, or auto-incrementing). The version must represent the binary version of the software/deployment — data changes within the same code version don't bump the version, they update artifacts in-place within the current version bucket.
-- Main server needs a mechanism to learn about updated routes/artifacts after a rebuild (CLI or API). Options: the rebuild command/API notifies the main server to reload affected routes, or the main server watches `build-metadata.json` for changes. Currently the main server loads everything at startup and has no reload path.
 
 **Production hardening:**
 
@@ -670,4 +668,4 @@ Production build tested on:
 - HTTPS / reverse proxy configuration guide
 - Graceful shutdown and health checks
 - Build parallelism (concurrent instance builds within bounded parallelism)
-- Incremental builds (rebuild only changed instances)
+- Optimistic skip for rebuild (compare slowViewState + template *before* compilation, requires splitting `buildInstance`)

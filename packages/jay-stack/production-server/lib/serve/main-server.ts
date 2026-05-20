@@ -70,7 +70,7 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
                 return;
             }
 
-            await handlePageRequest(res, match, currentManifest, artifacts);
+            await handlePageRequest(res, match, currentManifest, url, artifacts);
         } catch (err: any) {
             logger.error(`[Server] Error handling ${url.pathname}: ${err.message}`);
             if (!res.headersSent) {

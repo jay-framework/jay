@@ -65,6 +65,7 @@ export async function handlePageRequest(
     res: ServerResponse,
     match: MatchResult,
     manifest: RouteManifest,
+    requestUrl: URL,
     artifacts: FilesystemArtifactStore,
 ): Promise<void> {
     const { route, instance } = match;
@@ -79,8 +80,7 @@ export async function handlePageRequest(
 
     const pageParts = await getPageParts(route, pageModule, artifacts, instance.preRenderedPath);
 
-    const url = new URL(`http://localhost${match.pathname}`);
-    const query = Object.fromEntries(url.searchParams.entries());
+    const query = Object.fromEntries(requestUrl.searchParams.entries());
 
     const fastResult = await renderFastChangingData(
         match.params,
