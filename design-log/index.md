@@ -141,6 +141,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 134d | server build                           | Compiling page.ts, actions, services, init.ts to production JS         |
 | 136  | loadParams route context               | Passing inferred/route params to loadParams for multi-prefix filtering |
 | 139  | wix deployment separation              | Split build into frontend (CDN) + backend (container); Cloudflare-compatible fetch handler |
+| 140  | production smoke test                  | Dedicated example project validating dev, production self-hosted, and production CDN modes |
 
 ---
 
