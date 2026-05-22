@@ -186,33 +186,45 @@ yarn vitest run test/smoke.test.ts -t "production"
 
 ## Implementation Plan
 
-### Phase 1: Example project skeleton
+Implementation is split into two milestones. The first milestone (phases 1-3) uses only existing infrastructure — no DL#139 dependency. The second milestone (phases 4-5) adds CDN and fetch modes after DL#139 lands.
+
+### Milestone 1: Dev + Production Self-Hosted (before DL#139)
+
+#### Phase 1: Example project skeleton
 
 1. Create `examples/jay-stack/smoke-test/` with package.json, .jay, tsconfig
 2. Create the static page (`/`) and the phases page (`/phases`) with contracts
 3. Create the test plugin with headless contract + component + service
 4. Create remaining pages one by one, each with its contract and jay-html
 5. Add `public/` folder with test assets
-6. Add `.jay-deploy` with `local` and `cdn` environments
-7. Verify project works with `jay-stack dev`
+6. Verify project works with `jay-stack dev`
 
-### Phase 2: Dev mode smoke test
+#### Phase 2: Dev mode smoke test
 
 1. Create `test/smoke.test.ts` with test harness utilities
 2. Add dev mode describe block — start dev server, validate all pages
 3. Run and verify
 
-### Phase 3: Production smoke tests
+#### Phase 3: Production self-hosted smoke test
 
-1. Add production self-hosted describe block — build, serve, validate
-2. Add production CDN describe block — build with cdn env, serve + static server, validate
-3. CDN-specific checks (import map URLs, asset URLs)
-4. Run full suite
+1. Add production self-hosted describe block — build, start server, validate all pages
+2. Validate the same pages pass in both dev and production
+3. Wire into monorepo — add `test:smoke` script to package.json
+4. Run full suite (dev + production self-hosted)
 
-### Phase 4: Wire into monorepo
+### Milestone 2: CDN + Fetch Modes (after DL#139)
 
-1. Add `test:smoke` script to smoke-test package.json
-2. Optionally add to root-level test suite (may want to keep smoke tests separate due to duration)
+#### Phase 4: Deploy config and CDN smoke test
+
+1. Add `.jay-deploy` with `local`, `http-cdn`, and `production` environments
+2. Add production http+cdn describe block — start server + static file server, validate
+3. CDN-specific checks (import map URLs, CSS links, asset URLs reference `http://localhost:4001/`)
+
+#### Phase 5: Fetch mode smoke test
+
+1. Add production fetch+cdn describe block — start fetch-style server + static file server, validate
+2. Verify same pages pass across all four modes
+3. Run full suite
 
 ## Trade-offs
 
