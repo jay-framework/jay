@@ -30,6 +30,8 @@ A2: Use `new Response(ReadableStream)` with a `TransformStream` or manual `Reada
 
 **Q3: Should the build produce two separate root folders or two subfolders?**
 
+A3: Subfolders under `build/v{n}/` — `frontend/` and `backend/`.
+
 **Q4: Should the route manifest live in both folders or just backend?**
 
 A4: Just backend. The manifest is only consumed by the server. The CDN folder is dumb static hosting.
@@ -51,7 +53,7 @@ A6: No. Public folder contents are static project assets — they don't change d
 
 **Q7: How does the main server currently serve static files, and what changes?**
 
-A7: Currently `handleStaticRequest` serves `shared/` and `pre-rendered/` files from the build folder via filesystem. After separation, the server no longer serves these — the CDN does. The server only needs to handle page requests and actions. Static file serving on the server can be removed entirely (or kept as a dev/fallback mode).
+A7: Currently `handleStaticRequest` serves `shared/` and `pre-rendered/` files from the build folder via filesystem. After separation, the server **keeps** this capability — it's controlled by a deployment config. In `self-hosted` mode, the server serves static files from `frontend/` (same as today, for local/standalone deployments). In `cdn` mode, static serving is disabled and all browser-facing URLs use the CDN base path. This way the same server works for Wix deployment, other setups, and local testing.
 
 **Q8: What about the import map URLs — they currently point to `/shared/filename.js`?**
 
@@ -59,7 +61,57 @@ A8: They need to point to the CDN URL. `publicBasePath` in the manifest already 
 
 ## Design
 
-### 1. Build Output Structure
+### 1. Deployment Config
+
+A new `.jay-deploy` YAML file in the project root. Supports multiple named environments, with one marked as the active/default.
+
+```yaml
+# .jay-deploy
+environments:
+  local:
+    serving: self-hosted
+
+  staging:
+    serving: cdn
+    staticBaseUrl: https://static.parastorage.com/services/jay-app/staging/
+
+  production:
+    serving: cdn
+    staticBaseUrl: https://static.parastorage.com/services/jay-app/1.0.0/
+```
+
+**Fields per environment:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `serving` | `'self-hosted' \| 'cdn'` | `'self-hosted'` | Whether the server serves static files or they come from a CDN |
+| `staticBaseUrl` | `string` | `'/'` | Base URL prefix for all browser-facing assets (JS, CSS, images). Used as `publicBasePath` in the manifest and import maps |
+
+**Usage:**
+
+```bash
+jay-stack build --env production          # builds with production staticBaseUrl
+jay-stack serve --env production          # serves with production config (no static serving)
+jay-stack serve --env local               # serves with self-hosted static files
+jay-stack serve                           # defaults to 'local' if no --env
+```
+
+The build writes `staticBaseUrl` into the manifest's `publicBasePath`. At serve time, the `serving` mode determines whether the static handler is enabled.
+
+**Config type:**
+
+```typescript
+interface DeployEnvironment {
+    serving: 'self-hosted' | 'cdn';
+    staticBaseUrl?: string;  // defaults to '/'
+}
+
+interface DeployConfig {
+    environments: Record<string, DeployEnvironment>;
+}
+```
+
+### 2. Build Output Structure
 
 ```
 build/v{n}/
@@ -99,9 +151,9 @@ build/v{n}/
 │           └── page-parts.json
 ```
 
-### 2. Manifest Path Changes
+### 3. Manifest Path Changes
 
-Paths in the manifest currently are relative to `build/v{n}/`. After separation:
+All paths in the manifest stay **relative** — never absolute or CDN-prefixed:
 
 - **`serverModule`**: relative to `backend/` (e.g., `server/pages/index/page.js`)
 - **`preRenderedPath`**: relative to `backend/` (e.g., `pre-rendered/index/page.jay-html`)
@@ -110,14 +162,21 @@ Paths in the manifest currently are relative to `build/v{n}/`. After separation:
 - **`clientCssPath`**: relative to `frontend/` (e.g., `pages/index/page_{hash}.css`)
 - **`sharedManifest`**: values are relative to `frontend/shared/`
 
-The `publicBasePath` prefixes all frontend-relative paths when generating URLs for the browser (import maps, CSS links, script tags). This already works today.
+At serve time, `publicBasePath` (from the deploy config's `staticBaseUrl`) is prepended to all frontend-relative paths when generating browser-facing URLs (import maps, CSS links, script tags). In `self-hosted` mode, `publicBasePath` defaults to `/` and the server maps those URLs to the `frontend/` folder on disk.
 
-### 3. Cloudflare-Compatible Fetch Handler
+### 4. Cloudflare-Compatible Fetch Handler
 
 The core server logic becomes a pure function:
 
 ```typescript
 type FetchHandler = (request: Request) => Promise<Response>;
+
+interface HandlerOptions {
+    backendDir: string;
+    frontendDir: string;
+    serving: 'self-hosted' | 'cdn';
+    staticBaseUrl: string;    // '/' for self-hosted, CDN URL for cdn mode
+}
 
 export function createJayHandler(options: HandlerOptions): FetchHandler {
     return async (request: Request): Promise<Response> => {
@@ -125,6 +184,14 @@ export function createJayHandler(options: HandlerOptions): FetchHandler {
         
         if (isActionRequest(url.pathname)) {
             return handleActionRequest(request);
+        }
+        
+        // In self-hosted mode, serve static files from frontend/
+        if (options.serving === 'self-hosted') {
+            const staticResponse = await handleStaticRequest(
+                request, options.frontendDir
+            );
+            if (staticResponse) return staticResponse;
         }
         
         const manifest = await artifacts.readManifest();
@@ -147,7 +214,7 @@ The server entry wraps this in Node.js `http.createServer` using `node:http` ada
 |------|------------|---------|
 | `page-handler.ts` | `(res: ServerResponse, ...) → void` | `(...) → Response` (streaming via `ReadableStream`) |
 | `action-handler.ts` | `(req: IncomingMessage, res: ServerResponse) → void` | `(request: Request) → Response` |
-| `static-handler.ts` | `(req, res, basePath, urlPrefix) → boolean` | **Removed** — CDN serves static files |
+| `static-handler.ts` | `(req, res, basePath, urlPrefix) → boolean` | `(request, basePath, urlPrefix) → Response \| null` — **kept**, enabled in `self-hosted` mode |
 | `main-server.ts` | `http.createServer(callback)` | `createJayHandler()` + thin Node adapter |
 
 #### Streaming SSR with ReadableStream
@@ -202,7 +269,7 @@ http.createServer(async (req, res) => {
 }).listen(port);
 ```
 
-### 4. Build Pipeline Changes
+### 5. Build Pipeline Changes
 
 #### Phase 0: Shared Chunks
 
@@ -227,44 +294,51 @@ Currently writes all instance files to `build/v{n}/pre-rendered/{route}/`. Split
 
 `FilesystemArtifactStore` constructor takes `backendDir` instead of `buildDir`. All server-side reads resolve against the backend folder. The store no longer needs to know about frontend files.
 
-### 5. Public Folder Handling
+### 6. Public Folder Handling
 
-During build Phase 2 (finalize), recursively copy the project's `public/` folder to `frontend/public/`. The main server references public files via `publicBasePath + "public/"` for any URL patterns, but since the CDN serves everything under `frontend/`, the public files are available at `{cdnBase}/public/...`.
+During build Phase 2 (finalize), recursively copy the project's `public/` folder to `frontend/public/`. In `self-hosted` mode the server serves these from disk. In `cdn` mode they're available at `{staticBaseUrl}/public/...`.
 
 In dev mode, the dev server already serves `public/` via Express static middleware — no change needed there.
 
 ## Implementation Plan
 
-### Phase 1: Split build output
+### Phase 1: Deployment config
+
+1. **Create deploy config loader** — parse `.jay-deploy` YAML, resolve environment by name, defaults
+2. **Add `DeployConfig` types** to production-server types
+3. **Wire into CLI** — `--env` flag for `build` and `serve` commands
+
+### Phase 2: Split build output
 
 1. **Update `build-pipeline.ts`** — add `frontendDir` and `backendDir` paths derived from build root
 2. **Update `shared-chunks-build.ts`** — output to `frontend/shared/`
 3. **Update `server-code-build.ts`** — output to `backend/server/`
 4. **Update `instance-pipeline.ts`** — split instance outputs between frontend and backend
-5. **Update `route-manifest.ts`** — write manifest to `backend/`, adjust paths in manifest entries
+5. **Update `route-manifest.ts`** — write manifest to `backend/`, with relative paths for both sides
 6. **Add public folder copy** in finalize phase
-7. **Update `BuildOptions`** — add `publicFolder` path
+7. **Update `BuildOptions`** — add `publicFolder` path, `staticBaseUrl`
 
-### Phase 2: Cloudflare-compatible fetch handler
+### Phase 3: Cloudflare-compatible fetch handler
 
 1. **Create `handler.ts`** — `createJayHandler()` returning `FetchHandler`
 2. **Rewrite `page-handler.ts`** — return `Response` with `ReadableStream`
 3. **Rewrite `action-handler.ts`** — `Request` → `Response`
-4. **Remove `static-handler.ts`** — no longer needed (CDN serves statics)
+4. **Update `static-handler.ts`** — convert to Fetch API, enabled when `serving: 'self-hosted'`
 5. **Update `main-server.ts`** — thin Node adapter over `createJayHandler()`
 6. **Update `artifact-store.ts`** — resolve against backend dir only
 
-### Phase 3: Update CLI and renderer
+### Phase 4: Update CLI and renderer
 
-1. **Update `run-production.ts`** — pass `publicBasePath` from config/CLI, `publicFolder` path
-2. **Update renderer server** — invalidation writes to backend folder only (client bundles also go to frontend)
+1. **Update `run-production.ts`** — load deploy config, pass `staticBaseUrl` and `serving` mode
+2. **Update renderer server** — invalidation writes to both backend and frontend folders
 3. **Update tests**
 
 ## Trade-offs
 
 - **Two output folders vs. one**: Slightly more complex build pipeline, but clean deployment separation. No runtime overhead.
-- **Removing static handler**: The server can't self-host static files anymore. For local testing, either use a reverse proxy or add a `--self-host` flag that re-enables static serving from the frontend folder.
+- **Deploy config file**: Another config file in the project root. But it's optional — without it, everything defaults to `self-hosted` with `staticBaseUrl: '/'`, which matches current behavior exactly. Multi-environment support avoids needing env vars or CLI flags for each deployment target.
 - **Fetch API refactor**: More code change upfront but cleaner abstraction — the handler becomes platform-agnostic (testable without a running server, works with any runtime that supports Fetch API).
+- **Self-hosted mode kept**: Slightly more code to maintain (static handler stays), but essential for local development and non-CDN deployments.
 
 ## Verification
 
