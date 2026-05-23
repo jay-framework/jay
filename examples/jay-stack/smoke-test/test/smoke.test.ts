@@ -410,8 +410,7 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Widget alpha/);
         });
 
-        // TODO: headfull components not yet supported in production build
-        it.skip('/headfull — headfull component with banner', async () => {
+        it('/headfull — headfull component with banner', async () => {
             const { status, body } = await fetchPage(server.url, '/headfull/');
             expect(status).toBe(200);
             expect(body).toMatch(/Headfull Test/);
@@ -469,8 +468,7 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Fast Item 1/);
         });
 
-        // TODO: nested headfull components not yet supported in production build
-        it.skip('/nested — nested headfull component', async () => {
+        it('/nested — nested headfull component', async () => {
             const { status, body } = await fetchPage(server.url, '/nested/');
             expect(status).toBe(200);
             expect(body).toMatch(/Nested Test/);

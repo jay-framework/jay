@@ -249,3 +249,40 @@ Implementation is split into two milestones. The first milestone (phases 1-3) us
 7. Dynamic routes resolve to correct instances in all modes
 8. Test suite runs in under 90 seconds
 9. Test suite cleans up all child processes on success and failure
+
+## Implementation Results — Milestone 1
+
+### What was implemented
+
+Phases 1–3 complete. Example project at `examples/jay-stack/smoke-test/` with 10 pages, a local plugin, a counter service, actions, and a smoke test covering dev mode and production self-hosted mode.
+
+**Test results: 28 passing, 0 skipped, ~7s total.**
+
+### Production server test mode
+
+Added `--test-mode` flag to `jay-stack serve` (not in original design). Adds `/_jay/health` and `/_jay/shutdown` endpoints to the production server, matching the dev server pattern. This makes production smoke tests reliable — the test harness uses health polling and graceful shutdown instead of parsing stdout and sending SIGTERM.
+
+**Files changed:**
+- `packages/jay-stack/stack-cli/lib/cli.ts` — added `--test-mode` option to `serve` command
+- `packages/jay-stack/stack-cli/lib/run-production.ts` — pass `testMode` through to `startMainServer`
+- `packages/jay-stack/production-server/lib/serve/main-server.ts` — health/shutdown request handlers
+
+### Deviations from design
+
+1. **`/actions` page simplified to static** — The original design had the actions page with a server action (query + mutation) rendered in the page via `createActionCaller`. The production build's client bundle step fails when a page.ts uses `createActionCaller` because the action transform generates a virtual `jay-action:` module that can't be resolved. The page was simplified to static HTML; action endpoints are tested directly via HTTP instead.
+
+2. **Headfull components must live in `src/components/`** — Initially placed headfull components inside page directories (e.g., `src/pages/headfull/banner/`), which broke production builds. The server code build (`server-code-build.ts`) only discovers components from `src/components/` and `src/plugins/`. Moved to `src/components/banner/` and `src/components/inner-block/` — all tests pass. This matches the golf project's convention.
+
+3. **Public folder URLs** — Design showed `<img src="/public/images/...">`. In practice, Express static middleware serves `publicFolder` contents at the root, so URLs are `/images/...` (without `/public/` prefix).
+
+4. **Action endpoint path** — Design used `/_jay/action/` (singular). The actual endpoint is `/_jay/actions/` (plural), matching `ACTION_ENDPOINT_BASE` in the dev server.
+
+5. **Action response format** — Action endpoints return `{ success: true, data: { ... } }` not the raw handler result. Tests check `json.data.count` instead of `json.count`.
+
+6. **Plugin service not inside plugin** — Design said the test plugin provides a service. Implementation puts the counter service at project level (`src/counter-service.ts`) registered in `src/init.ts`. The test plugin only provides the headless component.
+
+### Discovered issues
+
+1. **Headfull components must be in `src/components/` for production builds** — `server-code-build.ts` only scans `src/components/` and `src/plugins/` for server-side component modules. Resolved by moving components to the correct location. The agent-kit documentation should be updated to make this convention explicit.
+
+2. **`createActionCaller` in page.ts breaks production client bundle** — The action transform generates a `\0jay-action:` virtual module import for pages that reference actions. When the action transform finds no `makeJayAction`/`makeJayQuery` exports in the page file, the virtual module resolution fails. This works in dev mode (Vite handles it on-the-fly) but fails in the production build's Vite bundle step.
