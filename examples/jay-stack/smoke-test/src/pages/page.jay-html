@@ -1,0 +1,13 @@
+<html>
+<head>
+  <script type="application/jay-data">
+    data:
+  </script>
+</head>
+<body>
+  <div>
+    <h1>Smoke Test Home</h1>
+    <p>Static page with no contract and no code</p>
+  </div>
+</body>
+</html>

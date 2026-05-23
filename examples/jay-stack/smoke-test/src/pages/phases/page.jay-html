@@ -1,0 +1,13 @@
+<html>
+<head>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+  <div>
+    <h1>{slowTitle}</h1>
+    <p class="fast-message">{fastMessage}</p>
+    <p class="click-count">Clicks: {clickCount}</p>
+    <button ref="clickButton">Click me</button>
+  </div>
+</body>
+</html>

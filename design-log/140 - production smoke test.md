@@ -28,22 +28,23 @@ A project where each page tests one specific feature configuration. Pages are mi
 
 #### Pages
 
-| Route | What it tests |
-|-------|--------------|
-| `/` | Static page, no contract, no code — just jay-html |
-| `/phases` | All three rendering phases (slow + fast + interactive) with a contract |
-| `/headless` | Headless component from a local plugin |
-| `/headfull` | Headfull full-stack component with its own jay-html |
-| `/actions` | Server action (query + mutation) with service injection |
-| `/dynamic/[slug]` | Dynamic route with `loadParams`, two instances |
-| `/async-data` | Async data in slow and fast phases |
-| `/public-assets` | Page referencing images/files from the `public/` folder |
-| `/foreach` | `forEach` and `slowForEach` rendering |
-| `/nested` | Nested headless inside headfull, headfull inside headfull |
+| Route             | What it tests                                                          |
+| ----------------- | ---------------------------------------------------------------------- |
+| `/`               | Static page, no contract, no code — just jay-html                      |
+| `/phases`         | All three rendering phases (slow + fast + interactive) with a contract |
+| `/headless`       | Headless component from a local plugin                                 |
+| `/headfull`       | Headfull full-stack component with its own jay-html                    |
+| `/actions`        | Server action (query + mutation) with service injection                |
+| `/dynamic/[slug]` | Dynamic route with `loadParams`, two instances                         |
+| `/async-data`     | Async data in slow and fast phases                                     |
+| `/public-assets`  | Page referencing images/files from the `public/` folder                |
+| `/foreach`        | `forEach` and `slowForEach` rendering                                  |
+| `/nested`         | Nested headless inside headfull, headfull inside headfull              |
 
 #### Plugins
 
 One local test plugin (`src/plugins/test-plugin/`) providing:
+
 - A headless contract + component (used by `/headless`)
 - A service (used by `/actions`)
 - A webhook (validates invalidation in renderer mode)
@@ -88,14 +89,14 @@ Single test file: `test/smoke.test.ts`
 describe('smoke-test smoke')
   describe('dev mode')
     for each page: fetch and validate
-    
+
   describe('production')
     beforeAll: build once (environment-agnostic)
-    
+
     describe('http + self-hosted')
       beforeAll: start server --env local
       for each page: fetch and validate
-    
+
     describe('http + cdn')
       beforeAll: start server --env http-cdn + static file server
       for each page: fetch and validate
@@ -103,7 +104,7 @@ describe('smoke-test smoke')
     describe('fetch + cdn')
       beforeAll: start server --env production + static file server
       for each page: fetch and validate
-    
+
     afterAll: stop all servers
 ```
 
@@ -111,23 +112,24 @@ describe('smoke-test smoke')
 
 Each page gets a validation function that checks its specific concern:
 
-| Page | Validation |
-|------|-----------|
-| `/` | Returns 200, contains expected static HTML |
-| `/phases` | SSR output has slow data baked in, fast data rendered, hydration script present |
-| `/headless` | Headless component's HTML present in SSR output |
-| `/headfull` | Headfull component's HTML present, its CSS loaded |
-| `/actions` | Action endpoint responds correctly to GET query and POST mutation |
-| `/dynamic/item-a` | Correct instance rendered with item-a params |
-| `/dynamic/item-b` | Correct instance rendered with item-b params |
-| `/async-data` | Async swap scripts present in output |
-| `/public-assets` | `<img>` src points to correct URL (self-hosted: `/public/...`, CDN: `http://localhost:4001/public/...`) |
-| `/foreach` | Repeated elements present in SSR output |
-| `/nested` | Nested components rendered at correct coordinates |
+| Page              | Validation                                                                                              |
+| ----------------- | ------------------------------------------------------------------------------------------------------- |
+| `/`               | Returns 200, contains expected static HTML                                                              |
+| `/phases`         | SSR output has slow data baked in, fast data rendered, hydration script present                         |
+| `/headless`       | Headless component's HTML present in SSR output                                                         |
+| `/headfull`       | Headfull component's HTML present, its CSS loaded                                                       |
+| `/actions`        | Action endpoint responds correctly to GET query and POST mutation                                       |
+| `/dynamic/item-a` | Correct instance rendered with item-a params                                                            |
+| `/dynamic/item-b` | Correct instance rendered with item-b params                                                            |
+| `/async-data`     | Async swap scripts present in output                                                                    |
+| `/public-assets`  | `<img>` src points to correct URL (self-hosted: `/public/...`, CDN: `http://localhost:4001/public/...`) |
+| `/foreach`        | Repeated elements present in SSR output                                                                 |
+| `/nested`         | Nested components rendered at correct coordinates                                                       |
 
 #### CDN-Specific Validation
 
 In CDN mode, additionally check:
+
 - Import map URLs start with `http://localhost:4001/`
 - CSS `<link>` href starts with `http://localhost:4001/`
 - Client bundle `<script>` src starts with `http://localhost:4001/`
@@ -141,7 +143,7 @@ The test harness starts a minimal HTTP server that serves `build/v{n}/frontend/`
 
 ```typescript
 async function startStaticServer(frontendDir: string, port: number): Promise<ChildProcess> {
-    // Simple static file server over the frontend/ folder
+  // Simple static file server over the frontend/ folder
 }
 ```
 
@@ -151,22 +153,26 @@ Extracted from fake-shop's smoke test into a shared helper:
 
 ```typescript
 interface SmokeTestServer {
-    url: string;
-    stop(): Promise<void>;
+  url: string;
+  stop(): Promise<void>;
 }
 
 async function startDevServer(projectDir: string, port: number): Promise<SmokeTestServer>;
-async function startProductionServer(projectDir: string, port: number, env?: string): Promise<SmokeTestServer>;
+async function startProductionServer(
+  projectDir: string,
+  port: number,
+  env?: string,
+): Promise<SmokeTestServer>;
 async function startStaticFileServer(dir: string, port: number): Promise<SmokeTestServer>;
 async function fetchPage(baseUrl: string, path: string): Promise<{ status: number; html: string }>;
 ```
 
 ### Port Allocation
 
-| Server | Port |
-|--------|------|
-| Dev server | 3300 |
-| Production server | 4000 |
+| Server                       | Port |
+| ---------------------------- | ---- |
+| Dev server                   | 3300 |
+| Production server            | 4000 |
 | Static file server (CDN sim) | 4001 |
 
 ### Running

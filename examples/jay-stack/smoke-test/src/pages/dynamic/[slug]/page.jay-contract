@@ -1,0 +1,13 @@
+name: Page
+tags:
+  - tag: itemName
+    type: data
+    dataType: string
+    phase: slow
+    description: Name of the dynamic item
+
+  - tag: itemSlug
+    type: data
+    dataType: string
+    phase: slow
+    description: URL slug for the item

@@ -1,0 +1,14 @@
+<html>
+<head>
+  <script type="application/jay-data">
+    data:
+  </script>
+</head>
+<body>
+  <div>
+    <h1>Public Assets Test</h1>
+    <img src="/images/test-image.png" alt="test image" class="test-image" />
+    <a href="/data/test.json" class="test-link">test.json</a>
+  </div>
+</body>
+</html>

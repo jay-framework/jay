@@ -1,0 +1,29 @@
+name: Page
+tags:
+  - tag: slowItems
+    type: sub-contract
+    phase: slow
+    repeated: true
+    trackBy: _id
+    description: Items pre-rendered at build time
+    tags:
+      - tag: _id
+        type: data
+        dataType: string
+      - tag: label
+        type: data
+        dataType: string
+
+  - tag: fastItems
+    type: sub-contract
+    phase: fast+interactive
+    repeated: true
+    trackBy: _id
+    description: Items rendered at request time
+    tags:
+      - tag: _id
+        type: data
+        dataType: string
+      - tag: label
+        type: data
+        dataType: string

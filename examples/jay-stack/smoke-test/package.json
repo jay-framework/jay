@@ -1,0 +1,27 @@
+{
+  "name": "example-jay-smoke-test",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "license": "Apache-2.0",
+  "scripts": {
+    "dev": "jay-stack-cli dev",
+    "build": "jay-stack-cli build",
+    "serve": "jay-stack-cli serve --port 4000",
+    "test:smoke": "npx vitest run test/smoke.test.ts",
+    "test": "npm run test:smoke"
+  },
+  "dependencies": {
+    "@jay-framework/fullstack-component": "workspace:^",
+    "@jay-framework/jay-stack-cli": "workspace:^",
+    "@jay-framework/runtime": "workspace:^",
+    "@jay-framework/stack-client-runtime": "workspace:^",
+    "@jay-framework/stack-server-runtime": "workspace:^"
+  },
+  "devDependencies": {
+    "@jay-framework/dev-environment": "workspace:^",
+    "@types/node": "^22.10.0",
+    "typescript": "~5.7.2",
+    "vitest": "^3.2.1"
+  }
+}

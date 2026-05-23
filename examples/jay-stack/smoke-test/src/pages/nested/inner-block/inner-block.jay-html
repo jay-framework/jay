@@ -1,0 +1,16 @@
+<html>
+<head>
+  <script type="application/jay-data">
+    data:
+      blockLabel: string
+      widgetValue: number
+  </script>
+</head>
+<body>
+  <div class="inner-block">
+    <h3 class="block-label">{blockLabel}</h3>
+    <span class="block-value">{widgetValue}</span>
+    <button ref="widgetIncrement">+1</button>
+  </div>
+</body>
+</html>

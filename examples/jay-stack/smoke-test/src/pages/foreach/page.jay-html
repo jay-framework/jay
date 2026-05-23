@@ -1,0 +1,22 @@
+<html>
+<head>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+  <div>
+    <h1>ForEach Test</h1>
+    <section class="slow-section">
+      <h2>Slow Items</h2>
+      <ul forEach="slowItems" trackBy="_id">
+        <li class="slow-item">{label}</li>
+      </ul>
+    </section>
+    <section class="fast-section">
+      <h2>Fast Items</h2>
+      <ul forEach="fastItems" trackBy="_id">
+        <li class="fast-item">{label}</li>
+      </ul>
+    </section>
+  </div>
+</body>
+</html>

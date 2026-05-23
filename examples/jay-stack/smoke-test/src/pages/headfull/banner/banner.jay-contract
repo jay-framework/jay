@@ -1,0 +1,10 @@
+name: Banner
+props:
+  - name: text
+    type: string
+    required: true
+tags:
+  - tag: bannerText
+    type: data
+    dataType: string
+    phase: slow

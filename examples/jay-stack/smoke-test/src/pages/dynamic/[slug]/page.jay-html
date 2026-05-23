@@ -1,0 +1,11 @@
+<html>
+<head>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+  <div>
+    <h1 class="item-name">{itemName}</h1>
+    <p class="item-slug">Slug: {itemSlug}</p>
+  </div>
+</body>
+</html>
