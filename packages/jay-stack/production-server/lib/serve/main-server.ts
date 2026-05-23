@@ -17,6 +17,7 @@ export interface MainServerOptions {
     version: number;
     port: number;
     publicBasePath: string;
+    testMode?: boolean;
 }
 
 export async function startMainServer(options: MainServerOptions): Promise<void> {
@@ -36,10 +37,34 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
         await registerActionsFromManifest(manifest.actions, buildDir);
     }
 
+    const startTime = Date.now();
+
     const server = http.createServer(async (req, res) => {
         const url = new URL(req.url || '/', `http://${req.headers.host}`);
 
         try {
+            if (options.testMode && url.pathname === '/_jay/health') {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(
+                    JSON.stringify({
+                        status: 'ready',
+                        port: options.port,
+                        uptime: (Date.now() - startTime) / 1000,
+                    }),
+                );
+                return;
+            }
+
+            if (options.testMode && url.pathname === '/_jay/shutdown' && req.method === 'POST') {
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ status: 'shutting_down' }));
+                setTimeout(() => {
+                    server.close();
+                    process.exit(0);
+                }, 100);
+                return;
+            }
+
             if (isActionRequest(url.pathname)) {
                 await handleActionRequest(req, res);
                 return;
@@ -85,5 +110,12 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
         logger.important(
             `[Server] Production server listening on http://localhost:${options.port}`,
         );
+        if (options.testMode) {
+            logger.important(`[Server] Test mode enabled`);
+            logger.important(`   Health: http://localhost:${options.port}/_jay/health`);
+            logger.important(
+                `   Shutdown: curl -X POST http://localhost:${options.port}/_jay/shutdown`,
+            );
+        }
     });
 }

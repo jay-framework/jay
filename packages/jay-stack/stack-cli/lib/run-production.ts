@@ -85,7 +85,13 @@ export async function runBuild(
 
 export async function runServe(
     projectPath: string | undefined,
-    options: { version?: string; port: string; role: string; verbose?: boolean },
+    options: {
+        version?: string;
+        port: string;
+        role: string;
+        verbose?: boolean;
+        testMode?: boolean;
+    },
 ): Promise<void> {
     initLogger(options.verbose);
 
@@ -108,6 +114,7 @@ export async function runServe(
             version: ctx.version,
             port: parseInt(options.port, 10),
             publicBasePath: '/',
+            testMode: options.testMode,
         });
     }
 }
