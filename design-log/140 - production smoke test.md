@@ -1,0 +1,314 @@
+# DL#140: Production Smoke Test Example
+
+## Background
+
+The fake-shop example has a dev-mode smoke test (`test/smoke.test.ts`) that starts the dev server, hits pages, and checks SSR output. But there's no validation of production builds, no coverage of the new deployment modes from DL#139 (self-hosted vs CDN), and the fake-shop mixes too many concerns to serve as a systematic configuration test.
+
+We need a dedicated example project where each page isolates a specific configuration, and a smoke test suite that validates all four serving modes:
+
+1. **Dev mode** — `jay-stack dev --test-mode`
+2. **Production http + self-hosted** — `jay-stack build` + `jay-stack serve --env local` (Node HTTP server serves static files)
+3. **Production http + CDN** — `jay-stack build` + `jay-stack serve --env http-cdn` (Node HTTP server, static files on separate server)
+4. **Production fetch + CDN** — `jay-stack build` + `jay-stack serve --env production` (fetch handler, static files on separate server)
+
+The build is environment-agnostic (DL#139) — same build output serves all environments. `--env` is serve-time only.
+
+## Problem
+
+1. No production build validation exists — we don't know if built artifacts actually serve correctly
+2. No validation of the frontend/backend split from DL#139
+3. No CDN-mode testing — import maps, CSS links, and client bundles referencing external URLs
+4. Different page configurations (headless, headfull, actions, dynamic routes, async data, public assets) aren't tested in isolation — a failure in fake-shop doesn't tell you which configuration broke
+
+## Design
+
+### Example Project: `examples/jay-stack/smoke-test`
+
+A project where each page tests one specific feature configuration. Pages are minimal — just enough to prove the configuration works.
+
+#### Pages
+
+| Route             | What it tests                                                          |
+| ----------------- | ---------------------------------------------------------------------- |
+| `/`               | Static page, no contract, no code — just jay-html                      |
+| `/phases`         | All three rendering phases (slow + fast + interactive) with a contract |
+| `/headless`       | Headless component from a local plugin                                 |
+| `/headfull`       | Headfull full-stack component with its own jay-html                    |
+| `/actions`        | Server action (query + mutation) with service injection                |
+| `/dynamic/[slug]` | Dynamic route with `loadParams`, two instances                         |
+| `/async-data`     | Async data in slow and fast phases                                     |
+| `/public-assets`  | Page referencing images/files from the `public/` folder                |
+| `/foreach`        | `forEach` and `slowForEach` rendering                                  |
+| `/nested`         | Nested headless inside headfull, headfull inside headfull              |
+
+#### Plugins
+
+One local test plugin (`src/plugins/test-plugin/`) providing:
+
+- A headless contract + component (used by `/headless`)
+- A service (used by `/actions`)
+- A webhook (validates invalidation in renderer mode)
+
+#### Public Folder
+
+```
+public/
+  images/
+    test-image.png    # Small 1x1 PNG for validation
+  data/
+    test.json         # Static JSON file
+```
+
+#### Deploy Config
+
+```yaml
+# .jay-deploy
+environments:
+  local:
+    serverStyle: http
+    serveStaticFiles: true
+
+  http-cdn:
+    serverStyle: http
+    serveStaticFiles: false
+    staticBaseUrl: http://localhost:4001/
+
+  production:
+    serverStyle: fetch
+    serveStaticFiles: false
+    staticBaseUrl: http://localhost:4001/
+```
+
+The CDN environments point to a local static file server started by the test harness. This validates that URLs resolve correctly without needing a real CDN. Testing both `http` and `fetch` server styles with CDN ensures the fetch handler works identically in both wrappings.
+
+### Smoke Test Structure
+
+Single test file: `test/smoke.test.ts`
+
+```
+describe('smoke-test smoke')
+  describe('dev mode')
+    for each page: fetch and validate
+
+  describe('production')
+    beforeAll: build once (environment-agnostic)
+
+    describe('http + self-hosted')
+      beforeAll: start server --env local
+      for each page: fetch and validate
+
+    describe('http + cdn')
+      beforeAll: start server --env http-cdn + static file server
+      for each page: fetch and validate
+
+    describe('fetch + cdn')
+      beforeAll: start server --env production + static file server
+      for each page: fetch and validate
+
+    afterAll: stop all servers
+```
+
+#### Per-Page Validation
+
+Each page gets a validation function that checks its specific concern:
+
+| Page              | Validation                                                                                              |
+| ----------------- | ------------------------------------------------------------------------------------------------------- |
+| `/`               | Returns 200, contains expected static HTML                                                              |
+| `/phases`         | SSR output has slow data baked in, fast data rendered, hydration script present                         |
+| `/headless`       | Headless component's HTML present in SSR output                                                         |
+| `/headfull`       | Headfull component's HTML present, its CSS loaded                                                       |
+| `/actions`        | Action endpoint responds correctly to GET query and POST mutation                                       |
+| `/dynamic/item-a` | Correct instance rendered with item-a params                                                            |
+| `/dynamic/item-b` | Correct instance rendered with item-b params                                                            |
+| `/async-data`     | Async swap scripts present in output                                                                    |
+| `/public-assets`  | `<img>` src points to correct URL (self-hosted: `/public/...`, CDN: `http://localhost:4001/public/...`) |
+| `/foreach`        | Repeated elements present in SSR output                                                                 |
+| `/nested`         | Nested components rendered at correct coordinates                                                       |
+
+#### CDN-Specific Validation
+
+In CDN mode, additionally check:
+
+- Import map URLs start with `http://localhost:4001/`
+- CSS `<link>` href starts with `http://localhost:4001/`
+- Client bundle `<script>` src starts with `http://localhost:4001/`
+- Static file server responds to shared chunk requests
+- Static file server responds to instance bundle requests
+- Public assets served from static file server
+
+#### Static File Server for CDN Tests
+
+The test harness starts a minimal HTTP server that serves `build/v{n}/frontend/` on port 4001. This simulates a CDN.
+
+```typescript
+async function startStaticServer(frontendDir: string, port: number): Promise<ChildProcess> {
+  // Simple static file server over the frontend/ folder
+}
+```
+
+### Test Harness Utilities
+
+Extracted from fake-shop's smoke test into a shared helper:
+
+```typescript
+interface SmokeTestServer {
+  url: string;
+  stop(): Promise<void>;
+}
+
+async function startDevServer(projectDir: string, port: number): Promise<SmokeTestServer>;
+async function startProductionServer(
+  projectDir: string,
+  port: number,
+  env?: string,
+): Promise<SmokeTestServer>;
+async function startStaticFileServer(dir: string, port: number): Promise<SmokeTestServer>;
+async function fetchPage(baseUrl: string, path: string): Promise<{ status: number; html: string }>;
+```
+
+### Port Allocation
+
+| Server                       | Port |
+| ---------------------------- | ---- |
+| Dev server                   | 3300 |
+| Production server            | 4000 |
+| Static file server (CDN sim) | 4001 |
+
+### Running
+
+```bash
+cd examples/jay-stack/smoke-test
+
+# Run all smoke tests
+yarn test:smoke
+
+# Run only dev mode tests
+yarn vitest run test/smoke.test.ts -t "dev mode"
+
+# Run only production tests
+yarn vitest run test/smoke.test.ts -t "production"
+```
+
+## Implementation Plan
+
+Implementation is split into two milestones. The first milestone (phases 1-3) uses only existing infrastructure — no DL#139 dependency. The second milestone (phases 4-5) adds CDN and fetch modes after DL#139 lands.
+
+### Milestone 1: Dev + Production Self-Hosted (before DL#139)
+
+#### Phase 1: Example project skeleton
+
+1. Create `examples/jay-stack/smoke-test/` with package.json, .jay, tsconfig
+2. Create the static page (`/`) and the phases page (`/phases`) with contracts
+3. Create the test plugin with headless contract + component + service
+4. Create remaining pages one by one, each with its contract and jay-html
+5. Add `public/` folder with test assets
+6. Verify project works with `jay-stack dev`
+
+#### Phase 2: Dev mode smoke test
+
+1. Create `test/smoke.test.ts` with test harness utilities
+2. Add dev mode describe block — start dev server, validate all pages
+3. Run and verify
+
+#### Phase 3: Production self-hosted smoke test
+
+1. Add production self-hosted describe block — build, start server, validate all pages
+2. Validate the same pages pass in both dev and production
+3. Wire into monorepo — add `test:smoke` script to package.json
+4. Run full suite (dev + production self-hosted)
+
+### Milestone 2: CDN + Fetch Modes (after DL#139)
+
+#### Phase 4: Deploy config and CDN smoke test
+
+1. Add `.jay-deploy` with `local`, `http-cdn`, and `production` environments
+2. Add production http+cdn describe block — start server + static file server, validate
+3. CDN-specific checks (import map URLs, CSS links, asset URLs reference `http://localhost:4001/`)
+
+#### Phase 5: Fetch mode smoke test
+
+1. Add production fetch+cdn describe block — start fetch-style server + static file server, validate
+2. Verify same pages pass across all four modes
+3. Run full suite
+
+## Trade-offs
+
+- **Separate project vs extending fake-shop**: Separate is cleaner — each page is minimal and tests one thing. Fake-shop stays as the "realistic app" example; smoke-test is the "systematic validation" example.
+- **Local static server vs mock CDN**: Using a real HTTP server on localhost is more realistic than mocking. The only downside is port management, but with fixed ports and proper cleanup it's straightforward.
+- **Test duration**: Three server modes × 10+ pages will take 30-60 seconds. Worth it for deployment confidence. Keep smoke tests in a separate script from unit tests.
+
+## Verification
+
+1. All pages render correctly in dev mode
+2. All pages render correctly in production self-hosted mode
+3. All pages render correctly in production CDN mode
+4. Import maps, CSS links, and client bundles reference correct base URLs per mode
+5. Public folder assets accessible in all modes
+6. Actions work in all modes
+7. Dynamic routes resolve to correct instances in all modes
+8. Test suite runs in under 90 seconds
+9. Test suite cleans up all child processes on success and failure
+
+## Implementation Results — Milestone 1
+
+### What was implemented
+
+Phases 1–3 complete. Example project at `examples/jay-stack/smoke-test/` with 10 pages, a local plugin, a counter service, actions, and a smoke test covering dev mode and production self-hosted mode.
+
+**Test results: 28 passing, 0 skipped, ~7s total.**
+
+### Production server test mode
+
+Added `--test-mode` flag to `jay-stack serve` (not in original design). Adds `/_jay/health` and `/_jay/shutdown` endpoints to the production server, matching the dev server pattern. This makes production smoke tests reliable — the test harness uses health polling and graceful shutdown instead of parsing stdout and sending SIGTERM.
+
+**Files changed:**
+
+- `packages/jay-stack/stack-cli/lib/cli.ts` — added `--test-mode` option to `serve` command
+- `packages/jay-stack/stack-cli/lib/run-production.ts` — pass `testMode` through to `startMainServer`
+- `packages/jay-stack/production-server/lib/serve/main-server.ts` — health/shutdown request handlers
+
+### Deviations from design
+
+1. **`/actions` page simplified to static** — The original design had the actions page with a server action (query + mutation) rendered in the page via `createActionCaller`. The production build's client bundle step fails when a page.ts uses `createActionCaller` because the action transform generates a virtual `jay-action:` module that can't be resolved. The page was simplified to static HTML; action endpoints are tested directly via HTTP instead.
+
+2. **Headfull components must live in `src/components/`** — Initially placed headfull components inside page directories (e.g., `src/pages/headfull/banner/`), which broke production builds. The server code build (`server-code-build.ts`) only discovers components from `src/components/` and `src/plugins/`. Moved to `src/components/banner/` and `src/components/inner-block/` — all tests pass. This matches the golf project's convention.
+
+3. **Public folder URLs** — Design showed `<img src="/public/images/...">`. In practice, Express static middleware serves `publicFolder` contents at the root, so URLs are `/images/...` (without `/public/` prefix).
+
+4. **Action endpoint path** — Design used `/_jay/action/` (singular). The actual endpoint is `/_jay/actions/` (plural), matching `ACTION_ENDPOINT_BASE` in the dev server.
+
+5. **Action response format** — Action endpoints return `{ success: true, data: { ... } }` not the raw handler result. Tests check `json.data.count` instead of `json.count`.
+
+6. **Plugin service not inside plugin** — Design said the test plugin provides a service. Implementation puts the counter service at project level (`src/counter-service.ts`) registered in `src/init.ts`. The test plugin only provides the headless component.
+
+### Discovered issues
+
+1. **Headfull components must be in `src/components/` for production builds** — `server-code-build.ts` only scans `src/components/` and `src/plugins/` for server-side component modules. Resolved by moving components to the correct location. The agent-kit documentation should be updated to make this convention explicit.
+
+2. **`createActionCaller` in page.ts breaks production client bundle** — The action transform generates a `\0jay-action:` virtual module import for pages that reference actions. When the action transform finds no `makeJayAction`/`makeJayQuery` exports in the page file, the virtual module resolution fails. This works in dev mode (Vite handles it on-the-fly) but fails in the production build's Vite bundle step.
+
+## Implementation Results — Milestone 2: CDN Mode
+
+### What was implemented
+
+CDN mode smoke tests added. A local static file server on port 4001 serves `build/v1/frontend/` to simulate a CDN. The production server runs with `--static-base-url http://localhost:4001/ --no-serve-static`.
+
+**Test results: 39 passing (16 dev + 12 production self-hosted + 11 production CDN), ~9s total.**
+
+### CDN-specific tests
+
+- Import map URLs point to `http://localhost:4001/shared/...`
+- CSS link hrefs point to CDN base
+- Client bundle script srcs point to CDN base
+- CDN static server responds to shared chunk requests
+- CDN static server responds to client bundle requests
+- Production server returns 404 for static file requests (not serving them)
+- Pages still render correctly with CDN URLs
+
+### CLI flags added
+
+- `--static-base-url <url>` — base URL for browser-facing assets (default: `/`)
+- `--no-serve-static` — disable serving static files from `frontend/`
+
+These are on `jay-stack serve` and pass through to `MainServerOptions`.

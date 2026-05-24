@@ -48,6 +48,8 @@ export interface InstanceBuildContext {
     projectRoot: string;
     pagesRoot: string;
     buildDir: string;
+    backendDir: string;
+    frontendDir: string;
     jayOptions: JayRollupConfig;
     tsConfigFilePath?: string;
     minify?: boolean;
@@ -92,15 +94,17 @@ export async function buildInstance(
     const routeDir = route.rawRoute.replace(/^\//, '') || 'index';
     const paramHash = hashParams(params, ctx.rebuildSuffix);
     const instanceId = `page${paramHash}`;
-    const instanceDir = path.join(ctx.buildDir, 'pre-rendered', routeDir);
+    const backendInstanceDir = path.join(ctx.backendDir, 'pre-rendered', routeDir);
+    const frontendInstanceDir = path.join(ctx.frontendDir, 'pages', routeDir);
 
-    await fs.mkdir(instanceDir, { recursive: true });
+    await fs.mkdir(backendInstanceDir, { recursive: true });
+    await fs.mkdir(frontendInstanceDir, { recursive: true });
 
     const jayHtmlContent = await fs.readFile(route.jayHtmlPath, 'utf-8');
     const sourceDir = path.dirname(route.jayHtmlPath);
 
     // Load page parts including headless components
-    const serverBuildDir = path.join(ctx.buildDir, 'server');
+    const serverBuildDir = path.join(ctx.backendDir, 'server');
     const pageParts = await loadProductionPageParts(
         route,
         pageModule,
@@ -121,7 +125,7 @@ export async function buildInstance(
     ];
 
     // Write page-parts.json (DL#137) — once per route, first instance writes it
-    const pagePartsConfigPath = path.join(instanceDir, 'page-parts.json');
+    const pagePartsConfigPath = path.join(backendInstanceDir, 'page-parts.json');
     try {
         await fs.access(pagePartsConfigPath);
     } catch {
@@ -145,7 +149,7 @@ export async function buildInstance(
             pageParts,
             pageServerModule,
             exportName,
-            ctx.buildDir,
+            ctx.backendDir,
             pageIsPlugin,
         );
         await fs.writeFile(pagePartsConfigPath, JSON.stringify(config, null, 2));
@@ -279,12 +283,36 @@ export async function buildInstance(
         }
     }
 
-    // Write clean pre-rendered file for compilation
-    const preRenderedPath = path.join(instanceDir, `${instanceId}.jay-html`);
+    // Rewrite headfull component paths to be relative from the build output directory
+    // instead of the source directory. The pre-rendered file lives in backendInstanceDir
+    // but paths in the jay-html are relative to the source page directory.
+    preRenderedJayHtml = preRenderedJayHtml.replace(
+        /(<script\s+type="application\/jay-headfull"[^>]*\s)(src="([^"]*)")/g,
+        (_match, prefix, _srcAttr, srcVal) => {
+            if (path.isAbsolute(srcVal)) return prefix + `src="${srcVal}"`;
+            const abs = path.resolve(sourceDir, srcVal);
+            let rel = path.relative(backendInstanceDir, abs);
+            if (!rel.startsWith('.')) rel = './' + rel;
+            return prefix + `src="${rel}"`;
+        },
+    );
+    preRenderedJayHtml = preRenderedJayHtml.replace(
+        /(<script\s+type="application\/jay-headfull"[^>]*\s)(contract="([^"]*)")/g,
+        (_match, prefix, _contractAttr, contractVal) => {
+            if (path.isAbsolute(contractVal)) return prefix + `contract="${contractVal}"`;
+            const abs = path.resolve(sourceDir, contractVal);
+            let rel = path.relative(backendInstanceDir, abs);
+            if (!rel.startsWith('.')) rel = './' + rel;
+            return prefix + `contract="${rel}"`;
+        },
+    );
+
+    // Write clean pre-rendered file for compilation (backend)
+    const preRenderedPath = path.join(backendInstanceDir, `${instanceId}.jay-html`);
     await fs.writeFile(preRenderedPath, preRenderedJayHtml, 'utf-8');
 
-    // Write cache metadata for the main server
-    const cacheMetadataPath = path.join(instanceDir, `${instanceId}.cache.json`);
+    // Write cache metadata for the main server (backend)
+    const cacheMetadataPath = path.join(backendInstanceDir, `${instanceId}.cache.json`);
     await fs.writeFile(
         cacheMetadataPath,
         JSON.stringify({
@@ -296,21 +324,21 @@ export async function buildInstance(
 
     logger.info(`[Build] Pre-rendered: ${routeDir}/${instanceId}`);
 
-    // 3. Compile server element + extract CSS
-    const serverElementPath = path.join(instanceDir, `${instanceId}.server-element.js`);
+    // 3. Compile server element + extract CSS (backend)
+    const serverElementPath = path.join(backendInstanceDir, `${instanceId}.server-element.js`);
     const serverElementResult = await compileServerElement(
         preRenderedJayHtml,
         `${instanceId}.jay-html`,
-        instanceDir,
+        backendInstanceDir,
         serverElementPath,
         ctx.projectRoot,
         ctx.tsConfigFilePath,
         sourceDir,
     );
 
-    // 4. Generate hydration entry
-    const hydrateEntryPath = path.join(instanceDir, `${instanceId}.hydrate-entry.ts`);
-    const relativeJayHtmlPath = path.relative(instanceDir, preRenderedPath);
+    // 4. Generate hydration entry (temporary, in backend dir for compilation)
+    const hydrateEntryPath = path.join(backendInstanceDir, `${instanceId}.hydrate-entry.ts`);
+    const relativeJayHtmlPath = path.relative(backendInstanceDir, preRenderedPath);
 
     // For NPM plugin routes, use /client entry + component export name
     let pageModulePath: string;
@@ -319,10 +347,10 @@ export async function buildInstance(
         const pkgName = resolvePackageNameForRoute(route.compPath!);
         pageModulePath = pkgName
             ? `${pkgName}/client`
-            : './' + path.relative(instanceDir, route.compPath!);
+            : './' + path.relative(backendInstanceDir, route.compPath!);
         pageExportName = route.componentExport;
     } else if (route.compPath) {
-        pageModulePath = './' + path.relative(instanceDir, route.compPath);
+        pageModulePath = './' + path.relative(backendInstanceDir, route.compPath);
         pageExportName = 'page';
     } else {
         pageModulePath = '';
@@ -346,11 +374,11 @@ export async function buildInstance(
         clientInits: ctx.clientInits,
     });
 
-    // 5. Per-instance Vite build
+    // 5. Per-instance Vite build → frontend/pages/
     const clientResult = await buildInstanceClient(
         hydrateEntryPath,
         instanceId,
-        instanceDir,
+        frontendInstanceDir,
         ctx.projectRoot,
         ctx.jayOptions,
         ctx.minify ?? true,
@@ -360,14 +388,29 @@ export async function buildInstance(
 
     await fs.rm(hydrateEntryPath, { force: true });
 
+    // Move CSS from server element compile (if any) to frontend
     const cssFile = clientResult.cssFile || serverElementResult.cssFile;
+    if (serverElementResult.cssFile && !clientResult.cssFile) {
+        const srcCss = path.join(backendInstanceDir, serverElementResult.cssFile);
+        const dstCss = path.join(frontendInstanceDir, serverElementResult.cssFile);
+        try {
+            await fs.rename(srcCss, dstCss);
+        } catch {
+            await fs.copyFile(srcCss, dstCss);
+            await fs.rm(srcCss, { force: true });
+        }
+    }
+
     const instanceEntry: InstanceEntry = {
         params,
-        preRenderedPath: path.relative(ctx.buildDir, preRenderedPath),
-        serverElementPath: path.relative(ctx.buildDir, serverElementPath),
-        clientBundlePath: path.relative(ctx.buildDir, path.join(instanceDir, clientResult.jsFile)),
+        preRenderedPath: path.relative(ctx.backendDir, preRenderedPath),
+        serverElementPath: path.relative(ctx.backendDir, serverElementPath),
+        clientBundlePath: path.relative(
+            ctx.frontendDir,
+            path.join(frontendInstanceDir, clientResult.jsFile),
+        ),
         clientCssPath: cssFile
-            ? path.relative(ctx.buildDir, path.join(instanceDir, cssFile))
+            ? path.relative(ctx.frontendDir, path.join(frontendInstanceDir, cssFile))
             : undefined,
     };
 

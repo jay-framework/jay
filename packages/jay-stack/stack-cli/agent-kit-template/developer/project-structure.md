@@ -14,6 +14,11 @@ my-project/
 │   ├── project.conf.yaml       # Project metadata (name, etc.)
 │   └── <plugin-name>.yaml      # Plugin-specific config files
 ├── src/
+│   ├── components/              # Headfull full-stack components (shared across pages)
+│   │   └── site-header/
+│   │       ├── site-header.ts
+│   │       ├── site-header.jay-html
+│   │       └── site-header.jay-contract
 │   ├── pages/                   # Pages (directory-based routing)
 │   │   ├── page.jay-html        # Homepage → /
 │   │   ├── page.jay-contract    # Homepage contract (optional)

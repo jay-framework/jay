@@ -1,4 +1,3 @@
-import type { ServerResponse } from 'node:http';
 import type { RouteManifest } from '../types';
 import type { MatchResult } from './route-matcher';
 import type { FilesystemArtifactStore } from './artifact-store';
@@ -39,13 +38,13 @@ async function getPageParts(
     return parts;
 }
 
-export async function handlePageRequest(
-    res: ServerResponse,
+export async function fetchPageRequest(
     match: MatchResult,
     manifest: RouteManifest,
     requestUrl: URL,
     artifacts: FilesystemArtifactStore,
-): Promise<void> {
+    staticBaseUrl: string,
+): Promise<Response> {
     const { route, instance } = match;
 
     const preRendered = await artifacts.readPreRenderedHtml(instance.preRenderedPath);
@@ -66,20 +65,20 @@ export async function handlePageRequest(
     );
 
     if (fastResult.kind === 'Redirect3xx') {
-        res.writeHead((fastResult as any).status, { Location: (fastResult as any).location });
-        res.end();
-        return;
+        return new Response(null, {
+            status: (fastResult as any).status,
+            headers: { Location: (fastResult as any).location },
+        });
     }
     if (fastResult.kind === 'ServerError5xx' || fastResult.kind === 'ClientError4xx') {
-        res.writeHead((fastResult as any).status);
-        res.end((fastResult as any).message || 'Error');
-        return;
+        return new Response((fastResult as any).message || 'Error', {
+            status: (fastResult as any).status,
+        });
     }
 
     const fastViewState = (fastResult as any).rendered || {};
     const fastCarryForward = (fastResult as any).carryForward || {};
 
-    // Collect head tags from slow (carryForward) and fast phases (DL#127)
     const headTagSources: any[][] = [];
     const slowHeadTags = (preRendered.carryForward as any).__slowHeadTags;
     if (slowHeadTags) headTagSources.push(...slowHeadTags);
@@ -87,7 +86,6 @@ export async function handlePageRequest(
     if (fastHeadTags) headTagSources.push(fastHeadTags);
     const headTags = headTagSources.length > 0 ? mergeHeadTags(headTagSources) : [];
     const headTagsHtml = headTags.length > 0 ? serializeHeadTags(headTags) + '\n' : '';
-    const hasCustomTitle = headTags.some((t: any) => t.tag.toLowerCase() === 'title');
 
     const fullViewState = deepMergeViewStates(
         preRendered.slowViewState,
@@ -98,21 +96,21 @@ export async function handlePageRequest(
     const serverElement = await artifacts.loadServerElement(instance.serverElementPath);
     const asyncPromises: Promise<string>[] = [];
 
-    const importMap = buildImportMap(manifest.sharedManifest, manifest.publicBasePath);
+    const importMap = buildImportMap(manifest.sharedManifest, staticBaseUrl);
     const modulePreloads = Object.values(importMap)
         .map((url) => `    <link rel="modulepreload" href="${url}" />`)
         .join('\n');
     const cssLink = instance.clientCssPath
-        ? `    <link rel="stylesheet" href="${manifest.publicBasePath}${instance.clientCssPath}" />`
+        ? `    <link rel="stylesheet" href="${staticBaseUrl}${instance.clientCssPath}" />`
         : '';
 
-    res.writeHead(200, {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Transfer-Encoding': 'chunked',
-    });
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+        async start(controller) {
+            const write = (s: string) => controller.enqueue(encoder.encode(s));
 
-    const headParts = [headTagsHtml, modulePreloads, cssLink].filter(Boolean).join('\n');
-    res.write(`<!doctype html>
+            const headParts = [headTagsHtml, modulePreloads, cssLink].filter(Boolean).join('\n');
+            write(`<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -123,31 +121,37 @@ ${headParts}
   <body>
     <div id="target">`);
 
-    serverElement.renderToStream(fullViewState, {
-        write: (chunk: string) => res.write(chunk),
-        onAsync: (promise, id, templates) => {
-            asyncPromises.push(
-                promise.then(
-                    (val) => asyncSwapScript(id, templates.resolved(val)),
-                    (err) => asyncSwapScript(id, templates.rejected(err)),
-                ),
-            );
-        },
-    });
+            serverElement.renderToStream(fullViewState, {
+                write: (chunk: string) => write(chunk),
+                onAsync: (promise, id, templates) => {
+                    asyncPromises.push(
+                        promise.then(
+                            (val) => asyncSwapScript(id, templates.resolved(val)),
+                            (err) => asyncSwapScript(id, templates.rejected(err)),
+                        ),
+                    );
+                },
+            });
 
-    res.write('</div>');
+            write('</div>');
 
-    const asyncScripts = (await Promise.all(asyncPromises)).filter((s) => s).join('');
-    if (asyncScripts) res.write(asyncScripts);
+            const asyncScripts = (await Promise.all(asyncPromises)).filter((s) => s).join('');
+            if (asyncScripts) write(asyncScripts);
 
-    const clientInitData = getClientInitData();
-    const clientBundleUrl = `${manifest.publicBasePath}${instance.clientBundlePath}`;
-    res.write(`
+            const clientInitData = getClientInitData();
+            const clientBundleUrl = `${staticBaseUrl}${instance.clientBundlePath}`;
+            write(`
     <script type="module">
       import { init } from '${clientBundleUrl}';
       await init(${JSON.stringify(fastViewState)}, ${JSON.stringify(fastCarryForward)}, ${JSON.stringify(clientInitData)});
     </script>
   </body>
 </html>`);
-    res.end();
+            controller.close();
+        },
+    });
+
+    return new Response(stream, {
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    });
 }

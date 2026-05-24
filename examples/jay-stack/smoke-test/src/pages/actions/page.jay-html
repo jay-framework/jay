@@ -1,0 +1,13 @@
+<html>
+<head>
+  <script type="application/jay-data">
+    data:
+  </script>
+</head>
+<body>
+  <div>
+    <h1>Actions Test</h1>
+    <p>Action endpoints are tested directly via HTTP</p>
+  </div>
+</body>
+</html>

@@ -2,6 +2,7 @@ node_modules
 dist
 dist-secure
 build
+tmp
 *.iml
 /packages/compiler/compiler/lib/expressions/expression-parser.js
 examples/**/*.d.ts

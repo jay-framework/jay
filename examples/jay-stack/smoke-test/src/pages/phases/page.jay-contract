@@ -1,0 +1,24 @@
+name: Page
+tags:
+  - tag: slowTitle
+    type: data
+    dataType: string
+    phase: slow
+    description: Title set at build time
+
+  - tag: fastMessage
+    type: data
+    dataType: string
+    phase: fast
+    description: Message set at request time
+
+  - tag: clickCount
+    type: data
+    dataType: number
+    phase: fast+interactive
+    description: Interactive click counter
+
+  - tag: clickButton
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Button to increment counter

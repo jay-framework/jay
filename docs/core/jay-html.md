@@ -218,6 +218,8 @@ Instances are then created in the template body using `<jay:name>`:
 
 ### Importing Headfull Full-Stack Components (Jay Stack)
 
+Headfull FS components must be placed in `src/components/` — each in its own subdirectory (e.g., `src/components/shared-header/`). The production build discovers server-side modules from `src/components/` and `src/plugins/` only; components inside page directories will work in dev mode but fail in production builds.
+
 In Jay Stack applications, adding a `contract` attribute to a headfull import makes the component full-stack — it participates in slow/fast/interactive rendering phases and is server-side rendered:
 
 ```html

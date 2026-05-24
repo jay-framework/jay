@@ -17,7 +17,7 @@ They handle:
 
 ### Headfull Components
 
-Headfull components include both the contract and UI design. They're created using `makeJayComponent` with Jay-HTML files.
+Headfull components include both the contract and UI design. They're created using `makeJayComponent` with Jay-HTML files. In Jay Stack projects, headfull full-stack components must be placed in `src/components/` (each in its own subdirectory) so the production build can discover and compile their server-side modules.
 
 ```typescript
 import { render, CounterElementRefs } from './counter.jay-html';

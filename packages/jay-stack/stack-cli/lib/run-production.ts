@@ -76,7 +76,6 @@ export async function runBuild(
         projectRoot: ctx.resolvedPath,
         pagesRoot: ctx.pagesRoot,
         buildRoot: ctx.buildRoot,
-        publicBasePath: '/',
         concurrency: 4,
         tsConfigFilePath: ctx.tsConfigFilePath,
         minify: options.minify,
@@ -85,7 +84,15 @@ export async function runBuild(
 
 export async function runServe(
     projectPath: string | undefined,
-    options: { version?: string; port: string; role: string; verbose?: boolean },
+    options: {
+        version?: string;
+        port: string;
+        role: string;
+        verbose?: boolean;
+        testMode?: boolean;
+        staticBaseUrl?: string;
+        serveStatic?: boolean;
+    },
 ): Promise<void> {
     initLogger(options.verbose);
 
@@ -107,7 +114,9 @@ export async function runServe(
             buildRoot: ctx.buildRoot,
             version: ctx.version,
             port: parseInt(options.port, 10),
-            publicBasePath: '/',
+            testMode: options.testMode,
+            publicBasePath: options.staticBaseUrl,
+            serveStatic: options.serveStatic,
         });
     }
 }

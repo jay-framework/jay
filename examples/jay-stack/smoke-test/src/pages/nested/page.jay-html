@@ -1,0 +1,16 @@
+<html>
+<head>
+  <script type="application/jay-headfull"
+          src="../../components/inner-block/inner-block"
+          contract="../../components/inner-block/inner-block.jay-contract"
+          names="innerBlock"></script>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+  <div>
+    <h1>{pageTitle}</h1>
+    <jay:innerBlock label="Block A" />
+    <jay:innerBlock label="Block B" />
+  </div>
+</body>
+</html>

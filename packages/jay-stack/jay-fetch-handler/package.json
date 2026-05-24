@@ -1,0 +1,28 @@
+{
+  "name": "@jay-framework/jay-fetch-handler",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "build:check-types": "tsc --noEmit",
+    "clean": "rimraf dist",
+    "test": ":"
+  },
+  "dependencies": {
+    "@jay-framework/logger": "workspace:^",
+    "@jay-framework/production-server": "workspace:^"
+  },
+  "devDependencies": {
+    "@jay-framework/dev-environment": "workspace:^",
+    "@types/node": "^22.15.21",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.3.3"
+  }
+}

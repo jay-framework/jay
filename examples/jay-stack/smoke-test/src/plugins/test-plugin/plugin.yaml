@@ -1,0 +1,6 @@
+name: test-plugin
+module: ./test-widget
+contracts:
+  - name: test-widget
+    contract: ./test-widget.jay-contract
+    component: testWidget

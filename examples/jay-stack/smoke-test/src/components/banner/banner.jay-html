@@ -1,0 +1,13 @@
+<html>
+<head>
+  <script type="application/jay-data">
+    data:
+      bannerText: string
+  </script>
+</head>
+<body>
+  <div class="banner">
+    <strong class="banner-text">{bannerText}</strong>
+  </div>
+</body>
+</html>

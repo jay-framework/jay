@@ -1,4 +1,3 @@
-import type { IncomingMessage, ServerResponse } from 'node:http';
 import { ActionRegistry, actionRegistry } from '@jay-framework/stack-server-runtime';
 import {
     isJayAction,
@@ -13,16 +12,15 @@ export function isActionRequest(pathname: string): boolean {
     return pathname.startsWith(ACTION_PREFIX);
 }
 
-export async function handleActionRequest(
-    req: IncomingMessage,
-    res: ServerResponse,
+export async function fetchActionRequest(
+    request: Request,
     registry: ActionRegistry = actionRegistry,
-): Promise<void> {
-    const url = new URL(req.url || '/', `http://${req.headers.host}`);
+): Promise<Response> {
+    const url = new URL(request.url);
     const actionName = url.pathname.slice(ACTION_PREFIX.length);
 
     if (!actionName) {
-        jsonResponse(res, 400, {
+        return jsonResponse(400, {
             success: false,
             error: {
                 code: 'MISSING_ACTION_NAME',
@@ -30,12 +28,11 @@ export async function handleActionRequest(
                 isActionError: false,
             },
         });
-        return;
     }
 
     const action = registry.get(actionName);
     if (!action) {
-        jsonResponse(res, 404, {
+        return jsonResponse(404, {
             success: false,
             error: {
                 code: 'ACTION_NOT_FOUND',
@@ -43,12 +40,11 @@ export async function handleActionRequest(
                 isActionError: false,
             },
         });
-        return;
     }
 
-    const requestMethod = (req.method || 'GET').toUpperCase() as HttpMethod;
+    const requestMethod = request.method.toUpperCase() as HttpMethod;
     if (requestMethod !== action.method) {
-        jsonResponse(res, 405, {
+        return jsonResponse(405, {
             success: false,
             error: {
                 code: 'METHOD_NOT_ALLOWED',
@@ -56,7 +52,6 @@ export async function handleActionRequest(
                 isActionError: false,
             },
         });
-        return;
     }
 
     let input: unknown;
@@ -70,10 +65,11 @@ export async function handleActionRequest(
                 delete (input as any)._input;
             }
         } else {
-            input = await parseBody(req);
+            const text = await request.text();
+            input = text ? JSON.parse(text) : {};
         }
     } catch {
-        jsonResponse(res, 400, {
+        return jsonResponse(400, {
             success: false,
             error: {
                 code: 'INVALID_INPUT',
@@ -81,41 +77,57 @@ export async function handleActionRequest(
                 isActionError: false,
             },
         });
-        return;
     }
 
     if (registry.isStreaming(actionName)) {
-        res.writeHead(200, {
-            'Content-Type': 'application/x-ndjson',
-            'Transfer-Encoding': 'chunked',
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream({
+            async start(controller) {
+                try {
+                    const generator = registry.executeStream(actionName, input);
+                    for await (const chunk of generator) {
+                        controller.enqueue(encoder.encode(JSON.stringify({ chunk }) + '\n'));
+                    }
+                    controller.enqueue(encoder.encode(JSON.stringify({ done: true }) + '\n'));
+                } catch (err: any) {
+                    controller.enqueue(
+                        encoder.encode(JSON.stringify({ error: err.message }) + '\n'),
+                    );
+                }
+                controller.close();
+            },
         });
-        try {
-            const generator = registry.executeStream(actionName, input);
-            for await (const chunk of generator) {
-                res.write(JSON.stringify({ chunk }) + '\n');
-            }
-            res.write(JSON.stringify({ done: true }) + '\n');
-        } catch (err: any) {
-            res.write(JSON.stringify({ error: err.message }) + '\n');
-        }
-        res.end();
-        return;
+        return new Response(stream, {
+            headers: { 'Content-Type': 'application/x-ndjson' },
+        });
     }
 
     const result = await registry.execute(actionName, input);
 
     if (result.success) {
+        const headers: Record<string, string> = {};
         if (requestMethod === 'GET') {
             const cacheHeaders = registry.getCacheHeaders(actionName);
             if (cacheHeaders) {
-                res.setHeader('Cache-Control', cacheHeaders);
+                headers['Cache-Control'] = cacheHeaders;
             }
         }
-        jsonResponse(res, 200, { success: true, data: result.data });
+        return jsonResponse(200, { success: true, data: result.data }, headers);
     } else {
         const statusCode = getStatusCode(result.error.code, result.error.isActionError);
-        jsonResponse(res, statusCode, { success: false, error: result.error });
+        return jsonResponse(statusCode, { success: false, error: result.error });
     }
+}
+
+function jsonResponse(
+    status: number,
+    body: object,
+    extraHeaders: Record<string, string> = {},
+): Response {
+    return new Response(JSON.stringify(body), {
+        status,
+        headers: { 'Content-Type': 'application/json', ...extraHeaders },
+    });
 }
 
 export async function registerActionsFromManifest(
@@ -155,35 +167,6 @@ export async function registerActionsFromManifest(
     }
 
     logger.info(`[Server] Registered ${count} actions`);
-}
-
-function jsonResponse(res: ServerResponse, status: number, body: object): void {
-    const json = JSON.stringify(body);
-    res.writeHead(status, {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(json),
-    });
-    res.end(json);
-}
-
-function parseBody(req: IncomingMessage): Promise<unknown> {
-    return new Promise((resolve, reject) => {
-        const chunks: Buffer[] = [];
-        req.on('data', (chunk) => chunks.push(chunk));
-        req.on('end', () => {
-            const raw = Buffer.concat(chunks).toString('utf-8');
-            if (!raw) {
-                resolve({});
-                return;
-            }
-            try {
-                resolve(JSON.parse(raw));
-            } catch {
-                reject(new Error('Invalid JSON body'));
-            }
-        });
-        req.on('error', reject);
-    });
 }
 
 function getStatusCode(code: string, isActionError: boolean): number {

@@ -1,0 +1,16 @@
+<html>
+<head>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+  <div>
+    <h1>{title}</h1>
+    <div when-resolved="asyncMessage">
+      <p class="async-resolved">{.}</p>
+    </div>
+    <div when-loading="asyncMessage">
+      <p class="async-loading">Loading...</p>
+    </div>
+  </div>
+</body>
+</html>

@@ -212,6 +212,31 @@ jay-stack dev --timeout 60
 jay-cli definitions src
 ```
 
+### Production Build & Serve
+
+```bash
+# Build production artifacts (frontend/ + backend/)
+jay-stack build
+jay-stack build --version 2 --no-minify
+
+# Serve self-hosted (static files from frontend/)
+jay-stack serve --port 4000
+
+# Serve with CDN (static files hosted externally)
+jay-stack serve --port 4000 --static-base-url https://cdn.example.com/app/1.0.0/ --no-serve-static
+
+# Serve with test mode (health/shutdown endpoints)
+jay-stack serve --port 4000 --test-mode
+
+# Start renderer server (webhook-driven rebuilds)
+jay-stack serve --role renderer --port 4001
+
+# Rebuild specific pages when data changes
+jay-stack rebuild --contract product-page
+jay-stack rebuild --url /products/blue-widget
+jay-stack cleanup
+```
+
 ### Agent / AI Tooling
 
 ```bash
