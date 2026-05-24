@@ -70,6 +70,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 90  | headless instances in interactive forEach             | Allow fast/interactive-only headless components inside forEach (no slow phase)       |
 | 111 | nested headfull full-stack components                 | Headfull components with own jay-html + SSR via headless pipeline template injection |
 | 123 | deeply nested headfull and headless components        | Gap analysis: headfull+keyed headless, headfull-in-headfull, headless-in-headfull    |
+| 141 | fast phase request context                            | Cookie access + response headers (Cache-Control) in fast phase for wix-members       |
 
 ---
 
