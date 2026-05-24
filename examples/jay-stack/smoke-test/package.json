@@ -7,6 +7,8 @@
   "scripts": {
     "dev": "jay-stack-cli dev",
     "build": "jay-stack-cli build",
+    "build:check-types": "tsc",
+    "clean": "rimraf dist && rimraf build && rimraf -g 'src/**/*.d.ts'",
     "serve": "jay-stack-cli serve --port 4000",
     "test:smoke": "npx vitest run test/smoke.test.ts",
     "test": "npm run test:smoke"
