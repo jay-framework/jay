@@ -57,6 +57,7 @@ jay-stack serve --role renderer --port 4001
 ```
 
 The renderer server:
+
 - Listens for data change webhooks from external systems (CMS, e-commerce)
 - Determines which routes are affected (via contract name → route resolution)
 - Runs `rebuild` for each affected instance
@@ -69,6 +70,7 @@ The manifest tracks which contracts each route uses. When a webhook says "produc
 ## Build Output After Rebuild
 
 Rebuilt instances write new files to both `frontend/` and `backend/`:
+
 - `backend/pre-rendered/` — updated jay-html, cache, server element
 - `frontend/pages/` — updated client bundle, CSS
 

@@ -1,5 +1,10 @@
 import { ActionRegistry, actionRegistry } from '@jay-framework/stack-server-runtime';
-import type { HttpMethod } from '@jay-framework/fullstack-component';
+import {
+    isJayAction,
+    isJayStreamAction,
+    type HttpMethod,
+} from '@jay-framework/fullstack-component';
+import { getLogger } from '@jay-framework/logger';
 
 const ACTION_PREFIX = '/_jay/actions/';
 
@@ -123,6 +128,45 @@ function jsonResponse(
         status,
         headers: { 'Content-Type': 'application/json', ...extraHeaders },
     });
+}
+
+export async function registerActionsFromManifest(
+    actions: Array<{
+        serverModule: string;
+        isPlugin: boolean;
+        actionNames: string[];
+        packageName?: string;
+    }>,
+    buildDir: string,
+    registry: ActionRegistry = actionRegistry,
+): Promise<void> {
+    const logger = getLogger();
+    let count = 0;
+
+    for (const entry of actions) {
+        try {
+            const modulePath = entry.isPlugin
+                ? entry.packageName!
+                : `${buildDir}/${entry.serverModule}`;
+            const mod = await import(modulePath);
+
+            for (const [, exported] of Object.entries(mod)) {
+                if (isJayAction(exported)) {
+                    registry.register(exported as any);
+                    count++;
+                } else if (isJayStreamAction(exported)) {
+                    registry.registerStream(exported as any);
+                    count++;
+                }
+            }
+        } catch (err: any) {
+            logger.error(
+                `[Server] Failed to load action module ${entry.serverModule}: ${err.message}`,
+            );
+        }
+    }
+
+    logger.info(`[Server] Registered ${count} actions`);
 }
 
 function getStatusCode(code: string, isActionError: boolean): number {

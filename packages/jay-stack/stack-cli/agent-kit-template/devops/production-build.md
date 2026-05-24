@@ -52,16 +52,17 @@ build/v{n}/
 
 ## Frontend vs Backend
 
-| Directory | Contains | Deploy to |
-|-----------|----------|-----------|
-| `frontend/` | JS bundles, CSS, images — everything the browser loads | CDN or static file server |
-| `backend/` | Server modules, pre-rendered HTML, manifests — everything the server reads | Container / server |
+| Directory   | Contains                                                                   | Deploy to                 |
+| ----------- | -------------------------------------------------------------------------- | ------------------------- |
+| `frontend/` | JS bundles, CSS, images — everything the browser loads                     | CDN or static file server |
+| `backend/`  | Server modules, pre-rendered HTML, manifests — everything the server reads | Container / server        |
 
 The build is **environment-agnostic**. The same output serves any deployment mode. `staticBaseUrl` (where browser assets are hosted) is a serve-time parameter, not baked into the build.
 
 ## Manifest
 
 `backend/route-manifest.json` contains:
+
 - **routes** — pattern, segments, server module path, instances with params
 - **instances** — `preRenderedPath` and `serverElementPath` (relative to `backend/`), `clientBundlePath` and `clientCssPath` (relative to `frontend/`)
 - **actions** — server module paths, action names
@@ -70,6 +71,7 @@ The build is **environment-agnostic**. The same output serves any deployment mod
 ## Project Structure Requirements
 
 For production builds to work correctly:
+
 - **Headfull FS components** must be in `src/components/` (not inside page directories)
 - **Headless plugins** must be in `src/plugins/`
 - **Actions** must be in `src/actions/` with `*.actions.ts` naming

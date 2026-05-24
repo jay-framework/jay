@@ -90,6 +90,8 @@ export async function runServe(
         role: string;
         verbose?: boolean;
         testMode?: boolean;
+        staticBaseUrl?: string;
+        serveStatic?: boolean;
     },
 ): Promise<void> {
     initLogger(options.verbose);
@@ -113,6 +115,8 @@ export async function runServe(
             version: ctx.version,
             port: parseInt(options.port, 10),
             testMode: options.testMode,
+            publicBasePath: options.staticBaseUrl,
+            serveStatic: options.serveStatic,
         });
     }
 }

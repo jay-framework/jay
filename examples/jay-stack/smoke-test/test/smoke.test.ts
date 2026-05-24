@@ -121,7 +121,73 @@ async function runBuild(): Promise<void> {
     });
 }
 
-async function startProductionServer(port: number): Promise<SmokeTestServer> {
+async function startStaticFileServer(dir: string, port: number): Promise<SmokeTestServer> {
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            reject(new Error(`Static server did not start within 10000ms`));
+        }, 10000);
+
+        const url = `http://localhost:${port}`;
+        const { createServer } = require('http') as typeof import('http');
+        const fsSync = require('fs') as typeof import('fs');
+        const pathMod = require('path') as typeof import('path');
+
+        const MIME: Record<string, string> = {
+            '.js': 'application/javascript',
+            '.css': 'text/css',
+            '.json': 'application/json',
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.svg': 'image/svg+xml',
+            '.woff2': 'font/woff2',
+        };
+
+        const srv = createServer((req, res) => {
+            const reqUrl = new URL(req.url || '/', `http://localhost:${port}`);
+            const filePath = pathMod.join(dir, reqUrl.pathname);
+            const normalized = pathMod.resolve(filePath);
+            if (!normalized.startsWith(pathMod.resolve(dir))) {
+                res.writeHead(403);
+                res.end();
+                return;
+            }
+            try {
+                const content = fsSync.readFileSync(normalized);
+                const ext = pathMod.extname(normalized);
+                res.writeHead(200, {
+                    'Content-Type': MIME[ext] || 'application/octet-stream',
+                    'Access-Control-Allow-Origin': '*',
+                });
+                res.end(content);
+            } catch {
+                res.writeHead(404);
+                res.end('Not Found');
+            }
+        });
+
+        srv.listen(port, () => {
+            clearTimeout(timeout);
+            resolve({
+                url,
+                process: null as any,
+                stop: async () => {
+                    srv.close();
+                    await new Promise((r) => setTimeout(r, 200));
+                },
+            });
+        });
+
+        srv.on('error', (err) => {
+            clearTimeout(timeout);
+            reject(err);
+        });
+    });
+}
+
+async function startProductionServer(
+    port: number,
+    extraArgs: string[] = [],
+): Promise<SmokeTestServer> {
     return new Promise((resolve, reject) => {
         const timeout = setTimeout(() => {
             reject(new Error(`Production server did not start within ${SERVER_STARTUP_TIMEOUT}ms`));
@@ -131,7 +197,7 @@ async function startProductionServer(port: number): Promise<SmokeTestServer> {
         const url = `http://localhost:${port}`;
         let pollingStarted = false;
 
-        const proc = spawn('yarn', ['serve', '--port', String(port), '--test-mode'], {
+        const proc = spawn('yarn', ['serve', '--port', String(port), '--test-mode', ...extraArgs], {
             cwd: PROJECT_ROOT,
             shell: true,
             stdio: ['pipe', 'pipe', 'pipe'],
@@ -474,6 +540,103 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Nested Test/);
             expect(body).toMatch(/Block A/);
             expect(body).toMatch(/Block B/);
+        });
+    });
+
+    describe('production CDN mode', () => {
+        let server: SmokeTestServer;
+        let cdnServer: SmokeTestServer;
+        const CDN_PORT = 4001;
+        const CDN_BASE = `http://localhost:${CDN_PORT}/`;
+
+        beforeAll(async () => {
+            const buildDir = path.join(PROJECT_ROOT, 'build/v1/frontend');
+            cdnServer = await startStaticFileServer(buildDir, CDN_PORT);
+            server = await startProductionServer(4002, [
+                '--static-base-url',
+                CDN_BASE,
+                '--no-serve-static',
+            ]);
+        }, SERVER_STARTUP_TIMEOUT + 5000);
+
+        afterAll(async () => {
+            await server?.stop();
+            await cdnServer?.stop();
+        });
+
+        it('/ — static page renders', async () => {
+            const { status, body } = await fetchPage(server.url, '/');
+            expect(status).toBe(200);
+            expect(body).toMatch(/Smoke Test Home/);
+        });
+
+        it('import map URLs point to CDN', async () => {
+            const { body } = await fetchPage(server.url, '/');
+            expect(body).toMatch(new RegExp(`${CDN_BASE}shared/`));
+        });
+
+        it('/phases — CSS link points to CDN', async () => {
+            const { body } = await fetchPage(server.url, '/phases/');
+            expect(body).toMatch(/Phases Test/);
+            const cssMatch = body.match(/href="([^"]*\.css)"/);
+            if (cssMatch) {
+                expect(cssMatch[1]).toMatch(new RegExp(`^${CDN_BASE}`));
+            }
+        });
+
+        it('/phases — client bundle points to CDN', async () => {
+            const { body } = await fetchPage(server.url, '/phases/');
+            const scriptMatch = body.match(/from '([^']*pages\/[^']*)'/);
+            expect(scriptMatch).toBeTruthy();
+            expect(scriptMatch![1]).toMatch(new RegExp(`^${CDN_BASE}`));
+        });
+
+        it('CDN serves shared chunks', async () => {
+            const { body } = await fetchPage(server.url, '/');
+            const importMapMatch = body.match(/"importmap">(.*?)<\/script>/s);
+            expect(importMapMatch).toBeTruthy();
+            const importMap = JSON.parse(importMapMatch![1]);
+            const runtimeUrl = importMap.imports['@jay-framework/runtime'];
+            expect(runtimeUrl).toMatch(new RegExp(`^${CDN_BASE}`));
+            const cdnResponse = await fetch(runtimeUrl);
+            expect(cdnResponse.ok).toBe(true);
+        });
+
+        it('CDN serves client bundles', async () => {
+            const { body } = await fetchPage(server.url, '/phases/');
+            const scriptMatch = body.match(/from '([^']*pages\/[^']*)'/);
+            if (scriptMatch) {
+                const cdnResponse = await fetch(scriptMatch[1]);
+                expect(cdnResponse.ok).toBe(true);
+            }
+        });
+
+        it('/headless — renders correctly', async () => {
+            const { status, body } = await fetchPage(server.url, '/headless/');
+            expect(status).toBe(200);
+            expect(body).toMatch(/Widget alpha/);
+        });
+
+        it('/headfull — renders correctly', async () => {
+            const { status, body } = await fetchPage(server.url, '/headfull/');
+            expect(status).toBe(200);
+            expect(body).toMatch(/Hello from banner/);
+        });
+
+        it('/actions — endpoints work', async () => {
+            const response = await fetch(`${server.url}/_jay/actions/counter.getCount`);
+            expect(response.ok).toBe(true);
+        });
+
+        it('/dynamic/item-a — renders correctly', async () => {
+            const { status, body } = await fetchPage(server.url, '/dynamic/item-a/');
+            expect(status).toBe(200);
+            expect(body).toMatch(/First Item/);
+        });
+
+        it('server returns 404 for static files (not serving)', async () => {
+            const response = await fetch(`${server.url}/shared/nonexistent.js`);
+            expect(response.status).toBe(404);
         });
     });
 });

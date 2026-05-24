@@ -58,6 +58,8 @@ program
     .option('--version <n>', 'Build version to serve (default: from package.json)')
     .option('--port <n>', 'Port number', '3000')
     .option('--role <role>', 'Server role: main (default) or renderer', 'main')
+    .option('--static-base-url <url>', 'Base URL for browser-facing assets (default: /)')
+    .option('--no-serve-static', 'Disable serving static files from frontend/')
     .option('--test-mode', 'Enable test endpoints (/_jay/health, /_jay/shutdown)')
     .option('-v, --verbose', 'Enable verbose logging output')
     .action(async (options) => {

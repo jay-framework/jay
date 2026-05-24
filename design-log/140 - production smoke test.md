@@ -287,3 +287,28 @@ Added `--test-mode` flag to `jay-stack serve` (not in original design). Adds `/_
 1. **Headfull components must be in `src/components/` for production builds** — `server-code-build.ts` only scans `src/components/` and `src/plugins/` for server-side component modules. Resolved by moving components to the correct location. The agent-kit documentation should be updated to make this convention explicit.
 
 2. **`createActionCaller` in page.ts breaks production client bundle** — The action transform generates a `\0jay-action:` virtual module import for pages that reference actions. When the action transform finds no `makeJayAction`/`makeJayQuery` exports in the page file, the virtual module resolution fails. This works in dev mode (Vite handles it on-the-fly) but fails in the production build's Vite bundle step.
+
+## Implementation Results — Milestone 2: CDN Mode
+
+### What was implemented
+
+CDN mode smoke tests added. A local static file server on port 4001 serves `build/v1/frontend/` to simulate a CDN. The production server runs with `--static-base-url http://localhost:4001/ --no-serve-static`.
+
+**Test results: 39 passing (16 dev + 12 production self-hosted + 11 production CDN), ~9s total.**
+
+### CDN-specific tests
+
+- Import map URLs point to `http://localhost:4001/shared/...`
+- CSS link hrefs point to CDN base
+- Client bundle script srcs point to CDN base
+- CDN static server responds to shared chunk requests
+- CDN static server responds to client bundle requests
+- Production server returns 404 for static file requests (not serving them)
+- Pages still render correctly with CDN URLs
+
+### CLI flags added
+
+- `--static-base-url <url>` — base URL for browser-facing assets (default: `/`)
+- `--no-serve-static` — disable serving static files from `frontend/`
+
+These are on `jay-stack serve` and pass through to `MainServerOptions`.

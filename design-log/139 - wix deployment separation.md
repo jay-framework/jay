@@ -445,3 +445,40 @@ Phase 1 complete. The build now produces `build/v{n}/frontend/` and `build/v{n}/
 - **smoke-test project** (DL#140) — 28/28 tests passing (dev mode + production self-hosted)
 - **production-server unit tests** — 85/85 passing (build, serve, param-routing)
 - **golf project** — confirmed working by user
+
+## Implementation Results — Phases 2-4: Fetch API + Package + CLI
+
+### What was implemented
+
+Phases 2-4 complete. Handlers refactored to Fetch API, new `@jay-framework/jay-fetch-handler` package created, main-server converted to use fetch handlers.
+
+### Phase 2: Fetch API handlers (in `production-server`)
+
+New files alongside the old Node.js handlers:
+
+- `lib/serve/fetch-page-handler.ts` — `fetchPageRequest()` returns `Response` with `ReadableStream` for streaming SSR, accepts `staticBaseUrl` for URL generation
+- `lib/serve/fetch-action-handler.ts` — `fetchActionRequest(request)` accepts Fetch `Request`, uses `request.text()` for body parsing, returns `Response`
+- `lib/serve/fetch-static-handler.ts` — `fetchStaticFile(pathname, frontendDir)` returns `Response | null`, tries direct path then `public/` subdirectory for root-level assets
+- All exported from `lib/index.ts`
+
+Old Node.js handlers (`page-handler.ts`, `action-handler.ts`, `static-handler.ts`) kept but no longer used by main-server.
+
+### Phase 3: `@jay-framework/jay-fetch-handler` package
+
+New package at `packages/jay-stack/jay-fetch-handler/`:
+
+- `createJayFetchHandler(options)` — composes artifact store, service init, action registration, and all Fetch API handlers into a single `(Request) → Response` function
+- Lazy initialization on first request
+- Options: `backendDir` (required), `staticBaseUrl` (default `/`), `frontendDir` (optional — enables static file serving)
+
+### Phase 4: main-server.ts converted
+
+- Uses Fetch API handlers internally via `toFetchRequest()` / `pipeFetchResponse()` conversion
+- `toFetchRequest()` — converts Node.js `IncomingMessage` to Fetch `Request` (including streaming body via `Readable.toWeb`)
+- `pipeFetchResponse()` — streams Fetch `Response` body back to Node.js `ServerResponse`
+
+### Verified on
+
+- **smoke-test** — 28/28 passing (dev + production self-hosted, including public assets)
+- **production-server unit tests** — 85/85 passing
+- **Public folder fix** — `fetchStaticFile` checks `frontend/public/` fallback for root-level assets (images, JSON)

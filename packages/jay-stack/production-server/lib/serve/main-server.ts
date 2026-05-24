@@ -5,9 +5,12 @@ import { getLogger } from '@jay-framework/logger';
 import { FilesystemArtifactStore } from './artifact-store';
 import { matchRequest } from './route-matcher';
 import { fetchPageRequest } from './fetch-page-handler';
-import { isActionRequest, fetchActionRequest } from './fetch-action-handler';
+import {
+    isActionRequest,
+    fetchActionRequest,
+    registerActionsFromManifest,
+} from './fetch-action-handler';
 import { fetchStaticFile } from './fetch-static-handler';
-import { registerActionsFromManifest } from './action-handler';
 import { initializeServices } from '../shared/init-services';
 
 export interface MainServerOptions {
@@ -15,6 +18,7 @@ export interface MainServerOptions {
     version: number;
     port: number;
     publicBasePath?: string;
+    serveStatic?: boolean;
     testMode?: boolean;
 }
 
@@ -108,10 +112,12 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
                 return;
             }
 
-            const staticResponse = await fetchStaticFile(url.pathname, frontendDir);
-            if (staticResponse) {
-                await pipeFetchResponse(staticResponse, res);
-                return;
+            if (options.serveStatic !== false) {
+                const staticResponse = await fetchStaticFile(url.pathname, frontendDir);
+                if (staticResponse) {
+                    await pipeFetchResponse(staticResponse, res);
+                    return;
+                }
             }
 
             const currentManifest = await artifacts.readManifest();

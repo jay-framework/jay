@@ -4,11 +4,11 @@
 
 The production server supports three deployment modes, all using the same build output:
 
-| Mode | Static files | Server | Use case |
-|------|-------------|--------|----------|
-| **Self-hosted** | Server serves from `frontend/` | `jay-stack serve` | Local testing, standalone deployment |
-| **CDN** | Uploaded to external CDN | `jay-stack serve --static-base-url <url> --no-serve-static` | Production with CDN |
-| **BaaS (fetch)** | Uploaded to CDN | `createJayFetchHandler()` | Wix, Cloudflare Workers |
+| Mode             | Static files                   | Server                                                      | Use case                             |
+| ---------------- | ------------------------------ | ----------------------------------------------------------- | ------------------------------------ |
+| **Self-hosted**  | Server serves from `frontend/` | `jay-stack serve`                                           | Local testing, standalone deployment |
+| **CDN**          | Uploaded to external CDN       | `jay-stack serve --static-base-url <url> --no-serve-static` | Production with CDN                  |
+| **BaaS (fetch)** | Uploaded to CDN                | `createJayFetchHandler()`                                   | Wix, Cloudflare Workers              |
 
 ## Self-Hosted (Default)
 
@@ -20,6 +20,7 @@ jay-stack serve --port 4000
 ```
 
 Static files are served from `build/v{n}/frontend/` at these URL prefixes:
+
 - `/shared/` — framework client chunks
 - `/pages/` — per-page client bundles and CSS
 - `/` — public folder assets (images, fonts, JSON)
@@ -46,32 +47,32 @@ The server generates import maps, CSS links, and client bundle URLs prefixed wit
 
 ### jay-stack serve
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--port <n>` | `3000` | Server port |
-| `--version <n>` | from package.json | Build version to serve |
-| `--role <role>` | `main` | `main` (pages + actions) or `renderer` (webhooks + rebuild) |
-| `--static-base-url <url>` | `/` | Base URL for all browser-facing assets |
-| `--no-serve-static` | (serves by default) | Disable serving static files from `frontend/` |
-| `--test-mode` | off | Enable `/_jay/health` and `/_jay/shutdown` endpoints |
-| `-v, --verbose` | off | Verbose logging |
+| Flag                      | Default             | Description                                                 |
+| ------------------------- | ------------------- | ----------------------------------------------------------- |
+| `--port <n>`              | `3000`              | Server port                                                 |
+| `--version <n>`           | from package.json   | Build version to serve                                      |
+| `--role <role>`           | `main`              | `main` (pages + actions) or `renderer` (webhooks + rebuild) |
+| `--static-base-url <url>` | `/`                 | Base URL for all browser-facing assets                      |
+| `--no-serve-static`       | (serves by default) | Disable serving static files from `frontend/`               |
+| `--test-mode`             | off                 | Enable `/_jay/health` and `/_jay/shutdown` endpoints        |
+| `-v, --verbose`           | off                 | Verbose logging                                             |
 
 ### jay-stack build
 
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--version <n>` | from package.json | Build version number |
-| `--no-minify` | minified | Disable minification (debugging) |
-| `-v, --verbose` | off | Verbose logging |
+| Flag            | Default           | Description                      |
+| --------------- | ----------------- | -------------------------------- |
+| `--version <n>` | from package.json | Build version number             |
+| `--no-minify`   | minified          | Disable minification (debugging) |
+| `-v, --verbose` | off               | Verbose logging                  |
 
 ## Test Mode
 
 When `--test-mode` is enabled, the server exposes:
 
-| Endpoint | Method | Response |
-|----------|--------|----------|
-| `/_jay/health` | GET | `{"status":"ready","port":4000,"uptime":5.2}` |
-| `/_jay/shutdown` | POST | `{"status":"shutting_down"}` — gracefully stops the server |
+| Endpoint         | Method | Response                                                   |
+| ---------------- | ------ | ---------------------------------------------------------- |
+| `/_jay/health`   | GET    | `{"status":"ready","port":4000,"uptime":5.2}`              |
+| `/_jay/shutdown` | POST   | `{"status":"shutting_down"}` — gracefully stops the server |
 
 Use for smoke tests and CI pipelines. The dev server (`jay-stack dev --test-mode`) has the same endpoints.
 
