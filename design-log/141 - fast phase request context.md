@@ -55,9 +55,9 @@ A3: On `PhaseOutput`, in the existing `options` bag. This follows the `headTags`
 
 A4: Not in this design. `Set-Cookie` has complex semantics (domain, path, secure, httpOnly, sameSite, maxAge). The wix-members use case only needs to *read* cookies, not write them. Setting cookies can be added later via a typed `responseCookies` field if needed.
 
-**Q5: How does this interact with the DL#139 fetch handler migration?**
+**Q5: How does this interact with the DL#139 fetch handler?**
 
-A5: Both server entry points need the same change — parse cookies from the request and pass to `renderFastChangingData`, then apply response headers from `PhaseOutput` to the response. Currently only `main-server.ts` (http) exists. When the fetch handler (DL#139) is implemented, it needs the same cookie parsing (`request.headers.get('cookie')`) and header application (`new Response(stream, { headers: { ...responseHeaders } })`). The design is server-style agnostic.
+A5: DL#139 is implemented. The production server now uses Fetch API handlers: `fetchPageRequest()` in `fetch-page-handler.ts` returns `Response` with `ReadableStream`, and `createJayFetchHandler()` in `@jay-framework/jay-fetch-handler` receives the full `Request` object. Cookies are parsed from `request.headers.get('cookie')` at the handler level and passed down to `fetchPageRequest()` → `renderFastChangingData()`. Response headers from `PhaseOutput` are spread into `new Response(stream, { headers: { ...responseHeaders } })`. The old Node.js handlers (`page-handler.ts`) are kept but no longer used by `main-server.ts` — they don't need updating.
 
 **Q6: Should response headers merge across multiple page parts (like headTags do)?**
 
@@ -118,12 +118,15 @@ if (cookieHeader) {
 }
 ```
 
-**Production server** (Node.js `http.IncomingMessage`):
+**Production server** (Fetch `Request` in `createJayFetchHandler`):
 ```typescript
-// main-server.ts — same parsing from req.headers.cookie
+// jay-fetch-handler/lib/index.ts — inside the returned handler
+const cookieHeader = request.headers.get('cookie');
+const cookies = parseCookies(cookieHeader);
+// pass cookies to fetchPageRequest(match, manifest, url, artifacts, staticBaseUrl, cookies)
 ```
 
-No cookie-parser middleware dependency — the format is simple enough to parse inline. When DL#139's fetch handler lands, it uses `request.headers.get('cookie')` with the same parsing.
+No cookie-parser middleware dependency — the format is simple enough to parse inline. A shared `parseCookies(header: string | null): Record<string, string>` helper avoids duplicating the logic between dev-server (Express `req.headers.cookie`) and production server (Fetch `request.headers.get('cookie')`).
 
 ### 3. Response headers from fast phase
 
@@ -195,13 +198,11 @@ if (renderedFast.responseHeaders) {
 }
 ```
 
-**Production server** (`handlePageRequest`):
+**Production server** (`fetchPageRequest` in `fetch-page-handler.ts`):
 ```typescript
 const extraHeaders = (fastResult as any).responseHeaders || {};
-res.writeHead(200, {
-    'Content-Type': 'text/html; charset=utf-8',
-    'Transfer-Encoding': 'chunked',
-    ...extraHeaders,
+return new Response(stream, {
+    headers: { 'Content-Type': 'text/html; charset=utf-8', ...extraHeaders },
 });
 ```
 
@@ -210,7 +211,8 @@ res.writeHead(200, {
 ```
 HTTP Request
   │
-  ├─ parse cookies from Cookie header → Record<string, string>
+  ├─ dev-server: req.headers.cookie        ──┐
+  ├─ fetch handler: request.headers.get('cookie') ──┤── parseCookies() → Record<string, string>
   ├─ parse query from URL → Record<string, string>  (existing, DL#117)
   │
   ▼
@@ -228,11 +230,30 @@ compDefinition.fastRender(props, carryForward, ...services)
   │
   ▼
 Server handler
-  ├─ If redirect/error → handleOtherResponseCodes (existing)
+  ├─ If redirect/error → short-circuit response (existing)
   ├─ If PhaseOutput → apply responseHeaders to HTTP response, then render
+  │   dev-server: res.setHeader(key, value)
+  │   fetch handler: new Response(stream, { headers: { ...responseHeaders } })
 ```
 
-### 7. `renderFastChangingData` signature change
+### 7. Shared cookie parser
+
+Both dev-server and fetch handler need to parse `Cookie` headers. Extract a shared helper into `stack-server-runtime`:
+
+```typescript
+// stack-server-runtime/lib/cookies.ts
+export function parseCookies(cookieHeader: string | null | undefined): Record<string, string> {
+    const cookies: Record<string, string> = {};
+    if (!cookieHeader) return cookies;
+    for (const pair of cookieHeader.split(';')) {
+        const [name, ...rest] = pair.trim().split('=');
+        if (name) cookies[name] = decodeURIComponent(rest.join('='));
+    }
+    return cookies;
+}
+```
+
+### 8. `renderFastChangingData` signature change
 
 ```typescript
 export async function renderFastChangingData(
@@ -276,14 +297,14 @@ export async function renderFastChangingData(
 8. Each handler passes `cookies` to `renderFastChangingData`
 9. Apply `renderedFast.responseHeaders` via `res.setHeader` before sending response body
 
-**`production-server/lib/serve/page-handler.ts`**:
-10. Accept request headers (or a parsed cookies object) in `handlePageRequest`
+**`production-server/lib/serve/fetch-page-handler.ts`**:
+10. Add `cookies` parameter to `fetchPageRequest`
 11. Pass cookies to `renderFastChangingData`
-12. Apply `responseHeaders` in `res.writeHead`
+12. Apply `responseHeaders` in the `new Response(stream, { headers })` constructor
 
-**`production-server/lib/serve/main-server.ts`**:
-13. Parse cookies from `req.headers.cookie`
-14. Pass to `handlePageRequest`
+**`jay-fetch-handler/lib/index.ts`**:
+13. Parse cookies from `request.headers.get('cookie')` using shared `parseCookies`
+14. Pass cookies to `fetchPageRequest`
 
 ### Phase 3: Tests
 
@@ -297,12 +318,20 @@ export async function renderFastChangingData(
 5. Type-level test: `RenderFast` callback has `cookies` in props
 6. Type-level test: `RenderSlowly` callback does NOT have `cookies`
 
-### Phase 4: Agent-kit documentation
+### Phase 4: Agent-kit and documentation
 
-**`packages/jay-stack/stack-cli/agent-kit-template/developer/`**:
+**`packages/jay-stack/stack-cli/agent-kit-template/developer/`** (developer role):
 1. Document `props.cookies` in the fast phase section
 2. Document `responseHeaders` in the `phaseOutput()` options section
-3. Show the login-protected page pattern
+3. Show the login-protected page pattern (cookies + redirect + Cache-Control)
+
+**`packages/jay-stack/stack-cli/agent-kit-template/plugin/`** (plugin role):
+4. Document how a headless plugin component can read cookies and set response headers
+5. Show the reusable login-gate component pattern
+
+**General docs** (`docs/`):
+6. Update fast-phase rendering docs with cookies and response headers
+7. Add a "login-protected pages" recipe/example
 
 ## Examples
 
@@ -376,4 +405,5 @@ export const loginGate = makeJayStackComponent<LoginGateContract>()
 7. Multiple page parts with `responseHeaders` merge via last-write-wins
 8. Redirect/error results bypass response headers (existing behavior unchanged)
 9. Existing tests continue to pass
-10. Production server applies the same cookies + response headers flow
+10. Production server (fetch handler) applies the same cookies + response headers flow
+11. Smoke-test project (DL#140) continues to pass in all modes (dev, self-hosted, CDN)
