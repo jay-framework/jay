@@ -4595,6 +4595,19 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@jay-framework/jay-fetch-handler@workspace:packages/jay-stack/jay-fetch-handler":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/jay-fetch-handler@workspace:packages/jay-stack/jay-fetch-handler"
+  dependencies:
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/logger": "workspace:^"
+    "@jay-framework/production-server": "workspace:^"
+    "@types/node": "npm:^22.15.21"
+    rimraf: "npm:^5.0.5"
+    typescript: "npm:^5.3.3"
+  languageName: unknown
+  linkType: soft
+
 "@jay-framework/jay-stack-cli@workspace:^, @jay-framework/jay-stack-cli@workspace:packages/jay-stack/stack-cli":
   version: 0.0.0-use.local
   resolution: "@jay-framework/jay-stack-cli@workspace:packages/jay-stack/stack-cli"

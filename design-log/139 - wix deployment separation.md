@@ -414,6 +414,7 @@ In dev mode, the dev server already serves `public/` via Express static middlewa
 Phase 1 complete. The build now produces `build/v{n}/frontend/` and `build/v{n}/backend/` with clean separation.
 
 **Build output structure:**
+
 - `backend/` — `route-manifest.json`, `build-metadata.json`, `server/` (compiled page.ts + actions + init), `pre-rendered/` (jay-html, cache.json, server-element.js, page-parts.json)
 - `frontend/` — `shared/` (framework client chunks), `pages/` (instance client bundles + CSS), `public/` (copied from project)
 
@@ -422,6 +423,7 @@ Phase 1 complete. The build now produces `build/v{n}/frontend/` and `build/v{n}/
 ### Files changed
 
 **`production-server` package:**
+
 - `lib/types.ts` — removed `publicBasePath` from `RouteManifest` and `BuildOptions`
 - `lib/builder/build-pipeline.ts` — derive `backendDir`/`frontendDir`, route outputs to correct dirs, copy `public/` to frontend
 - `lib/builder/instance-pipeline.ts` — added `backendDir`/`frontendDir` to `InstanceBuildContext`, split instance outputs (backend: jay-html, cache, server-element; frontend: client bundle, CSS), rewrite headfull component paths for build output resolution
@@ -435,6 +437,7 @@ Phase 1 complete. The build now produces `build/v{n}/frontend/` and `build/v{n}/
 - `tsconfig.json` — added `"node"` to types array (fixes WebStorm resolution for `node:*` imports)
 
 **`stack-cli` package:**
+
 - `lib/run-production.ts` — removed `publicBasePath` from build and serve calls
 
 ### Verified on
