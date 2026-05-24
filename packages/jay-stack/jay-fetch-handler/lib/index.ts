@@ -8,6 +8,7 @@ import {
     registerActionsFromManifest,
     initializeServices,
 } from '@jay-framework/production-server';
+import { parseCookies } from '@jay-framework/stack-server-runtime';
 import { getLogger } from '@jay-framework/logger';
 
 export interface JayFetchHandlerOptions {
@@ -62,6 +63,7 @@ export function createJayFetchHandler(
             return new Response('Not Found', { status: 404 });
         }
 
-        return fetchPageRequest(match, manifest, url, artifacts, staticBaseUrl);
+        const cookies = parseCookies(request.headers.get('cookie'));
+        return fetchPageRequest(match, manifest, url, artifacts, staticBaseUrl, cookies);
     };
 }

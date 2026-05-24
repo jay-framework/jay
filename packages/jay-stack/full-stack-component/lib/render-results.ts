@@ -72,13 +72,14 @@ export function redirect3xx(status: number, location: string, message?: string):
 export function phaseOutput<ViewState extends object, CarryForward = {}>(
     rendered: ViewState,
     carryForward: CarryForward,
-    options?: { headTags?: HeadTag[] },
+    options?: { headTags?: HeadTag[]; responseHeaders?: Record<string, string> },
 ): PhaseOutput<ViewState, CarryForward> {
     return {
         kind: 'PhaseOutput',
         rendered,
         carryForward,
         ...(options?.headTags && { headTags: options.headTags }),
+        ...(options?.responseHeaders && { responseHeaders: options.responseHeaders }),
     };
 }
 

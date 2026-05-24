@@ -19,3 +19,4 @@ export * from './contract-materializer';
 export * from './plugin-scanner';
 export * from './plugin-setup';
 export * from './head-tags';
+export * from './cookies';

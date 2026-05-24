@@ -85,6 +85,14 @@ export interface RequestQuery {
     query: Record<string, string>;
 }
 
+/**
+ * HTTP cookies parsed from the request Cookie header.
+ * Available in the fast phase only — not in the slow phase.
+ */
+export interface RequestCookies {
+    cookies: Record<string, string>;
+}
+
 export type UrlParams = Record<string, string>;
 
 // ============================================================================
@@ -138,6 +146,8 @@ export interface PhaseOutput<ViewState extends object, CarryForward = {}> {
     carryForward: CarryForward;
     /** Tags to inject into <head> during SSR (Design Log #127). */
     headTags?: HeadTag[];
+    /** HTTP response headers to set on the page response (Design Log #141). */
+    responseHeaders?: Record<string, string>;
 }
 
 /**
@@ -189,7 +199,7 @@ export type RenderFast<
     FastViewState extends object,
     FastCarryForward,
 > = (
-    props: PropsT & RequestQuery,
+    props: PropsT & RequestQuery & RequestCookies,
     ...services: Services
 ) => Promise<FastRenderResult<FastViewState, FastCarryForward>>;
 

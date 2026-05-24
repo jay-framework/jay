@@ -44,6 +44,7 @@ export async function fetchPageRequest(
     requestUrl: URL,
     artifacts: FilesystemArtifactStore,
     staticBaseUrl: string,
+    cookies: Record<string, string> = {},
 ): Promise<Response> {
     const { route, instance } = match;
 
@@ -62,6 +63,7 @@ export async function fetchPageRequest(
         pageParts.headlessInstanceComponents,
         preRendered.slowViewState,
         query,
+        cookies,
     );
 
     if (fastResult.kind === 'Redirect3xx') {
@@ -151,7 +153,8 @@ ${headParts}
         },
     });
 
+    const responseHeaders = (fastResult as any).responseHeaders || {};
     return new Response(stream, {
-        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+        headers: { 'Content-Type': 'text/html; charset=utf-8', ...responseHeaders },
     });
 }

@@ -12,6 +12,7 @@ import {
 } from './fetch-action-handler';
 import { fetchStaticFile } from './fetch-static-handler';
 import { initializeServices } from '../shared/init-services';
+import { parseCookies } from '@jay-framework/stack-server-runtime';
 
 export interface MainServerOptions {
     buildRoot: string;
@@ -129,12 +130,14 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
                 return;
             }
 
+            const cookies = parseCookies(req.headers.cookie);
             const response = await fetchPageRequest(
                 match,
                 currentManifest,
                 url,
                 artifacts,
                 staticBaseUrl,
+                cookies,
             );
             await pipeFetchResponse(response, res);
         } catch (err: any) {

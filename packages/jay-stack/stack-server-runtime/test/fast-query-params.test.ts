@@ -1,5 +1,10 @@
 import { renderFastChangingData } from '../lib';
-import { PageProps, phaseOutput, RequestQuery } from '@jay-framework/fullstack-component';
+import {
+    PageProps,
+    phaseOutput,
+    RequestQuery,
+    RequestCookies,
+} from '@jay-framework/fullstack-component';
 import { DevServerPagePart } from '../lib/load-page-parts';
 import type { AnyJayStackComponentDefinition } from '@jay-framework/fullstack-component';
 
@@ -29,7 +34,7 @@ function makeTestComponent(
 describe('fast phase query parameters (DL#117)', () => {
     it('should pass query params to fast render props', async () => {
         let receivedQuery: Record<string, string> | undefined;
-        const part = makeTestComponent(async (props: PageProps & RequestQuery) => {
+        const part = makeTestComponent(async (props: PageProps & RequestQuery & RequestCookies) => {
             receivedQuery = props.query;
             return phaseOutput({ result: 'ok' }, {});
         });
@@ -51,7 +56,7 @@ describe('fast phase query parameters (DL#117)', () => {
 
     it('should default query to empty object when not provided', async () => {
         let receivedQuery: Record<string, string> | undefined;
-        const part = makeTestComponent(async (props: PageProps & RequestQuery) => {
+        const part = makeTestComponent(async (props: PageProps & RequestQuery & RequestCookies) => {
             receivedQuery = props.query;
             return phaseOutput({ result: 'ok' }, {});
         });
@@ -72,7 +77,7 @@ describe('fast phase query parameters (DL#117)', () => {
                     receivedProps = props;
                     return phaseOutput({ data: 'slow' }, {});
                 },
-                fastRender: async (props: PageProps & RequestQuery) => {
+                fastRender: async (props: PageProps & RequestQuery & RequestCookies) => {
                     return phaseOutput({ data: 'fast' }, {});
                 },
                 comp: undefined as any,

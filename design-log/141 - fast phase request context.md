@@ -21,6 +21,7 @@ The fast phase already receives per-request data: `PageProps` (language, url), p
 `PageProps` contains only `language` and `url`. The HTTP request object (`req`) exists in dev-server and production-server handlers but isn't forwarded to the fast phase. Components wanting to read cookies have no path to do so.
 
 Current flow:
+
 ```
 HTTP Request (has cookies in headers)
     ↓
@@ -53,7 +54,7 @@ A3: On `PhaseOutput`, in the existing `options` bag. This follows the `headTags`
 
 **Q4: Should we support setting cookies (Set-Cookie response header) from the fast phase?**
 
-A4: Not in this design. `Set-Cookie` has complex semantics (domain, path, secure, httpOnly, sameSite, maxAge). The wix-members use case only needs to *read* cookies, not write them. Setting cookies can be added later via a typed `responseCookies` field if needed.
+A4: Not in this design. `Set-Cookie` has complex semantics (domain, path, secure, httpOnly, sameSite, maxAge). The wix-members use case only needs to _read_ cookies, not write them. Setting cookies can be added later via a typed `responseCookies` field if needed.
 
 **Q5: How does this interact with the DL#139 fetch handler?**
 
@@ -76,12 +77,12 @@ New type `RequestCookies`, intersected into `RenderFast` props alongside `Reques
 ```typescript
 // jay-stack-types.ts
 export interface RequestCookies {
-    cookies: Record<string, string>;
+  cookies: Record<string, string>;
 }
 
 export type RenderFast<Services, PropsT, FastViewState, FastCarryForward> = (
-    props: PropsT & RequestQuery & RequestCookies,
-    ...services: Services
+  props: PropsT & RequestQuery & RequestCookies,
+  ...services: Services
 ) => Promise<FastRenderResult<FastViewState, FastCarryForward>>;
 ```
 
@@ -106,19 +107,21 @@ Usage in a component:
 Both server entry points parse cookies from the request and pass to `renderFastChangingData`.
 
 **Dev server** (Express `req`):
+
 ```typescript
 // dev-server.ts — inside mkRoute handler
 const cookies: Record<string, string> = {};
 const cookieHeader = req.headers.cookie;
 if (cookieHeader) {
-    for (const pair of cookieHeader.split(';')) {
-        const [name, ...rest] = pair.trim().split('=');
-        if (name) cookies[name] = decodeURIComponent(rest.join('='));
-    }
+  for (const pair of cookieHeader.split(';')) {
+    const [name, ...rest] = pair.trim().split('=');
+    if (name) cookies[name] = decodeURIComponent(rest.join('='));
+  }
 }
 ```
 
 **Production server** (Fetch `Request` in `createJayFetchHandler`):
+
 ```typescript
 // jay-fetch-handler/lib/index.ts — inside the returned handler
 const cookieHeader = request.headers.get('cookie');
@@ -135,26 +138,26 @@ Extend `PhaseOutput` and `phaseOutput()`:
 ```typescript
 // jay-stack-types.ts
 export interface PhaseOutput<ViewState extends object, CarryForward = {}> {
-    kind: 'PhaseOutput';
-    rendered: ViewState;
-    carryForward: CarryForward;
-    headTags?: HeadTag[];
-    responseHeaders?: Record<string, string>;
+  kind: 'PhaseOutput';
+  rendered: ViewState;
+  carryForward: CarryForward;
+  headTags?: HeadTag[];
+  responseHeaders?: Record<string, string>;
 }
 
 // render-results.ts
 export function phaseOutput<ViewState extends object, CarryForward = {}>(
-    rendered: ViewState,
-    carryForward: CarryForward,
-    options?: { headTags?: HeadTag[]; responseHeaders?: Record<string, string> },
+  rendered: ViewState,
+  carryForward: CarryForward,
+  options?: { headTags?: HeadTag[]; responseHeaders?: Record<string, string> },
 ): PhaseOutput<ViewState, CarryForward> {
-    return {
-        kind: 'PhaseOutput',
-        rendered,
-        carryForward,
-        ...(options?.headTags && { headTags: options.headTags }),
-        ...(options?.responseHeaders && { responseHeaders: options.responseHeaders }),
-    };
+  return {
+    kind: 'PhaseOutput',
+    rendered,
+    carryForward,
+    ...(options?.headTags && { headTags: options.headTags }),
+    ...(options?.responseHeaders && { responseHeaders: options.responseHeaders }),
+  };
 }
 ```
 
@@ -168,13 +171,13 @@ const responseHeaderSources: Record<string, string>[] = [];
 
 // After each fastRenderedPart:
 if (fastRenderedPart.responseHeaders) {
-    responseHeaderSources.push(fastRenderedPart.responseHeaders);
+  responseHeaderSources.push(fastRenderedPart.responseHeaders);
 }
 
 // At the end:
 const result = phaseOutput(fastViewState, fastCarryForward);
 if (responseHeaderSources.length > 0) {
-    result.responseHeaders = Object.assign({}, ...responseHeaderSources);
+  result.responseHeaders = Object.assign({}, ...responseHeaderSources);
 }
 ```
 
@@ -183,6 +186,7 @@ Last-write-wins: later components override earlier ones. Page component runs aft
 ### 5. Response header application in server handlers
 
 **Dev server** (`handleCachedRequest`, `handlePreRenderRequest`):
+
 ```typescript
 const renderedFast = await renderFastChangingData(...);
 if (renderedFast.kind !== 'PhaseOutput') {
@@ -199,10 +203,11 @@ if (renderedFast.responseHeaders) {
 ```
 
 **Production server** (`fetchPageRequest` in `fetch-page-handler.ts`):
+
 ```typescript
 const extraHeaders = (fastResult as any).responseHeaders || {};
 return new Response(stream, {
-    headers: { 'Content-Type': 'text/html; charset=utf-8', ...extraHeaders },
+  headers: { 'Content-Type': 'text/html; charset=utf-8', ...extraHeaders },
 });
 ```
 
@@ -243,13 +248,13 @@ Both dev-server and fetch handler need to parse `Cookie` headers. Extract a shar
 ```typescript
 // stack-server-runtime/lib/cookies.ts
 export function parseCookies(cookieHeader: string | null | undefined): Record<string, string> {
-    const cookies: Record<string, string> = {};
-    if (!cookieHeader) return cookies;
-    for (const pair of cookieHeader.split(';')) {
-        const [name, ...rest] = pair.trim().split('=');
-        if (name) cookies[name] = decodeURIComponent(rest.join('='));
-    }
-    return cookies;
+  const cookies: Record<string, string> = {};
+  if (!cookieHeader) return cookies;
+  for (const pair of cookieHeader.split(';')) {
+    const [name, ...rest] = pair.trim().split('=');
+    if (name) cookies[name] = decodeURIComponent(rest.join('='));
+  }
+  return cookies;
 }
 ```
 
@@ -257,17 +262,17 @@ export function parseCookies(cookieHeader: string | null | undefined): Record<st
 
 ```typescript
 export async function renderFastChangingData(
-    pageParams: object,
-    pageProps: PageProps,
-    carryForward: object,
-    parts: Array<DevServerPagePart>,
-    instancePhaseData?: InstancePhaseData,
-    forEachInstances?: ForEachHeadlessInstance[],
-    headlessInstanceComponents?: HeadlessInstanceComponent[],
-    mergedSlowViewState?: object,
-    query: Record<string, string> = {},
-    cookies: Record<string, string> = {},   // ← new
-): Promise<AnyFastRenderResult>
+  pageParams: object,
+  pageProps: PageProps,
+  carryForward: object,
+  parts: Array<DevServerPagePart>,
+  instancePhaseData?: InstancePhaseData,
+  forEachInstances?: ForEachHeadlessInstance[],
+  headlessInstanceComponents?: HeadlessInstanceComponent[],
+  mergedSlowViewState?: object,
+  query: Record<string, string> = {},
+  cookies: Record<string, string> = {}, // ← new
+): Promise<AnyFastRenderResult>;
 ```
 
 ## Implementation Plan
@@ -275,63 +280,51 @@ export async function renderFastChangingData(
 ### Phase 1: Types
 
 **`full-stack-component/lib/jay-stack-types.ts`**:
+
 1. Add `RequestCookies` interface
 2. Intersect `RequestCookies` into `RenderFast` props type
 3. Add `responseHeaders?: Record<string, string>` to `PhaseOutput`
 
-**`full-stack-component/lib/render-results.ts`**:
-4. Add `responseHeaders` to `phaseOutput()` options
+**`full-stack-component/lib/render-results.ts`**: 4. Add `responseHeaders` to `phaseOutput()` options
 
 ### Phase 2: Cookie parsing and forwarding
 
 **`stack-server-runtime/lib/fast-changing-runner.ts`**:
+
 1. Add `cookies` parameter to `renderFastChangingData`
 2. Merge `cookies` into `partProps` for page-level parts
 3. Merge `cookies` into instance props (static and forEach instances)
 4. Collect `responseHeaders` from all parts and instances (same pattern as headTags)
 5. Attach merged `responseHeaders` to the returned `PhaseOutput`
 
-**`dev-server/lib/dev-server.ts`**:
-6. Parse cookies from `req.headers.cookie` in `mkRoute` handler
-7. Pass `cookies` to `handleCachedRequest`, `handlePreRenderRequest`, `handleClientOnlyRequest`
-8. Each handler passes `cookies` to `renderFastChangingData`
-9. Apply `renderedFast.responseHeaders` via `res.setHeader` before sending response body
+**`dev-server/lib/dev-server.ts`**: 6. Parse cookies from `req.headers.cookie` in `mkRoute` handler 7. Pass `cookies` to `handleCachedRequest`, `handlePreRenderRequest`, `handleClientOnlyRequest` 8. Each handler passes `cookies` to `renderFastChangingData` 9. Apply `renderedFast.responseHeaders` via `res.setHeader` before sending response body
 
-**`production-server/lib/serve/fetch-page-handler.ts`**:
-10. Add `cookies` parameter to `fetchPageRequest`
-11. Pass cookies to `renderFastChangingData`
-12. Apply `responseHeaders` in the `new Response(stream, { headers })` constructor
+**`production-server/lib/serve/fetch-page-handler.ts`**: 10. Add `cookies` parameter to `fetchPageRequest` 11. Pass cookies to `renderFastChangingData` 12. Apply `responseHeaders` in the `new Response(stream, { headers })` constructor
 
-**`jay-fetch-handler/lib/index.ts`**:
-13. Parse cookies from `request.headers.get('cookie')` using shared `parseCookies`
-14. Pass cookies to `fetchPageRequest`
+**`jay-fetch-handler/lib/index.ts`**: 13. Parse cookies from `request.headers.get('cookie')` using shared `parseCookies` 14. Pass cookies to `fetchPageRequest`
 
 ### Phase 3: Tests
 
 **`stack-server-runtime/test/fast-changing-runner.test.ts`** (extend):
+
 1. Test that cookies appear in fast render props
 2. Test that empty cookies default to `{}`
 3. Test that responseHeaders from phaseOutput are collected
 4. Test that responseHeaders from multiple parts merge (last-write-wins)
 
-**`full-stack-component/test/`** (extend):
-5. Type-level test: `RenderFast` callback has `cookies` in props
-6. Type-level test: `RenderSlowly` callback does NOT have `cookies`
+**`full-stack-component/test/`** (extend): 5. Type-level test: `RenderFast` callback has `cookies` in props 6. Type-level test: `RenderSlowly` callback does NOT have `cookies`
 
 ### Phase 4: Agent-kit and documentation
 
 **`packages/jay-stack/stack-cli/agent-kit-template/developer/`** (developer role):
+
 1. Document `props.cookies` in the fast phase section
 2. Document `responseHeaders` in the `phaseOutput()` options section
 3. Show the login-protected page pattern (cookies + redirect + Cache-Control)
 
-**`packages/jay-stack/stack-cli/agent-kit-template/plugin/`** (plugin role):
-4. Document how a headless plugin component can read cookies and set response headers
-5. Show the reusable login-gate component pattern
+**`packages/jay-stack/stack-cli/agent-kit-template/plugin/`** (plugin role): 4. Document how a headless plugin component can read cookies and set response headers 5. Show the reusable login-gate component pattern
 
-**General docs** (`docs/`):
-6. Update fast-phase rendering docs with cookies and response headers
-7. Add a "login-protected pages" recipe/example
+**General docs** (`docs/`): 6. Update fast-phase rendering docs with cookies and response headers 7. Add a "login-protected pages" recipe/example
 
 ## Examples
 
@@ -339,40 +332,42 @@ export async function renderFastChangingData(
 
 ```typescript
 export const page = makeJayStackComponent<ProtectedPageContract>()
-    .withServices(MEMBER_SERVICE)
-    .withFastRender(async (props, memberService) => {
-        const token = props.cookies['session-token'];
-        if (!token) return redirect3xx(302, '/login');
+  .withServices(MEMBER_SERVICE)
+  .withFastRender(async (props, memberService) => {
+    const token = props.cookies['session-token'];
+    if (!token) return redirect3xx(302, '/login');
 
-        const member = await memberService.validate(token);
-        if (!member) return redirect3xx(302, '/login');
+    const member = await memberService.validate(token);
+    if (!member) return redirect3xx(302, '/login');
 
-        return phaseOutput(
-            { memberName: member.name, memberAvatar: member.avatar },
-            {},
-            { responseHeaders: { 'Cache-Control': 'no-store' } },
-        );
-    })
-    .withInteractive((refs, viewState) => { /* ... */ });
+    return phaseOutput(
+      { memberName: member.name, memberAvatar: member.avatar },
+      {},
+      { responseHeaders: { 'Cache-Control': 'no-store' } },
+    );
+  })
+  .withInteractive((refs, viewState) => {
+    /* ... */
+  });
 ```
 
 ### Headless login-gate component (reusable plugin)
 
 ```typescript
 export const loginGate = makeJayStackComponent<LoginGateContract>()
-    .withServices(MEMBER_SERVICE)
-    .withFastRender(async (props, memberService) => {
-        const token = props.cookies['session-token'];
-        const member = token ? await memberService.validate(token) : null;
+  .withServices(MEMBER_SERVICE)
+  .withFastRender(async (props, memberService) => {
+    const token = props.cookies['session-token'];
+    const member = token ? await memberService.validate(token) : null;
 
-        if (!member) return redirect3xx(302, props.loginPageUrl || '/login');
+    if (!member) return redirect3xx(302, props.loginPageUrl || '/login');
 
-        return phaseOutput(
-            { isLoggedIn: true, memberName: member.name },
-            {},
-            { responseHeaders: { 'Cache-Control': 'no-store' } },
-        );
-    });
+    return phaseOutput(
+      { isLoggedIn: true, memberName: member.name },
+      {},
+      { responseHeaders: { 'Cache-Control': 'no-store' } },
+    );
+  });
 ```
 
 ### Anti-pattern: cookies in slow phase
@@ -385,14 +380,14 @@ export const loginGate = makeJayStackComponent<LoginGateContract>()
 
 ## Trade-offs
 
-| Aspect | Benefit | Cost |
-|--------|---------|------|
-| `Record<string, string>` for cookies | Simple, matches `query` pattern | No typed cookie names, no parsing of JSON cookies |
-| No cookie-parser dependency | Zero new dependencies | Manual parsing (trivial for standard cookies) |
-| Response headers as `Record<string, string>` | Simple, covers `Cache-Control` and any future headers | No typed header names, no multi-value headers |
-| Last-write-wins for response headers | Simple, page author has final say | No "most restrictive wins" for Cache-Control specifically |
-| No Set-Cookie support | Simpler scope | Components can't set cookies from fast phase (add later if needed) |
-| Cookies not in slow phase | Cache integrity preserved | Components needing auth in slow phase must use a different pattern |
+| Aspect                                       | Benefit                                               | Cost                                                               |
+| -------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------ |
+| `Record<string, string>` for cookies         | Simple, matches `query` pattern                       | No typed cookie names, no parsing of JSON cookies                  |
+| No cookie-parser dependency                  | Zero new dependencies                                 | Manual parsing (trivial for standard cookies)                      |
+| Response headers as `Record<string, string>` | Simple, covers `Cache-Control` and any future headers | No typed header names, no multi-value headers                      |
+| Last-write-wins for response headers         | Simple, page author has final say                     | No "most restrictive wins" for Cache-Control specifically          |
+| No Set-Cookie support                        | Simpler scope                                         | Components can't set cookies from fast phase (add later if needed) |
+| Cookies not in slow phase                    | Cache integrity preserved                             | Components needing auth in slow phase must use a different pattern |
 
 ## Verification Criteria
 

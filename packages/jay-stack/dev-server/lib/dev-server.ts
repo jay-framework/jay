@@ -27,7 +27,11 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
 import { RequestHandler } from 'express-serve-static-core';
-import { renderFastChangingData, mergeHeadTags } from '@jay-framework/stack-server-runtime';
+import {
+    renderFastChangingData,
+    mergeHeadTags,
+    parseCookies,
+} from '@jay-framework/stack-server-runtime';
 import { loadPageParts } from '@jay-framework/stack-server-runtime';
 import {
     generateClientScript,
@@ -351,6 +355,8 @@ function mkRoute(
                 query[key] = value; // last value wins for repeated keys
             }
 
+            const cookies = parseCookies(req.headers.cookie);
+
             // Frozen page rendering (DL#127): serve a static SSR snapshot
             // from a saved ViewState — no component logic, no client scripts.
             const freezeId = query['_jay_freeze'];
@@ -387,6 +393,7 @@ function mkRoute(
                     url,
                     timing,
                     query,
+                    cookies,
                 );
             } else {
                 // SSR: always use full pipeline with slow render cache
@@ -412,6 +419,7 @@ function mkRoute(
                         url,
                         timing,
                         query,
+                        cookies,
                     );
                 } else {
                     await handlePreRenderRequest(
@@ -429,6 +437,7 @@ function mkRoute(
                         url,
                         timing,
                         query,
+                        cookies,
                     );
                 }
             }
@@ -460,6 +469,7 @@ async function handleCachedRequest(
     url: string,
     timing?: RequestTiming,
     query: Record<string, string> = {},
+    cookies: Record<string, string> = {},
 ): Promise<void> {
     // Load page parts with cached pre-rendered jay-html content (already stripped of cache tag)
     const loadStart = Date.now();
@@ -518,6 +528,7 @@ async function handleCachedRequest(
         headlessComps,
         cachedEntry.slowViewState,
         query,
+        cookies,
     );
     timing?.recordFastRender(Date.now() - fastStart);
 
@@ -525,6 +536,12 @@ async function handleCachedRequest(
         handleOtherResponseCodes(res, renderedFast);
         timing?.end();
         return;
+    }
+
+    if (renderedFast.responseHeaders) {
+        for (const [key, value] of Object.entries(renderedFast.responseHeaders)) {
+            res.setHeader(key, value as string);
+        }
     }
 
     const fastViewState = renderedFast.rendered;
@@ -579,6 +596,7 @@ async function handlePreRenderRequest(
     url: string,
     timing?: RequestTiming,
     query: Record<string, string> = {},
+    cookies: Record<string, string> = {},
 ): Promise<void> {
     // First, load page parts with original jay-html to get component definitions
     const loadStart = Date.now();
@@ -686,6 +704,7 @@ async function handlePreRenderRequest(
         url,
         timing,
         query,
+        cookies,
     );
 }
 
@@ -708,6 +727,7 @@ async function handleClientOnlyRequest(
     url: string,
     timing?: RequestTiming,
     query: Record<string, string> = {},
+    cookies: Record<string, string> = {},
 ): Promise<void> {
     const loadStart = Date.now();
     const pagePartsResult = await loadPageParts(
@@ -785,6 +805,7 @@ async function handleClientOnlyRequest(
         headlessInstanceComponents,
         renderedSlowly.rendered,
         query,
+        cookies,
     );
     timing?.recordFastRender(Date.now() - fastStart);
 
@@ -792,6 +813,12 @@ async function handleClientOnlyRequest(
         handleOtherResponseCodes(res, renderedFast);
         timing?.end();
         return;
+    }
+
+    if (renderedFast.responseHeaders) {
+        for (const [key, value] of Object.entries(renderedFast.responseHeaders)) {
+            res.setHeader(key, value as string);
+        }
     }
 
     // Merge slow + fast viewState using deep merge (DL#108).
