@@ -39,7 +39,7 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
     const logger = getLogger();
     const buildDir = path.join(options.buildRoot, `v${options.version}`);
 
-    const manifestPath = path.join(buildDir, 'route-manifest.json');
+    const manifestPath = path.join(buildDir, 'backend', 'route-manifest.json');
     const manifest: RouteManifest = JSON.parse(await fs.readFile(manifestPath, 'utf-8'));
 
     const {
@@ -59,13 +59,18 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
         `[Rebuild] Found ${affectedRoutes.length} route(s): ${affectedRoutes.map((r) => r.pattern).join(', ')}`,
     );
 
-    await initializeServices(buildDir, options.projectRoot, 'Rebuild');
+    const backendDir = path.join(buildDir, 'backend');
+    const frontendDir = path.join(buildDir, 'frontend');
+
+    await initializeServices(backendDir, options.projectRoot, 'Rebuild');
 
     const rebuildSuffix = Date.now().toString(36);
     const instanceCtx: InstanceBuildContext = {
         projectRoot: options.projectRoot,
         pagesRoot: options.pagesRoot,
         buildDir,
+        backendDir,
+        frontendDir,
         jayOptions: { tsConfigFilePath: options.tsConfigFilePath },
         tsConfigFilePath: options.tsConfigFilePath,
         minify: options.minify ?? true,
@@ -142,7 +147,7 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
         await fs.rename(tempPath, manifestPath);
 
         // Update build-metadata.json — triggers main server manifest reload
-        const metadataPath = path.join(buildDir, 'build-metadata.json');
+        const metadataPath = path.join(buildDir, 'backend', 'build-metadata.json');
         try {
             const metadata: BuildMetadata = JSON.parse(await fs.readFile(metadataPath, 'utf-8'));
             metadata.buildTimestamp = new Date().toISOString();

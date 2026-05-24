@@ -2,7 +2,6 @@ export interface RouteManifest {
     version: number;
     buildTimestamp: string;
     sourceHash: string;
-    publicBasePath: string;
     projectRoot: string;
     sharedManifest: Record<string, string>;
     routes: RouteEntry[];
@@ -66,7 +65,6 @@ export interface BuildOptions {
     projectRoot: string;
     pagesRoot: string;
     buildRoot: string;
-    publicBasePath: string;
     concurrency: number;
     tsConfigFilePath: string;
     minify?: boolean;

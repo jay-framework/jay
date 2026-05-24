@@ -263,6 +263,7 @@ Phases 1–3 complete. Example project at `examples/jay-stack/smoke-test/` with 
 Added `--test-mode` flag to `jay-stack serve` (not in original design). Adds `/_jay/health` and `/_jay/shutdown` endpoints to the production server, matching the dev server pattern. This makes production smoke tests reliable — the test harness uses health polling and graceful shutdown instead of parsing stdout and sending SIGTERM.
 
 **Files changed:**
+
 - `packages/jay-stack/stack-cli/lib/cli.ts` — added `--test-mode` option to `serve` command
 - `packages/jay-stack/stack-cli/lib/run-production.ts` — pass `testMode` through to `startMainServer`
 - `packages/jay-stack/production-server/lib/serve/main-server.ts` — health/shutdown request handlers

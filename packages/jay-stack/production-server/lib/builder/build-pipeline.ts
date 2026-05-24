@@ -87,19 +87,22 @@ async function discoverPluginClientPackages(projectRoot: string): Promise<string
 export async function buildVersion(options: BuildOptions): Promise<RouteManifest> {
     const logger = getLogger();
     const buildDir = path.join(options.buildRoot, `v${options.version}`);
+    const backendDir = path.join(buildDir, 'backend');
+    const frontendDir = path.join(buildDir, 'frontend');
 
     logger.important(`[Build] Starting production build v${options.version}`);
     logger.important(`[Build] Project: ${options.projectRoot}`);
 
-    await fs.mkdir(buildDir, { recursive: true });
+    await fs.mkdir(backendDir, { recursive: true });
+    await fs.mkdir(frontendDir, { recursive: true });
 
     // ── Phase 0: Shared Artifacts ──
 
     // 0a. Discover entries + scan routes
     const { entries, routes } = await discoverServerEntries(options.projectRoot, options.pagesRoot);
 
-    // 0b. Compile server code (Vite SSR build)
-    const serverOutputDir = path.join(buildDir, 'server');
+    // 0b. Compile server code (Vite SSR build) → backend/server/
+    const serverOutputDir = path.join(backendDir, 'server');
     await buildServerCode(
         entries,
         { tsConfigFilePath: options.tsConfigFilePath },
@@ -113,8 +116,8 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         logger.important(`[Build] Plugin client packages: ${pluginClientPackages.join(', ')}`);
     }
 
-    // 0d. Build shared client chunks
-    const sharedOutputDir = path.join(buildDir, 'shared');
+    // 0d. Build shared client chunks → frontend/shared/
+    const sharedOutputDir = path.join(frontendDir, 'shared');
     const { manifest: sharedManifest } = await buildSharedChunks(
         sharedOutputDir,
         options.projectRoot,
@@ -126,7 +129,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
     const { actions, plugins } = await discoverActions(
         entries.actions,
         serverOutputDir,
-        buildDir,
+        backendDir,
         options.projectRoot,
     );
 
@@ -215,6 +218,8 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         projectRoot: options.projectRoot,
         pagesRoot: options.pagesRoot,
         buildDir,
+        backendDir,
+        frontendDir,
         jayOptions: { tsConfigFilePath: options.tsConfigFilePath },
         tsConfigFilePath: options.tsConfigFilePath,
         minify: options.minify ?? true,
@@ -264,7 +269,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
     async function loadPageModule(entry: RouteEntry): Promise<Record<string, unknown>> {
         if (!entry.serverModule) return {};
         if (entry.isPlugin) return import(entry.serverModule);
-        return import(path.join(serverOutputDir, entry.serverModule.replace('server/', '')));
+        return import(path.join(backendDir, entry.serverModule));
     }
 
     // ── Step 1: Collect loadParams (run each unique one once) ──
@@ -304,7 +309,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
             await fs.readFile(route.jayHtmlPath, 'utf-8'),
             options.projectRoot,
             options.tsConfigFilePath,
-            path.join(buildDir, 'server'),
+            serverOutputDir,
         );
         const partsWithLoadParams = pageParts.parts.filter((p) => p.compDefinition?.loadParams);
         if (partsWithLoadParams.length === 0) continue;
@@ -399,14 +404,13 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         buildTimestamp: new Date().toISOString(),
         sourceHash: '',
         projectRoot: options.projectRoot,
-        publicBasePath: options.publicBasePath,
         sharedManifest,
         routes: routeEntries.map((r) => r.entry),
         actions,
         plugins,
     };
 
-    await writeRouteManifest(manifest, buildDir);
+    await writeRouteManifest(manifest, backendDir);
 
     const metadata: BuildMetadata = {
         version: options.version,
@@ -416,9 +420,19 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         instanceCount,
     };
     await fs.writeFile(
-        path.join(buildDir, 'build-metadata.json'),
+        path.join(backendDir, 'build-metadata.json'),
         JSON.stringify(metadata, null, 2),
     );
+
+    // Copy public folder to frontend/
+    const publicFolder = path.join(options.projectRoot, 'public');
+    try {
+        await fs.access(publicFolder);
+        await fs.cp(publicFolder, path.join(frontendDir, 'public'), { recursive: true });
+        logger.info('[Build] Copied public/ to frontend/public/');
+    } catch {
+        // No public folder — skip
+    }
 
     logger.important(`[Build] Done! ${instanceCount} instances built in ${buildDir}`);
 

@@ -1,15 +1,17 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { buildVersion } from '../lib/builder/build-pipeline';
-import { resolveContractToRoutes } from '../lib/invalidation/rebuild';
+import { buildVersion } from '../lib';
+import { resolveContractToRoutes } from '../lib';
 import { matchRequest } from '../lib/serve/route-matcher';
 import { setDevLogger, createDevLogger } from '@jay-framework/logger';
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import type { RouteManifest, RouteEntry } from '../lib/types';
+import type { RouteManifest, RouteEntry } from '../lib';
 
 const fixtureRoot = path.resolve(__dirname, 'fixtures/basic-project');
 const buildRoot = path.join(fixtureRoot, 'build');
 const buildDir = path.join(buildRoot, 'v1');
+const backendDir = path.join(buildDir, 'backend');
+const frontendDir = path.join(buildDir, 'frontend');
 
 let manifest: RouteManifest;
 
@@ -27,7 +29,6 @@ beforeAll(async () => {
         projectRoot: fixtureRoot,
         pagesRoot: path.join(fixtureRoot, 'src/pages'),
         buildRoot,
-        publicBasePath: '/',
         concurrency: 4,
         tsConfigFilePath: path.join(fixtureRoot, 'tsconfig.json'),
     });
@@ -35,7 +36,10 @@ beforeAll(async () => {
 
 describe('build artifacts', () => {
     it('produces route manifest', async () => {
-        const manifestFile = await fs.readFile(path.join(buildDir, 'route-manifest.json'), 'utf-8');
+        const manifestFile = await fs.readFile(
+            path.join(buildDir, 'backend/route-manifest.json'),
+            'utf-8',
+        );
         const parsed = JSON.parse(manifestFile);
         expect(parsed.version).toBe(1);
         expect(parsed.routes.length).toBeGreaterThanOrEqual(5);
@@ -43,7 +47,7 @@ describe('build artifacts', () => {
 
     it('produces build metadata', async () => {
         const metadata = JSON.parse(
-            await fs.readFile(path.join(buildDir, 'build-metadata.json'), 'utf-8'),
+            await fs.readFile(path.join(buildDir, 'backend/build-metadata.json'), 'utf-8'),
         );
         expect(metadata.version).toBe(1);
         expect(metadata.instanceCount).toBeGreaterThanOrEqual(6);
@@ -51,19 +55,19 @@ describe('build artifacts', () => {
 
     it('compiles server code', async () => {
         const initExists = await fs
-            .access(path.join(buildDir, 'server/init.js'))
+            .access(path.join(buildDir, 'backend/server/init.js'))
             .then(() => true)
             .catch(() => false);
         expect(initExists).toBe(true);
 
         const pageExists = await fs
-            .access(path.join(buildDir, 'server/pages/page.js'))
+            .access(path.join(buildDir, 'backend/server/pages/page.js'))
             .then(() => true)
             .catch(() => false);
         expect(pageExists).toBe(true);
 
         const actionExists = await fs
-            .access(path.join(buildDir, 'server/actions/cart.actions.js'))
+            .access(path.join(buildDir, 'backend/server/actions/cart.actions.js'))
             .then(() => true)
             .catch(() => false);
         expect(actionExists).toBe(true);
@@ -71,7 +75,7 @@ describe('build artifacts', () => {
 
     it('builds shared client chunks', async () => {
         const sharedManifest = JSON.parse(
-            await fs.readFile(path.join(buildDir, 'shared/shared-manifest.json'), 'utf-8'),
+            await fs.readFile(path.join(buildDir, 'frontend/shared/shared-manifest.json'), 'utf-8'),
         );
         expect(sharedManifest['@jay-framework/runtime']).toBeDefined();
         expect(sharedManifest['@jay-framework/stack-client-runtime']).toBeDefined();
@@ -123,18 +127,18 @@ describe('per-instance artifacts', () => {
         const index = findRoute('');
         const inst = index.instances[0];
         expect(
-            await fs.access(path.join(buildDir, inst.preRenderedPath)).then(
+            await fs.access(path.join(backendDir, inst.preRenderedPath)).then(
                 () => true,
                 () => false,
             ),
         ).toBe(true);
         expect(
-            await fs.access(path.join(buildDir, inst.clientBundlePath)).then(
+            await fs.access(path.join(frontendDir, inst.clientBundlePath)).then(
                 () => true,
                 () => false,
             ),
         ).toBe(true);
-        const mod = await import(path.join(buildDir, inst.serverElementPath));
+        const mod = await import(path.join(backendDir, inst.serverElementPath));
         expect(typeof mod.renderToStream).toBe('function');
     });
 
@@ -142,13 +146,13 @@ describe('per-instance artifacts', () => {
         const home = findRoute('/home');
         const inst = home.instances[0];
         expect(
-            await fs.access(path.join(buildDir, inst.preRenderedPath)).then(
+            await fs.access(path.join(backendDir, inst.preRenderedPath)).then(
                 () => true,
                 () => false,
             ),
         ).toBe(true);
         const cachePath = inst.preRenderedPath.replace('.jay-html', '.cache.json');
-        const cache = JSON.parse(await fs.readFile(path.join(buildDir, cachePath), 'utf-8'));
+        const cache = JSON.parse(await fs.readFile(path.join(backendDir, cachePath), 'utf-8'));
         expect(cache.slowViewState.siteName).toBe('Test Shop');
     });
 
@@ -156,13 +160,13 @@ describe('per-instance artifacts', () => {
         const featured = findRoute('/featured');
         const inst = featured.instances[0];
         expect(
-            await fs.access(path.join(buildDir, inst.preRenderedPath)).then(
+            await fs.access(path.join(backendDir, inst.preRenderedPath)).then(
                 () => true,
                 () => false,
             ),
         ).toBe(true);
         const cachePath = inst.preRenderedPath.replace('.jay-html', '.cache.json');
-        const cache = JSON.parse(await fs.readFile(path.join(buildDir, cachePath), 'utf-8'));
+        const cache = JSON.parse(await fs.readFile(path.join(backendDir, cachePath), 'utf-8'));
         expect(cache.slowViewState.pageTitle).toBe('Featured Items');
     });
 
@@ -170,13 +174,13 @@ describe('per-instance artifacts', () => {
         const catalog = findRoute('/catalog');
         const inst = catalog.instances[0];
         expect(
-            await fs.access(path.join(buildDir, inst.preRenderedPath)).then(
+            await fs.access(path.join(backendDir, inst.preRenderedPath)).then(
                 () => true,
                 () => false,
             ),
         ).toBe(true);
         const cachePath = inst.preRenderedPath.replace('.jay-html', '.cache.json');
-        const cache = JSON.parse(await fs.readFile(path.join(buildDir, cachePath), 'utf-8'));
+        const cache = JSON.parse(await fs.readFile(path.join(backendDir, cachePath), 'utf-8'));
         expect(cache.slowViewState.catalogTitle).toBe('Full Catalog');
     });
 
@@ -187,13 +191,13 @@ describe('per-instance artifacts', () => {
 
         const cacheA = JSON.parse(
             await fs.readFile(
-                path.join(buildDir, widgetA.preRenderedPath.replace('.jay-html', '.cache.json')),
+                path.join(backendDir, widgetA.preRenderedPath.replace('.jay-html', '.cache.json')),
                 'utf-8',
             ),
         );
         const cacheB = JSON.parse(
             await fs.readFile(
-                path.join(buildDir, widgetB.preRenderedPath.replace('.jay-html', '.cache.json')),
+                path.join(backendDir, widgetB.preRenderedPath.replace('.jay-html', '.cache.json')),
                 'utf-8',
             ),
         );
@@ -206,7 +210,7 @@ describe('per-instance artifacts', () => {
 
     it('server element renders index page HTML', async () => {
         const index = findRoute('');
-        const mod = await import(path.join(buildDir, index.instances[0].serverElementPath));
+        const mod = await import(path.join(backendDir, index.instances[0].serverElementPath));
         const chunks: string[] = [];
         mod.renderToStream(
             { welcomeMessage: 'Welcome to Test Shop' },
@@ -218,7 +222,7 @@ describe('per-instance artifacts', () => {
 
     it('server element renders home page HTML', async () => {
         const home = findRoute('/home');
-        const mod = await import(path.join(buildDir, home.instances[0].serverElementPath));
+        const mod = await import(path.join(backendDir, home.instances[0].serverElementPath));
         const chunks: string[] = [];
         mod.renderToStream(
             { siteName: 'Test Shop', itemCount: 5 },
@@ -233,7 +237,7 @@ describe('per-instance artifacts', () => {
 describe('page-parts.json (DL#137)', () => {
     it('generates page-parts.json for each route', async () => {
         for (const routeDir of ['index', 'home', 'featured', 'catalog', 'items/[slug]']) {
-            const configPath = path.join(buildDir, 'pre-rendered', routeDir, 'page-parts.json');
+            const configPath = path.join(backendDir, 'pre-rendered', routeDir, 'page-parts.json');
             const exists = await fs.access(configPath).then(
                 () => true,
                 () => false,
@@ -245,7 +249,7 @@ describe('page-parts.json (DL#137)', () => {
     it('featured page config includes headfull-nested headless component', async () => {
         const config = JSON.parse(
             await fs.readFile(
-                path.join(buildDir, 'pre-rendered/featured/page-parts.json'),
+                path.join(backendDir, 'pre-rendered/featured/page-parts.json'),
                 'utf-8',
             ),
         );
@@ -263,7 +267,10 @@ describe('page-parts.json (DL#137)', () => {
 
     it('catalog page config includes direct headless component', async () => {
         const config = JSON.parse(
-            await fs.readFile(path.join(buildDir, 'pre-rendered/catalog/page-parts.json'), 'utf-8'),
+            await fs.readFile(
+                path.join(backendDir, 'pre-rendered/catalog/page-parts.json'),
+                'utf-8',
+            ),
         );
         const cartBadge = config.instanceComponents.find(
             (c: any) => c.contractName === 'cart-badge',
@@ -274,7 +281,7 @@ describe('page-parts.json (DL#137)', () => {
 
     it('simple page config has no instance components', async () => {
         const config = JSON.parse(
-            await fs.readFile(path.join(buildDir, 'pre-rendered/index/page-parts.json'), 'utf-8'),
+            await fs.readFile(path.join(backendDir, 'pre-rendered/index/page-parts.json'), 'utf-8'),
         );
         expect(config.instanceComponents.length).toBe(0);
         expect(config.forEachInstances.length).toBe(0);

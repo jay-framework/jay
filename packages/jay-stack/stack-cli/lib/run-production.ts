@@ -76,7 +76,6 @@ export async function runBuild(
         projectRoot: ctx.resolvedPath,
         pagesRoot: ctx.pagesRoot,
         buildRoot: ctx.buildRoot,
-        publicBasePath: '/',
         concurrency: 4,
         tsConfigFilePath: ctx.tsConfigFilePath,
         minify: options.minify,
@@ -113,7 +112,6 @@ export async function runServe(
             buildRoot: ctx.buildRoot,
             version: ctx.version,
             port: parseInt(options.port, 10),
-            publicBasePath: '/',
             testMode: options.testMode,
         });
     }

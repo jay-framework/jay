@@ -46,7 +46,6 @@ beforeAll(async () => {
         projectRoot: fixtureRoot,
         pagesRoot: path.join(fixtureRoot, 'src/pages'),
         buildRoot,
-        publicBasePath: '/',
         concurrency: 4,
         tsConfigFilePath: path.join(fixtureRoot, 'tsconfig.json'),
     });
@@ -55,7 +54,6 @@ beforeAll(async () => {
         buildRoot,
         version: 1,
         port: PORT,
-        publicBasePath: '/',
     });
 
     await new Promise((r) => setTimeout(r, 500));
@@ -214,7 +212,10 @@ describe('dynamic param pages', () => {
 describe('static assets', () => {
     it('serves shared chunks', async () => {
         const manifest = JSON.parse(
-            await fs.readFile(path.join(buildRoot, 'v1/shared/shared-manifest.json'), 'utf-8'),
+            await fs.readFile(
+                path.join(buildRoot, 'v1/frontend/shared/shared-manifest.json'),
+                'utf-8',
+            ),
         );
         const runtimeFile = manifest['@jay-framework/runtime'];
         const res = await fetch(`/shared/${runtimeFile}`);
@@ -224,7 +225,7 @@ describe('static assets', () => {
 
     it('serves instance bundles', async () => {
         const routeManifest = JSON.parse(
-            await fs.readFile(path.join(buildRoot, 'v1/route-manifest.json'), 'utf-8'),
+            await fs.readFile(path.join(buildRoot, 'v1/backend/route-manifest.json'), 'utf-8'),
         );
         const index = routeManifest.routes.find((r: any) => r.pattern === '');
         const res = await fetch(`/${index.instances[0].clientBundlePath}`);
@@ -233,7 +234,10 @@ describe('static assets', () => {
 
     it('sets cache headers on hashed assets', async () => {
         const manifest = JSON.parse(
-            await fs.readFile(path.join(buildRoot, 'v1/shared/shared-manifest.json'), 'utf-8'),
+            await fs.readFile(
+                path.join(buildRoot, 'v1/frontend/shared/shared-manifest.json'),
+                'utf-8',
+            ),
         );
         const runtimeFile = manifest['@jay-framework/runtime'];
         const res = await fetch(`/shared/${runtimeFile}`);

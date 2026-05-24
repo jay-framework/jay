@@ -8,6 +8,20 @@
   <div>
     <h1>Smoke Test Home</h1>
     <p>Static page with no contract and no code</p>
+    <nav>
+      <ul>
+        <li><a href="/phases/">Phases</a> — slow + fast + interactive</li>
+        <li><a href="/headless/">Headless</a> — headless component from local plugin</li>
+        <li><a href="/headfull/">Headfull</a> — headfull component with own jay-html</li>
+        <li><a href="/actions/">Actions</a> — server action endpoints</li>
+        <li><a href="/dynamic/item-a/">Dynamic (item-a)</a> — dynamic route instance</li>
+        <li><a href="/dynamic/item-b/">Dynamic (item-b)</a> — dynamic route instance</li>
+        <li><a href="/async-data/">Async Data</a> — async data resolution</li>
+        <li><a href="/public-assets/">Public Assets</a> — public folder files</li>
+        <li><a href="/foreach/">ForEach</a> — forEach and slowForEach</li>
+        <li><a href="/nested/">Nested</a> — nested headfull components</li>
+      </ul>
+    </nav>
   </div>
 </body>
 </html>

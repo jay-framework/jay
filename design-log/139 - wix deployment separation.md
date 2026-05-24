@@ -67,6 +67,7 @@ A8: They need to point to the CDN URL. Currently `publicBasePath` in the manifes
 A new package `@jay-framework/jay-fetch-handler` that exports a `fetch(request: Request) → Promise<Response>` function. This is the primary serve-time API — not an HTTP server.
 
 The package:
+
 - Imports internals from `@jay-framework/production-server` (artifact store, route matcher, page handler, action handler)
 - Composes them into a single fetch function
 - Is consumed directly by BaaS runtimes (Wix, Cloudflare) or wrapped in an HTTP server by `jay-stack serve`
@@ -91,13 +92,13 @@ The package:
 
 ```typescript
 interface JayFetchHandlerOptions {
-    backendDir: string;
-    staticBaseUrl?: string;       // defaults to '/'
-    frontendDir?: string;         // when set, serves static files from this dir
+  backendDir: string;
+  staticBaseUrl?: string; // defaults to '/'
+  frontendDir?: string; // when set, serves static files from this dir
 }
 
 export function createJayFetchHandler(
-    options: JayFetchHandlerOptions,
+  options: JayFetchHandlerOptions,
 ): (request: Request) => Promise<Response>;
 ```
 
@@ -107,8 +108,8 @@ export function createJayFetchHandler(
 import { createJayFetchHandler } from '@jay-framework/jay-fetch-handler';
 
 const handler = createJayFetchHandler({
-    backendDir: './build/v1/backend',
-    staticBaseUrl: 'https://static.parastorage.com/services/jay-app/1.0.0/',
+  backendDir: './build/v1/backend',
+  staticBaseUrl: 'https://static.parastorage.com/services/jay-app/1.0.0/',
 });
 
 export default { fetch: handler };
@@ -121,16 +122,18 @@ import { createJayFetchHandler } from '@jay-framework/jay-fetch-handler';
 import http from 'node:http';
 
 const handler = createJayFetchHandler({
-    backendDir: './build/v1/backend',
-    staticBaseUrl: '/',
-    frontendDir: './build/v1/frontend',   // serve static files from disk
+  backendDir: './build/v1/backend',
+  staticBaseUrl: '/',
+  frontendDir: './build/v1/frontend', // serve static files from disk
 });
 
-http.createServer(async (req, res) => {
+http
+  .createServer(async (req, res) => {
     const request = toFetchRequest(req);
     const response = await handler(request);
     await pipeFetchResponse(response, res);
-}).listen(4000);
+  })
+  .listen(4000);
 ```
 
 The `jay-stack serve` CLI command creates the HTTP wrapper. The fetch handler is the universal core.
@@ -219,39 +222,39 @@ import { matchRequest } from '@jay-framework/production-server';
 import { initializeServices } from '@jay-framework/production-server';
 
 export function createJayFetchHandler(options: JayFetchHandlerOptions) {
-    const { backendDir, staticBaseUrl = '/', frontendDir } = options;
-    const artifacts = new FilesystemArtifactStore(backendDir);
-    let initialized = false;
+  const { backendDir, staticBaseUrl = '/', frontendDir } = options;
+  const artifacts = new FilesystemArtifactStore(backendDir);
+  let initialized = false;
 
-    return async (request: Request): Promise<Response> => {
-        if (!initialized) {
-            await initialize(backendDir, artifacts);
-            initialized = true;
-        }
+  return async (request: Request): Promise<Response> => {
+    if (!initialized) {
+      await initialize(backendDir, artifacts);
+      initialized = true;
+    }
 
-        const url = new URL(request.url);
+    const url = new URL(request.url);
 
-        // Static files (when frontendDir is provided)
-        if (frontendDir) {
-            const staticResponse = await serveStaticFile(url.pathname, frontendDir);
-            if (staticResponse) return staticResponse;
-        }
+    // Static files (when frontendDir is provided)
+    if (frontendDir) {
+      const staticResponse = await serveStaticFile(url.pathname, frontendDir);
+      if (staticResponse) return staticResponse;
+    }
 
-        // Actions
-        if (isActionRequest(url.pathname)) {
-            return handleActionRequest(request);
-        }
+    // Actions
+    if (isActionRequest(url.pathname)) {
+      return handleActionRequest(request);
+    }
 
-        // Page requests
-        const manifest = await artifacts.readManifest();
-        const match = matchRequest(manifest, url.pathname);
+    // Page requests
+    const manifest = await artifacts.readManifest();
+    const match = matchRequest(manifest, url.pathname);
 
-        if (!match) {
-            return new Response('Not Found', { status: 404 });
-        }
+    if (!match) {
+      return new Response('Not Found', { status: 404 });
+    }
 
-        return handlePageRequest(match, manifest, url, artifacts, staticBaseUrl);
-    };
+    return handlePageRequest(match, manifest, url, artifacts, staticBaseUrl);
+  };
 }
 ```
 
@@ -259,11 +262,11 @@ export function createJayFetchHandler(options: JayFetchHandlerOptions) {
 
 The page and action handlers in `@jay-framework/production-server` are refactored to use Fetch API types:
 
-| File                | Current API                                          | New API                                              |
-| ------------------- | ---------------------------------------------------- | ---------------------------------------------------- |
-| `page-handler.ts`   | `(res: ServerResponse, ...) → void`                  | `(...) → Response` (streaming via `ReadableStream`)  |
-| `action-handler.ts` | `(req: IncomingMessage, res: ServerResponse) → void` | `(request: Request) → Response`                      |
-| `static-handler.ts` | `(req, res, basePath, urlPrefix) → boolean`          | `(pathname, frontendDir) → Response \| null`         |
+| File                | Current API                                          | New API                                             |
+| ------------------- | ---------------------------------------------------- | --------------------------------------------------- |
+| `page-handler.ts`   | `(res: ServerResponse, ...) → void`                  | `(...) → Response` (streaming via `ReadableStream`) |
+| `action-handler.ts` | `(req: IncomingMessage, res: ServerResponse) → void` | `(request: Request) → Response`                     |
+| `static-handler.ts` | `(req, res, basePath, urlPrefix) → boolean`          | `(pathname, frontendDir) → Response \| null`        |
 
 #### Streaming SSR with ReadableStream
 
@@ -298,19 +301,18 @@ The `jay-stack serve` command imports the fetch handler and wraps it in an HTTP 
 import { createJayFetchHandler } from '@jay-framework/jay-fetch-handler';
 
 async function runServe(options) {
-    const handler = createJayFetchHandler({
-        backendDir: path.join(buildDir, 'backend'),
-        staticBaseUrl: options.staticBaseUrl ?? '/',
-        frontendDir: options.serveStatic !== false
-            ? path.join(buildDir, 'frontend')
-            : undefined,
-    });
+  const handler = createJayFetchHandler({
+    backendDir: path.join(buildDir, 'backend'),
+    staticBaseUrl: options.staticBaseUrl ?? '/',
+    frontendDir: options.serveStatic !== false ? path.join(buildDir, 'frontend') : undefined,
+  });
 
-    startHttpServer(handler, options.port);
+  startHttpServer(handler, options.port);
 }
 ```
 
 New CLI flags for `jay-stack serve`:
+
 - `--static-base-url <url>` — base URL for browser-facing assets (default: `/`)
 - `--no-serve-static` — disable static file serving from frontend/
 
@@ -404,3 +406,39 @@ In dev mode, the dev server already serves `public/` via Express static middlewa
 8. Rebuild (invalidation) correctly writes new files to both frontend and backend folders
 9. Streaming SSR works via `ReadableStream` / `Response` API
 10. Actions work via `Request` / `Response` API
+
+## Implementation Results — Phase 1: Split Build Output
+
+### What was implemented
+
+Phase 1 complete. The build now produces `build/v{n}/frontend/` and `build/v{n}/backend/` with clean separation.
+
+**Build output structure:**
+- `backend/` — `route-manifest.json`, `build-metadata.json`, `server/` (compiled page.ts + actions + init), `pre-rendered/` (jay-html, cache.json, server-element.js, page-parts.json)
+- `frontend/` — `shared/` (framework client chunks), `pages/` (instance client bundles + CSS), `public/` (copied from project)
+
+**`publicBasePath` removed from manifest and `BuildOptions`.** The manifest is now environment-agnostic — all paths are relative to their respective root directory (backend or frontend).
+
+### Files changed
+
+**`production-server` package:**
+- `lib/types.ts` — removed `publicBasePath` from `RouteManifest` and `BuildOptions`
+- `lib/builder/build-pipeline.ts` — derive `backendDir`/`frontendDir`, route outputs to correct dirs, copy `public/` to frontend
+- `lib/builder/instance-pipeline.ts` — added `backendDir`/`frontendDir` to `InstanceBuildContext`, split instance outputs (backend: jay-html, cache, server-element; frontend: client bundle, CSS), rewrite headfull component paths for build output resolution
+- `lib/builder/route-manifest.ts` — action paths relative to `backendDir`
+- `lib/serve/main-server.ts` — read from `backend/`, serve static files from `frontend/shared/`, `frontend/pages/`, `frontend/public/`; made `publicBasePath` optional
+- `lib/serve/page-handler.ts` — hardcode `/` as static base URL (will become configurable in Phase 2)
+- `lib/invalidation/rebuild.ts` — manifest and metadata paths under `backend/`
+- `lib/shared/init-services.ts` — no changes needed (receives `backendDir` which contains `server/`)
+- `test/build.test.ts` — updated paths for `backend/`/`frontend/` split
+- `test/serve.test.ts` — updated manifest and shared-manifest paths
+- `tsconfig.json` — added `"node"` to types array (fixes WebStorm resolution for `node:*` imports)
+
+**`stack-cli` package:**
+- `lib/run-production.ts` — removed `publicBasePath` from build and serve calls
+
+### Verified on
+
+- **smoke-test project** (DL#140) — 28/28 tests passing (dev mode + production self-hosted)
+- **production-server unit tests** — 85/85 passing (build, serve, param-routing)
+- **golf project** — confirmed working by user

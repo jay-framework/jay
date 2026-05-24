@@ -98,12 +98,12 @@ export async function handlePageRequest(
     const serverElement = await artifacts.loadServerElement(instance.serverElementPath);
     const asyncPromises: Promise<string>[] = [];
 
-    const importMap = buildImportMap(manifest.sharedManifest, manifest.publicBasePath);
+    const importMap = buildImportMap(manifest.sharedManifest, '/');
     const modulePreloads = Object.values(importMap)
         .map((url) => `    <link rel="modulepreload" href="${url}" />`)
         .join('\n');
     const cssLink = instance.clientCssPath
-        ? `    <link rel="stylesheet" href="${manifest.publicBasePath}${instance.clientCssPath}" />`
+        ? `    <link rel="stylesheet" href="${'/'}${instance.clientCssPath}" />`
         : '';
 
     res.writeHead(200, {
@@ -141,7 +141,7 @@ ${headParts}
     if (asyncScripts) res.write(asyncScripts);
 
     const clientInitData = getClientInitData();
-    const clientBundleUrl = `${manifest.publicBasePath}${instance.clientBundlePath}`;
+    const clientBundleUrl = `${'/'}${instance.clientBundlePath}`;
     res.write(`
     <script type="module">
       import { init } from '${clientBundleUrl}';

@@ -16,25 +16,27 @@ export interface MainServerOptions {
     buildRoot: string;
     version: number;
     port: number;
-    publicBasePath: string;
+    publicBasePath?: string;
     testMode?: boolean;
 }
 
 export async function startMainServer(options: MainServerOptions): Promise<void> {
     const logger = getLogger();
     const buildDir = path.join(options.buildRoot, `v${options.version}`);
-    const artifacts = new FilesystemArtifactStore(buildDir);
+    const backendDir = path.join(buildDir, 'backend');
+    const frontendDir = path.join(buildDir, 'frontend');
+    const artifacts = new FilesystemArtifactStore(backendDir);
 
     const manifest = await artifacts.readManifest();
     logger.important(
         `[Server] Loaded manifest: ${manifest.routes.length} routes, v${manifest.version}`,
     );
 
-    await initializeServices(buildDir, process.cwd(), 'Server');
+    await initializeServices(backendDir, process.cwd(), 'Server');
 
     // Register actions (project + plugin)
     if (manifest.actions.length > 0) {
-        await registerActionsFromManifest(manifest.actions, buildDir);
+        await registerActionsFromManifest(manifest.actions, backendDir);
     }
 
     const startTime = Date.now();
@@ -70,21 +72,30 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
                 return;
             }
 
-            const handled = await handleStaticRequest(
+            // Serve static files from frontend/ (shared chunks + instance client bundles)
+            const handledShared = await handleStaticRequest(
                 req,
                 res,
-                path.join(buildDir, 'shared'),
+                path.join(frontendDir, 'shared'),
                 '/shared/',
             );
-            if (handled) return;
+            if (handledShared) return;
 
-            const handledInstances = await handleStaticRequest(
+            const handledPages = await handleStaticRequest(
                 req,
                 res,
-                path.join(buildDir, 'pre-rendered'),
-                '/pre-rendered/',
+                path.join(frontendDir, 'pages'),
+                '/pages/',
             );
-            if (handledInstances) return;
+            if (handledPages) return;
+
+            const handledPublic = await handleStaticRequest(
+                req,
+                res,
+                path.join(frontendDir, 'public'),
+                '/',
+            );
+            if (handledPublic) return;
 
             const currentManifest = await artifacts.readManifest();
             const match = matchRequest(currentManifest, url.pathname);
