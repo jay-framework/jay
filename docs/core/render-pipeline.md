@@ -186,6 +186,17 @@ await Pipeline.ok(data).toPhaseOutput((data) => ({
 - Success: `PhaseOutput<ViewState, CarryForward>`
 - Error: `ClientError4xx`, `ServerError5xx`, or `Redirect3xx`
 
+**Options**: Pass a third field for `headTags` or `responseHeaders`:
+
+```typescript
+await Pipeline.ok(data).toPhaseOutput((data) => ({
+  viewState: { memberName: data.name },
+  carryForward: {},
+  headTags: [{ tag: 'title', children: data.name }],
+  responseHeaders: { 'Cache-Control': 'no-store' },
+}));
+```
+
 ## Complete Examples
 
 ### Product Page - Slow Render

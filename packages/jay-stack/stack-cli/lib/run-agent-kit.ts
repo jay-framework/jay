@@ -14,8 +14,8 @@ import { createViteForCli } from '@jay-framework/dev-server';
 import { getLogger } from '@jay-framework/logger';
 import { initializeServicesForCli } from './cli-services';
 
-type AgentKitRole = 'designer' | 'developer' | 'plugin';
-const ALL_ROLES: AgentKitRole[] = ['designer', 'developer', 'plugin'];
+type AgentKitRole = 'designer' | 'developer' | 'plugin' | 'devops';
+const ALL_ROLES: AgentKitRole[] = ['designer', 'developer', 'plugin', 'devops'];
 
 export async function runAgentKit(options: {
     output?: string;

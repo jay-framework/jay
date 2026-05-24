@@ -46,7 +46,7 @@ Jay Stack implements three distinct rendering phases for optimal performance:
 **When**: Page serving
 **Output**: Server-rendered HTML with dynamic data
 
-The fast phase receives `props.query` — a `Record<string, string>` parsed from the URL query string. Query params are not available in the slow phase.
+The fast phase receives `props.query` (query string) and `props.cookies` (HTTP cookies) — both `Record<string, string>`. Neither is available in the slow phase. The fast phase can also set HTTP response headers (e.g. `Cache-Control: no-store`) via `phaseOutput()` options.
 
 ```typescript
 .withFastRender(async (props, carryForward, inventory) => {

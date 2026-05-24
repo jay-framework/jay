@@ -402,7 +402,7 @@ export class RenderPipeline<
      * Resolves all pending promises and applies the final mapping.
      */
     async toPhaseOutput(
-        fn: (value: T) => { viewState: TargetVS; carryForward: TargetCF; headTags?: HeadTag[] },
+        fn: (value: T) => { viewState: TargetVS; carryForward: TargetCF; headTags?: HeadTag[]; responseHeaders?: Record<string, string> },
     ): Promise<RenderOutcome<TargetVS, TargetCF>> {
         // Resolve the value
         let resolvedValue:
@@ -454,8 +454,9 @@ export class RenderPipeline<
         }
 
         // Apply the final mapping
-        const { viewState, carryForward, headTags } = fn(resolvedValue as T);
-        return phaseOutput(viewState, carryForward, headTags ? { headTags } : undefined);
+        const { viewState, carryForward, headTags, responseHeaders } = fn(resolvedValue as T);
+        const options = headTags || responseHeaders ? { headTags, responseHeaders } : undefined;
+        return phaseOutput(viewState, carryForward, options);
     }
 
     // =========================================================================
