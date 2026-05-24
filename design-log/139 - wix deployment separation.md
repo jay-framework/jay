@@ -1,10 +1,10 @@
-# DL#139: Wix Deployment — Build Separation & Cloudflare-Compatible Head
+# DL#139: Wix Deployment — Build Separation & Fetch Handler Package
 
 ## Background
 
 The production server (DL#134b) currently uses Node.js `http.createServer` with `IncomingMessage`/`ServerResponse`. All build artifacts live in a single `build/v{n}/` folder. For Wix backend-as-a-service deployment:
 
-- The **head** (main server) runs as a container but must expose a **Cloudflare-compatible HTTP API** (Fetch API: `Request` → `Response`)
+- The runtime calls a **fetch function** (`(Request) → Response`) exported from a module — similar to how `@wix/runtime-fetch-adapter` wraps Astro for BaaS (see `tmp/cloud-runtime-baas/packages/wix-runtime-fetch-adapter`)
 - **Frontend assets** (JS, CSS, images) are uploaded to **Wix statics CDN** — they don't live on the server
 - **Backend artifacts** (server modules, pre-rendered HTML, manifests) stay on the server
 
@@ -12,7 +12,7 @@ The public folder (`./public` in project root) contains media files (images, fon
 
 ## Problem
 
-1. The main server uses `node:http` types (`IncomingMessage`, `ServerResponse`) throughout all handlers. Cloudflare Workers expect `fetch(request: Request): Response`. The server runs as a container (not on Workers edge), so Node.js APIs are available — but the HTTP interface must be Cloudflare-compatible.
+1. The main server uses `node:http` types (`IncomingMessage`, `ServerResponse`) throughout all handlers. The serve-time API should be a standard `fetch(request: Request): Response` function exported from a module — the same interface used by BaaS runtimes, Cloudflare Workers, and other platforms. The HTTP server is just one consumer of this function.
 
 2. Build artifacts are interleaved in one folder. The browser-facing files (`shared/` chunks, instance `.js` bundles, `.css` files) must be separated from server-only files (`server/` modules, `pre-rendered/` HTML + cache + server-elements, manifests) so frontend assets can be uploaded to CDN independently.
 
@@ -54,83 +54,90 @@ A6: No. Public folder contents are static project assets — they don't change d
 
 **Q7: How does the main server currently serve static files, and what changes?**
 
-A7: Currently `handleStaticRequest` serves `shared/` and `pre-rendered/` files from the build folder via filesystem. After separation, the server **keeps** this capability — it's controlled by a deployment config. In `self-hosted` mode, the server serves static files from `frontend/` (same as today, for local/standalone deployments). In `cdn` mode, static serving is disabled and all browser-facing URLs use the CDN base path. This way the same server works for Wix deployment, other setups, and local testing.
+A7: Currently `handleStaticRequest` serves `shared/` and `pre-rendered/` files from the build folder via filesystem. After separation, static file serving becomes optional — controlled by whether `frontendDir` is passed to the fetch handler. When provided, the handler serves static files from `frontend/` (for local/standalone deployments). When omitted, all browser-facing URLs use the CDN base path via `staticBaseUrl`. This way the same fetch handler works for Wix BaaS deployment, standalone, and local testing.
 
 **Q8: What about the import map URLs — they currently point to `/shared/filename.js`?**
 
-A8: They need to point to the CDN URL. Currently `publicBasePath` in the manifest is hardcoded to `/`. After this change, `publicBasePath` is removed from the manifest — the serve layer reads `staticBaseUrl` from the deploy config and prepends it when generating import maps, CSS links, and script tags. The import map builder and link generation keep the same logic, but read the base URL from config instead of the manifest.
+A8: They need to point to the CDN URL. Currently `publicBasePath` in the manifest is hardcoded to `/`. After this change, `publicBasePath` is removed from the manifest — the fetch handler receives `staticBaseUrl` as a creation-time option and prepends it when generating import maps, CSS links, and script tags. The import map builder and link generation keep the same logic, but read the base URL from the handler options instead of the manifest.
 
 ## Design
 
-### 1. Deployment Config
+### 1. Fetch Handler Package
 
-A new `.jay-deploy` YAML file in the project root. Supports multiple named environments with three orthogonal concerns:
+A new package `@jay-framework/jay-fetch-handler` that exports a `fetch(request: Request) → Promise<Response>` function. This is the primary serve-time API — not an HTTP server.
 
-1. **`serveStaticFiles`** — does the server serve frontend static files from disk?
-2. **`staticBaseUrl`** — base URL for all browser-facing assets (import maps, CSS links, script tags)
-3. **`serverStyle`** — how the server is exposed: `http` (Node.js `http.createServer` wrapping the fetch handler) or `fetch` (exports a `(Request) → Response` function directly)
+The package:
+- Imports internals from `@jay-framework/production-server` (artifact store, route matcher, page handler, action handler)
+- Composes them into a single fetch function
+- Is consumed directly by BaaS runtimes (Wix, Cloudflare) or wrapped in an HTTP server by `jay-stack serve`
 
-The fetch handler (`Request → Response`) is the core in **all** modes — it handles page requests, actions, and SSR. The `serverStyle` only controls how that handler is exposed to the outside world. Static file serving is a separate layer outside the fetch handler, controlled by `serveStaticFiles`.
-
-```yaml
-# .jay-deploy
-environments:
-  local:
-    serverStyle: http
-    serveStaticFiles: true
-
-  staging:
-    serverStyle: fetch
-    serveStaticFiles: false
-    staticBaseUrl: https://static.parastorage.com/services/jay-app/staging/
-
-  production:
-    serverStyle: fetch
-    serveStaticFiles: false
-    staticBaseUrl: https://static.parastorage.com/services/jay-app/1.0.0/
+```
+┌─────────────────────────────────────────────────────┐
+│  BaaS runtime / jay-stack serve                     │
+│                                                     │
+│  ┌───────────────────────────────────────────────┐  │
+│  │  @jay-framework/jay-fetch-handler             │  │
+│  │  createJayFetchHandler(options) → fetch        │  │
+│  │                                               │  │
+│  │  (Request) → Response                         │  │
+│  │  • page requests → SSR streaming              │  │
+│  │  • actions → JSON responses                   │  │
+│  │  • static files (optional) → from frontend/   │  │
+│  └───────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────┘
 ```
 
-**Fields per environment:**
-
-| Field              | Type                | Default  | Description                                                                                                                                            |
-| ------------------ | ------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `serverStyle`      | `'http' \| 'fetch'` | `'http'` | `http`: Node.js HTTP server wrapping the fetch handler. `fetch`: exports the fetch handler directly (Cloudflare Workers / service-worker style)        |
-| `serveStaticFiles` | `boolean`           | `true`   | Whether the server serves `frontend/` files from disk. Independent of `serverStyle`                                                                    |
-| `staticBaseUrl`    | `string`            | `'/'`    | Base URL prefix for all browser-facing assets. When `serveStaticFiles: true` and `staticBaseUrl: '/'`, the server maps these to the `frontend/` folder |
-
-These compose freely — all combinations are valid:
-
-| `serverStyle` | `serveStaticFiles` | `staticBaseUrl` | Use case                                               |
-| ------------- | ------------------ | --------------- | ------------------------------------------------------ |
-| `http`        | `true`             | `/`             | Local dev, standalone deployment                       |
-| `http`        | `false`            | CDN URL         | Node server behind CDN (no static serving overhead)    |
-| `fetch`       | `false`            | CDN URL         | Wix / Cloudflare Workers deployment                    |
-| `fetch`       | `true`             | `/`             | Fetch-style handler with self-hosted statics (testing) |
-
-**Usage:**
-
-```bash
-jay-stack build                           # build is environment-agnostic, no --env needed
-jay-stack serve --env production          # starts with fetch handler, no static serving
-jay-stack serve --env local               # starts Node HTTP server with static files
-jay-stack serve                           # defaults to 'local' if no --env
-```
-
-The deploy config is **serve-time only**. The build always produces the same output with relative paths — no environment baked in. This means: build once, deploy to any environment. `publicBasePath` is removed from the manifest; the serve layer resolves it from the deploy config's `staticBaseUrl`.
-
-**Config type:**
+**Package API:**
 
 ```typescript
-interface DeployEnvironment {
-  serverStyle?: 'http' | 'fetch'; // defaults to 'http'
-  serveStaticFiles?: boolean; // defaults to true
-  staticBaseUrl?: string; // defaults to '/'
+interface JayFetchHandlerOptions {
+    backendDir: string;
+    staticBaseUrl?: string;       // defaults to '/'
+    frontendDir?: string;         // when set, serves static files from this dir
 }
 
-interface DeployConfig {
-  environments: Record<string, DeployEnvironment>;
-}
+export function createJayFetchHandler(
+    options: JayFetchHandlerOptions,
+): (request: Request) => Promise<Response>;
 ```
+
+**Usage — Wix BaaS deployment:**
+
+```typescript
+import { createJayFetchHandler } from '@jay-framework/jay-fetch-handler';
+
+const handler = createJayFetchHandler({
+    backendDir: './build/v1/backend',
+    staticBaseUrl: 'https://static.parastorage.com/services/jay-app/1.0.0/',
+});
+
+export default { fetch: handler };
+```
+
+**Usage — self-hosted (jay-stack serve):**
+
+```typescript
+import { createJayFetchHandler } from '@jay-framework/jay-fetch-handler';
+import http from 'node:http';
+
+const handler = createJayFetchHandler({
+    backendDir: './build/v1/backend',
+    staticBaseUrl: '/',
+    frontendDir: './build/v1/frontend',   // serve static files from disk
+});
+
+http.createServer(async (req, res) => {
+    const request = toFetchRequest(req);
+    const response = await handler(request);
+    await pipeFetchResponse(response, res);
+}).listen(4000);
+```
+
+The `jay-stack serve` CLI command creates the HTTP wrapper. The fetch handler is the universal core.
+
+**No `.jay-deploy` config file.** The `staticBaseUrl` and `frontendDir` are passed programmatically. For `jay-stack serve`, these come from CLI flags (`--static-base-url`, `--serve-static`). Defaults match current behavior: `staticBaseUrl: '/'`, static files served from `frontend/`.
+
+`publicBasePath` is **removed from the manifest**. The manifest contains only relative paths. The fetch handler receives `staticBaseUrl` at creation time and prepends it when generating import maps, CSS links, and script tags.
 
 ### 2. Build Output Structure
 
@@ -187,114 +194,76 @@ At serve time, `staticBaseUrl` (from the deploy config, defaults to `/`) is prep
 
 `publicBasePath` is **removed from the manifest**. The manifest is environment-agnostic — it contains only relative paths. The serve layer reads `staticBaseUrl` from the deploy config.
 
-### 4. Fetch Handler (Core) and Server Styles
+### 4. Fetch Handler Package (`@jay-framework/jay-fetch-handler`)
 
-#### Architecture
+A new package in `packages/jay-stack/jay-fetch-handler/`. Imports internals from `@jay-framework/production-server` and exposes a single `createJayFetchHandler` function.
+
+#### Package Structure
 
 ```
-┌─────────────────────────────────────────────────┐
-│  Server Style Layer (http or fetch)             │
-│                                                 │
-│  ┌───────────────────────────────────────────┐  │
-│  │  Static Files Layer (optional)            │  │
-│  │  serveStaticFiles: true → serve frontend/ │  │
-│  │                                           │  │
-│  │  ┌─────────────────────────────────────┐  │  │
-│  │  │  Fetch Handler (always the core)    │  │  │
-│  │  │  (Request) → Response               │  │  │
-│  │  │  • page requests → SSR streaming    │  │  │
-│  │  │  • actions → JSON responses         │  │  │
-│  │  │  • webhooks → invalidation          │  │  │
-│  │  └─────────────────────────────────────┘  │  │
-│  └───────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────┘
+packages/jay-stack/jay-fetch-handler/
+├── package.json
+├── lib/
+│   ├── index.ts              # Public API: createJayFetchHandler + types
+│   ├── fetch-handler.ts      # Core fetch handler composition
+│   ├── static-files.ts       # Static file serving (Request → Response | null)
+│   └── http-adapter.ts       # Request/Response conversion utilities
 ```
 
-The fetch handler is the core logic in **all** modes. It handles page requests, actions, and webhooks — never static files. Static file serving wraps around it as a separate layer, enabled by `serveStaticFiles`.
-
-#### Fetch Handler
+#### Core Implementation
 
 ```typescript
-type FetchHandler = (request: Request) => Promise<Response>;
+// lib/fetch-handler.ts
+import { FilesystemArtifactStore } from '@jay-framework/production-server';
+import { matchRequest } from '@jay-framework/production-server';
+import { initializeServices } from '@jay-framework/production-server';
 
-interface HandlerOptions {
-  backendDir: string;
-  staticBaseUrl: string;
+export function createJayFetchHandler(options: JayFetchHandlerOptions) {
+    const { backendDir, staticBaseUrl = '/', frontendDir } = options;
+    const artifacts = new FilesystemArtifactStore(backendDir);
+    let initialized = false;
+
+    return async (request: Request): Promise<Response> => {
+        if (!initialized) {
+            await initialize(backendDir, artifacts);
+            initialized = true;
+        }
+
+        const url = new URL(request.url);
+
+        // Static files (when frontendDir is provided)
+        if (frontendDir) {
+            const staticResponse = await serveStaticFile(url.pathname, frontendDir);
+            if (staticResponse) return staticResponse;
+        }
+
+        // Actions
+        if (isActionRequest(url.pathname)) {
+            return handleActionRequest(request);
+        }
+
+        // Page requests
+        const manifest = await artifacts.readManifest();
+        const match = matchRequest(manifest, url.pathname);
+
+        if (!match) {
+            return new Response('Not Found', { status: 404 });
+        }
+
+        return handlePageRequest(match, manifest, url, artifacts, staticBaseUrl);
+    };
 }
-
-export function createJayHandler(options: HandlerOptions): FetchHandler {
-  const artifacts = new FilesystemArtifactStore(options.backendDir);
-
-  return async (request: Request): Promise<Response> => {
-    const url = new URL(request.url);
-
-    if (isActionRequest(url.pathname)) {
-      return handleActionRequest(request);
-    }
-
-    const manifest = await artifacts.readManifest();
-    const match = matchRequest(manifest, url.pathname);
-
-    if (!match) {
-      return new Response('Not Found', { status: 404 });
-    }
-
-    return handlePageRequest(match, manifest, url, artifacts);
-  };
-}
-```
-
-#### Static Files Layer
-
-Wraps the fetch handler. When `serveStaticFiles` is true, incoming requests are first checked against the `frontend/` folder. Unmatched requests fall through to the fetch handler.
-
-```typescript
-function withStaticFiles(handler: FetchHandler, frontendDir: string): FetchHandler {
-  return async (request: Request): Promise<Response> => {
-    const staticResponse = await serveStaticFile(request, frontendDir);
-    if (staticResponse) return staticResponse;
-    return handler(request);
-  };
-}
-```
-
-#### Server Style: `http`
-
-Wraps the handler in `http.createServer`. Used for standalone deployments and local testing.
-
-```typescript
-import http from 'node:http';
-
-function startHttpServer(handler: FetchHandler, port: number): void {
-  http
-    .createServer(async (req, res) => {
-      const request = toFetchRequest(req);
-      const response = await handler(request);
-      await pipeFetchResponse(response, res);
-    })
-    .listen(port);
-}
-```
-
-#### Server Style: `fetch`
-
-Exports the handler directly. The hosting platform (Cloudflare Workers, Wix backend) calls it.
-
-```typescript
-// Entry point for fetch-style platforms
-export default {
-  fetch: handler,
-};
 ```
 
 #### Handler Module Changes
 
-| File                | Current API                                          | New API                                                                                |
-| ------------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `page-handler.ts`   | `(res: ServerResponse, ...) → void`                  | `(...) → Response` (streaming via `ReadableStream`)                                    |
-| `action-handler.ts` | `(req: IncomingMessage, res: ServerResponse) → void` | `(request: Request) → Response`                                                        |
-| `static-handler.ts` | `(req, res, basePath, urlPrefix) → boolean`          | `(request, frontendDir) → Response \| null` — separate layer, not inside fetch handler |
-| `main-server.ts`    | `http.createServer(callback)`                        | Composes layers based on config: fetch handler + optional static files + server style  |
+The page and action handlers in `@jay-framework/production-server` are refactored to use Fetch API types:
+
+| File                | Current API                                          | New API                                              |
+| ------------------- | ---------------------------------------------------- | ---------------------------------------------------- |
+| `page-handler.ts`   | `(res: ServerResponse, ...) → void`                  | `(...) → Response` (streaming via `ReadableStream`)  |
+| `action-handler.ts` | `(req: IncomingMessage, res: ServerResponse) → void` | `(request: Request) → Response`                      |
+| `static-handler.ts` | `(req, res, basePath, urlPrefix) → boolean`          | `(pathname, frontendDir) → Response \| null`         |
 
 #### Streaming SSR with ReadableStream
 
@@ -320,31 +289,30 @@ function handlePageRequest(...): Response {
 }
 ```
 
-#### Composition at Startup
+#### CLI Integration (`jay-stack serve`)
 
-All three config fields are serve-time only. The build output is identical regardless of environment.
+The `jay-stack serve` command imports the fetch handler and wraps it in an HTTP server:
 
 ```typescript
-async function startServer(config: DeployEnvironment, dirs: Dirs): Promise<void> {
-  // staticBaseUrl comes from deploy config, not from the manifest
-  let handler = createJayHandler({
-    backendDir: dirs.backend,
-    staticBaseUrl: config.staticBaseUrl ?? '/',
-  });
+// run-production.ts
+import { createJayFetchHandler } from '@jay-framework/jay-fetch-handler';
 
-  if (config.serveStaticFiles !== false) {
-    handler = withStaticFiles(handler, dirs.frontend);
-  }
+async function runServe(options) {
+    const handler = createJayFetchHandler({
+        backendDir: path.join(buildDir, 'backend'),
+        staticBaseUrl: options.staticBaseUrl ?? '/',
+        frontendDir: options.serveStatic !== false
+            ? path.join(buildDir, 'frontend')
+            : undefined,
+    });
 
-  if (config.serverStyle === 'fetch') {
-    // Export for platform consumption
-    module.exports = { fetch: handler };
-  } else {
-    // Default: Node.js HTTP server
-    startHttpServer(handler, config.port);
-  }
+    startHttpServer(handler, options.port);
 }
 ```
+
+New CLI flags for `jay-stack serve`:
+- `--static-base-url <url>` — base URL for browser-facing assets (default: `/`)
+- `--no-serve-static` — disable static file serving from frontend/
 
 ### 5. Build Pipeline Changes
 
@@ -390,39 +358,39 @@ In dev mode, the dev server already serves `public/` via Express static middlewa
 6. **Add public folder copy** in finalize phase
 7. **Update `BuildOptions`** — add `publicFolder` path (no `staticBaseUrl` — that's serve-time only)
 
-### Phase 2: Deployment config (serve-time only)
+### Phase 2: Refactor handlers to Fetch API
 
-1. **Create deploy config loader** — parse `.jay-deploy` YAML, resolve environment by name, defaults
-2. **Add `DeployConfig` / `DeployEnvironment` types** to production-server types
-3. **Wire into CLI** — `--env` flag for `serve` command only (not `build`)
-
-### Phase 3: Fetch handler (core)
-
-1. **Create `handler.ts`** — `createJayHandler()` returning `FetchHandler`
-2. **Rewrite `page-handler.ts`** — return `Response` with `ReadableStream`
-3. **Rewrite `action-handler.ts`** — `Request` → `Response`
+1. **Rewrite `page-handler.ts`** — return `Response` with `ReadableStream`
+2. **Rewrite `action-handler.ts`** — `Request` → `Response`
+3. **Create `static-files.ts`** — `(pathname, frontendDir) → Response | null`
 4. **Update `artifact-store.ts`** — resolve against backend dir only
 
-### Phase 4: Server composition
+### Phase 3: Create `@jay-framework/jay-fetch-handler` package
 
-1. **Update `static-handler.ts`** — convert to Fetch API (`Request → Response | null`), used as wrapper layer
-2. **Create `with-static-files.ts`** — `withStaticFiles(handler, frontendDir)` wrapper
-3. **Create `http-adapter.ts`** — `startHttpServer(handler, port)` for `serverStyle: 'http'`
-4. **Create `fetch-entry.ts`** — export entry for `serverStyle: 'fetch'`
-5. **Update `main-server.ts`** — compose layers based on deploy config
+1. **Create package** in `packages/jay-stack/jay-fetch-handler/` with package.json, tsconfig
+2. **Create `fetch-handler.ts`** — `createJayFetchHandler(options)` composing handlers from production-server
+3. **Create `http-adapter.ts`** — `toFetchRequest()` and `pipeFetchResponse()` utilities
+4. **Export public API** from `index.ts`
 
-### Phase 5: Update CLI and renderer
+### Phase 4: Update CLI
 
-1. **Update `run-production.ts`** — load deploy config on serve, remove `publicBasePath` from build path
-2. **Update renderer server** — invalidation writes to both backend and frontend folders
-3. **Update tests**
+1. **Update `run-production.ts`** — import `createJayFetchHandler`, wrap in HTTP server
+2. **Add CLI flags** — `--static-base-url`, `--no-serve-static`
+3. **Update `main-server.ts`** — thin wrapper using the fetch handler
+4. **Update renderer server** — invalidation writes to both backend and frontend folders
+
+### Phase 5: Tests and smoke test
+
+1. **Update existing production-server tests**
+2. **Update DL140 smoke test** — add CDN mode tests (Milestone 2)
+3. **Add fetch handler unit tests** in new package
 
 ## Trade-offs
 
 - **Two output folders vs. one**: Slightly more complex build pipeline, but clean deployment separation. No runtime overhead.
-- **Deploy config file**: Another config file in the project root. But it's optional — without it, everything defaults to `serverStyle: 'http'`, `serveStaticFiles: true`, `staticBaseUrl: '/'`, which matches current behavior exactly. Multi-environment support avoids needing env vars or CLI flags for each deployment target.
-- **Three orthogonal concerns**: More config surface, but each combination is valid and independently testable. No "magic" modes where changing one setting has hidden side effects on another.
-- **Fetch handler as universal core**: All code paths go through the same `(Request) → Response` function. The http adapter and static file layer are thin wrappers. This means the fetch handler is always tested regardless of server style.
+- **Separate fetch handler package**: One more package in the monorepo, but cleanly separates the serve-time API from the build-time logic. The production-server package stays focused on building; the fetch handler package is the runtime.
+- **No deploy config file**: CLI flags (`--static-base-url`, `--no-serve-static`) are simpler than a YAML config file. For BaaS deployment, the consumer passes options programmatically. No config file to maintain or sync.
+- **Fetch handler as universal core**: All code paths go through the same `(Request) → Response` function. The HTTP server in `jay-stack serve` is a thin wrapper. The same handler runs identically in BaaS, Cloudflare Workers, or standalone Node.js.
 
 ## Verification
 
