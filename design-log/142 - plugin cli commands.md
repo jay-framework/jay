@@ -30,6 +30,7 @@ There's no mechanism for a plugin to expose a CLI command that:
 2. **Product sync**: `jay-stack run stores/sync-catalog` — pulls product data from external CMS into local reference files
 3. **Schema migration**: `jay-stack run data/migrate --dry-run` — runs database migrations declared by a plugin
 4. **Cache clear**: `jay-stack run cdn/purge --all` — purges CDN cache for the site
+5. **Cloud deployment**: `jay-stack run wix/deploy --env production` — deploys the built application to a cloud provider (uploads frontend to CDN, pushes backend container, runs health checks)
 
 ## Questions and Answers
 
@@ -43,11 +44,11 @@ A2: Declared in `plugin.yaml`. This is consistent with how actions, services, we
 
 **Q3: Should command handlers get the same context as setup handlers?**
 
-A3: Similar but not identical. Commands need services (like setup), but they also need parsed CLI arguments, and they don't need configDir. The context should include `projectRoot`, `services`, and a typed `args` record.
+A3: Similar but not identical. Commands need services (like setup), but they also need typed input parsed from CLI arguments, and they don't need configDir. The handler uses a `makeCliCommand` builder with `.withServices()`, just like `makeJayAction`.
 
 **Q4: How do commands declare their arguments?**
 
-A4: In plugin.yaml, as a simple list with name, description, and optional default. The CLI parses them positionally or as flags. Keep it minimal — plugins that need complex argument parsing can do it themselves inside the handler.
+A4: In a `.jay-command` YAML file (same pattern as `.jay-action`). The file declares `inputSchema` with typed parameters. The CLI reads the schema and auto-generates commander flags — `--folder <string>`, `--dry-run` (boolean), etc. This means the CLI natively validates and parses arguments before calling the handler. No raw passthrough needed.
 
 **Q5: Should commands run in a Vite context (for TypeScript loading)?**
 
@@ -67,90 +68,109 @@ A8: Yes. The handler returns a result object. The CLI renders it as JSON or YAML
 
 ## Design
 
-### 1. Plugin manifest declaration
+### 1. `makeCliCommand` builder
+
+Follows the same builder pattern as `makeJayAction` — declares services, accepts typed input:
+
+```typescript
+import { makeCliCommand } from '@jay-framework/fullstack-component';
+import { MEDIA_SERVICE } from './services';
+
+export const uploadPublic = makeCliCommand('upload-public')
+    .withServices(MEDIA_SERVICE)
+    .withHandler(async (input, mediaService) => {
+        const fs = await import('node:fs/promises');
+        const path = await import('node:path');
+
+        const folder = input.folder || 'public';
+        const publicPath = path.resolve(input.__projectRoot, folder);
+        const files = await fs.readdir(publicPath, { recursive: true });
+        const uploaded: Array<{ local: string; url: string }> = [];
+
+        for (const file of files) {
+            const filePath = path.join(publicPath, String(file));
+            const stat = await fs.stat(filePath);
+            if (!stat.isFile()) continue;
+
+            if (input.dryRun) {
+                getLogger().info(`[dry-run] Would upload ${file}`);
+                continue;
+            }
+
+            const url = await mediaService.upload(filePath);
+            uploaded.push({ local: String(file), url });
+            getLogger().info(`Uploaded ${file} → ${url}`);
+        }
+
+        return {
+            uploaded,
+            count: uploaded.length,
+        };
+    });
+```
+
+The builder produces a `JayCliCommand` object (analogous to `JayAction`):
+
+```typescript
+interface JayCliCommand<Input, Output> {
+    commandName: string;
+    services: ServiceMarkers<any[]>;
+    handler: (input: Input, ...services: any[]) => Promise<Output>;
+    _brand: 'JayCliCommand';
+}
+```
+
+The handler receives `input` with typed fields from the `.jay-command` schema, plus injected `__projectRoot` and `__publicFolder` context fields.
+
+### 2. `.jay-command` metadata file
+
+Like `.jay-action`, a YAML file declares the command's description and input schema:
+
+```yaml
+# upload-public.jay-command
+name: upload-public
+description: Upload files from the public folder to Wix Media
+
+inputSchema:
+  folder?: string      # Subfolder within public/ (default: entire public/)
+  dryRun?: boolean     # Preview without uploading
+
+outputSchema:
+  uploaded:
+    - local: string
+      url: string
+  count: number
+```
+
+The CLI reads `inputSchema` and auto-generates commander flags:
+
+- `folder?: string` → `--folder <value>` (optional string flag)
+- `dryRun?: boolean` → `--dry-run` (boolean flag, camelCase → kebab-case)
+
+Required fields (no `?`) become required flags — the CLI validates them before calling the handler.
+
+### 3. Plugin manifest declaration
 
 ```yaml
 # plugin.yaml
 name: wix-media
 commands:
   - name: upload-public
-    handler: uploadPublicCommand    # export name from plugin module
-    description: Upload public folder files to Wix Media
+    command: upload-public.jay-command    # path to .jay-command file
   - name: clear-cache
-    handler: clearCacheCommand
-    description: Clear media CDN cache
+    command: clear-cache.jay-command
 ```
 
-The `handler` is an export name resolved from the plugin's main module (same pattern as `setup.handler`).
-
-### 2. Command handler interface
-
-```typescript
-export interface PluginCommandContext {
-    pluginName: string;
-    projectRoot: string;
-    publicFolder: string;
-    args: string[];
-    options: Record<string, string | boolean>;
-    services: Map<symbol, unknown>;
-    verbose: boolean;
-}
-
-export interface PluginCommandResult {
-    success: boolean;
-    message?: string;
-    data?: unknown;
-}
-
-export type PluginCommandHandler = (ctx: PluginCommandContext) => Promise<PluginCommandResult>;
-```
-
-### 3. Handler example (media upload)
-
-```typescript
-// In plugin module (e.g., lib/index.ts)
-import { MEDIA_SERVICE } from './services';
-
-export const uploadPublicCommand: PluginCommandHandler = async (ctx) => {
-    const mediaService = ctx.services.get(MEDIA_SERVICE as any);
-    const fs = await import('node:fs/promises');
-    const path = await import('node:path');
-
-    const files = await fs.readdir(ctx.publicFolder, { recursive: true });
-    const uploaded: Array<{ local: string; url: string }> = [];
-
-    for (const file of files) {
-        const filePath = path.join(ctx.publicFolder, file);
-        const stat = await fs.stat(filePath);
-        if (!stat.isFile()) continue;
-
-        const url = await mediaService.upload(filePath);
-        uploaded.push({ local: file, url });
-        getLogger().info(`Uploaded ${file} → ${url}`);
-    }
-
-    return {
-        success: true,
-        message: `Uploaded ${uploaded.length} files`,
-        data: { uploaded },
-    };
-};
-```
+The `command` field points to the `.jay-command` file (same as `action` pointing to `.jay-action`). The handler export is discovered by name from the plugin module (matching the command name, like actions).
 
 ### 4. CLI invocation
 
 ```bash
-# Run a plugin command
-jay-stack run media/upload-public
-
-# With extra args passed through to the handler
+# Run a command — flags auto-generated from .jay-command inputSchema
 jay-stack run media/upload-public --folder images --dry-run
 
-# List available commands
+# List available commands (from all plugins)
 jay-stack run --list
-
-# JSON output (default)
-jay-stack run stores/sync-catalog
 
 # YAML output
 jay-stack run stores/sync-catalog --yaml
@@ -159,89 +179,113 @@ jay-stack run stores/sync-catalog --yaml
 jay-stack run media/upload-public -v
 ```
 
+The CLI natively parses `--folder images` and `--dry-run` because it read the inputSchema. The handler receives `{ folder: 'images', dryRun: true }` — typed, validated, no manual parsing needed.
+
 ### 5. Discovery and execution flow
 
 ```
-jay-stack run media/upload-public --folder images
+jay-stack run media/upload-public --folder images --dry-run
     │
-    ├─ scanPlugins() → find all plugins with `commands` in plugin.yaml
+    ├─ scanPlugins() → find plugins with `commands` in plugin.yaml
     ├─ Match "media/upload-public" → plugin "wix-media", command "upload-public"
+    ├─ Read upload-public.jay-command → get inputSchema, description
+    ├─ Auto-parse CLI flags from inputSchema → { folder: 'images', dryRun: true }
     ├─ createViteForCli() → TypeScript loading
     ├─ initializeServices() → register all plugin services
     ├─ viteServer.ssrLoadModule(pluginModule) → load handler export
-    ├─ Parse remaining args: args=[], options={ folder: 'images' }
     │
     ▼
-    handler({ pluginName, projectRoot, publicFolder, args, options, services, verbose })
+    handler({ folder: 'images', dryRun: true, __projectRoot, __publicFolder }, mediaService)
     │
-    ├─ Handler uses services, reads files, calls APIs
+    ├─ Handler uses injected services, typed input
     ├─ Logs progress via getLogger()
     │
     ▼
-    Return { success, message, data }
+    Return { uploaded: [...], count: 2 }
     │
     ├─ Print result as JSON/YAML
     └─ Exit 0 (success) or 1 (failure)
 ```
 
-### 6. Argument parsing
-
-The `run` command uses `--` to separate jay-stack options from plugin command arguments:
-
-```bash
-jay-stack run -v --yaml media/upload-public -- --folder images --dry-run
-```
-
-Everything before `--` (or before the command ref) is parsed by jay-stack. Everything after is passed as raw `args` and `options` to the handler.
-
-In practice, commander's `allowUnknownOption()` + `passThroughOptions` on the `run` command achieves this without requiring `--`.
-
-### 7. `--list` output
+### 6. `--list` output
 
 ```
 Available plugin commands:
 
   wix-media
-    upload-public    Upload public folder files to Wix Media
+    upload-public    Upload files from the public folder to Wix Media
     clear-cache      Clear media CDN cache
 
   wix-stores
     sync-catalog     Sync product catalog from external CMS
+
+  wix-deploy
+    deploy           Deploy application to Wix cloud
 ```
+
+### 7. Input type mapping (`.jay-command` → CLI flags)
+
+| Schema type | CLI flag | Example |
+|-------------|----------|---------|
+| `field: string` | `--field <value>` (required) | `--env production` |
+| `field?: string` | `--field <value>` (optional) | `--folder images` |
+| `field: boolean` | `--field` (required, must be present) | rare |
+| `field?: boolean` | `--field` (optional flag) | `--dry-run` |
+| `field: number` | `--field <value>` (required, parsed as number) | `--concurrency 4` |
+| `field?: number` | `--field <value>` (optional number) | `--timeout 30` |
+
+camelCase field names become kebab-case flags: `dryRun` → `--dry-run`.
+
+### 8. Context fields injected into input
+
+The CLI injects these fields into the handler's input object (prefixed with `__` to avoid collision with schema fields):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `__projectRoot` | `string` | Absolute path to project root |
+| `__publicFolder` | `string` | Absolute path to public folder |
+| `__verbose` | `boolean` | Whether `-v` / `--verbose` was passed |
 
 ## Implementation Plan
 
-### Phase 1: Discovery
+### Phase 1: Builder and types
+
+**`full-stack-component/lib/jay-command-builder.ts`** (new):
+1. `makeCliCommand(name)` builder with `.withServices()` and `.withHandler()`
+2. `JayCliCommand` interface (commandName, services, handler, `_brand`)
+3. `isJayCliCommand()` type guard
+4. Export from package index
+
+### Phase 2: Discovery and execution
 
 **`stack-server-runtime/lib/plugin-commands.ts`** (new):
-1. Define `PluginCommandContext`, `PluginCommandResult`, `PluginCommandHandler` types
-2. Define `PluginCommandDeclaration` (parsed from plugin.yaml)
-3. `discoverPluginCommands({ projectRoot, pluginFilter? })` → returns declared commands with plugin info
-4. `executePluginCommand(plugin, command, context)` → loads handler, calls it, returns result
-
-### Phase 2: CLI command
-
-**`stack-cli/lib/run-command.ts`** (new):
-1. `runCommand(commandRef, options, projectRoot, initializeServices)` handler
-2. Parse `commandRef` as `pluginName/commandName`
-3. Discover commands, match, init Vite + services, load handler, execute
-4. Print result as JSON/YAML
-5. Handle `--list` flag
-
-**`stack-cli/lib/cli.ts`**:
-6. Register `run` command with options: `--list`, `--yaml`, `-v`, `--verbose`
-
-### Phase 3: Plugin manifest support
+1. `discoverPluginCommands({ projectRoot, pluginFilter? })` — scans plugin.yaml for `commands`, resolves `.jay-command` files
+2. `executePluginCommand(plugin, command, input, viteServer)` — loads handler via Vite, resolves services, calls handler
+3. Parse `.jay-command` YAML — extract `inputSchema`, `description`, `outputSchema`
+4. `commandSchemaToFlags(inputSchema)` — convert schema to commander option definitions
 
 **`stack-server-runtime/lib/plugin-scanner.ts`**:
-1. Add `commands` to `PluginManifest` type (optional array)
-2. Parse from plugin.yaml during scan
+5. Add `commands` to `PluginManifest` type (optional array)
+
+### Phase 3: CLI command
+
+**`stack-cli/lib/run-command.ts`** (new):
+1. `runCommand(commandRef, args, options, projectRoot, initializeServices)` handler
+2. Parse `commandRef` as `pluginName/commandName`
+3. Discover commands, read `.jay-command`, auto-generate flags from inputSchema
+4. Parse CLI args against schema, validate required fields
+5. Init Vite + services, load handler, inject context fields (`__projectRoot`, `__publicFolder`, `__verbose`)
+6. Execute handler, print result as JSON/YAML
+7. Handle `--list` flag
+
+**`stack-cli/lib/cli.ts`**:
+8. Register `run` command with `allowUnknownOption()` for schema-derived flags
 
 ### Phase 4: Documentation
 
 **Agent-kit templates**:
 1. Update `plugin/plugin-structure.md` — add `commands` field to plugin.yaml docs
-2. Add `plugin/commands-guide.md` — how to write command handlers
+2. Add `plugin/commands-guide.md` — how to write `makeCliCommand` handlers and `.jay-command` files
 
 **`stack-cli/agent-kit-template/devops/`**:
 3. Add reference to `jay-stack run` in devops guide
@@ -301,9 +345,10 @@ data:
 | Aspect | Benefit | Cost |
 |--------|---------|------|
 | New CLI command (`run`) | Clear separation from actions and setup | One more command to learn |
-| Declared in plugin.yaml | Discoverable, documentable | Requires plugin author to declare explicitly |
-| Raw args passthrough | Plugins can parse their own args | No type-safe arg declaration in manifest |
-| Service injection | Plugins reuse existing service infrastructure | Requires full service initialization even for simple commands |
+| `makeCliCommand` builder | Consistent with `makeJayAction`, type-safe services | New builder to implement |
+| `.jay-command` YAML schema | CLI auto-generates flags, validates input, self-documenting | Another file format (but mirrors `.jay-action`) |
+| Native flag parsing from schema | No manual arg parsing in handlers, consistent UX | Schema must cover all parameters upfront |
+| Service injection via builder | Same pattern as actions — plugins reuse service infrastructure | Requires full service initialization even for simple commands |
 | Vite for TypeScript | Plugins authored in TypeScript seamlessly | Adds ~1s startup overhead |
 
 ## Verification Criteria
