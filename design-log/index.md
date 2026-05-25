@@ -98,6 +98,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 88  | PR 158 review guide                               | Review guide for export_import branch (Figma vendor + plugin resolution) |
 | 89  | PR 158 merge concerns                             | Merge conflicts, duplicate work, and decisions for PR #158 into main     |
 | 130 | plugin routes and templates                       | Plugins provide pages (jay-html + page.ts) as routes; project overrides  |
+| 142 | plugin CLI commands                               | `jay-stack run <plugin>/<command>` for admin/batch operations            |
 
 ---
 
