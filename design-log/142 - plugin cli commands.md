@@ -68,24 +68,50 @@ A8: Yes. The handler returns a result object. The CLI renders it as JSON or YAML
 
 ## Design
 
-### 1. `makeCliCommand` builder
+### 1. Console context service
 
-Follows the same builder pattern as `makeJayAction` — declares services, accepts typed input:
+A framework-provided service that gives CLI commands access to project info and a logger. Commands request it via `.withServices()` like any other service:
+
+```typescript
+import { createJayService } from '@jay-framework/fullstack-component';
+
+export interface ConsoleContext {
+    projectRoot: string;
+    publicFolder: string;
+    build: {
+        frontend: string;
+        backend: string;
+    };
+    verbose: boolean;
+    log: (message: string) => void;
+    warn: (message: string) => void;
+    error: (message: string) => void;
+}
+
+export const CONSOLE_CONTEXT = createJayService<ConsoleContext>('ConsoleContext');
+```
+
+The CLI registers this service before executing the command. Commands that don't need project info simply don't request it.
+
+### 2. `makeCliCommand` builder
+
+Follows the same builder pattern as `makeJayAction` — declares services, accepts typed input, returns success/failure:
 
 ```typescript
 import { makeCliCommand } from '@jay-framework/fullstack-component';
 import { MEDIA_SERVICE } from './services';
+import { CONSOLE_CONTEXT } from '@jay-framework/fullstack-component';
 
 export const uploadPublic = makeCliCommand('upload-public')
-    .withServices(MEDIA_SERVICE)
-    .withHandler(async (input, mediaService) => {
+    .withServices(MEDIA_SERVICE, CONSOLE_CONTEXT)
+    .withHandler(async (input, mediaService, console) => {
         const fs = await import('node:fs/promises');
         const path = await import('node:path');
 
-        const folder = input.folder || 'public';
-        const publicPath = path.resolve(input.__projectRoot, folder);
+        const folder = input.folder || '';
+        const publicPath = path.resolve(console.publicFolder, folder);
         const files = await fs.readdir(publicPath, { recursive: true });
-        const uploaded: Array<{ local: string; url: string }> = [];
+        let count = 0;
 
         for (const file of files) {
             const filePath = path.join(publicPath, String(file));
@@ -93,34 +119,32 @@ export const uploadPublic = makeCliCommand('upload-public')
             if (!stat.isFile()) continue;
 
             if (input.dryRun) {
-                getLogger().info(`[dry-run] Would upload ${file}`);
+                console.log(`[dry-run] Would upload ${file}`);
                 continue;
             }
 
             const url = await mediaService.upload(filePath);
-            uploaded.push({ local: String(file), url });
-            getLogger().info(`Uploaded ${file} → ${url}`);
+            console.log(`Uploaded ${file} → ${url}`);
+            count++;
         }
 
-        return {
-            uploaded,
-            count: uploaded.length,
-        };
+        console.log(`Done. ${count} files uploaded.`);
+        return { success: true };
     });
 ```
 
-The builder produces a `JayCliCommand` object (analogous to `JayAction`):
+The builder produces a `JayCliCommand` object:
 
 ```typescript
-interface JayCliCommand<Input, Output> {
+interface JayCliCommand<Input> {
     commandName: string;
     services: ServiceMarkers<any[]>;
-    handler: (input: Input, ...services: any[]) => Promise<Output>;
+    handler: (input: Input, ...services: any[]) => Promise<{ success: boolean }>;
     _brand: 'JayCliCommand';
 }
 ```
 
-The handler receives `input` with typed fields from the `.jay-command` schema, plus injected `__projectRoot` and `__publicFolder` context fields.
+The handler returns `{ success: true }` or `{ success: false }`. The CLI maps this to exit code 0 or 1. All console output goes through the `ConsoleContext` logger (or any other service the command requests).
 
 ### 2. `.jay-command` metadata file
 
@@ -134,13 +158,9 @@ description: Upload files from the public folder to Wix Media
 inputSchema:
   folder?: string      # Subfolder within public/ (default: entire public/)
   dryRun?: boolean     # Preview without uploading
-
-outputSchema:
-  uploaded:
-    - local: string
-      url: string
-  count: number
 ```
+
+No `outputSchema` — CLI commands write output directly to the console via a logger. The handler returns a success/failure status to determine exit code.
 
 The CLI reads `inputSchema` and auto-generates commander flags:
 
@@ -192,18 +212,18 @@ jay-stack run media/upload-public --folder images --dry-run
     ├─ Auto-parse CLI flags from inputSchema → { folder: 'images', dryRun: true }
     ├─ createViteForCli() → TypeScript loading
     ├─ initializeServices() → register all plugin services
+    ├─ Register CONSOLE_CONTEXT service (projectRoot, publicFolder, logger)
     ├─ viteServer.ssrLoadModule(pluginModule) → load handler export
     │
     ▼
-    handler({ folder: 'images', dryRun: true, __projectRoot, __publicFolder }, mediaService)
+    handler({ folder: 'images', dryRun: true }, mediaService, consoleContext)
     │
-    ├─ Handler uses injected services, typed input
-    ├─ Logs progress via getLogger()
+    ├─ Handler uses injected services and console context
+    ├─ Writes output via consoleContext.log()
     │
     ▼
-    Return { uploaded: [...], count: 2 }
+    Return { success: true }
     │
-    ├─ Print result as JSON/YAML
     └─ Exit 0 (success) or 1 (failure)
 ```
 
@@ -236,15 +256,20 @@ Available plugin commands:
 
 camelCase field names become kebab-case flags: `dryRun` → `--dry-run`.
 
-### 8. Context fields injected into input
+### 8. `CONSOLE_CONTEXT` service
 
-The CLI injects these fields into the handler's input object (prefixed with `__` to avoid collision with schema fields):
+Registered by the CLI before executing the command. Available to any command that requests it via `.withServices(CONSOLE_CONTEXT)`. Commands that don't need project info simply don't request it — they only declare the services they need.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `__projectRoot` | `string` | Absolute path to project root |
-| `__publicFolder` | `string` | Absolute path to public folder |
-| `__verbose` | `boolean` | Whether `-v` / `--verbose` was passed |
+| `projectRoot` | `string` | Absolute path to project root |
+| `publicFolder` | `string` | Absolute path to public folder |
+| `build.frontend` | `string` | Absolute path to frontend build output (JS, CSS, public assets) |
+| `build.backend` | `string` | Absolute path to backend build output (server modules, pre-rendered HTML) |
+| `verbose` | `boolean` | Whether `-v` / `--verbose` was passed |
+| `log(msg)` | `function` | Write info to console |
+| `warn(msg)` | `function` | Write warning to console |
+| `error(msg)` | `function` | Write error to console |
 
 ## Implementation Plan
 
@@ -252,9 +277,10 @@ The CLI injects these fields into the handler's input object (prefixed with `__`
 
 **`full-stack-component/lib/jay-command-builder.ts`** (new):
 1. `makeCliCommand(name)` builder with `.withServices()` and `.withHandler()`
-2. `JayCliCommand` interface (commandName, services, handler, `_brand`)
+2. `JayCliCommand` interface (commandName, services, handler returns `{ success: boolean }`, `_brand`)
 3. `isJayCliCommand()` type guard
-4. Export from package index
+4. `CONSOLE_CONTEXT` service marker and `ConsoleContext` interface
+5. Export from package index
 
 ### Phase 2: Discovery and execution
 
@@ -274,8 +300,8 @@ The CLI injects these fields into the handler's input object (prefixed with `__`
 2. Parse `commandRef` as `pluginName/commandName`
 3. Discover commands, read `.jay-command`, auto-generate flags from inputSchema
 4. Parse CLI args against schema, validate required fields
-5. Init Vite + services, load handler, inject context fields (`__projectRoot`, `__publicFolder`, `__verbose`)
-6. Execute handler, print result as JSON/YAML
+5. Init Vite + services, register `CONSOLE_CONTEXT` with project info and logger
+6. Execute handler, exit code from `{ success }` result
 7. Handle `--list` flag
 
 **`stack-cli/lib/cli.ts`**:
@@ -346,8 +372,10 @@ data:
 |--------|---------|------|
 | New CLI command (`run`) | Clear separation from actions and setup | One more command to learn |
 | `makeCliCommand` builder | Consistent with `makeJayAction`, type-safe services | New builder to implement |
-| `.jay-command` YAML schema | CLI auto-generates flags, validates input, self-documenting | Another file format (but mirrors `.jay-action`) |
+| `.jay-command` YAML (no outputSchema) | CLI auto-generates flags, validates input, self-documenting | Another file format (but mirrors `.jay-action`) |
 | Native flag parsing from schema | No manual arg parsing in handlers, consistent UX | Schema must cover all parameters upfront |
+| `CONSOLE_CONTEXT` service | Opt-in — commands request only what they need, no magic fields in input | One more framework service to know about |
+| Handler returns `{ success }` only | Simple contract, output is console logs not structured data | No machine-readable output (use actions for that) |
 | Service injection via builder | Same pattern as actions — plugins reuse service infrastructure | Requires full service initialization even for simple commands |
 | Vite for TypeScript | Plugins authored in TypeScript seamlessly | Adds ~1s startup overhead |
 
