@@ -9,9 +9,10 @@ The devops role handles the production lifecycle: building artifacts, configurin
 ## Workflow
 
 1. **Build** — `jay-stack build` to compile all pages into production artifacts
-2. **Deploy** — upload `frontend/` to CDN, deploy `backend/` to server container
+2. **Deploy** — upload `frontend/` to CDN, deploy `backend/` to server container. Plugins can provide deploy commands via `jay-stack run <plugin>/deploy`
 3. **Serve** — start the production server with environment-appropriate flags
 4. **Invalidate** — rebuild specific pages when data changes
+5. **Admin** — run plugin CLI commands via `jay-stack run <plugin>/<command>` (media upload, data sync, cache purge)
 
 ## Guides
 

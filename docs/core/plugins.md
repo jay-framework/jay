@@ -106,6 +106,18 @@ routes:
 
 Plugin pages use the same rendering pipeline as project pages — full SSR, hydration, and HMR support. A plugin route is essentially a headless component + jay-html template + route path.
 
+### commands
+
+```yaml
+commands:
+  - name: upload-public
+    command: upload-public.jay-command   # Optional metadata file with description and inputSchema
+  - name: sync-catalog
+    command: sync-catalog.jay-command
+```
+
+CLI commands for admin and batch operations. Run via `jay-stack run <plugin>/<command>`. Handlers are built with `makeCliCommand()` and support service injection. The `.jay-command` file declares an `inputSchema` that auto-generates CLI flags.
+
 ### setup
 
 ```yaml

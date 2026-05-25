@@ -111,6 +111,36 @@ jay-stack action <plugin/action> [options]
 jay-stack action wix-stores/searchProducts --input '{"query":"laptop"}'
 ```
 
+### `jay-stack run`
+
+Run a plugin CLI command. Used for admin and batch operations like media upload, deployment, and data sync.
+
+```bash
+jay-stack run <plugin/command> [flags]
+```
+
+| Option          | Description                        |
+| --------------- | ---------------------------------- |
+| `--list`        | List all available plugin commands |
+| `-v, --verbose` | Show detailed output               |
+
+Flags after the command ref are auto-generated from the `.jay-command` metadata file's `inputSchema`. For example, if the schema declares `dryRun?: boolean`, the CLI accepts `--dry-run`.
+
+**Examples:**
+
+```bash
+# List available commands
+jay-stack run --list
+
+# Run a command
+jay-stack run media/upload-public --folder images --dry-run
+
+# Run a deploy command
+jay-stack run wix/deploy --env production
+```
+
+Plugins declare commands in `plugin.yaml` and implement handlers with `makeCliCommand()`. See [Plugins](./plugins.md) for details.
+
 ### `jay-stack params`
 
 Discover load param values for a contract. Useful for finding valid page parameters.
@@ -235,6 +265,19 @@ jay-stack serve --role renderer --port 4001
 jay-stack rebuild --contract product-page
 jay-stack rebuild --url /products/blue-widget
 jay-stack cleanup
+```
+
+### Plugin Commands
+
+```bash
+# List available plugin commands
+jay-stack run --list
+
+# Run a plugin command
+jay-stack run media/upload-public --folder images
+
+# Deploy to cloud
+jay-stack run wix/deploy --env production
 ```
 
 ### Agent / AI Tooling
