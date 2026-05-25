@@ -89,6 +89,14 @@ export interface PluginManifest {
         /** Human-readable description */
         description?: string;
     }>;
+    /** CLI commands exposed by this plugin (Design Log #142).
+     *  Run via `jay-stack run <plugin>/<command>`. */
+    commands?: Array<{
+        /** Command name (e.g., "upload-public") */
+        name: string;
+        /** Path to .jay-command metadata file (for input schema and description) */
+        command?: string;
+    }>;
     /** Plugin setup configuration (Design Log #87) */
     setup?: {
         /** Export name (NPM) or relative path (local) to setup handler function */

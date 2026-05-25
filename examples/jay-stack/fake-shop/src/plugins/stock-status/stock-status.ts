@@ -1,4 +1,10 @@
-import { makeJayStackComponent, RenderPipeline, Signals } from '@jay-framework/fullstack-component';
+import {
+    makeJayStackComponent,
+    RenderPipeline,
+    Signals,
+    makeCliCommand,
+    CONSOLE_CONTEXT,
+} from '@jay-framework/fullstack-component';
 import {
     StockStatusContract,
     StockStatusRefs,
@@ -55,3 +61,20 @@ export const stockStatus = makeJayStackComponent<StockStatusContract>()
             };
         },
     );
+
+export const checkInventory = makeCliCommand('check-inventory')
+    .withServices(INVENTORY_SERVICE, CONSOLE_CONTEXT)
+    .withHandler(async (input: { inStockOnly?: boolean }, inventoryService, console) => {
+        const productIds = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
+        let reported = 0;
+
+        for (const id of productIds) {
+            const units = await inventoryService.getAvailableUnits(id);
+            if (input.inStockOnly && units === 0) continue;
+            console.log(`Product ${id}: ${units} units${units === 0 ? ' (out of stock)' : ''}`);
+            reported++;
+        }
+
+        console.log(`\nReported ${reported} products.`);
+        return { success: true };
+    });

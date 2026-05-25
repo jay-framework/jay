@@ -5,12 +5,14 @@
 Plugins need to run administrative operations that don't belong in the rendering pipeline or the dev server request cycle. Example: a media plugin that uploads files from the project's `public/` folder to Wix Media, or a stores plugin that syncs product data from an external CMS.
 
 Today plugins can declare:
+
 - **Services** — initialized at startup, available to components and actions
 - **Actions** — request-scoped server functions (`makeJayAction`/`makeJayQuery`) for client-server communication
 - **Setup handlers** — run via `jay-stack setup`, create config files, validate credentials (DL#87)
 - **References** — run via `jay-stack agent-kit`, generate discovery data for AI agents (DL#87)
 
 None of these fit "upload media files" or "sync products":
+
 - Actions are request-response — they need a running server and an HTTP caller
 - Setup handlers are for config creation and validation, not arbitrary operations
 - References are for generating data files, not side effects
@@ -18,6 +20,7 @@ None of these fit "upload media files" or "sync products":
 ## Problem
 
 There's no mechanism for a plugin to expose a CLI command that:
+
 1. Runs as a one-shot terminal operation (not a server endpoint)
 2. Has access to initialized services (e.g., Wix Media API client)
 3. Can accept arguments (e.g., folder path, flags)
@@ -76,16 +79,16 @@ A framework-provided service that gives CLI commands access to project info and 
 import { createJayService } from '@jay-framework/fullstack-component';
 
 export interface ConsoleContext {
-    projectRoot: string;
-    publicFolder: string;
-    build: {
-        frontend: string;
-        backend: string;
-    };
-    verbose: boolean;
-    log: (message: string) => void;
-    warn: (message: string) => void;
-    error: (message: string) => void;
+  projectRoot: string;
+  publicFolder: string;
+  build: {
+    frontend: string;
+    backend: string;
+  };
+  verbose: boolean;
+  log: (message: string) => void;
+  warn: (message: string) => void;
+  error: (message: string) => void;
 }
 
 export const CONSOLE_CONTEXT = createJayService<ConsoleContext>('ConsoleContext');
@@ -103,44 +106,44 @@ import { MEDIA_SERVICE } from './services';
 import { CONSOLE_CONTEXT } from '@jay-framework/fullstack-component';
 
 export const uploadPublic = makeCliCommand('upload-public')
-    .withServices(MEDIA_SERVICE, CONSOLE_CONTEXT)
-    .withHandler(async (input, mediaService, console) => {
-        const fs = await import('node:fs/promises');
-        const path = await import('node:path');
+  .withServices(MEDIA_SERVICE, CONSOLE_CONTEXT)
+  .withHandler(async (input, mediaService, console) => {
+    const fs = await import('node:fs/promises');
+    const path = await import('node:path');
 
-        const folder = input.folder || '';
-        const publicPath = path.resolve(console.publicFolder, folder);
-        const files = await fs.readdir(publicPath, { recursive: true });
-        let count = 0;
+    const folder = input.folder || '';
+    const publicPath = path.resolve(console.publicFolder, folder);
+    const files = await fs.readdir(publicPath, { recursive: true });
+    let count = 0;
 
-        for (const file of files) {
-            const filePath = path.join(publicPath, String(file));
-            const stat = await fs.stat(filePath);
-            if (!stat.isFile()) continue;
+    for (const file of files) {
+      const filePath = path.join(publicPath, String(file));
+      const stat = await fs.stat(filePath);
+      if (!stat.isFile()) continue;
 
-            if (input.dryRun) {
-                console.log(`[dry-run] Would upload ${file}`);
-                continue;
-            }
+      if (input.dryRun) {
+        console.log(`[dry-run] Would upload ${file}`);
+        continue;
+      }
 
-            const url = await mediaService.upload(filePath);
-            console.log(`Uploaded ${file} → ${url}`);
-            count++;
-        }
+      const url = await mediaService.upload(filePath);
+      console.log(`Uploaded ${file} → ${url}`);
+      count++;
+    }
 
-        console.log(`Done. ${count} files uploaded.`);
-        return { success: true };
-    });
+    console.log(`Done. ${count} files uploaded.`);
+    return { success: true };
+  });
 ```
 
 The builder produces a `JayCliCommand` object:
 
 ```typescript
 interface JayCliCommand<Input> {
-    commandName: string;
-    services: ServiceMarkers<any[]>;
-    handler: (input: Input, ...services: any[]) => Promise<{ success: boolean }>;
-    _brand: 'JayCliCommand';
+  commandName: string;
+  services: ServiceMarkers<any[]>;
+  handler: (input: Input, ...services: any[]) => Promise<{ success: boolean }>;
+  _brand: 'JayCliCommand';
 }
 ```
 
@@ -156,8 +159,8 @@ name: upload-public
 description: Upload files from the public folder to Wix Media
 
 inputSchema:
-  folder?: string      # Subfolder within public/ (default: entire public/)
-  dryRun?: boolean     # Preview without uploading
+  folder?: string # Subfolder within public/ (default: entire public/)
+  dryRun?: boolean # Preview without uploading
 ```
 
 No `outputSchema` — CLI commands write output directly to the console via a logger. The handler returns a success/failure status to determine exit code.
@@ -176,7 +179,7 @@ Required fields (no `?`) become required flags — the CLI validates them before
 name: wix-media
 commands:
   - name: upload-public
-    command: upload-public.jay-command    # path to .jay-command file
+    command: upload-public.jay-command # path to .jay-command file
   - name: clear-cache
     command: clear-cache.jay-command
 ```
@@ -245,14 +248,14 @@ Available plugin commands:
 
 ### 7. Input type mapping (`.jay-command` → CLI flags)
 
-| Schema type | CLI flag | Example |
-|-------------|----------|---------|
-| `field: string` | `--field <value>` (required) | `--env production` |
-| `field?: string` | `--field <value>` (optional) | `--folder images` |
-| `field: boolean` | `--field` (required, must be present) | rare |
-| `field?: boolean` | `--field` (optional flag) | `--dry-run` |
-| `field: number` | `--field <value>` (required, parsed as number) | `--concurrency 4` |
-| `field?: number` | `--field <value>` (optional number) | `--timeout 30` |
+| Schema type       | CLI flag                                       | Example            |
+| ----------------- | ---------------------------------------------- | ------------------ |
+| `field: string`   | `--field <value>` (required)                   | `--env production` |
+| `field?: string`  | `--field <value>` (optional)                   | `--folder images`  |
+| `field: boolean`  | `--field` (required, must be present)          | rare               |
+| `field?: boolean` | `--field` (optional flag)                      | `--dry-run`        |
+| `field: number`   | `--field <value>` (required, parsed as number) | `--concurrency 4`  |
+| `field?: number`  | `--field <value>` (optional number)            | `--timeout 30`     |
 
 camelCase field names become kebab-case flags: `dryRun` → `--dry-run`.
 
@@ -260,22 +263,23 @@ camelCase field names become kebab-case flags: `dryRun` → `--dry-run`.
 
 Registered by the CLI before executing the command. Available to any command that requests it via `.withServices(CONSOLE_CONTEXT)`. Commands that don't need project info simply don't request it — they only declare the services they need.
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `projectRoot` | `string` | Absolute path to project root |
-| `publicFolder` | `string` | Absolute path to public folder |
-| `build.frontend` | `string` | Absolute path to frontend build output (JS, CSS, public assets) |
-| `build.backend` | `string` | Absolute path to backend build output (server modules, pre-rendered HTML) |
-| `verbose` | `boolean` | Whether `-v` / `--verbose` was passed |
-| `log(msg)` | `function` | Write info to console |
-| `warn(msg)` | `function` | Write warning to console |
-| `error(msg)` | `function` | Write error to console |
+| Field            | Type       | Description                                                               |
+| ---------------- | ---------- | ------------------------------------------------------------------------- |
+| `projectRoot`    | `string`   | Absolute path to project root                                             |
+| `publicFolder`   | `string`   | Absolute path to public folder                                            |
+| `build.frontend` | `string`   | Absolute path to frontend build output (JS, CSS, public assets)           |
+| `build.backend`  | `string`   | Absolute path to backend build output (server modules, pre-rendered HTML) |
+| `verbose`        | `boolean`  | Whether `-v` / `--verbose` was passed                                     |
+| `log(msg)`       | `function` | Write info to console                                                     |
+| `warn(msg)`      | `function` | Write warning to console                                                  |
+| `error(msg)`     | `function` | Write error to console                                                    |
 
 ## Implementation Plan
 
 ### Phase 1: Builder and types
 
 **`full-stack-component/lib/jay-command-builder.ts`** (new):
+
 1. `makeCliCommand(name)` builder with `.withServices()` and `.withHandler()`
 2. `JayCliCommand` interface (commandName, services, handler returns `{ success: boolean }`, `_brand`)
 3. `isJayCliCommand()` type guard
@@ -285,17 +289,18 @@ Registered by the CLI before executing the command. Available to any command tha
 ### Phase 2: Discovery and execution
 
 **`stack-server-runtime/lib/plugin-commands.ts`** (new):
+
 1. `discoverPluginCommands({ projectRoot, pluginFilter? })` — scans plugin.yaml for `commands`, resolves `.jay-command` files
 2. `executePluginCommand(plugin, command, input, viteServer)` — loads handler via Vite, resolves services, calls handler
 3. Parse `.jay-command` YAML — extract `inputSchema`, `description`, `outputSchema`
 4. `commandSchemaToFlags(inputSchema)` — convert schema to commander option definitions
 
-**`stack-server-runtime/lib/plugin-scanner.ts`**:
-5. Add `commands` to `PluginManifest` type (optional array)
+**`stack-server-runtime/lib/plugin-scanner.ts`**: 5. Add `commands` to `PluginManifest` type (optional array)
 
 ### Phase 3: CLI command
 
 **`stack-cli/lib/run-command.ts`** (new):
+
 1. `runCommand(commandRef, args, options, projectRoot, initializeServices)` handler
 2. Parse `commandRef` as `pluginName/commandName`
 3. Discover commands, read `.jay-command`, auto-generate flags from inputSchema
@@ -304,17 +309,16 @@ Registered by the CLI before executing the command. Available to any command tha
 6. Execute handler, exit code from `{ success }` result
 7. Handle `--list` flag
 
-**`stack-cli/lib/cli.ts`**:
-8. Register `run` command with `allowUnknownOption()` for schema-derived flags
+**`stack-cli/lib/cli.ts`**: 8. Register `run` command with `allowUnknownOption()` for schema-derived flags
 
 ### Phase 4: Documentation
 
 **Agent-kit templates**:
+
 1. Update `plugin/plugin-structure.md` — add `commands` field to plugin.yaml docs
 2. Add `plugin/commands-guide.md` — how to write `makeCliCommand` handlers and `.jay-command` files
 
-**`stack-cli/agent-kit-template/devops/`**:
-3. Add reference to `jay-stack run` in devops guide
+**`stack-cli/agent-kit-template/devops/`**: 3. Add reference to `jay-stack run` in devops guide
 
 ## Examples
 
@@ -368,16 +372,16 @@ data:
 
 ## Trade-offs
 
-| Aspect | Benefit | Cost |
-|--------|---------|------|
-| New CLI command (`run`) | Clear separation from actions and setup | One more command to learn |
-| `makeCliCommand` builder | Consistent with `makeJayAction`, type-safe services | New builder to implement |
-| `.jay-command` YAML (no outputSchema) | CLI auto-generates flags, validates input, self-documenting | Another file format (but mirrors `.jay-action`) |
-| Native flag parsing from schema | No manual arg parsing in handlers, consistent UX | Schema must cover all parameters upfront |
-| `CONSOLE_CONTEXT` service | Opt-in — commands request only what they need, no magic fields in input | One more framework service to know about |
-| Handler returns `{ success }` only | Simple contract, output is console logs not structured data | No machine-readable output (use actions for that) |
-| Service injection via builder | Same pattern as actions — plugins reuse service infrastructure | Requires full service initialization even for simple commands |
-| Vite for TypeScript | Plugins authored in TypeScript seamlessly | Adds ~1s startup overhead |
+| Aspect                                | Benefit                                                                 | Cost                                                          |
+| ------------------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------- |
+| New CLI command (`run`)               | Clear separation from actions and setup                                 | One more command to learn                                     |
+| `makeCliCommand` builder              | Consistent with `makeJayAction`, type-safe services                     | New builder to implement                                      |
+| `.jay-command` YAML (no outputSchema) | CLI auto-generates flags, validates input, self-documenting             | Another file format (but mirrors `.jay-action`)               |
+| Native flag parsing from schema       | No manual arg parsing in handlers, consistent UX                        | Schema must cover all parameters upfront                      |
+| `CONSOLE_CONTEXT` service             | Opt-in — commands request only what they need, no magic fields in input | One more framework service to know about                      |
+| Handler returns `{ success }` only    | Simple contract, output is console logs not structured data             | No machine-readable output (use actions for that)             |
+| Service injection via builder         | Same pattern as actions — plugins reuse service infrastructure          | Requires full service initialization even for simple commands |
+| Vite for TypeScript                   | Plugins authored in TypeScript seamlessly                               | Adds ~1s startup overhead                                     |
 
 ## Verification Criteria
 

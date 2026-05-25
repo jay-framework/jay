@@ -34,3 +34,7 @@ Style with `:popover-open` for transitions:
   opacity: 1;
 }
 ```
+
+## Accessibility
+
+The Popover API handles focus management, Escape-to-close, and light-dismiss natively. `popovertarget` is keyboard-accessible (Enter/Space). No additional ARIA attributes needed for basic usage.

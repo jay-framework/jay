@@ -1,0 +1,5 @@
+name: check-inventory
+description: Report inventory levels for all products
+
+inputSchema:
+  inStockOnly?: boolean

@@ -23,6 +23,9 @@ plugins:
         description: Stock status badge showing availability (fast-only, no slow phase)
         type: static
         path: ./src/plugins/stock-status/stock-status.jay-contract
+    commands:
+      - name: check-inventory
+        description: Report inventory levels for all products
   - name: ui-kit
     path: ./../../../packages/plugins/ui-kit
     contracts:

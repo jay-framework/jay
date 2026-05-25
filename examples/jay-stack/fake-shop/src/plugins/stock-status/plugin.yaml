@@ -5,3 +5,6 @@ contracts:
     contract: ./stock-status.jay-contract
     component: stockStatus
     description: Stock status badge showing availability (fast-only, no slow phase)
+commands:
+  - name: check-inventory
+    command: ./check-inventory.jay-command

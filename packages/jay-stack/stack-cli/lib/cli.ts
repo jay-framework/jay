@@ -9,6 +9,7 @@ import { runAgentKit } from './run-agent-kit';
 import { runAction } from './run-action';
 import { runParams } from './run-params';
 import { runSetup } from './run-setup';
+import { runCommand } from './run-command';
 
 const program = new Command();
 
@@ -184,6 +185,21 @@ program
     .option('-v, --verbose', 'Show detailed output')
     .action(async (actionRef: string, options) => {
         await runAction(actionRef, options, process.cwd(), initializeServicesForCli);
+    });
+
+program
+    .command('run [plugin/command]')
+    .description('Run a plugin CLI command (e.g., jay-stack run media/upload-public)')
+    .option('--list', 'List all available plugin commands')
+    .option('-v, --verbose', 'Show detailed output')
+    .allowUnknownOption()
+    .allowExcessArguments()
+    .action(async (commandRef: string | undefined, options, command) => {
+        const rawArgs = command.parent?.rawArgs.slice(3) ?? [];
+        const extraArgs = rawArgs.filter(
+            (a: string) => a !== commandRef && a !== '-v' && a !== '--verbose' && a !== '--list',
+        );
+        await runCommand(commandRef, extraArgs, options, process.cwd(), initializeServicesForCli);
     });
 
 program

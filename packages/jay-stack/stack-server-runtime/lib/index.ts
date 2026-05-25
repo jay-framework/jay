@@ -20,3 +20,4 @@ export * from './plugin-scanner';
 export * from './plugin-setup';
 export * from './head-tags';
 export * from './cookies';
+export * from './plugin-commands';

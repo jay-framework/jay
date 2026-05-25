@@ -160,6 +160,31 @@ URL query parameters (`?page=2&sort=price`) are available in the **fast render p
 - Not available in the slow phase (compile error) — slow results are cached by path params only
 - In the interactive phase, use `new URLSearchParams(window.location.search)` directly
 
+## Cookies
+
+HTTP cookies are available in the **fast render phase only** via `props.cookies`:
+
+```typescript
+.withFastRender(async (props, carryForward, memberService) => {
+    const token = props.cookies['session-token'];
+    if (!token) return redirect3xx(302, '/login');
+
+    const member = await memberService.validate(token);
+    if (!member) return redirect3xx(302, '/login');
+
+    return phaseOutput(
+        { memberName: member.name },
+        {},
+        { responseHeaders: { 'Cache-Control': 'no-store' } },
+    );
+})
+```
+
+- `props.cookies` is `Record<string, string>` — empty `{}` when no cookies
+- Not available in the slow phase (compile error) — same as query params
+- In the interactive phase, use `document.cookie` directly
+- To set response headers (e.g. `Cache-Control: no-store`), use `responseHeaders` in `phaseOutput()` options
+
 ## Plugin Routes
 
 Plugins can provide their own pages via `routes` in `plugin.yaml`. These are backoffice tools, admin dashboards, or editors with boxed designs that don't need per-site customization.
