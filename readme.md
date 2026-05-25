@@ -109,8 +109,8 @@ Jay Stack projects include an agent kit that gives AI coding agents full context
 **To set up your AI agent with Jay:**
 
 1. Copy [`jay-skill.md`](jay-skill.md) into your agent's skill/instructions folder:
-   - **Claude Code**: `cp jay-skill.md .claude/commands/`
-   - **Cursor**: `mkdir -p .cursor/skills && cp jay-skill.md .cursor/skills/`
+   - **Claude Code**: `mkdir -p ~/.claude/skills/jay && cp jay-skill.md ~/.claude/skills/jay/SKILL.md`
+   - **Cursor**: `mkdir -p .cursor/skills/jay && cp jay-skill.md .cursor/skills/jay/SKILL.md`
    - **Windsurf**: add the file path to your agent's context
    - Or add it to any agent that supports instruction files
 

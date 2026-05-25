@@ -1,3 +1,8 @@
+---
+name: jay
+description: Getting started with Jay Stack projects. Covers plugin setup, agent-kit generation, the four roles (designer, developer, plugin, devops), and key CLI commands.
+---
+
 # Jay Stack — Agent Skill
 
 Jay Stack is a full-stack framework. Plugins provide headless components (data + logic, no UI). Designers build UI in jay-html templates that bind to plugin contracts. Developers write page logic and services.
