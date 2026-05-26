@@ -44,7 +44,7 @@ export interface JayFile {
  * Options for file upload support.
  */
 export interface FileUploadOptions {
-    /** Maximum file size in bytes (default: 10MB) */
+/** Maximum file size in bytes. Omit when using `.withFiles({ maxFiles: N })` for no size cap. */
     maxFileSize?: number;
     /** Maximum number of files (default: 10) */
     maxFiles?: number;

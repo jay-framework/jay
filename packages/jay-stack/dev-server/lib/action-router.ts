@@ -266,7 +266,7 @@ function mergeDottedMultipartKeys(body: Record<string, any>): void {
 function parseMultipart(
     req: Request,
     tempDir: string,
-    maxFileSize: number,
+    maxFileSize: number | undefined,
     maxFiles: number,
 ): Promise<{ body: Record<string, any>; tempDir: string }> {
     return new Promise((resolve, reject) => {
@@ -278,12 +278,14 @@ function parseMultipart(
         let errored = false;
         const pendingWrites: Promise<void>[] = [];
 
+        const limits: { files: number; fileSize?: number } = { files: maxFiles };
+        if (maxFileSize !== undefined) {
+            limits.fileSize = maxFileSize;
+        }
+
         const bb = Busboy({
             headers: req.headers,
-            limits: {
-                fileSize: maxFileSize,
-                files: maxFiles,
-            },
+            limits,
         });
 
         bb.on('file', (fieldname, stream, info) => {
@@ -312,7 +314,9 @@ function parseMultipart(
                         if (truncated) {
                             rejectWrite(
                                 new Error(
-                                    `File "${filename}" exceeds maximum size of ${maxFileSize} bytes`,
+                                    maxFileSize !== undefined
+                                        ? `File "${filename}" exceeds maximum size of ${maxFileSize} bytes`
+                                        : `File "${filename}" exceeds upload size limit`,
                                 ),
                             );
                             return;
@@ -431,8 +435,16 @@ export function actionBodyParser(options: ActionBodyParserOptions): RequestHandl
 
             const requestId = crypto.randomUUID();
             const tempDir = path.join(buildFolder, '.tmp', 'actions', requestId);
-            const maxFileSize = (action as any).fileOptions?.maxFileSize ?? DEFAULT_MAX_FILE_SIZE;
-            const maxFiles = (action as any).fileOptions?.maxFiles ?? DEFAULT_MAX_FILES;
+            const fileOptions = (action as any).fileOptions as
+                | { maxFileSize?: number; maxFiles?: number }
+                | undefined;
+            const maxFiles = fileOptions?.maxFiles ?? DEFAULT_MAX_FILES;
+            const maxFileSize =
+                fileOptions?.maxFileSize !== undefined
+                    ? fileOptions.maxFileSize
+                    : fileOptions === undefined
+                      ? DEFAULT_MAX_FILE_SIZE
+                      : undefined;
 
             parseMultipart(req, tempDir, maxFileSize, maxFiles)
                 .then(({ body, tempDir: td }) => {
