@@ -45,6 +45,7 @@ import { DevServerOptions } from './dev-server-options';
 import { ServiceLifecycleManager } from './service-lifecycle';
 import { deepMergeViewStates } from '@jay-framework/view-state-merge';
 import { createActionRouter, actionBodyParser, ACTION_ENDPOINT_BASE } from './action-router';
+import { actionRegistry } from '@jay-framework/stack-server-runtime';
 import {
     slowRenderTransform,
     parseContract,
@@ -1455,10 +1456,10 @@ function setupServiceHotReload(
  */
 function setupActionRouter(vite: ViteDevServer, buildFolder: string): void {
     // Add body parser middleware for action requests (DL#131: multipart support)
-    vite.middlewares.use(actionBodyParser({ buildFolder }));
+    vite.middlewares.use(actionBodyParser({ buildFolder, registry: actionRegistry }));
 
     // Add action router
-    vite.middlewares.use(ACTION_ENDPOINT_BASE, createActionRouter());
+    vite.middlewares.use(ACTION_ENDPOINT_BASE, createActionRouter({ registry: actionRegistry }));
 
     getLogger().info(`[Actions] Action router mounted at ${ACTION_ENDPOINT_BASE}`);
 }

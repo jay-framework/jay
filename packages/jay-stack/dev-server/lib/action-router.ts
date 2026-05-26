@@ -231,7 +231,6 @@ export interface ActionBodyParserOptions {
 /**
  * Default file upload limits.
  */
-const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const DEFAULT_MAX_FILES = 10;
 
 /**
@@ -435,16 +434,10 @@ export function actionBodyParser(options: ActionBodyParserOptions): RequestHandl
 
             const requestId = crypto.randomUUID();
             const tempDir = path.join(buildFolder, '.tmp', 'actions', requestId);
-            const fileOptions = (action as any).fileOptions as
-                | { maxFileSize?: number; maxFiles?: number }
-                | undefined;
+            const fileOptions = action.fileOptions;
             const maxFiles = fileOptions?.maxFiles ?? DEFAULT_MAX_FILES;
-            const maxFileSize =
-                fileOptions?.maxFileSize !== undefined
-                    ? fileOptions.maxFileSize
-                    : fileOptions === undefined
-                      ? DEFAULT_MAX_FILE_SIZE
-                      : undefined;
+            // Actions with .withFiles() may omit maxFileSize (no cap).
+            const maxFileSize = fileOptions?.maxFileSize;
 
             parseMultipart(req, tempDir, maxFileSize, maxFiles)
                 .then(({ body, tempDir: td }) => {

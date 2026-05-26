@@ -89,6 +89,35 @@ describe('ActionRegistry', () => {
             expect(registered!.method).toBe('GET');
             expect((registered as RegisteredAction).cacheOptions).toEqual({ maxAge: 60 });
         });
+
+        it('should preserve fileOptions from withFiles()', () => {
+            const upload = makeJayAction('test.upload')
+                .withFiles({ maxFileSize: 1024 * 1024 * 1024, maxFiles: 2 })
+                .withHandler(async () => ({ ok: true }));
+
+            registry.register(upload);
+
+            const registered = registry.get('test.upload');
+            expect(registered?.acceptsFiles).toBe(true);
+            expect(registered?.fileOptions).toEqual({
+                maxFileSize: 1024 * 1024 * 1024,
+                maxFiles: 2,
+            });
+        });
+
+        it('should store empty fileOptions when withFiles() has no limits', () => {
+            const upload = makeJayAction('test.uploadOpen')
+                .withFiles()
+                .withHandler(async () => ({
+                    ok: true,
+                }));
+
+            registry.register(upload);
+
+            const registered = registry.get('test.uploadOpen');
+            expect(registered?.acceptsFiles).toBe(true);
+            expect(registered?.fileOptions).toEqual({});
+        });
     });
 
     describe('getNames', () => {

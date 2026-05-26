@@ -272,8 +272,7 @@ class JayActionBuilderImpl<Services extends any[], DefaultMethod extends HttpMet
                 services: serviceMarkers,
                 handler,
                 _brand: 'JayAction' as const,
-                ...(acceptsFiles && { acceptsFiles: true }),
-                ...(fileOptions && { fileOptions }),
+                ...(acceptsFiles && { acceptsFiles: true, fileOptions: fileOptions ?? {} }),
             },
         );
 
@@ -450,8 +449,7 @@ class JayStreamBuilderImpl<Services extends any[]> implements JayStreamBuilder<S
                 services: serviceMarkers,
                 handler,
                 _brand: 'JayStreamAction' as const,
-                ...(acceptsFiles && { acceptsFiles: true }),
-                ...(fileOptions && { fileOptions }),
+                ...(acceptsFiles && { acceptsFiles: true, fileOptions: fileOptions ?? {} }),
             },
         );
 

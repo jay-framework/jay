@@ -549,6 +549,48 @@ describe('Action Router', () => {
             expect(data.error.code).toBe('FILES_NOT_ACCEPTED');
         });
 
+        it('should accept uploads larger than 10MB when fileOptions has no maxFileSize', async () => {
+            let receivedInput: any = null;
+
+            const action = makeJayAction('test.largeUpload')
+                .withFiles()
+                .withHandler(async (input: { file: JayFile }) => {
+                    receivedInput = input;
+                    return { size: input.file.size };
+                });
+
+            registry.register(action);
+            const url = await startServer(registry);
+
+            const boundary = '----TestBoundary' + Date.now();
+            const fileContent = 'x'.repeat(11 * 1024 * 1024);
+
+            const body = [
+                `--${boundary}\r\n` +
+                    `Content-Disposition: form-data; name="_json"\r\n\r\n` +
+                    `{}\r\n`,
+                `--${boundary}\r\n` +
+                    `Content-Disposition: form-data; name="file"; filename="large.bin"\r\n` +
+                    `Content-Type: application/octet-stream\r\n\r\n` +
+                    `${fileContent}\r\n`,
+                `--${boundary}--\r\n`,
+            ].join('');
+
+            const response = await fetch(`${url}${ACTION_ENDPOINT_BASE}/test.largeUpload`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': `multipart/form-data; boundary=${boundary}`,
+                },
+                body,
+            });
+
+            const data = await response.json();
+            expect(response.status).toBe(200);
+            expect(data.success).toBe(true);
+            expect(data.data.size).toBe(fileContent.length);
+            expect(receivedInput.file.name).toBe('large.bin');
+        });
+
         it('should still handle JSON requests for withFiles actions', async () => {
             const action = makeJayAction('test.flexible')
                 .withFiles()
