@@ -111,7 +111,7 @@ Plugin pages use the same rendering pipeline as project pages — full SSR, hydr
 ```yaml
 commands:
   - name: upload-public
-    command: upload-public.jay-command   # Optional metadata file with description and inputSchema
+    command: upload-public.jay-command # Optional metadata file with description and inputSchema
   - name: sync-catalog
     command: sync-catalog.jay-command
 ```

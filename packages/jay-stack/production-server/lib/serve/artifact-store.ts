@@ -1,11 +1,24 @@
-import type { RouteManifest, PreRenderedEntry, ServerElementModule, PageModule } from '../types';
+import type { RouteManifest, PreRenderedEntry, ServerElementModule } from '../types';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
 const CACHE_TAG_START = '<script type="application/jay-cache">';
 const CACHE_TAG_END = '</script>';
 
-export class FilesystemArtifactStore {
+/**
+ * Interface for reading build artifacts at serve time (DL#143).
+ * FilesystemArtifactStore is the default implementation.
+ * BaaS deployments provide a custom implementation that fetches from cloud storage.
+ */
+export interface ArtifactStore {
+    readManifest(): Promise<RouteManifest>;
+    readPreRenderedHtml(relativePath: string): Promise<PreRenderedEntry>;
+    loadServerElement(relativePath: string): Promise<ServerElementModule>;
+    getAssetPath(relativePath: string): string;
+    getBuildDir(): string;
+}
+
+export class FilesystemArtifactStore implements ArtifactStore {
     private manifestCache?: { manifest: RouteManifest; mtime: number };
     private metadataMtime?: number;
     private moduleCache = new Map<string, { module: any; mtime: number }>();
@@ -51,15 +64,6 @@ export class FilesystemArtifactStore {
 
     async loadServerElement(relativePath: string): Promise<ServerElementModule> {
         return this.loadModule(relativePath);
-    }
-
-    async loadPageModule(relativePath: string): Promise<PageModule> {
-        return this.loadModule(relativePath);
-    }
-
-    async readRawFile(relativePath: string): Promise<string> {
-        const fullPath = path.join(this.basePath, relativePath);
-        return await fs.readFile(fullPath, 'utf-8');
     }
 
     getAssetPath(relativePath: string): string {

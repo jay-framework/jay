@@ -4,6 +4,16 @@
   "license": "Apache-2.0",
   "type": "module",
   "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./serve": {
+      "types": "./dist/serve-index.d.ts",
+      "default": "./dist/serve-index.js"
+    }
+  },
   "files": [
     "dist"
   ],
@@ -11,7 +21,7 @@
     "build": "npm run build:js && npm run build:types",
     "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch",
     "build:js": "vite build",
-    "build:types": "tsup lib/index.ts --dts-only --format esm",
+    "build:types": "tsup lib/index.ts lib/serve-index.ts --dts-only --format esm",
     "build:check-types": "tsc",
     "clean": "rimraf dist",
     "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",

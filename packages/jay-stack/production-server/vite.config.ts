@@ -5,11 +5,13 @@ export default defineConfig({
     build: {
         minify: false,
         target: 'es2020',
-        ssr: resolve(__dirname, 'lib/index.ts'),
+        ssr: true,
         lib: {
-            entry: resolve(__dirname, 'lib/index.ts'),
+            entry: {
+                index: resolve(__dirname, 'lib/index.ts'),
+                'serve-index': resolve(__dirname, 'lib/serve-index.ts'),
+            },
             name: 'jayProductionServer',
-            fileName: 'index',
             formats: ['es'],
         },
         commonjsOptions: {

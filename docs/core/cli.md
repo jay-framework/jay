@@ -280,6 +280,31 @@ jay-stack run media/upload-public --folder images
 jay-stack run wix/deploy --env production
 ```
 
+### Programmatic Fetch Handler
+
+For BaaS platforms (Wix, Cloudflare Workers) or custom server setups, use `createJayFetchHandler` directly:
+
+```typescript
+import { createJayFetchHandler } from '@jay-framework/jay-fetch-handler';
+
+// Self-hosted (same as jay-stack serve)
+const handler = createJayFetchHandler({
+  backendDir: './build/v1/backend',
+  staticBaseUrl: '/',
+  frontendDir: './build/v1/frontend',
+});
+
+// BaaS with custom artifact store and pre-imported modules
+const handler = createJayFetchHandler({
+  artifactStore: customStore,
+  staticBaseUrl: 'https://cdn.example.com/app/1.0.0/',
+  plugins: [{ name: 'my-plugin', init: myPluginInit }],
+  actionModules: [{ module: myPluginModule, name: 'my-plugin' }],
+});
+```
+
+For serve-only imports without build-time dependencies: `import { ... } from '@jay-framework/production-server/serve'`.
+
 ### Agent / AI Tooling
 
 ```bash

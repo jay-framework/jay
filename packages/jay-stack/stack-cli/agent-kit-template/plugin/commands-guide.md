@@ -20,30 +20,30 @@ import { makeCliCommand, CONSOLE_CONTEXT } from '@jay-framework/fullstack-compon
 import { MEDIA_SERVICE } from './services';
 
 export const uploadPublic = makeCliCommand('upload-public')
-    .withServices(MEDIA_SERVICE, CONSOLE_CONTEXT)
-    .withHandler(async (input: { folder?: string; dryRun?: boolean }, mediaService, console) => {
-        const path = await import('node:path');
-        const fs = await import('node:fs/promises');
+  .withServices(MEDIA_SERVICE, CONSOLE_CONTEXT)
+  .withHandler(async (input: { folder?: string; dryRun?: boolean }, mediaService, console) => {
+    const path = await import('node:path');
+    const fs = await import('node:fs/promises');
 
-        const dir = path.resolve(console.publicFolder, input.folder || '');
-        const files = await fs.readdir(dir, { recursive: true });
+    const dir = path.resolve(console.publicFolder, input.folder || '');
+    const files = await fs.readdir(dir, { recursive: true });
 
-        for (const file of files) {
-            const filePath = path.join(dir, String(file));
-            const stat = await fs.stat(filePath);
-            if (!stat.isFile()) continue;
+    for (const file of files) {
+      const filePath = path.join(dir, String(file));
+      const stat = await fs.stat(filePath);
+      if (!stat.isFile()) continue;
 
-            if (input.dryRun) {
-                console.log(`[dry-run] Would upload ${file}`);
-                continue;
-            }
+      if (input.dryRun) {
+        console.log(`[dry-run] Would upload ${file}`);
+        continue;
+      }
 
-            const url = await mediaService.upload(filePath);
-            console.log(`Uploaded ${file} → ${url}`);
-        }
+      const url = await mediaService.upload(filePath);
+      console.log(`Uploaded ${file} → ${url}`);
+    }
 
-        return { success: true };
-    });
+    return { success: true };
+  });
 ```
 
 ### 2. Create the metadata file
@@ -59,6 +59,7 @@ inputSchema:
 ```
 
 The `inputSchema` auto-generates CLI flags:
+
 - `folder?: string` → `--folder <value>` (optional)
 - `dryRun?: boolean` → `--dry-run` (optional flag)
 
@@ -78,16 +79,16 @@ A framework-provided service with project info and a logger:
 
 ```typescript
 interface ConsoleContext {
-    projectRoot: string;
-    publicFolder: string;
-    build: {
-        frontend: string;   // Build output: JS, CSS, public assets
-        backend: string;    // Build output: server modules, pre-rendered HTML
-    };
-    verbose: boolean;
-    log: (message: string) => void;
-    warn: (message: string) => void;
-    error: (message: string) => void;
+  projectRoot: string;
+  publicFolder: string;
+  build: {
+    frontend: string; // Build output: JS, CSS, public assets
+    backend: string; // Build output: server modules, pre-rendered HTML
+  };
+  verbose: boolean;
+  log: (message: string) => void;
+  warn: (message: string) => void;
+  error: (message: string) => void;
 }
 ```
 
@@ -108,11 +109,11 @@ jay-stack run media/upload-public -v
 
 ## Input Type Mapping
 
-| Schema type | CLI flag | Example |
-|-------------|----------|---------|
-| `field: string` | `--field <value>` (required) | `--env production` |
-| `field?: string` | `--field <value>` (optional) | `--folder images` |
-| `field?: boolean` | `--field` (optional flag) | `--dry-run` |
-| `field: number` | `--field <value>` (required number) | `--concurrency 4` |
+| Schema type       | CLI flag                            | Example            |
+| ----------------- | ----------------------------------- | ------------------ |
+| `field: string`   | `--field <value>` (required)        | `--env production` |
+| `field?: string`  | `--field <value>` (optional)        | `--folder images`  |
+| `field?: boolean` | `--field` (optional flag)           | `--dry-run`        |
+| `field: number`   | `--field <value>` (required number) | `--concurrency 4`  |
 
 camelCase names become kebab-case flags: `dryRun` → `--dry-run`.

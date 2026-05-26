@@ -58,12 +58,12 @@ Use this file to discover what's available before writing any code.
 
 The agent kit contains guides organized by role. Read the role that matches your task:
 
-| Folder | Role | When to read |
-|--------|------|-------------|
-| `agent-kit/designer/` | Designer | Creating or editing `.jay-html` pages, styling, template syntax |
-| `agent-kit/developer/` | Developer | Writing `page.ts` components, services, state management, routing |
-| `agent-kit/plugin/` | Plugin Developer | Creating headless components, contracts, actions, CLI commands |
-| `agent-kit/devops/` | DevOps | Building, deploying, serving in production, invalidation |
+| Folder                 | Role             | When to read                                                      |
+| ---------------------- | ---------------- | ----------------------------------------------------------------- |
+| `agent-kit/designer/`  | Designer         | Creating or editing `.jay-html` pages, styling, template syntax   |
+| `agent-kit/developer/` | Developer        | Writing `page.ts` components, services, state management, routing |
+| `agent-kit/plugin/`    | Plugin Developer | Creating headless components, contracts, actions, CLI commands    |
+| `agent-kit/devops/`    | DevOps           | Building, deploying, serving in production, invalidation          |
 
 Each folder has an `INSTRUCTIONS.md` that lists all available guides. Start there.
 

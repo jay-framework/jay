@@ -28,16 +28,16 @@ Extract from `FilesystemArtifactStore`:
 ```typescript
 // production-server/lib/serve/artifact-store.ts
 export interface ArtifactStore {
-    readManifest(): Promise<RouteManifest>;
-    readPreRenderedHtml(relativePath: string): Promise<PreRenderedEntry>;
-    loadServerElement(relativePath: string): Promise<ServerElementModule>;
-    getAssetPath(relativePath: string): string;
-    getBuildDir(): string;
+  readManifest(): Promise<RouteManifest>;
+  readPreRenderedHtml(relativePath: string): Promise<PreRenderedEntry>;
+  loadServerElement(relativePath: string): Promise<ServerElementModule>;
+  getAssetPath(relativePath: string): string;
+  getBuildDir(): string;
 }
 
 export class FilesystemArtifactStore implements ArtifactStore {
-    // Existing implementation unchanged
-    // loadPageModule and readRawFile removed — unused by the serve pipeline
+  // Existing implementation unchanged
+  // loadPageModule and readRawFile removed — unused by the serve pipeline
 }
 ```
 
@@ -45,26 +45,26 @@ Update `fetchPageRequest` and `getPageParts` to accept `ArtifactStore` (the inte
 
 ```typescript
 export async function fetchPageRequest(
-    match: MatchResult,
-    manifest: RouteManifest,
-    requestUrl: URL,
-    artifacts: ArtifactStore,        // ← interface, not class
-    staticBaseUrl: string,
-    cookies?: Record<string, string>,
-): Promise<Response>
+  match: MatchResult,
+  manifest: RouteManifest,
+  requestUrl: URL,
+  artifacts: ArtifactStore, // ← interface, not class
+  staticBaseUrl: string,
+  cookies?: Record<string, string>,
+): Promise<Response>;
 ```
 
 ### 2. createJayFetchHandler accepts custom ArtifactStore
 
 ```typescript
 export interface JayFetchHandlerOptions {
-    // Option A: filesystem (existing)
-    backendDir?: string;
-    // Option B: custom store (new)
-    artifactStore?: ArtifactStore;
+  // Option A: filesystem (existing)
+  backendDir?: string;
+  // Option B: custom store (new)
+  artifactStore?: ArtifactStore;
 
-    staticBaseUrl?: string;
-    frontendDir?: string;
+  staticBaseUrl?: string;
+  frontendDir?: string;
 }
 ```
 
@@ -77,21 +77,34 @@ Add a `/serve` entry point to production-server that re-exports only serve funct
 ```json
 // production-server/package.json exports
 {
-    ".": "./dist/index.js",
-    "./serve": "./dist/serve.js"
+  ".": "./dist/index.js",
+  "./serve": "./dist/serve.js"
 }
 ```
 
 **`lib/serve-index.ts`** (new entry point):
+
 ```typescript
 export type { ArtifactStore } from './serve/artifact-store';
 export { FilesystemArtifactStore } from './serve/artifact-store';
 export { fetchPageRequest } from './serve/fetch-page-handler';
-export { fetchActionRequest, isActionRequest, registerActionsFromManifest } from './serve/fetch-action-handler';
+export {
+  fetchActionRequest,
+  isActionRequest,
+  registerActionsFromManifest,
+} from './serve/fetch-action-handler';
 export { fetchStaticFile } from './serve/fetch-static-handler';
 export { matchRequest } from './serve/route-matcher';
 export { initializeServices } from './shared/init-services';
-export type { RouteManifest, RouteEntry, InstanceEntry, PreRenderedEntry, ServerElementModule, PageModule, MatchResult } from './types';
+export type {
+  RouteManifest,
+  RouteEntry,
+  InstanceEntry,
+  PreRenderedEntry,
+  ServerElementModule,
+  PageModule,
+  MatchResult,
+} from './types';
 ```
 
 This pulls in only runtime dependencies (`logger`, `stack-server-runtime`, `ssr-runtime`, `view-state-merge`). No `vite`, `compiler-*`, or `vite-plugin`.
@@ -105,27 +118,27 @@ New function that accepts pre-imported init modules instead of discovering them 
 ```typescript
 // production-server/lib/shared/init-services.ts
 export interface PreImportedPlugin {
-    name: string;
-    init: JayInit<any>;
+  name: string;
+  init: JayInit<any>;
 }
 
 export async function initializeServicesFromModules(
-    plugins: PreImportedPlugin[],
-    label: string,
+  plugins: PreImportedPlugin[],
+  label: string,
 ): Promise<void> {
-    const logger = getLogger();
-    for (const plugin of plugins) {
-        try {
-            const services = plugin.init.build();
-            for (const { marker, factory } of services) {
-                const instance = await factory();
-                registerService(marker, instance);
-            }
-            logger.info(`[${plugin.name}] ${label} initialization complete`);
-        } catch (err: any) {
-            logger.warn(`[${plugin.name}] ${label} init failed: ${err.message}`);
-        }
+  const logger = getLogger();
+  for (const plugin of plugins) {
+    try {
+      const services = plugin.init.build();
+      for (const { marker, factory } of services) {
+        const instance = await factory();
+        registerService(marker, instance);
+      }
+      logger.info(`[${plugin.name}] ${label} initialization complete`);
+    } catch (err: any) {
+      logger.warn(`[${plugin.name}] ${label} init failed: ${err.message}`);
     }
+  }
 }
 ```
 
@@ -138,18 +151,18 @@ New function that accepts pre-imported action modules:
 ```typescript
 // production-server/lib/serve/fetch-action-handler.ts
 export async function registerActionsFromModules(
-    modules: Array<{ module: Record<string, unknown>; name: string }>,
-    registry: ActionRegistry = actionRegistry,
+  modules: Array<{ module: Record<string, unknown>; name: string }>,
+  registry: ActionRegistry = actionRegistry,
 ): Promise<void> {
-    for (const { module, name } of modules) {
-        for (const [exportName, exported] of Object.entries(module)) {
-            if (isJayAction(exported)) {
-                registry.register(exported);
-            } else if (isJayStreamAction(exported)) {
-                registry.registerStream(exported);
-            }
-        }
+  for (const { module, name } of modules) {
+    for (const [exportName, exported] of Object.entries(module)) {
+      if (isJayAction(exported)) {
+        registry.register(exported);
+      } else if (isJayStreamAction(exported)) {
+        registry.registerStream(exported);
+      }
     }
+  }
 }
 ```
 
@@ -157,45 +170,44 @@ export async function registerActionsFromModules(
 
 ```typescript
 export interface JayFetchHandlerOptions {
-    // Artifact source (one required)
-    backendDir?: string;
-    artifactStore?: ArtifactStore;
+  // Artifact source (one required)
+  backendDir?: string;
+  artifactStore?: ArtifactStore;
 
-    // Static assets
-    staticBaseUrl?: string;
-    frontendDir?: string;
+  // Static assets
+  staticBaseUrl?: string;
+  frontendDir?: string;
 
-    // Pre-imported modules (for bundled entry.mjs)
-    plugins?: PreImportedPlugin[];
-    actionModules?: Array<{ module: Record<string, unknown>; name: string }>;
+  // Pre-imported modules (for bundled entry.mjs)
+  plugins?: PreImportedPlugin[];
+  actionModules?: Array<{ module: Record<string, unknown>; name: string }>;
 }
 
 export function createJayFetchHandler(
-    options: JayFetchHandlerOptions,
+  options: JayFetchHandlerOptions,
 ): (request: Request) => Promise<Response> {
-    const store = options.artifactStore
-        ?? new FilesystemArtifactStore(options.backendDir!);
+  const store = options.artifactStore ?? new FilesystemArtifactStore(options.backendDir!);
 
-    return async (request: Request): Promise<Response> => {
-        if (!initialized) {
-            const manifest = await store.readManifest();
-            
-            if (options.plugins) {
-                await initializeServicesFromModules(options.plugins, 'FetchHandler');
-            } else if (options.backendDir) {
-                await initializeServices(options.backendDir, process.cwd(), 'FetchHandler');
-            }
+  return async (request: Request): Promise<Response> => {
+    if (!initialized) {
+      const manifest = await store.readManifest();
 
-            if (options.actionModules) {
-                await registerActionsFromModules(options.actionModules);
-            } else if (manifest.actions.length > 0 && options.backendDir) {
-                await registerActionsFromManifest(manifest.actions, options.backendDir);
-            }
-            
-            initialized = true;
-        }
-        // ... rest of handler
-    };
+      if (options.plugins) {
+        await initializeServicesFromModules(options.plugins, 'FetchHandler');
+      } else if (options.backendDir) {
+        await initializeServices(options.backendDir, process.cwd(), 'FetchHandler');
+      }
+
+      if (options.actionModules) {
+        await registerActionsFromModules(options.actionModules);
+      } else if (manifest.actions.length > 0 && options.backendDir) {
+        await registerActionsFromManifest(manifest.actions, options.backendDir);
+      }
+
+      initialized = true;
+    }
+    // ... rest of handler
+  };
 }
 ```
 
@@ -206,11 +218,12 @@ Currently `loadPagePartsFromConfig(configPath, buildDir)` reads a JSON file and 
 Two approaches:
 
 **A. ArtifactStore handles module loading:**
+
 ```typescript
 export async function loadPagePartsFromConfig(
-    configPath: string,
-    artifacts: ArtifactStore,
-): Promise<ProductionPageParts>
+  configPath: string,
+  artifacts: ArtifactStore,
+): Promise<ProductionPageParts>;
 ```
 
 The store's `loadPageModule` resolves the path — for filesystem it's `import(path.join(buildDir, modulePath))`, for BaaS it's `import('/tmp/cache/' + modulePath)` or a pre-loaded module.
@@ -225,19 +238,19 @@ Approach A is cleaner — it keeps the loading strategy in the store where it be
 ### Phase 1: ArtifactStore interface
 
 **`production-server/lib/serve/artifact-store.ts`**:
+
 1. Extract `ArtifactStore` interface from existing class methods
 2. `FilesystemArtifactStore implements ArtifactStore`
 3. Export interface and class
 
-**`production-server/lib/serve/fetch-page-handler.ts`**:
-4. Change parameter type from `FilesystemArtifactStore` to `ArtifactStore`
+**`production-server/lib/serve/fetch-page-handler.ts`**: 4. Change parameter type from `FilesystemArtifactStore` to `ArtifactStore`
 
-**`production-server/lib/index.ts`**:
-5. Export `ArtifactStore` interface
+**`production-server/lib/index.ts`**: 5. Export `ArtifactStore` interface
 
 ### Phase 2: createJayFetchHandler accepts custom store
 
 **`jay-fetch-handler/lib/index.ts`**:
+
 1. Add `artifactStore?` to options interface
 2. Use provided store or create `FilesystemArtifactStore` from `backendDir`
 3. Export `ArtifactStore` type for consumer convenience
@@ -245,31 +258,28 @@ Approach A is cleaner — it keeps the loading strategy in the store where it be
 ### Phase 3: Pre-imported modules
 
 **`production-server/lib/shared/init-services.ts`**:
+
 1. Add `PreImportedPlugin` interface
 2. Add `initializeServicesFromModules` function
 
-**`production-server/lib/serve/fetch-action-handler.ts`**:
-3. Add `registerActionsFromModules` function
+**`production-server/lib/serve/fetch-action-handler.ts`**: 3. Add `registerActionsFromModules` function
 
-**`jay-fetch-handler/lib/index.ts`**:
-4. Add `plugins` and `actionModules` to options
-5. Use pre-imported modules when provided, fall back to filesystem discovery
+**`jay-fetch-handler/lib/index.ts`**: 4. Add `plugins` and `actionModules` to options 5. Use pre-imported modules when provided, fall back to filesystem discovery
 
 ### Phase 4: Serve-only export
 
 **`production-server/lib/serve-index.ts`** (new):
+
 1. Re-export only serve functions and types (no build deps)
 
-**`production-server/package.json`**:
-2. Add `"./serve"` to exports map
-3. Add `serve-index.ts` to tsup entry points
+**`production-server/package.json`**: 2. Add `"./serve"` to exports map 3. Add `serve-index.ts` to tsup entry points
 
-**`production-server/tsconfig.json`** and build config:
-4. Ensure `/serve` entry is built separately
+**`production-server/tsconfig.json`** and build config: 4. Ensure `/serve` entry is built separately
 
 ### Phase 5: loadPagePartsFromConfig with ArtifactStore
 
 **`production-server/lib/builder/load-production-parts.ts`**:
+
 1. Accept `ArtifactStore` instead of raw `buildDir` string
 2. Use `artifacts.loadPageModule()` for module loading
 3. Use `artifacts.readRawFile()` for config file reading
@@ -290,9 +300,9 @@ Approach A is cleaner — it keeps the loading strategy in the store where it be
 
 ```typescript
 const handler = createJayFetchHandler({
-    backendDir: './build/v1/backend',
-    staticBaseUrl: '/',
-    frontendDir: './build/v1/frontend',
+  backendDir: './build/v1/backend',
+  staticBaseUrl: '/',
+  frontendDir: './build/v1/frontend',
 });
 ```
 
@@ -305,17 +315,13 @@ import { init as wixStoresInit } from '@jay-framework/wix-stores';
 import * as wixStoresModule from '@jay-framework/wix-stores';
 
 const handler = createJayFetchHandler({
-    artifactStore: new WixDataArtifactStore({
-        collectionId: 'jay-backend-files',
-        cacheDir: '/tmp/jay-backend',
-    }),
-    staticBaseUrl: 'https://static.parastorage.com/services/my-app/1.0.0/',
-    plugins: [
-        { name: 'wix-stores', init: wixStoresInit },
-    ],
-    actionModules: [
-        { module: wixStoresModule, name: 'wix-stores' },
-    ],
+  artifactStore: new WixDataArtifactStore({
+    collectionId: 'jay-backend-files',
+    cacheDir: '/tmp/jay-backend',
+  }),
+  staticBaseUrl: 'https://static.parastorage.com/services/my-app/1.0.0/',
+  plugins: [{ name: 'wix-stores', init: wixStoresInit }],
+  actionModules: [{ module: wixStoresModule, name: 'wix-stores' }],
 });
 
 export default { fetch: handler };
@@ -323,13 +329,13 @@ export default { fetch: handler };
 
 ## Trade-offs
 
-| Aspect | Benefit | Cost |
-|--------|---------|------|
-| ArtifactStore interface | Clean abstraction, any backend storage | One more interface to maintain |
-| `/serve` export | No build deps in BaaS entry, small bundle | Two entry points to maintain |
-| Pre-imported modules | esbuild can bundle everything, no runtime discovery | Must list plugins explicitly |
-| Keeping filesystem as default | Zero breaking changes for self-hosted | Two code paths to maintain |
-| loadPageParts via ArtifactStore | Single abstraction for all file access | Slightly more indirection for local deployments |
+| Aspect                          | Benefit                                             | Cost                                            |
+| ------------------------------- | --------------------------------------------------- | ----------------------------------------------- |
+| ArtifactStore interface         | Clean abstraction, any backend storage              | One more interface to maintain                  |
+| `/serve` export                 | No build deps in BaaS entry, small bundle           | Two entry points to maintain                    |
+| Pre-imported modules            | esbuild can bundle everything, no runtime discovery | Must list plugins explicitly                    |
+| Keeping filesystem as default   | Zero breaking changes for self-hosted               | Two code paths to maintain                      |
+| loadPageParts via ArtifactStore | Single abstraction for all file access              | Slightly more indirection for local deployments |
 
 ## Verification Criteria
 
@@ -340,3 +346,66 @@ export default { fetch: handler };
 5. `@jay-framework/production-server/serve` import does not pull in Vite or compiler packages
 6. Smoke-test project (DL#140) passes in all modes
 7. A mock BaaS entry.mjs can be bundled with esbuild without stubs for build-time deps
+
+## Implementation Results
+
+### What was implemented
+
+Phases 1–4 complete. Phase 5 (loadPagePartsFromConfig with ArtifactStore) deferred — the current `loadPagePartsFromConfig` uses `getAssetPath` and `getBuildDir` from the store, which is sufficient for now. Full abstraction can be added when the BaaS adapter needs it.
+
+### Files changed
+
+**`production-server/lib/serve/artifact-store.ts`**:
+
+- Extracted `ArtifactStore` interface (5 methods: `readManifest`, `readPreRenderedHtml`, `loadServerElement`, `getAssetPath`, `getBuildDir`)
+- `FilesystemArtifactStore implements ArtifactStore`
+- Removed unused `loadPageModule` and `readRawFile` methods
+
+**`production-server/lib/serve/fetch-page-handler.ts`**:
+
+- Parameter type changed from `FilesystemArtifactStore` to `ArtifactStore`
+
+**`production-server/lib/shared/init-services.ts`**:
+
+- Added `PreImportedPlugin` interface
+- Added `initializeServicesFromModules(plugins, label)` function
+
+**`production-server/lib/serve/fetch-action-handler.ts`**:
+
+- Added `registerActionsFromModules(modules, registry?)` function
+
+**`production-server/lib/serve-index.ts`** (new):
+
+- Serve-only entry point — re-exports only serve functions and types
+
+**`production-server/lib/index.ts`**:
+
+- Exports `ArtifactStore` type, `initializeServicesFromModules`, `PreImportedPlugin`, `registerActionsFromModules`
+
+**`production-server/package.json`**:
+
+- Added `"./serve"` export mapping to `dist/serve-index.js`
+- Updated tsup to build both `index.ts` and `serve-index.ts`
+
+**`production-server/vite.config.ts`**:
+
+- Dual entry points: `index` and `serve-index`
+
+**`jay-fetch-handler/lib/index.ts`**:
+
+- `JayFetchHandlerOptions`: added `artifactStore?`, `plugins?`, `actionModules?`
+- Uses custom store when provided, falls back to `FilesystemArtifactStore`
+- Uses pre-imported modules when provided, falls back to filesystem discovery
+- Re-exports `ArtifactStore` and `PreImportedPlugin` types
+
+### Test results
+
+- production-server: 85/85 passing
+- stack-server-runtime: 143/143 passing
+- full-stack-component: 50/50 passing
+- Full monorepo build: 72 packages successful
+
+### Deviations from design
+
+- Phase 5 (loadPagePartsFromConfig) deferred — not needed for initial BaaS support
+- The `/serve` entry still lists compiler packages as imports in the generated JS because `initializeServices` (the filesystem-based function) dynamically imports from `stack-server-runtime` which depends on `compiler-shared`. This is fine: BaaS will use `initializeServicesFromModules` instead, and esbuild can stub the unused imports

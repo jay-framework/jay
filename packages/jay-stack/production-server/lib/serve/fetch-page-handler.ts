@@ -1,6 +1,6 @@
 import type { RouteManifest } from '../types';
 import type { MatchResult } from './route-matcher';
-import type { FilesystemArtifactStore } from './artifact-store';
+import type { ArtifactStore } from './artifact-store';
 import {
     renderFastChangingData,
     mergeHeadTags,
@@ -21,7 +21,7 @@ const pagePartsCache = new Map<string, ProductionPageParts>();
 
 async function getPageParts(
     route: RouteEntry,
-    artifacts: FilesystemArtifactStore,
+    artifacts: ArtifactStore,
     preRenderedPath: string,
 ): Promise<ProductionPageParts> {
     const cacheKey = route.pattern;
@@ -42,7 +42,7 @@ export async function fetchPageRequest(
     match: MatchResult,
     manifest: RouteManifest,
     requestUrl: URL,
-    artifacts: FilesystemArtifactStore,
+    artifacts: ArtifactStore,
     staticBaseUrl: string,
     cookies: Record<string, string> = {},
 ): Promise<Response> {

@@ -43,6 +43,33 @@ jay-stack serve --port 4000 \
 
 The server generates import maps, CSS links, and client bundle URLs prefixed with `--static-base-url`. It does not serve static files itself.
 
+## BaaS Mode (Custom Artifact Store)
+
+For platforms where backend files are not on the local filesystem (e.g., stored in a cloud database), use `createJayFetchHandler` with a custom `ArtifactStore` and pre-imported modules:
+
+```typescript
+import { createJayFetchHandler } from '@jay-framework/jay-fetch-handler';
+
+const handler = createJayFetchHandler({
+  artifactStore: customStore, // Custom ArtifactStore implementation
+  staticBaseUrl: 'https://cdn.example.com/app/1.0.0/',
+  plugins: [
+    // Pre-imported plugin init modules
+    { name: 'my-plugin', init: myPluginInit },
+  ],
+  actionModules: [
+    // Pre-imported action modules
+    { module: myPluginModule, name: 'my-plugin' },
+  ],
+});
+
+export default { fetch: handler };
+```
+
+Pre-imported modules bypass filesystem discovery — the entry file bundles everything with esbuild. See [fetch-handler.md](fetch-handler.md) for the `ArtifactStore` interface and full BaaS example.
+
+For serve-only imports without build-time dependencies, use `@jay-framework/production-server/serve`.
+
 ## CLI Flags
 
 ### jay-stack serve

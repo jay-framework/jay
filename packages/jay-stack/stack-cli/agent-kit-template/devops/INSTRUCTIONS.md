@@ -16,9 +16,9 @@ The devops role handles the production lifecycle: building artifacts, configurin
 
 ## Guides
 
-| File                                       | Topic                                                    |
-| ------------------------------------------ | -------------------------------------------------------- |
-| [production-build.md](production-build.md) | Build pipeline, output structure, frontend/backend split |
-| [serving-modes.md](serving-modes.md)       | Self-hosted, CDN, BaaS (fetch handler), CLI flags        |
-| [fetch-handler.md](fetch-handler.md)       | @jay-framework/jay-fetch-handler for BaaS integration    |
-| [invalidation.md](invalidation.md)         | Rebuild, renderer server, cleanup                        |
+| File                                       | Topic                                                      |
+| ------------------------------------------ | ---------------------------------------------------------- |
+| [production-build.md](production-build.md) | Build pipeline, output structure, frontend/backend split   |
+| [serving-modes.md](serving-modes.md)       | Self-hosted, CDN, BaaS (fetch handler), CLI flags          |
+| [fetch-handler.md](fetch-handler.md)       | Fetch handler, ArtifactStore interface, BaaS custom stores |
+| [invalidation.md](invalidation.md)         | Rebuild, renderer server, cleanup                          |
