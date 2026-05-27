@@ -1382,6 +1382,38 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
         ),
     );
 
+    async function rescanAndMergeNewRoutes(): Promise<DevServerRoute[]> {
+        const projectRoutes: JayRoutes = await initRoutes(options.pagesRootFolder);
+        const filteredProjectRoutes = options.buildFolder
+            ? projectRoutes.filter((route) => !route.jayHtmlPath.startsWith(options.buildFolder!))
+            : projectRoutes;
+        const pluginRoutes = await scanPluginRoutes(
+            options.projectRootFolder,
+            filteredProjectRoutes,
+        );
+        const scannedJayRoutes = [...filteredProjectRoutes, ...pluginRoutes];
+        const existingRawRoutes = new Set(devServerRoutes.map((r) => r.fsRoute.rawRoute));
+        const added: DevServerRoute[] = [];
+        for (const jayRoute of scannedJayRoutes) {
+            if (existingRawRoutes.has(jayRoute.rawRoute)) continue;
+            const devRoute = mkRoute(
+                jayRoute,
+                vite,
+                slowlyPhase,
+                options,
+                slowRenderCache,
+                freezeStore,
+                projectInit,
+                pluginsWithInit,
+                pluginClientInits,
+            );
+            devServerRoutes.push(devRoute);
+            existingRawRoutes.add(jayRoute.rawRoute);
+            added.push(devRoute);
+        }
+        return added;
+    }
+
     const service = new DevServerService(
         devServerRoutes,
         vite,
@@ -1389,6 +1421,7 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
         options.projectRootFolder,
         options.jayRollupConfig,
         freezeStore,
+        rescanAndMergeNewRoutes,
     );
 
     // Register as a Jay service so plugin actions/components can inject it (DL#130)
