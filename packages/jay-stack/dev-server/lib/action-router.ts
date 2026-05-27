@@ -229,11 +229,6 @@ export interface ActionBodyParserOptions {
 }
 
 /**
- * Default file upload limits.
- */
-const DEFAULT_MAX_FILES = 10;
-
-/**
  * Reconstruct nested objects from multipart field names like `extraFiles.attachment_1_0`
  * (emitted by buildFormData for Record<string, Blob> values). Mutates `body` in place.
  */
@@ -265,8 +260,6 @@ function mergeDottedMultipartKeys(body: Record<string, any>): void {
 function parseMultipart(
     req: Request,
     tempDir: string,
-    maxFileSize: number | undefined,
-    maxFiles: number,
 ): Promise<{ body: Record<string, any>; tempDir: string }> {
     return new Promise((resolve, reject) => {
         fs.mkdirSync(tempDir, { recursive: true });
@@ -277,14 +270,8 @@ function parseMultipart(
         let errored = false;
         const pendingWrites: Promise<void>[] = [];
 
-        const limits: { files: number; fileSize?: number } = { files: maxFiles };
-        if (maxFileSize !== undefined) {
-            limits.fileSize = maxFileSize;
-        }
-
         const bb = Busboy({
             headers: req.headers,
-            limits,
         });
 
         bb.on('file', (fieldname, stream, info) => {
@@ -294,7 +281,6 @@ function parseMultipart(
             const filename = info.filename || `upload-${fileCount}`;
             const tempPath = path.join(tempDir, `${fileCount}-${filename}`);
             let size = 0;
-            let truncated = false;
 
             const writeStream = fs.createWriteStream(tempPath);
             stream.pipe(writeStream);
@@ -303,24 +289,9 @@ function parseMultipart(
                 size += data.length;
             });
 
-            stream.on('limit', () => {
-                truncated = true;
-            });
-
             pendingWrites.push(
                 new Promise<void>((resolveWrite, rejectWrite) => {
                     writeStream.on('close', () => {
-                        if (truncated) {
-                            rejectWrite(
-                                new Error(
-                                    maxFileSize !== undefined
-                                        ? `File "${filename}" exceeds maximum size of ${maxFileSize} bytes`
-                                        : `File "${filename}" exceeds upload size limit`,
-                                ),
-                            );
-                            return;
-                        }
-
                         const jayFile: JayFile = {
                             name: filename,
                             type: info.mimeType,
@@ -434,12 +405,8 @@ export function actionBodyParser(options: ActionBodyParserOptions): RequestHandl
 
             const requestId = crypto.randomUUID();
             const tempDir = path.join(buildFolder, '.tmp', 'actions', requestId);
-            const fileOptions = action.fileOptions;
-            const maxFiles = fileOptions?.maxFiles ?? DEFAULT_MAX_FILES;
-            // Actions with .withFiles() may omit maxFileSize (no cap).
-            const maxFileSize = fileOptions?.maxFileSize;
 
-            parseMultipart(req, tempDir, maxFileSize, maxFiles)
+            parseMultipart(req, tempDir)
                 .then(({ body, tempDir: td }) => {
                     req.body = body;
                     // Attach cleanup function for the action router to call after handler

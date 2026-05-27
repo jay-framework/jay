@@ -12,8 +12,6 @@ import type {
     JayStreamActionDefinition,
     HttpMethod,
     CacheOptions,
-    ActionError,
-    FileUploadOptions,
 } from '@jay-framework/fullstack-component';
 import { resolveServices } from './services';
 import type { ActionMetadata } from './action-metadata';
@@ -37,8 +35,6 @@ export interface RegisteredActionBase {
     metadata?: ActionMetadata;
     /** Whether this action accepts file uploads (DL#131) */
     acceptsFiles?: boolean;
-    /** Per-action upload limits from .withFiles() (DL#131) */
-    fileOptions?: FileUploadOptions;
 }
 
 /**
@@ -123,7 +119,6 @@ export class ActionRegistry {
             handler: action.handler,
             ...(action.acceptsFiles && {
                 acceptsFiles: true,
-                fileOptions: action.fileOptions ?? {},
             }),
         };
 
@@ -313,7 +308,6 @@ export class ActionRegistry {
             handler: action.handler,
             ...(action.acceptsFiles && {
                 acceptsFiles: true,
-                fileOptions: action.fileOptions ?? {},
             }),
         };
         this.actions.set(action.actionName, entry);

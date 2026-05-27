@@ -40,16 +40,6 @@ export interface JayFile {
     path?: string;
 }
 
-/**
- * Options for file upload support.
- */
-export interface FileUploadOptions {
-    /** Maximum file size in bytes. Omit when using `.withFiles({ maxFiles: N })` for no size cap. */
-    maxFileSize?: number;
-    /** Maximum number of files (default: 10) */
-    maxFiles?: number;
-}
-
 // ============================================================================
 // HTTP Method and Cache Types
 // ============================================================================
@@ -139,9 +129,6 @@ export interface JayActionDefinition<Input, Output, Services extends any[]> {
     /** Whether this action accepts file uploads (DL#131) */
     acceptsFiles?: boolean;
 
-    /** File upload options (DL#131) */
-    fileOptions?: FileUploadOptions;
-
     /** The handler function */
     handler: (input: Input, ...services: Services) => Promise<Output>;
 }
@@ -186,9 +173,7 @@ export interface JayActionBuilder<
      * Mark this action as accepting file uploads (DL#131).
      * The handler will receive JayFile objects for file fields.
      */
-    withFiles(
-        options?: FileUploadOptions,
-    ): JayActionBuilder<Services, Input, Output, DefaultMethod>;
+    withFiles(): JayActionBuilder<Services, Input, Output, DefaultMethod>;
 
     /**
      * Define the handler function. Input and output types are inferred from the handler signature.
@@ -209,7 +194,6 @@ class JayActionBuilderImpl<Services extends any[], DefaultMethod extends HttpMet
     private _method: HttpMethod;
     private _cacheOptions?: CacheOptions;
     private _acceptsFiles = false;
-    private _fileOptions?: FileUploadOptions;
 
     constructor(
         private readonly _actionName: string,
@@ -237,11 +221,8 @@ class JayActionBuilderImpl<Services extends any[], DefaultMethod extends HttpMet
         return this;
     }
 
-    withFiles(
-        options?: FileUploadOptions,
-    ): JayActionBuilder<Services, unknown, unknown, DefaultMethod> {
+    withFiles(): JayActionBuilder<Services, unknown, unknown, DefaultMethod> {
         this._acceptsFiles = true;
-        this._fileOptions = options;
         return this;
     }
 
@@ -257,7 +238,6 @@ class JayActionBuilderImpl<Services extends any[], DefaultMethod extends HttpMet
         // On server: uses global resolver to inject services automatically
         // On client: build transform replaces this with HTTP call
         const acceptsFiles = this._acceptsFiles;
-        const fileOptions = this._fileOptions;
 
         const action = Object.assign(
             (input: I): Promise<O> => {
@@ -272,7 +252,7 @@ class JayActionBuilderImpl<Services extends any[], DefaultMethod extends HttpMet
                 services: serviceMarkers,
                 handler,
                 _brand: 'JayAction' as const,
-                ...(acceptsFiles && { acceptsFiles: true, fileOptions: fileOptions ?? {} }),
+                ...(acceptsFiles && { acceptsFiles: true }),
             },
         );
 
@@ -385,8 +365,6 @@ export interface JayStreamActionDefinition<Input, Chunk, Services extends any[]>
     services: ServiceMarkers<Services>;
     /** Whether this action accepts file uploads (DL#131) */
     acceptsFiles?: boolean;
-    /** File upload options (DL#131) */
-    fileOptions?: FileUploadOptions;
     handler: (input: Input, ...services: Services) => AsyncIterable<Chunk>;
 }
 
@@ -401,7 +379,7 @@ export interface JayStreamBuilder<Services extends any[]> {
     /**
      * Mark this streaming action as accepting file uploads (DL#131).
      */
-    withFiles(options?: FileUploadOptions): JayStreamBuilder<Services>;
+    withFiles(): JayStreamBuilder<Services>;
 
     withHandler<I, C>(
         handler: (input: I, ...services: Services) => AsyncIterable<C>,
@@ -411,7 +389,6 @@ export interface JayStreamBuilder<Services extends any[]> {
 class JayStreamBuilderImpl<Services extends any[]> implements JayStreamBuilder<Services> {
     private _services: ServiceMarkers<Services> = [] as unknown as ServiceMarkers<Services>;
     private _acceptsFiles = false;
-    private _fileOptions?: FileUploadOptions;
 
     constructor(private readonly _actionName: string) {}
 
@@ -422,9 +399,8 @@ class JayStreamBuilderImpl<Services extends any[]> implements JayStreamBuilder<S
         return this as unknown as JayStreamBuilder<NewServices>;
     }
 
-    withFiles(options?: FileUploadOptions): JayStreamBuilder<Services> {
+    withFiles(): JayStreamBuilder<Services> {
         this._acceptsFiles = true;
-        this._fileOptions = options;
         return this;
     }
 
@@ -434,7 +410,6 @@ class JayStreamBuilderImpl<Services extends any[]> implements JayStreamBuilder<S
         const actionName = this._actionName;
         const serviceMarkers = this._services;
         const acceptsFiles = this._acceptsFiles;
-        const fileOptions = this._fileOptions;
 
         const action = Object.assign(
             (input: I): AsyncIterable<C> => {
@@ -449,7 +424,7 @@ class JayStreamBuilderImpl<Services extends any[]> implements JayStreamBuilder<S
                 services: serviceMarkers,
                 handler,
                 _brand: 'JayStreamAction' as const,
-                ...(acceptsFiles && { acceptsFiles: true, fileOptions: fileOptions ?? {} }),
+                ...(acceptsFiles && { acceptsFiles: true }),
             },
         );
 

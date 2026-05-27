@@ -223,7 +223,7 @@ export const getCategories = makeJayQuery('products.categories')
   });
 ```
 
-### `.withFiles(options?)`
+### `.withFiles()`
 
 Enable multipart file uploads. The handler receives `JayFile` objects with temp file paths:
 
@@ -231,7 +231,7 @@ Enable multipart file uploads. The handler receives `JayFile` objects with temp 
 import { makeJayAction, type JayFile } from '@jay-framework/fullstack-component';
 
 export const uploadPhoto = makeJayAction('photos.upload')
-  .withFiles({ maxFileSize: 5 * 1024 * 1024 }) // 5MB limit
+  .withFiles()
   .withHandler(async (input: { caption: string; photo: JayFile }) => {
     // JayFile: { name, type, size, path? }
     // path is always present on the server (temp file, cleaned up after handler returns)
@@ -239,13 +239,6 @@ export const uploadPhoto = makeJayAction('photos.upload')
     return { success: true };
   });
 ```
-
-Options:
-
-| Option        | Default | Description         |
-| ------------- | ------- | ------------------- |
-| `maxFileSize` | 10MB    | Max bytes per file  |
-| `maxFiles`    | 10      | Max number of files |
 
 Works with `makeJayStream` too — upload files and stream back results:
 
