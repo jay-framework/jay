@@ -4602,6 +4602,7 @@ __metadata:
     "@jay-framework/dev-environment": "workspace:^"
     "@jay-framework/logger": "workspace:^"
     "@jay-framework/production-server": "workspace:^"
+    "@jay-framework/stack-server-runtime": "workspace:^"
     "@types/node": "npm:^22.15.21"
     rimraf: "npm:^5.0.5"
     typescript: "npm:^5.3.3"
