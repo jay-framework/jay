@@ -48,8 +48,10 @@ export const uploadPublic = makeCliCommand('upload-public')
 
 ### 2. Create the metadata file
 
+Place `.jay-command` files in a `commands/` folder (alongside `contracts/` and `actions/`):
+
 ```yaml
-# upload-public.jay-command
+# commands/upload-public.jay-command
 name: upload-public
 description: Upload public folder files to cloud storage
 
@@ -70,7 +72,7 @@ Required fields (no `?`) are validated before the handler runs.
 ```yaml
 commands:
   - name: upload-public
-    command: upload-public.jay-command
+    command: commands/upload-public.jay-command
 ```
 
 ## `CONSOLE_CONTEXT` Service

@@ -57,9 +57,9 @@ routes:
 
 commands:
   - name: upload-public
-    command: upload-public.jay-command
+    command: commands/upload-public.jay-command
   - name: sync-catalog
-    command: sync-catalog.jay-command
+    command: commands/sync-catalog.jay-command
 
 setup:
   handler: setup-handler
@@ -206,6 +206,8 @@ my-plugin/
 │   ├── actions/
 │   │   ├── search-products.jay-action
 │   │   └── add-to-cart.jay-action
+│   ├── commands/
+│   │   └── upload-public.jay-command
 │   ├── webhooks/
 │   │   └── on-product-change.ts
 │   ├── components/
