@@ -956,6 +956,31 @@ export function resolveHeadlessInstances(
 }
 
 /**
+ * Check if a contract has slow-phase repeated (forEach) properties.
+ * Routes with slow forEach produce per-instance coordinate structures
+ * that cannot be shared across instances (DL#144).
+ */
+export function hasSlowForEach(contract: Contract | undefined): boolean {
+    if (!contract) return false;
+
+    function checkTag(tag: ContractTag, parentPhase: RenderingPhase = 'slow'): boolean {
+        const effectivePhase = getEffectivePhase(tag, parentPhase);
+        if (effectivePhase === 'slow' && tag.repeated) return true;
+        if (tag.tags) {
+            for (const childTag of tag.tags) {
+                if (checkTag(childTag, effectivePhase)) return true;
+            }
+        }
+        return false;
+    }
+
+    for (const tag of contract.tags) {
+        if (checkTag(tag)) return true;
+    }
+    return false;
+}
+
+/**
  * Check if a jay-html file has any slow-phase properties that can be pre-rendered
  */
 export function hasSlowPhaseProperties(contract: Contract | undefined): boolean {

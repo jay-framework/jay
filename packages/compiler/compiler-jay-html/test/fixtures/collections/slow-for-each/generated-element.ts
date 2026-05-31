@@ -5,7 +5,7 @@ import {
     RenderElement,
     ReferencesManager,
     dynamicElement as de,
-    slowForEachItem,
+    forEach,
     ConstructContext,
     RenderElementOptions,
     JayContract,
@@ -47,25 +47,15 @@ export function render(options?: RenderElementOptions): SlowForEachElementPreRen
     const render = (viewState: SlowForEachViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             de('ul', {}, [
-                slowForEachItem<SlowForEachViewState, ProductOfSlowForEachViewState>(
+                forEach(
                     (vs: SlowForEachViewState) => vs.products,
-                    0,
-                    'p1',
-                    () =>
-                        e('li', {}, [
-                            e('span', { class: 'name' }, ['Widget A']),
+                    (vs1: ProductOfSlowForEachViewState) => {
+                        return e('li', {}, [
+                            e('span', { class: 'name' }, [dt((vs1) => vs1.name)]),
                             e('span', { class: 'price' }, [dt((vs1) => vs1.price)]),
-                        ]),
-                ),
-                slowForEachItem<SlowForEachViewState, ProductOfSlowForEachViewState>(
-                    (vs: SlowForEachViewState) => vs.products,
-                    1,
-                    'p2',
-                    () =>
-                        e('li', {}, [
-                            e('span', { class: 'name' }, ['Widget B']),
-                            e('span', { class: 'price' }, [dt((vs1) => vs1.price)]),
-                        ]),
+                        ]);
+                    },
+                    'id',
                 ),
             ]),
         ) as SlowForEachElement;

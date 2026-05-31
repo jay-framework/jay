@@ -1,70 +1,51 @@
-# DL#144: Per-Route Server Elements
+# DL#144: Per-Route Shared Artifacts (Server Element, Hydrate Script, CSS)
 
 ## Background
 
-Server-element files are compiled from jay-html templates into streaming HTML renderers. Currently they're generated per-instance — one per route + params combination. For a product page with 10 SKUs, that's 10 server-element.js files. For the golf project with 163 category/product instances, that's 163 files totaling 4.9 MB of pre-rendered content out of 59 MB total build output.
+Server-element files, hydrate scripts, and CSS are compiled from jay-html templates into per-instance artifacts. For a product page with 10 SKUs, that's 10 server-element.js, 10 hydrate JS bundles, and 10 CSS files. For the golf project with 163 category/product instances, that's 489 nearly-identical files.
 
-The problem: these files are 95%+ identical. They differ only in baked-in slow-phase data values (product name, price, SKU). The template structure, bindings, and rendering logic are the same across all instances of a route.
+The problem: these files are 95%+ identical. They differ only in baked-in slow-phase data values. The template structure, bindings, and rendering logic are the same across all instances of a route.
 
-Example diff between two product page instances:
+### Golf project measurements
 
-```diff
--  w("Gaming Laptop");
-+  w("Bluetooth Speaker");
--  w("1299.99");
-+  w("89.99");
--  w("LAP-001");
-+  w("SPK-007");
-```
+| Asset             | Instances   | Total Size   | Actual differences                         |
+|-------------------|-------------|--------------|--------------------------------------------|
+| server-element.js | 163         | ~18MB        | Product name, options, descriptions, sizes |
+| hydrate JS        | 163         | 6.8MB        | Product ID, choice IDs, swatch colors      |
+| CSS               | 163         | copies       | Zero — all identical                       |
 
-The `.cache.json` files already contain all the slow ViewState data. It's just being baked into JS literals instead of read at render time.
+The hydrate scripts are even more "samey" than the server-element files. The baked-in data (product ID, choice IDs, color codes) could trivially come from `cache.json` at hydration time.
+
+### Root cause: `slowForEach` and pre-rendering
+
+The current system unrolls slow-phase `forEach` at build time via `slowRenderTransform`, baking slow data values into the jay-html. This produces per-instance jay-html with:
+- Slow binding values resolved to literals (`{productName}` → `"Widget A"`)
+- `forEach` unrolled into concrete `slowForEach` items (one element per array item)
+- Slow conditionals resolved (false branches removed)
+
+All three compilation targets (server-element, hydrate, element) then compile from this per-instance pre-rendered jay-html, producing per-instance artifacts.
 
 ## Problem
 
-Per-instance server elements cause:
+Per-instance artifacts cause:
 
-1. **Build size bloat** — 59 MB pre-rendered content in the golf project. Category listing routes alone produce 58 nearly-identical 1,300-line files.
+1. **Build size bloat** — 59 MB pre-rendered content in the golf project. 163 near-identical server elements (18MB) + 163 near-identical hydrate scripts (6.8MB) + 163 identical CSS copies.
 
-2. **Wasted V8 resources** — 163 separate modules parsed and compiled. Each render function called ~1x, runs interpreted (never JIT-optimized). 163 compiled function objects in memory.
+2. **Wasted V8 resources** — 163 separate modules parsed and compiled per artifact type. Each function called ~1x, runs interpreted (never JIT-optimized).
 
-3. **Slow BaaS cold starts** — each instance requires a separate file fetch from cloud storage. 163 `import()` calls with I/O latency.
+3. **Slow BaaS cold starts** — each instance requires separate file fetches from cloud storage. Hundreds of `import()` calls with I/O latency.
 
-4. **Slow rebuilds** — when a product changes, the entire server-element must be recompiled from the pre-rendered jay-html. With per-route elements, only the `.cache.json` needs updating.
+4. **Slow rebuilds** — when a product changes, server-element AND hydrate script AND CSS must be recompiled. With per-route artifacts, only `cache.json` needs updating.
 
-5. **Negligible benefit** — the "performance" of baked-in string literals vs. ViewState property lookups is measured in nanoseconds. A few extra `escapeHtml` calls and loop iterations are irrelevant compared to parsing 163 JS modules.
-
-## Golf Project Analysis
-
-### Category listing routes (`[[category]]`)
-
-27 kitan + 31 polgat instances, ~1,300 lines each. Only 122 lines differ between two category instances:
-
-- Hero banner image URL
-- Breadcrumb links and category name
-- Sub-category filter checkboxes (varies by category)
-- Jay-coordinate numbers shifting due to different filter count
-- Category header title
-
-The product grid — the heaviest part of the render — is already fully dynamic (`vs.search.searchResults`). The baked-in bits are a handful of category-level strings.
-
-### Performance: single file vs per-instance
-
-| Factor           | Per-instance (current)                     | Single file + data                           |
-| ---------------- | ------------------------------------------ | -------------------------------------------- |
-| V8 parse/compile | 163 separate modules parsed & compiled     | 1 module, compiled once, reused              |
-| JIT optimization | Each function called ~1x, runs interpreted | One function called 163x, gets JIT-optimized |
-| Memory           | 163 compiled function objects              | 1 compiled function object                   |
-| Module loading   | 163 `import()` calls with disk I/O         | 1 cached import + JSON read                  |
-| String escaping  | Some pre-escaped literals                  | More `escapeHtml` calls                      |
-| Branching        | Unrolled (7 options = 7 blocks)            | `for` loop over data                         |
-
-The last two rows are the only costs — negligible compared to parsing/compiling 163 modules that are 95% identical.
+5. **Browser can't cache** — each product page loads a unique hydrate script. Navigating between products forces a fresh parse of nearly-identical JS. A shared script would be cached after first load.
 
 ## Design
 
-### Per-route server elements
+### Eliminate slowForEach, compile everything from original jay-html
 
-Compile one server-element.js per route (not per instance). The server-element renders ALL bindings — slow, fast, and interactive coordinates — from the full merged ViewState.
+Instead of pre-rendering jay-html per instance and compiling from it, compile all artifacts (server-element, hydrate script, CSS) **once per route** from the **original jay-html**.
+
+The slow render phase still runs per instance and produces `cache.json` (slowViewState + carryForward). But it no longer transforms the jay-html. The pre-rendered jay-html is eliminated as a compilation input.
 
 **Current flow (per-instance):**
 
@@ -72,16 +53,19 @@ Compile one server-element.js per route (not per instance). The server-element r
 Build:
   For each instance (route + params):
     1. Slow render → slow ViewState
-    2. Pre-render jay-html (bake slow data into HTML)
-    3. Compile pre-rendered HTML → per-instance server-element.js (slow data as literals)
-    4. Write cache.json (slowViewState, carryForward)
+    2. slowRenderTransform: bake slow values, unroll forEach → pre-rendered jay-html
+    3. Compile pre-rendered HTML → per-instance server-element.js
+    4. Compile pre-rendered HTML → per-instance hydrate-entry.js
+    5. Extract CSS → per-instance page.css
+    6. Write cache.json (slowViewState, carryForward)
 
 Serve:
   1. import(instance-specific server-element.js)
   2. Read cache.json → get carryForward
-  3. Run fast phase → fast ViewState
-  4. Merge slow + fast ViewState (but slow is already baked in)
-  5. Server-element renders only fast bindings
+  3. Fast render → fast ViewState
+  4. Merge slow + fast ViewState
+  5. Server-element renders fast+interactive bindings only (slow already baked)
+  6. Client loads instance-specific hydrate script
 ```
 
 **Proposed flow (per-route):**
@@ -89,156 +73,242 @@ Serve:
 ```
 Build:
   Once per route:
-    1. Compile original jay-html → per-route server-element.js (ALL bindings dynamic)
+    1. Compile original jay-html → route server-element.js (ALL bindings dynamic)
+    2. Compile original jay-html → route hydrate-entry.js (phase-aware)
+    3. Extract CSS → route.css
   For each instance (route + params):
-    2. Slow render → slow ViewState
-    3. Write cache.json (slowViewState, carryForward)
-    (No pre-rendered jay-html needed for SSR — only for hydration entry)
+    4. Slow render → slow ViewState
+    5. Write cache.json (slowViewState, carryForward)
 
 Serve:
   1. import(route server-element.js) — cached after first load
-  2. Read cache.json → get slowViewState + carryForward
-  3. Run fast phase → fast ViewState
+  2. Read cache.json → slowViewState + carryForward
+  3. Fast render → fast ViewState
   4. Merge slow + fast ViewState
-  5. Server-element renders full page from merged ViewState
+  5. Server-element renders ALL bindings from merged ViewState
+  6. Client loads shared hydrate script (cached across instances)
 ```
 
 ### What changes
 
-| Artifact                 | Current                             | Proposed                                         |
-| ------------------------ | ----------------------------------- | ------------------------------------------------ |
-| `server-element.js`      | Per instance, bakes slow data       | Per route, all data from ViewState               |
-| `cache.json`             | Stores slowViewState + carryForward | Same (no change)                                 |
-| Pre-rendered `.jay-html` | Used to compile server-element      | Still needed for hydration coordinate assignment |
-| Build time               | Compile N server-elements per route | Compile 1 server-element per route               |
-| Serve time               | Load instance-specific module       | Load route-shared module, read cache.json        |
+| Artifact | Current | Proposed |
+|----------|---------|----------|
+| `server-element.js` | Per instance, bakes slow data | Per route, all data from ViewState |
+| hydrate script | Per instance, bakes slow data | Per route, phase-aware |
+| CSS | Per instance (all identical) | Per route (single copy) |
+| `cache.json` | Stores slowViewState + carryForward | Same (no change) |
+| Pre-rendered `.jay-html` | Input for all compilers | Eliminated |
+| `slowRenderTransform` | Bakes values + unrolls forEach | No longer needed for compilation |
 
-### Server-element compilation target
+### Coordinate consistency
 
-Currently the server-element compiler takes pre-rendered jay-html (slow data baked in) and outputs a render function where slow values are string literals. The proposed change: compile from the original jay-html template and output a render function where ALL values come from the ViewState parameter.
+With all compilers reading the same original jay-html, coordinate assignment is naturally consistent:
+- `assignCoordinates` runs on the same DOM for both server-element and hydrate
+- `forEach` gets a single shared scope (S1) — same in SSR output and hydrate adoption
+- No `slowForEach` means no per-item scope divergence
+- No coordinate shifts from conditional removal — conditionals are runtime `if` checks
 
-This is conceptually the same as what the dev server does — it compiles the original jay-html and renders with the full ViewState. The production build just needs to use the same compilation target.
+### Phase-aware hydrate compilation
 
-### Coordinate assignment
+The hydrate compiler must become phase-aware when compiling from original jay-html:
 
-Jay-coordinates are assigned during pre-rendering and must be consistent between server-element (SSR) and hydration (client). With per-route server elements, coordinates are still assigned from the same template — they're deterministic based on template structure, not data.
+- **Interactive bindings** (`interactivePaths`): emit coordinates, create adoption code, wire reactive updates. This is what the hydrate compiler already does for fast+interactive bindings.
+- **Slow/fast-only bindings**: skip coordinate emission, no adoption code. The server-rendered content stays as-is in the DOM. The hydrate compiler already skips these via the `interactivePaths` check.
 
-The one exception: `slowForEach` items can vary per instance (different number of items). The coordinate assignment for forEach is data-dependent. This needs careful handling — the server-element must use the runtime ViewState to determine forEach iterations, not a baked-in count.
+The hydrate compiler already has this logic — it uses `interactivePaths` (built from the contract) to decide coordinate emission. The change is that it now receives original jay-html (where slow bindings are still `{productName}`) instead of pre-rendered jay-html (where they're `"Widget A"`). Since slow bindings are not in `interactivePaths`, the compiler correctly ignores them.
 
-### Impact on the hydration entry
+### slowForEach → regular forEach
 
-The hydration entry (`page.hydrate-entry.ts`) currently uses the pre-rendered jay-html to determine which coordinates need client-side wiring. With per-route server elements, the hydration entry is still compiled from the same jay-html template (it doesn't use the server-element). No change needed.
+Slow-phase `forEach` becomes regular `forEach` in the compiled output:
+- Server element: `for (const vs1 of vs.products) { ... }` — iterates at render time
+- Hydrate script: `forEach(accessor, creator, trackBy)` — standard forEach adoption
+- Element target: same `forEach` — no `slowForEachItem` needed
+
+The `slowForEachItem` runtime function, `isSlowForEach` compiler handlers, and forEach unrolling in `slowRenderTransform` become dead code.
+
+### Headless instances in slow forEach
+
+Currently, headless component instances inside `slowForEach` are discovered and slow-rendered during pre-rendering (Pass 2 in `instance-pipeline.ts`). With the new approach:
+
+- Headless instances inside `forEach` are discovered at build time from the original jay-html
+- Their slow render still runs per instance (producing instance-specific ViewState)
+- The ViewState is stored in `cache.json` under `carryForward.__instances`
+- At serve time, the server element reads instance ViewState from `__headlessInstances` (existing mechanism)
+- The hydrate script wires interactive bindings on the headless instance's template
 
 ## Questions
 
 **Q1: Does this break the slow render cache?**
 
-A1: No. The slow render cache (`cache.json`) already stores `slowViewState` and `carryForward`. The only difference is that the server-element reads `slowViewState` from the cache instead of having it baked into the render function.
+No. `cache.json` still stores `slowViewState` and `carryForward`. The only change is that we no longer generate pre-rendered jay-html alongside it.
 
-**Q2: What about `slowForEach` where the number of items varies per instance?**
+**Q2: What about slow conditionals (`if` blocks on slow data)?**
 
-A2: The server-element must handle `slowForEach` dynamically — iterate over the ViewState array at render time instead of unrolling a fixed number of items. This is already how `forEach` works in the fast+interactive phases.
+The server element evaluates them at render time from the merged ViewState. The hydrate script ignores them if they're not interactive (no coordinate emitted). If a slow conditional wraps interactive content, the hydrate compiler emits a conditional adoption — this already works for fast-phase conditionals.
 
-**Q3: Does this affect the client bundle or hydration?**
+**Q3: How does the hydrate script get slow data for initial render?**
 
-A3: No. The client bundle and hydration entry are compiled from the original jay-html, not from the server-element. They already handle all phases dynamically.
+Same as today: the hydrate entry receives `slowViewState` (baked into the hydrate entry as a JSON literal, read from `cache.json` at build time). It merges slow + fast ViewState before hydrating. The difference is that the hydrate SCRIPT (the compiled template) is shared; only the DATA (slowViewState JSON) is per-instance.
 
-**Q4: What about conditionals that depend on slow data?**
+**Q4: Can the hydrate entry still be per-instance if the hydrate script is per-route?**
 
-A4: Same as Q2 — the server-element evaluates conditionals at render time from the ViewState. This is how the dev server already works.
+Yes. The hydrate entry is a thin wrapper:
+```javascript
+import { hydrate } from './route.hydrate.js'; // shared
+const slowViewState = {...}; // per-instance, baked from cache.json
+export function init(fastViewState) {
+    const vs = merge(slowViewState, fastViewState);
+    hydrate(vs);
+}
+```
+
+The `route.hydrate.js` is the shared compiled template. The entry file bakes the per-instance `slowViewState` and imports the shared script.
 
 **Q5: How does this affect BaaS deployment (DL#143)?**
 
-A5: Significant improvement. The `ArtifactStore` now loads 1 server-element per route instead of N per instance. For the golf project, 1 file instead of 163 fetches from cloud storage.
+Major improvement. The `ArtifactStore` loads 1 server-element + 1 hydrate script per route instead of N per instance. For the golf project: 3 files instead of ~500 fetches.
+
+**Q6: What about the `slow` attribute on forEach elements?**
+
+The `slow` attribute in the original jay-html marks a forEach as slow-phase. With the new approach, this attribute is informational for the build pipeline (determines which forEach arrays to slow-render) but doesn't change compilation. The server-element and hydrate compilers treat it as a regular `forEach`. The `slow` attribute is already in `DIRECTIVE_ATTRIBUTES` so it's filtered from HTML output.
 
 ## Implementation Plan
 
-### Phase 1: Server-element compilation from original jay-html
+### Phase 1: Server-element from original jay-html
 
-1. Add a "full" compilation mode to the server-element compiler that outputs a render function taking the complete ViewState (slow + fast)
-2. All data values are read from the ViewState parameter — no baked-in literals
-3. `slowForEach` iterates over ViewState arrays at render time
+1. Compile server-element once per route from original jay-html (ALL bindings dynamic) ✅ done
+2. `forEach` (including slow-phase) compiled as loops — no unrolling ✅ done
+3. Build pipeline compiles route server-element before per-instance loop ✅ done
+4. Serve pipeline loads route-shared server-element ✅ done
 
-### Phase 2: Build pipeline changes
+### Phase 2: Hydrate script from original jay-html
 
-1. Compile server-element once per route (from original jay-html), write to route directory
-2. Each instance still runs slow render and writes `cache.json`
-3. Remove per-instance server-element compilation
-4. Update `page-parts.json` to reference the shared server-element path
+1. Compile hydrate target once per route from original jay-html
+2. Phase-aware: only interactive bindings get coordinates and adoption code
+3. `forEach` (including slow-phase) uses standard `forEach` runtime — no `slowForEachItem`
+4. Split hydrate entry: shared script (per-route) + data wrapper (per-instance)
 
-### Phase 3: Serve pipeline changes
+### Phase 3: CSS deduplication
 
-1. `fetchPageRequest`: load route-shared server-element (cached after first load)
-2. Read `cache.json` for slow ViewState
-3. Merge slow + fast ViewState
-4. Render full page with merged ViewState
+1. Extract CSS once per route (already identical across instances)
+2. All instances reference the shared CSS file
 
-### Phase 4: Dev server alignment
+### Phase 4: Remove slowRenderTransform from compilation path
 
-1. Verify the dev server already uses the equivalent approach (compiles from original jay-html, renders with full ViewState)
-2. Ensure coordinate assignment is consistent between dev and production
+1. `slowRenderTransform` no longer needed for server-element or hydrate compilation
+2. Slow render still runs per instance → produces `cache.json`
+3. Headless instance discovery + slow render still runs per instance
+4. Remove per-instance pre-rendered jay-html generation (no longer used as compiler input)
 
-### Phase 5: Tests
+### Phase 5: Clean up dead code
 
-1. Verify SSR output matches between per-instance and per-route approaches
-2. Test with `slowForEach` (varying item counts across instances)
-3. Test with slow-phase conditionals
-4. Run smoke tests in all modes
-5. Measure build size reduction and serve-time performance
+1. Remove `slowForEachItem` from runtime (or deprecate)
+2. Remove `isSlowForEach`/`getSlowForEachInfo` handlers from compilers
+3. Remove forEach unrolling from `slowRenderTransform`
+4. Update test fixtures from unrolled `slowForEach` format to `forEach` format
+
+### Phase 6: Tests
+
+1. Verify SSR output renders correctly with all bindings dynamic
+2. Verify hydration round-trip works (click handlers, reactive updates)
+3. Test forEach with varying item counts across instances
+4. Run smoke tests in all modes (dev, self-hosted, CDN)
+5. Measure build size reduction
+
+### Tests to remove/rewrite (use unrolled `slowForEach` format)
+
+Server element tests (skipped — test removed `isSlowForEach` handler):
+- `generate-server-element.test.ts` > "for headless instance inside slowForEach" (`contracts/page-with-headless-in-slow-foreach`)
+- `generate-server-element.test.ts` > "for headless instance mixed (child, conditional, slowForEach)" (`contracts/page-with-headless-mixed`)
+
+Element target tests (still passing — `isSlowForEach` handler not yet removed):
+- `generate-element.test.ts` > "for headless instance inside slowForEach" (`contracts/page-with-headless-in-slow-foreach`)
+- `generate-element.test.ts` > "for headless instance mixed" (`contracts/page-with-headless-mixed`)
+
+Hydrate target tests (still passing — `isSlowForEach` handler not yet removed):
+- `generate-element-hydrate.test.ts` > "for headless instance inside slowForEach" (`contracts/page-with-headless-in-slow-foreach`)
+- `generate-element-hydrate.test.ts` > "for headless instance mixed" (`contracts/page-with-headless-mixed`)
+- `generate-element-hydrate.test.ts` > "for fully static slowForEach" (`contracts/page-with-fully-static-slow-foreach`)
+- `generate-element-hydrate.test.ts` > "for mixed static and headless slowForEach" (`contracts/page-with-mixed-static-slow-foreach`)
+
+Fixture jay-html files using unrolled `slowForEach` format (candidates for rewrite to `forEach` with conditionals):
+- `contracts/page-with-headless-in-slow-foreach/page-with-headless-in-slow-foreach.jay-html`
+- `contracts/page-with-mixed-static-slow-foreach/page-with-mixed-static-slow-foreach.jay-html`
+- `contracts/page-with-fully-static-slow-foreach/page-with-fully-static-slow-foreach.jay-html`
+- `contracts/page-with-headless-mixed/page-with-headless-mixed.jay-html`
 
 ## Trade-offs
 
-| Aspect          | Benefit                                                         | Cost                                               |
-| --------------- | --------------------------------------------------------------- | -------------------------------------------------- |
-| Build size      | Dramatic reduction (59 MB → much less for pre-rendered content) | None                                               |
-| Build time      | Fewer compilations (1 per route vs N per instance)              | None                                               |
-| V8 performance  | JIT optimization, fewer modules, less memory                    | Negligible: more `escapeHtml` calls at render time |
-| BaaS cold start | 1 file fetch per route vs N                                     | None                                               |
-| Invalidation    | Only update cache.json, not recompile server-element            | None                                               |
-| Complexity      | Simpler build pipeline (fewer artifacts)                        | Server-element must handle all phases dynamically  |
+| Aspect | Benefit | Cost |
+|--------|---------|------|
+| Build size | Dramatic reduction (~25MB → ~1MB for route artifacts) | None |
+| Build time | 1 compilation per route vs N per instance | None |
+| V8 performance | JIT optimization, fewer modules, less memory | Negligible: more `escapeHtml` calls |
+| Browser caching | Shared hydrate script cached across product pages | None |
+| BaaS cold start | ~3 file fetches per route vs ~500 | None |
+| Invalidation | Only update cache.json, not recompile anything | None |
+| Complexity | Simpler build (fewer artifacts, no pre-rendering) | Hydrate compiler must be phase-aware (already is) |
+| Dead code | slowForEachItem, unrolling logic removable | Migration effort |
+
+## Future Optimization: Async Creation Branches
+
+Once the hydrate script is shared per route and phase-aware, a further optimization becomes possible: **lazy-load creation branches via async imports**.
+
+The hydrate script has two kinds of code for each dynamic element:
+- **Adoption code** — finds the SSR-rendered element in the DOM and wires it up. Runs on every page load.
+- **Creation code** — creates an element from scratch when it doesn't exist in the DOM. Only runs when a conditional flips false→true or a forEach adds a new item.
+
+Currently both are bundled together. But creation branches are cold paths on initial load — the SSR output already has all visible elements. Creation only fires later in response to user interaction or data changes.
+
+With per-route hydrate scripts, creation branches could become **async imports**:
+```javascript
+// Adoption (sync, runs immediately):
+adoptElement('S1/0', div({}, [...]))
+
+// Creation (async, loaded on demand):
+createFallback: () => import('./create-branches.js').then(m => m.createS1(...))
+```
+
+This reduces the initial JS parse/execute cost. The creation code is loaded only when needed — when a user action triggers a conditional or adds a forEach item.
 
 ## Verification Criteria
 
-1. **Fake-shop** — full build + production serve works, all pages render correctly
+1. **Fake-shop** — full build + production serve works, all pages render correctly including slowForEach products
 2. **Smoke-test** — all modes pass (dev, self-hosted, CDN)
-3. **Coordinate stability** — jay-coordinate values in SSR output must be identical to current per-instance output. Coordinates drive client hydration — if SSR and hydration disagree on coordinates, bindings break silently. Specifically:
-   - `slowForEach` items must produce the same coordinate structure as today (coordinate-base assignments, forEach prefix keys)
-   - Slow-phase conditionals (`if` blocks that depend on slow data) must produce the same coordinate offsets — a false-at-SSR conditional must still reserve its coordinate slot so subsequent elements don't shift
-   - The coordinate assignment algorithm (DL#103, DL#126) must not change — the server-element reads coordinates from the same pre-assigned `jay-coordinate-base` attributes
-4. **Hydration round-trip** — pages with interactive elements hydrate correctly after SSR (click handlers, reactive updates work)
-5. Build size is significantly smaller
-6. Serve-time performance is equal or better
-7. `slowForEach` renders correctly with varying item counts across instances of the same route
+3. **Coordinate consistency** — server-element and hydrate script produce identical coordinates because they compile from the same original jay-html. No coordinate shifts.
+4. **Hydration round-trip** — pages with interactive elements hydrate correctly (click handlers, reactive updates, forEach item tracking)
+5. **Build size** — significant reduction in server-element + hydrate + CSS artifacts
+6. **Serve-time performance** — equal or better
+7. **forEach correctness** — varying item counts across instances of the same route render and hydrate correctly
 
-## Implementation Results
+## Implementation Status
 
-### Approach
+### Phase 1: Server element from original jay-html — ✅ complete
 
-Compiled per-route server element from the **original jay-html** (with headfull FS templates injected). All bindings — slow, fast, interactive — are dynamic ViewState lookups. The `slow` attribute on forEach elements is filtered as a directive attribute so it doesn't appear in HTML output. Relative paths in the jay-html (contract refs, headless src, etc.) are rewritten via `resolveJayHtmlPaths` to be relative to the build output directory, so generated TypeScript imports resolve correctly (per DL#143 — all build paths relative).
+- `compileRouteServerElement()` added to `server-element-compile.ts` — compiles from original jay-html, resolves paths via `resolveJayHtmlPaths` (HTML parser, relative paths per DL#143)
+- Server element compiler: removed `isSlowForEach` handler, `slowForEachScope`, `insideSlowForEach`. All `forEach` (slow or fast) compiles as regular loop with shared scope
+- `'slow'` added to `DIRECTIVE_ATTRIBUTES` (filtered from HTML output)
+- Build pipeline (`build-pipeline.ts`): Step 3b compiles route server element before per-instance loop
+- Instance pipeline (`instance-pipeline.ts`): accepts `routeServerElementPath`/`routeCssPath`, skips per-instance server element compilation
+- Serve pipeline (`fetch-page-handler.ts`): uses `route.serverElementPath` (falls back to `instance.serverElementPath`)
+- Types: `serverElementPath` and `routeCssPath` added to `RouteEntry`
+- Test fixtures `collections/slow-for-each` and `collections/slow-for-each-dynamic-bindings` converted from unrolled `slowForEach` to `forEach` format with updated expected outputs
+- 2 server element tests skipped (use unrolled `slowForEach` format, pending rewrite)
+- All 647 compiler-jay-html tests pass
 
-### Files Changed
+### Phase 2: Hydrate script from original jay-html — not started
 
-1. **`packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler-shared.ts`** — Added `'slow'` to `DIRECTIVE_ATTRIBUTES`
-2. **`packages/jay-stack/production-server/lib/types.ts`** — Added `serverElementPath` and `routeCssPath` to `RouteEntry`
-3. **`packages/jay-stack/production-server/lib/builder/server-element-compile.ts`** — Added `compileRouteServerElement()` that reads original jay-html, injects headfull templates, and compiles
-4. **`packages/jay-stack/production-server/lib/builder/build-pipeline.ts`** — Added Step 3b: compile route server elements before per-instance loop; passes route paths to `buildInstance`
-5. **`packages/jay-stack/production-server/lib/builder/instance-pipeline.ts`** — Accepts optional `routeServerElementPath`/`routeCssPath`; skips per-instance server element compilation when route-level path provided
-6. **`packages/jay-stack/production-server/lib/serve/fetch-page-handler.ts`** — Uses `route.serverElementPath` (falling back to `instance.serverElementPath`)
+### Phase 3: CSS deduplication — not started
 
-### Coordinate Analysis
+### Phase 4: Remove slowRenderTransform from compilation path — not started
 
-For routes **without** slowForEach or slow conditionals, the original jay-html produces identical coordinate structure to the pre-rendered version. Non-interactive (slow/fast-only) bindings don't trigger `jay-coordinate` emission in either case, so the SSR output coordinates match the hydration entry.
+### Phase 5: Clean up dead code — not started
 
-For routes **with** slowForEach: the original jay-html has a `forEach` element (not unrolled), which gets a single scope. The pre-rendered hydration entry has unrolled items with per-item scopes. This is a potential coordinate mismatch. However, in practice the test suite (including smoke tests with production build + serve + hydration) passes — the current test fixtures don't exercise slowForEach across instances with varying item counts.
+- `isSlowForEach`/`getSlowForEachInfo` handlers still in element and hydrate compilers
+- `slowForEachItem` still in runtime
+- forEach unrolling still in `slowRenderTransform`
 
-### Test Results
+### Phase 6: Tests — in progress
 
-- 72/72 packages build successfully
-- 72/72 packages test successfully
-- Smoke test: 39/39 tests pass (dev, self-hosted, CDN modes)
-- Fake-shop: builds and serves with 10-instance `/products/[slug]` route sharing 1 server element
-
-### Deviations from Design
-
-- **No dev server changes needed** (Phase 4) — dev server continues compiling from pre-rendered jay-html per-request, which is correct for its use case
-- **slowForEach coordinate mismatch** is a known limitation for routes where instances have different slow forEach item counts. The fix would require either dynamic scope assignment at render time or a structural pre-rendering mode. Not addressed in this implementation since the common case (same structure across instances) works correctly.
+- Compiler-jay-html: 647 pass, 6 skipped
+- Production-server + smoke tests: not re-run since compiler cleanup
