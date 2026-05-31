@@ -145,6 +145,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 139  | wix deployment separation              | Split build into frontend (CDN) + backend (container); Cloudflare-compatible fetch handler |
 | 140  | production smoke test                  | Dedicated example project validating dev, production self-hosted, and production CDN modes |
 | 143  | artifact store abstraction for BaaS    | ArtifactStore interface, serve-only export, pre-imported modules for cloud deployment      |
+| 144  | per-route server elements              | One server-element.js per route instead of per instance; render from ViewState, not literals |
 
 ---
 
