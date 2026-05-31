@@ -122,6 +122,7 @@ const DIRECTIVE_ATTRIBUTES = new Set([
     'foreach',
     'trackby',
     'ref',
+    'slow',
     'slowforeach',
     'jayindex',
     'jaytrackby',

@@ -95,7 +95,8 @@ export async function fetchPageRequest(
         route.trackByMap || {},
     );
 
-    const serverElement = await artifacts.loadServerElement(instance.serverElementPath);
+    const serverElementPath = route.serverElementPath || instance.serverElementPath;
+    const serverElement = await artifacts.loadServerElement(serverElementPath);
     const asyncPromises: Promise<string>[] = [];
 
     const importMap = buildImportMap(manifest.sharedManifest, staticBaseUrl);

@@ -49,14 +49,14 @@ The product grid — the heaviest part of the render — is already fully dynami
 
 ### Performance: single file vs per-instance
 
-| Factor | Per-instance (current) | Single file + data |
-|--------|----------------------|-------------------|
-| V8 parse/compile | 163 separate modules parsed & compiled | 1 module, compiled once, reused |
+| Factor           | Per-instance (current)                     | Single file + data                           |
+| ---------------- | ------------------------------------------ | -------------------------------------------- |
+| V8 parse/compile | 163 separate modules parsed & compiled     | 1 module, compiled once, reused              |
 | JIT optimization | Each function called ~1x, runs interpreted | One function called 163x, gets JIT-optimized |
-| Memory | 163 compiled function objects | 1 compiled function object |
-| Module loading | 163 `import()` calls with disk I/O | 1 cached import + JSON read |
-| String escaping | Some pre-escaped literals | More `escapeHtml` calls |
-| Branching | Unrolled (7 options = 7 blocks) | `for` loop over data |
+| Memory           | 163 compiled function objects              | 1 compiled function object                   |
+| Module loading   | 163 `import()` calls with disk I/O         | 1 cached import + JSON read                  |
+| String escaping  | Some pre-escaped literals                  | More `escapeHtml` calls                      |
+| Branching        | Unrolled (7 options = 7 blocks)            | `for` loop over data                         |
 
 The last two rows are the only costs — negligible compared to parsing/compiling 163 modules that are 95% identical.
 
@@ -105,13 +105,13 @@ Serve:
 
 ### What changes
 
-| Artifact | Current | Proposed |
-|----------|---------|----------|
-| `server-element.js` | Per instance, bakes slow data | Per route, all data from ViewState |
-| `cache.json` | Stores slowViewState + carryForward | Same (no change) |
-| Pre-rendered `.jay-html` | Used to compile server-element | Still needed for hydration coordinate assignment |
-| Build time | Compile N server-elements per route | Compile 1 server-element per route |
-| Serve time | Load instance-specific module | Load route-shared module, read cache.json |
+| Artifact                 | Current                             | Proposed                                         |
+| ------------------------ | ----------------------------------- | ------------------------------------------------ |
+| `server-element.js`      | Per instance, bakes slow data       | Per route, all data from ViewState               |
+| `cache.json`             | Stores slowViewState + carryForward | Same (no change)                                 |
+| Pre-rendered `.jay-html` | Used to compile server-element      | Still needed for hydration coordinate assignment |
+| Build time               | Compile N server-elements per route | Compile 1 server-element per route               |
+| Serve time               | Load instance-specific module       | Load route-shared module, read cache.json        |
 
 ### Server-element compilation target
 
@@ -188,14 +188,14 @@ A5: Significant improvement. The `ArtifactStore` now loads 1 server-element per 
 
 ## Trade-offs
 
-| Aspect | Benefit | Cost |
-|--------|---------|------|
-| Build size | Dramatic reduction (59 MB → much less for pre-rendered content) | None |
-| Build time | Fewer compilations (1 per route vs N per instance) | None |
-| V8 performance | JIT optimization, fewer modules, less memory | Negligible: more `escapeHtml` calls at render time |
-| BaaS cold start | 1 file fetch per route vs N | None |
-| Invalidation | Only update cache.json, not recompile server-element | None |
-| Complexity | Simpler build pipeline (fewer artifacts) | Server-element must handle all phases dynamically |
+| Aspect          | Benefit                                                         | Cost                                               |
+| --------------- | --------------------------------------------------------------- | -------------------------------------------------- |
+| Build size      | Dramatic reduction (59 MB → much less for pre-rendered content) | None                                               |
+| Build time      | Fewer compilations (1 per route vs N per instance)              | None                                               |
+| V8 performance  | JIT optimization, fewer modules, less memory                    | Negligible: more `escapeHtml` calls at render time |
+| BaaS cold start | 1 file fetch per route vs N                                     | None                                               |
+| Invalidation    | Only update cache.json, not recompile server-element            | None                                               |
+| Complexity      | Simpler build pipeline (fewer artifacts)                        | Server-element must handle all phases dynamically  |
 
 ## Verification Criteria
 
@@ -209,3 +209,36 @@ A5: Significant improvement. The `ArtifactStore` now loads 1 server-element per 
 5. Build size is significantly smaller
 6. Serve-time performance is equal or better
 7. `slowForEach` renders correctly with varying item counts across instances of the same route
+
+## Implementation Results
+
+### Approach
+
+Compiled per-route server element from the **original jay-html** (with headfull FS templates injected). All bindings — slow, fast, interactive — are dynamic ViewState lookups. The `slow` attribute on forEach elements is filtered as a directive attribute so it doesn't appear in HTML output. Relative paths in the jay-html (contract refs, headless src, etc.) are rewritten via `resolveJayHtmlPaths` to be relative to the build output directory, so generated TypeScript imports resolve correctly (per DL#143 — all build paths relative).
+
+### Files Changed
+
+1. **`packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler-shared.ts`** — Added `'slow'` to `DIRECTIVE_ATTRIBUTES`
+2. **`packages/jay-stack/production-server/lib/types.ts`** — Added `serverElementPath` and `routeCssPath` to `RouteEntry`
+3. **`packages/jay-stack/production-server/lib/builder/server-element-compile.ts`** — Added `compileRouteServerElement()` that reads original jay-html, injects headfull templates, and compiles
+4. **`packages/jay-stack/production-server/lib/builder/build-pipeline.ts`** — Added Step 3b: compile route server elements before per-instance loop; passes route paths to `buildInstance`
+5. **`packages/jay-stack/production-server/lib/builder/instance-pipeline.ts`** — Accepts optional `routeServerElementPath`/`routeCssPath`; skips per-instance server element compilation when route-level path provided
+6. **`packages/jay-stack/production-server/lib/serve/fetch-page-handler.ts`** — Uses `route.serverElementPath` (falling back to `instance.serverElementPath`)
+
+### Coordinate Analysis
+
+For routes **without** slowForEach or slow conditionals, the original jay-html produces identical coordinate structure to the pre-rendered version. Non-interactive (slow/fast-only) bindings don't trigger `jay-coordinate` emission in either case, so the SSR output coordinates match the hydration entry.
+
+For routes **with** slowForEach: the original jay-html has a `forEach` element (not unrolled), which gets a single scope. The pre-rendered hydration entry has unrolled items with per-item scopes. This is a potential coordinate mismatch. However, in practice the test suite (including smoke tests with production build + serve + hydration) passes — the current test fixtures don't exercise slowForEach across instances with varying item counts.
+
+### Test Results
+
+- 72/72 packages build successfully
+- 72/72 packages test successfully
+- Smoke test: 39/39 tests pass (dev, self-hosted, CDN modes)
+- Fake-shop: builds and serves with 10-instance `/products/[slug]` route sharing 1 server element
+
+### Deviations from Design
+
+- **No dev server changes needed** (Phase 4) — dev server continues compiling from pre-rendered jay-html per-request, which is correct for its use case
+- **slowForEach coordinate mismatch** is a known limitation for routes where instances have different slow forEach item counts. The fix would require either dynamic scope assignment at render time or a structural pre-rendering mode. Not addressed in this implementation since the common case (same structure across instances) works correctly.

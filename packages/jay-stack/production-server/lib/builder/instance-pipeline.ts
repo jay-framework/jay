@@ -89,6 +89,8 @@ export async function buildInstance(
     params: Record<string, string>,
     pageModule: any,
     ctx: InstanceBuildContext,
+    routeServerElementPath?: string,
+    routeCssPath?: string,
 ): Promise<InstanceBuildResult> {
     const logger = getLogger();
     const routeDir = route.rawRoute.replace(/^\//, '') || 'index';
@@ -325,16 +327,24 @@ export async function buildInstance(
     logger.info(`[Build] Pre-rendered: ${routeDir}/${instanceId}`);
 
     // 3. Compile server element + extract CSS (backend)
-    const serverElementPath = path.join(backendInstanceDir, `${instanceId}.server-element.js`);
-    const serverElementResult = await compileServerElement(
-        preRenderedJayHtml,
-        `${instanceId}.jay-html`,
-        backendInstanceDir,
-        serverElementPath,
-        ctx.projectRoot,
-        ctx.tsConfigFilePath,
-        sourceDir,
-    );
+    // With per-route server elements (DL#144), skip per-instance compilation
+    let serverElementResult: { cssFile?: string };
+    const serverElementPath = routeServerElementPath
+        ? path.join(ctx.backendDir, routeServerElementPath)
+        : path.join(backendInstanceDir, `${instanceId}.server-element.js`);
+    if (routeServerElementPath) {
+        serverElementResult = {};
+    } else {
+        serverElementResult = await compileServerElement(
+            preRenderedJayHtml,
+            `${instanceId}.jay-html`,
+            backendInstanceDir,
+            serverElementPath,
+            ctx.projectRoot,
+            ctx.tsConfigFilePath,
+            sourceDir,
+        );
+    }
 
     // 4. Generate hydration entry (temporary, in backend dir for compilation)
     const hydrateEntryPath = path.join(backendInstanceDir, `${instanceId}.hydrate-entry.ts`);
@@ -401,6 +411,10 @@ export async function buildInstance(
         }
     }
 
+    const instanceCssPath = cssFile
+        ? path.relative(ctx.frontendDir, path.join(frontendInstanceDir, cssFile))
+        : routeCssPath;
+
     const instanceEntry: InstanceEntry = {
         params,
         preRenderedPath: path.relative(ctx.backendDir, preRenderedPath),
@@ -409,9 +423,7 @@ export async function buildInstance(
             ctx.frontendDir,
             path.join(frontendInstanceDir, clientResult.jsFile),
         ),
-        clientCssPath: cssFile
-            ? path.relative(ctx.frontendDir, path.join(frontendInstanceDir, cssFile))
-            : undefined,
+        clientCssPath: instanceCssPath,
     };
 
     return { status: 'success', instanceEntry, slowViewState, carryForward, contracts };

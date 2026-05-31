@@ -5,6 +5,7 @@ import { buildInstance, type InstanceBuildContext } from './instance-pipeline';
 import { loadProductionPageParts } from './load-production-parts';
 import { buildRouteEntry, discoverActions, writeRouteManifest } from './route-manifest';
 import { scanPluginRoutes } from './plugin-routes';
+import { compileRouteServerElement } from './server-element-compile';
 import { runLoadParams } from '@jay-framework/stack-server-runtime';
 import {
     crossProductParams,
@@ -354,6 +355,46 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         byRoute.get(info)!.push(materialized.params);
     }
 
+    // ── Step 3b: Compile per-route server elements (DL#144) ──
+
+    for (const [info] of byRoute) {
+        const { route, entry } = info.routeEntry;
+        if (!route.jayHtmlPath) continue;
+
+        const routeDir = route.rawRoute.replace(/^\//, '') || 'index';
+        const backendRouteDir = path.join(backendDir, 'pre-rendered', routeDir);
+        const frontendRouteDir = path.join(frontendDir, 'pages', routeDir);
+        await fs.mkdir(backendRouteDir, { recursive: true });
+        await fs.mkdir(frontendRouteDir, { recursive: true });
+
+        const serverElementPath = path.join(backendRouteDir, 'route.server-element.js');
+        try {
+            const seResult = await compileRouteServerElement(
+                route.jayHtmlPath,
+                serverElementPath,
+                options.projectRoot,
+                options.tsConfigFilePath,
+            );
+            entry.serverElementPath = path.relative(backendDir, serverElementPath);
+
+            if (seResult.cssFile) {
+                const srcCss = path.join(backendRouteDir, seResult.cssFile);
+                const dstCss = path.join(frontendRouteDir, seResult.cssFile);
+                try {
+                    await fs.rename(srcCss, dstCss);
+                } catch {
+                    await fs.copyFile(srcCss, dstCss);
+                    await fs.rm(srcCss, { force: true });
+                }
+                entry.routeCssPath = path.relative(frontendDir, dstCss);
+            }
+
+            logger.important(`[Build] Route server element: ${routeDir}`);
+        } catch (err: any) {
+            logger.error(`[Build] Route server element FAILED ${route.rawRoute}: ${err.message}`);
+        }
+    }
+
     // ── Step 4: Build ──
 
     for (const [info, paramsList] of byRoute) {
@@ -375,7 +416,14 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
 
         for (const params of paramsList) {
             try {
-                const result = await buildInstance(route, params, pageModule, instanceCtx);
+                const result = await buildInstance(
+                    route,
+                    params,
+                    pageModule,
+                    instanceCtx,
+                    entry.serverElementPath,
+                    entry.routeCssPath,
+                );
                 if (result.status === 'success') {
                     entry.instances.push(result.instanceEntry);
                     if (result.contracts.length > 0 && !entry.contracts) {

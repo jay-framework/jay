@@ -21,6 +21,10 @@ export interface RouteEntry {
     trackByMap?: Record<string, string>;
     contracts?: string[];
     componentExport?: string;
+    /** Per-route server element path (DL#144). Shared across all instances. */
+    serverElementPath?: string;
+    /** Per-route CSS file path (DL#144). Extracted from route-level server element compilation. */
+    routeCssPath?: string;
     instances: InstanceEntry[];
     isPlugin?: boolean;
     pluginName?: string;
