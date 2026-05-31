@@ -21,6 +21,8 @@ export type JayRoute = {
     compPath: string;
     /** Export name for the page component (default: 'page'). Used by plugin routes where the export name differs. */
     componentExport?: string;
+    /** NPM package name for plugin routes. Used by build to generate portable module paths. */
+    packageName?: string;
     /**
      * Explicit params declared via <script type="application/jay-params"> in the jay-html.
      * Used by static override routes to provide param values.

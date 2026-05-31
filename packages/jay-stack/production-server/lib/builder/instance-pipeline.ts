@@ -134,7 +134,7 @@ export async function buildInstance(
         let pageIsPlugin = false;
         if (route.compPath) {
             if (route.componentExport) {
-                pageServerModule = route.compPath;
+                pageServerModule = route.packageName || route.compPath;
                 pageIsPlugin = true;
             } else {
                 const relativePath = path.relative(ctx.projectRoot, route.compPath);

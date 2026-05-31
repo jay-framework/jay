@@ -113,10 +113,13 @@ export async function loadProductionPageParts(
                 modulePath = sourcePath;
             }
         } else {
-            modulePath = require.resolve(module, { paths: [dirName] });
+            modulePath = module;
         }
 
-        const headlessModule = await import(modulePath);
+        const resolvedModulePath = isLocalModule
+            ? modulePath
+            : require.resolve(module, { paths: [dirName] });
+        const headlessModule = await import(resolvedModulePath);
         const headlessCompDef = headlessModule[name];
 
         if (headlessImport.key) {
