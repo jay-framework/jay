@@ -1,5 +1,6 @@
 import { build as viteBuild } from 'vite';
 import { jayRuntime, type JayRollupConfig } from '@jay-framework/vite-plugin';
+import { jayStackCompiler } from '@jay-framework/compiler-jay-stack';
 import {
     parseJayFile,
     generateServerElementFile,
@@ -162,7 +163,7 @@ export async function compileRouteHydrateScript(
 
     await viteBuild({
         root: projectRoot,
-        plugins: [jayRuntime(jayOptions)],
+        plugins: [...jayStackCompiler(jayOptions)],
         build: {
             outDir: outputDir,
             emptyOutDir: false,
