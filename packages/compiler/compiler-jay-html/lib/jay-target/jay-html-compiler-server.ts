@@ -834,12 +834,12 @@ function renderServerElementContent(
     // Root must always emit: hydrate needs adoptElement("0", ...) to resolve.
     // Interactive conditional elements (if=) must emit: hydrate adoptElement fails otherwise,
     // causing createFallback to create duplicates (SSR content + client-created).
-    // Non-interactive conditionals (slow/fast-only) are static on client and don't need coordinates.
+    // All conditionals need coordinates so the hydrate script can adopt them (DL#144).
+    // Non-interactive conditionals use guarded adoption; interactive ones use hydrateConditional.
     const refName = element.attributes.ref ? camelCase(element.attributes.ref) : null;
     const needsCoordinate =
         options?.isRoot === true ||
-        (isConditional(element) &&
-            conditionIsInteractive(element.getAttribute('if'), context.interactivePaths)) ||
+        isConditional(element) ||
         dynamicTextFragment !== null ||
         refName !== null ||
         hasDynamicAttributeBindings(element, variables) ||

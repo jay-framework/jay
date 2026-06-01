@@ -20,7 +20,12 @@ import {
 } from '@jay-framework/compiler-shared';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
-import { parseCondition, parseTextExpression, Variables } from '../expressions/expression-compiler';
+import {
+    parseCondition,
+    parseServerCondition,
+    parseTextExpression,
+    Variables,
+} from '../expressions/expression-compiler';
 import { camelCase } from '../case-utils';
 import { pascalCase } from 'change-case';
 import { Contract } from '../contract';
@@ -257,6 +262,40 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
             ],
             childContent.refs,
         );
+    }
+
+    // --- Non-interactive conditional (DL#144) ---
+    // With per-route hydrate scripts, non-interactive conditions (slow/fast) are present
+    // in the original jay-html. Guard the adoption with a ViewState check — the element
+    // may not be in the DOM if the condition was false at SSR time.
+    if (isConditional(element) && context.interactivePaths.size > 0) {
+        const condition = element.getAttribute('if');
+        // Use viewState variable (the hydrate render function parameter) for the guard,
+        // not vs (the accessor variable used in condition callbacks).
+        const viewStateVars = new Variables(
+            context.variables.currentType,
+            undefined,
+            0,
+            'viewState',
+        );
+        const renderedCondition = parseServerCondition(condition, viewStateVars);
+        const coordinate = element.getAttribute(COORD_ATTR) || '0';
+        const childContent = renderHydrateElementContent(
+            element,
+            context,
+            renderContext,
+            coordinate,
+            true,
+        );
+        const adoption = childContent.rendered.trim();
+        if (adoption) {
+            return new RenderFragment(
+                `${context.indent.firstLine}...(${renderedCondition.rendered} ? [${adoption}] : [])`,
+                childContent.imports.plus(Import.adoptElement),
+                [...renderedCondition.validations, ...childContent.validations],
+                childContent.refs,
+            );
+        }
     }
 
     // --- forEach ---

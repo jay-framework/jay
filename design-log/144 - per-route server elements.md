@@ -413,3 +413,21 @@ The build pipeline simplifies to:
 Per route:  server-element.js + hydrate.js + route.css
 Per instance:  cache.json only
 ```
+
+### Non-interactive conditional guards in hydrate
+
+With per-route hydrate scripts compiled from original jay-html, non-interactive conditionals (`if` on slow/fast properties) are present in the template. The hydrate compiler sees them and generates `adoptElement` calls. But at runtime, the SSR output may omit these elements (condition was false for this instance).
+
+Previously, non-interactive conditionals were resolved during `slowRenderTransform` — false branches were removed before the hydrate compiler saw them. Each instance had its own hydrate script that only adopted elements that existed in that instance's SSR output.
+
+Fix: the hydrate compiler wraps adoption of non-interactive conditional elements in a ViewState ternary:
+
+```javascript
+// Before (unconditional — breaks when inStock is false):
+adoptElement('S0/0/10/0', {}, [], refAddToCart());
+
+// After (guarded — skips adoption when condition is false):
+vs.inStock ? adoptElement('S0/0/10/0', {}, [], refAddToCart()) : null;
+```
+
+Since these appear inside children arrays, the parent's children array filters nulls. The ternary is sufficient because non-interactive conditions are static for the page lifetime — no create/destroy lifecycle needed.
