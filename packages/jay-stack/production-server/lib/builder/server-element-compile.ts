@@ -3,9 +3,11 @@ import { jayRuntime, type JayRollupConfig } from '@jay-framework/vite-plugin';
 import {
     parseJayFile,
     generateServerElementFile,
+    generateElementHydrateFile,
     JAY_IMPORT_RESOLVER,
     injectHeadfullFSTemplates,
 } from '@jay-framework/compiler-jay-html';
+import { RuntimeMode } from '@jay-framework/compiler-shared';
 import { checkValidationErrors } from '@jay-framework/compiler-shared';
 import { getLogger } from '@jay-framework/logger';
 import { parse as parseHtml } from 'node-html-parser';
@@ -112,6 +114,85 @@ export async function compileRouteServerElement(
         tsConfigFilePath,
         sourceDir,
     );
+}
+
+export interface RouteHydrateCompileResult {
+    jsFile: string;
+}
+
+/**
+ * Compile a per-route hydrate script from the original jay-html (DL#144).
+ * Phase-aware: only interactive bindings get coordinates and adoption code.
+ * Produces a client-side ES module that exports `hydrate()`.
+ */
+export async function compileRouteHydrateScript(
+    jayHtmlPath: string,
+    outputDir: string,
+    projectRoot: string,
+    tsConfigFilePath?: string,
+    minify: boolean = true,
+): Promise<RouteHydrateCompileResult> {
+    const jayHtmlContent = await fs.readFile(jayHtmlPath, 'utf-8');
+    const sourceDir = path.dirname(jayHtmlPath);
+
+    let jayHtml = injectHeadfullFSTemplates(jayHtmlContent, sourceDir, JAY_IMPORT_RESOLVER);
+    jayHtml = resolveJayHtmlPaths(jayHtml, sourceDir, outputDir);
+
+    const jayFile = await parseJayFile(
+        jayHtml,
+        path.basename(jayHtmlPath),
+        outputDir,
+        { relativePath: tsConfigFilePath },
+        JAY_IMPORT_RESOLVER,
+        projectRoot,
+        sourceDir,
+    );
+    const parsedJayFile = checkValidationErrors(jayFile);
+
+    const hydrateCode = checkValidationErrors(
+        generateElementHydrateFile(parsedJayFile, RuntimeMode.MainTrusted),
+    ) as string;
+
+    await fs.mkdir(outputDir, { recursive: true });
+
+    const tsPath = path.join(outputDir, 'route.hydrate.ts');
+    await fs.writeFile(tsPath, hydrateCode, 'utf-8');
+
+    const jayOptions: JayRollupConfig = { tsConfigFilePath };
+
+    await viteBuild({
+        root: projectRoot,
+        plugins: [jayRuntime(jayOptions)],
+        build: {
+            outDir: outputDir,
+            emptyOutDir: false,
+            minify,
+            manifest: 'route-hydrate-manifest.json',
+            rollupOptions: {
+                input: { 'route.hydrate': tsPath },
+                external: (id) => id.startsWith('@jay-framework/'),
+                output: {
+                    entryFileNames: '[name]-[hash].js',
+                    format: 'es',
+                },
+                preserveEntrySignatures: 'exports-only',
+            },
+        },
+        logLevel: 'warn',
+    });
+
+    await fs.rm(tsPath, { force: true });
+
+    const manifestPath = path.join(outputDir, 'route-hydrate-manifest.json');
+    const manifest = JSON.parse(await fs.readFile(manifestPath, 'utf-8'));
+    await fs.rm(manifestPath, { force: true });
+
+    const entryKey = Object.keys(manifest).find((k) => (manifest[k] as any).isEntry);
+    if (!entryKey) throw new Error('No entry in route hydrate manifest');
+    const jsFile = (manifest[entryKey] as any).file as string;
+
+    getLogger().info(`[Build] Compiled route hydrate script: ${jsFile}`);
+    return { jsFile };
 }
 
 /**

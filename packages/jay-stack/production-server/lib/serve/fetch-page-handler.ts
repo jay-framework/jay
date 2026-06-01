@@ -100,6 +100,9 @@ export async function fetchPageRequest(
     const asyncPromises: Promise<string>[] = [];
 
     const importMap = buildImportMap(manifest.sharedManifest, staticBaseUrl);
+    if (route.routeHydratePath) {
+        importMap['jay-route-hydrate'] = `${staticBaseUrl}${route.routeHydratePath}`;
+    }
     const modulePreloads = Object.values(importMap)
         .map((url) => `    <link rel="modulepreload" href="${url}" />`)
         .join('\n');

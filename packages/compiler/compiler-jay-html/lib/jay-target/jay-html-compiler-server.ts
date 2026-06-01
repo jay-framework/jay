@@ -23,8 +23,10 @@ import {
     checkAsync,
     ensureSingleChildElement,
     getComponentName,
+    getSlowForEachInfo,
     isConditional,
     isForEach,
+    isSlowForEach,
 } from './jay-html-helpers';
 import { generateTypes } from './jay-html-compile-types';
 import { Indent } from './indent';
@@ -43,6 +45,7 @@ import {
     escapeForJsString,
     validateAsyncAccessor,
     validateForEachAccessor,
+    validateSlowForEachAccessor,
     findHtmlStringBindings,
 } from './jay-html-compiler-shared';
 import {
@@ -175,6 +178,47 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
             itemBody.imports,
             itemBody.validations,
         );
+    }
+
+    // --- slowForEach (pre-rendered slow-phase forEach items) ---
+    // Used by dev server which still compiles from pre-rendered jay-html.
+    // Production build compiles from original jay-html (DL#144) where these don't appear.
+    if (isSlowForEach(element)) {
+        const slowForEachInfo = getSlowForEachInfo(element);
+        if (slowForEachInfo) {
+            const { arrayName, jayIndex } = slowForEachInfo;
+            const slowValidated = validateSlowForEachAccessor(arrayName, variables);
+            if (isValidationError(slowValidated)) return slowValidated;
+            const { accessor: arrayAccessor, childVariables: slowForEachVariables } = slowValidated;
+            const arrayExpr = arrayAccessor.render().rendered;
+            const itemVar = slowForEachVariables.currentVar;
+            const itemContext: ServerContext = {
+                ...context,
+                variables: slowForEachVariables,
+                indent,
+            };
+            const childContent = renderServerElementContent(element, itemContext, {
+                isRoot: true,
+            });
+            const needsItemVar = childContent.rendered.includes(itemVar + '.');
+            if (needsItemVar) {
+                const itemIndent = new Indent(indent.curr + '    ');
+                const indentedContext: ServerContext = {
+                    ...context,
+                    variables: slowForEachVariables,
+                    indent: itemIndent,
+                };
+                const indentedContent = renderServerElementContent(element, indentedContext, {
+                    isRoot: true,
+                });
+                return new RenderFragment(
+                    `${indent.firstLine}{ const ${itemVar} = ${arrayExpr}?.[${jayIndex}]; if (${itemVar}) {\n${indentedContent.rendered}\n${indent.firstLine}}}`,
+                    indentedContent.imports,
+                    [...arrayAccessor.validations, ...indentedContent.validations],
+                );
+            }
+            return childContent;
+        }
     }
 
     // --- Async directives are handled by the parent's child processing ---

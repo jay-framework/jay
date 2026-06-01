@@ -5,7 +5,7 @@ import { buildInstance, type InstanceBuildContext } from './instance-pipeline';
 import { loadProductionPageParts } from './load-production-parts';
 import { buildRouteEntry, discoverActions, writeRouteManifest } from './route-manifest';
 import { scanPluginRoutes } from './plugin-routes';
-import { compileRouteServerElement } from './server-element-compile';
+import { compileRouteServerElement, compileRouteHydrateScript } from './server-element-compile';
 import { runLoadParams } from '@jay-framework/stack-server-runtime';
 import {
     crossProductParams,
@@ -393,6 +393,23 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         } catch (err: any) {
             logger.error(`[Build] Route server element FAILED ${route.rawRoute}: ${err.message}`);
         }
+
+        try {
+            const hydrateResult = await compileRouteHydrateScript(
+                route.jayHtmlPath,
+                frontendRouteDir,
+                options.projectRoot,
+                options.tsConfigFilePath,
+                options.minify ?? true,
+            );
+            entry.routeHydratePath = path.relative(
+                frontendDir,
+                path.join(frontendRouteDir, hydrateResult.jsFile),
+            );
+            logger.important(`[Build] Route hydrate script: ${routeDir}`);
+        } catch (err: any) {
+            logger.error(`[Build] Route hydrate script FAILED ${route.rawRoute}: ${err.message}`);
+        }
     }
 
     // ── Step 4: Build ──
@@ -423,6 +440,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
                     instanceCtx,
                     entry.serverElementPath,
                     entry.routeCssPath,
+                    entry.routeHydratePath,
                 );
                 if (result.status === 'success') {
                     entry.instances.push(result.instanceEntry);

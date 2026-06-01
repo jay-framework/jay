@@ -23,6 +23,8 @@ export interface HydrationEntryOptions {
     outputPath: string;
     keyedParts?: KeyedPartInfo[];
     clientInits?: ClientInitInfo[];
+    /** When set, import hydrate from this shared route module instead of ?jay-hydrate */
+    routeHydrateImport?: string;
 }
 
 export async function generateHydrationEntry(options: HydrationEntryOptions): Promise<void> {
@@ -35,9 +37,10 @@ export async function generateHydrationEntry(options: HydrationEntryOptions): Pr
         outputPath,
         keyedParts = [],
         clientInits = [],
+        routeHydrateImport,
     } = options;
 
-    const hydrateImport = `${jayHtmlPath}?jay-hydrate`;
+    const hydrateImport = routeHydrateImport || `${jayHtmlPath}?jay-hydrate`;
 
     const partImports = keyedParts
         .map((p, i) => `import { ${p.exportName} as keyedPart${i} } from '${p.modulePath}';`)

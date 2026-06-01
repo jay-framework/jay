@@ -1,19 +1,8 @@
-import {
-    slowRenderTransform,
-    parseContract,
-    JAY_IMPORT_RESOLVER,
-    injectHeadfullFSTemplates,
-    discoverHeadlessInstances,
-    assignCoordinatesToJayHtml,
-    resolveHeadlessInstances,
-} from '@jay-framework/compiler-jay-html';
 import { DevSlowlyChangingPhase, slowRenderInstances } from '@jay-framework/stack-server-runtime';
 import type { JayRollupConfig } from '@jay-framework/compiler-jay-stack';
 import type { JayRoute } from '@jay-framework/stack-route-scanner';
-import type { Contract } from '@jay-framework/compiler-jay-html';
 import type { InstanceEntry } from '../types';
 import { loadProductionPageParts, buildPagePartsConfig } from './load-production-parts';
-import { compileServerElement } from './server-element-compile';
 import { generateHydrationEntry } from './hydration-entry-gen';
 import { buildInstanceClient } from './instance-client-build';
 import { getLogger } from '@jay-framework/logger';
@@ -91,6 +80,7 @@ export async function buildInstance(
     ctx: InstanceBuildContext,
     routeServerElementPath?: string,
     routeCssPath?: string,
+    routeHydratePath?: string,
 ): Promise<InstanceBuildResult> {
     const logger = getLogger();
     const routeDir = route.rawRoute.replace(/^\//, '') || 'index';
@@ -184,137 +174,55 @@ export async function buildInstance(
     const slowViewState = slowResult.rendered;
     const carryForward = slowResult.carryForward;
 
-    // 2. Pre-render jay-html (Pass 1: page bindings)
-    let contract: Contract | undefined;
-    const contractPath = route.jayHtmlPath.replace('.jay-html', '.jay-contract');
-    try {
-        const contractContent = await fs.readFile(contractPath, 'utf-8');
-        const parseResult = parseContract(contractContent, path.basename(contractPath));
-        if (parseResult.val) contract = parseResult.val;
-    } catch {
-        // No contract file
-    }
-
-    const jayHtmlWithTemplates = injectHeadfullFSTemplates(
-        jayHtmlContent,
-        sourceDir,
-        JAY_IMPORT_RESOLVER,
-    );
-
-    const transformResult = slowRenderTransform({
-        jayHtmlContent: jayHtmlWithTemplates,
-        slowViewState: slowViewState as Record<string, unknown>,
-        contract,
-        headlessContracts: pageParts.headlessContracts,
-        sourceDir,
-        importResolver: JAY_IMPORT_RESOLVER,
-    });
-
-    if (!transformResult.val) {
-        throw new Error(
-            `Slow render transform failed for ${route.rawRoute}: ${transformResult.validations.join(', ')}`,
+    // 2. Slow-render static headless instances (DL#144)
+    // Static instances (outside forEach) are discovered from the original jay-html
+    // by loadProductionPageParts. forEach instances are handled at serve time.
+    if (
+        pageParts.discoveredInstances.length > 0 &&
+        pageParts.headlessInstanceComponents.length > 0
+    ) {
+        const slowResult = await slowRenderInstances(
+            pageParts.discoveredInstances,
+            pageParts.headlessInstanceComponents,
         );
-    }
 
-    let preRenderedJayHtml = transformResult.val.preRenderedJayHtml;
-
-    // Pass 2: Headless instance bindings (same as dev server's preRenderJayHtml)
-    // After Pass 1, the jay-html still has <jay:xxx> tags — including unrolled
-    // slowForEach instances. We discover and slow-render ALL instances here.
-    if (pageParts.headlessInstanceComponents.length > 0) {
-        const discoveryResult = discoverHeadlessInstances(preRenderedJayHtml);
-        const htmlWithRefs = discoveryResult.preRenderedJayHtml;
-        const contractNames = new Set(
-            pageParts.headlessInstanceComponents.map((c) => c.contractName),
-        );
-        preRenderedJayHtml = assignCoordinatesToJayHtml(htmlWithRefs, contractNames);
-
-        const finalDiscovery = discoverHeadlessInstances(preRenderedJayHtml);
-
-        if (finalDiscovery.instances.length > 0) {
-            // Slow-render ALL discovered instances (including unrolled slowForEach)
-            const slowResult = await slowRenderInstances(
-                finalDiscovery.instances,
-                pageParts.headlessInstanceComponents,
-            );
-
-            if (slowResult) {
-                // Merge instance phase data into carryForward
-                const existingInstances = (carryForward as any).__instances || {
-                    discovered: [],
-                    carryForwards: {},
-                };
-                (carryForward as any).__instances = {
-                    discovered: [
-                        ...existingInstances.discovered,
-                        ...slowResult.instancePhaseData.discovered,
-                    ],
-                    carryForwards: {
-                        ...existingInstances.carryForwards,
-                        ...slowResult.instancePhaseData.carryForwards,
-                    },
-                    slowViewStates: {
-                        ...(existingInstances.slowViewStates || {}),
-                        ...(slowResult.instancePhaseData as any).slowViewStates,
-                    },
-                };
-                (carryForward as any).__instanceSlowViewStates = {
-                    ...((carryForward as any).__instanceSlowViewStates || {}),
-                    ...Object.fromEntries(
-                        slowResult.resolvedData.map((d) => [
-                            d.coordinate.join('/'),
-                            d.slowViewState,
-                        ]),
-                    ),
-                };
-                (carryForward as any).__instanceResolvedData = [
-                    ...((carryForward as any).__instanceResolvedData || []),
-                    ...slowResult.resolvedData,
-                ];
-
-                // Resolve instance bindings in jay-html
-                const pass2Result = resolveHeadlessInstances(
-                    preRenderedJayHtml,
-                    slowResult.resolvedData,
-                    JAY_IMPORT_RESOLVER,
-                );
-                if (pass2Result.val) {
-                    preRenderedJayHtml = pass2Result.val;
-                }
-            }
+        if (slowResult) {
+            const existingInstances = (carryForward as any).__instances || {
+                discovered: [],
+                carryForwards: {},
+            };
+            (carryForward as any).__instances = {
+                discovered: [
+                    ...existingInstances.discovered,
+                    ...slowResult.instancePhaseData.discovered,
+                ],
+                carryForwards: {
+                    ...existingInstances.carryForwards,
+                    ...slowResult.instancePhaseData.carryForwards,
+                },
+                slowViewStates: {
+                    ...(existingInstances.slowViewStates || {}),
+                    ...(slowResult.instancePhaseData as any).slowViewStates,
+                },
+            };
         }
     }
 
-    // Rewrite headfull component paths to be relative from the build output directory
-    // instead of the source directory. The pre-rendered file lives in backendInstanceDir
-    // but paths in the jay-html are relative to the source page directory.
-    preRenderedJayHtml = preRenderedJayHtml.replace(
-        /(<script\s+type="application\/jay-headfull"[^>]*\s)(src="([^"]*)")/g,
-        (_match, prefix, _srcAttr, srcVal) => {
-            if (path.isAbsolute(srcVal)) return prefix + `src="${srcVal}"`;
-            const abs = path.resolve(sourceDir, srcVal);
-            let rel = path.relative(backendInstanceDir, abs);
-            if (!rel.startsWith('.')) rel = './' + rel;
-            return prefix + `src="${rel}"`;
-        },
-    );
-    preRenderedJayHtml = preRenderedJayHtml.replace(
-        /(<script\s+type="application\/jay-headfull"[^>]*\s)(contract="([^"]*)")/g,
-        (_match, prefix, _contractAttr, contractVal) => {
-            if (path.isAbsolute(contractVal)) return prefix + `contract="${contractVal}"`;
-            const abs = path.resolve(sourceDir, contractVal);
-            let rel = path.relative(backendInstanceDir, abs);
-            if (!rel.startsWith('.')) rel = './' + rel;
-            return prefix + `contract="${rel}"`;
-        },
-    );
-
-    // Write clean pre-rendered file for compilation (backend)
-    const preRenderedPath = path.join(backendInstanceDir, `${instanceId}.jay-html`);
-    await fs.writeFile(preRenderedPath, preRenderedJayHtml, 'utf-8');
+    // Store forEach instances in carryForward for serve-time processing
+    if (pageParts.forEachInstances.length > 0) {
+        const existingInstances = (carryForward as any).__instances || {
+            discovered: [],
+            carryForwards: {},
+        };
+        existingInstances.forEachInstances = pageParts.forEachInstances;
+        (carryForward as any).__instances = existingInstances;
+    }
 
     // Write cache metadata for the main server (backend)
+    // The .jay-html stub is written alongside so readPreRenderedHtml can find the .cache.json.
+    const preRenderedPath = path.join(backendInstanceDir, `${instanceId}.jay-html`);
     const cacheMetadataPath = path.join(backendInstanceDir, `${instanceId}.cache.json`);
+    await fs.writeFile(preRenderedPath, '', 'utf-8');
     await fs.writeFile(
         cacheMetadataPath,
         JSON.stringify({
@@ -324,31 +232,16 @@ export async function buildInstance(
         'utf-8',
     );
 
-    logger.info(`[Build] Pre-rendered: ${routeDir}/${instanceId}`);
+    logger.info(`[Build] Instance data: ${routeDir}/${instanceId}`);
 
-    // 3. Compile server element + extract CSS (backend)
-    // With per-route server elements (DL#144), skip per-instance compilation
-    let serverElementResult: { cssFile?: string };
+    // 3. Server element is compiled per-route (DL#144), skip per-instance
     const serverElementPath = routeServerElementPath
         ? path.join(ctx.backendDir, routeServerElementPath)
         : path.join(backendInstanceDir, `${instanceId}.server-element.js`);
-    if (routeServerElementPath) {
-        serverElementResult = {};
-    } else {
-        serverElementResult = await compileServerElement(
-            preRenderedJayHtml,
-            `${instanceId}.jay-html`,
-            backendInstanceDir,
-            serverElementPath,
-            ctx.projectRoot,
-            ctx.tsConfigFilePath,
-            sourceDir,
-        );
-    }
+    let serverElementResult: { cssFile?: string } = {};
 
     // 4. Generate hydration entry (temporary, in backend dir for compilation)
     const hydrateEntryPath = path.join(backendInstanceDir, `${instanceId}.hydrate-entry.ts`);
-    const relativeJayHtmlPath = path.relative(backendInstanceDir, preRenderedPath);
 
     // For NPM plugin routes, use /client entry + component export name
     let pageModulePath: string;
@@ -373,8 +266,9 @@ export async function buildInstance(
         );
     }
 
+    const ROUTE_HYDRATE_KEY = 'jay-route-hydrate';
     await generateHydrationEntry({
-        jayHtmlPath: './' + relativeJayHtmlPath,
+        jayHtmlPath: './' + path.relative(backendInstanceDir, route.jayHtmlPath),
         pageModulePath,
         pageExportName,
         slowViewState,
@@ -382,6 +276,7 @@ export async function buildInstance(
         outputPath: hydrateEntryPath,
         keyedParts: pageParts.keyedPartModules,
         clientInits: ctx.clientInits,
+        routeHydrateImport: routeHydratePath ? ROUTE_HYDRATE_KEY : undefined,
     });
 
     // 5. Per-instance Vite build → frontend/pages/

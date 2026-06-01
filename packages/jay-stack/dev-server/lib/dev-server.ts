@@ -897,8 +897,6 @@ async function sendResponse(
         const jayHtmlDir = path.dirname(jayHtmlPath);
 
         // Inject headfull FS templates using the ORIGINAL source directory for resolution.
-        // The pre-rendered HTML may be in build/pre-rendered/, but contract and jay-html
-        // files are relative to the original page location.
         const sourceDir = path.dirname(sourceJayHtmlPath);
         jayHtmlContent = injectHeadfullFSTemplates(jayHtmlContent, sourceDir, JAY_IMPORT_RESOLVER);
 

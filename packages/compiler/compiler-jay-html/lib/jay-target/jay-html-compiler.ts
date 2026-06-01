@@ -1732,6 +1732,13 @@ export function generateElementHydrateFile(
     importerMode: MainRuntimeModes,
 ): WithValidations<string> {
     const types = generateTypes(jayFile.types);
+
+    // Pre-assign coordinates and refs before element compilation so the element
+    // compiler reads the same refs that the hydrate and server-element compilers use.
+    const headlessImports = jayFile.headlessImports?.filter((h) => !h.key) ?? [];
+    const headlessContractNames = new Set(headlessImports.map((h) => h.contractName));
+    assignCoordinates(jayFile.body, { headlessContractNames });
+
     const {
         renderedRefs,
         renderedElement,

@@ -174,8 +174,8 @@ export async function loadProductionPageParts(
             contractPath: hi.contractPath,
         }));
 
-    // Use pre-rendered jay-html for discovery — slowForEach items are already
-    // unrolled into static instances with coordinate keys matching carryForward.__instances.
+    // Discover headless instances from original jay-html (DL#144).
+    // assignCoordinates runs first to pre-assign refs that match the hydrate compiler.
     const jayHtmlForDiscovery = injectHeadfullFSTemplates(
         jayHtmlContent,
         dirName,
@@ -185,15 +185,11 @@ export async function loadProductionPageParts(
     let forEachInstances: ForEachHeadlessInstance[] = [];
 
     if (headlessInstanceComponents.length > 0) {
-        const firstDiscovery = discoverHeadlessInstances(jayHtmlForDiscovery);
         const contractNames = new Set(headlessInstanceComponents.map((c) => c.contractName));
-        const withCoords = assignCoordinatesToJayHtml(
-            firstDiscovery.preRenderedJayHtml,
-            contractNames,
-        );
-        const finalDiscovery = discoverHeadlessInstances(withCoords);
-        discoveredInstances = finalDiscovery.instances;
-        forEachInstances = finalDiscovery.forEachInstances;
+        const withCoords = assignCoordinatesToJayHtml(jayHtmlForDiscovery, contractNames);
+        const discovery = discoverHeadlessInstances(withCoords);
+        discoveredInstances = discovery.instances;
+        forEachInstances = discovery.forEachInstances;
     }
 
     return {

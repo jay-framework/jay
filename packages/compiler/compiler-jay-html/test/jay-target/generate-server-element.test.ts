@@ -147,7 +147,7 @@ describe('generate jay-html server element', () => {
             );
         });
 
-        it.skip('for headless instance inside slowForEach', async () => {
+        it('for headless instance inside slowForEach', async () => {
             const folder = 'contracts/page-with-headless-in-slow-foreach';
             const serverFile = await readFileAndGenerateServerElementFile(folder);
             expect(serverFile.validations).toEqual([]);
@@ -156,7 +156,7 @@ describe('generate jay-html server element', () => {
             );
         });
 
-        it.skip('for headless instance mixed (child, conditional, slowForEach)', async () => {
+        it('for headless instance mixed (child, conditional, slowForEach)', async () => {
             const folder = 'contracts/page-with-headless-mixed';
             const serverFile = await readFileAndGenerateServerElementFile(folder);
             expect(serverFile.validations).toEqual([]);

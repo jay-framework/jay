@@ -1,4 +1,4 @@
-import {escapeHtml, escapeAttr, type ServerRenderContext} from "@jay-framework/ssr-runtime";
+import { escapeHtml, escapeAttr, type ServerRenderContext } from '@jay-framework/ssr-runtime';
 
 export interface CategoryOfSlowForEachDynamicBindingsViewState {
     categoryId: string;
@@ -10,7 +10,10 @@ export interface SlowForEachDynamicBindingsViewState {
     categories: Array<CategoryOfSlowForEachDynamicBindingsViewState>;
 }
 
-export function renderToStream(vs: SlowForEachDynamicBindingsViewState, ctx: ServerRenderContext): void {
+export function renderToStream(
+    vs: SlowForEachDynamicBindingsViewState,
+    ctx: ServerRenderContext,
+): void {
     const { write: w } = ctx;
     w('<div');
     w(' class="filter-categories"');

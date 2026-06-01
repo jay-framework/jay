@@ -25,6 +25,8 @@ export interface RouteEntry {
     serverElementPath?: string;
     /** Per-route CSS file path (DL#144). Extracted from route-level server element compilation. */
     routeCssPath?: string;
+    /** Per-route hydrate script path (DL#144). Shared across all instances. */
+    routeHydratePath?: string;
     instances: InstanceEntry[];
     isPlugin?: boolean;
     pluginName?: string;
