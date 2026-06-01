@@ -9,7 +9,7 @@ import { makeJayAction, makeJayStream, type JayFile } from '@jay-framework/fulls
  * Upload a product image. Receives the file + metadata, returns file info.
  */
 export const uploadProductImage = makeJayAction('upload.productImage')
-    .withFiles({ maxFileSize: 5 * 1024 * 1024 }) // 5MB limit
+    .withFiles()
     .withHandler(async (input: { productName: string; image: JayFile }) => {
         const { productName, image } = input;
         console.log(`Uploaded file: ${productName} - ${image.name}`);

@@ -12,7 +12,6 @@ import type {
     JayStreamActionDefinition,
     HttpMethod,
     CacheOptions,
-    ActionError,
 } from '@jay-framework/fullstack-component';
 import { resolveServices } from './services';
 import type { ActionMetadata } from './action-metadata';
@@ -118,7 +117,9 @@ export class ActionRegistry {
             cacheOptions: action.cacheOptions,
             services: action.services as any[],
             handler: action.handler,
-            ...(action.acceptsFiles && { acceptsFiles: true }),
+            ...(action.acceptsFiles && {
+                acceptsFiles: true,
+            }),
         };
 
         this.actions.set(action.actionName, entry);
@@ -305,7 +306,9 @@ export class ActionRegistry {
             isStreaming: true,
             services: action.services as any[],
             handler: action.handler,
-            ...(action.acceptsFiles && { acceptsFiles: true }),
+            ...(action.acceptsFiles && {
+                acceptsFiles: true,
+            }),
         };
         this.actions.set(action.actionName, entry);
     }

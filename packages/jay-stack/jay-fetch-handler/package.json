@@ -17,7 +17,8 @@
   },
   "dependencies": {
     "@jay-framework/logger": "workspace:^",
-    "@jay-framework/production-server": "workspace:^"
+    "@jay-framework/production-server": "workspace:^",
+    "@jay-framework/stack-server-runtime": "workspace:^"
   },
   "devDependencies": {
     "@jay-framework/dev-environment": "workspace:^",

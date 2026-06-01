@@ -224,7 +224,7 @@ describe('transform-action-imports', () => {
                 import { makeJayStream } from '@jay-framework/fullstack-component';
 
                 export const submitTask = makeJayStream('aiditor.submitTask')
-                    .withFiles({ maxFileSize: 5000000 })
+                    .withFiles()
                     .withServices(AGENT_SERVICE)
                     .withHandler(async function* (input, agent) {
                         yield { status: 'done' };
