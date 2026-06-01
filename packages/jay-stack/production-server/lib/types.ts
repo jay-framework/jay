@@ -27,6 +27,8 @@ export interface RouteEntry {
     routeCssPath?: string;
     /** Per-route hydrate script path (DL#144). Shared across all instances. */
     routeHydratePath?: string;
+    /** Per-route client bundle path (DL#144). Entry that imports route hydrate script. */
+    routeClientBundlePath?: string;
     instances: InstanceEntry[];
     isPlugin?: boolean;
     pluginName?: string;

@@ -378,3 +378,38 @@ The dev server must also compile from original jay-html (not pre-rendered) to ma
 3. The hydrate script (`?jay-hydrate`) also compiles from original jay-html
 
 The `interactivePaths` check already handles phase-awareness correctly when a contract is present. When no contract exists, all bindings are treated as interactive (existing behavior, correct default).
+
+### Next: Eliminate per-instance client bundles
+
+Currently each instance still gets a thin hydrate entry that bakes `slowViewState` as a JSON literal and imports the shared route hydrate script. This produces a per-instance JS file that the browser loads.
+
+But the serve pipeline already passes `fastViewState` as a JSON argument in the inline `<script>` tag:
+
+```javascript
+await init(${JSON.stringify(fastViewState)}, ${JSON.stringify(fastCarryForward)}, ...);
+```
+
+The `slowViewState` can be passed the same way — the serve pipeline already has it from `cache.json`. The `init()` signature becomes:
+
+```javascript
+export function init(slowViewState, fastViewState, fastCarryForward, clientInitData) {
+    const viewState = deepMergeViewStates(slowViewState, fastViewState, trackByMap);
+    hydrate(viewState, ...);
+}
+```
+
+With `slowViewState` passed at serve time instead of baked at build time, the hydrate entry is identical across all instances — it IS the shared route hydrate script. No per-instance Vite build needed.
+
+This eliminates:
+
+- Per-instance hydrate entry generation (`generateHydrationEntry`)
+- Per-instance client Vite build (`buildInstanceClient`)
+- Per-instance JS files in `frontend/pages/`
+- The `jay-route-hydrate` import map key (the client bundle IS the route hydrate script)
+
+The build pipeline simplifies to:
+
+```
+Per route:  server-element.js + hydrate.js + route.css
+Per instance:  cache.json only
+```

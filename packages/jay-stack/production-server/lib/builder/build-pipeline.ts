@@ -6,6 +6,8 @@ import { loadProductionPageParts } from './load-production-parts';
 import { buildRouteEntry, discoverActions, writeRouteManifest } from './route-manifest';
 import { scanPluginRoutes } from './plugin-routes';
 import { compileRouteServerElement, compileRouteHydrateScript } from './server-element-compile';
+import { generateRouteHydrationEntry } from './hydration-entry-gen';
+import { buildInstanceClient } from './instance-client-build';
 import { runLoadParams } from '@jay-framework/stack-server-runtime';
 import {
     crossProductParams,
@@ -409,6 +411,62 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
             logger.important(`[Build] Route hydrate script: ${routeDir}`);
         } catch (err: any) {
             logger.error(`[Build] Route hydrate script FAILED ${route.rawRoute}: ${err.message}`);
+            continue;
+        }
+
+        // Compile per-route client bundle (hydrate entry + route hydrate script)
+        try {
+            const ROUTE_HYDRATE_KEY = 'jay-route-hydrate';
+            const exportName = (route as any).componentExport || 'page';
+            let pageModulePath = '';
+            if (route.compPath) {
+                if (route.componentExport) {
+                    const pkgName = route.packageName || route.compPath;
+                    pageModulePath = `${pkgName}/client`;
+                } else {
+                    pageModulePath = './' + path.relative(frontendRouteDir, route.compPath);
+                }
+            }
+
+            const pageParts = await loadProductionPageParts(
+                route,
+                {},
+                await fs.readFile(route.jayHtmlPath, 'utf-8'),
+                options.projectRoot,
+                options.tsConfigFilePath,
+                path.join(backendDir, 'server'),
+            );
+
+            const entryPath = path.join(frontendRouteDir, 'route.entry.ts');
+            await generateRouteHydrationEntry({
+                hydrateImport: ROUTE_HYDRATE_KEY,
+                pageModulePath,
+                pageExportName: exportName,
+                trackByMap: pageParts.clientTrackByMap || {},
+                outputPath: entryPath,
+                keyedParts: pageParts.keyedPartModules,
+                clientInits,
+            });
+
+            const clientResult = await buildInstanceClient(
+                entryPath,
+                'route.client',
+                frontendRouteDir,
+                options.projectRoot,
+                { tsConfigFilePath: options.tsConfigFilePath },
+                options.minify ?? true,
+                options.pagesRoot,
+                buildDir,
+            );
+            await fs.rm(entryPath, { force: true });
+
+            entry.routeClientBundlePath = path.relative(
+                frontendDir,
+                path.join(frontendRouteDir, clientResult.jsFile),
+            );
+            logger.important(`[Build] Route client bundle: ${routeDir}`);
+        } catch (err: any) {
+            logger.error(`[Build] Route client bundle FAILED ${route.rawRoute}: ${err.message}`);
         }
     }
 
@@ -441,6 +499,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
                     entry.serverElementPath,
                     entry.routeCssPath,
                     entry.routeHydratePath,
+                    entry.routeClientBundlePath,
                 );
                 if (result.status === 'success') {
                     entry.instances.push(result.instanceEntry);

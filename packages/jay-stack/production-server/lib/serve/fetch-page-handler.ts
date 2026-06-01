@@ -145,11 +145,16 @@ ${headParts}
             if (asyncScripts) write(asyncScripts);
 
             const clientInitData = getClientInitData();
-            const clientBundleUrl = `${staticBaseUrl}${instance.clientBundlePath}`;
+            const clientBundleUrl = route.routeClientBundlePath
+                ? `${staticBaseUrl}${route.routeClientBundlePath}`
+                : `${staticBaseUrl}${instance.clientBundlePath}`;
+            const initArgs = route.routeClientBundlePath
+                ? `${JSON.stringify(preRendered.slowViewState)}, ${JSON.stringify(fastViewState)}, ${JSON.stringify(fastCarryForward)}, ${JSON.stringify(clientInitData)}`
+                : `${JSON.stringify(fastViewState)}, ${JSON.stringify(fastCarryForward)}, ${JSON.stringify(clientInitData)}`;
             write(`
     <script type="module">
       import { init } from '${clientBundleUrl}';
-      await init(${JSON.stringify(fastViewState)}, ${JSON.stringify(fastCarryForward)}, ${JSON.stringify(clientInitData)});
+      await init(${initArgs});
     </script>
   </body>
 </html>`);

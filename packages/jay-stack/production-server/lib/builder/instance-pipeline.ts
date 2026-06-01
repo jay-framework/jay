@@ -3,29 +3,10 @@ import type { JayRollupConfig } from '@jay-framework/compiler-jay-stack';
 import type { JayRoute } from '@jay-framework/stack-route-scanner';
 import type { InstanceEntry } from '../types';
 import { loadProductionPageParts, buildPagePartsConfig } from './load-production-parts';
-import { generateHydrationEntry } from './hydration-entry-gen';
-import { buildInstanceClient } from './instance-client-build';
 import { getLogger } from '@jay-framework/logger';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import crypto from 'node:crypto';
-
-import fsSync from 'node:fs';
-
-function resolvePackageNameForRoute(compPath: string): string | undefined {
-    const dir = path.dirname(compPath);
-    for (const candidate of [dir, path.join(dir, '..')]) {
-        try {
-            const pkgJson = JSON.parse(
-                fsSync.readFileSync(path.join(candidate, 'package.json'), 'utf-8'),
-            );
-            if (pkgJson.name) return pkgJson.name;
-        } catch {
-            /* skip */
-        }
-    }
-    return undefined;
-}
 
 export interface ClientInitEntry {
     modulePath: string;
@@ -81,6 +62,7 @@ export async function buildInstance(
     routeServerElementPath?: string,
     routeCssPath?: string,
     routeHydratePath?: string,
+    routeClientBundlePath?: string,
 ): Promise<InstanceBuildResult> {
     const logger = getLogger();
     const routeDir = route.rawRoute.replace(/^\//, '') || 'index';
@@ -240,85 +222,14 @@ export async function buildInstance(
         : path.join(backendInstanceDir, `${instanceId}.server-element.js`);
     let serverElementResult: { cssFile?: string } = {};
 
-    // 4. Generate hydration entry (temporary, in backend dir for compilation)
-    const hydrateEntryPath = path.join(backendInstanceDir, `${instanceId}.hydrate-entry.ts`);
-
-    // For NPM plugin routes, use /client entry + component export name
-    let pageModulePath: string;
-    let pageExportName: string;
-    if (route.componentExport) {
-        const pkgName = resolvePackageNameForRoute(route.compPath!);
-        pageModulePath = pkgName
-            ? `${pkgName}/client`
-            : './' + path.relative(backendInstanceDir, route.compPath!);
-        pageExportName = route.componentExport;
-    } else if (route.compPath) {
-        pageModulePath = './' + path.relative(backendInstanceDir, route.compPath);
-        pageExportName = 'page';
-    } else {
-        pageModulePath = '';
-        pageExportName = '';
-    }
-
-    if (pageParts.keyedPartModules.length > 0) {
-        logger.info(
-            `[Build] Keyed parts for ${routeDir}: ${pageParts.keyedPartModules.map((p) => p.key).join(', ')}`,
-        );
-    }
-
-    const ROUTE_HYDRATE_KEY = 'jay-route-hydrate';
-    await generateHydrationEntry({
-        jayHtmlPath: './' + path.relative(backendInstanceDir, route.jayHtmlPath),
-        pageModulePath,
-        pageExportName,
-        slowViewState,
-        trackByMap: pageParts.clientTrackByMap || {},
-        outputPath: hydrateEntryPath,
-        keyedParts: pageParts.keyedPartModules,
-        clientInits: ctx.clientInits,
-        routeHydrateImport: routeHydratePath ? ROUTE_HYDRATE_KEY : undefined,
-    });
-
-    // 5. Per-instance Vite build → frontend/pages/
-    const clientResult = await buildInstanceClient(
-        hydrateEntryPath,
-        instanceId,
-        frontendInstanceDir,
-        ctx.projectRoot,
-        ctx.jayOptions,
-        ctx.minify ?? true,
-        ctx.pagesRoot,
-        ctx.buildDir,
-    );
-
-    await fs.rm(hydrateEntryPath, { force: true });
-
-    // Move CSS from server element compile (if any) to frontend
-    const cssFile = clientResult.cssFile || serverElementResult.cssFile;
-    if (serverElementResult.cssFile && !clientResult.cssFile) {
-        const srcCss = path.join(backendInstanceDir, serverElementResult.cssFile);
-        const dstCss = path.join(frontendInstanceDir, serverElementResult.cssFile);
-        try {
-            await fs.rename(srcCss, dstCss);
-        } catch {
-            await fs.copyFile(srcCss, dstCss);
-            await fs.rm(srcCss, { force: true });
-        }
-    }
-
-    const instanceCssPath = cssFile
-        ? path.relative(ctx.frontendDir, path.join(frontendInstanceDir, cssFile))
-        : routeCssPath;
+    // 4. Client bundle is compiled per-route (DL#144), skip per-instance
 
     const instanceEntry: InstanceEntry = {
         params,
         preRenderedPath: path.relative(ctx.backendDir, preRenderedPath),
         serverElementPath: path.relative(ctx.backendDir, serverElementPath),
-        clientBundlePath: path.relative(
-            ctx.frontendDir,
-            path.join(frontendInstanceDir, clientResult.jsFile),
-        ),
-        clientCssPath: instanceCssPath,
+        clientBundlePath: routeClientBundlePath || '',
+        clientCssPath: routeCssPath,
     };
 
     return { status: 'success', instanceEntry, slowViewState, carryForward, contracts };
