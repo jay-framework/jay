@@ -1,0 +1,51 @@
+items:
+  - id: ui-kit:popover-menu
+    title: Popover menu
+    category: UI Kit
+    subCategory: Components
+    pluginName: ui-kit
+    packageName: "@jay-framework/ui-kit"
+    prompt: |
+      Use headless component @jay-framework/ui-kit / contract popover-menu.
+      Read agent-kit/designer/popover-menu.md for import, refs (trigger, popover), and CSS.
+      Hover-triggered dropdown; for click-triggered popups use click-popover.md (pure HTML).
+
+  - id: ui-kit:scroll-carousel
+    title: Scroll carousel
+    category: UI Kit
+    subCategory: Components
+    pluginName: ui-kit
+    packageName: "@jay-framework/ui-kit"
+    prompt: |
+      Use headless component @jay-framework/ui-kit / contract scroll-carousel.
+      Read agent-kit/designer/scroll-carousel.md for import, refs (container, prev, next), and ViewState (atStart, atEnd).
+
+  - id: ui-kit:clipboard-copy
+    title: Clipboard copy
+    category: UI Kit
+    subCategory: Components
+    pluginName: ui-kit
+    packageName: "@jay-framework/ui-kit"
+    prompt: |
+      Use headless component @jay-framework/ui-kit / contract clipboard-copy.
+      Read agent-kit/designer/clipboard-copy.md for import, copyBtn ref, text prop, and copied ViewState.
+
+  - id: ui-kit:word-split
+    title: Word split
+    category: UI Kit
+    subCategory: Typography
+    pluginName: ui-kit
+    packageName: "@jay-framework/ui-kit"
+    prompt: |
+      Use headless component @jay-framework/ui-kit / contract word-split.
+      Read agent-kit/designer/word-split.md for import, text prop, words loop, and accessibility (aria-label).
+
+  - id: ui-kit:letter-split
+    title: Letter split
+    category: UI Kit
+    subCategory: Typography
+    pluginName: ui-kit
+    packageName: "@jay-framework/ui-kit"
+    prompt: |
+      Use headless component @jay-framework/ui-kit / contract letter-split.
+      Read agent-kit/designer/letter-split.md for import, text prop, letters loop, and accessibility (aria-label).

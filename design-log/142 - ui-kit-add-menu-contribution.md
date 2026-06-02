@@ -2,7 +2,7 @@
 
 ## Status
 
-**Ready (M19.3)** — execution-ready when ui-kit work starts; **does not block** M19.1 (aiditor + wix-stores). Parent: [jay-aiditor #19](../../jay-aiditor/design-log/19%20-%20aiditor-add-menu.md). Start after aiditor **A2** (scanner) lands.
+**Done (U1–U3)** — 2026-06-02. Parent: [jay-aiditor #19](../../jay-aiditor/design-log/19%20-%20aiditor-add-menu.md). **Does not block** M19.1 (aiditor + wix-stores).
 
 **Note:** ui-kit lives in **jay** monorepo (`packages/plugins/ui-kit`), not wix. **wix-media out of scope.**
 
@@ -148,6 +148,20 @@ Defer until product requests M19.3 Effects parity with aiditor #19 `ui-kit:sprin
 | 3 | Add Menu shows UI Kit after re-fetch (with aiditor) |
 | 4 | Marker-scoped attachment → visual-prompt block (aiditor A8 + A10 #3) |
 | 5 | No Q8 route UI for ui-kit-only attachments |
+
+## Implementation Results (2026-06-02)
+
+| Task | Status | Notes |
+| --- | --- | --- |
+| U1 | Done | `lib/setup.ts`, `setupUiKit` in `plugin.yaml` + `lib/index.ts` |
+| U2 | Done | `agent-kit/aiditor/add-menu.template.yaml` — 5 items |
+| U3 | Done | `test/setup-add-menu.test.ts` — 4/4 passing; no aiditor import |
+| U4 | Deferred | Effects/skills (P2) |
+
+### Smoke (with aiditor on jay-golf)
+
+1. `jay-stack setup ui-kit` → `agent-kit/aiditor/add-menu/ui-kit.yaml`
+2. `/aiditor` → Add Menu → **UI Kit** category shows 5 items
 
 ## References
 

@@ -24,3 +24,7 @@ contracts:
     contract: letter-split.jay-contract
     component: letterSplit
     description: Splits text into a span per letter for individual letter styling
+
+setup:
+  handler: setupUiKit
+  description: Install ui-kit Add Menu catalog for AIditor
