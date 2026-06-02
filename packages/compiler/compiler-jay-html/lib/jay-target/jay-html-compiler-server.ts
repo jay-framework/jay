@@ -23,10 +23,8 @@ import {
     checkAsync,
     ensureSingleChildElement,
     getComponentName,
-    getSlowForEachInfo,
     isConditional,
     isForEach,
-    isSlowForEach,
 } from './jay-html-helpers';
 import { generateTypes } from './jay-html-compile-types';
 import { Indent } from './indent';
@@ -45,7 +43,6 @@ import {
     escapeForJsString,
     validateAsyncAccessor,
     validateForEachAccessor,
-    validateSlowForEachAccessor,
     findHtmlStringBindings,
 } from './jay-html-compiler-shared';
 import {
@@ -180,47 +177,6 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
         );
     }
 
-    // --- slowForEach (pre-rendered slow-phase forEach items) ---
-    // Used by dev server which still compiles from pre-rendered jay-html.
-    // Production build compiles from original jay-html (DL#144) where these don't appear.
-    if (isSlowForEach(element)) {
-        const slowForEachInfo = getSlowForEachInfo(element);
-        if (slowForEachInfo) {
-            const { arrayName, jayIndex } = slowForEachInfo;
-            const slowValidated = validateSlowForEachAccessor(arrayName, variables);
-            if (isValidationError(slowValidated)) return slowValidated;
-            const { accessor: arrayAccessor, childVariables: slowForEachVariables } = slowValidated;
-            const arrayExpr = arrayAccessor.render().rendered;
-            const itemVar = slowForEachVariables.currentVar;
-            const itemContext: ServerContext = {
-                ...context,
-                variables: slowForEachVariables,
-                indent,
-            };
-            const childContent = renderServerElementContent(element, itemContext, {
-                isRoot: true,
-            });
-            const needsItemVar = childContent.rendered.includes(itemVar + '.');
-            if (needsItemVar) {
-                const itemIndent = new Indent(indent.curr + '    ');
-                const indentedContext: ServerContext = {
-                    ...context,
-                    variables: slowForEachVariables,
-                    indent: itemIndent,
-                };
-                const indentedContent = renderServerElementContent(element, indentedContext, {
-                    isRoot: true,
-                });
-                return new RenderFragment(
-                    `${indent.firstLine}{ const ${itemVar} = ${arrayExpr}?.[${jayIndex}]; if (${itemVar}) {\n${indentedContent.rendered}\n${indent.firstLine}}}`,
-                    indentedContent.imports,
-                    [...arrayAccessor.validations, ...indentedContent.validations],
-                );
-            }
-            return childContent;
-        }
-    }
-
     // --- Async directives are handled by the parent's child processing ---
     // when-loading, when-resolved, when-rejected are never reached here
     // because renderServerElementContent groups them and handles them directly.
@@ -258,7 +214,7 @@ function renderServerHeadlessInstance(
 
     // Compute __headlessInstances lookup key (DL#126).
     // With scoped coordinates, the key is the full jay-coordinate-base value
-    // for static and slowForEach instances. For forEach, the key includes the
+    // for static instances. For forEach, the key includes the
     // runtime trackBy value.
     let instanceKeyExpr: string;
 
@@ -271,7 +227,7 @@ function renderServerHeadlessInstance(
                 : 'undefined';
         instanceKeyExpr = `String(${trackByExpr}) + ',${coordinateSuffix}'`;
     } else {
-        // Static or slowForEach: use the full instance coordinate as key
+        // Static: use the full instance coordinate as key
         instanceKeyExpr = `'${instanceCoord}'`;
     }
 

@@ -34,10 +34,8 @@ import {
     checkAsync,
     ensureSingleChildElement,
     getComponentName,
-    getSlowForEachInfo,
     isConditional,
     isForEach,
-    isSlowForEach,
 } from './jay-html-helpers';
 import { Indent } from './indent';
 import {
@@ -58,7 +56,6 @@ import {
     resolveHeadlessImport,
     textEscape,
     validateForEachAccessor,
-    validateSlowForEachAccessor,
     findHtmlStringBindings,
 } from './jay-html-compiler-shared';
 import {
@@ -95,8 +92,6 @@ interface HydrateContext {
     headlessInstanceCounter: { count: number };
     /** Whether we're inside a forEach (affects coordinate key format) */
     insideFastForEach: boolean;
-    /** Whether we're inside a slowForEach (affects instance key computation) */
-    insideSlowForEach: boolean;
     /** Property paths whose phase is 'fast+interactive' — only these need client adoption */
     interactivePaths: Set<string>;
 }
@@ -236,7 +231,6 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
                 _.nodeType === NodeType.ELEMENT_NODE &&
                 (isConditional(_ as HTMLElement) ||
                     isForEach(_ as HTMLElement) ||
-                    isSlowForEach(_ as HTMLElement) ||
                     checkAsync(_ as HTMLElement).isAsync),
         );
         const createElementFunc = needDynamicElement ? 'de' : 'e';
@@ -488,7 +482,6 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
                 _.nodeType === NodeType.ELEMENT_NODE &&
                 (isConditional(_ as HTMLElement) ||
                     isForEach(_ as HTMLElement) ||
-                    isSlowForEach(_ as HTMLElement) ||
                     checkAsync(_ as HTMLElement).isAsync),
         );
         const forEachElementFunc = forEachNeedsDynamic ? 'de' : 'e';
@@ -525,131 +518,6 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         );
         // Nest refs under the forEach access path, matching the standard element target
         return nestRefs(forEachAccessor.terms, hydrateForEachFragment);
-    }
-
-    // --- slowForEach (pre-rendered slow-phase forEach items) ---
-    if (isSlowForEach(element)) {
-        const slowForEachInfo = getSlowForEachInfo(element);
-        if (!slowForEachInfo) {
-            return new RenderFragment('', Imports.none(), [
-                `slowForEach element is missing required attributes (slowForEach, jayIndex, jayTrackBy)`,
-            ]);
-        }
-
-        const { arrayName, jayIndex, jayTrackBy } = slowForEachInfo;
-        const { variables, indent } = context;
-
-        const slowValidated = validateSlowForEachAccessor(arrayName, variables);
-        if (isValidationError(slowValidated)) return slowValidated;
-        const { accessor: arrayAccessor, childVariables: slowForEachVariables } = slowValidated;
-        const parentTypeName = variables.currentType.name;
-        const itemTypeName = slowForEachVariables.currentType.name;
-        const paramName = arrayAccessor.rootVar;
-        const getItemsFragment = arrayAccessor
-            .render()
-            .map((_) => `(${paramName}: ${parentTypeName}) => ${_}`);
-
-        // Render element content in the item's variable scope.
-        // With scoped coordinates (DL#126), children read their own jay-coordinate-base
-        // which is already fully-qualified within the item's scope (e.g., "S3/0").
-        const itemContext: HydrateContext = {
-            ...context,
-            variables: slowForEachVariables,
-            indent: indent.child().child(),
-            dynamicRef: true,
-            insideSlowForEach: true,
-        };
-        // Process children individually to determine if wrapping is needed (DL#115).
-        // slowForEachItem's callback must return a single BaseJayElement. When there are
-        // multiple dynamic children, wrap in adoptElement to provide a single return value.
-        const itemChildNodes = filterContentNodes(element.childNodes);
-        const childFragments = itemChildNodes.map((child) => renderHydrateNode(child, itemContext));
-        const nonEmptyChildren = childFragments.filter((f) => f.rendered.trim());
-
-        // Drop fully static items — nothing to adopt
-        if (nonEmptyChildren.length === 0) {
-            return RenderFragment.empty();
-        }
-
-        let callbackBody: string;
-        let callbackImports = Imports.none();
-        let callbackValidations: string[] = [];
-        let callbackRefs: RefsTree | undefined;
-
-        if (nonEmptyChildren.length === 1) {
-            // Single dynamic child — use directly, no wrapper needed
-            callbackBody = nonEmptyChildren[0].rendered.trim();
-            callbackImports = nonEmptyChildren[0].imports;
-            callbackValidations = [...nonEmptyChildren[0].validations];
-            callbackRefs = nonEmptyChildren[0].refs;
-        } else {
-            // Multiple dynamic children — wrap in adoptElement/adoptDynamicElement.
-            // The '' coordinate resolves to coordinateBase itself (the jayTrackBy value),
-            // matching the jay-coordinate attribute on the slow forEach item's root element.
-            //
-            // Check if any child is a dynamic group (conditional/forEach) that needs
-            // Kindergarten for DOM positioning. If so, use adoptDynamicElement with STATIC
-            // sentinels for non-dynamic children.
-            const hasDynamicGroups = itemChildNodes.some(
-                (child) =>
-                    child.nodeType === NodeType.ELEMENT_NODE &&
-                    ((isConditional(child as HTMLElement) &&
-                        conditionIsInteractive(
-                            (child as HTMLElement).getAttribute('if'),
-                            itemContext.interactivePaths,
-                        )) ||
-                        isForEach(child as HTMLElement) ||
-                        isSlowForEach(child as HTMLElement)),
-            );
-
-            if (hasDynamicGroups) {
-                // adoptDynamicElement with STATIC sentinels for proper Kindergarten positioning
-                const childParts: string[] = [];
-                for (let i = 0; i < childFragments.length; i++) {
-                    const frag = childFragments[i];
-                    if (frag.rendered.trim()) {
-                        childParts.push(frag.rendered);
-                        callbackImports = callbackImports.plus(frag.imports);
-                        callbackValidations.push(...frag.validations);
-                        if (frag.refs)
-                            callbackRefs = callbackRefs
-                                ? mergeRefsTrees(callbackRefs, frag.refs)
-                                : frag.refs;
-                    } else if (itemChildNodes[i].nodeType === NodeType.ELEMENT_NODE) {
-                        childParts.push(`${indent.firstLine}        STATIC`);
-                        callbackImports = callbackImports.plus(Import.STATIC);
-                    }
-                }
-                const childrenArr = childParts.join(',\n');
-                // Use the slowForEach item's scoped coordinate for the wrapper element
-                const itemCoord = element.getAttribute(COORD_ATTR) || '';
-                callbackBody = `adoptDynamicElement('${itemCoord}', {}, [\n${childrenArr},\n${indent.firstLine}    ])`;
-                callbackImports = callbackImports.plus(Import.adoptDynamicElement);
-            } else {
-                // No dynamic groups — plain adoptElement suffices
-                const itemCoord = element.getAttribute(COORD_ATTR) || '';
-                const childrenArr = nonEmptyChildren.map((f) => f.rendered).join(',\n');
-                callbackBody = `adoptElement('${itemCoord}', {}, [\n${childrenArr},\n${indent.firstLine}    ])`;
-                for (const f of nonEmptyChildren) {
-                    callbackImports = callbackImports.plus(f.imports);
-                    callbackValidations.push(...f.validations);
-                    if (f.refs)
-                        callbackRefs = callbackRefs ? mergeRefsTrees(callbackRefs, f.refs) : f.refs;
-                }
-                callbackImports = callbackImports.plus(Import.adoptElement);
-            }
-        }
-
-        const slowForEachFragment = new RenderFragment(
-            `${indent.firstLine}slowForEachItem<${parentTypeName}, ${itemTypeName}>(${getItemsFragment.rendered}, ${jayIndex}, '${jayTrackBy}',\n${indent.firstLine}() => ${callbackBody}\n${indent.firstLine})`,
-            Imports.for(Import.slowForEachItem)
-                .plus(getItemsFragment.imports)
-                .plus(callbackImports),
-            [...getItemsFragment.validations, ...callbackValidations],
-            callbackRefs,
-        );
-
-        return nestRefs(arrayName.split('.'), slowForEachFragment);
     }
 
     // --- Async directives (when-loading, when-resolved, when-rejected) ---
@@ -730,12 +598,12 @@ function renderHydrateHeadlessInstance(
 
     // Compute instance key for __headlessInstances lookup.
     // With scoped coordinates (DL#126), the key is the full jay-coordinate-base value
-    // for static and slowForEach instances. For forEach, the key is computed at runtime.
+    // for static instances. For forEach, the key is computed at runtime.
     let coordinateKey: string | undefined;
     if (isInsideForEach) {
         coordinateKey = undefined; // forEach: key computed at runtime
     } else {
-        // Static or slowForEach: use the full instance coordinate as key
+        // Static: use the full instance coordinate as key
         coordinateKey = instanceCoord;
     }
 
@@ -839,7 +707,7 @@ ${adoptInlineBody.rendered}
     } else {
         adoptComponentSymbol = `_Headless${pascal}${idx}`;
         // Use the __headlessInstances key (not full DOM coordinate) for data lookup.
-        // Static: 'widget:0', slowForEach: 'p1/widget:0'
+        // Static: 'widget:0'
         adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName},\n    '${coordinateKey}',\n);`;
     }
 
@@ -1390,7 +1258,6 @@ export function renderHydrate(
         headlessInstanceDefs: [],
         headlessInstanceCounter: { count: 0 },
         insideFastForEach: false,
-        insideSlowForEach: false,
         interactivePaths: buildInteractivePaths(contract),
     };
 

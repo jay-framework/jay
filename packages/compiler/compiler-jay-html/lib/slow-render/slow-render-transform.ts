@@ -287,55 +287,6 @@ function transformElement(
     contextData: Record<string, unknown>,
 ): WithValidations<HTMLElement[]> {
     // Handle forEach directive
-    const forEachAttr = element.getAttribute('forEach');
-    if (forEachAttr) {
-        const fullPath = contextPath ? `${contextPath}.${forEachAttr}` : forEachAttr;
-        const phaseInfo = phaseMap.get(fullPath);
-
-        // If the array is explicitly slow phase, unroll it.
-        // Without phase info (no contract), forEach is not slow — leave for SSR (DL#108).
-        if (phaseInfo?.phase === 'slow') {
-            const arrayValue = getValueByPath(contextData, forEachAttr);
-
-            if (Array.isArray(arrayValue)) {
-                const trackBy = element.getAttribute('trackBy') || 'id';
-
-                // Process each array item and collect results
-                const itemResults = arrayValue.map((item, index): WithValidations<HTMLElement> => {
-                    // Clone the element
-                    const cloned = element.clone() as HTMLElement;
-
-                    // Remove forEach and trackBy, add slowForEach with jay* attributes
-                    cloned.removeAttribute('forEach');
-                    cloned.removeAttribute('foreach');
-                    cloned.removeAttribute('trackBy');
-                    cloned.removeAttribute('trackby');
-                    cloned.setAttribute('slowForEach', forEachAttr);
-                    cloned.setAttribute('jayIndex', String(index));
-
-                    // Get trackBy value
-                    const trackByValue =
-                        item && typeof item === 'object'
-                            ? String((item as any)[trackBy] || index)
-                            : String(index);
-                    cloned.setAttribute('jayTrackBy', trackByValue);
-
-                    // Transform children with new context
-                    const itemData = item as Record<string, unknown>;
-                    return transformChildren(cloned, phaseMap, fullPath, itemData).map(
-                        (children) => {
-                            cloned.innerHTML = '';
-                            children.forEach((child) => cloned.appendChild(child as any));
-                            return cloned;
-                        },
-                    );
-                });
-
-                return WithValidations.all(itemResults);
-            }
-        }
-    }
-
     // Handle if directive (slow conditional)
     const ifAttr = element.getAttribute('if');
     if (ifAttr) {

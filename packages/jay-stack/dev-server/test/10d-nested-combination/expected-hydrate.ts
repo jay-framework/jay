@@ -2,7 +2,9 @@ import {
     element as e,
     dynamicText as dt,
     ReferencesManager,
-    slowForEachItem,
+    conditional as c,
+    dynamicElement as de,
+    forEach,
     ConstructContext,
     adoptText,
     adoptElement,
@@ -29,55 +31,54 @@ export function hydrate(rootElement, options) {
     });
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('S0/0', {}, [
-                slowForEachItem(
+            adoptDynamicElement('S0/0', {}, [
+                STATIC,
+                hydrateForEach(
                     (vs) => vs.categories,
-                    0,
-                    'c1',
-                    () =>
-                        adoptDynamicElement('S1/0', {}, [
+                    '_id',
+                    'S0/0/1',
+                    () => [
+                        adoptDynamicElement('S0/0/1', {}, [
                             STATIC,
-                            STATIC,
+                            ...(viewState.showDetails ? [adoptElement('S1/1', {}, [])] : []),
                             hydrateConditional(
                                 (vs1) => vs1.isActive,
-                                () => adoptElement('S1/0/2', {}, []),
+                                () => adoptElement('S1/2', {}, []),
                                 () => e('span', { class: 'active-badge' }, ['Active']),
                             ),
                             hydrateForEach(
                                 (vs1) => vs1.items,
                                 '_id',
-                                'S1/0/3',
+                                'S1/3',
                                 () => [adoptText('S2/0', (vs2) => vs2.label)],
                                 (vs2) => {
                                     return e('ul', {}, [e('li', {}, [dt((vs22) => vs22.label)])]);
                                 },
                             ),
-                            adoptElement('S1/0/4', {}, [], refToggleButton()),
+                            adoptElement('S1/4', {}, [], refToggleButton()),
                         ]),
-                ),
-                slowForEachItem(
-                    (vs) => vs.categories,
-                    1,
-                    'c2',
-                    () =>
-                        adoptDynamicElement('S3/0', {}, [
-                            STATIC,
-                            hydrateConditional(
-                                (vs1) => vs1.isActive,
-                                () => adoptElement('S3/0/1', {}, []),
+                    ],
+                    (vs1) => {
+                        return de('div', { class: 'category' }, [
+                            e('h2', {}, [dt((vs12) => vs12.name)]),
+                            c(
+                                (vs12) => vs12.showDetails,
+                                () => e('p', { class: 'details' }, ['Details visible']),
+                            ),
+                            c(
+                                (vs12) => vs12.isActive,
                                 () => e('span', { class: 'active-badge' }, ['Active']),
                             ),
-                            hydrateForEach(
-                                (vs1) => vs1.items,
-                                '_id',
-                                'S3/0/2',
-                                () => [adoptText('S4/0', (vs2) => vs2.label)],
+                            forEach(
+                                (vs12) => vs12.items,
                                 (vs2) => {
                                     return e('ul', {}, [e('li', {}, [dt((vs22) => vs22.label)])]);
                                 },
+                                '_id',
                             ),
-                            adoptElement('S3/0/3', {}, [], refToggleButton()),
-                        ]),
+                            e('button', {}, ['Toggle'], refToggleButton()),
+                        ]);
+                    },
                 ),
             ]),
         );

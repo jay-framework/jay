@@ -422,31 +422,6 @@ describe('generate jay-html element', () => {
             );
         });
 
-        it('generate element file with headless component instance inside slowForEach', async () => {
-            const folder = 'contracts/page-with-headless-in-slow-foreach';
-            const elementFile = await readFileAndGenerateElementFile(folder);
-            expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(
-                await prettify(
-                    await readFixtureFileRaw(
-                        folder,
-                        'page-with-headless-in-slow-foreach.jay-html.ts',
-                    ),
-                ),
-            );
-        });
-
-        it('generate element file with headless component instances mixed: child, conditional, slowForEach', async () => {
-            const folder = 'contracts/page-with-headless-mixed';
-            const elementFile = await readFileAndGenerateElementFile(folder);
-            expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(
-                await prettify(
-                    await readFixtureFileRaw(folder, 'page-with-headless-mixed.jay-html.ts'),
-                ),
-            );
-        });
-
         it('generate element file with headless component instance with multiple children', async () => {
             const folder = 'contracts/page-with-headless-multi-child';
             const elementFile = await readFileAndGenerateElementFile(folder);

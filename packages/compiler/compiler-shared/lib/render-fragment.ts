@@ -17,7 +17,7 @@ export interface RefsTree {
 
 export function mergeRefsTrees(...trees: RefsTree[]): RefsTree {
     // Deduplicate refs by constName — the same ref appearing in multiple sibling
-    // trees (e.g., slowForEach items) is the same binding, not separate refs.
+    // trees (e.g., forEach items) is the same binding, not separate refs.
     // When duplicates exist, prefer the repeated (collection) variant.
     // Only deduplicate when constName is set (some targets like react use null).
     const refsByConstName = new Map<string, Ref>();

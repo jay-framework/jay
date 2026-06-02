@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
     compileCoordinateExpr,
     isStaticCoordinate,
-    computeInstanceKey,
     compileForEachInstanceKeyExpr,
     computeForEachInstanceKey,
 } from '../lib';
@@ -60,20 +59,6 @@ describe('isStaticCoordinate', () => {
     it('should return false for dynamic coordinates', () => {
         expect(isStaticCoordinate('0/$_id/1')).toBe(false);
         expect(isStaticCoordinate('$_id')).toBe(false);
-    });
-});
-
-describe('computeInstanceKey', () => {
-    it('should return suffix for static instances', () => {
-        expect(computeInstanceKey('product-card:0', 'static')).toBe('product-card:0');
-    });
-
-    it('should return prefix/suffix for slowForEach instances', () => {
-        expect(computeInstanceKey('product-card:0', 'slowForEach', 'p1')).toBe('p1/product-card:0');
-    });
-
-    it('should return undefined for forEach instances (runtime-computed)', () => {
-        expect(computeInstanceKey('product-card:0', 'forEach')).toBeUndefined();
     });
 });
 

@@ -11,6 +11,7 @@ import {
     // @ts-ignore
 } from '/@fs{{ROOT}}/packages/runtime/runtime/dist/index.js';
 export function hydrate(rootElement, options) {
+    const [slowItemsRefManager, []] = ReferencesManager.for(options, [], [], [], []);
     const [fastItemsRefManager, []] = ReferencesManager.for(options, [], [], [], []);
     const [fastMixedItemsRefManager, [refIncrement]] = ReferencesManager.for(
         options,
@@ -33,6 +34,7 @@ export function hydrate(rootElement, options) {
         [],
         [],
         {
+            slowItems: slowItemsRefManager,
             fastItems: fastItemsRefManager,
             fastMixedItems: fastMixedItemsRefManager,
             interactiveItems: interactiveItemsRefManager,
@@ -41,13 +43,25 @@ export function hydrate(rootElement, options) {
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('S0/0', {}, [
+                adoptDynamicElement('S0/0/1', {}, [
+                    STATIC,
+                    hydrateForEach(
+                        (vs) => vs.slowItems,
+                        '_id',
+                        'S0/0/1/1',
+                        () => [adoptText('S1/0', (vs1) => vs1.label)],
+                        (vs1) => {
+                            return e('ul', {}, [e('li', {}, [dt((vs12) => vs12.label)])]);
+                        },
+                    ),
+                ]),
                 adoptDynamicElement('S0/0/2', {}, [
                     STATIC,
                     hydrateForEach(
                         (vs) => vs.fastItems,
                         '_id',
                         'S0/0/2/1',
-                        () => [adoptText('S3/0', (vs1) => vs1.label)],
+                        () => [adoptText('S2/0', (vs1) => vs1.label)],
                         (vs1) => {
                             return e('ul', {}, [e('li', {}, [dt((vs12) => vs12.label)])]);
                         },
@@ -60,9 +74,9 @@ export function hydrate(rootElement, options) {
                         '_id',
                         'S0/0/3/1',
                         () => [
-                            adoptText('S4/0', (vs1) => vs1.label),
-                            adoptText('S4/1', (vs1) => vs1.count),
-                            adoptElement('S4/2', {}, [], refIncrement()),
+                            adoptText('S3/0', (vs1) => vs1.label),
+                            adoptText('S3/1', (vs1) => vs1.count),
+                            adoptElement('S3/2', {}, [], refIncrement()),
                         ],
                         (vs1) => {
                             return e('div', { class: 'item' }, [
@@ -80,9 +94,9 @@ export function hydrate(rootElement, options) {
                         '_id',
                         'S0/0/4/1',
                         () => [
-                            adoptText('S5/0', (vs1) => vs1.label),
-                            adoptText('S5/1', (vs1) => vs1.count),
-                            adoptElement('S5/2', {}, [], refIncrement2()),
+                            adoptText('S4/0', (vs1) => vs1.label),
+                            adoptText('S4/1', (vs1) => vs1.count),
+                            adoptElement('S4/2', {}, [], refIncrement2()),
                         ],
                         (vs1) => {
                             return e('div', { class: 'item' }, [

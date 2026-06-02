@@ -123,9 +123,6 @@ const DIRECTIVE_ATTRIBUTES = new Set([
     'trackby',
     'ref',
     'slow',
-    'slowforeach',
-    'jayindex',
-    'jaytrackby',
     'jay-coordinate-base',
     'jay-scope',
     AsyncDirectiveTypes.loading.directive,
@@ -171,26 +168,6 @@ export function validateForEachAccessor(
     if (!isArrayType(accessor.resolvedType))
         return new RenderFragment('', Imports.none(), [
             `forEach directive - resolved forEach type is not an array [forEach=${forEach}]`,
-        ]);
-    return { accessor, childVariables: variables.childVariableFor(accessor) };
-}
-
-/**
- * Parse and validate a slowForEach accessor expression. Returns the parsed accessor
- * and child variables, or a RenderFragment error if validation fails.
- */
-export function validateSlowForEachAccessor(
-    arrayName: string,
-    variables: Variables,
-): ValidatedArrayAccessor | RenderFragment {
-    const accessor = parseAccessor(arrayName, variables);
-    if (accessor.resolvedType === JayUnknown)
-        return new RenderFragment('', Imports.none(), [
-            `slowForEach directive - failed to resolve array type [slowForEach=${arrayName}]`,
-        ]);
-    if (!isArrayType(accessor.resolvedType))
-        return new RenderFragment('', Imports.none(), [
-            `slowForEach directive - resolved type is not an array [slowForEach=${arrayName}]`,
         ]);
     return { accessor, childVariables: variables.childVariableFor(accessor) };
 }

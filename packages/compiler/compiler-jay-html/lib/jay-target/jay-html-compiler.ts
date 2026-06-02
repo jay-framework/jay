@@ -55,8 +55,6 @@ import {
     ensureSingleChildElement,
     isConditional,
     isForEach,
-    isSlowForEach,
-    getSlowForEachInfo,
     isRecurse,
     isRecurseWithData,
     isWithData,
@@ -91,7 +89,6 @@ import {
     findHtmlStringBindings,
     validateAsyncAccessor,
     validateForEachAccessor,
-    validateSlowForEachAccessor,
 } from './jay-html-compiler-shared';
 import { renderBridge, renderSandboxRoot } from './jay-html-compiler-bridge';
 import { renderHydrate } from './jay-html-compiler-hydrate';
@@ -138,7 +135,7 @@ export interface RenderContext {
     headlessImports: JayHeadlessImports[]; // Full headless imports (for headless instance compilation)
     headlessInstanceDefs: HeadlessInstanceDefinition[]; // Accumulator for inline template definitions
     headlessInstanceCounter: { count: number }; // Shared counter for unique naming
-    coordinatePrefix: string[]; // Accumulated jayTrackBy values from ancestor slowForEach elements
+    coordinatePrefix: string[]; // Accumulated coordinate prefix values from ancestor elements
     coordinateCounters: Map<string, number>; // Scope-level counter per prefix+contractName for unique coordinates
 }
 
@@ -616,7 +613,6 @@ export function renderNode(node: Node, context: RenderContext): RenderFragment {
                 (_) =>
                     isConditional(_) ||
                     isForEach(_) ||
-                    isSlowForEach(_) ||
                     isRecurseWithData(_) ||
                     isWithData(_) ||
                     checkAsync(_).isAsync,
@@ -1142,62 +1138,6 @@ const ${componentSymbol} = makeHeadlessInstanceComponent(
                     forEachAccessPath,
                     renderForEach(forEachFragment, forEachVariables, trackBy, childElement),
                 );
-            } else if (isSlowForEach(htmlElement)) {
-                // Handle pre-rendered slow array items
-                const slowForEachInfo = getSlowForEachInfo(htmlElement);
-                if (!slowForEachInfo) {
-                    return new RenderFragment('', Imports.none(), [
-                        `slowForEach element is missing required attributes (slowForEach, jayIndex, jayTrackBy)`,
-                    ]);
-                }
-
-                const { arrayName, jayIndex, jayTrackBy } = slowForEachInfo;
-
-                // Parse the array accessor to get type info
-                const slowValidated = validateSlowForEachAccessor(arrayName, variables);
-                if (isValidationError(slowValidated)) return slowValidated;
-                const { accessor: arrayAccessor, childVariables: slowForEachVariables } =
-                    slowValidated;
-
-                // Track the iteration type as a used component import
-                context.usedComponentImports.add(slowForEachVariables.currentType.name);
-
-                let newContext = {
-                    ...context,
-                    variables: slowForEachVariables,
-                    indent: indent.child().noFirstLineBreak().withLastLineBreak(),
-                    dynamicRef: true,
-                    isInsideGuard: true, // Mark that we're inside a guard
-                    coordinatePrefix: [...context.coordinatePrefix, jayTrackBy],
-                };
-
-                // Render the element (without the slowForEach directive attributes)
-                let childElement = renderHtmlElement(htmlElement, newContext);
-
-                // Get type names for generic parameters
-                const parentTypeName = variables.currentType.name;
-                const itemTypeName = slowForEachVariables.currentType.name;
-
-                // Generate accessor function similar to regular forEach
-                // This handles nested paths like productSearch.filters.categoryFilter.categories
-                const paramName = arrayAccessor.rootVar;
-                const getItemsFragment = arrayAccessor
-                    .render()
-                    .map((_) => `(${paramName}: ${parentTypeName}) => ${_}`);
-
-                // Wrap with slowForEachItem - element is wrapped in a function for context setup
-                // Include generic types to ensure proper TypeScript inference
-                const slowForEachFragment = new RenderFragment(
-                    `${indent.firstLine}slowForEachItem<${parentTypeName}, ${itemTypeName}>(${getItemsFragment.rendered}, ${jayIndex}, '${jayTrackBy}',\n${indent.firstLine}() => ${childElement.rendered}\n${indent.firstLine})`,
-                    childElement.imports
-                        .plus(Import.slowForEachItem)
-                        .plus(getItemsFragment.imports),
-                    [...getItemsFragment.validations, ...childElement.validations],
-                    childElement.refs,
-                    childElement.recursiveRegions,
-                );
-
-                return nestRefs(arrayName.split('.'), slowForEachFragment);
             } else if (checkAsync(htmlElement).isAsync) {
                 const asyncDirective = checkAsync(htmlElement);
                 const asyncProperty = htmlElement.getAttribute(asyncDirective.directive);
