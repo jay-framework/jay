@@ -362,13 +362,16 @@ This reduces the initial JS parse/execute cost. The creation code is loaded only
 ## Pending
 
 ### Dev server alignment
+
 The dev server still compiles from pre-rendered jay-html. Aligning it with production requires:
+
 1. `generateSSRPageHtml` receives original jay-html + merged slow+fast ViewState
 2. Server element cache keys on source jay-html path
 3. Hydrate script (`?jay-hydrate`) compiled from original jay-html
 4. The `interactivePaths` empty-set issue: when a contract has only slow properties, `interactivePaths` is empty — same as "no contract". The compiler can't distinguish and treats all bindings as interactive. Needs a nullable `interactivePaths` or a `hasContract` flag.
 
 ### Dead code removal
+
 - Remove `slowForEachItem` from `@jay-framework/runtime`
 - Remove `isSlowForEach`/`getSlowForEachInfo` handlers from all three compilers (server, hydrate, element)
 - Remove forEach unrolling from `slowRenderTransform`
@@ -377,13 +380,16 @@ The dev server still compiles from pre-rendered jay-html. Aligning it with produ
 - Update/remove test fixtures using unrolled `slowForEach` format
 
 ### Test fixture rewrites
+
 Fixtures still using unrolled `slowForEach` format:
+
 - `contracts/page-with-headless-in-slow-foreach` (element, hydrate, server-element)
 - `contracts/page-with-mixed-static-slow-foreach` (hydrate, server-element)
 - `contracts/page-with-fully-static-slow-foreach` (element, hydrate)
 - `contracts/page-with-headless-mixed` (element, hydrate, server-element)
 
 ### Upload action investigation
+
 File upload actions return 400 in production serve for the fake-shop `/upload` page. Unrelated to DL144 — action callers are correctly compiled. May be a pre-existing issue with the production action router's multipart handling (works in dev server).
 
 ## Revised Phase Model: Simplified Compilation

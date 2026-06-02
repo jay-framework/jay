@@ -41,10 +41,16 @@ function _headlessHeader1HydrateRender(options) {
 const _HeadlessHeader1 = makeHeadlessInstanceComponent(
     _headlessHeader1HydrateRender,
     header,
-    'S3/0/header:AR0',
+    'S3/0/header:AR1',
 );
 export function hydrate(rootElement, options) {
-    const [itemsRefManager, [refAr0]] = ReferencesManager.for(options, [], [], [], ['ar0']);
+    const [itemsRefManager, [refAr0, refAr1]] = ReferencesManager.for(
+        options,
+        [],
+        [],
+        [],
+        ['ar0', 'ar1'],
+    );
     const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
         items: itemsRefManager,
     });
@@ -72,7 +78,7 @@ export function hydrate(rootElement, options) {
                             _HeadlessHeader1,
                             (vs1) => ({ itemId: '2', style: 'display: contents' }),
                             'S4/0',
-                            refAr0(),
+                            refAr1(),
                         ),
                 ),
             ]),

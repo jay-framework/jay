@@ -61,7 +61,6 @@ import {
     getServiceRegistry,
     materializeContracts,
     slowRenderInstances,
-    validateForEachInstances,
     type HeadlessInstanceComponent,
     type InstancePhaseData,
     type ForEachHeadlessInstance,
@@ -552,17 +551,20 @@ async function handleCachedRequest(
         renderedFast.headTags ??
         mergeHeadTags((cachedEntry.carryForward as any)?.__slowHeadTags ?? []);
 
-    // Only fast+interactive viewState (slow is baked into jay-html)
-    // Use the pre-rendered file path so Vite compiles it
-    // Pass slowViewState so automation can show full merged state
+    // DL#144: compile from original jay-html with merged slow+fast ViewState
+    const fullViewState = deepMergeViewStates(
+        cachedEntry.slowViewState,
+        fastViewState,
+        clientTrackByMap || {},
+    );
     await sendResponse(
         vite,
         res,
         url,
-        cachedEntry.preRenderedPath,
+        route.jayHtmlPath,
         route.jayHtmlPath,
         pageParts,
-        fastViewState,
+        fullViewState,
         fastCarryForward,
         clientTrackByMap,
         projectInit,
@@ -572,7 +574,7 @@ async function handleCachedRequest(
         getRouteDir(route),
         cachedEntry.slowViewState,
         timing,
-        cachedEntry.preRenderedContent,
+        undefined,
         headTags,
     );
 }
@@ -890,20 +892,15 @@ async function sendResponse(
     let pageHtml: string;
 
     try {
-        // Try SSR: server-render HTML + hydration script
-        // Use pre-loaded content if available (from cache with tag already stripped)
-        let jayHtmlContent = preLoadedContent ?? (await fs.readFile(jayHtmlPath, 'utf-8'));
-        const jayHtmlFilename = path.basename(jayHtmlPath);
+        // SSR: compile from original jay-html with merged ViewState (DL#144)
         const jayHtmlDir = path.dirname(jayHtmlPath);
-
-        // Inject headfull FS templates using the ORIGINAL source directory for resolution.
-        const sourceDir = path.dirname(sourceJayHtmlPath);
-        jayHtmlContent = injectHeadfullFSTemplates(jayHtmlContent, sourceDir, JAY_IMPORT_RESOLVER);
+        let jayHtmlContent = preLoadedContent ?? (await fs.readFile(jayHtmlPath, 'utf-8'));
+        jayHtmlContent = injectHeadfullFSTemplates(jayHtmlContent, jayHtmlDir, JAY_IMPORT_RESOLVER);
 
         pageHtml = await generateSSRPageHtml(
             vite,
             jayHtmlContent,
-            jayHtmlFilename,
+            path.basename(jayHtmlPath),
             jayHtmlDir,
             viewState,
             jayHtmlPath,
@@ -922,8 +919,7 @@ async function sendResponse(
                 slowViewState,
                 routePattern,
             },
-            // Pass source directory for headfull FS file resolution when using pre-rendered path
-            jayHtmlDir !== sourceDir ? sourceDir : undefined,
+            undefined,
             headTags,
         );
     } catch (err) {
@@ -1154,30 +1150,19 @@ async function preRenderJayHtml(
     let forEachInstances: ForEachHeadlessInstance[] | undefined;
 
     if (headlessInstanceComponents.length > 0) {
-        // Discovery first (assigns ref attributes on <jay:xxx> tags), then coordinate
-        // assignment reads those refs to produce consistent scoped coordinates (DL#126).
-        const discoveryResult = discoverHeadlessInstances(preRenderedJayHtml);
-        // Use the HTML with embedded ref attributes
-        const htmlWithRefs = discoveryResult.preRenderedJayHtml;
-        // Assign scoped coordinates — now jay-coordinate-base is set on all elements
+        // DL#144: discover from original jay-html (not pre-rendered) so forEach instances
+        // get trackBy-based keys matching the hydrate script compiled from original.
         const headlessContractNameSet = new Set(
             headlessInstanceComponents.map((c) => c.contractName),
         );
-        preRenderedJayHtml = assignCoordinatesToJayHtml(htmlWithRefs, headlessContractNameSet);
-        // Re-discover to pick up the jay-coordinate-base values for key computation
-        const finalDiscovery = discoverHeadlessInstances(preRenderedJayHtml);
-        // Validate: forEach instances must not have slow phases
+        const withCoords = assignCoordinatesToJayHtml(
+            jayHtmlWithTemplates,
+            headlessContractNameSet,
+        );
+        const finalDiscovery = discoverHeadlessInstances(withCoords);
+        // DL#144: forEach instances (including those with slow phases) are handled
+        // at serve time by the fast render runner, which calls slowlyRender + fastRender.
         if (finalDiscovery.forEachInstances.length > 0) {
-            const validationErrors = validateForEachInstances(
-                finalDiscovery.forEachInstances,
-                headlessInstanceComponents,
-            );
-            if (validationErrors.length > 0) {
-                getLogger().error(
-                    `[SlowRender] ForEach instance validation failed: ${validationErrors.join(', ')}`,
-                );
-                return undefined;
-            }
             forEachInstances = finalDiscovery.forEachInstances;
         }
 
@@ -1217,7 +1202,7 @@ async function preRenderJayHtml(
                     componentByContractName.set(comp.contractName, comp);
                 }
                 instancePhaseData = {
-                    discovered: discoveryResult.instances
+                    discovered: finalDiscovery.instances
                         .filter((i) => componentByContractName.has(i.contractName))
                         .map((i) => {
                             const comp = componentByContractName.get(i.contractName)!;

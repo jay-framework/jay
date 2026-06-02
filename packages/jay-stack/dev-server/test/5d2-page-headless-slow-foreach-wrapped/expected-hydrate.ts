@@ -41,10 +41,16 @@ function _headlessWidget1HydrateRender(options) {
 const _HeadlessWidget1 = makeHeadlessInstanceComponent(
     _headlessWidget1HydrateRender,
     widget,
-    'S3/0/0/widget:AR0',
+    'S3/0/0/widget:AR1',
 );
 export function hydrate(rootElement, options) {
-    const [itemsRefManager, [refAr0]] = ReferencesManager.for(options, [], [], [], ['ar0']);
+    const [itemsRefManager, [refAr0, refAr1]] = ReferencesManager.for(
+        options,
+        [],
+        [],
+        [],
+        ['ar0', 'ar1'],
+    );
     const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
         items: itemsRefManager,
     });
@@ -72,7 +78,7 @@ export function hydrate(rootElement, options) {
                             _HeadlessWidget1,
                             (vs1) => ({ itemId: '2' }),
                             'S4/0',
-                            refAr0(),
+                            refAr1(),
                         ),
                 ),
             ]),
