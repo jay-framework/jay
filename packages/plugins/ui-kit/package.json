@@ -29,7 +29,8 @@
     "build:check-types": "tsc",
     "clean": "rimraf dist",
     "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@jay-framework/component": "workspace:^",
@@ -43,10 +44,11 @@
     "@jay-framework/compiler-jay-stack": "workspace:^",
     "@jay-framework/dev-environment": "workspace:^",
     "@jay-framework/jay-cli": "workspace:^",
+    "@types/node": "^20.11.5",
     "js-yaml": "^4.1.0",
     "rimraf": "^5.0.5",
     "typescript": "^5.3.3",
     "vite": "^5.0.11",
-    "vitest": "^3.2.4"
+    "vitest": "^1.2.1"
   }
 }

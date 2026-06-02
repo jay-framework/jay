@@ -163,6 +163,17 @@ Defer until product requests M19.3 Effects parity with aiditor #19 `ui-kit:sprin
 1. `jay-stack setup ui-kit` → `agent-kit/aiditor/add-menu/ui-kit.yaml`
 2. `/aiditor` → Add Menu → **UI Kit** category shows 5 items
 
+### Verify tests locally
+
+From jay monorepo root (installs vitest into the ui-kit workspace):
+
+```bash
+cd jay && yarn install
+cd packages/plugins/ui-kit && yarn test test/setup-add-menu.test.ts
+```
+
+Or scoped package confirm: `yarn workspace @jay-framework/ui-kit confirm`
+
 ## References
 
 - jay **#132** (ui-kit primitives), jay-aiditor **#19**, jay **#87** (setup)

@@ -4,5 +4,5 @@
     "outDir": "dist",
     "lib": ["ES2022", "DOM"],
   },
-  "include": ["lib"],
+  "include": ["lib", "test"],
 }

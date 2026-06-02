@@ -14,7 +14,7 @@ import { fileURLToPath } from 'url';
 import { load as loadYaml } from 'js-yaml';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { PluginSetupContext } from '@jay-framework/stack-server-runtime';
-import { setupUiKit } from '../lib/setup.js';
+import { setupUiKit } from '../lib/setup';
 
 // Canonical shape reference (no @jay-framework/aiditor import):
 // jay-aiditor/packages/aiditor/test/fixtures/add-menu/valid-item.yaml
