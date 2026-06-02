@@ -246,7 +246,7 @@ function renderServerHeadlessInstance(
     }
 
     // Create a context for the inline template with the instance's ViewState.
-    // Children read their own jay-coordinate-base — no coordinatePrefix needed.
+
     // Use the headless component's contract for interactivePaths — the widget's bindings
     // are resolved against the widget's contract, not the page's contract.
     const bodyIndent = ifCondition

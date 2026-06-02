@@ -138,7 +138,6 @@ function buildRenderContext(context: HydrateContext): RenderContext {
         headlessInstanceDefs: context.headlessInstanceDefs,
         headlessInstanceCounter: context.headlessInstanceCounter,
         // Element target still uses its own coordinate logic (DL#103: out of scope)
-        coordinatePrefix: [],
         coordinateCounters: new Map(),
     };
 }
@@ -743,7 +742,6 @@ ${adoptInlineBody.rendered}
             // inside headfull FS component templates can be detected (DL#123)
             headlessContractNames: renderContext.headlessContractNames,
             headlessImports: renderContext.headlessImports,
-            coordinatePrefix: [],
             coordinateCounters: new Map(),
         };
 

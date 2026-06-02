@@ -545,7 +545,7 @@ export interface HeadlessInstanceResolvedData {
 /**
  * Build the coordinate prefix from ancestor slowForEach jayTrackBy values.
  * Only collects jayTrackBy values — intermediate element indices are NOT included.
- * This matches the element target's coordinatePrefix which only accumulates jayTrackBy.
+
  */
 export function buildCoordinatePrefix(element: HTMLElement): string[] {
     const parts: string[] = [];

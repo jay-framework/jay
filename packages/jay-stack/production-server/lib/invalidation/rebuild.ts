@@ -295,11 +295,7 @@ function paramsMatch(
 
 function collectInstanceFiles(instance: InstanceEntry): string[] {
     if (!instance.cachePath) return [];
-    const files = [
-        instance.cachePath,
-        instance.serverElementPath,
-        instance.clientBundlePath,
-    ];
+    const files = [instance.cachePath, instance.serverElementPath, instance.clientBundlePath];
     if (instance.clientCssPath) files.push(instance.clientCssPath);
     return files.filter(Boolean);
 }

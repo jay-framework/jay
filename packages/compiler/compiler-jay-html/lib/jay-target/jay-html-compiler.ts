@@ -135,8 +135,7 @@ export interface RenderContext {
     headlessImports: JayHeadlessImports[]; // Full headless imports (for headless instance compilation)
     headlessInstanceDefs: HeadlessInstanceDefinition[]; // Accumulator for inline template definitions
     headlessInstanceCounter: { count: number }; // Shared counter for unique naming
-    coordinatePrefix: string[]; // Accumulated coordinate prefix values from ancestor elements
-    coordinateCounters: Map<string, number>; // Scope-level counter per prefix+contractName for unique coordinates
+    coordinateCounters: Map<string, number>;
 }
 
 function renderFunctionDeclaration(preRenderType: string): string {
@@ -873,7 +872,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
         if (explicitRef) {
             coordinateRef = explicitRef;
         } else {
-            const counterKey = [...newContext.coordinatePrefix, contractName].join('/');
+            const counterKey = contractName;
             const localIndex = newContext.coordinateCounters.get(counterKey) ?? 0;
             newContext.coordinateCounters.set(counterKey, localIndex + 1);
             coordinateRef = `AR${localIndex}`;
@@ -886,7 +885,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
         const instanceCoordBase = htmlElement.getAttribute('jay-coordinate-base');
         const coordinateKey = isInsideForEach
             ? undefined // will use factory
-            : instanceCoordBase || [...newContext.coordinatePrefix, coordinateSuffix].join('/');
+            : instanceCoordBase || coordinateSuffix;
 
         // Generate type aliases and render function code
         const renderFnCode = `
@@ -1326,7 +1325,6 @@ function renderFunctionImplementation(
             headlessImports, // Full headless imports for instance compilation
             headlessInstanceDefs, // Accumulator for inline template definitions
             headlessInstanceCounter, // Counter for unique naming
-            coordinatePrefix: [], // Root has empty coordinate prefix
             coordinateCounters: new Map(), // Scope-level counter for unique coordinates
         });
 

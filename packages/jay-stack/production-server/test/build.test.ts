@@ -190,16 +190,10 @@ describe('per-instance artifacts', () => {
         const widgetB = items.instances.find((i) => i.params.slug === 'widget-b')!;
 
         const cacheA = JSON.parse(
-            await fs.readFile(
-                path.join(backendDir, widgetA.cachePath),
-                'utf-8',
-            ),
+            await fs.readFile(path.join(backendDir, widgetA.cachePath), 'utf-8'),
         );
         const cacheB = JSON.parse(
-            await fs.readFile(
-                path.join(backendDir, widgetB.cachePath),
-                'utf-8',
-            ),
+            await fs.readFile(path.join(backendDir, widgetB.cachePath), 'utf-8'),
         );
 
         expect(cacheA.slowViewState.name).toBe('Widget A');

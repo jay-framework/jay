@@ -52,7 +52,6 @@ import {
     Contract,
     JAY_IMPORT_RESOLVER,
     discoverHeadlessInstances,
-    resolveHeadlessInstances,
     injectHeadfullFSTemplates,
     assignCoordinatesToJayHtml,
 } from '@jay-framework/compiler-jay-html';
@@ -1053,14 +1052,10 @@ interface PreRenderResult {
 // InstancePhaseData is now imported from stack-server-runtime
 
 /**
- * Pre-render the jay-html with slow viewState.
- *
- * Uses a two-pass pipeline:
- * - Pass 1: Resolve page-level slow bindings, unroll slow forEach
- * - Pass 2: Discover headless instances, call slowlyRender for each, resolve instance bindings
+ * Discover and slow-render headless instances from the original jay-html (DL#144).
  *
  * @param route - The route containing the jay-html path
- * @param slowViewState - The slow phase view state data
+ * @param slowViewState - The slow phase view state data (unused, kept for signature compat)
  * @param headlessContracts - Key-based headless contracts (from loadPageParts)
  * @param headlessInstanceComponents - Instance-only headless components (from loadPageParts)
  * @param partKeys - Keys from keyed page parts (plugins), used to distinguish plugin data from page-level data
@@ -1072,51 +1067,7 @@ async function preRenderJayHtml(
     headlessInstanceComponents: HeadlessInstanceComponent[],
     partKeys: string[] = [],
 ): Promise<PreRenderResult | undefined> {
-    // Read the original jay-html
     const jayHtmlContent = await fs.readFile(route.jayHtmlPath, 'utf-8');
-
-    // Try to load and parse the main contract for phase detection
-    const contractPath = route.jayHtmlPath.replace('.jay-html', '.jay-contract');
-    let contract: Contract | undefined;
-
-    try {
-        const contractContent = await fs.readFile(contractPath, 'utf-8');
-        // Contract file exists - parse it (errors should fail the function)
-        const parseResult = parseContract(contractContent, path.basename(contractPath));
-        if (parseResult.val) {
-            contract = parseResult.val;
-        } else if (parseResult.validations.length > 0) {
-            getLogger().error(
-                `[SlowRender] Contract parse error for ${contractPath}: ${parseResult.validations.join(', ')}`,
-            );
-            return undefined;
-        }
-    } catch (error) {
-        // File doesn't exist - that's OK, continue without contract
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-            // Some other error (permissions, etc.) - log and fail
-            getLogger().error(`[SlowRender] Error reading contract ${contractPath}: ${error}`);
-            return undefined;
-        }
-    }
-
-    // Warn if slow data is provided without a contract (DL#108).
-    // Without a contract, slow render resolves nothing — the data is silently ignored.
-    // Skip warning when slowViewState only contains keyed part data (plugins) —
-    // plugins have their own contracts and don't need the page-level contract.
-    const hasPageLevelSlowData =
-        slowViewState && Object.keys(slowViewState).some((k) => !partKeys.includes(k));
-    if (!contract && hasPageLevelSlowData) {
-        getLogger().warn(
-            `[SlowRender] Page ${route.jayHtmlPath} has slow ViewState but no contract. ` +
-                `Without a contract, slow bindings cannot be resolved. ` +
-                `Move data to withFastRender or add a .jay-contract file with phase annotations.`,
-        );
-    }
-
-    // Inject headfull FS component templates into the HTML before slow render.
-    // This ensures instance bindings in headfull FS templates are resolved during pre-rendering,
-    // just like inline templates in headless instances.
     const sourceDir = path.dirname(route.jayHtmlPath);
     const jayHtmlWithTemplates = injectHeadfullFSTemplates(
         jayHtmlContent,
@@ -1124,7 +1075,19 @@ async function preRenderJayHtml(
         JAY_IMPORT_RESOLVER,
     );
 
-    // ── Pass 1: Resolve page-level slow bindings ──
+    // slowRenderTransform still runs for the dev server's slow render cache.
+    // It resolves slow text bindings and conditionals in the cached HTML file.
+    // forEach unrolling was removed in DL#144.
+    let contract: Contract | undefined;
+    const contractPath = route.jayHtmlPath.replace('.jay-html', '.jay-contract');
+    try {
+        const contractContent = await fs.readFile(contractPath, 'utf-8');
+        const parseResult = parseContract(contractContent, path.basename(contractPath));
+        if (parseResult.val) contract = parseResult.val;
+    } catch {
+        // No contract file
+    }
+
     const result = slowRenderTransform({
         jayHtmlContent: jayHtmlWithTemplates,
         slowViewState: slowViewState as Record<string, unknown>,
@@ -1143,15 +1106,11 @@ async function preRenderJayHtml(
         return undefined;
     }
 
-    let preRenderedJayHtml = result.val.preRenderedJayHtml;
+    const preRenderedJayHtml = result.val.preRenderedJayHtml;
     let instancePhaseData: InstancePhaseData | undefined;
-
-    // ── Pass 2: Resolve headless instance bindings ──
     let forEachInstances: ForEachHeadlessInstance[] | undefined;
 
     if (headlessInstanceComponents.length > 0) {
-        // DL#144: discover from original jay-html (not pre-rendered) so forEach instances
-        // get trackBy-based keys matching the hydrate script compiled from original.
         const headlessContractNameSet = new Set(
             headlessInstanceComponents.map((c) => c.contractName),
         );
@@ -1160,8 +1119,7 @@ async function preRenderJayHtml(
             headlessContractNameSet,
         );
         const finalDiscovery = discoverHeadlessInstances(withCoords);
-        // DL#144: forEach instances (including those with slow phases) are handled
-        // at serve time by the fast render runner, which calls slowlyRender + fastRender.
+
         if (finalDiscovery.forEachInstances.length > 0) {
             forEachInstances = finalDiscovery.forEachInstances;
         }
@@ -1171,31 +1129,10 @@ async function preRenderJayHtml(
                 finalDiscovery.instances,
                 headlessInstanceComponents,
             );
-
             if (slowResult) {
                 instancePhaseData = slowResult.instancePhaseData;
-
-                // Apply instance data to resolve bindings in inline templates
-                // Uses the ref-annotated HTML so resolveHeadlessInstances can read refs
-                const pass2Result = resolveHeadlessInstances(
-                    preRenderedJayHtml,
-                    slowResult.resolvedData,
-                    JAY_IMPORT_RESOLVER,
-                );
-
-                if (pass2Result.val) {
-                    preRenderedJayHtml = pass2Result.val;
-                }
-
-                if (pass2Result.validations.length > 0) {
-                    getLogger().error(
-                        `[SlowRender] Instance resolution warnings for ${route.jayHtmlPath}: ${pass2Result.validations.join(', ')}`,
-                    );
-                }
             }
 
-            // Always populate instancePhaseData with all discovered instances (DL#109).
-            // Even without slow data, instances need to be visible to the fast phase.
             if (!instancePhaseData) {
                 const componentByContractName = new Map<string, HeadlessInstanceComponent>();
                 for (const comp of headlessInstanceComponents) {

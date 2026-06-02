@@ -2,7 +2,6 @@ import type { RouteManifest, CacheEntry, ServerElementModule } from '../types';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-
 /**
  * Interface for reading build artifacts at serve time (DL#143).
  * FilesystemArtifactStore is the default implementation.
