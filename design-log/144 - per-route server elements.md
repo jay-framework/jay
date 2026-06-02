@@ -291,106 +291,82 @@ This reduces the initial JS parse/execute cost. The creation code is loaded only
 6. **Serve-time performance** — equal or better
 7. **forEach correctness** — varying item counts across instances of the same route render and hydrate correctly
 
-## Implementation Status
+## Implementation Status — ✅ Complete
 
-### Phase 1: Server element from original jay-html — ✅ complete
+### Phase 1: Server element from original jay-html
 
-- `compileRouteServerElement()` added to `server-element-compile.ts` — compiles from original jay-html, resolves paths via `resolveJayHtmlPaths` (HTML parser, relative paths per DL#143)
-- Server element compiler: removed `isSlowForEach` handler, `slowForEachScope`, `insideSlowForEach`. All `forEach` (slow or fast) compiles as regular loop with shared scope
-- `'slow'` added to `DIRECTIVE_ATTRIBUTES` (filtered from HTML output)
-- Build pipeline (`build-pipeline.ts`): Step 3b compiles route server element before per-instance loop
-- Instance pipeline (`instance-pipeline.ts`): accepts `routeServerElementPath`/`routeCssPath`, skips per-instance server element compilation
-- Serve pipeline (`fetch-page-handler.ts`): uses `route.serverElementPath` (falls back to `instance.serverElementPath`)
-- Types: `serverElementPath` and `routeCssPath` added to `RouteEntry`
-- Test fixtures `collections/slow-for-each` and `collections/slow-for-each-dynamic-bindings` converted from unrolled `slowForEach` to `forEach` format with updated expected outputs
-- 2 server element tests skipped (use unrolled `slowForEach` format, pending rewrite)
-- All 647 compiler-jay-html tests pass
+- `compileRouteServerElement()` compiles from original jay-html with `resolveJayHtmlPaths` (DL#143)
+- All `forEach` (slow or fast) compiles as regular loop with shared scope
+- Build pipeline compiles route server element before per-instance loop
+- Serve pipeline uses `route.serverElementPath`
 
-### Phase 2: Hydrate script from original jay-html — in progress
+### Phase 2: Per-route hydrate script + client bundle
 
-- `compileRouteHydrateScript()` added, compiles hydrate target from original jay-html
-- Build pipeline compiles route hydrate before per-instance loop, stores `routeHydratePath` on `RouteEntry`
-- Hydrate entry imports shared module via `jay-route-hydrate` import map key (external in instance build)
-- Serve pipeline adds `jay-route-hydrate` to import map
-- Fix: `preserveEntrySignatures: 'exports-only'` prevents Vite from tree-shaking the `hydrate` export
-- Smoke tests 39/39 pass, production-server 85/85 pass
-- Known issue: fake-shop slowForEach page broken — headless instances inside forEach don't render
+- `compileRouteHydrateScript()` compiles hydrate target from original jay-html using `jayStackCompiler` (resolves plugin `/client` subpath imports)
+- `generateRouteHydrationEntry()` generates per-route entry accepting `slowViewState` as parameter
+- Route client bundle compiled once per route — no per-instance Vite builds
+- Serve pipeline passes `slowViewState` to `init()` in inline script
+- `jay-route-hydrate` import map key for shared hydrate module
+- Build output: `route.server-element.js` + `route.hydrate.js` + `route.client.js` + `route.css` per route, `cache.json` per instance
 
-### Phase 2 completed — per-instance client bundles eliminated
+### Phase 2b: Non-interactive conditional guards
 
-- `generateRouteHydrationEntry()` generates a per-route entry that accepts `slowViewState` as a parameter (not baked)
-- Route client bundle compiled once per route in `build-pipeline.ts` via `buildInstanceClient`
-- Instance pipeline no longer generates hydrate entries or runs per-instance Vite builds — only produces `cache.json`
-- Serve pipeline passes `slowViewState` to `init()` in the inline script
-- `jayStackCompiler` used for route hydrate build (instead of `jayRuntime`) — resolves plugin `/client` subpath imports via `plugin-client-import-resolver`
-- Build output: 2 JS files per route (`route.hydrate` + `route.client`) instead of N per instance
+- Hydrate compiler wraps adoption of non-interactive conditionals: `...(condition ? [adoptElement(...)] : [])`
+- Server element emits `jay-coordinate` on ALL conditional elements
+- `assignCoordinates` called before `renderFunctionImplementation` in `generateElementHydrateFile`
 
-### Phase 2b — non-interactive conditional guards
+### Phase 3: CSS deduplication
 
-- Hydrate compiler wraps adoption of non-interactive conditional elements with spread guard: `...(condition ? [adoptElement(...)] : [])`
-- Uses `parseServerCondition` with `viewState` variable (the hydrate render function parameter) for the guard expression
-- Server element compiler emits `jay-coordinate` on ALL conditional elements (not just interactive ones) so hydrate can find them
-- `assignCoordinates` called before `renderFunctionImplementation` in `generateElementHydrateFile` to ensure consistent ref assignment across compilers
+- CSS extracted once per route, stored as `routeCssPath` on `RouteEntry`
 
-### Phase 3: CSS deduplication — complete
+### Phase 4: Eliminate slowRenderTransform from compilation
 
-- CSS extracted once per route during `compileRouteServerElement`, stored as `routeCssPath` on `RouteEntry`
-- All instances reference the shared route CSS
+- Production build: instance pipeline discovers headless instances from original jay-html, no `slowRenderTransform`
+- Dev server: `slowRenderTransform` still runs for slow render cache (resolves slow bindings/conditionals), forEach unrolling removed
+- `resolveHeadlessInstances` removed from dev server (instance data no longer baked into HTML)
+- `validateForEachInstances` removed — slow-phase components in forEach handled at serve time
 
-### Phase 4: Remove slowRenderTransform from compilation path — partial
+### Phase 5: Dead code removal
 
-- Instance pipeline no longer calls `slowRenderTransform` — discovers headless instances from original jay-html via `loadProductionPageParts`
-- `assignCoordinatesToJayHtml` runs before `discoverHeadlessInstances` in `loadProductionPageParts` to ensure consistent ref assignment
-- forEach instances stored in `carryForward.__instances.forEachInstances` for serve-time processing
-- Empty `.jay-html` stub files still written alongside `cache.json` (compatibility shim for `readPreRenderedHtml`)
+Removed:
+- `slowForEachItem` from `@jay-framework/runtime`
+- `isSlowForEach`/`getSlowForEachInfo` from all three compilers and helpers
+- `validateSlowForEachAccessor` from compiler-shared
+- `computeInstanceKey` from coordinates
+- `validateForEachInstances` from stack-server-runtime
+- `generateHydrationEntry` (per-instance version)
+- forEach unrolling from `slowRenderTransform`
+- `slowForEach`/`jayIndex`/`jayTrackBy` coordinate assignment from `assignCoordinates`
+- `coordinatePrefix` from element compiler's `RenderContext`
+- Empty `.jay-html` stub files — `InstanceEntry.preRenderedPath` replaced with `cachePath`
+- `PreRenderedEntry` type replaced with `CacheEntry`, `readPreRenderedHtml` replaced with `readCacheData`
+- `extractCacheMetadata` and `CACHE_TAG` constants from artifact store
+- 4 stale fixture directories, 20+ tests, 2 test files
 
-### Phase 5: Clean up dead code — not started
+### Phase 6: Dev server alignment
 
-- `isSlowForEach`/`getSlowForEachInfo` handlers still in element and hydrate compilers
-- `isSlowForEach` handler in server element compiler kept for dev server backward compat
-- `slowForEachItem` still in runtime
-- forEach unrolling still in `slowRenderTransform`
-- `generateHydrationEntry` (per-instance version) still exists alongside `generateRouteHydrationEntry`
+- `handleCachedRequest` passes original `route.jayHtmlPath` + merged slow+fast ViewState
+- `sendResponse` reads original jay-html directly
+- Headless instance discovery from original jay-html with `assignCoordinatesToJayHtml` first
+- All 674 dev-server tests pass
 
-### Phase 6: Tests — in progress
+### Phase 7: Consolidate module loading
 
-- Compiler-jay-html: 649 pass, 4 skipped
+- `loadModule(modulePath, local?)` added to `ArtifactStore` interface
+- `loadPagePartsFromConfig` delegates all imports through `artifacts.loadModule`
+- `FilesystemArtifactStore.loadModule` resolves local paths from `basePath`, npm via bare `import()`
+- BaaS implementations resolve all modules from pre-bundled registry
+
+### Test results
+
+- Compiler-jay-html: 629 pass, 4 skipped
 - Production-server: 85/85 pass
-- Smoke test: 39/39 pass
-- Dev-server: 674/674 pass (still uses pre-rendered path, not yet aligned)
+- Smoke tests: 39/39 pass
+- Dev-server: 674/674 pass
 
-## Pending
+### Known issue (unrelated)
 
-### Dev server alignment
-
-The dev server still compiles from pre-rendered jay-html. Aligning it with production requires:
-
-1. `generateSSRPageHtml` receives original jay-html + merged slow+fast ViewState
-2. Server element cache keys on source jay-html path
-3. Hydrate script (`?jay-hydrate`) compiled from original jay-html
-4. The `interactivePaths` empty-set issue: when a contract has only slow properties, `interactivePaths` is empty — same as "no contract". The compiler can't distinguish and treats all bindings as interactive. Needs a nullable `interactivePaths` or a `hasContract` flag.
-
-### Dead code removal
-
-- Remove `slowForEachItem` from `@jay-framework/runtime`
-- Remove `isSlowForEach`/`getSlowForEachInfo` handlers from all three compilers (server, hydrate, element)
-- Remove forEach unrolling from `slowRenderTransform`
-- Remove `generateHydrationEntry` (per-instance version)
-- Remove empty `.jay-html` stub file generation (update serve pipeline to read `cache.json` directly)
-- Update/remove test fixtures using unrolled `slowForEach` format
-
-### Test fixture rewrites
-
-Fixtures still using unrolled `slowForEach` format:
-
-- `contracts/page-with-headless-in-slow-foreach` (element, hydrate, server-element)
-- `contracts/page-with-mixed-static-slow-foreach` (hydrate, server-element)
-- `contracts/page-with-fully-static-slow-foreach` (element, hydrate)
-- `contracts/page-with-headless-mixed` (element, hydrate, server-element)
-
-### Upload action investigation
-
-File upload actions return 400 in production serve for the fake-shop `/upload` page. Unrelated to DL144 — action callers are correctly compiled. May be a pre-existing issue with the production action router's multipart handling (works in dev server).
+File upload actions return 400 in production serve for the fake-shop `/upload` page. Action callers are correctly compiled. Likely a pre-existing issue with the production action router's multipart handling (works in dev server).
 
 ## Revised Phase Model: Simplified Compilation
 
