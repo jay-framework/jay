@@ -311,10 +311,7 @@ export async function loadPagePartsFromConfig(
                 `Empty modulePath in page-parts.json for "${entry.exportName}" (source: ${entry.source}). Rebuild required.`,
             );
         }
-        if (entry.source === 'local') {
-            return artifacts.loadModule(entry.modulePath);
-        }
-        return import(entry.modulePath);
+        return artifacts.loadModule(entry.modulePath, entry.source === 'local');
     }
 
     const parts: DevServerPagePart[] = [];

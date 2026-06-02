@@ -102,13 +102,13 @@ interface ArtifactStore {
   readManifest(): Promise<RouteManifest>;
   readCacheData(relativePath: string): Promise<CacheEntry>;
   loadServerElement(relativePath: string): Promise<ServerElementModule>;
-  loadModule(modulePath: string): Promise<any>;
+  loadModule(modulePath: string, local?: boolean): Promise<any>;
   getAssetPath(relativePath: string): string;
   getBuildDir(): string;
 }
 ```
 
-`loadModule` is used for all module loading — server elements, page components, headless components. For filesystem deployments it does `import()`. BaaS implementations can resolve from a pre-bundled registry instead.
+`loadModule` handles all module loading — server elements, page components, headless components. The `local` flag indicates whether the path is relative to the build directory (`true`) or an npm package (`false`). For filesystem deployments, local modules resolve from `basePath` and npm modules use bare `import()`. BaaS implementations resolve all modules from their pre-bundled registry, ignoring the `local` flag.
 
 For serve-only imports (no build-time dependencies), use `@jay-framework/production-server/serve`.
 
