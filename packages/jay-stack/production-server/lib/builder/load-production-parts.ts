@@ -1,6 +1,7 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { createRequire } from 'node:module';
+import type { ArtifactStore } from '../serve/artifact-store';
 import { getLogger } from '@jay-framework/logger';
 import {
     parseJayFile,
@@ -300,7 +301,7 @@ export interface ServeTimeContract {
 
 export async function loadPagePartsFromConfig(
     configPath: string,
-    buildDir: string,
+    artifacts: ArtifactStore,
 ): Promise<ProductionPageParts> {
     const config: PagePartsConfig = JSON.parse(await fs.readFile(configPath, 'utf-8'));
 
@@ -311,7 +312,7 @@ export async function loadPagePartsFromConfig(
             );
         }
         if (entry.source === 'local') {
-            return import(path.join(buildDir, entry.modulePath));
+            return artifacts.loadModule(entry.modulePath);
         }
         return import(entry.modulePath);
     }

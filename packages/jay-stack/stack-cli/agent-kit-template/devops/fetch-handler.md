@@ -100,12 +100,15 @@ The `ArtifactStore` interface:
 ```typescript
 interface ArtifactStore {
   readManifest(): Promise<RouteManifest>;
-  readPreRenderedHtml(relativePath: string): Promise<PreRenderedEntry>;
+  readCacheData(relativePath: string): Promise<CacheEntry>;
   loadServerElement(relativePath: string): Promise<ServerElementModule>;
+  loadModule(modulePath: string): Promise<any>;
   getAssetPath(relativePath: string): string;
   getBuildDir(): string;
 }
 ```
+
+`loadModule` is used for all module loading — server elements, page components, headless components. For filesystem deployments it does `import()`. BaaS implementations can resolve from a pre-bundled registry instead.
 
 For serve-only imports (no build-time dependencies), use `@jay-framework/production-server/serve`.
 

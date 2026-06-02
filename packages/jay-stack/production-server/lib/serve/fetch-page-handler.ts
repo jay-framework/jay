@@ -30,9 +30,8 @@ async function getPageParts(
 
     const routeDir = path.dirname(cachePath);
     const configPath = artifacts.getAssetPath(path.join(routeDir, 'page-parts.json'));
-    const buildDir = artifacts.getBuildDir();
 
-    const parts = await loadPagePartsFromConfig(configPath, buildDir);
+    const parts = await loadPagePartsFromConfig(configPath, artifacts);
 
     pagePartsCache.set(cacheKey, parts);
     return parts;

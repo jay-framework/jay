@@ -11,6 +11,7 @@ export interface ArtifactStore {
     readManifest(): Promise<RouteManifest>;
     readCacheData(relativePath: string): Promise<CacheEntry>;
     loadServerElement(relativePath: string): Promise<ServerElementModule>;
+    loadModule(relativePath: string): Promise<any>;
     getAssetPath(relativePath: string): string;
     getBuildDir(): string;
 }
@@ -63,15 +64,17 @@ export class FilesystemArtifactStore implements ArtifactStore {
         return this.basePath;
     }
 
-    private async loadModule(relativePath: string): Promise<any> {
-        const fullPath = path.join(this.basePath, relativePath);
+    async loadModule(modulePath: string): Promise<any> {
+        const fullPath = path.isAbsolute(modulePath)
+            ? modulePath
+            : path.join(this.basePath, modulePath);
         const stat = await fs.stat(fullPath);
-        const cached = this.moduleCache.get(relativePath);
+        const cached = this.moduleCache.get(modulePath);
         if (cached && stat.mtimeMs === cached.mtime) {
             return cached.module;
         }
         const mod = await import(fullPath + '?t=' + stat.mtimeMs);
-        this.moduleCache.set(relativePath, { module: mod, mtime: stat.mtimeMs });
+        this.moduleCache.set(modulePath, { module: mod, mtime: stat.mtimeMs });
         return mod;
     }
 }
