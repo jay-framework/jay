@@ -3,7 +3,7 @@ export type {
     RouteEntry,
     RouteSegment,
     InstanceEntry,
-    PreRenderedEntry,
+    CacheEntry,
     ActionEntry,
     PluginEntry,
     BuildMetadata,

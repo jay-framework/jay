@@ -36,14 +36,13 @@ export interface RouteEntry {
 
 export interface InstanceEntry {
     params: Record<string, string>;
-    preRenderedPath: string;
+    cachePath: string;
     serverElementPath: string;
     clientBundlePath: string;
     clientCssPath?: string;
 }
 
-export interface PreRenderedEntry {
-    content: string;
+export interface CacheEntry {
     slowViewState: object;
     carryForward: object;
 }

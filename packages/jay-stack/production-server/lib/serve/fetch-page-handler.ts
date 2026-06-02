@@ -22,13 +22,13 @@ const pagePartsCache = new Map<string, ProductionPageParts>();
 async function getPageParts(
     route: RouteEntry,
     artifacts: ArtifactStore,
-    preRenderedPath: string,
+    cachePath: string,
 ): Promise<ProductionPageParts> {
     const cacheKey = route.pattern;
     const cached = pagePartsCache.get(cacheKey);
     if (cached) return cached;
 
-    const routeDir = path.dirname(preRenderedPath);
+    const routeDir = path.dirname(cachePath);
     const configPath = artifacts.getAssetPath(path.join(routeDir, 'page-parts.json'));
     const buildDir = artifacts.getBuildDir();
 
@@ -48,20 +48,20 @@ export async function fetchPageRequest(
 ): Promise<Response> {
     const { route, instance } = match;
 
-    const preRendered = await artifacts.readPreRenderedHtml(instance.preRenderedPath);
-    const pageParts = await getPageParts(route, artifacts, instance.preRenderedPath);
+    const cached = await artifacts.readCacheData(instance.cachePath);
+    const pageParts = await getPageParts(route, artifacts, instance.cachePath);
 
     const query = Object.fromEntries(requestUrl.searchParams.entries());
 
     const fastResult = await renderFastChangingData(
         match.params,
         { params: match.params, query },
-        preRendered.carryForward,
+        cached.carryForward,
         pageParts.parts,
-        (preRendered.carryForward as any).__instances,
+        (cached.carryForward as any).__instances,
         pageParts.forEachInstances,
         pageParts.headlessInstanceComponents,
-        preRendered.slowViewState,
+        cached.slowViewState,
         query,
         cookies,
     );
@@ -82,7 +82,7 @@ export async function fetchPageRequest(
     const fastCarryForward = (fastResult as any).carryForward || {};
 
     const headTagSources: any[][] = [];
-    const slowHeadTags = (preRendered.carryForward as any).__slowHeadTags;
+    const slowHeadTags = (cached.carryForward as any).__slowHeadTags;
     if (slowHeadTags) headTagSources.push(...slowHeadTags);
     const fastHeadTags = (fastResult as any).headTags;
     if (fastHeadTags) headTagSources.push(fastHeadTags);
@@ -90,7 +90,7 @@ export async function fetchPageRequest(
     const headTagsHtml = headTags.length > 0 ? serializeHeadTags(headTags) + '\n' : '';
 
     const fullViewState = deepMergeViewStates(
-        preRendered.slowViewState,
+        cached.slowViewState,
         fastViewState,
         route.trackByMap || {},
     );
@@ -149,7 +149,7 @@ ${headParts}
                 ? `${staticBaseUrl}${route.routeClientBundlePath}`
                 : `${staticBaseUrl}${instance.clientBundlePath}`;
             const initArgs = route.routeClientBundlePath
-                ? `${JSON.stringify(preRendered.slowViewState)}, ${JSON.stringify(fastViewState)}, ${JSON.stringify(fastCarryForward)}, ${JSON.stringify(clientInitData)}`
+                ? `${JSON.stringify(cached.slowViewState)}, ${JSON.stringify(fastViewState)}, ${JSON.stringify(fastCarryForward)}, ${JSON.stringify(clientInitData)}`
                 : `${JSON.stringify(fastViewState)}, ${JSON.stringify(fastCarryForward)}, ${JSON.stringify(clientInitData)}`;
             write(`
     <script type="module">

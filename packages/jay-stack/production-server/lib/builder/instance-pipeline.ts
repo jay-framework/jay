@@ -201,12 +201,9 @@ export async function buildInstance(
     }
 
     // Write cache metadata for the main server (backend)
-    // The .jay-html stub is written alongside so readPreRenderedHtml can find the .cache.json.
-    const preRenderedPath = path.join(backendInstanceDir, `${instanceId}.jay-html`);
-    const cacheMetadataPath = path.join(backendInstanceDir, `${instanceId}.cache.json`);
-    await fs.writeFile(preRenderedPath, '', 'utf-8');
+    const cachePath = path.join(backendInstanceDir, `${instanceId}.cache.json`);
     await fs.writeFile(
-        cacheMetadataPath,
+        cachePath,
         JSON.stringify({
             slowViewState,
             carryForward,
@@ -226,7 +223,7 @@ export async function buildInstance(
 
     const instanceEntry: InstanceEntry = {
         params,
-        preRenderedPath: path.relative(ctx.backendDir, preRenderedPath),
+        cachePath: path.relative(ctx.backendDir, cachePath),
         serverElementPath: path.relative(ctx.backendDir, serverElementPath),
         clientBundlePath: routeClientBundlePath || '',
         clientCssPath: routeCssPath,

@@ -294,10 +294,9 @@ function paramsMatch(
 }
 
 function collectInstanceFiles(instance: InstanceEntry): string[] {
-    if (!instance.preRenderedPath) return [];
+    if (!instance.cachePath) return [];
     const files = [
-        instance.preRenderedPath,
-        instance.preRenderedPath.replace('.jay-html', '.cache.json'),
+        instance.cachePath,
         instance.serverElementPath,
         instance.clientBundlePath,
     ];

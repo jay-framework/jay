@@ -1,9 +1,7 @@
-import type { RouteManifest, PreRenderedEntry, ServerElementModule } from '../types';
+import type { RouteManifest, CacheEntry, ServerElementModule } from '../types';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-const CACHE_TAG_START = '<script type="application/jay-cache">';
-const CACHE_TAG_END = '</script>';
 
 /**
  * Interface for reading build artifacts at serve time (DL#143).
@@ -12,7 +10,7 @@ const CACHE_TAG_END = '</script>';
  */
 export interface ArtifactStore {
     readManifest(): Promise<RouteManifest>;
-    readPreRenderedHtml(relativePath: string): Promise<PreRenderedEntry>;
+    readCacheData(relativePath: string): Promise<CacheEntry>;
     loadServerElement(relativePath: string): Promise<ServerElementModule>;
     getAssetPath(relativePath: string): string;
     getBuildDir(): string;
@@ -45,21 +43,13 @@ export class FilesystemArtifactStore implements ArtifactStore {
         return manifest;
     }
 
-    async readPreRenderedHtml(relativePath: string): Promise<PreRenderedEntry> {
+    async readCacheData(relativePath: string): Promise<CacheEntry> {
         const fullPath = path.join(this.basePath, relativePath);
-        const content = await fs.readFile(fullPath, 'utf-8');
-
-        const cachePath = fullPath.replace(/\.jay-html$/, '.cache.json');
-        try {
-            const cacheData = JSON.parse(await fs.readFile(cachePath, 'utf-8'));
-            return {
-                content,
-                slowViewState: cacheData.slowViewState || {},
-                carryForward: cacheData.carryForward || {},
-            };
-        } catch {
-            return extractCacheMetadata(content);
-        }
+        const cacheData = JSON.parse(await fs.readFile(fullPath, 'utf-8'));
+        return {
+            slowViewState: cacheData.slowViewState || {},
+            carryForward: cacheData.carryForward || {},
+        };
     }
 
     async loadServerElement(relativePath: string): Promise<ServerElementModule> {
@@ -85,30 +75,4 @@ export class FilesystemArtifactStore implements ArtifactStore {
         this.moduleCache.set(relativePath, { module: mod, mtime: stat.mtimeMs });
         return mod;
     }
-}
-
-function extractCacheMetadata(fileContent: string): PreRenderedEntry {
-    const startIdx = fileContent.indexOf(CACHE_TAG_START);
-    if (startIdx === -1) {
-        return { content: fileContent, slowViewState: {}, carryForward: {} };
-    }
-
-    const jsonStart = startIdx + CACHE_TAG_START.length;
-    const endIdx = fileContent.indexOf(CACHE_TAG_END, jsonStart);
-    if (endIdx === -1) {
-        return { content: fileContent, slowViewState: {}, carryForward: {} };
-    }
-
-    const jsonStr = fileContent.substring(jsonStart, endIdx);
-    const metadata = JSON.parse(jsonStr);
-
-    const tagEnd = endIdx + CACHE_TAG_END.length;
-    const afterTag = fileContent[tagEnd] === '\n' ? tagEnd + 1 : tagEnd;
-    const content = fileContent.substring(0, startIdx) + fileContent.substring(afterTag);
-
-    return {
-        content,
-        slowViewState: metadata.slowViewState || {},
-        carryForward: metadata.carryForward || {},
-    };
 }

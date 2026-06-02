@@ -26,6 +26,6 @@ export type {
     RouteManifest,
     RouteEntry,
     InstanceEntry,
-    PreRenderedEntry,
+    CacheEntry,
     ServerElementModule,
 } from './types';
