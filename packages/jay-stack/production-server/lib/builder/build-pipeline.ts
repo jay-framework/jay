@@ -364,8 +364,9 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         if (!route.jayHtmlPath) continue;
 
         const routeDir = route.rawRoute.replace(/^\//, '') || 'index';
+        const frontendSafeRouteDir = routeDir.replace(/\[/g, '%5B').replace(/\]/g, '%5D');
         const backendRouteDir = path.join(backendDir, 'pre-rendered', routeDir);
-        const frontendRouteDir = path.join(frontendDir, 'pages', routeDir);
+        const frontendRouteDir = path.join(frontendDir, 'pages', frontendSafeRouteDir);
         await fs.mkdir(backendRouteDir, { recursive: true });
         await fs.mkdir(frontendRouteDir, { recursive: true });
 

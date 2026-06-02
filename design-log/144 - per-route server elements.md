@@ -329,6 +329,7 @@ This reduces the initial JS parse/execute cost. The creation code is loaded only
 ### Phase 5: Dead code removal
 
 Removed:
+
 - `slowForEachItem` from `@jay-framework/runtime`
 - `isSlowForEach`/`getSlowForEachInfo` from all three compilers and helpers
 - `validateSlowForEachAccessor` from compiler-shared
