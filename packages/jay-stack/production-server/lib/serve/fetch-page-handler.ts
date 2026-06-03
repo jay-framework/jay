@@ -46,9 +46,11 @@ export async function fetchPageRequest(
     cookies: Record<string, string> = {},
 ): Promise<Response> {
     const { route, instance } = match;
+    const t0 = Date.now();
 
     const cached = await artifacts.readCacheData(instance.cachePath);
     const pageParts = await getPageParts(route, artifacts, instance.cachePath);
+    const tData = Date.now();
 
     const query = Object.fromEntries(requestUrl.searchParams.entries());
 
@@ -64,6 +66,7 @@ export async function fetchPageRequest(
         query,
         cookies,
     );
+    const tFast = Date.now();
 
     if (fastResult.kind === 'Redirect3xx') {
         return new Response(null, {
@@ -126,6 +129,7 @@ ${headParts}
   <body>
     <div id="target">`);
 
+            const tSsrStart = Date.now();
             serverElement.renderToStream(fullViewState, {
                 write: (chunk: string) => write(chunk),
                 onAsync: (promise, id, templates) => {
@@ -137,6 +141,7 @@ ${headParts}
                     );
                 },
             });
+            const tSsr = Date.now();
 
             write('</div>');
 
@@ -158,6 +163,14 @@ ${headParts}
   </body>
 </html>`);
             controller.close();
+
+            const total = Date.now() - t0;
+            const parts = [
+                `data: ${tData - t0}ms`,
+                `fast: ${tFast - tData}ms`,
+                `ssr: ${tSsr - tSsrStart}ms`,
+            ];
+            console.log(`GET ${match.pathname} [${parts.join(' | ')}] ${total}ms`);
         },
     });
 

@@ -438,6 +438,8 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
                 path.join(backendDir, 'server'),
             );
 
+            entry.trackByMap = pageParts.serverTrackByMap || pageParts.clientTrackByMap;
+
             const entryPath = path.join(frontendRouteDir, 'route.entry.ts');
             await generateRouteHydrationEntry({
                 hydrateImport: ROUTE_HYDRATE_KEY,
