@@ -10,10 +10,10 @@
 
 ## Release coordination
 
-| Package | M19.1 coupling |
-| --- | --- |
-| `@jay-framework/aiditor` + `@jay-framework/wix-stores` | Ship together for Add Menu smoke |
-| `@jay-framework/ui-kit` | Independent; after M19.1 scanner (aiditor A2) |
+| Package                                                | M19.1 coupling                                |
+| ------------------------------------------------------ | --------------------------------------------- |
+| `@jay-framework/aiditor` + `@jay-framework/wix-stores` | Ship together for Add Menu smoke              |
+| `@jay-framework/ui-kit`                                | Independent; after M19.1 scanner (aiditor A2) |
 
 ## Background
 
@@ -35,13 +35,13 @@ Design log **#132** introduced `@jay-framework/ui-kit` headless primitives. AIdi
 
 ### Items — M19.3 v1 (all static contracts)
 
-| Contract | `id` | `category` / `subCategory` |
-| --- | --- | --- |
-| `popover-menu` | `ui-kit:popover-menu` | UI Kit / Components |
-| `scroll-carousel` | `ui-kit:scroll-carousel` | UI Kit / Components |
-| `clipboard-copy` | `ui-kit:clipboard-copy` | UI Kit / Components |
-| `word-split` | `ui-kit:word-split` | UI Kit / Typography |
-| `letter-split` | `ui-kit:letter-split` | UI Kit / Typography |
+| Contract          | `id`                     | `category` / `subCategory` |
+| ----------------- | ------------------------ | -------------------------- |
+| `popover-menu`    | `ui-kit:popover-menu`    | UI Kit / Components        |
+| `scroll-carousel` | `ui-kit:scroll-carousel` | UI Kit / Components        |
+| `clipboard-copy`  | `ui-kit:clipboard-copy`  | UI Kit / Components        |
+| `word-split`      | `ui-kit:word-split`      | UI Kit / Typography        |
+| `letter-split`    | `ui-kit:letter-split`    | UI Kit / Typography        |
 
 No URL `params:` on typical ui-kit contracts → no Q8 route UI for these items.
 
@@ -60,12 +60,12 @@ ui-kit and aiditor are **separate packages**. **Do not** import `@jay-framework/
 
 ## Implementation plan
 
-| ID | Deliverable | Priority |
-| --- | --- | --- |
-| U1 | `setupUiKit` + plugin.yaml registration | P0 |
-| U2 | `add-menu.template.yaml` with 5 contract items | P0 |
-| U3 | Tests (fixture compare, no aiditor import) | P0 |
-| U4 | Optional Effects / skills | P2 |
+| ID  | Deliverable                                    | Priority |
+| --- | ---------------------------------------------- | -------- |
+| U1  | `setupUiKit` + plugin.yaml registration        | P0       |
+| U2  | `add-menu.template.yaml` with 5 contract items | P0       |
+| U3  | Tests (fixture compare, no aiditor import)     | P0       |
+| U4  | Optional Effects / skills                      | P2       |
 
 **Depends on:** aiditor #19 schema (A1 types/fixtures). **Recommended:** aiditor A3 for `agent-kit/plugin/aiditor-add-menu.md`. **Does not depend on** wix #20.
 
@@ -141,22 +141,22 @@ Defer until product requests M19.3 Effects parity with aiditor #19 `ui-kit:sprin
 
 ## Verification
 
-| # | Check |
-| --- | --- |
-| 1 | `jay-stack setup ui-kit` writes `ui-kit.yaml` |
-| 2 | Five contract items; field checks per U3 |
-| 3 | Add Menu shows UI Kit after re-fetch (with aiditor) |
-| 4 | Marker-scoped attachment → visual-prompt block (aiditor A8 + A10 #3) |
-| 5 | No Q8 route UI for ui-kit-only attachments |
+| #   | Check                                                                |
+| --- | -------------------------------------------------------------------- |
+| 1   | `jay-stack setup ui-kit` writes `ui-kit.yaml`                        |
+| 2   | Five contract items; field checks per U3                             |
+| 3   | Add Menu shows UI Kit after re-fetch (with aiditor)                  |
+| 4   | Marker-scoped attachment → visual-prompt block (aiditor A8 + A10 #3) |
+| 5   | No Q8 route UI for ui-kit-only attachments                           |
 
 ## Implementation Results (2026-06-02)
 
-| Task | Status | Notes |
-| --- | --- | --- |
-| U1 | Done | `lib/setup.ts`, `setupUiKit` in `plugin.yaml` + `lib/index.ts` |
-| U2 | Done | `agent-kit/aiditor/add-menu.template.yaml` — 5 items |
-| U3 | Done | `test/setup-add-menu.test.ts` — 4/4 passing; no aiditor import |
-| U4 | Deferred | Effects/skills (P2) |
+| Task | Status   | Notes                                                          |
+| ---- | -------- | -------------------------------------------------------------- |
+| U1   | Done     | `lib/setup.ts`, `setupUiKit` in `plugin.yaml` + `lib/index.ts` |
+| U2   | Done     | `agent-kit/aiditor/add-menu.template.yaml` — 5 items           |
+| U3   | Done     | `test/setup-add-menu.test.ts` — 4/4 passing; no aiditor import |
+| U4   | Deferred | Effects/skills (P2)                                            |
 
 ### Smoke (with aiditor on jay-golf)
 
