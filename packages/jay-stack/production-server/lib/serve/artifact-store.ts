@@ -1,4 +1,5 @@
 import type { RouteManifest, CacheEntry, ServerElementModule } from '../types';
+import type { PagePartsConfig } from '../builder/load-production-parts';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
@@ -10,6 +11,7 @@ import path from 'node:path';
 export interface ArtifactStore {
     readManifest(): Promise<RouteManifest>;
     readCacheData(relativePath: string): Promise<CacheEntry>;
+    readPagePartsConfig(relativePath: string): Promise<PagePartsConfig>;
     loadServerElement(relativePath: string): Promise<ServerElementModule>;
     loadModule(modulePath: string, local?: boolean): Promise<any>;
     getAssetPath(relativePath: string): string;
@@ -50,6 +52,10 @@ export class FilesystemArtifactStore implements ArtifactStore {
             slowViewState: cacheData.slowViewState || {},
             carryForward: cacheData.carryForward || {},
         };
+    }
+
+    async readPagePartsConfig(relativePath: string): Promise<PagePartsConfig> {
+        return JSON.parse(await fs.readFile(path.join(this.basePath, relativePath), 'utf-8'));
     }
 
     async loadServerElement(relativePath: string): Promise<ServerElementModule> {

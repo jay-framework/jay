@@ -101,6 +101,7 @@ The `ArtifactStore` interface:
 interface ArtifactStore {
   readManifest(): Promise<RouteManifest>;
   readCacheData(relativePath: string): Promise<CacheEntry>;
+  readPagePartsConfig(relativePath: string): Promise<any>;
   loadServerElement(relativePath: string): Promise<ServerElementModule>;
   loadModule(modulePath: string, local?: boolean): Promise<any>;
   getAssetPath(relativePath: string): string;

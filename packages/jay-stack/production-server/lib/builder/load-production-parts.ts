@@ -303,7 +303,7 @@ export async function loadPagePartsFromConfig(
     configPath: string,
     artifacts: ArtifactStore,
 ): Promise<ProductionPageParts> {
-    const config: PagePartsConfig = JSON.parse(await fs.readFile(configPath, 'utf-8'));
+    const config: PagePartsConfig = await artifacts.readPagePartsConfig(configPath);
 
     async function importModule(entry: PagePartsConfigEntry): Promise<any> {
         if (!entry.modulePath) {

@@ -29,9 +29,9 @@ async function getPageParts(
     if (cached) return cached;
 
     const routeDir = path.dirname(cachePath);
-    const configPath = artifacts.getAssetPath(path.join(routeDir, 'page-parts.json'));
+    const configRelPath = path.join(routeDir, 'page-parts.json');
 
-    const parts = await loadPagePartsFromConfig(configPath, artifacts);
+    const parts = await loadPagePartsFromConfig(configRelPath, artifacts);
 
     pagePartsCache.set(cacheKey, parts);
     return parts;
@@ -101,7 +101,9 @@ export async function fetchPageRequest(
     );
 
     const serverElementPath = route.serverElementPath || instance.serverElementPath;
+    const tLoadStart = Date.now();
     const serverElement = await artifacts.loadServerElement(serverElementPath);
+    const tLoad = Date.now();
     const asyncPromises: Promise<string>[] = [];
 
     const importMap = buildImportMap(manifest.sharedManifest, staticBaseUrl);
@@ -159,17 +161,19 @@ ${headParts}
                 ? `${JSON.stringify(cached.slowViewState)}, ${JSON.stringify(fastViewState)}, ${JSON.stringify(fastCarryForward)}, ${JSON.stringify(clientInitData)}`
                 : `${JSON.stringify(fastViewState)}, ${JSON.stringify(fastCarryForward)}, ${JSON.stringify(clientInitData)}`;
             const tTotal = Date.now() - t0;
+            const tLoadMs = tLoad - tLoadStart;
             const serverTiming = {
                 cache: tCache,
                 parts: tParts,
                 data: tData - t0,
                 fast: tFast - tData,
+                load: tLoadMs,
                 ssr: tSsr - tSsrStart,
                 total: tTotal,
             };
 
             write(`
-    <script>console.log('[jay] server: cache=${serverTiming.cache}ms parts=${serverTiming.parts}ms fast=${serverTiming.fast}ms ssr=${serverTiming.ssr}ms total=${serverTiming.total}ms')</script>
+    <script>console.log('[jay] server: cache=${serverTiming.cache}ms parts=${serverTiming.parts}ms fast=${serverTiming.fast}ms load=${serverTiming.load}ms ssr=${serverTiming.ssr}ms total=${serverTiming.total}ms')</script>
     <script type="module">
       import { init } from '${clientBundleUrl}';
       const _t=performance.now();
@@ -184,6 +188,7 @@ ${headParts}
                 `cache: ${tCache}ms`,
                 `parts: ${tParts}ms`,
                 `fast: ${serverTiming.fast}ms`,
+                `load: ${tLoadMs}ms`,
                 `ssr: ${serverTiming.ssr}ms`,
             ];
             console.log(`GET ${match.pathname} [${timingParts.join(' | ')}] ${tTotal}ms`);
