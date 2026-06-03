@@ -48,10 +48,17 @@ export async function fetchPageRequest(
     const { route, instance } = match;
     const t0 = Date.now();
 
-    let tCache = 0, tParts = 0;
+    let tCache = 0,
+        tParts = 0;
     const [cached, pageParts] = await Promise.all([
-        artifacts.readCacheData(instance.cachePath).then(r => { tCache = Date.now() - t0; return r; }),
-        getPageParts(route, artifacts, instance.cachePath).then(r => { tParts = Date.now() - t0; return r; }),
+        artifacts.readCacheData(instance.cachePath).then((r) => {
+            tCache = Date.now() - t0;
+            return r;
+        }),
+        getPageParts(route, artifacts, instance.cachePath).then((r) => {
+            tParts = Date.now() - t0;
+            return r;
+        }),
     ]);
     const tData = Date.now();
 
