@@ -62,3 +62,16 @@ items:
       the linear() transition curve, reduced-motion fallback, and jay-html usage.
       Implement only on buttons (or button-like controls) the user indicated in this request.
       Add the shared CSS once per page; add the class to each targeted control in page.jay-html.
+
+  - id: ui-kit:sticky-header-scroll
+    title: Sticky header (scroll morph)
+    category: UI Kit
+    subCategory: Animation
+    pluginName: ui-kit
+    packageName: '@jay-framework/ui-kit'
+    prompt: |
+      Apply the scroll-driven sticky header effect on this page.
+      Read agent-kit/aiditor/skills/ui-kit/sticky-header-scroll.md for class .ui-kit-sticky-header,
+      scroll-linked padding + clip-path shape() morph, fallbacks, and jay-html usage.
+      Implement only on the page header/nav the user indicated in this request.
+      Add the shared CSS once per page; add the class to the targeted header element in page.jay-html.

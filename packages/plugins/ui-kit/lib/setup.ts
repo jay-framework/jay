@@ -2,6 +2,7 @@
  * Setup handler for ui-kit plugin (Design Log #142).
  *
  * Writes AIditor Add Menu catalog: agent-kit/aiditor/add-menu/ui-kit.yaml
+ * Copies effect skill markdown into agent-kit/aiditor/skills/ui-kit/
  */
 
 import * as fs from 'fs';
@@ -10,8 +11,18 @@ import { fileURLToPath } from 'url';
 import type { PluginSetupContext, PluginSetupResult } from '@jay-framework/stack-server-runtime';
 
 const ADD_MENU_OUTPUT_REL = 'agent-kit/aiditor/add-menu/ui-kit.yaml';
-const SPRING_SKILL_SOURCE_REL = 'agent-kit/designer/spring-button-hover.md';
-const SPRING_SKILL_OUTPUT_REL = 'agent-kit/aiditor/skills/ui-kit/spring-button-hover.md';
+
+/** Designer guide source → project skill path (AIditor add-menu prompts reference skills/). */
+const AIDITOR_SKILL_COPIES: ReadonlyArray<{ sourceRel: string; outputRel: string }> = [
+    {
+        sourceRel: 'agent-kit/designer/spring-button-hover.md',
+        outputRel: 'agent-kit/aiditor/skills/ui-kit/spring-button-hover.md',
+    },
+    {
+        sourceRel: 'agent-kit/designer/sticky-header-scroll.md',
+        outputRel: 'agent-kit/aiditor/skills/ui-kit/sticky-header-scroll.md',
+    },
+];
 
 function resolvePackageAgentKitPath(relativePath: string): string {
     const thisDir = path.dirname(fileURLToPath(import.meta.url));
@@ -26,20 +37,25 @@ function resolveAddMenuTemplatePath(): string {
     return resolvePackageAgentKitPath('agent-kit/aiditor/add-menu.template.yaml');
 }
 
-function writeSpringButtonHoverSkill(ctx: PluginSetupContext): string | null {
-    const outputPath = path.join(ctx.projectRoot, SPRING_SKILL_OUTPUT_REL);
+function writeAiditorSkills(ctx: PluginSetupContext): string[] {
+    const created: string[] = [];
 
-    if (fs.existsSync(outputPath) && !ctx.force) {
-        return null;
+    for (const { sourceRel, outputRel } of AIDITOR_SKILL_COPIES) {
+        const outputPath = path.join(ctx.projectRoot, outputRel);
+
+        if (fs.existsSync(outputPath) && !ctx.force) {
+            continue;
+        }
+
+        const sourcePath = resolvePackageAgentKitPath(sourceRel);
+        const skillContent = fs.readFileSync(sourcePath, 'utf-8');
+
+        fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+        fs.writeFileSync(outputPath, skillContent, 'utf-8');
+        created.push(outputRel);
     }
 
-    const sourcePath = resolvePackageAgentKitPath(SPRING_SKILL_SOURCE_REL);
-    const skillContent = fs.readFileSync(sourcePath, 'utf-8');
-
-    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-    fs.writeFileSync(outputPath, skillContent, 'utf-8');
-
-    return SPRING_SKILL_OUTPUT_REL;
+    return created;
 }
 
 function writeAddMenuCatalog(ctx: PluginSetupContext): string | null {
@@ -71,14 +87,11 @@ export async function setupUiKit(ctx: PluginSetupContext): Promise<PluginSetupRe
     if (addMenuCreated) {
         configCreated.push(addMenuCreated);
     }
-    const skillCreated = writeSpringButtonHoverSkill(ctx);
-    if (skillCreated) {
-        configCreated.push(skillCreated);
-    }
+    configCreated.push(...writeAiditorSkills(ctx));
 
     const message =
         configCreated.length > 0
-            ? 'ui-kit Add Menu catalog and spring-button-hover skill installed.'
+            ? 'ui-kit Add Menu catalog and effect skills installed.'
             : 'ui-kit Add Menu catalog already present (use --force to rewrite).';
 
     return {

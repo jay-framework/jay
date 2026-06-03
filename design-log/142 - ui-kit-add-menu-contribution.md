@@ -156,7 +156,7 @@ Defer until product requests M19.3 Effects parity with aiditor #19 `ui-kit:sprin
 | U1   | Done     | `lib/setup.ts`, `setupUiKit` in `plugin.yaml` + `lib/index.ts` |
 | U2   | Done     | `agent-kit/aiditor/add-menu.template.yaml` — 5 items           |
 | U3   | Done     | `test/setup-add-menu.test.ts` — 4/4 passing; no aiditor import |
-| U4   | Done     | `spring-button-hover` skill + Add Menu item (2026-06-03)      |
+| U4   | Done     | Effect skills: `spring-button-hover`, `sticky-header-scroll` (2026-06-03) |
 
 ### U4 — Spring button hover (2026-06-03)
 
@@ -166,7 +166,12 @@ Defer until product requests M19.3 Effects parity with aiditor #19 `ui-kit:sprin
 | AIditor skill (setup copy) | `agent-kit/aiditor/skills/ui-kit/spring-button-hover.md` |
 | Add Menu item | `ui-kit:spring-button-hover` — UI Kit / Animation |
 
-`setupUiKit` copies the skill into the project (idempotent; `--force` rewrites). Prompt tells the agent to apply `.ui-kit-spring-hover` only on user-indicated buttons.
+`setupUiKit` copies effect skills into the project (idempotent; `--force` rewrites).
+
+| Add Menu id | Class | Effect |
+| ----------- | ----- | ------ |
+| `ui-kit:spring-button-hover` | `.ui-kit-spring-hover` | Spring hover on buttons (`linear()` easing) |
+| `ui-kit:sticky-header-scroll` | `.ui-kit-sticky-header` | Scroll-driven sticky header + wavy `shape()` bottom ([css-tip](https://css-tip.com/sticky-header/)) |
 
 ### Smoke (with aiditor on jay-golf)
 

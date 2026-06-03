@@ -22,10 +22,12 @@ const EXPECTED_IDS = [
     'ui-kit:word-split',
     'ui-kit:letter-split',
     'ui-kit:spring-button-hover',
+    'ui-kit:sticky-header-scroll',
 ] as const;
 
 const ADD_MENU_OUTPUT_REL = 'agent-kit/aiditor/add-menu/ui-kit.yaml';
 const SPRING_SKILL_OUTPUT_REL = 'agent-kit/aiditor/skills/ui-kit/spring-button-hover.md';
+const STICKY_SKILL_OUTPUT_REL = 'agent-kit/aiditor/skills/ui-kit/sticky-header-scroll.md';
 
 function makeCtx(
     projectRoot: string,
@@ -52,7 +54,7 @@ function assertAddMenuCatalogShape(catalog: unknown): void {
     expect(catalog).toEqual(expect.objectContaining({ items: expect.any(Array) }));
 
     const items = (catalog as { items: Record<string, unknown>[] }).items;
-    expect(items).toHaveLength(6);
+    expect(items).toHaveLength(7);
     expect(items.map((item) => item.id)).toEqual([...EXPECTED_IDS]);
 
     for (const item of items) {
@@ -70,6 +72,9 @@ function expectedPromptGuidePath(id: string): RegExp {
     if (id === 'ui-kit:spring-button-hover') {
         return /agent-kit\/aiditor\/skills\/ui-kit\/spring-button-hover\.md/;
     }
+    if (id === 'ui-kit:sticky-header-scroll') {
+        return /agent-kit\/aiditor\/skills\/ui-kit\/sticky-header-scroll\.md/;
+    }
     const contract = id.split(':')[1];
     return new RegExp(`agent-kit/designer/${contract}\\.md`);
 }
@@ -86,12 +91,16 @@ describe('setupUiKit add-menu catalog (Design Log #142 U3)', () => {
         rmSync(projectRoot, { recursive: true, force: true });
     });
 
-    it('writes ui-kit.yaml with six catalog items matching expected fixture', async () => {
+    it('writes ui-kit.yaml with seven catalog items matching expected fixture', async () => {
         const result = await setupUiKit(makeCtx(projectRoot));
 
         expect(result.status).toBe('configured');
         expect(result.configCreated).toEqual(
-            expect.arrayContaining([ADD_MENU_OUTPUT_REL, SPRING_SKILL_OUTPUT_REL]),
+            expect.arrayContaining([
+                ADD_MENU_OUTPUT_REL,
+                SPRING_SKILL_OUTPUT_REL,
+                STICKY_SKILL_OUTPUT_REL,
+            ]),
         );
 
         const outputPath = join(projectRoot, ADD_MENU_OUTPUT_REL);
@@ -102,17 +111,20 @@ describe('setupUiKit add-menu catalog (Design Log #142 U3)', () => {
         expect(written).toEqual(loadExpectedCatalog());
     });
 
-    it('writes spring-button-hover skill markdown for AIditor', async () => {
+    it('writes effect skill markdown files for AIditor', async () => {
         await setupUiKit(makeCtx(projectRoot));
 
-        const skillPath = join(projectRoot, SPRING_SKILL_OUTPUT_REL);
-        expect(existsSync(skillPath)).toBe(true);
+        const springPath = join(projectRoot, SPRING_SKILL_OUTPUT_REL);
+        expect(existsSync(springPath)).toBe(true);
+        const springContent = readFileSync(springPath, 'utf-8');
+        expect(springContent).toEqual(expect.stringMatching(/\.ui-kit-spring-hover/));
+        expect(springContent).toEqual(expect.stringMatching(/linear\(/));
 
-        const skillContent = readFileSync(skillPath, 'utf-8');
-        expect(skillContent).toEqual(
-            expect.stringMatching(/\.ui-kit-spring-hover/),
-        );
-        expect(skillContent).toEqual(expect.stringMatching(/linear\(/));
+        const stickyPath = join(projectRoot, STICKY_SKILL_OUTPUT_REL);
+        expect(existsSync(stickyPath)).toBe(true);
+        const stickyContent = readFileSync(stickyPath, 'utf-8');
+        expect(stickyContent).toEqual(expect.stringMatching(/\.ui-kit-sticky-header/));
+        expect(stickyContent).toEqual(expect.stringMatching(/animation-timeline:\s*scroll\(\)/));
     });
 
     it('each item prompt references the correct agent-kit guide', async () => {
@@ -136,6 +148,7 @@ describe('setupUiKit add-menu catalog (Design Log #142 U3)', () => {
         const skillDir = join(projectRoot, 'agent-kit/aiditor/skills/ui-kit');
         mkdirSync(skillDir, { recursive: true });
         writeFileSync(join(skillDir, 'spring-button-hover.md'), '# stale\n');
+        writeFileSync(join(skillDir, 'sticky-header-scroll.md'), '# stale\n');
 
         const result = await setupUiKit(makeCtx(projectRoot));
 
@@ -145,6 +158,7 @@ describe('setupUiKit add-menu catalog (Design Log #142 U3)', () => {
         const written = loadYaml(readFileSync(join(addMenuDir, 'ui-kit.yaml'), 'utf-8'));
         expect(written).toEqual({ items: [] });
         expect(readFileSync(join(skillDir, 'spring-button-hover.md'), 'utf-8')).toBe('# stale\n');
+        expect(readFileSync(join(skillDir, 'sticky-header-scroll.md'), 'utf-8')).toBe('# stale\n');
     });
 
     it('rewrites output when force is true', async () => {
@@ -155,19 +169,28 @@ describe('setupUiKit add-menu catalog (Design Log #142 U3)', () => {
         const skillDir = join(projectRoot, 'agent-kit/aiditor/skills/ui-kit');
         mkdirSync(skillDir, { recursive: true });
         writeFileSync(join(skillDir, 'spring-button-hover.md'), '# stale\n');
+        writeFileSync(join(skillDir, 'sticky-header-scroll.md'), '# stale\n');
 
         const result = await setupUiKit(makeCtx(projectRoot, { force: true }));
 
         expect(result.status).toBe('configured');
         expect(result.configCreated).toEqual(
-            expect.arrayContaining([ADD_MENU_OUTPUT_REL, SPRING_SKILL_OUTPUT_REL]),
+            expect.arrayContaining([
+                ADD_MENU_OUTPUT_REL,
+                SPRING_SKILL_OUTPUT_REL,
+                STICKY_SKILL_OUTPUT_REL,
+            ]),
         );
 
         const written = loadYaml(readFileSync(join(addMenuDir, 'ui-kit.yaml'), 'utf-8'));
         assertAddMenuCatalogShape(written);
         expect(written).toEqual(loadExpectedCatalog());
 
-        const skillContent = readFileSync(join(skillDir, 'spring-button-hover.md'), 'utf-8');
-        expect(skillContent).toEqual(expect.stringMatching(/\.ui-kit-spring-hover/));
+        expect(readFileSync(join(skillDir, 'spring-button-hover.md'), 'utf-8')).toEqual(
+            expect.stringMatching(/\.ui-kit-spring-hover/),
+        );
+        expect(readFileSync(join(skillDir, 'sticky-header-scroll.md'), 'utf-8')).toEqual(
+            expect.stringMatching(/\.ui-kit-sticky-header/),
+        );
     });
 });
