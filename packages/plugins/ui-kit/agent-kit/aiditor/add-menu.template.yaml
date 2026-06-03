@@ -49,3 +49,16 @@ items:
     prompt: |
       Use headless component @jay-framework/ui-kit / contract letter-split.
       Read agent-kit/designer/letter-split.md for import, text prop, letters loop, and accessibility (aria-label).
+
+  - id: ui-kit:spring-button-hover
+    title: Spring button hover
+    category: UI Kit
+    subCategory: Animation
+    pluginName: ui-kit
+    packageName: '@jay-framework/ui-kit'
+    prompt: |
+      Apply the CSS spring hover effect for buttons on this page.
+      Read agent-kit/aiditor/skills/ui-kit/spring-button-hover.md for class names (.ui-kit-spring-hover),
+      the linear() transition curve, reduced-motion fallback, and jay-html usage.
+      Implement only on buttons (or button-like controls) the user indicated in this request.
+      Add the shared CSS once per page; add the class to each targeted control in page.jay-html.

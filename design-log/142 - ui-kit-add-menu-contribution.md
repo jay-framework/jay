@@ -156,12 +156,22 @@ Defer until product requests M19.3 Effects parity with aiditor #19 `ui-kit:sprin
 | U1   | Done     | `lib/setup.ts`, `setupUiKit` in `plugin.yaml` + `lib/index.ts` |
 | U2   | Done     | `agent-kit/aiditor/add-menu.template.yaml` — 5 items           |
 | U3   | Done     | `test/setup-add-menu.test.ts` — 4/4 passing; no aiditor import |
-| U4   | Deferred | Effects/skills (P2)                                            |
+| U4   | Done     | `spring-button-hover` skill + Add Menu item (2026-06-03)      |
+
+### U4 — Spring button hover (2026-06-03)
+
+| Deliverable | Path |
+| ----------- | ---- |
+| Designer guide | `agent-kit/designer/spring-button-hover.md` |
+| AIditor skill (setup copy) | `agent-kit/aiditor/skills/ui-kit/spring-button-hover.md` |
+| Add Menu item | `ui-kit:spring-button-hover` — UI Kit / Animation |
+
+`setupUiKit` copies the skill into the project (idempotent; `--force` rewrites). Prompt tells the agent to apply `.ui-kit-spring-hover` only on user-indicated buttons.
 
 ### Smoke (with aiditor on jay-golf)
 
-1. `jay-stack setup ui-kit` → `agent-kit/aiditor/add-menu/ui-kit.yaml`
-2. `/aiditor` → Add Menu → **UI Kit** category shows 5 items
+1. `jay-stack setup ui-kit` (or `--force`) → `ui-kit.yaml` + spring skill
+2. `/aiditor` → Add Menu → **UI Kit** → **Animation** → Spring button hover
 
 ### Verify tests locally
 

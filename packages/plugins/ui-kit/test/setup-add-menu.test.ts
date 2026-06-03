@@ -21,9 +21,11 @@ const EXPECTED_IDS = [
     'ui-kit:clipboard-copy',
     'ui-kit:word-split',
     'ui-kit:letter-split',
+    'ui-kit:spring-button-hover',
 ] as const;
 
 const ADD_MENU_OUTPUT_REL = 'agent-kit/aiditor/add-menu/ui-kit.yaml';
+const SPRING_SKILL_OUTPUT_REL = 'agent-kit/aiditor/skills/ui-kit/spring-button-hover.md';
 
 function makeCtx(
     projectRoot: string,
@@ -50,7 +52,7 @@ function assertAddMenuCatalogShape(catalog: unknown): void {
     expect(catalog).toEqual(expect.objectContaining({ items: expect.any(Array) }));
 
     const items = (catalog as { items: Record<string, unknown>[] }).items;
-    expect(items).toHaveLength(5);
+    expect(items).toHaveLength(6);
     expect(items.map((item) => item.id)).toEqual([...EXPECTED_IDS]);
 
     for (const item of items) {
@@ -62,6 +64,14 @@ function assertAddMenuCatalogShape(catalog: unknown): void {
             expect(item).not.toHaveProperty(field);
         }
     }
+}
+
+function expectedPromptGuidePath(id: string): RegExp {
+    if (id === 'ui-kit:spring-button-hover') {
+        return /agent-kit\/aiditor\/skills\/ui-kit\/spring-button-hover\.md/;
+    }
+    const contract = id.split(':')[1];
+    return new RegExp(`agent-kit/designer/${contract}\\.md`);
 }
 
 describe('setupUiKit add-menu catalog (Design Log #142 U3)', () => {
@@ -76,11 +86,13 @@ describe('setupUiKit add-menu catalog (Design Log #142 U3)', () => {
         rmSync(projectRoot, { recursive: true, force: true });
     });
 
-    it('writes ui-kit.yaml with five catalog items matching expected fixture', async () => {
+    it('writes ui-kit.yaml with six catalog items matching expected fixture', async () => {
         const result = await setupUiKit(makeCtx(projectRoot));
 
         expect(result.status).toBe('configured');
-        expect(result.configCreated).toEqual([ADD_MENU_OUTPUT_REL]);
+        expect(result.configCreated).toEqual(
+            expect.arrayContaining([ADD_MENU_OUTPUT_REL, SPRING_SKILL_OUTPUT_REL]),
+        );
 
         const outputPath = join(projectRoot, ADD_MENU_OUTPUT_REL);
         expect(existsSync(outputPath)).toBe(true);
@@ -90,7 +102,20 @@ describe('setupUiKit add-menu catalog (Design Log #142 U3)', () => {
         expect(written).toEqual(loadExpectedCatalog());
     });
 
-    it('each item prompt references agent-kit designer guide', async () => {
+    it('writes spring-button-hover skill markdown for AIditor', async () => {
+        await setupUiKit(makeCtx(projectRoot));
+
+        const skillPath = join(projectRoot, SPRING_SKILL_OUTPUT_REL);
+        expect(existsSync(skillPath)).toBe(true);
+
+        const skillContent = readFileSync(skillPath, 'utf-8');
+        expect(skillContent).toEqual(
+            expect.stringMatching(/\.ui-kit-spring-hover/),
+        );
+        expect(skillContent).toEqual(expect.stringMatching(/linear\(/));
+    });
+
+    it('each item prompt references the correct agent-kit guide', async () => {
         await setupUiKit(makeCtx(projectRoot));
 
         const outputPath = join(projectRoot, ADD_MENU_OUTPUT_REL);
@@ -99,10 +124,7 @@ describe('setupUiKit add-menu catalog (Design Log #142 U3)', () => {
         };
 
         for (const item of written.items) {
-            const contract = item.id.split(':')[1];
-            expect(item.prompt).toEqual(
-                expect.stringMatching(new RegExp(`agent-kit/designer/${contract}\\.md`)),
-            );
+            expect(item.prompt).toMatch(expectedPromptGuidePath(item.id));
         }
     });
 
@@ -111,6 +133,10 @@ describe('setupUiKit add-menu catalog (Design Log #142 U3)', () => {
         mkdirSync(addMenuDir, { recursive: true });
         writeFileSync(join(addMenuDir, 'ui-kit.yaml'), 'items: []\n');
 
+        const skillDir = join(projectRoot, 'agent-kit/aiditor/skills/ui-kit');
+        mkdirSync(skillDir, { recursive: true });
+        writeFileSync(join(skillDir, 'spring-button-hover.md'), '# stale\n');
+
         const result = await setupUiKit(makeCtx(projectRoot));
 
         expect(result.status).toBe('configured');
@@ -118,6 +144,7 @@ describe('setupUiKit add-menu catalog (Design Log #142 U3)', () => {
 
         const written = loadYaml(readFileSync(join(addMenuDir, 'ui-kit.yaml'), 'utf-8'));
         expect(written).toEqual({ items: [] });
+        expect(readFileSync(join(skillDir, 'spring-button-hover.md'), 'utf-8')).toBe('# stale\n');
     });
 
     it('rewrites output when force is true', async () => {
@@ -125,13 +152,22 @@ describe('setupUiKit add-menu catalog (Design Log #142 U3)', () => {
         mkdirSync(addMenuDir, { recursive: true });
         writeFileSync(join(addMenuDir, 'ui-kit.yaml'), 'items: []\n');
 
+        const skillDir = join(projectRoot, 'agent-kit/aiditor/skills/ui-kit');
+        mkdirSync(skillDir, { recursive: true });
+        writeFileSync(join(skillDir, 'spring-button-hover.md'), '# stale\n');
+
         const result = await setupUiKit(makeCtx(projectRoot, { force: true }));
 
         expect(result.status).toBe('configured');
-        expect(result.configCreated).toEqual([ADD_MENU_OUTPUT_REL]);
+        expect(result.configCreated).toEqual(
+            expect.arrayContaining([ADD_MENU_OUTPUT_REL, SPRING_SKILL_OUTPUT_REL]),
+        );
 
         const written = loadYaml(readFileSync(join(addMenuDir, 'ui-kit.yaml'), 'utf-8'));
         assertAddMenuCatalogShape(written);
         expect(written).toEqual(loadExpectedCatalog());
+
+        const skillContent = readFileSync(join(skillDir, 'spring-button-hover.md'), 'utf-8');
+        expect(skillContent).toEqual(expect.stringMatching(/\.ui-kit-spring-hover/));
     });
 });
