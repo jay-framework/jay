@@ -48,9 +48,10 @@ export async function fetchPageRequest(
     const { route, instance } = match;
     const t0 = Date.now();
 
+    let tCache = 0, tParts = 0;
     const [cached, pageParts] = await Promise.all([
-        artifacts.readCacheData(instance.cachePath),
-        getPageParts(route, artifacts, instance.cachePath),
+        artifacts.readCacheData(instance.cachePath).then(r => { tCache = Date.now() - t0; return r; }),
+        getPageParts(route, artifacts, instance.cachePath).then(r => { tParts = Date.now() - t0; return r; }),
     ]);
     const tData = Date.now();
 
@@ -157,22 +158,35 @@ ${headParts}
             const initArgs = route.routeClientBundlePath
                 ? `${JSON.stringify(cached.slowViewState)}, ${JSON.stringify(fastViewState)}, ${JSON.stringify(fastCarryForward)}, ${JSON.stringify(clientInitData)}`
                 : `${JSON.stringify(fastViewState)}, ${JSON.stringify(fastCarryForward)}, ${JSON.stringify(clientInitData)}`;
+            const tTotal = Date.now() - t0;
+            const serverTiming = {
+                cache: tCache,
+                parts: tParts,
+                data: tData - t0,
+                fast: tFast - tData,
+                ssr: tSsr - tSsrStart,
+                total: tTotal,
+            };
+
             write(`
+    <script>console.log('[jay] server: cache=${serverTiming.cache}ms parts=${serverTiming.parts}ms fast=${serverTiming.fast}ms ssr=${serverTiming.ssr}ms total=${serverTiming.total}ms')</script>
     <script type="module">
       import { init } from '${clientBundleUrl}';
+      const _t=performance.now();
       await init(${initArgs});
+      console.log('[jay] hydrate: '+(performance.now()-_t).toFixed(1)+'ms');
     </script>
   </body>
 </html>`);
             controller.close();
 
-            const total = Date.now() - t0;
-            const parts = [
-                `data: ${tData - t0}ms`,
-                `fast: ${tFast - tData}ms`,
-                `ssr: ${tSsr - tSsrStart}ms`,
+            const timingParts = [
+                `cache: ${tCache}ms`,
+                `parts: ${tParts}ms`,
+                `fast: ${serverTiming.fast}ms`,
+                `ssr: ${serverTiming.ssr}ms`,
             ];
-            console.log(`GET ${match.pathname} [${parts.join(' | ')}] ${total}ms`);
+            console.log(`GET ${match.pathname} [${timingParts.join(' | ')}] ${tTotal}ms`);
         },
     });
 
