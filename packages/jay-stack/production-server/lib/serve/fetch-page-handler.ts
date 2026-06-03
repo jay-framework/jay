@@ -48,8 +48,10 @@ export async function fetchPageRequest(
     const { route, instance } = match;
     const t0 = Date.now();
 
-    const cached = await artifacts.readCacheData(instance.cachePath);
-    const pageParts = await getPageParts(route, artifacts, instance.cachePath);
+    const [cached, pageParts] = await Promise.all([
+        artifacts.readCacheData(instance.cachePath),
+        getPageParts(route, artifacts, instance.cachePath),
+    ]);
     const tData = Date.now();
 
     const query = Object.fromEntries(requestUrl.searchParams.entries());
