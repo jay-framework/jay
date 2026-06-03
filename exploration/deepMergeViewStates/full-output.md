@@ -1,4 +1,5 @@
 # slow:
+
 ```json
 {
   "productSearch": {
@@ -41,7 +42,9 @@
   }
 }
 ```
+
 # fast:
+
 ```json
 {
   "productSearch": {
@@ -775,11 +778,15 @@
   }
 }
 ```
+
 # trackByMap:
+
 ```json
 {}
 ```
+
 # fullViewState:
+
 ```json
 {
   "productSearch": {
