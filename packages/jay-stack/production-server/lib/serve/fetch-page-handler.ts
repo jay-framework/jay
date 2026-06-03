@@ -126,8 +126,8 @@ export async function fetchPageRequest(
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-${headParts}
     <script type="importmap">${JSON.stringify({ imports: importMap })}</script>
+${headParts}
   </head>
   <body>
     <div id="target">`);
