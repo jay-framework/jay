@@ -14,6 +14,7 @@ import { createViteForCli } from '@jay-framework/dev-server';
 import { getLogger } from '@jay-framework/logger';
 import type { InitializeServicesForCli } from './cli-services';
 import { loadConfig } from './config';
+import { resolveVersionFromPackageJson } from './run-production';
 
 export interface RunCommandOptions {
     list?: boolean;
@@ -117,7 +118,8 @@ export async function runCommand(
             projectRoot,
             jayConfig.devServer?.publicFolder || 'public',
         );
-        const buildRoot = path.resolve(projectRoot, 'build/v1');
+        const version = await resolveVersionFromPackageJson(projectRoot);
+        const buildRoot = path.resolve(projectRoot, `build/v${version}`);
 
         registerService(CONSOLE_CONTEXT as any, {
             projectRoot,

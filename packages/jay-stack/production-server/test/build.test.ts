@@ -25,7 +25,7 @@ beforeAll(async () => {
     setDevLogger(createDevLogger('silent'));
     await fs.rm(buildRoot, { recursive: true, force: true });
     manifest = await buildVersion({
-        version: 1,
+        version: '1',
         projectRoot: fixtureRoot,
         pagesRoot: path.join(fixtureRoot, 'src/pages'),
         buildRoot,
@@ -41,7 +41,7 @@ describe('build artifacts', () => {
             'utf-8',
         );
         const parsed = JSON.parse(manifestFile);
-        expect(parsed.version).toBe(1);
+        expect(parsed.version).toBe('1');
         expect(parsed.routes.length).toBeGreaterThanOrEqual(5);
     });
 
@@ -49,7 +49,7 @@ describe('build artifacts', () => {
         const metadata = JSON.parse(
             await fs.readFile(path.join(buildDir, 'backend/build-metadata.json'), 'utf-8'),
         );
-        expect(metadata.version).toBe(1);
+        expect(metadata.version).toBe('1');
         expect(metadata.instanceCount).toBeGreaterThanOrEqual(6);
     });
 

@@ -1,5 +1,5 @@
 export interface RouteManifest {
-    version: number;
+    version: string;
     buildTimestamp: string;
     sourceHash: string;
     projectRoot: string;
@@ -60,7 +60,7 @@ export interface PluginEntry {
 }
 
 export interface BuildMetadata {
-    version: number;
+    version: string;
     sourceHash: string;
     buildTimestamp: string;
     nodeVersion: string;
@@ -68,7 +68,7 @@ export interface BuildMetadata {
 }
 
 export interface BuildOptions {
-    version: number;
+    version: string;
     projectRoot: string;
     pagesRoot: string;
     buildRoot: string;

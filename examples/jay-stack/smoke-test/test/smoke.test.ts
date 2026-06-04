@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { spawn, type ChildProcess } from 'child_process';
 import path from 'path';
+import * as fs from 'fs';
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const SERVER_STARTUP_TIMEOUT = 60000;
@@ -550,7 +551,10 @@ describe('Smoke Test', () => {
         const CDN_BASE = `http://localhost:${CDN_PORT}/`;
 
         beforeAll(async () => {
-            const buildDir = path.join(PROJECT_ROOT, 'build/v1/frontend');
+            const pkg = JSON.parse(
+                fs.readFileSync(path.join(PROJECT_ROOT, 'package.json'), 'utf-8'),
+            );
+            const buildDir = path.join(PROJECT_ROOT, `build/v${pkg.version}/frontend`);
             cdnServer = await startStaticFileServer(buildDir, CDN_PORT);
             server = await startProductionServer(4002, [
                 '--static-base-url',
