@@ -16,7 +16,7 @@ import { parseCookies } from '@jay-framework/stack-server-runtime';
 
 export interface MainServerOptions {
     buildRoot: string;
-    version: number;
+    version: string;
     port: number;
     publicBasePath?: string;
     serveStatic?: boolean;

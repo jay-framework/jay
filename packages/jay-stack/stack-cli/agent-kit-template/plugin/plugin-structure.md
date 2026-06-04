@@ -55,6 +55,12 @@ routes:
     component: ./pages/admin/page.ts
     description: Admin dashboard with product stats
 
+commands:
+  - name: upload-public
+    command: commands/upload-public.jay-command
+  - name: sync-catalog
+    command: commands/sync-catalog.jay-command
+
 setup:
   handler: setup-handler
   references: references-handler
@@ -172,6 +178,13 @@ services:
 
 Plugin routes are served by the dev server alongside project routes. If a project defines the same route path, the project's page takes precedence.
 
+### Command Entry Fields
+
+- `name` — Command name (used with `jay-stack run <plugin>/<command>`)
+- `command` — (optional) Path to `.jay-command` metadata file (declares description and input schema)
+
+Commands are CLI operations run via `jay-stack run`. Use `makeCliCommand()` to create handlers with service injection. See [commands-guide.md](commands-guide.md).
+
 ### Setup Fields
 
 - `handler` — Setup handler for `jay-stack setup` (handles config, credentials)
@@ -193,6 +206,8 @@ my-plugin/
 │   ├── actions/
 │   │   ├── search-products.jay-action
 │   │   └── add-to-cart.jay-action
+│   ├── commands/
+│   │   └── upload-public.jay-command
 │   ├── webhooks/
 │   │   └── on-product-change.ts
 │   ├── components/

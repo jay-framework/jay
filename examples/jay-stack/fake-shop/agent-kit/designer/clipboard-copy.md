@@ -30,3 +30,16 @@ Copy-to-clipboard button with "Copied!" feedback. Headless component — require
 **Props:** `text` — the string to copy (bound from page ViewState)
 
 **ViewState:** `copied` (boolean) — true for 2 seconds after clicking copy
+
+## Accessibility
+
+Use `aria-live` to announce the copy feedback to screen readers:
+
+```html
+<jay:clipboard-copy text="{shareUrl}">
+  <button ref="copyBtn" class="copy-btn">
+    <span if="!copied">Copy Link</span>
+    <span if="copied" aria-live="polite">Copied!</span>
+  </button>
+</jay:clipboard-copy>
+```

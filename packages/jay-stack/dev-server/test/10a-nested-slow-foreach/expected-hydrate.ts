@@ -1,9 +1,12 @@
 import {
+    element as e,
+    dynamicText as dt,
     ReferencesManager,
-    slowForEachItem,
+    dynamicElement as de,
+    forEach,
     ConstructContext,
     adoptText,
-    adoptElement,
+    hydrateForEach,
     adoptDynamicElement,
     STATIC,
     // @ts-ignore
@@ -12,48 +15,44 @@ export function hydrate(rootElement, options) {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('S0/0', {}, [
-                slowForEachItem(
+            adoptDynamicElement('S0/0', {}, [
+                STATIC,
+                hydrateForEach(
                     (vs) => vs.categories,
-                    0,
-                    'c1',
-                    () =>
-                        adoptDynamicElement('S1/0', {}, [
+                    '_id',
+                    'S0/0/1',
+                    () => [
+                        adoptDynamicElement('S0/0/1', {}, [
                             STATIC,
-                            slowForEachItem(
+                            hydrateForEach(
                                 (vs1) => vs1.items,
-                                0,
-                                'i1',
-                                () => adoptText('S2/0/1', (vs2) => vs2.count),
-                            ),
-                            slowForEachItem(
-                                (vs1) => vs1.items,
-                                1,
-                                'i2',
-                                () => adoptText('S3/0/1', (vs2) => vs2.count),
+                                '_id',
+                                'S1/1',
+                                () => [adoptText('S2/1', (vs2) => vs2.count)],
+                                (vs2) => {
+                                    return e('div', { class: 'item' }, [
+                                        e('span', { class: 'label' }, [dt((vs22) => vs22.label)]),
+                                        e('span', { class: 'count' }, [dt((vs22) => vs22.count)]),
+                                    ]);
+                                },
                             ),
                         ]),
-                ),
-                slowForEachItem(
-                    (vs) => vs.categories,
-                    1,
-                    'c2',
-                    () =>
-                        adoptDynamicElement('S4/0', {}, [
-                            STATIC,
-                            slowForEachItem(
-                                (vs1) => vs1.items,
-                                0,
-                                'i3',
-                                () => adoptText('S5/0/1', (vs2) => vs2.count),
+                    ],
+                    (vs1) => {
+                        return de('div', { class: 'category' }, [
+                            e('h2', {}, [dt((vs12) => vs12.name)]),
+                            forEach(
+                                (vs12) => vs12.items,
+                                (vs2) => {
+                                    return e('div', { class: 'item' }, [
+                                        e('span', { class: 'label' }, [dt((vs22) => vs22.label)]),
+                                        e('span', { class: 'count' }, [dt((vs22) => vs22.count)]),
+                                    ]);
+                                },
+                                '_id',
                             ),
-                            slowForEachItem(
-                                (vs1) => vs1.items,
-                                1,
-                                'i4',
-                                () => adoptText('S6/0/1', (vs2) => vs2.count),
-                            ),
-                        ]),
+                        ]);
+                    },
                 ),
             ]),
         );

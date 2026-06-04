@@ -188,7 +188,7 @@ export class ConstructContext<ViewState> {
     };
 
     /**
-     * Create a child context for a forEach/slowForEach item.
+     * Create a child context for a forEach item.
      *
      * With scoped coordinates (DL#126), coordinateBase is NOT accumulated —
      * scoped coordinates are fully qualified within each scope. Only dataIds

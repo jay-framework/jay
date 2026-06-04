@@ -87,7 +87,7 @@ CarryForward data is passed to the fast phase but not included in the ViewState.
 
 ### `.withFastRender(fn)` — Request-time rendering
 
-Runs on each request. Receives props (including `query` for query parameters) and carry-forward from slow phase.
+Runs on each request. Receives props (including `query` for query parameters and `cookies` for HTTP cookies) and carry-forward from slow phase. Can set HTTP response headers via `phaseOutput()` options.
 
 ```typescript
 .withFastRender(async (props, db) => {
@@ -95,6 +95,30 @@ Runs on each request. Receives props (including `query` for query parameters) an
     return phaseOutput({ price, inStock: price > 0 }, {});
 })
 ```
+
+#### Cookies
+
+`props.cookies` is a `Record<string, string>` parsed from the HTTP `Cookie` header. Use for auth checks:
+
+```typescript
+.withFastRender(async (props, memberService) => {
+    const token = props.cookies['session-token'];
+    if (!token) return redirect3xx(302, '/login');
+
+    const member = await memberService.validate(token);
+    if (!member) return redirect3xx(302, '/login');
+
+    return phaseOutput(
+        { isLoggedIn: true, memberName: member.name },
+        {},
+        { responseHeaders: { 'Cache-Control': 'no-store' } },
+    );
+})
+```
+
+- Empty `{}` when no cookies are present
+- Not available in the slow phase (compile error)
+- `responseHeaders` in `phaseOutput()` options sets HTTP headers on the response (e.g. `Cache-Control: no-store` for per-user pages)
 
 ### `.withClientDefaults(fn)` — Defaults for dynamically created forEach items
 
@@ -134,7 +158,7 @@ The interactive phase runs in the browser. Use hooks here (see component-state.m
 
 Each phase can return:
 
-- `phaseOutput(viewState, carryForward)` — success
+- `phaseOutput(viewState, carryForward, options?)` — success (options: `{ headTags?, responseHeaders? }`)
 - `notFound()`, `badRequest()`, `unauthorized()`, `forbidden()` — client errors
 - `serverError5xx(status, message)` — server errors
 - `redirect3xx(status, location)` — redirects

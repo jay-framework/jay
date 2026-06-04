@@ -1,4 +1,6 @@
 import {
+    type ArtifactStore,
+    type PreImportedPlugin,
     FilesystemArtifactStore,
     matchRequest,
     fetchPageRequest,
@@ -6,22 +8,37 @@ import {
     isActionRequest,
     fetchStaticFile,
     registerActionsFromManifest,
+    registerActionsFromModules,
     initializeServices,
+    initializeServicesFromModules,
 } from '@jay-framework/production-server';
 import { parseCookies } from '@jay-framework/stack-server-runtime';
 import { getLogger } from '@jay-framework/logger';
 
+export type { ArtifactStore } from '@jay-framework/production-server';
+export type { PreImportedPlugin } from '@jay-framework/production-server';
+
 export interface JayFetchHandlerOptions {
-    backendDir: string;
+    /** Filesystem path to backend build output (creates FilesystemArtifactStore) */
+    backendDir?: string;
+    /** Custom artifact store for non-filesystem backends (DL#143) */
+    artifactStore?: ArtifactStore;
+
     staticBaseUrl?: string;
     frontendDir?: string;
+
+    /** Pre-imported plugin init modules — bypasses filesystem discovery (DL#143) */
+    plugins?: PreImportedPlugin[];
+    /** Pre-imported action modules — bypasses filesystem discovery (DL#143) */
+    actionModules?: Array<{ module: Record<string, unknown>; name: string }>;
 }
 
 export function createJayFetchHandler(
     options: JayFetchHandlerOptions,
 ): (request: Request) => Promise<Response> {
-    const { backendDir, staticBaseUrl = '/', frontendDir } = options;
-    const artifacts = new FilesystemArtifactStore(backendDir);
+    const { staticBaseUrl = '/', frontendDir } = options;
+    const artifacts = options.artifactStore ?? new FilesystemArtifactStore(options.backendDir!);
+    const backendDir = options.backendDir;
     const logger = getLogger();
     let initialized = false;
 
@@ -31,9 +48,15 @@ export function createJayFetchHandler(
             `[FetchHandler] Loaded manifest: ${manifest.routes.length} routes, v${manifest.version}`,
         );
 
-        await initializeServices(backendDir, process.cwd(), 'FetchHandler');
+        if (options.plugins) {
+            await initializeServicesFromModules(options.plugins, 'FetchHandler');
+        } else if (backendDir) {
+            await initializeServices(backendDir, process.cwd(), 'FetchHandler');
+        }
 
-        if (manifest.actions.length > 0) {
+        if (options.actionModules) {
+            await registerActionsFromModules(options.actionModules);
+        } else if (manifest.actions.length > 0 && backendDir) {
             await registerActionsFromManifest(manifest.actions, backendDir);
         }
 

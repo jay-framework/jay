@@ -21,8 +21,8 @@ export function hydrate(rootElement, options) {
             adoptDynamicElement('S0/0', {}, [
                 STATIC,
                 STATIC,
-                STATIC,
-                STATIC,
+                ...(viewState.fastVisible ? [adoptElement('S0/0/2', {}, [])] : []),
+                ...(viewState.fastHidden ? [adoptElement('S0/0/3', {}, [])] : []),
                 hydrateConditional(
                     (vs) => vs.interactiveVisible,
                     () => adoptElement('S0/0/4', {}, []),

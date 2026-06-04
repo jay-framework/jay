@@ -10,7 +10,7 @@ import fs from 'node:fs/promises';
 
 export interface RendererServerOptions {
     buildRoot: string;
-    version: number;
+    version: string;
     port: number;
     projectRoot: string;
     pagesRoot: string;

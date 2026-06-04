@@ -111,6 +111,36 @@ jay-stack action <plugin/action> [options]
 jay-stack action wix-stores/searchProducts --input '{"query":"laptop"}'
 ```
 
+### `jay-stack run`
+
+Run a plugin CLI command. Used for admin and batch operations like media upload, deployment, and data sync.
+
+```bash
+jay-stack run <plugin/command> [flags]
+```
+
+| Option          | Description                        |
+| --------------- | ---------------------------------- |
+| `--list`        | List all available plugin commands |
+| `-v, --verbose` | Show detailed output               |
+
+Flags after the command ref are auto-generated from the `.jay-command` metadata file's `inputSchema`. For example, if the schema declares `dryRun?: boolean`, the CLI accepts `--dry-run`.
+
+**Examples:**
+
+```bash
+# List available commands
+jay-stack run --list
+
+# Run a command
+jay-stack run media/upload-public --folder images --dry-run
+
+# Run a deploy command
+jay-stack run wix/deploy --env production
+```
+
+Plugins declare commands in `plugin.yaml` and implement handlers with `makeCliCommand()`. See [Plugins](./plugins.md) for details.
+
 ### `jay-stack params`
 
 Discover load param values for a contract. Useful for finding valid page parameters.
@@ -236,6 +266,44 @@ jay-stack rebuild --contract product-page
 jay-stack rebuild --url /products/blue-widget
 jay-stack cleanup
 ```
+
+### Plugin Commands
+
+```bash
+# List available plugin commands
+jay-stack run --list
+
+# Run a plugin command
+jay-stack run media/upload-public --folder images
+
+# Deploy to cloud
+jay-stack run wix/deploy --env production
+```
+
+### Programmatic Fetch Handler
+
+For BaaS platforms (Wix, Cloudflare Workers) or custom server setups, use `createJayFetchHandler` directly:
+
+```typescript
+import { createJayFetchHandler } from '@jay-framework/jay-fetch-handler';
+
+// Self-hosted (same as jay-stack serve)
+const handler = createJayFetchHandler({
+  backendDir: './build/v1/backend',
+  staticBaseUrl: '/',
+  frontendDir: './build/v1/frontend',
+});
+
+// BaaS with custom artifact store and pre-imported modules
+const handler = createJayFetchHandler({
+  artifactStore: customStore,
+  staticBaseUrl: 'https://cdn.example.com/app/1.0.0/',
+  plugins: [{ name: 'my-plugin', init: myPluginInit }],
+  actionModules: [{ module: myPluginModule, name: 'my-plugin' }],
+});
+```
+
+For serve-only imports without build-time dependencies: `import { ... } from '@jay-framework/production-server/serve'`.
 
 ### Agent / AI Tooling
 

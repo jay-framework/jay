@@ -14,7 +14,7 @@ Entry point at `src/pages/`. Can import all component types.
 
 ### Headfull FS
 
-Reusable component with its own template + contract + three-phase rendering (slow/fast/interactive). Lives alongside the page in a components directory. Can nest other headfull FS and instance headless in its own `<head>`. Cannot use keyed headless.
+Reusable component with its own template + contract + three-phase rendering (slow/fast/interactive). Must live in `src/components/` (not inside page directories) so the production build can discover and compile them. Can nest other headfull FS and instance headless in its own `<head>`. Cannot use keyed headless.
 
 ### Headless
 

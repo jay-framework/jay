@@ -15,13 +15,13 @@ export function renderToStream(
     w(' jay-coordinate="S0/0">');
     if (vs.slowFlag) {
         w('<span');
-        w('>');
+        w(' jay-coordinate="S0/0/0">');
         w('Slow');
         w('</span>');
     }
     if (vs.fastFlag) {
         w('<span');
-        w('>');
+        w(' jay-coordinate="S0/0/1">');
         w('Fast');
         w('</span>');
     }

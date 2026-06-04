@@ -169,6 +169,32 @@ export async function registerActionsFromManifest(
     logger.info(`[Server] Registered ${count} actions`);
 }
 
+/**
+ * Register actions from pre-imported modules (DL#143).
+ * Used by BaaS entry.mjs where action modules are bundled by esbuild.
+ */
+export async function registerActionsFromModules(
+    modules: Array<{ module: Record<string, unknown>; name: string }>,
+    registry: ActionRegistry = actionRegistry,
+): Promise<void> {
+    const logger = getLogger();
+    let count = 0;
+
+    for (const { module, name } of modules) {
+        for (const [, exported] of Object.entries(module)) {
+            if (isJayAction(exported)) {
+                registry.register(exported as any);
+                count++;
+            } else if (isJayStreamAction(exported)) {
+                registry.registerStream(exported as any);
+                count++;
+            }
+        }
+    }
+
+    logger.info(`[Server] Registered ${count} actions from pre-imported modules`);
+}
+
 function getStatusCode(code: string, isActionError: boolean): number {
     if (isActionError) return 422;
     switch (code) {

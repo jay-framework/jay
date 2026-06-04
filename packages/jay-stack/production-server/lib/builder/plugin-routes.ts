@@ -49,6 +49,7 @@ export async function scanPluginRoutes(
                 jayHtmlPath,
                 compPath,
                 componentExport,
+                packageName: plugin.packageName,
             });
 
             logger.info(`[Routes] Plugin "${plugin.manifest.name}" provides route ${route.path}`);

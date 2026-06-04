@@ -1,10 +1,15 @@
 import {
+    element as e,
+    dynamicText as dt,
     ReferencesManager,
-    slowForEachItem,
     ConstructContext,
+    childComp,
     adoptText,
     adoptElement,
     childCompHydrate,
+    hydrateForEach,
+    adoptDynamicElement,
+    STATIC,
     // @ts-ignore
 } from '/@fs{{ROOT}}/packages/runtime/runtime/dist/index.js';
 // @ts-ignore
@@ -22,26 +27,25 @@ function _headlessWidget0HydrateRender(options) {
         );
     return [refManager.getPublicAPI(), render];
 }
-const _HeadlessWidget0 = makeHeadlessInstanceComponent(
+const _HeadlessWidget0Adopt = makeHeadlessInstanceComponent(
     _headlessWidget0HydrateRender,
     widget,
-    'S1/0/0/widget:AR0',
+    (dataIds) => [...dataIds, 'widget:AR0'].toString(),
 );
-function _headlessWidget1HydrateRender(options) {
-    const [refManager, [refIncrement2]] = ReferencesManager.for(options, ['increment'], [], [], []);
+function _headlessWidget1Render(options) {
+    const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
     const render = (viewState) =>
-        ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement('S4/0', {}, [
-                adoptText('S4/0/1', (vs) => vs.value),
-                adoptElement('S4/0/2', {}, [], refIncrement2()),
+        ConstructContext.withRootContext(viewState, refManager, () =>
+            e('div', { class: 'widget' }, [
+                e('span', { class: 'label' }, [dt((vs) => vs.label)]),
+                e('span', { class: 'value' }, [dt((vs) => vs.value)]),
+                e('button', {}, ['+1'], refIncrement()),
             ]),
         );
     return [refManager.getPublicAPI(), render];
 }
-const _HeadlessWidget1 = makeHeadlessInstanceComponent(
-    _headlessWidget1HydrateRender,
-    widget,
-    'S3/0/0/widget:AR0',
+const _HeadlessWidget1 = makeHeadlessInstanceComponent(_headlessWidget1Render, widget, (dataIds) =>
+    [...dataIds, 'widget:AR0'].toString(),
 );
 export function hydrate(rootElement, options) {
     const [itemsRefManager, [refAr0]] = ReferencesManager.for(options, [], [], [], ['ar0']);
@@ -50,30 +54,31 @@ export function hydrate(rootElement, options) {
     });
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('S0/0', {}, [
-                slowForEachItem(
+            adoptDynamicElement('S0/0', {}, [
+                STATIC,
+                hydrateForEach(
                     (vs) => vs.items,
-                    0,
-                    '1',
-                    () =>
+                    '_id',
+                    'S0/0/1',
+                    () => [
                         childCompHydrate(
-                            _HeadlessWidget0,
-                            (vs1) => ({ itemId: '1' }),
+                            _HeadlessWidget0Adopt,
+                            (vs1) => ({ itemId: vs1._id }),
                             'S2/0',
                             refAr0(),
                         ),
-                ),
-                slowForEachItem(
-                    (vs) => vs.items,
-                    1,
-                    '2',
-                    () =>
-                        childCompHydrate(
-                            _HeadlessWidget1,
-                            (vs1) => ({ itemId: '2' }),
-                            'S4/0',
-                            refAr0(),
-                        ),
+                    ],
+                    (vs1) => {
+                        return e('div', { class: 'list' }, [
+                            e('div', { class: 'card' }, [
+                                childComp(
+                                    _HeadlessWidget1,
+                                    (vs12) => ({ itemId: vs12._id }),
+                                    refAr0(),
+                                ),
+                            ]),
+                        ]);
+                    },
                 ),
             ]),
         );

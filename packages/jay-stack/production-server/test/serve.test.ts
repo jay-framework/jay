@@ -42,7 +42,7 @@ beforeAll(async () => {
     setDevLogger(createDevLogger('silent'));
     await fs.rm(buildRoot, { recursive: true, force: true });
     await buildVersion({
-        version: 1,
+        version: '1',
         projectRoot: fixtureRoot,
         pagesRoot: path.join(fixtureRoot, 'src/pages'),
         buildRoot,
@@ -52,7 +52,7 @@ beforeAll(async () => {
 
     await startMainServer({
         buildRoot,
-        version: 1,
+        version: '1',
         port: PORT,
     });
 

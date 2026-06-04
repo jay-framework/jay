@@ -61,7 +61,7 @@ function nextScopeId(counter: ScopeCounter): string {
 /**
  * Assign `jay-coordinate-base` and `jay-scope` attributes to elements in the DOM tree.
  *
- * Must run after slow-render (which resolves slow conditions, unrolls slowForEach,
+ * Must run after slow-render (which resolves slow conditions
  * and wraps multi-child headless inline templates).
  *
  * Mutates the DOM in place. Returns the serialized DOM for debug output.
@@ -95,8 +95,8 @@ export function assignCoordinates(
  * Walk children of an element and assign scoped coordinates.
  *
  * Coordinates are of the form `S<n>/<path>` where `<path>` is the positional
- * path within the scope. Scope boundaries (headless instances, forEach items,
- * slowForEach items) create new scopes with fresh scope IDs.
+ * path within the scope. Scope boundaries (headless instances, forEach items)
+ * create new scopes with fresh scope IDs.
  *
  * @param parentCoord - The parent element's full coordinate (e.g., "S0/0")
  * @param scopeId - The current scope ID (e.g., "S0")
@@ -157,23 +157,6 @@ function walkChildren(
                 // Inside forEach, coordinates are relative to the item scope.
                 // The forEach element itself is the item root, so children start at S<n>/0.
                 walkForEachChildren(element, itemScopeId, options, counter);
-                continue;
-            }
-        }
-
-        // --- slowForEach ---
-        // Each concrete slowForEach item creates a new scope.
-        const slowForEachAttr = element.getAttribute('slowForEach');
-        if (slowForEachAttr) {
-            const jayTrackBy = element.getAttribute('jayTrackBy');
-            if (jayTrackBy) {
-                const itemScopeId = nextScopeId(counter);
-                element.setAttribute(SCOPE_ATTR, itemScopeId);
-                // slowForEach item root — coordinate is scope root
-                const itemCoord = `${itemScopeId}/0`;
-                element.setAttribute(COORD_ATTR, itemCoord);
-                walkChildren(element, itemCoord, itemScopeId, options, counter);
-                // Don't increment — slowForEach items are scope boundaries
                 continue;
             }
         }

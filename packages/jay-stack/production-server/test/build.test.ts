@@ -25,7 +25,7 @@ beforeAll(async () => {
     setDevLogger(createDevLogger('silent'));
     await fs.rm(buildRoot, { recursive: true, force: true });
     manifest = await buildVersion({
-        version: 1,
+        version: '1',
         projectRoot: fixtureRoot,
         pagesRoot: path.join(fixtureRoot, 'src/pages'),
         buildRoot,
@@ -41,7 +41,7 @@ describe('build artifacts', () => {
             'utf-8',
         );
         const parsed = JSON.parse(manifestFile);
-        expect(parsed.version).toBe(1);
+        expect(parsed.version).toBe('1');
         expect(parsed.routes.length).toBeGreaterThanOrEqual(5);
     });
 
@@ -49,7 +49,7 @@ describe('build artifacts', () => {
         const metadata = JSON.parse(
             await fs.readFile(path.join(buildDir, 'backend/build-metadata.json'), 'utf-8'),
         );
-        expect(metadata.version).toBe(1);
+        expect(metadata.version).toBe('1');
         expect(metadata.instanceCount).toBeGreaterThanOrEqual(6);
     });
 
@@ -127,7 +127,7 @@ describe('per-instance artifacts', () => {
         const index = findRoute('');
         const inst = index.instances[0];
         expect(
-            await fs.access(path.join(backendDir, inst.preRenderedPath)).then(
+            await fs.access(path.join(backendDir, inst.cachePath)).then(
                 () => true,
                 () => false,
             ),
@@ -146,12 +146,12 @@ describe('per-instance artifacts', () => {
         const home = findRoute('/home');
         const inst = home.instances[0];
         expect(
-            await fs.access(path.join(backendDir, inst.preRenderedPath)).then(
+            await fs.access(path.join(backendDir, inst.cachePath)).then(
                 () => true,
                 () => false,
             ),
         ).toBe(true);
-        const cachePath = inst.preRenderedPath.replace('.jay-html', '.cache.json');
+        const cachePath = inst.cachePath;
         const cache = JSON.parse(await fs.readFile(path.join(backendDir, cachePath), 'utf-8'));
         expect(cache.slowViewState.siteName).toBe('Test Shop');
     });
@@ -160,12 +160,12 @@ describe('per-instance artifacts', () => {
         const featured = findRoute('/featured');
         const inst = featured.instances[0];
         expect(
-            await fs.access(path.join(backendDir, inst.preRenderedPath)).then(
+            await fs.access(path.join(backendDir, inst.cachePath)).then(
                 () => true,
                 () => false,
             ),
         ).toBe(true);
-        const cachePath = inst.preRenderedPath.replace('.jay-html', '.cache.json');
+        const cachePath = inst.cachePath;
         const cache = JSON.parse(await fs.readFile(path.join(backendDir, cachePath), 'utf-8'));
         expect(cache.slowViewState.pageTitle).toBe('Featured Items');
     });
@@ -174,12 +174,12 @@ describe('per-instance artifacts', () => {
         const catalog = findRoute('/catalog');
         const inst = catalog.instances[0];
         expect(
-            await fs.access(path.join(backendDir, inst.preRenderedPath)).then(
+            await fs.access(path.join(backendDir, inst.cachePath)).then(
                 () => true,
                 () => false,
             ),
         ).toBe(true);
-        const cachePath = inst.preRenderedPath.replace('.jay-html', '.cache.json');
+        const cachePath = inst.cachePath;
         const cache = JSON.parse(await fs.readFile(path.join(backendDir, cachePath), 'utf-8'));
         expect(cache.slowViewState.catalogTitle).toBe('Full Catalog');
     });
@@ -190,16 +190,10 @@ describe('per-instance artifacts', () => {
         const widgetB = items.instances.find((i) => i.params.slug === 'widget-b')!;
 
         const cacheA = JSON.parse(
-            await fs.readFile(
-                path.join(backendDir, widgetA.preRenderedPath.replace('.jay-html', '.cache.json')),
-                'utf-8',
-            ),
+            await fs.readFile(path.join(backendDir, widgetA.cachePath), 'utf-8'),
         );
         const cacheB = JSON.parse(
-            await fs.readFile(
-                path.join(backendDir, widgetB.preRenderedPath.replace('.jay-html', '.cache.json')),
-                'utf-8',
-            ),
+            await fs.readFile(path.join(backendDir, widgetB.cachePath), 'utf-8'),
         );
 
         expect(cacheA.slowViewState.name).toBe('Widget A');

@@ -9,7 +9,6 @@ import {
     adoptElement,
     hydrateConditional,
     adoptDynamicElement,
-    STATIC,
 } from '@jay-framework/runtime';
 
 export interface PhaseAwareConditionalsViewState {
@@ -61,8 +60,8 @@ export function hydrate(
     const render = (viewState: PhaseAwareConditionalsViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptDynamicElement('S0/0', {}, [
-                STATIC,
-                STATIC,
+                ...(viewState.slowFlag ? [adoptElement('S0/0/0', {}, [])] : []),
+                ...(viewState.fastFlag ? [adoptElement('S0/0/1', {}, [])] : []),
                 hydrateConditional(
                     (vs) => vs.interactiveFlag,
                     () => adoptElement('S0/0/2', {}, []),

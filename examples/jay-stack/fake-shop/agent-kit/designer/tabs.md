@@ -61,3 +61,19 @@ Switch between content panels with tab buttons. Pure CSS using radio inputs, no 
 ```
 
 **How it works:** Clicking a `<label>` checks its associated radio input. CSS `:checked` sibling selectors (`~`) show the matching panel.
+
+## Accessibility
+
+The radio+label pattern is natively keyboard-accessible (arrow keys switch tabs). For screen reader semantics, add ARIA roles:
+
+```html
+<nav class="tab-bar" role="tablist">
+  <label for="tab-details" class="tab-label" role="tab">Details</label>
+  <label for="tab-reviews" class="tab-label" role="tab">Reviews</label>
+</nav>
+<div class="tab-panels">
+  <div class="panel" id="panel-details" role="tabpanel">...</div>
+</div>
+```
+
+All panel content is in the DOM — search engines see everything regardless of which tab is active.

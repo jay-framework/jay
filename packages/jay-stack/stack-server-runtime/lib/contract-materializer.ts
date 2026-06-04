@@ -66,6 +66,12 @@ export interface RouteIndexEntry {
     description?: string;
 }
 
+/** CLI command entry in plugins-index.yaml (DL#142) */
+export interface CommandIndexEntry {
+    name: string;
+    description?: string;
+}
+
 /** Entry for plugins-index.yaml (Design Log #85) */
 export interface PluginsIndexEntry {
     name: string;
@@ -79,6 +85,8 @@ export interface PluginsIndexEntry {
     contexts?: ContextIndexEntry[];
     /** Plugin-provided routes (DL#130) */
     routes?: RouteIndexEntry[];
+    /** CLI commands (DL#142) */
+    commands?: CommandIndexEntry[];
 }
 
 export interface PluginsIndex {
@@ -414,6 +422,26 @@ export async function materializeContracts(
                     ...(r.description && { description: r.description }),
                 }));
             }
+            // Add CLI commands from plugin.yaml (DL#142)
+            if (manifest.commands?.length) {
+                entry.commands = manifest.commands.map((c) => {
+                    let description: string | undefined;
+                    if (c.command) {
+                        try {
+                            const cmdPath = path.resolve(plugin.pluginPath, c.command);
+                            const cmdContent = fs.readFileSync(cmdPath, 'utf-8');
+                            const parsed = YAML.parse(cmdContent);
+                            description = parsed?.description;
+                        } catch {
+                            /* skip */
+                        }
+                    }
+                    return {
+                        name: c.name,
+                        ...(description && { description }),
+                    };
+                });
+            }
             pluginsIndexMap.set(plugin.name, entry);
         }
 
@@ -590,6 +618,7 @@ export async function materializeContracts(
             ...(data.services?.length && { services: data.services }),
             ...(data.contexts?.length && { contexts: data.contexts }),
             ...(data.routes?.length && { routes: data.routes }),
+            ...(data.commands?.length && { commands: data.commands }),
         })),
     };
 
@@ -667,6 +696,25 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
                     ...(r.description && { description: r.description }),
                 }));
             }
+            if (manifest.commands?.length) {
+                entry.commands = manifest.commands.map((c) => {
+                    let description: string | undefined;
+                    if (c.command) {
+                        try {
+                            const cmdPath = path.resolve(plugin.pluginPath, c.command);
+                            const cmdContent = fs.readFileSync(cmdPath, 'utf-8');
+                            const parsed = YAML.parse(cmdContent);
+                            description = parsed?.description;
+                        } catch {
+                            /* skip */
+                        }
+                    }
+                    return {
+                        name: c.name,
+                        ...(description && { description }),
+                    };
+                });
+            }
             pluginsMap.set(plugin.name, entry);
         }
 
@@ -731,6 +779,7 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
             ...(data.services?.length && { services: data.services }),
             ...(data.contexts?.length && { contexts: data.contexts }),
             ...(data.routes?.length && { routes: data.routes }),
+            ...(data.commands?.length && { commands: data.commands }),
         })),
     };
 }

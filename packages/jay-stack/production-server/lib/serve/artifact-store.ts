@@ -1,11 +1,24 @@
-import type { RouteManifest, PreRenderedEntry, ServerElementModule, PageModule } from '../types';
+import type { RouteManifest, CacheEntry, ServerElementModule } from '../types';
+import type { PagePartsConfig } from '../builder/load-production-parts';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-const CACHE_TAG_START = '<script type="application/jay-cache">';
-const CACHE_TAG_END = '</script>';
+/**
+ * Interface for reading build artifacts at serve time (DL#143).
+ * FilesystemArtifactStore is the default implementation.
+ * BaaS deployments provide a custom implementation that fetches from cloud storage.
+ */
+export interface ArtifactStore {
+    readManifest(): Promise<RouteManifest>;
+    readCacheData(relativePath: string): Promise<CacheEntry>;
+    readPagePartsConfig(relativePath: string): Promise<PagePartsConfig>;
+    loadServerElement(relativePath: string): Promise<ServerElementModule>;
+    loadModule(modulePath: string, local?: boolean): Promise<any>;
+    getAssetPath(relativePath: string): string;
+    getBuildDir(): string;
+}
 
-export class FilesystemArtifactStore {
+export class FilesystemArtifactStore implements ArtifactStore {
     private manifestCache?: { manifest: RouteManifest; mtime: number };
     private metadataMtime?: number;
     private moduleCache = new Map<string, { module: any; mtime: number }>();
@@ -32,34 +45,21 @@ export class FilesystemArtifactStore {
         return manifest;
     }
 
-    async readPreRenderedHtml(relativePath: string): Promise<PreRenderedEntry> {
+    async readCacheData(relativePath: string): Promise<CacheEntry> {
         const fullPath = path.join(this.basePath, relativePath);
-        const content = await fs.readFile(fullPath, 'utf-8');
+        const cacheData = JSON.parse(await fs.readFile(fullPath, 'utf-8'));
+        return {
+            slowViewState: cacheData.slowViewState || {},
+            carryForward: cacheData.carryForward || {},
+        };
+    }
 
-        const cachePath = fullPath.replace(/\.jay-html$/, '.cache.json');
-        try {
-            const cacheData = JSON.parse(await fs.readFile(cachePath, 'utf-8'));
-            return {
-                content,
-                slowViewState: cacheData.slowViewState || {},
-                carryForward: cacheData.carryForward || {},
-            };
-        } catch {
-            return extractCacheMetadata(content);
-        }
+    async readPagePartsConfig(relativePath: string): Promise<PagePartsConfig> {
+        return JSON.parse(await fs.readFile(path.join(this.basePath, relativePath), 'utf-8'));
     }
 
     async loadServerElement(relativePath: string): Promise<ServerElementModule> {
         return this.loadModule(relativePath);
-    }
-
-    async loadPageModule(relativePath: string): Promise<PageModule> {
-        return this.loadModule(relativePath);
-    }
-
-    async readRawFile(relativePath: string): Promise<string> {
-        const fullPath = path.join(this.basePath, relativePath);
-        return await fs.readFile(fullPath, 'utf-8');
     }
 
     getAssetPath(relativePath: string): string {
@@ -70,41 +70,24 @@ export class FilesystemArtifactStore {
         return this.basePath;
     }
 
-    private async loadModule(relativePath: string): Promise<any> {
-        const fullPath = path.join(this.basePath, relativePath);
-        const stat = await fs.stat(fullPath);
-        const cached = this.moduleCache.get(relativePath);
-        if (cached && stat.mtimeMs === cached.mtime) {
-            return cached.module;
+    async loadModule(modulePath: string, local?: boolean): Promise<any> {
+        if (local !== false) {
+            const fullPath = path.isAbsolute(modulePath)
+                ? modulePath
+                : path.join(this.basePath, modulePath);
+            try {
+                const stat = await fs.stat(fullPath);
+                const cached = this.moduleCache.get(modulePath);
+                if (cached && stat.mtimeMs === cached.mtime) {
+                    return cached.module;
+                }
+                const mod = await import(fullPath + '?t=' + stat.mtimeMs);
+                this.moduleCache.set(modulePath, { module: mod, mtime: stat.mtimeMs });
+                return mod;
+            } catch {
+                if (local) throw new Error(`Local module not found: ${fullPath}`);
+            }
         }
-        const mod = await import(fullPath + '?t=' + stat.mtimeMs);
-        this.moduleCache.set(relativePath, { module: mod, mtime: stat.mtimeMs });
-        return mod;
+        return import(modulePath);
     }
-}
-
-function extractCacheMetadata(fileContent: string): PreRenderedEntry {
-    const startIdx = fileContent.indexOf(CACHE_TAG_START);
-    if (startIdx === -1) {
-        return { content: fileContent, slowViewState: {}, carryForward: {} };
-    }
-
-    const jsonStart = startIdx + CACHE_TAG_START.length;
-    const endIdx = fileContent.indexOf(CACHE_TAG_END, jsonStart);
-    if (endIdx === -1) {
-        return { content: fileContent, slowViewState: {}, carryForward: {} };
-    }
-
-    const jsonStr = fileContent.substring(jsonStart, endIdx);
-    const metadata = JSON.parse(jsonStr);
-
-    const tagEnd = endIdx + CACHE_TAG_END.length;
-    const afterTag = fileContent[tagEnd] === '\n' ? tagEnd + 1 : tagEnd;
-    const content = fileContent.substring(0, startIdx) + fileContent.substring(afterTag);
-
-    return {
-        content,
-        slowViewState: metadata.slowViewState || {},
-        carryForward: metadata.carryForward || {},
-    };
 }

@@ -2,11 +2,21 @@
 
 Hover tooltip showing extra info. Pure CSS using `::after` pseudo-element, no component needed.
 
+**Accessibility note:** CSS `::after` content is NOT read by most screen readers. Use `title` or `aria-label` for the accessible version of the tooltip text:
+
 ## Usage
 
 ```html
-<span class="has-tooltip" data-tooltip="Ships in 2-3 business days"> Shipping info &#9432; </span>
+<span
+  class="has-tooltip"
+  data-tooltip="Ships in 2-3 business days"
+  aria-label="Ships in 2-3 business days"
+>
+  Shipping info &#9432;
+</span>
 ```
+
+The `data-tooltip` drives the CSS visual tooltip. The `aria-label` makes the same text available to screen readers.
 
 ## CSS
 
