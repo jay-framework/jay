@@ -26,6 +26,8 @@ export interface RouteInfo {
     compPath: string;
 }
 
+export type DevServerRouteRegistrar = (routes: DevServerRoute[]) => void;
+
 export class DevServerService {
     constructor(
         private routes: DevServerRoute[],
@@ -34,10 +36,36 @@ export class DevServerService {
         private projectBase: string,
         private jayRollupConfig: JayRollupConfig,
         private _freezeStore?: FreezeStore,
+        private rescanRoutes?: () => Promise<DevServerRoute[]>,
     ) {}
+
+    private routeRegistrar?: DevServerRouteRegistrar;
 
     get freezeStore(): FreezeStore | undefined {
         return this._freezeStore;
+    }
+
+    /** Register new route handlers with Express (or another HTTP layer). */
+    attachRouteRegistrar(registrar: DevServerRouteRegistrar): void {
+        this.routeRegistrar = registrar;
+    }
+
+    /**
+     * Rescan the pages directory for new routes and register any that were
+     * added since dev-server startup (e.g. after AIditor Add Page).
+     */
+    async refreshRoutes(): Promise<RouteInfo[]> {
+        if (!this.rescanRoutes) {
+            return this.listRoutes();
+        }
+        const added = await this.rescanRoutes();
+        if (added.length > 0 && this.routeRegistrar) {
+            this.routeRegistrar(added);
+            getLogger().info(
+                `[Routes] Registered ${added.length} new route(s): ${added.map((r) => r.fsRoute.rawRoute).join(', ')}`,
+            );
+        }
+        return this.listRoutes();
     }
 
     /** List all page routes in the project. */

@@ -229,12 +229,6 @@ export interface ActionBodyParserOptions {
 }
 
 /**
- * Default file upload limits.
- */
-const DEFAULT_MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const DEFAULT_MAX_FILES = 10;
-
-/**
  * Reconstruct nested objects from multipart field names like `extraFiles.attachment_1_0`
  * (emitted by buildFormData for Record<string, Blob> values). Mutates `body` in place.
  */
@@ -266,8 +260,6 @@ function mergeDottedMultipartKeys(body: Record<string, any>): void {
 function parseMultipart(
     req: Request,
     tempDir: string,
-    maxFileSize: number,
-    maxFiles: number,
 ): Promise<{ body: Record<string, any>; tempDir: string }> {
     return new Promise((resolve, reject) => {
         fs.mkdirSync(tempDir, { recursive: true });
@@ -280,10 +272,6 @@ function parseMultipart(
 
         const bb = Busboy({
             headers: req.headers,
-            limits: {
-                fileSize: maxFileSize,
-                files: maxFiles,
-            },
         });
 
         bb.on('file', (fieldname, stream, info) => {
@@ -293,7 +281,6 @@ function parseMultipart(
             const filename = info.filename || `upload-${fileCount}`;
             const tempPath = path.join(tempDir, `${fileCount}-${filename}`);
             let size = 0;
-            let truncated = false;
 
             const writeStream = fs.createWriteStream(tempPath);
             stream.pipe(writeStream);
@@ -302,22 +289,9 @@ function parseMultipart(
                 size += data.length;
             });
 
-            stream.on('limit', () => {
-                truncated = true;
-            });
-
             pendingWrites.push(
                 new Promise<void>((resolveWrite, rejectWrite) => {
                     writeStream.on('close', () => {
-                        if (truncated) {
-                            rejectWrite(
-                                new Error(
-                                    `File "${filename}" exceeds maximum size of ${maxFileSize} bytes`,
-                                ),
-                            );
-                            return;
-                        }
-
                         const jayFile: JayFile = {
                             name: filename,
                             type: info.mimeType,
@@ -431,10 +405,8 @@ export function actionBodyParser(options: ActionBodyParserOptions): RequestHandl
 
             const requestId = crypto.randomUUID();
             const tempDir = path.join(buildFolder, '.tmp', 'actions', requestId);
-            const maxFileSize = (action as any).fileOptions?.maxFileSize ?? DEFAULT_MAX_FILE_SIZE;
-            const maxFiles = (action as any).fileOptions?.maxFiles ?? DEFAULT_MAX_FILES;
 
-            parseMultipart(req, tempDir, maxFileSize, maxFiles)
+            parseMultipart(req, tempDir)
                 .then(({ body, tempDir: td }) => {
                     req.body = body;
                     // Attach cleanup function for the action router to call after handler

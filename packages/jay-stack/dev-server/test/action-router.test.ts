@@ -549,6 +549,94 @@ describe('Action Router', () => {
             expect(data.error.code).toBe('FILES_NOT_ACCEPTED');
         });
 
+        it('should accept uploads larger than 10MB', async () => {
+            let receivedInput: any = null;
+
+            const action = makeJayAction('test.largeUpload')
+                .withFiles()
+                .withHandler(async (input: { file: JayFile }) => {
+                    receivedInput = input;
+                    return { size: input.file.size };
+                });
+
+            registry.register(action);
+            const url = await startServer(registry);
+
+            const boundary = '----TestBoundary' + Date.now();
+            const fileContent = 'x'.repeat(11 * 1024 * 1024);
+
+            const body = [
+                `--${boundary}\r\n` +
+                    `Content-Disposition: form-data; name="_json"\r\n\r\n` +
+                    `{}\r\n`,
+                `--${boundary}\r\n` +
+                    `Content-Disposition: form-data; name="file"; filename="large.bin"\r\n` +
+                    `Content-Type: application/octet-stream\r\n\r\n` +
+                    `${fileContent}\r\n`,
+                `--${boundary}--\r\n`,
+            ].join('');
+
+            const response = await fetch(`${url}${ACTION_ENDPOINT_BASE}/test.largeUpload`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': `multipart/form-data; boundary=${boundary}`,
+                },
+                body,
+            });
+
+            const data = await response.json();
+            expect(response.status).toBe(200);
+            expect(data.success).toBe(true);
+            expect(data.data.size).toBe(fileContent.length);
+            expect(receivedInput.file.name).toBe('large.bin');
+        });
+
+        it('should accept more than 10 files', async () => {
+            let receivedInput: any = null;
+
+            const action = makeJayAction('test.manyFiles')
+                .withFiles()
+                .withHandler(async (input: { files: JayFile[] }) => {
+                    receivedInput = input;
+                    return { count: input.files.length };
+                });
+
+            registry.register(action);
+            const url = await startServer(registry);
+
+            const boundary = '----TestBoundary' + Date.now();
+            const fileCount = 11;
+            const parts = [
+                `--${boundary}\r\n` +
+                    `Content-Disposition: form-data; name="_json"\r\n\r\n` +
+                    `{}\r\n`,
+            ];
+
+            for (let i = 0; i < fileCount; i++) {
+                parts.push(
+                    `--${boundary}\r\n` +
+                        `Content-Disposition: form-data; name="files"; filename="file-${i}.txt"\r\n` +
+                        `Content-Type: text/plain\r\n\r\n` +
+                        `content-${i}\r\n`,
+                );
+            }
+            parts.push(`--${boundary}--\r\n`);
+
+            const response = await fetch(`${url}${ACTION_ENDPOINT_BASE}/test.manyFiles`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': `multipart/form-data; boundary=${boundary}`,
+                },
+                body: parts.join(''),
+            });
+
+            const data = await response.json();
+            expect(response.status).toBe(200);
+            expect(data.success).toBe(true);
+            expect(data.data.count).toBe(fileCount);
+            expect(receivedInput.files).toHaveLength(fileCount);
+        });
+
         it('should still handle JSON requests for withFiles actions', async () => {
             const action = makeJayAction('test.flexible')
                 .withFiles()

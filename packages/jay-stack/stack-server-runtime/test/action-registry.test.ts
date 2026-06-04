@@ -89,6 +89,17 @@ describe('ActionRegistry', () => {
             expect(registered!.method).toBe('GET');
             expect((registered as RegisteredAction).cacheOptions).toEqual({ maxAge: 60 });
         });
+
+        it('should preserve acceptsFiles from withFiles()', () => {
+            const upload = makeJayAction('test.upload')
+                .withFiles()
+                .withHandler(async () => ({ ok: true }));
+
+            registry.register(upload);
+
+            const registered = registry.get('test.upload');
+            expect(registered?.acceptsFiles).toBe(true);
+        });
     });
 
     describe('getNames', () => {

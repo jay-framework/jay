@@ -256,3 +256,7 @@ Update the compiler's client-side action replacement to pass `acceptsFiles` flag
 | `agent-kit-template/plugin/actions-guide.md`                 | Documentation for `.withFiles()`, `JayFile`, `FileUploadOptions`                                                   |
 | `examples/jay-stack/fake-shop/src/actions/upload.actions.ts` | Example upload + streaming upload actions                                                                          |
 | `examples/jay-stack/fake-shop/src/pages/upload/`             | Example upload page (contract, jay-html, page.ts)                                                                  |
+
+### Dev-server upload limits removed (2026-05)
+
+**Deviation from original Q5:** Upload size/count limits and `FileUploadOptions` were removed from the dev-server and action builder. `.withFiles()` is a boolean opt-in only; limits can be reintroduced later if a production deployment surface needs them.

@@ -38,7 +38,7 @@ makeJayAction('name')
   .withServices(SERVICE1, SERVICE2) // Inject services
   .withMethod('PUT') // Override HTTP method (default: POST for actions)
   .withCaching({ maxAge: 60 }) // Enable caching (queries only)
-  .withFiles({ maxFileSize: 5_000_000 }) // Accept file uploads (multipart/form-data)
+  .withFiles() // Accept file uploads (multipart/form-data)
   .withHandler(async (input, svc1, svc2) => {
     // Define handler
     return result;
@@ -55,7 +55,7 @@ import { makeJayAction, type JayFile } from '@jay-framework/fullstack-component'
 import fs from 'fs';
 
 export const uploadPhoto = makeJayAction('photos.upload')
-  .withFiles({ maxFileSize: 5 * 1024 * 1024 }) // 5MB limit, 10 files max (default)
+  .withFiles()
   .withHandler(async (input: { caption: string; photo: JayFile }) => {
     // JayFile provides: name, type, size, path (temp file on disk)
     const data = fs.readFileSync(input.photo.path);
@@ -121,14 +121,6 @@ refs.uploadBtn.onClick(async () => {
   const file = fileInput.files?.[0];
   const result = await uploadPhoto({ caption: 'My photo', photo: file });
 });
-```
-
-### FileUploadOptions
-
-```typescript
-.withFiles()                                       // Defaults: 10MB per file, 10 files max
-.withFiles({ maxFileSize: 2 * 1024 * 1024 })       // 2MB limit
-.withFiles({ maxFileSize: 20_000_000, maxFiles: 5 }) // 20MB, 5 files
 ```
 
 ## ActionError

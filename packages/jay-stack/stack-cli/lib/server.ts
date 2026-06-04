@@ -181,9 +181,14 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
         log.important(`⚠️  Public folder not found: ${resolvedConfig.devServer.publicFolder}`);
     }
 
-    // Serve HTML
+    // Serve HTML — initial routes; new routes register via service.refreshRoutes()
     routes.forEach((route) => {
         app.get(route.path, route.handler);
+    });
+    service.attachRouteRegistrar((added) => {
+        added.forEach((route) => {
+            app.get(route.path, route.handler);
+        });
     });
 
     // generate page d.ts files
