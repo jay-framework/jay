@@ -332,18 +332,49 @@ describe('headless instance props validation (DL#124 Phase 2)', () => {
     });
 
     describe('plugin validators (DL#145)', () => {
-        it('should discover and run plugin validators', async () => {
-            const fixtureDir = path.join(baseFixturesDir, 'plugin-validator');
+        const pluginFixtureDir = path.join(baseFixturesDir, 'plugin-validator');
+
+        it('should report error for missing title', async () => {
             const result = await validateJayFiles({
-                path: fixtureDir,
-                projectRoot: fixtureDir,
+                path: pluginFixtureDir,
+                projectRoot: pluginFixtureDir,
             });
 
-            const pluginWarnings = result.warnings.filter((w) => w.source);
-            expect(pluginWarnings).toHaveLength(1);
-            expect(pluginWarnings[0].source).toBe('test-validator/check-title');
-            expect(pluginWarnings[0].message).toBe('Test validator finding');
-            expect(pluginWarnings[0].suggestion).toBe('This is a test suggestion');
+            const titleErrors = result.errors.filter(
+                (e) => e.source === 'test-validator/check-title',
+            );
+            expect(titleErrors).toHaveLength(1);
+            expect(titleErrors[0].message).toBe('Page is missing a <title> element');
+            expect(titleErrors[0].suggestion).toBe('Add a <title> element inside <head>');
+        });
+
+        it('should warn on wix-image binding without resize params', async () => {
+            const result = await validateJayFiles({
+                path: pluginFixtureDir,
+                projectRoot: pluginFixtureDir,
+            });
+
+            const imageWarnings = result.warnings.filter(
+                (w) => w.source === 'test-validator/check-wix-image',
+            );
+            expect(imageWarnings).toHaveLength(1);
+            expect(imageWarnings[0].message).toBe(
+                'Wix image binding {heroImage} missing resize params',
+            );
+            expect(imageWarnings[0].suggestion).toBeDefined();
+        });
+
+        it('should warn on img without alt attribute', async () => {
+            const result = await validateJayFiles({
+                path: pluginFixtureDir,
+                projectRoot: pluginFixtureDir,
+            });
+
+            const altWarnings = result.warnings.filter(
+                (w) => w.source === 'test-validator/check-alt',
+            );
+            expect(altWarnings).toHaveLength(1);
+            expect(altWarnings[0].message).toBe('Image element missing alt attribute');
         });
 
         it('should not fail when no plugins exist', async () => {

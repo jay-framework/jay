@@ -1,0 +1,10 @@
+name: product-page
+tags:
+  - tag: productName
+    type: data
+    dataType: string
+  - tag: heroImage
+    type: data
+    dataType: string
+    meta:
+      wix-type: image
