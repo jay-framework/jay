@@ -148,6 +148,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 143  | artifact store abstraction for BaaS    | ArtifactStore interface, serve-only export, pre-imported modules for cloud deployment        |
 | 144  | per-route server elements              | One server-element.js per route instead of per instance; render from ViewState, not literals |
 | 145  | pluggable jay-html validation          | Plugin-provided validation rules for jay-html files with agent-friendly feedback             |
+| 146  | css performance fixes                  | CSS minification in production build, preload hints for route CSS                            |
 
 ---
 

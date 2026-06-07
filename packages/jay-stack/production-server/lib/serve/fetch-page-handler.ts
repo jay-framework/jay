@@ -120,8 +120,14 @@ export async function fetchPageRequest(
     const modulePreloads = Object.values(importMap)
         .map((url) => `    <link rel="modulepreload" href="${url}" />`)
         .join('\n');
-    const cssLink = instance.clientCssPath
-        ? `    <link rel="stylesheet" href="${staticBaseUrl}${instance.clientCssPath}" />`
+    const cssUrl = instance.clientCssPath
+        ? `${staticBaseUrl}${instance.clientCssPath}`
+        : '';
+    const cssPreload = cssUrl
+        ? `    <link rel="preload" href="${cssUrl}" as="style" />`
+        : '';
+    const cssLink = cssUrl
+        ? `    <link rel="stylesheet" href="${cssUrl}" />`
         : '';
 
     const encoder = new TextEncoder();
@@ -135,7 +141,7 @@ export async function fetchPageRequest(
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script type="importmap">${JSON.stringify({ imports: importMap })}</script>
+${cssPreload ? cssPreload + '\n' : ''}    <script type="importmap">${JSON.stringify({ imports: importMap })}</script>
 ${headParts}
   </head>
   <body>

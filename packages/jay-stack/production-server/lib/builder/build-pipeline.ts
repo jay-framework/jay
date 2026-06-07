@@ -377,6 +377,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
                 serverElementPath,
                 options.projectRoot,
                 options.tsConfigFilePath,
+                options.minify ?? true,
             );
             entry.serverElementPath = path.relative(backendDir, serverElementPath);
 

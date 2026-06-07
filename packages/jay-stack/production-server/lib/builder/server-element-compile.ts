@@ -12,6 +12,7 @@ import { RuntimeMode } from '@jay-framework/compiler-shared';
 import { checkValidationErrors } from '@jay-framework/compiler-shared';
 import { getLogger } from '@jay-framework/logger';
 import { parse as parseHtml } from 'node-html-parser';
+import { transform as esbuildTransform } from 'esbuild';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 
@@ -27,6 +28,7 @@ export async function compileServerElement(
     projectRoot: string,
     tsConfigFilePath?: string,
     sourceDir?: string,
+    minifyCss: boolean = true,
 ): Promise<ServerElementCompileResult> {
     const jayFile = await parseJayFile(
         jayHtmlContent,
@@ -76,7 +78,12 @@ export async function compileServerElement(
     if (css) {
         const cssFilename = path.basename(outputPath, '.server-element.js') + '.css';
         const cssPath = path.join(outputDir, cssFilename);
-        await fs.writeFile(cssPath, css, 'utf-8');
+        if (minifyCss) {
+            const minified = await esbuildTransform(css, { loader: 'css', minify: true });
+            await fs.writeFile(cssPath, minified.code, 'utf-8');
+        } else {
+            await fs.writeFile(cssPath, css, 'utf-8');
+        }
         cssFile = cssFilename;
     }
 
@@ -98,6 +105,7 @@ export async function compileRouteServerElement(
     outputPath: string,
     projectRoot: string,
     tsConfigFilePath?: string,
+    minifyCss: boolean = true,
 ): Promise<ServerElementCompileResult> {
     const jayHtmlContent = await fs.readFile(jayHtmlPath, 'utf-8');
     const sourceDir = path.dirname(jayHtmlPath);
@@ -114,6 +122,7 @@ export async function compileRouteServerElement(
         projectRoot,
         tsConfigFilePath,
         sourceDir,
+        minifyCss,
     );
 }
 
