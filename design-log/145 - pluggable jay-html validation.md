@@ -269,27 +269,273 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
 
 ## Implementation Plan
 
-### Phase 1: Types and Manifest
-1. Create `packages/compiler/compiler-shared/lib/plugin-validators.ts` with type definitions
-2. Export from `packages/compiler/compiler-shared/lib/index.ts`
-3. Add `validators` to `PluginManifest` interface
+### Phase 1: Contract tag `meta` and types
+1. Add `meta?: Record<string, string>` to `ParsedYamlTag` and `ContractTag`
+2. Pass `meta` through in `parseTag()` — no validation, opaque to framework
+3. Create `packages/compiler/compiler-shared/lib/plugin-validators.ts` with `JayHtmlValidationContext`, `JayHtmlValidationFinding`, `JayHtmlValidatorFn`
+4. Add `contract` and `headlessImports` to `JayHtmlValidationContext`
+5. Export from `packages/compiler/compiler-shared/lib/index.ts`
+6. Add `validators` to `PluginManifest` interface
 
-### Phase 2: Validation Runner
+### Phase 2: Validator utilities
+1. Create `packages/compiler/compiler-shared/lib/validator-utils.ts`
+2. Implement `parseTemplateParts` — regex-based `{binding}` / static split
+3. Implement `resolveBindingTag` — walk contract tag tree by dot-separated path
+4. Implement `walkElements` — depth-first element visitor
+5. Implement `resolveAttributeBindings` — convenience combining the above
+6. Export from index
+7. Unit tests for all four utilities
+
+### Phase 3: Validation runner
 1. Modify `validateJayFiles()` to retain parsed jay-html files after core validation
 2. Add plugin scanning (import `scanPlugins` from `stack-server-runtime`)
 3. Add validator handler loading and execution
-4. Merge findings into `ValidationResult`
-5. Update output formatting to show plugin findings with suggestions
+4. Build `JayHtmlValidationContext` with contract and headless imports from parsed files
+5. Merge findings into `ValidationResult`
+6. Update output formatting to show plugin findings with suggestions
 
-### Phase 3: Plugin Validator Schema
+### Phase 4: Plugin validator schema
 1. Update `validateSchema()` in `plugin-validator` to validate the `validators` section
 2. Check handler file exists for local plugins
 
-### Phase 4: Tests
-1. Create test fixture with a local plugin providing a validator
-2. Test that validator findings appear in validation results
-3. Test that core validation still works unchanged
+### Phase 5: Tests
+1. Contract parser test: tag with `meta` parses and roundtrips correctly
+2. Validator utils tests: `parseTemplateParts`, `resolveBindingTag` with nested sub-contracts and `meta`
+3. Integration test: local plugin with validator, validate discovers and runs it
 4. Test error handling (missing handler, handler throws, etc.)
+5. Verify core validation unchanged
+
+### 8. Contract Tag Metadata (`meta`)
+
+Validators often need to know *what kind of data* a binding represents beyond its dataType. A `string` tag could be a plain label, a URL, or a Wix image URL that requires a resize suffix. The validator needs this semantic context to produce useful findings.
+
+Add an optional `meta` field to contract tags — a free-form key-value map that plugins define and validators consume:
+
+```yaml
+# In a wix-data plugin contract
+name: ProductPage
+tags:
+  - tag: mediaGallery
+    type: sub-contract
+    tags:
+      - tag: selectedMedia
+        type: sub-contract
+        tags:
+          - tag: url
+            type: data
+            dataType: string
+            meta:
+              vendor: wix-image
+              defaultTransform: w_300,h_200,q_80
+          - tag: alt
+            type: data
+            dataType: string
+  - tag: productName
+    type: data
+    dataType: string
+```
+
+#### Contract types
+
+`ParsedYamlTag` gains:
+```typescript
+meta?: Record<string, string>;
+```
+
+`ContractTag` gains:
+```typescript
+/** Vendor/plugin metadata for validation. Opaque to the framework. */
+meta?: Record<string, string>;
+```
+
+The `parseTag()` function passes `meta` through unchanged — the framework never interprets it, only validators do.
+
+#### Validation context
+
+`JayHtmlValidationContext` gains access to the parsed contract, so validators can look up tag metadata:
+
+```typescript
+export interface JayHtmlValidationContext {
+    body: HTMLElement;
+    filePath: string;
+    projectRoot: string;
+    /** Parsed contract for this page (undefined if no contract) */
+    contract?: Contract;
+    /** Headless plugin imports declared in this file */
+    headlessImports: Array<{
+        pluginName: string;
+        contractName: string;
+        contract: Contract;
+    }>;
+}
+```
+
+### 9. Validator Utilities
+
+Walking the DOM, parsing bindings, and resolving tag types are common operations every validator needs. Providing utility functions prevents each plugin from reimplementing them (and getting them wrong).
+
+New file `packages/compiler/compiler-shared/lib/validator-utils.ts`:
+
+```typescript
+import type { HTMLElement, Node } from 'node-html-parser';
+import type { ContractTag, Contract } from './contract';
+
+/** A parsed segment of an attribute or text value */
+export interface TemplatePart {
+    /** 'static' for literal text, 'binding' for {expression} */
+    kind: 'static' | 'binding';
+    /** The raw text: literal string for static, accessor path for binding */
+    value: string;
+}
+
+/** Resolved binding with contract tag info */
+export interface ResolvedBinding {
+    /** Full accessor path, e.g. "productPage.mediaGallery.selectedMedia.url" */
+    path: string;
+    /** The leaf tag from the contract, if resolved */
+    tag?: ContractTag;
+}
+
+/**
+ * Parse an attribute value or text content into static and binding parts.
+ *
+ * Example: `"{mediaGallery.selectedMedia.url}/v1/fit/w_300/file.jpg"`
+ * → [{ kind: 'binding', value: 'mediaGallery.selectedMedia.url' },
+ *    { kind: 'static', value: '/v1/fit/w_300/file.jpg' }]
+ */
+export function parseTemplateParts(value: string): TemplatePart[];
+
+/**
+ * Resolve a binding path to its contract tag, walking through sub-contracts.
+ *
+ * Example: resolveBindingTag("mediaGallery.selectedMedia.url", contract)
+ * → { tag: "url", dataType: JayString, meta: { vendor: "wix-image", ... } }
+ */
+export function resolveBindingTag(
+    bindingPath: string,
+    contract: Contract,
+): ContractTag | undefined;
+
+/**
+ * Walk all elements in a DOM tree depth-first.
+ */
+export function walkElements(
+    root: HTMLElement,
+    visitor: (el: HTMLElement) => void,
+): void;
+
+/**
+ * Find all bindings in an element's attribute value and resolve them
+ * against the contract.
+ *
+ * Convenience combining parseTemplateParts + resolveBindingTag.
+ */
+export function resolveAttributeBindings(
+    attrValue: string,
+    contract: Contract,
+): ResolvedBinding[];
+```
+
+#### Usage in Wix media validator
+
+With these utilities, the wix media validator becomes:
+
+```typescript
+import type {
+    JayHtmlValidatorFn,
+    JayHtmlValidationFinding,
+} from '@jay-framework/compiler-shared';
+import {
+    walkElements,
+    parseTemplateParts,
+    resolveBindingTag,
+} from '@jay-framework/compiler-shared';
+
+export const validate: JayHtmlValidatorFn = (ctx) => {
+    if (!ctx.contract) return [];
+    const findings: JayHtmlValidationFinding[] = [];
+
+    walkElements(ctx.body, (el) => {
+        if (el.rawTagName !== 'img') return;
+        const src = el.getAttribute('src');
+        if (!src) return;
+
+        const parts = parseTemplateParts(src);
+        for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
+            if (part.kind !== 'binding') continue;
+
+            const tag = resolveBindingTag(part.value, ctx.contract);
+            if (!tag?.meta?.vendor || tag.meta.vendor !== 'wix-image') continue;
+
+            // Check if the next static part has the resize suffix
+            const next = parts[i + 1];
+            if (!next || next.kind !== 'static' || !next.value.includes('/v1/')) {
+                const transform = tag.meta.defaultTransform || 'w_300,h_200,q_80';
+                findings.push({
+                    severity: 'warning',
+                    message: `Wix image binding {${part.value}} missing resize suffix`,
+                    suggestion:
+                        `Add resize parameters after the binding. Change:\n` +
+                        `  src="{${part.value}}"\n` +
+                        `to:\n` +
+                        `  src="{${part.value}}/v1/fit/${transform}/file.jpg"`,
+                    element: 'img',
+                    attribute: 'src',
+                });
+            }
+        }
+    });
+
+    return findings;
+};
+```
+
+#### `parseTemplateParts` implementation
+
+Lightweight regex split — no PEG parser dependency, no code generation:
+
+```typescript
+export function parseTemplateParts(value: string): TemplatePart[] {
+    const parts: TemplatePart[] = [];
+    const regex = /\{([^}]+)\}/g;
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(value)) !== null) {
+        if (match.index > lastIndex) {
+            parts.push({ kind: 'static', value: value.substring(lastIndex, match.index) });
+        }
+        parts.push({ kind: 'binding', value: match[1].trim() });
+        lastIndex = regex.lastIndex;
+    }
+    if (lastIndex < value.length) {
+        parts.push({ kind: 'static', value: value.substring(lastIndex) });
+    }
+    return parts;
+}
+```
+
+#### `resolveBindingTag` implementation
+
+Walks the contract tag tree following dot-separated path segments:
+
+```typescript
+export function resolveBindingTag(
+    bindingPath: string,
+    contract: Contract,
+): ContractTag | undefined {
+    const segments = bindingPath.split('.');
+    let tags = contract.tags;
+    for (const segment of segments) {
+        const tag = tags?.find((t) => t.tag === camelCase(segment) || t.tag === segment);
+        if (!tag) return undefined;
+        if (segment === segments[segments.length - 1]) return tag;
+        tags = tag.tags;
+        if (!tags) return undefined;
+    }
+    return undefined;
+}
+```
 
 ## Trade-offs
 
@@ -299,6 +545,9 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
 | Per-file validation only | Simple, matches existing pattern | No cross-file rules (can add later) |
 | Accessibility as plugin, not built-in | Core stays focused, rules evolve independently | Projects must opt in |
 | Standard import() for handlers | No extra dependencies, works with compiled JS | Local plugins must be compiled first |
+| `meta` on contract tags, not separate file | Discoverable, co-located with data definition | Couples contract format to vendor concerns |
+| Framework-provided validator utilities | Consistent parsing, no reimplementation | More API surface to maintain |
+| `parseTemplateParts` uses regex, not PEG | No parser dependency for validators, lightweight | Doesn't handle nested braces or escaped `{` |
 
 ## Verification Criteria
 
@@ -308,3 +557,7 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
 4. Core validation behavior is completely unchanged
 5. `--json` output includes plugin validation findings
 6. `plugin-validator` validates the `validators` section of plugin.yaml
+7. Contract tags with `meta` parse correctly and are accessible via `ContractTag.meta`
+8. `parseTemplateParts` correctly splits attribute values into static and binding parts
+9. `resolveBindingTag` walks sub-contracts and returns the leaf tag with its `meta`
+10. A validator can detect a wix-image binding missing a resize suffix using the utilities
