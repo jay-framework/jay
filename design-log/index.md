@@ -99,6 +99,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 89  | PR 158 merge concerns                             | Merge conflicts, duplicate work, and decisions for PR #158 into main     |
 | 130 | plugin routes and templates                       | Plugins provide pages (jay-html + page.ts) as routes; project overrides  |
 | 142 | plugin CLI commands                               | `jay-stack run <plugin>/<command>` for admin/batch operations            |
+| 145 | pluggable jay-html validation                     | Plugin-provided validation rules for jay-html with agent-friendly feedback |
 
 ---
 
@@ -146,6 +147,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 140  | production smoke test                  | Dedicated example project validating dev, production self-hosted, and production CDN modes   |
 | 143  | artifact store abstraction for BaaS    | ArtifactStore interface, serve-only export, pre-imported modules for cloud deployment        |
 | 144  | per-route server elements              | One server-element.js per route instead of per instance; render from ViewState, not literals |
+| 145  | pluggable jay-html validation          | Plugin-provided validation rules for jay-html files with agent-friendly feedback             |
 
 ---
 
