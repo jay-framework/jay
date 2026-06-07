@@ -130,6 +130,10 @@ export async function fetchPageRequest(
         ? `    <link rel="stylesheet" href="${cssUrl}" />`
         : '';
 
+    const cssImportPreloads = (route.cssImports ?? [])
+        .map((url) => `    <link rel="preload" href="${url}" as="style" />`)
+        .join('\n');
+
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
         async start(controller) {
@@ -141,7 +145,7 @@ export async function fetchPageRequest(
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-${cssPreload ? cssPreload + '\n' : ''}    <script type="importmap">${JSON.stringify({ imports: importMap })}</script>
+${[cssPreload, cssImportPreloads].filter(Boolean).map((l) => l + '\n').join('')}    <script type="importmap">${JSON.stringify({ imports: importMap })}</script>
 ${headParts}
   </head>
   <body>

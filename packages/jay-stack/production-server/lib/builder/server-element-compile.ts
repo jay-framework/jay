@@ -18,6 +18,8 @@ import fs from 'node:fs/promises';
 
 export interface ServerElementCompileResult {
     cssFile?: string;
+    /** External URLs extracted from @import rules (e.g., Google Fonts) */
+    cssImports?: string[];
 }
 
 export async function compileServerElement(
@@ -74,8 +76,11 @@ export async function compileServerElement(
     await fs.rm(tsPath, { force: true });
 
     let cssFile: string | undefined;
+    let cssImports: string[] | undefined;
     const css = (parsedJayFile as any).css as string | undefined;
     if (css) {
+        cssImports = extractCssImportUrls(css);
+
         const cssFilename = path.basename(outputPath, '.server-element.js') + '.css';
         const cssPath = path.join(outputDir, cssFilename);
         if (minifyCss) {
@@ -88,7 +93,7 @@ export async function compileServerElement(
     }
 
     getLogger().info(`[Build] Compiled server element: ${path.basename(outputPath)}`);
-    return { cssFile };
+    return { cssFile, cssImports };
 }
 
 /**
@@ -241,4 +246,21 @@ function resolveJayHtmlPaths(html: string, sourceDir: string, targetDir: string)
     }
 
     return root.toString();
+}
+
+/**
+ * Extract external @import URLs from CSS for preload hints (DL#146).
+ * Only extracts absolute URLs — relative @imports are local and don't need preloading.
+ */
+function extractCssImportUrls(css: string): string[] {
+    const imports: string[] = [];
+    const re = /@import\s*(?:url\(\s*['"]?([^'")]+)['"]?\s*\)|['"]([^'"]+)['"])/g;
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(css)) !== null) {
+        const url = match[1] || match[2];
+        if (url.startsWith('https://')) {
+            imports.push(url);
+        }
+    }
+    return imports;
 }

@@ -392,6 +392,9 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
                 }
                 entry.routeCssPath = path.relative(frontendDir, dstCss);
             }
+            if (seResult.cssImports?.length) {
+                entry.cssImports = seResult.cssImports;
+            }
 
             logger.important(`[Build] Route server element: ${routeDir}`);
         } catch (err: any) {

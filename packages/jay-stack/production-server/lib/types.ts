@@ -29,6 +29,8 @@ export interface RouteEntry {
     routeHydratePath?: string;
     /** Per-route client bundle path (DL#144). Entry that imports route hydrate script. */
     routeClientBundlePath?: string;
+    /** External @import URLs extracted from CSS at build time (DL#146). Used for preload hints. */
+    cssImports?: string[];
     instances: InstanceEntry[];
     isPlugin?: boolean;
     pluginName?: string;
