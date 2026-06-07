@@ -1435,9 +1435,7 @@ describe('expression-compiler', () => {
         });
 
         it('should parse single binding', () => {
-            expect(parseTemplateParts('{name}')).toEqual([
-                { kind: 'binding', value: 'name' },
-            ]);
+            expect(parseTemplateParts('{name}')).toEqual([{ kind: 'binding', value: 'name' }]);
         });
 
         it('should parse binding with dot path', () => {
@@ -1470,9 +1468,7 @@ describe('expression-compiler', () => {
         });
 
         it('should trim whitespace in binding', () => {
-            expect(parseTemplateParts('{ name }')).toEqual([
-                { kind: 'binding', value: 'name' },
-            ]);
+            expect(parseTemplateParts('{ name }')).toEqual([{ kind: 'binding', value: 'name' }]);
         });
     });
 });

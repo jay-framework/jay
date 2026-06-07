@@ -116,21 +116,18 @@ validators:
 The handler module exports a `validate` function:
 
 ```typescript
-import type {
-    JayHtmlValidatorFn,
-    JayHtmlValidationFinding,
-} from '@jay-framework/compiler-shared';
+import type { JayHtmlValidatorFn, JayHtmlValidationFinding } from '@jay-framework/compiler-shared';
 
 export const validate: JayHtmlValidatorFn = (ctx) => {
-    const findings: JayHtmlValidationFinding[] = [];
+  const findings: JayHtmlValidationFinding[] = [];
 
-    // ctx.body — parsed DOM tree (HTMLElement from node-html-parser)
-    // ctx.filePath — relative path to the jay-html file
-    // ctx.contract — page contract (if any), with tags including meta
-    // ctx.headlessImports — headless components used in this file
-    // ctx.projectRoot — absolute project root path
+  // ctx.body — parsed DOM tree (HTMLElement from node-html-parser)
+  // ctx.filePath — relative path to the jay-html file
+  // ctx.contract — page contract (if any), with tags including meta
+  // ctx.headlessImports — headless components used in this file
+  // ctx.projectRoot — absolute project root path
 
-    return findings;
+  return findings;
 };
 ```
 
@@ -169,26 +166,26 @@ import { walkElements, resolveBinding } from '@jay-framework/compiler-shared';
 import { parseTemplateParts } from '@jay-framework/compiler-jay-html';
 
 export const validate: JayHtmlValidatorFn = (ctx) => {
-    const findings: JayHtmlValidationFinding[] = [];
+  const findings: JayHtmlValidationFinding[] = [];
 
-    walkElements(ctx.body, ctx, (el, scope) => {
-        if (el.rawTagName !== 'img') return;
-        const src = el.getAttribute('src');
-        if (!src) return;
+  walkElements(ctx.body, ctx, (el, scope) => {
+    if (el.rawTagName !== 'img') return;
+    const src = el.getAttribute('src');
+    if (!src) return;
 
-        for (const part of parseTemplateParts(src)) {
-            if (part.kind !== 'binding') continue;
-            const resolved = resolveBinding(part.value, scope);
-            if (resolved.tag?.meta?.vendor !== 'wix-image') continue;
+    for (const part of parseTemplateParts(src)) {
+      if (part.kind !== 'binding') continue;
+      const resolved = resolveBinding(part.value, scope);
+      if (resolved.tag?.meta?.vendor !== 'wix-image') continue;
 
-            findings.push({
-                severity: 'warning',
-                message: `Image binding {${part.value}} may need resize parameters`,
-                suggestion: 'Add /v1/fit/w_{WIDTH},h_{HEIGHT},q_80/file.jpg after the binding',
-            });
-        }
-    });
+      findings.push({
+        severity: 'warning',
+        message: `Image binding {${part.value}} may need resize parameters`,
+        suggestion: 'Add /v1/fit/w_{WIDTH},h_{HEIGHT},q_80/file.jpg after the binding',
+      });
+    }
+  });
 
-    return findings;
+  return findings;
 };
 ```

@@ -26,7 +26,11 @@ export {
 export { renderRefsType } from './jay-target/jay-html-compile-refs';
 export { htmlElementTagNameMap } from './jay-target/html-element-tag-name-map';
 export { generateTypes } from './jay-target/jay-html-compile-types';
-export { parseIsEnum, parseEnumValues, parseTemplateParts } from './expressions/expression-compiler';
+export {
+    parseIsEnum,
+    parseEnumValues,
+    parseTemplateParts,
+} from './expressions/expression-compiler';
 export * from './contract';
 export * from './action';
 export { type JayImportResolver } from './jay-target/jay-import-resolver';
