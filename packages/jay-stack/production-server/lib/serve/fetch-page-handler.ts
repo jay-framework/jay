@@ -120,15 +120,9 @@ export async function fetchPageRequest(
     const modulePreloads = Object.values(importMap)
         .map((url) => `    <link rel="modulepreload" href="${url}" />`)
         .join('\n');
-    const cssUrl = instance.clientCssPath
-        ? `${staticBaseUrl}${instance.clientCssPath}`
-        : '';
-    const cssPreload = cssUrl
-        ? `    <link rel="preload" href="${cssUrl}" as="style" />`
-        : '';
-    const cssLink = cssUrl
-        ? `    <link rel="stylesheet" href="${cssUrl}" />`
-        : '';
+    const cssUrl = instance.clientCssPath ? `${staticBaseUrl}${instance.clientCssPath}` : '';
+    const cssPreload = cssUrl ? `    <link rel="preload" href="${cssUrl}" as="style" />` : '';
+    const cssLink = cssUrl ? `    <link rel="stylesheet" href="${cssUrl}" />` : '';
 
     const cssImportPreloads = (route.cssImports ?? [])
         .map((url) => `    <link rel="preload" href="${url}" as="style" />`)
@@ -145,7 +139,10 @@ export async function fetchPageRequest(
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-${[cssPreload, cssImportPreloads].filter(Boolean).map((l) => l + '\n').join('')}    <script type="importmap">${JSON.stringify({ imports: importMap })}</script>
+${[cssPreload, cssImportPreloads]
+    .filter(Boolean)
+    .map((l) => l + '\n')
+    .join('')}    <script type="importmap">${JSON.stringify({ imports: importMap })}</script>
 ${headParts}
   </head>
   <body>
