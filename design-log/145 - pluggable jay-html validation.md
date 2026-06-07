@@ -17,6 +17,7 @@ There is no mechanism for plugins to provide validation rules that run against j
 ### Q1: What data do validators need access to?
 
 Validators operate on the already-parsed jay-html DOM tree (`HTMLElement` from node-html-parser). They need:
+
 - The element tree (to walk and inspect elements, attributes, text)
 - File path (for context in error messages)
 - Headless imports (to know which plugins are used in this file)
@@ -27,6 +28,7 @@ They do **not** need to load external files, run compilation, or access runtime 
 ### Q2: How are validator handlers loaded?
 
 Since validators work purely on parsed jay-html data, they need no special TypeScript loader. Handlers are loaded via standard `import()`:
+
 - **NPM plugins**: handler is pre-compiled JS in the package's dist
 - **Local plugins**: handler is a relative path to the compiled JS file
 
@@ -68,29 +70,28 @@ New file `packages/compiler/compiler-shared/lib/plugin-validators.ts`:
 import type { HTMLElement } from 'node-html-parser';
 
 export interface JayHtmlValidationContext {
-    /** Parsed jay-html DOM tree root */
-    body: HTMLElement;
-    /** Relative file path (from project root) */
-    filePath: string;
-    /** Absolute project root path */
-    projectRoot: string;
+  /** Parsed jay-html DOM tree root */
+  body: HTMLElement;
+  /** Relative file path (from project root) */
+  filePath: string;
+  /** Absolute project root path */
+  projectRoot: string;
 }
 
 export interface JayHtmlValidationFinding {
-    severity: 'error' | 'warning';
-    /** Human-readable problem description */
-    message: string;
-    /** Agent-friendly instruction on how to fix the issue */
-    suggestion: string;
-    /** Element context (tag name or ref) */
-    element?: string;
-    /** Which attribute is problematic */
-    attribute?: string;
+  severity: 'error' | 'warning';
+  /** Human-readable problem description */
+  message: string;
+  /** Agent-friendly instruction on how to fix the issue */
+  suggestion: string;
+  /** Element context (tag name or ref) */
+  element?: string;
+  /** Which attribute is problematic */
+  attribute?: string;
 }
 
 /** Function signature for a validator handler module's default export */
-export type JayHtmlValidatorFn =
-    (context: JayHtmlValidationContext) => JayHtmlValidationFinding[];
+export type JayHtmlValidatorFn = (context: JayHtmlValidationContext) => JayHtmlValidationFinding[];
 ```
 
 ### 3. PluginManifest Extension
@@ -143,9 +144,9 @@ A validator handler module exports a `validate` function:
 import type { JayHtmlValidatorFn } from '@jay-framework/compiler-shared';
 
 export const validate: JayHtmlValidatorFn = (ctx) => {
-    const findings = [];
-    // walk ctx.body, inspect elements, return findings
-    return findings;
+  const findings = [];
+  // walk ctx.body, inspect elements, return findings
+  return findings;
 };
 ```
 
@@ -167,6 +168,7 @@ In `--json` mode, findings include `plugin`, `rule`, `message`, and `suggestion`
 ### 7. Plugin Validator Schema Validation
 
 Update `validateSchema()` in `packages/jay-stack/plugin-validator/lib/validate-plugin.ts` to validate the `validators` section:
+
 - Each validator must have a `name` (kebab-case) and `handler` (non-empty string)
 - Handler file must exist (for local plugins)
 
@@ -180,33 +182,33 @@ import type { JayHtmlValidatorFn, JayHtmlValidationFinding } from '@jay-framewor
 const WIX_MEDIA_PATTERN = 'static.wixstatic.com/media/';
 
 export const validate: JayHtmlValidatorFn = (ctx) => {
-    const findings: JayHtmlValidationFinding[] = [];
-    walkElements(ctx.body, (el) => {
-        if (el.rawTagName !== 'img') return;
-        const src = el.getAttribute('src');
-        if (src && src.includes(WIX_MEDIA_PATTERN) && !src.includes('/v1/')) {
-            findings.push({
-                severity: 'warning',
-                message: 'Wix media image without resize parameters — full-size image will be served',
-                suggestion:
-                    'Add resize parameters to optimize image delivery. ' +
-                    'Change src from "https://static.wixstatic.com/media/HASH.jpg" to ' +
-                    '"https://static.wixstatic.com/media/HASH.jpg/v1/fit/w_{WIDTH},h_{HEIGHT},q_80/HASH.jpg" ' +
-                    'where WIDTH and HEIGHT match the rendered dimensions from the element\'s style. ' +
-                    'For responsive images, add a srcset attribute with multiple sizes.',
-                element: 'img',
-                attribute: 'src',
-            });
-        }
-    });
-    return findings;
+  const findings: JayHtmlValidationFinding[] = [];
+  walkElements(ctx.body, (el) => {
+    if (el.rawTagName !== 'img') return;
+    const src = el.getAttribute('src');
+    if (src && src.includes(WIX_MEDIA_PATTERN) && !src.includes('/v1/')) {
+      findings.push({
+        severity: 'warning',
+        message: 'Wix media image without resize parameters — full-size image will be served',
+        suggestion:
+          'Add resize parameters to optimize image delivery. ' +
+          'Change src from "https://static.wixstatic.com/media/HASH.jpg" to ' +
+          '"https://static.wixstatic.com/media/HASH.jpg/v1/fit/w_{WIDTH},h_{HEIGHT},q_80/HASH.jpg" ' +
+          "where WIDTH and HEIGHT match the rendered dimensions from the element's style. " +
+          'For responsive images, add a srcset attribute with multiple sizes.',
+        element: 'img',
+        attribute: 'src',
+      });
+    }
+  });
+  return findings;
 };
 
 function walkElements(el: any, visitor: (el: any) => void): void {
-    visitor(el);
-    for (const child of el.childNodes ?? []) {
-        if (child.nodeType === 1) walkElements(child, visitor);
-    }
+  visitor(el);
+  for (const child of el.childNodes ?? []) {
+    if (child.nodeType === 1) walkElements(child, visitor);
+  }
 }
 ```
 
@@ -216,60 +218,65 @@ function walkElements(el: any, visitor: (el: any) => void): void {
 import type { JayHtmlValidatorFn, JayHtmlValidationFinding } from '@jay-framework/compiler-shared';
 
 export const validate: JayHtmlValidatorFn = (ctx) => {
-    const findings: JayHtmlValidationFinding[] = [];
-    walkElements(ctx.body, (el) => {
-        const tag = el.rawTagName?.toLowerCase();
+  const findings: JayHtmlValidationFinding[] = [];
+  walkElements(ctx.body, (el) => {
+    const tag = el.rawTagName?.toLowerCase();
 
-        // img must have alt
-        if (tag === 'img' && !el.getAttribute('alt')) {
-            findings.push({
-                severity: 'warning',
-                message: 'Image element missing alt attribute',
-                suggestion:
-                    'Add an alt attribute to the <img> element. ' +
-                    'Use descriptive text for informative images, or alt="" for decorative images.',
-                element: 'img',
-                attribute: 'alt',
-            });
-        }
+    // img must have alt
+    if (tag === 'img' && !el.getAttribute('alt')) {
+      findings.push({
+        severity: 'warning',
+        message: 'Image element missing alt attribute',
+        suggestion:
+          'Add an alt attribute to the <img> element. ' +
+          'Use descriptive text for informative images, or alt="" for decorative images.',
+        element: 'img',
+        attribute: 'alt',
+      });
+    }
 
-        // input must have associated label
-        if (tag === 'input' && el.getAttribute('type') !== 'hidden') {
-            const id = el.getAttribute('id');
-            if (!id || !hasLabelFor(ctx.body, id)) {
-                findings.push({
-                    severity: 'warning',
-                    message: 'Input element without associated label',
-                    suggestion:
-                        'Add a <label for="inputId"> element that references this input\'s id, ' +
-                        'or wrap the input in a <label> element.',
-                    element: 'input',
-                    attribute: 'id',
-                });
-            }
-        }
-    });
-    return findings;
+    // input must have associated label
+    if (tag === 'input' && el.getAttribute('type') !== 'hidden') {
+      const id = el.getAttribute('id');
+      if (!id || !hasLabelFor(ctx.body, id)) {
+        findings.push({
+          severity: 'warning',
+          message: 'Input element without associated label',
+          suggestion:
+            'Add a <label for="inputId"> element that references this input\'s id, ' +
+            'or wrap the input in a <label> element.',
+          element: 'input',
+          attribute: 'id',
+        });
+      }
+    }
+  });
+  return findings;
 };
 ```
 
 ### Validation Output Examples
 
 **Good** (validator finds no issues):
+
 ```html
-<img src="https://static.wixstatic.com/media/abc123.jpg/v1/fit/w_300,h_200,q_80/abc123.jpg"
-     alt="Product photo" style="width: 300px; height: 200px;" />
+<img
+  src="https://static.wixstatic.com/media/abc123.jpg/v1/fit/w_300,h_200,q_80/abc123.jpg"
+  alt="Product photo"
+  style="width: 300px; height: 200px;"
+/>
 ```
 
 **Bad** (validator reports warning):
+
 ```html
-<img src="https://static.wixstatic.com/media/abc123.jpg"
-     style="width: 300px; height: 200px;" />
+<img src="https://static.wixstatic.com/media/abc123.jpg" style="width: 300px; height: 200px;" />
 ```
 
 ## Implementation Plan
 
 ### Phase 1: Contract tag `meta` and types
+
 1. Add `meta?: Record<string, string>` to `ParsedYamlTag` and `ContractTag`
 2. Pass `meta` through in `parseTag()` — no validation, opaque to framework
 3. Create `packages/compiler/compiler-shared/lib/plugin-validators.ts` with `JayHtmlValidationContext`, `JayHtmlValidationFinding`, `JayHtmlValidatorFn`
@@ -278,6 +285,7 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
 6. Add `validators` to `PluginManifest` interface
 
 ### Phase 2: Validator utilities
+
 1. Create `packages/compiler/compiler-shared/lib/validator-utils.ts`
 2. Implement `parseTemplateParts` — wrap PEG `template` rule, return `TemplatePart[]` instead of generated code (add `templateParts` PEG rule or post-process existing AST)
 3. Implement `DataScope` type and `resolveBinding` — walk contract tag tree by dot-separated path within a scope
@@ -287,6 +295,7 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
 7. Unit tests: `parseTemplateParts` with nested braces/ternaries, `resolveBinding` through sub-contracts with `meta`, `walkElements` scope changes at forEach and headless boundaries
 
 ### Phase 3: Validation runner
+
 1. Modify `validateJayFiles()` to retain parsed jay-html files after core validation
 2. Add plugin scanning (import `scanPlugins` from `stack-server-runtime`)
 3. Add validator handler loading and execution
@@ -295,10 +304,12 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
 6. Update output formatting to show plugin findings with suggestions
 
 ### Phase 4: Plugin validator schema
+
 1. Update `validateSchema()` in `plugin-validator` to validate the `validators` section
 2. Check handler file exists for local plugins
 
 ### Phase 5: Tests
+
 1. Contract parser test: tag with `meta` parses and roundtrips correctly
 2. Validator utils tests: `parseTemplateParts`, `resolveBindingTag` with nested sub-contracts and `meta`
 3. Integration test: local plugin with validator, validate discovers and runs it
@@ -307,7 +318,7 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
 
 ### 8. Contract Tag Metadata (`meta`)
 
-Validators often need to know *what kind of data* a binding represents beyond its dataType. A `string` tag could be a plain label, a URL, or a Wix image URL that requires a resize suffix. The validator needs this semantic context to produce useful findings.
+Validators often need to know _what kind of data_ a binding represents beyond its dataType. A `string` tag could be a plain label, a URL, or a Wix image URL that requires a resize suffix. The validator needs this semantic context to produce useful findings.
 
 Add an optional `meta` field to contract tags — a free-form key-value map that plugins define and validators consume:
 
@@ -338,11 +349,13 @@ tags:
 #### Contract types
 
 `ParsedYamlTag` gains:
+
 ```typescript
 meta?: Record<string, string>;
 ```
 
 `ContractTag` gains:
+
 ```typescript
 /** Vendor/plugin metadata for validation. Opaque to the framework. */
 meta?: Record<string, string>;
@@ -356,17 +369,17 @@ The `parseTag()` function passes `meta` through unchanged — the framework neve
 
 ```typescript
 export interface JayHtmlValidationContext {
-    body: HTMLElement;
-    filePath: string;
-    projectRoot: string;
-    /** Parsed contract for this page (undefined if no contract) */
-    contract?: Contract;
-    /** Headless plugin imports declared in this file */
-    headlessImports: Array<{
-        pluginName: string;
-        contractName: string;
-        contract: Contract;
-    }>;
+  body: HTMLElement;
+  filePath: string;
+  projectRoot: string;
+  /** Parsed contract for this page (undefined if no contract) */
+  contract?: Contract;
+  /** Headless plugin imports declared in this file */
+  headlessImports: Array<{
+    pluginName: string;
+    contractName: string;
+    contract: Contract;
+  }>;
 }
 ```
 
@@ -406,20 +419,20 @@ import type { ContractTag, Contract } from './contract';
 
 /** A parsed segment of an attribute or text value */
 export interface TemplatePart {
-    /** 'static' for literal text, 'binding' for {expression} */
-    kind: 'static' | 'binding';
-    /** The raw text: literal string for static, accessor path for binding */
-    value: string;
+  /** 'static' for literal text, 'binding' for {expression} */
+  kind: 'static' | 'binding';
+  /** The raw text: literal string for static, accessor path for binding */
+  value: string;
 }
 
 /** Resolved binding with contract tag info and scope context */
 export interface ResolvedBinding {
-    /** Full accessor path as written in the template */
-    path: string;
-    /** The leaf tag from the contract, if resolved */
-    tag?: ContractTag;
-    /** Which contract the binding resolved against (page or headless component) */
-    sourceContract?: Contract;
+  /** Full accessor path as written in the template */
+  path: string;
+  /** The leaf tag from the contract, if resolved */
+  tag?: ContractTag;
+  /** Which contract the binding resolved against (page or headless component) */
+  sourceContract?: Contract;
 }
 
 /**
@@ -442,10 +455,7 @@ export function parseTemplateParts(value: string): TemplatePart[];
  * Where scope was built by walkElements when entering <jay:product-page>,
  * resolves against the product-page contract.
  */
-export function resolveBinding(
-    bindingPath: string,
-    scope: DataScope,
-): ResolvedBinding;
+export function resolveBinding(bindingPath: string, scope: DataScope): ResolvedBinding;
 
 /**
  * Walk all elements depth-first, tracking data context through
@@ -456,19 +466,16 @@ export function resolveBinding(
  * need to reconstruct it.
  */
 export function walkElements(
-    root: HTMLElement,
-    ctx: JayHtmlValidationContext,
-    visitor: (el: HTMLElement, scope: DataScope) => void,
+  root: HTMLElement,
+  ctx: JayHtmlValidationContext,
+  visitor: (el: HTMLElement, scope: DataScope) => void,
 ): void;
 
 /**
  * Find all bindings in an element's attribute value and resolve them
  * against the given data scope.
  */
-export function resolveAttributeBindings(
-    attrValue: string,
-    scope: DataScope,
-): ResolvedBinding[];
+export function resolveAttributeBindings(attrValue: string, scope: DataScope): ResolvedBinding[];
 ```
 
 #### Data context reconstruction
@@ -486,6 +493,7 @@ When `resolveBinding` is called, it walks up the DOM from `element`:
 ```
 
 Walk up from `<img>`:
+
 1. Hit `forEach="mediaGallery.images"` → push scope: item type of `mediaGallery.images` array
 2. Hit `<jay:product-page>` → push scope: product-page contract
 3. Resolve `url` starting from innermost scope (the forEach item)
@@ -495,53 +503,51 @@ Walk up from `<img>`:
 
 ```typescript
 export interface DataScope {
-    contract: Contract;
-    /** Tags at this scope level */
-    tags: ContractTag[];
-    /** Parent scope (undefined at page root) */
-    parent?: DataScope;
+  contract: Contract;
+  /** Tags at this scope level */
+  tags: ContractTag[];
+  /** Parent scope (undefined at page root) */
+  parent?: DataScope;
 }
 
 function doWalk(
-    el: HTMLElement,
-    ctx: JayHtmlValidationContext,
-    scope: DataScope,
-    visitor: (el: HTMLElement, scope: DataScope) => void,
+  el: HTMLElement,
+  ctx: JayHtmlValidationContext,
+  scope: DataScope,
+  visitor: (el: HTMLElement, scope: DataScope) => void,
 ): void {
-    let currentScope = scope;
+  let currentScope = scope;
 
-    // <jay:component-name> switches to that component's contract
-    const headless = ctx.headlessImports.find(
-        (h) => `jay:${h.contractName}` === el.rawTagName,
-    );
-    if (headless) {
-        currentScope = {
-            contract: headless.contract,
-            tags: headless.contract.tags,
-            parent: scope,
-        };
+  // <jay:component-name> switches to that component's contract
+  const headless = ctx.headlessImports.find((h) => `jay:${h.contractName}` === el.rawTagName);
+  if (headless) {
+    currentScope = {
+      contract: headless.contract,
+      tags: headless.contract.tags,
+      parent: scope,
+    };
+  }
+
+  // forEach="path" narrows to the array item type
+  const forEach = el.getAttribute('forEach');
+  if (forEach) {
+    const arrayTag = resolveTagPath(forEach, currentScope.tags);
+    if (arrayTag?.tags) {
+      currentScope = {
+        contract: currentScope.contract,
+        tags: arrayTag.tags,
+        parent: currentScope,
+      };
     }
+  }
 
-    // forEach="path" narrows to the array item type
-    const forEach = el.getAttribute('forEach');
-    if (forEach) {
-        const arrayTag = resolveTagPath(forEach, currentScope.tags);
-        if (arrayTag?.tags) {
-            currentScope = {
-                contract: currentScope.contract,
-                tags: arrayTag.tags,
-                parent: currentScope,
-            };
-        }
+  visitor(el, currentScope);
+
+  for (const child of el.childNodes ?? []) {
+    if (child.nodeType === 1) {
+      doWalk(child as HTMLElement, ctx, currentScope, visitor);
     }
-
-    visitor(el, currentScope);
-
-    for (const child of el.childNodes ?? []) {
-        if (child.nodeType === 1) {
-            doWalk(child as HTMLElement, ctx, currentScope, visitor);
-        }
-    }
+  }
 }
 ```
 
@@ -553,10 +559,10 @@ The existing PEG grammar (`expression-compiler.ts`) already parses template expr
 
 ```typescript
 export function parseTemplateParts(value: string): TemplatePart[] {
-    // Use the PEG template rule to get the parsed AST,
-    // then extract static/binding segments from it.
-    // Falls back to regex for values with no bindings (pure static).
-    return parseParts(value, 'templateParts');
+  // Use the PEG template rule to get the parsed AST,
+  // then extract static/binding segments from it.
+  // Falls back to regex for values with no bindings (pure static).
+  return parseParts(value, 'templateParts');
 }
 ```
 
@@ -567,70 +573,61 @@ This requires adding a `templateParts` rule to the PEG grammar (or a post-parse 
 With these utilities, the wix media validator becomes:
 
 ```typescript
-import type {
-    JayHtmlValidatorFn,
-    JayHtmlValidationFinding,
-} from '@jay-framework/compiler-shared';
-import {
-    walkElements,
-    parseTemplateParts,
-    resolveBinding,
-} from '@jay-framework/compiler-shared';
+import type { JayHtmlValidatorFn, JayHtmlValidationFinding } from '@jay-framework/compiler-shared';
+import { walkElements, parseTemplateParts, resolveBinding } from '@jay-framework/compiler-shared';
 
 export const validate: JayHtmlValidatorFn = (ctx) => {
-    if (!ctx.contract) return [];
-    const findings: JayHtmlValidationFinding[] = [];
+  if (!ctx.contract) return [];
+  const findings: JayHtmlValidationFinding[] = [];
 
-    walkElements(ctx.body, ctx, (el, scope) => {
-        if (el.rawTagName !== 'img') return;
-        const src = el.getAttribute('src');
-        if (!src) return;
+  walkElements(ctx.body, ctx, (el, scope) => {
+    if (el.rawTagName !== 'img') return;
+    const src = el.getAttribute('src');
+    if (!src) return;
 
-        const parts = parseTemplateParts(src);
-        for (let i = 0; i < parts.length; i++) {
-            const part = parts[i];
-            if (part.kind !== 'binding') continue;
+    const parts = parseTemplateParts(src);
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      if (part.kind !== 'binding') continue;
 
-            const resolved = resolveBinding(part.value, scope);
-            if (!resolved.tag?.meta?.vendor
-                || resolved.tag.meta.vendor !== 'wix-image') continue;
+      const resolved = resolveBinding(part.value, scope);
+      if (!resolved.tag?.meta?.vendor || resolved.tag.meta.vendor !== 'wix-image') continue;
 
-            // Check if the next static part has the resize suffix
-            const next = parts[i + 1];
-            if (!next || next.kind !== 'static' || !next.value.includes('/v1/')) {
-                const transform = resolved.tag.meta.defaultTransform
-                    || 'w_300,h_200,q_80';
-                findings.push({
-                    severity: 'warning',
-                    message: `Wix image binding {${part.value}} missing resize suffix`,
-                    suggestion:
-                        `Add resize parameters after the binding. Change:\n` +
-                        `  src="{${part.value}}"\n` +
-                        `to:\n` +
-                        `  src="{${part.value}}/v1/fit/${transform}/file.jpg"`,
-                    element: 'img',
-                    attribute: 'src',
-                });
-            }
-        }
-    });
+      // Check if the next static part has the resize suffix
+      const next = parts[i + 1];
+      if (!next || next.kind !== 'static' || !next.value.includes('/v1/')) {
+        const transform = resolved.tag.meta.defaultTransform || 'w_300,h_200,q_80';
+        findings.push({
+          severity: 'warning',
+          message: `Wix image binding {${part.value}} missing resize suffix`,
+          suggestion:
+            `Add resize parameters after the binding. Change:\n` +
+            `  src="{${part.value}}"\n` +
+            `to:\n` +
+            `  src="{${part.value}}/v1/fit/${transform}/file.jpg"`,
+          element: 'img',
+          attribute: 'src',
+        });
+      }
+    }
+  });
 
-    return findings;
+  return findings;
 };
 ```
 
 ## Trade-offs
 
-| Decision | Benefit | Cost |
-|----------|---------|------|
-| Validators get parsed DOM, not raw HTML | Consistent with existing validation, no re-parsing | Validators depend on node-html-parser types |
-| Per-file validation only | Simple, matches existing pattern | No cross-file rules (can add later) |
-| Accessibility as plugin, not built-in | Core stays focused, rules evolve independently | Projects must opt in |
-| Standard import() for handlers | No extra dependencies, works with compiled JS | Local plugins must be compiled first |
-| `meta` on contract tags, not separate file | Discoverable, co-located with data definition | Couples contract format to vendor concerns |
-| Framework-provided validator utilities | Consistent parsing, no reimplementation | More API surface to maintain |
-| `parseTemplateParts` reuses PEG grammar | Handles edge cases (nested braces, ternaries, escaping) | Validators depend on compiler-jay-html PEG parser |
-| `walkElements` provides `DataScope` in callback | Validators never reconstruct scope; forEach/headless boundaries handled automatically | Slightly larger callback signature |
+| Decision                                        | Benefit                                                                               | Cost                                              |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Validators get parsed DOM, not raw HTML         | Consistent with existing validation, no re-parsing                                    | Validators depend on node-html-parser types       |
+| Per-file validation only                        | Simple, matches existing pattern                                                      | No cross-file rules (can add later)               |
+| Accessibility as plugin, not built-in           | Core stays focused, rules evolve independently                                        | Projects must opt in                              |
+| Standard import() for handlers                  | No extra dependencies, works with compiled JS                                         | Local plugins must be compiled first              |
+| `meta` on contract tags, not separate file      | Discoverable, co-located with data definition                                         | Couples contract format to vendor concerns        |
+| Framework-provided validator utilities          | Consistent parsing, no reimplementation                                               | More API surface to maintain                      |
+| `parseTemplateParts` reuses PEG grammar         | Handles edge cases (nested braces, ternaries, escaping)                               | Validators depend on compiler-jay-html PEG parser |
+| `walkElements` provides `DataScope` in callback | Validators never reconstruct scope; forEach/headless boundaries handled automatically | Slightly larger callback signature                |
 
 ## Verification Criteria
 

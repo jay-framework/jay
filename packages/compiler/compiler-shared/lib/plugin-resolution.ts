@@ -97,6 +97,12 @@ export interface PluginManifest {
         /** Path to .jay-command metadata file (for input schema and description) */
         command?: string;
     }>;
+    /** Jay-HTML validators provided by this plugin (DL#145) */
+    validators?: Array<{
+        name: string;
+        handler: string;
+        description?: string;
+    }>;
     /** Plugin setup configuration (Design Log #87) */
     setup?: {
         /** Export name (NPM) or relative path (local) to setup handler function */

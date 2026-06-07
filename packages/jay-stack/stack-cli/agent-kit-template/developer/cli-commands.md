@@ -93,6 +93,8 @@ Errors:
 1 error(s) found, 7 file(s) valid.
 ```
 
+Plugins can provide custom validators that run as part of `jay-stack validate`. Plugin findings include a suggestion field with fix instructions. See the plugin [validation.md](../plugin/validation.md) guide.
+
 Always run validate after creating or editing jay-html and contract files.
 
 ## jay-stack params

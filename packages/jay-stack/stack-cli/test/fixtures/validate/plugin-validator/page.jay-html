@@ -1,0 +1,9 @@
+<html>
+<head>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+    <h1>{productName}</h1>
+    <img src="{heroImage}" />
+</body>
+</html>
