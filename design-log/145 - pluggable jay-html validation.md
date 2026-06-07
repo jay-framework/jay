@@ -279,12 +279,12 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
 
 ### Phase 2: Validator utilities
 1. Create `packages/compiler/compiler-shared/lib/validator-utils.ts`
-2. Implement `parseTemplateParts` — regex-based `{binding}` / static split
-3. Implement `resolveBindingTag` — walk contract tag tree by dot-separated path
-4. Implement `walkElements` — depth-first element visitor
+2. Implement `parseTemplateParts` — wrap PEG `template` rule, return `TemplatePart[]` instead of generated code (add `templateParts` PEG rule or post-process existing AST)
+3. Implement `DataScope` type and `resolveBinding` — walk contract tag tree by dot-separated path within a scope
+4. Implement `walkElements` — depth-first traversal that builds `DataScope` at forEach/`<jay:*>` boundaries and passes it to visitor callback
 5. Implement `resolveAttributeBindings` — convenience combining the above
 6. Export from index
-7. Unit tests for all four utilities
+7. Unit tests: `parseTemplateParts` with nested braces/ternaries, `resolveBinding` through sub-contracts with `meta`, `walkElements` scope changes at forEach and headless boundaries
 
 ### Phase 3: Validation runner
 1. Modify `validateJayFiles()` to retain parsed jay-html files after core validation
@@ -374,10 +374,34 @@ export interface JayHtmlValidationContext {
 
 Walking the DOM, parsing bindings, and resolving tag types are common operations every validator needs. Providing utility functions prevents each plugin from reimplementing them (and getting them wrong).
 
+#### Data context scoping problem
+
+Inside a jay-html file, the data context changes at certain boundaries:
+
+- **`forEach`**: children bind against the iteration item type, not the page ViewState
+- **`<jay:component>`**: children bind against the headless component's contract, not the page's
+- **Nested forEach/headless**: scopes stack — a forEach inside a `<jay:widget>` has the widget's contract as parent scope
+
+A validator that naively resolves `{label}` against the page contract will get the wrong answer when the element is inside `<jay:test-widget>` where `label` comes from the widget's contract.
+
+The compiler solves this with the `Variables` class — a linked chain of scopes built during tree traversal. Validators need the same capability, but without the code-generation machinery.
+
+#### Design: element-anchored resolution
+
+Instead of taking a binding path + contract, resolution takes a **binding path + the element it appears on**. The utility walks up the DOM from the element to reconstruct the data context:
+
+1. Walk ancestors looking for `forEach=` attributes and `<jay:*>` tags
+2. Each one pushes a scope onto the chain (forEach → array item type, jay:component → component contract)
+3. Resolve the binding against the innermost matching scope
+
+This means the framework pre-builds a `DataContext` for each element during the validation pass, or builds it lazily on demand by walking the ancestor chain.
+
+#### Types
+
 New file `packages/compiler/compiler-shared/lib/validator-utils.ts`:
 
 ```typescript
-import type { HTMLElement, Node } from 'node-html-parser';
+import type { HTMLElement } from 'node-html-parser';
 import type { ContractTag, Contract } from './contract';
 
 /** A parsed segment of an attribute or text value */
@@ -388,16 +412,20 @@ export interface TemplatePart {
     value: string;
 }
 
-/** Resolved binding with contract tag info */
+/** Resolved binding with contract tag info and scope context */
 export interface ResolvedBinding {
-    /** Full accessor path, e.g. "productPage.mediaGallery.selectedMedia.url" */
+    /** Full accessor path as written in the template */
     path: string;
     /** The leaf tag from the contract, if resolved */
     tag?: ContractTag;
+    /** Which contract the binding resolved against (page or headless component) */
+    sourceContract?: Contract;
 }
 
 /**
  * Parse an attribute value or text content into static and binding parts.
+ * Uses the existing PEG template rule — handles nested braces, ternaries,
+ * and escaped characters correctly.
  *
  * Example: `"{mediaGallery.selectedMedia.url}/v1/fit/w_300/file.jpg"`
  * → [{ kind: 'binding', value: 'mediaGallery.selectedMedia.url' },
@@ -406,35 +434,133 @@ export interface ResolvedBinding {
 export function parseTemplateParts(value: string): TemplatePart[];
 
 /**
- * Resolve a binding path to its contract tag, walking through sub-contracts.
+ * Resolve a binding path to its contract tag within a data scope.
  *
- * Example: resolveBindingTag("mediaGallery.selectedMedia.url", contract)
- * → { tag: "url", dataType: JayString, meta: { vendor: "wix-image", ... } }
+ * The scope is provided by walkElements — no need to reconstruct it.
+ *
+ * Example: resolveBinding("selectedMedia.url", scope)
+ * Where scope was built by walkElements when entering <jay:product-page>,
+ * resolves against the product-page contract.
  */
-export function resolveBindingTag(
+export function resolveBinding(
     bindingPath: string,
-    contract: Contract,
-): ContractTag | undefined;
+    scope: DataScope,
+): ResolvedBinding;
 
 /**
- * Walk all elements in a DOM tree depth-first.
+ * Walk all elements depth-first, tracking data context through
+ * forEach and <jay:component> boundaries.
+ *
+ * The visitor receives both the element and its DataScope — the scope
+ * is pre-built by walkElements as it traverses, so validators never
+ * need to reconstruct it.
  */
 export function walkElements(
     root: HTMLElement,
-    visitor: (el: HTMLElement) => void,
+    ctx: JayHtmlValidationContext,
+    visitor: (el: HTMLElement, scope: DataScope) => void,
 ): void;
 
 /**
  * Find all bindings in an element's attribute value and resolve them
- * against the contract.
- *
- * Convenience combining parseTemplateParts + resolveBindingTag.
+ * against the given data scope.
  */
 export function resolveAttributeBindings(
     attrValue: string,
-    contract: Contract,
+    scope: DataScope,
 ): ResolvedBinding[];
 ```
+
+#### Data context reconstruction
+
+When `resolveBinding` is called, it walks up the DOM from `element`:
+
+```
+<div>                                    ← page contract scope
+  <jay:product-page>                     ← product-page contract scope
+    <div forEach="mediaGallery.images">  ← iteration item scope (images[n])
+      <img src="{url}" />                ← resolveBinding("url", img, ctx)
+    </div>
+  </jay:product-page>
+</div>
+```
+
+Walk up from `<img>`:
+1. Hit `forEach="mediaGallery.images"` → push scope: item type of `mediaGallery.images` array
+2. Hit `<jay:product-page>` → push scope: product-page contract
+3. Resolve `url` starting from innermost scope (the forEach item)
+4. Find `url` tag on the array item sub-contract → return it with `meta`
+
+`walkElements` builds the scope as it recurses, pushing/popping at boundaries:
+
+```typescript
+export interface DataScope {
+    contract: Contract;
+    /** Tags at this scope level */
+    tags: ContractTag[];
+    /** Parent scope (undefined at page root) */
+    parent?: DataScope;
+}
+
+function doWalk(
+    el: HTMLElement,
+    ctx: JayHtmlValidationContext,
+    scope: DataScope,
+    visitor: (el: HTMLElement, scope: DataScope) => void,
+): void {
+    let currentScope = scope;
+
+    // <jay:component-name> switches to that component's contract
+    const headless = ctx.headlessImports.find(
+        (h) => `jay:${h.contractName}` === el.rawTagName,
+    );
+    if (headless) {
+        currentScope = {
+            contract: headless.contract,
+            tags: headless.contract.tags,
+            parent: scope,
+        };
+    }
+
+    // forEach="path" narrows to the array item type
+    const forEach = el.getAttribute('forEach');
+    if (forEach) {
+        const arrayTag = resolveTagPath(forEach, currentScope.tags);
+        if (arrayTag?.tags) {
+            currentScope = {
+                contract: currentScope.contract,
+                tags: arrayTag.tags,
+                parent: currentScope,
+            };
+        }
+    }
+
+    visitor(el, currentScope);
+
+    for (const child of el.childNodes ?? []) {
+        if (child.nodeType === 1) {
+            doWalk(child as HTMLElement, ctx, currentScope, visitor);
+        }
+    }
+}
+```
+
+No ancestor-walking needed per element — the scope is threaded through the recursion and arrives ready at each visitor call.
+
+#### `parseTemplateParts` — reuse PEG parser
+
+The existing PEG grammar (`expression-compiler.ts`) already parses template expressions correctly, handling nested braces, ternaries, and escaping. `parseTemplateParts` wraps the PEG `template` rule but returns structured parts instead of generated code:
+
+```typescript
+export function parseTemplateParts(value: string): TemplatePart[] {
+    // Use the PEG template rule to get the parsed AST,
+    // then extract static/binding segments from it.
+    // Falls back to regex for values with no bindings (pure static).
+    return parseParts(value, 'templateParts');
+}
+```
+
+This requires adding a `templateParts` rule to the PEG grammar (or a post-parse extraction from the existing `template` rule's AST) that returns `TemplatePart[]` instead of generated JS code. The PEG grammar already distinguishes static text from `{expression}` — we just need a second output mode.
 
 #### Usage in Wix media validator
 
@@ -448,14 +574,14 @@ import type {
 import {
     walkElements,
     parseTemplateParts,
-    resolveBindingTag,
+    resolveBinding,
 } from '@jay-framework/compiler-shared';
 
 export const validate: JayHtmlValidatorFn = (ctx) => {
     if (!ctx.contract) return [];
     const findings: JayHtmlValidationFinding[] = [];
 
-    walkElements(ctx.body, (el) => {
+    walkElements(ctx.body, ctx, (el, scope) => {
         if (el.rawTagName !== 'img') return;
         const src = el.getAttribute('src');
         if (!src) return;
@@ -465,13 +591,15 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
             const part = parts[i];
             if (part.kind !== 'binding') continue;
 
-            const tag = resolveBindingTag(part.value, ctx.contract);
-            if (!tag?.meta?.vendor || tag.meta.vendor !== 'wix-image') continue;
+            const resolved = resolveBinding(part.value, scope);
+            if (!resolved.tag?.meta?.vendor
+                || resolved.tag.meta.vendor !== 'wix-image') continue;
 
             // Check if the next static part has the resize suffix
             const next = parts[i + 1];
             if (!next || next.kind !== 'static' || !next.value.includes('/v1/')) {
-                const transform = tag.meta.defaultTransform || 'w_300,h_200,q_80';
+                const transform = resolved.tag.meta.defaultTransform
+                    || 'w_300,h_200,q_80';
                 findings.push({
                     severity: 'warning',
                     message: `Wix image binding {${part.value}} missing resize suffix`,
@@ -491,52 +619,6 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
 };
 ```
 
-#### `parseTemplateParts` implementation
-
-Lightweight regex split — no PEG parser dependency, no code generation:
-
-```typescript
-export function parseTemplateParts(value: string): TemplatePart[] {
-    const parts: TemplatePart[] = [];
-    const regex = /\{([^}]+)\}/g;
-    let lastIndex = 0;
-    let match: RegExpExecArray | null;
-    while ((match = regex.exec(value)) !== null) {
-        if (match.index > lastIndex) {
-            parts.push({ kind: 'static', value: value.substring(lastIndex, match.index) });
-        }
-        parts.push({ kind: 'binding', value: match[1].trim() });
-        lastIndex = regex.lastIndex;
-    }
-    if (lastIndex < value.length) {
-        parts.push({ kind: 'static', value: value.substring(lastIndex) });
-    }
-    return parts;
-}
-```
-
-#### `resolveBindingTag` implementation
-
-Walks the contract tag tree following dot-separated path segments:
-
-```typescript
-export function resolveBindingTag(
-    bindingPath: string,
-    contract: Contract,
-): ContractTag | undefined {
-    const segments = bindingPath.split('.');
-    let tags = contract.tags;
-    for (const segment of segments) {
-        const tag = tags?.find((t) => t.tag === camelCase(segment) || t.tag === segment);
-        if (!tag) return undefined;
-        if (segment === segments[segments.length - 1]) return tag;
-        tags = tag.tags;
-        if (!tags) return undefined;
-    }
-    return undefined;
-}
-```
-
 ## Trade-offs
 
 | Decision | Benefit | Cost |
@@ -547,7 +629,8 @@ export function resolveBindingTag(
 | Standard import() for handlers | No extra dependencies, works with compiled JS | Local plugins must be compiled first |
 | `meta` on contract tags, not separate file | Discoverable, co-located with data definition | Couples contract format to vendor concerns |
 | Framework-provided validator utilities | Consistent parsing, no reimplementation | More API surface to maintain |
-| `parseTemplateParts` uses regex, not PEG | No parser dependency for validators, lightweight | Doesn't handle nested braces or escaped `{` |
+| `parseTemplateParts` reuses PEG grammar | Handles edge cases (nested braces, ternaries, escaping) | Validators depend on compiler-jay-html PEG parser |
+| `walkElements` provides `DataScope` in callback | Validators never reconstruct scope; forEach/headless boundaries handled automatically | Slightly larger callback signature |
 
 ## Verification Criteria
 
