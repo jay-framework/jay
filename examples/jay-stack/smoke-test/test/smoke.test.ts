@@ -441,6 +441,14 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Block A/);
             expect(body).toMatch(/Block B/);
         });
+
+        it('/html-string — string is escaped, html-string is not', async () => {
+            const { status, body } = await fetchPage(server.url, '/html-string/');
+            expect(status).toBe(200);
+            expectPage(body);
+            expect(body).toMatch(/&lt;b&gt;This should be escaped&lt;\/b&gt;/);
+            expect(body).toMatch(/<b>This should be bold<\/b> and <em>italic<\/em>/);
+        });
     });
 
     describe('production self-hosted', () => {
@@ -541,6 +549,13 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Nested Test/);
             expect(body).toMatch(/Block A/);
             expect(body).toMatch(/Block B/);
+        });
+
+        it('/html-string — string is escaped, html-string is not', async () => {
+            const { status, body } = await fetchPage(server.url, '/html-string/');
+            expect(status).toBe(200);
+            expect(body).toMatch(/&lt;b&gt;This should be escaped&lt;\/b&gt;/);
+            expect(body).toMatch(/<b>This should be bold<\/b> and <em>italic<\/em>/);
         });
     });
 

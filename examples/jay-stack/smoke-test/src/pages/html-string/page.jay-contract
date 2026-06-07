@@ -1,0 +1,13 @@
+name: Page
+tags:
+  - tag: title
+    type: data
+    dataType: string
+    phase: fast
+    description: Plain text title (should be escaped)
+
+  - tag: richContent
+    type: data
+    dataType: html-string
+    phase: fast
+    description: HTML content (should NOT be escaped)
