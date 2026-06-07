@@ -309,6 +309,13 @@ export function parseServerTemplateExpression(
     return doParse(expression, 'template', vars);
 }
 
+import type { TemplatePart } from '@jay-framework/compiler-shared';
+
+export function parseTemplateParts(value: string): TemplatePart[] {
+    if (!value) return [];
+    return doParse(value, 'templateParts');
+}
+
 /**
  * Parse a condition expression without arrow function wrapping.
  * Returns the raw condition (e.g., "vs.cond" instead of "vs => vs.cond").

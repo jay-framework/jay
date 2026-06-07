@@ -1,0 +1,5 @@
+name: test-validator
+validators:
+  - name: check-title
+    handler: ./validator.mjs
+    description: Checks that title elements exist

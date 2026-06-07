@@ -4,9 +4,6 @@ import {
     validateJayFiles,
     extractRouteParams,
     extractJayParams,
-    checkRouteParams,
-    checkRouteToContractParams,
-    checkHeadlessInstanceProps,
     checkRefElementTypes,
 } from '../lib/validate';
 import { parseJayFile, JAY_IMPORT_RESOLVER } from '@jay-framework/compiler-jay-html';
@@ -332,5 +329,30 @@ describe('headless instance props validation (DL#124 Phase 2)', () => {
                 w.message.includes('missing required prop'),
         );
         expect(propWarnings).toHaveLength(0);
+    });
+
+    describe('plugin validators (DL#145)', () => {
+        it('should discover and run plugin validators', async () => {
+            const fixtureDir = path.join(baseFixturesDir, 'plugin-validator');
+            const result = await validateJayFiles({
+                path: fixtureDir,
+                projectRoot: fixtureDir,
+            });
+
+            const pluginWarnings = result.warnings.filter((w) => w.source);
+            expect(pluginWarnings).toHaveLength(1);
+            expect(pluginWarnings[0].source).toBe('test-validator/check-title');
+            expect(pluginWarnings[0].message).toBe('Test validator finding');
+            expect(pluginWarnings[0].suggestion).toBe('This is a test suggestion');
+        });
+
+        it('should not fail when no plugins exist', async () => {
+            const result = await validateJayFiles({
+                path: path.join(baseFixturesDir, 'valid'),
+            });
+
+            expect(result.valid).toBe(true);
+            expect(result.errors).toHaveLength(0);
+        });
     });
 });

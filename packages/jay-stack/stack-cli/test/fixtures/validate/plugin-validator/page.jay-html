@@ -1,0 +1,11 @@
+<html>
+<head>
+    <script type="application/jay-data">
+        data:
+          title: string
+    </script>
+</head>
+<body>
+    <div>{title}</div>
+</body>
+</html>

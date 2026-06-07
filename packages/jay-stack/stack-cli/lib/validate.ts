@@ -7,7 +7,10 @@ import {
     JAY_EXTENSION,
     GenerateTarget,
     RuntimeMode,
+    type JayHtmlValidationContext,
+    type JayHtmlValidatorFn,
 } from '@jay-framework/compiler-shared';
+import { scanPlugins } from '@jay-framework/stack-server-runtime';
 import {
     parseJayFile,
     JAY_IMPORT_RESOLVER,
@@ -34,12 +37,16 @@ export interface ValidateOptions {
 export interface ValidationError {
     file: string;
     message: string;
-    stage: 'parse' | 'generate';
+    stage: 'parse' | 'generate' | 'plugin';
+    source?: string;
+    suggestion?: string;
 }
 
 export interface ValidationWarning {
     file: string;
     message: string;
+    source?: string;
+    suggestion?: string;
 }
 
 export interface ContractCoverage {
@@ -706,6 +713,103 @@ export function checkHeadlessInstanceProps(jayHtml: JayHtmlSourceFile, file: str
     return warnings;
 }
 
+async function runPluginValidators(
+    projectRoot: string,
+    parsedFiles: Array<{ relativePath: string; parsed: JayHtmlSourceFile }>,
+    errors: ValidationError[],
+    warnings: ValidationWarning[],
+): Promise<void> {
+    const scannedPlugins = await scanPlugins({ projectRoot });
+
+    for (const [, plugin] of scannedPlugins) {
+        if (!plugin.manifest.validators) continue;
+
+        for (const validatorDef of plugin.manifest.validators) {
+            let validatorFn: JayHtmlValidatorFn;
+            try {
+                const handlerPath = path.resolve(plugin.pluginPath, validatorDef.handler);
+                const handlerModule = await import(handlerPath);
+                validatorFn = handlerModule.validate;
+
+                if (typeof validatorFn !== 'function') {
+                    errors.push({
+                        file: `plugin:${plugin.name}`,
+                        message: `Validator "${validatorDef.name}" handler does not export a "validate" function`,
+                        stage: 'plugin',
+                    });
+                    continue;
+                }
+            } catch (loadErr: any) {
+                errors.push({
+                    file: `plugin:${plugin.name}`,
+                    message: `Failed to load validator "${validatorDef.name}": ${loadErr.message}`,
+                    stage: 'plugin',
+                });
+                continue;
+            }
+
+            const source = `${plugin.name}/${validatorDef.name}`;
+
+            for (const { relativePath, parsed } of parsedFiles) {
+                const ctx: JayHtmlValidationContext = {
+                    filePath: relativePath,
+                    body: parsed.body,
+                    contract: parsed.contract
+                        ? {
+                              name: parsed.contract.name,
+                              tags: parsed.contract.tags as any,
+                              props: parsed.contract.props as any,
+                              params: parsed.contract.params as any,
+                          }
+                        : undefined,
+                    headlessImports: parsed.headlessImports.map((imp) => ({
+                        key: imp.key,
+                        contractName: imp.contractName,
+                        contract: imp.contract
+                            ? {
+                                  name: imp.contract.name,
+                                  tags: imp.contract.tags as any,
+                                  props: imp.contract.props as any,
+                                  params: imp.contract.params as any,
+                              }
+                            : undefined,
+                    })),
+                    projectRoot,
+                };
+
+                try {
+                    const findings = await validatorFn(ctx);
+                    for (const finding of findings) {
+                        if (finding.severity === 'error') {
+                            errors.push({
+                                file: relativePath,
+                                message: finding.message,
+                                stage: 'plugin',
+                                source,
+                                suggestion: finding.suggestion,
+                            });
+                        } else {
+                            warnings.push({
+                                file: relativePath,
+                                message: finding.message,
+                                source,
+                                suggestion: finding.suggestion,
+                            });
+                        }
+                    }
+                } catch (runErr: any) {
+                    errors.push({
+                        file: relativePath,
+                        message: `Validator "${source}" threw: ${runErr.message}`,
+                        stage: 'plugin',
+                        source,
+                    });
+                }
+            }
+        }
+    }
+}
+
 export async function validateJayFiles(options: ValidateOptions = {}): Promise<ValidationResult> {
     const config = loadConfig();
     const resolvedConfig = getConfigWithDefaults(config);
@@ -719,6 +823,7 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
     const errors: ValidationError[] = [];
     const warnings: ValidationWarning[] = [];
     const coverage: FileCoverage[] = [];
+    const parsedFiles: Array<{ relativePath: string; parsed: JayHtmlSourceFile }> = [];
 
     // Find all jay files
     const jayHtmlFiles = await findJayFiles(scanDir);
@@ -795,6 +900,8 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                 }
                 continue; // Skip generation if parsing failed
             }
+
+            parsedFiles.push({ relativePath, parsed: parsedFile.val! });
 
             // Check route params match contract params (contract→route)
             const routeParamWarnings = checkRouteParams(parsedFile.val!, jayFile, scanDir, content);
@@ -876,6 +983,9 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
         }
     }
 
+    // --- Plugin validators (DL#145) ---
+    await runPluginValidators(projectRoot, parsedFiles, errors, warnings);
+
     return {
         valid: errors.length === 0,
         jayHtmlFilesScanned: jayHtmlFiles.length,
@@ -906,8 +1016,12 @@ export function printJayValidationResult(result: ValidationResult, options: Vali
         logger.important('Errors:');
 
         for (const error of result.errors) {
+            const prefix = error.source ? `[${error.source}] ` : '';
             logger.important(chalk.red(`  ❌ ${error.file}`));
-            logger.important(chalk.gray(`     ${error.message}`));
+            logger.important(chalk.gray(`     ${prefix}${error.message}`));
+            if (error.suggestion) {
+                logger.important(chalk.blue(`     Suggestion: ${error.suggestion}`));
+            }
             logger.important('');
         }
 
@@ -922,8 +1036,12 @@ export function printJayValidationResult(result: ValidationResult, options: Vali
         logger.important('');
         logger.important(chalk.yellow('Warnings:'));
         for (const warning of result.warnings) {
+            const prefix = warning.source ? `[${warning.source}] ` : '';
             logger.important(chalk.yellow(`  ⚠ ${warning.file}`));
-            logger.important(chalk.gray(`    ${warning.message}`));
+            logger.important(chalk.gray(`    ${prefix}${warning.message}`));
+            if (warning.suggestion) {
+                logger.important(chalk.blue(`    Suggestion: ${warning.suggestion}`));
+            }
             logger.important('');
         }
     }

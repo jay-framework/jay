@@ -99,3 +99,96 @@ component: ./lib/components/product-page.ts
 # Right
 component: productPage
 ```
+
+## Plugin Validators
+
+Plugins can provide custom jay-html validation rules that run during `jay-stack validate`. Declare validators in `plugin.yaml`:
+
+```yaml
+validators:
+  - name: media-optimization
+    handler: ./validators/media-validator
+    description: Ensures media URLs use resize parameters
+```
+
+### Writing a Validator
+
+The handler module exports a `validate` function:
+
+```typescript
+import type {
+    JayHtmlValidatorFn,
+    JayHtmlValidationFinding,
+} from '@jay-framework/compiler-shared';
+
+export const validate: JayHtmlValidatorFn = (ctx) => {
+    const findings: JayHtmlValidationFinding[] = [];
+
+    // ctx.body — parsed DOM tree (HTMLElement from node-html-parser)
+    // ctx.filePath — relative path to the jay-html file
+    // ctx.contract — page contract (if any), with tags including meta
+    // ctx.headlessImports — headless components used in this file
+    // ctx.projectRoot — absolute project root path
+
+    return findings;
+};
+```
+
+Each finding has:
+
+- `severity` — `'error'` (fails validation) or `'warning'`
+- `message` — what's wrong
+- `suggestion` — how to fix it (shown to agents and developers)
+- `element` — (optional) which element
+- `attribute` — (optional) which attribute
+
+### Validator Utilities
+
+- **`parseTemplateParts(value)`** — split `"{url}/v1/fit/w_300/file.jpg"` into binding and static parts (import from `@jay-framework/compiler-jay-html`)
+- **`walkElements(root, ctx, visitor)`** — depth-first traversal tracking data scope through `forEach` and `<jay:component>` boundaries (import from `@jay-framework/compiler-shared`)
+- **`resolveBinding(path, scope)`** — resolve a binding path to its contract tag (including `meta`) (import from `@jay-framework/compiler-shared`)
+
+### Contract Tag `meta`
+
+Contract tags can carry a `meta` field — arbitrary key-value metadata that validators read:
+
+```yaml
+tags:
+  - tag: imageUrl
+    type: data
+    dataType: string
+    meta:
+      vendor: wix-image
+      defaultTransform: w_300,h_200,q_80
+```
+
+Validators use `resolveBinding` to find the tag and inspect `meta`:
+
+```typescript
+import { walkElements, resolveBinding } from '@jay-framework/compiler-shared';
+import { parseTemplateParts } from '@jay-framework/compiler-jay-html';
+
+export const validate: JayHtmlValidatorFn = (ctx) => {
+    const findings: JayHtmlValidationFinding[] = [];
+
+    walkElements(ctx.body, ctx, (el, scope) => {
+        if (el.rawTagName !== 'img') return;
+        const src = el.getAttribute('src');
+        if (!src) return;
+
+        for (const part of parseTemplateParts(src)) {
+            if (part.kind !== 'binding') continue;
+            const resolved = resolveBinding(part.value, scope);
+            if (resolved.tag?.meta?.vendor !== 'wix-image') continue;
+
+            findings.push({
+                severity: 'warning',
+                message: `Image binding {${part.value}} may need resize parameters`,
+                suggestion: 'Add /v1/fit/w_{WIDTH},h_{HEIGHT},q_80/file.jpg after the binding',
+            });
+        }
+    });
+
+    return findings;
+};
+```

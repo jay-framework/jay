@@ -33,6 +33,7 @@ interface ParsedYamlTag {
     link?: string;
     async?: boolean;
     phase?: string;
+    meta?: Record<string, string>;
 }
 
 interface ParsedYamlProp {
@@ -264,6 +265,7 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
                     ...(tag.repeated && { repeated: tag.repeated }),
                     ...(tag.trackBy && { trackBy: tag.trackBy }),
                     ...(phase && { phase }),
+                    ...(tag.meta && { meta: tag.meta }),
                     link: tag.link,
                 },
                 validations,
@@ -300,6 +302,7 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
                 ...(tag.trackBy && { trackBy: tag.trackBy }),
                 ...(tag.async && { async: tag.async }),
                 ...(phase && { phase }),
+                ...(tag.meta && { meta: tag.meta }),
             },
             [...validations, ...subTagValidations, ...duplicateTagValidations],
         );
@@ -319,6 +322,7 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
             ...(elementType && { elementType }),
             ...(tag.async && { async: tag.async }),
             ...(phase && { phase }),
+            ...(tag.meta && { meta: tag.meta }),
         };
 
         return new WithValidations<ContractTag>(contractTag, validations);

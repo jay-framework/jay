@@ -14,6 +14,7 @@ import {
     parseReactClassExpression,
     parseReactTextExpression,
     parseStyleDeclarations,
+    parseTemplateParts,
     parseTextExpression,
     SlowRenderContext,
     Variables,
@@ -1419,6 +1420,59 @@ describe('expression-compiler', () => {
                 const result = parseConditionForSlowRender('unknownProp', ctx);
                 expect(result.type).toEqual('runtime');
             });
+        });
+    });
+
+    describe('parseTemplateParts', () => {
+        it('should return empty array for empty string', () => {
+            expect(parseTemplateParts('')).toEqual([]);
+        });
+
+        it('should parse static-only value', () => {
+            expect(parseTemplateParts('hello world')).toEqual([
+                { kind: 'static', value: 'hello world' },
+            ]);
+        });
+
+        it('should parse single binding', () => {
+            expect(parseTemplateParts('{name}')).toEqual([
+                { kind: 'binding', value: 'name' },
+            ]);
+        });
+
+        it('should parse binding with dot path', () => {
+            expect(parseTemplateParts('{user.profile.name}')).toEqual([
+                { kind: 'binding', value: 'user.profile.name' },
+            ]);
+        });
+
+        it('should parse mixed static and binding', () => {
+            expect(parseTemplateParts('Hello {name}!')).toEqual([
+                { kind: 'static', value: 'Hello ' },
+                { kind: 'binding', value: 'name' },
+                { kind: 'static', value: '!' },
+            ]);
+        });
+
+        it('should parse multiple bindings', () => {
+            expect(parseTemplateParts('{first} and {second}')).toEqual([
+                { kind: 'binding', value: 'first' },
+                { kind: 'static', value: ' and ' },
+                { kind: 'binding', value: 'second' },
+            ]);
+        });
+
+        it('should parse binding followed by static path', () => {
+            expect(parseTemplateParts('{url}/v1/fit/w_300/file.jpg')).toEqual([
+                { kind: 'binding', value: 'url' },
+                { kind: 'static', value: '/v1/fit/w_300/file.jpg' },
+            ]);
+        });
+
+        it('should trim whitespace in binding', () => {
+            expect(parseTemplateParts('{ name }')).toEqual([
+                { kind: 'binding', value: 'name' },
+            ]);
         });
     });
 });
