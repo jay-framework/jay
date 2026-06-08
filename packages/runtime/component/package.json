@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/component",
-  "version": "0.18.3",
+  "version": "0.18.4",
   "type": "module",
   "license": "Apache-2.0",
   "main": "dist/index.js",
