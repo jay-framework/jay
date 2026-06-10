@@ -18,6 +18,8 @@ import {
     generateServerElementFile,
     parseContract,
     htmlElementTagNameMap,
+    loadLinkedContract,
+    getLinkedContractDir,
     type ContractTag,
     type Contract,
     type JayHtmlSourceFile,
@@ -714,6 +716,31 @@ export function checkHeadlessInstanceProps(jayHtml: JayHtmlSourceFile, file: str
     return warnings;
 }
 
+function resolveLinkedTags(tags: ContractTag[], contractDir: string): ContractTag[] {
+    return tags.map((tag) => {
+        if (tag.link) {
+            const linked = loadLinkedContract(tag.link, contractDir, JAY_IMPORT_RESOLVER);
+            if (linked) {
+                const childDir = getLinkedContractDir(tag.link, contractDir, JAY_IMPORT_RESOLVER);
+                return { ...tag, tags: resolveLinkedTags(linked.tags, childDir) };
+            }
+        }
+        if (tag.tags) {
+            return { ...tag, tags: resolveLinkedTags(tag.tags, contractDir) };
+        }
+        return tag;
+    });
+}
+
+function resolveContractLinks(
+    contract: Contract,
+    contractPath: string | undefined,
+): Contract {
+    if (!contractPath) return contract;
+    const contractDir = path.dirname(contractPath);
+    return { ...contract, tags: resolveLinkedTags(contract.tags, contractDir) };
+}
+
 async function runPluginValidators(
     projectRoot: string,
     parsedFiles: Array<{ relativePath: string; parsed: JayHtmlSourceFile }>,
@@ -763,29 +790,41 @@ async function runPluginValidators(
             loadedValidators.push(source);
 
             for (const { relativePath, parsed } of parsedFiles) {
+                const pageContractPath = parsed.contractRef
+                    ? path.resolve(path.dirname(path.resolve(projectRoot, relativePath)), parsed.contractRef)
+                    : undefined;
+                const resolvedPageContract = parsed.contract
+                    ? resolveContractLinks(parsed.contract, pageContractPath)
+                    : undefined;
+
                 const ctx: JayHtmlValidationContext = {
                     filePath: relativePath,
                     body: parsed.body,
-                    contract: parsed.contract
+                    contract: resolvedPageContract
                         ? {
-                              name: parsed.contract.name,
-                              tags: parsed.contract.tags as any,
-                              props: parsed.contract.props as any,
-                              params: parsed.contract.params as any,
+                              name: resolvedPageContract.name,
+                              tags: resolvedPageContract.tags as any,
+                              props: resolvedPageContract.props as any,
+                              params: resolvedPageContract.params as any,
                           }
                         : undefined,
-                    headlessImports: parsed.headlessImports.map((imp) => ({
-                        key: imp.key,
-                        contractName: imp.contractName,
-                        contract: imp.contract
-                            ? {
-                                  name: imp.contract.name,
-                                  tags: imp.contract.tags as any,
-                                  props: imp.contract.props as any,
-                                  params: imp.contract.params as any,
-                              }
-                            : undefined,
-                    })),
+                    headlessImports: parsed.headlessImports.map((imp) => {
+                        const resolvedContract = imp.contract
+                            ? resolveContractLinks(imp.contract, imp.contractPath)
+                            : undefined;
+                        return {
+                            key: imp.key,
+                            contractName: imp.contractName,
+                            contract: resolvedContract
+                                ? {
+                                      name: resolvedContract.name,
+                                      tags: resolvedContract.tags as any,
+                                      props: resolvedContract.props as any,
+                                      params: resolvedContract.params as any,
+                                  }
+                                : undefined,
+                        };
+                    }),
                     projectRoot,
                 };
 
