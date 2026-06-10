@@ -162,4 +162,48 @@ describe('walkElements', () => {
         expect(scopes[0].tags[0].tag).toBe('name');
         expect(scopes[0].tags[1].meta).toEqual({ vendor: 'wix-image' });
     });
+
+    it('should resolve headless-keyed forEach path', () => {
+        const inner = makeElement('span');
+        const forEachDiv = makeElement('div', { forEach: 'productSearch.searchResults' }, [inner]);
+        const root = makeElement('div', {}, [forEachDiv]);
+
+        const scopes: DataScope[] = [];
+        const ctx: JayHtmlValidationContext = {
+            body: root,
+            filePath: 'test.jay-html',
+            projectRoot: '/root',
+            headlessImports: [
+                {
+                    key: 'productSearch',
+                    contractName: 'product-search',
+                    contract: {
+                        name: 'product-search',
+                        tags: [
+                            {
+                                tag: 'searchResults',
+                                type: [3],
+                                repeated: true,
+                                tags: [
+                                    { tag: 'title', type: [0] },
+                                    { tag: 'thumbnail', type: [0], meta: { vendor: 'wix-image' } },
+                                ],
+                            },
+                        ],
+                    },
+                },
+            ],
+        };
+
+        walkElements(root, ctx, (el, scope) => {
+            if (el.rawTagName === 'span') {
+                scopes.push(scope);
+            }
+        });
+
+        expect(scopes).toHaveLength(1);
+        expect(scopes[0].tags).toHaveLength(2);
+        expect(scopes[0].tags[0].tag).toBe('title');
+        expect(scopes[0].tags[1].meta).toEqual({ vendor: 'wix-image' });
+    });
 });

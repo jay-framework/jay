@@ -641,3 +641,45 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
 8. `parseTemplateParts` correctly splits attribute values into static and binding parts
 9. `resolveBindingTag` walks sub-contracts and returns the leaf tag with its `meta`
 10. A validator can detect a wix-image binding missing a resize suffix using the utilities
+
+## Implementation Results
+
+### Post-implementation fixes (discovered via wix-media plugin)
+
+Four issues were found when the wix-media plugin (an npm-published plugin) used the validation framework from a consuming project:
+
+#### Fix 1: Validator handler loading for npm packages
+
+**File:** `packages/jay-stack/stack-cli/lib/validate.ts`
+
+The validator handler loading always treated `handler` as a file path relative to `pluginPath`. For npm packages, `handler` is an export name from the package's main module — matching the `loadHandler` pattern already used by setup/references in `stack-server-runtime`.
+
+**Change:** Added `plugin.isLocal` branching: local plugins resolve handler as a file path; npm plugins import via `plugin.packageName` and look up the handler as a named export.
+
+#### Fix 2: Validation context doesn't resolve `link:` sub-contracts
+
+**File:** `packages/jay-stack/stack-cli/lib/validate.ts`
+
+Contracts passed to validators had unresolved `link:` references — sub-contract tags with `link: ./media-gallery` had no `tags` array. Validators couldn't traverse through linked sub-contracts to reach nested tags and their `meta`.
+
+**Change:** Added `resolveLinkedTags` / `resolveContractLinks` functions that recursively resolve all `link:` references inline before constructing the validation context. Uses `loadLinkedContract` and `getLinkedContractDir` from `compiler-jay-html`, with `JAY_IMPORT_RESOLVER`. Applied to both page-level contracts (via `parsed.contractRef`) and headless import contracts (via `imp.contractPath`).
+
+#### Fix 3: `scanPlugins` missing `includeDevDeps`
+
+**File:** `packages/jay-stack/stack-cli/lib/validate.ts`
+
+Plugins listed in `devDependencies` were not discovered by the validate command. Validators are dev-time tools, so plugins providing only validators are typically devDependencies.
+
+**Change:** Added `includeDevDeps: true` to the `scanPlugins({ projectRoot })` call.
+
+#### Fix 4: `walkElements` doesn't resolve headless-keyed `forEach` paths
+
+**File:** `packages/compiler/compiler-shared/lib/validator-utils.ts`
+
+`walkElements` handled `forEach` by calling `resolveTagPath(forEach, currentScope.tags)`. When the forEach value was headless-keyed (e.g., `forEach="productSearch.searchResults"`), it tried to find `productSearch` in the current scope — which was empty when there was no page contract. The forEach scope was never entered, so bindings inside it were unresolvable.
+
+**Change:** After `resolveTagPath` returns undefined, check if the first segment matches a headless import key. If so, resolve the remaining path against that import's contract. Added test case.
+
+#### Additional: Validator output
+
+Added `pluginValidators: string[]` to `ValidationResult` and display in the print output, so the user can see which validators were loaded and ran.

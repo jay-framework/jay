@@ -82,7 +82,16 @@ function doWalk(
 
     const forEach = el.getAttribute?.('forEach');
     if (forEach) {
-        const arrayTag = resolveTagPath(forEach, currentScope.tags);
+        let arrayTag = resolveTagPath(forEach, currentScope.tags);
+        if (!arrayTag) {
+            const segments = forEach.split('.');
+            const headless = ctx.headlessImports.find(
+                (h) => h.key === segments[0] && h.contract,
+            );
+            if (headless?.contract && segments.length > 1) {
+                arrayTag = resolveTagPath(segments.slice(1).join('.'), headless.contract.tags);
+            }
+        }
         if (arrayTag?.tags) {
             currentScope = {
                 tags: arrayTag.tags,
