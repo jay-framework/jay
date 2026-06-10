@@ -747,7 +747,7 @@ async function runPluginValidators(
     errors: ValidationError[],
     warnings: ValidationWarning[],
 ): Promise<string[]> {
-    const scannedPlugins = await scanPlugins({ projectRoot });
+    const scannedPlugins = await scanPlugins({ projectRoot, includeDevDeps: true });
     const loadedValidators: string[] = [];
 
     for (const [, plugin] of scannedPlugins) {
