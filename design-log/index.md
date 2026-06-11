@@ -251,6 +251,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 92  | Gemini agent plugin for jay-stack                      | Embedded AI agent: Gemini API, .jay-action metadata, chat contract, page automation       |
 | 97  | Contract-based tool descriptions for gemini agent      | Semantic tool descriptions from .jay-contract via server action, not embedded in HTML     |
 | 132 | ui-kit headless primitives                             | Popover menu, scroll carousel, tab switcher, clipboard copy — thin JS over HTML/CSS       |
+| 142 | ui-kit Add Menu contribution                           | M19.3 add-menu yaml; U1–U3 done; ships with aiditor smoke                                 |
 
 ---
 

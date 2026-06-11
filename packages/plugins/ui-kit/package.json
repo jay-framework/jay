@@ -25,25 +25,30 @@
     "definitions": "jay-cli definitions lib",
     "build:client": "vite build",
     "build:server": "vite build --ssr",
-    "build:copy-assets": "cp lib/*.jay-contract* dist/",
+    "build:copy-assets": "cp lib/*.jay-contract* dist/ && mkdir -p dist/agent-kit/aiditor dist/agent-kit/designer && cp agent-kit/aiditor/add-menu.template.yaml dist/agent-kit/aiditor/ && cp agent-kit/designer/spring-button-hover.md agent-kit/designer/sticky-header-scroll.md dist/agent-kit/designer/",
     "build:check-types": "tsc",
     "clean": "rimraf dist",
     "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
-    "test": ":"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@jay-framework/component": "workspace:^",
     "@jay-framework/fullstack-component": "workspace:^",
     "@jay-framework/reactive": "workspace:^",
     "@jay-framework/runtime": "workspace:^",
-    "@jay-framework/stack-client-runtime": "workspace:^"
+    "@jay-framework/stack-client-runtime": "workspace:^",
+    "@jay-framework/stack-server-runtime": "workspace:^"
   },
   "devDependencies": {
     "@jay-framework/compiler-jay-stack": "workspace:^",
     "@jay-framework/dev-environment": "workspace:^",
     "@jay-framework/jay-cli": "workspace:^",
+    "@types/node": "^20.11.5",
+    "js-yaml": "^4.1.0",
     "rimraf": "^5.0.5",
     "typescript": "^5.3.3",
-    "vite": "^5.0.11"
+    "vite": "^5.0.11",
+    "vitest": "^1.2.1"
   }
 }

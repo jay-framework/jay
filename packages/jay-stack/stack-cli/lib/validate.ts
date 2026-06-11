@@ -732,10 +732,7 @@ function resolveLinkedTags(tags: ContractTag[], contractDir: string): ContractTa
     });
 }
 
-function resolveContractLinks(
-    contract: Contract,
-    contractPath: string | undefined,
-): Contract {
+function resolveContractLinks(contract: Contract, contractPath: string | undefined): Contract {
     if (!contractPath) return contract;
     const contractDir = path.dirname(contractPath);
     return { ...contract, tags: resolveLinkedTags(contract.tags, contractDir) };
@@ -791,7 +788,10 @@ async function runPluginValidators(
 
             for (const { relativePath, parsed } of parsedFiles) {
                 const pageContractPath = parsed.contractRef
-                    ? path.resolve(path.dirname(path.resolve(projectRoot, relativePath)), parsed.contractRef)
+                    ? path.resolve(
+                          path.dirname(path.resolve(projectRoot, relativePath)),
+                          parsed.contractRef,
+                      )
                     : undefined;
                 const resolvedPageContract = parsed.contract
                     ? resolveContractLinks(parsed.contract, pageContractPath)
