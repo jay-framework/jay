@@ -59,6 +59,7 @@ export async function discoverPluginCommands(options: {
         projectRoot,
         verbose,
         discoverTransitive: true,
+        includeDevDeps: true,
     });
 
     const commands: DiscoveredCommand[] = [];
