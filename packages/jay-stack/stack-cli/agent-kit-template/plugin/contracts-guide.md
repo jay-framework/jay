@@ -190,6 +190,21 @@ name: product-search
 description: Product listing with filters, sorting, and pagination. Use for search results and category pages.
 ```
 
+## Tag Metadata
+
+Tags can carry a `meta` field — a free-form key-value map for plugin validators. The framework ignores `meta`; only validators read it.
+
+```yaml
+- tag: heroImage
+  type: data
+  dataType: string
+  meta:
+    vendor: wix-image
+    defaultTransform: w_800,h_400,q_80
+```
+
+Use `meta` to attach semantic meaning that goes beyond the data type — e.g., marking a `string` tag as a URL that requires specific formatting. See [validation.md](validation.md) for writing validators that consume `meta`.
+
 ## Validation Rules
 
 - Tag names must be unique at each level

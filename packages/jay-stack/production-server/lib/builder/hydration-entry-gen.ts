@@ -14,30 +14,33 @@ export interface ClientInitInfo {
     key: string;
 }
 
-export interface HydrationEntryOptions {
-    jayHtmlPath: string;
+export interface RouteHydrationEntryOptions {
+    hydrateImport: string;
     pageModulePath: string;
     pageExportName?: string;
-    slowViewState: object;
     trackByMap: Record<string, string>;
     outputPath: string;
     keyedParts?: KeyedPartInfo[];
     clientInits?: ClientInitInfo[];
 }
 
-export async function generateHydrationEntry(options: HydrationEntryOptions): Promise<void> {
+/**
+ * Generate a per-route hydration entry (DL#144).
+ * slowViewState is received as a parameter to init() instead of baked as a literal.
+ * This makes the entry identical across all instances of a route.
+ */
+export async function generateRouteHydrationEntry(
+    options: RouteHydrationEntryOptions,
+): Promise<void> {
     const {
-        jayHtmlPath,
+        hydrateImport,
         pageModulePath,
         pageExportName = 'page',
-        slowViewState,
         trackByMap,
         outputPath,
         keyedParts = [],
         clientInits = [],
     } = options;
-
-    const hydrateImport = `${jayHtmlPath}?jay-hydrate`;
 
     const partImports = keyedParts
         .map((p, i) => `import { ${p.exportName} as keyedPart${i} } from '${p.modulePath}';`)
@@ -70,8 +73,6 @@ export async function generateHydrationEntry(options: HydrationEntryOptions): Pr
         )
         .join('\n');
 
-    const hasClientInit = clientInits.length > 0;
-
     const code = `import { hydrateCompositeJayComponent } from '@jay-framework/stack-client-runtime';
 import { deepMergeViewStates } from '@jay-framework/view-state-merge';
 import { hydrate } from '${hydrateImport}';
@@ -79,10 +80,9 @@ ${pageImport}
 ${partImports}
 ${initImports}
 
-const slowViewState = ${JSON.stringify(slowViewState)};
 const trackByMap = ${JSON.stringify(trackByMap)};
 
-export async function init(fastViewState, fastCarryForward${hasClientInit ? ', clientInitData' : ''}) {
+export async function init(slowViewState, fastViewState, fastCarryForward, clientInitData) {
 ${initCalls}
     const viewState = deepMergeViewStates(slowViewState, fastViewState, trackByMap);
     const target = document.getElementById('target');
@@ -102,5 +102,5 @@ ${initCalls}
     await fs.mkdir(outputDir, { recursive: true });
     await fs.writeFile(outputPath, code, 'utf-8');
 
-    getLogger().info(`[Build] Generated hydration entry: ${path.basename(outputPath)}`);
+    getLogger().info(`[Build] Generated route hydration entry: ${path.basename(outputPath)}`);
 }

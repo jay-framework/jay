@@ -1,5 +1,5 @@
 export interface RouteManifest {
-    version: number;
+    version: string;
     buildTimestamp: string;
     sourceHash: string;
     projectRoot: string;
@@ -21,6 +21,16 @@ export interface RouteEntry {
     trackByMap?: Record<string, string>;
     contracts?: string[];
     componentExport?: string;
+    /** Per-route server element path (DL#144). Shared across all instances. */
+    serverElementPath?: string;
+    /** Per-route CSS file path (DL#144). Extracted from route-level server element compilation. */
+    routeCssPath?: string;
+    /** Per-route hydrate script path (DL#144). Shared across all instances. */
+    routeHydratePath?: string;
+    /** Per-route client bundle path (DL#144). Entry that imports route hydrate script. */
+    routeClientBundlePath?: string;
+    /** External @import URLs extracted from CSS at build time (DL#146). Used for preload hints. */
+    cssImports?: string[];
     instances: InstanceEntry[];
     isPlugin?: boolean;
     pluginName?: string;
@@ -28,14 +38,13 @@ export interface RouteEntry {
 
 export interface InstanceEntry {
     params: Record<string, string>;
-    preRenderedPath: string;
+    cachePath: string;
     serverElementPath: string;
     clientBundlePath: string;
     clientCssPath?: string;
 }
 
-export interface PreRenderedEntry {
-    content: string;
+export interface CacheEntry {
     slowViewState: object;
     carryForward: object;
 }
@@ -53,7 +62,7 @@ export interface PluginEntry {
 }
 
 export interface BuildMetadata {
-    version: number;
+    version: string;
     sourceHash: string;
     buildTimestamp: string;
     nodeVersion: string;
@@ -61,7 +70,7 @@ export interface BuildMetadata {
 }
 
 export interface BuildOptions {
-    version: number;
+    version: string;
     projectRoot: string;
     pagesRoot: string;
     buildRoot: string;

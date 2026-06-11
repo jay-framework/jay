@@ -22,6 +22,7 @@ export interface ContractTag {
     link?: string;
     async?: boolean;
     phase?: RenderingPhase;
+    meta?: Record<string, string>;
 }
 
 export interface ContractProp {

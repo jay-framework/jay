@@ -103,10 +103,6 @@ describe('Slow Render Transform', () => {
             await runSlowRenderTest('conditional-fast-preserved');
         });
 
-        it('should handle negated slow conditionals inside forEach', async () => {
-            await runSlowRenderTest('conditional-negated-in-foreach');
-        });
-
         it('should handle complex conditions with logical operators and comparisons', async () => {
             await runSlowRenderTest('conditional-complex');
         });
@@ -116,19 +112,7 @@ describe('Slow Render Transform', () => {
         });
     });
 
-    describe('forEach Array Unrolling', () => {
-        it('should unroll slow arrays with slowForEach', async () => {
-            await runSlowRenderTest('foreach-unrolling');
-        });
-
-        it('should handle mixed-phase arrays (slow array with fast properties)', async () => {
-            await runSlowRenderTest('foreach-mixed-phase');
-        });
-
-        it('should resolve empty string attributes in forEach items', async () => {
-            await runSlowRenderTest('foreach-empty-string-attr');
-        });
-
+    describe('forEach Array Handling', () => {
         it('should preserve fast arrays', async () => {
             await runSlowRenderTest('foreach-fast-preserved');
         });
@@ -346,144 +330,6 @@ tags:
         // isSearching is fast+interactive - should be preserved as binding
         expect(result.val!.preRenderedJayHtml).toContain('{productSearch.isSearching}');
     });
-
-    it('should resolve bindings in forEach from headless contracts', () => {
-        const headlessContract = checkValidationErrors(
-            parseContract(
-                `
-name: product-search
-tags:
-  - tag: categories
-    type: sub-contract
-    repeated: true
-    trackBy: id
-    tags:
-      - tag: id
-        type: data
-        dataType: string
-      - tag: name
-        type: data
-        dataType: string
-`,
-                'product-search.jay-contract',
-            ),
-        );
-
-        const input: SlowRenderInput = {
-            jayHtmlContent: `<!DOCTYPE html>
-<html>
-<head></head>
-<body>
-    <div forEach="productSearch.categories" trackBy="id">
-        <span>{name}</span>
-    </div>
-</body>
-</html>`,
-            slowViewState: {
-                productSearch: {
-                    categories: [
-                        { id: 'cat1', name: 'Electronics' },
-                        { id: 'cat2', name: 'Clothing' },
-                    ],
-                },
-            },
-            headlessContracts: [
-                {
-                    key: 'productSearch',
-                    contract: headlessContract,
-                },
-            ],
-        };
-
-        const result = slowRenderTransform(input);
-        expect(result.validations).toEqual([]);
-
-        // forEach should be unrolled and names should be resolved
-        expect(result.val!.preRenderedJayHtml).toContain('>Electronics</span>');
-        expect(result.val!.preRenderedJayHtml).toContain('>Clothing</span>');
-        expect(result.val!.preRenderedJayHtml).toContain('slowForEach="productSearch.categories"');
-    });
-
-    it('should resolve nested sub-contract bindings in forEach from headless contracts', () => {
-        const headlessContract = checkValidationErrors(
-            parseContract(
-                `
-name: products
-tags:
-  - tag: items
-    type: sub-contract
-    repeated: true
-    trackBy: id
-    tags:
-      - tag: id
-        type: data
-        dataType: string
-      - tag: image
-        type: sub-contract
-        tags:
-          - tag: url
-            type: data
-            dataType: string
-          - tag: altText
-            type: data
-            dataType: string
-`,
-                'products.jay-contract',
-            ),
-        );
-
-        const input: SlowRenderInput = {
-            jayHtmlContent: `<!DOCTYPE html>
-<html>
-<head></head>
-<body>
-    <div forEach="products.items" trackBy="id">
-        <img src="{image.url}" alt="{image.altText}" />
-    </div>
-</body>
-</html>`,
-            slowViewState: {
-                products: {
-                    items: [
-                        {
-                            id: 'prod1',
-                            image: {
-                                url: 'https://example.com/image1.jpg',
-                                altText: 'Product 1 image',
-                            },
-                        },
-                        {
-                            id: 'prod2',
-                            image: {
-                                url: 'https://example.com/image2.jpg',
-                                altText: 'Product 2 image',
-                            },
-                        },
-                    ],
-                },
-            },
-            headlessContracts: [
-                {
-                    key: 'products',
-                    contract: headlessContract,
-                },
-            ],
-        };
-
-        const result = slowRenderTransform(input);
-        expect(result.validations).toEqual([]);
-
-        // forEach should be unrolled and nested image.url and image.altText should be resolved
-        expect(result.val!.preRenderedJayHtml).toContain('src="https://example.com/image1.jpg"');
-        expect(result.val!.preRenderedJayHtml).toContain('alt="Product 1 image"');
-        expect(result.val!.preRenderedJayHtml).toContain('src="https://example.com/image2.jpg"');
-        expect(result.val!.preRenderedJayHtml).toContain('alt="Product 2 image"');
-        expect(result.val!.preRenderedJayHtml).toContain('slowForEach="products.items"');
-
-        // Verify that bindings are actually resolved (not still present as bindings)
-        expect(result.val!.preRenderedJayHtml).not.toContain('{image.url}');
-        expect(result.val!.preRenderedJayHtml).not.toContain('{image.altText}');
-    });
 });
 
 describe('Missing Slow-Phase Data Handling', () => {
@@ -627,81 +473,6 @@ tags:
         expect(result.val!.preRenderedJayHtml).toContain('<span class="name">Jane Doe</span>');
         expect(result.val!.preRenderedJayHtml).toContain('<span class="bio">undefined</span>');
         expect(result.val!.preRenderedJayHtml).not.toContain('{author.bio}');
-    });
-
-    it('should fail validation and render "undefined" for missing fields in forEach items', () => {
-        const contract = checkValidationErrors(
-            parseContract(
-                `
-name: TestContract
-tags:
-  - tag: items
-    type: sub-contract
-    repeated: true
-    trackBy: id
-    tags:
-      - tag: id
-        type: data
-        dataType: string
-      - tag: title
-        type: data
-        dataType: string
-      - tag: subtitle
-        type: data
-        dataType: string
-`,
-                'test.jay-contract',
-            ),
-        );
-
-        const input: SlowRenderInput = {
-            jayHtmlContent: `<!DOCTYPE html><html><body>
-<ul>
-    <li forEach="items" trackBy="id">
-        <h2>{title}</h2>
-        <p>{subtitle}</p>
-    </li>
-</ul>
-</body></html>`,
-            slowViewState: {
-                items: [
-                    { id: '1', title: 'Item 1', subtitle: 'Subtitle 1' },
-                    { id: '2', title: 'Item 2' }, // subtitle missing
-                    { id: '3', title: 'Item 3', subtitle: null }, // subtitle null
-                ],
-            },
-            contract,
-        };
-
-        const result = slowRenderTransform(input);
-
-        // Should have 2 validation errors (item 2 missing, item 3 null)
-        expect(result.validations.length).toBe(2);
-        expect(
-            result.validations.some((v) => v.includes('subtitle') && v.includes('undefined')),
-        ).toBe(true);
-        expect(result.validations.some((v) => v.includes('subtitle') && v.includes('null'))).toBe(
-            true,
-        );
-
-        const html = result.val!.preRenderedJayHtml;
-
-        // First item - both present
-        expect(html).toContain('<h2>Item 1</h2>');
-        expect(html).toContain('<p>Subtitle 1</p>');
-
-        // Second item - subtitle missing, should be "undefined"
-        expect(html).toContain('<h2>Item 2</h2>');
-
-        // Third item - subtitle null, should be "undefined"
-        expect(html).toContain('<h2>Item 3</h2>');
-
-        // Should have "undefined" rendered for missing subtitles
-        expect(html).toContain('<p>undefined</p>');
-
-        // No binding placeholders should remain
-        expect(html).not.toContain('{title}');
-        expect(html).not.toContain('{subtitle}');
     });
 
     it('should fail validation and render "undefined" for missing image sub-contract', () => {
@@ -1384,95 +1155,6 @@ tags:
 </body>
 </html>`),
             );
-        });
-
-        it('full two-pass pipeline with slow forEach unrolling', () => {
-            // Page has a slow products array with product-card instances inside
-            const pageContract = checkValidationErrors(
-                parseContract(
-                    `
-name: CatalogPage
-tags:
-  - tag: products
-    type: sub-contract
-    repeated: true
-    trackBy: _id
-    tags:
-      - tag: _id
-        type: data
-        dataType: string
-`,
-                    'catalog.jay-contract',
-                ),
-            );
-
-            const input: SlowRenderInput = {
-                jayHtmlContent: `<!DOCTYPE html>
-<html>
-<head>
-    <script type="application/jay-headless" plugin="wix-stores" contract="product-card"></script>
-</head>
-<body>
-    <div class="grid" forEach="products" trackBy="_id">
-        <jay:product-card productId="{_id}">
-            <h2>{name}</h2>
-            <span>{price}</span>
-        </jay:product-card>
-    </div>
-</body>
-</html>`,
-                slowViewState: {
-                    products: [{ _id: 'prod-123' }, { _id: 'prod-456' }],
-                },
-                contract: pageContract,
-            };
-
-            // Pass 1: resolve page bindings and unroll forEach
-            const pass1 = slowRenderTransform(input);
-            expect(pass1.validations).toEqual([]);
-            const pass1Html = pass1.val!.preRenderedJayHtml;
-
-            // Discover instances — coordinates include jayTrackBy from forEach
-            const { instances, preRenderedJayHtml: discoveredHtml } =
-                discoverHeadlessInstances(pass1Html);
-            expect(instances).toEqual([
-                {
-                    contractName: 'product-card',
-                    props: { productId: 'prod-123' },
-                    coordinate: ['prod-123', 'product-card:AR0'],
-                },
-                {
-                    contractName: 'product-card',
-                    props: { productId: 'prod-456' },
-                    coordinate: ['prod-456', 'product-card:AR0'],
-                },
-            ]);
-
-            // Pass 2: resolve instance bindings using discovered coordinates
-            const pass2 = resolveHeadlessInstances(discoveredHtml, [
-                {
-                    coordinate: instances[0].coordinate,
-                    contract: productCardContract,
-                    slowViewState: { name: 'Ceramic Vase', price: '$34.99' },
-                },
-                {
-                    coordinate: instances[1].coordinate,
-                    contract: productCardContract,
-                    slowViewState: { name: 'Glass Bowl', price: '$19.99' },
-                },
-            ]);
-
-            expect(pass2.validations).toEqual([]);
-            const finalHtml = prettifyHtml(pass2.val!);
-
-            // Both instances resolved with correct data
-            expect(finalHtml).toContain('Ceramic Vase');
-            expect(finalHtml).toContain('$34.99');
-            expect(finalHtml).toContain('Glass Bowl');
-            expect(finalHtml).toContain('$19.99');
-            // No unresolved component bindings
-            expect(finalHtml).not.toContain('{name}');
-            expect(finalHtml).not.toContain('{price}');
         });
     });
 

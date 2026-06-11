@@ -87,17 +87,19 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ## Plugin System
 
-| #   | Title                                             | Description                                                              |
-| --- | ------------------------------------------------- | ------------------------------------------------------------------------ |
-| 39  | Plugin package                                    | Plugin package requirements and structure                                |
-| 43  | Jay Package                                       | Jay package format                                                       |
-| 60  | plugin system refinement and dynamic contracts    | Plugin.yaml, contract resolution, dynamic contract generation            |
-| 66  | transitive plugin dependency resolution           | Plugin dependency resolution                                             |
-| 80  | exposing dynamic contracts for agentic generation | CLI and dev server contract generation for AI agents                     |
-| 87  | jay-stack setup command                           | Plugin config templating, credential validation, references              |
-| 88  | PR 158 review guide                               | Review guide for export_import branch (Figma vendor + plugin resolution) |
-| 89  | PR 158 merge concerns                             | Merge conflicts, duplicate work, and decisions for PR #158 into main     |
-| 130 | plugin routes and templates                       | Plugins provide pages (jay-html + page.ts) as routes; project overrides  |
+| #   | Title                                             | Description                                                                |
+| --- | ------------------------------------------------- | -------------------------------------------------------------------------- |
+| 39  | Plugin package                                    | Plugin package requirements and structure                                  |
+| 43  | Jay Package                                       | Jay package format                                                         |
+| 60  | plugin system refinement and dynamic contracts    | Plugin.yaml, contract resolution, dynamic contract generation              |
+| 66  | transitive plugin dependency resolution           | Plugin dependency resolution                                               |
+| 80  | exposing dynamic contracts for agentic generation | CLI and dev server contract generation for AI agents                       |
+| 87  | jay-stack setup command                           | Plugin config templating, credential validation, references                |
+| 88  | PR 158 review guide                               | Review guide for export_import branch (Figma vendor + plugin resolution)   |
+| 89  | PR 158 merge concerns                             | Merge conflicts, duplicate work, and decisions for PR #158 into main       |
+| 130 | plugin routes and templates                       | Plugins provide pages (jay-html + page.ts) as routes; project overrides    |
+| 142 | plugin CLI commands                               | `jay-stack run <plugin>/<command>` for admin/batch operations              |
+| 145 | pluggable jay-html validation                     | Plugin-provided validation rules for jay-html with agent-friendly feedback |
 
 ---
 
@@ -125,24 +127,28 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ## Compiler & Build System
 
-| #    | Title                                  | Description                                                                                |
-| ---- | -------------------------------------- | ------------------------------------------------------------------------------------------ |
-| 04   | compiler                               | Initial compiler design                                                                    |
-| 20   | component compiler                     | Component compilation                                                                      |
-| 25   | building the compiler                  | Compiler architecture, code splitting                                                      |
-| 28   | runtime compiler                       | Runtime compilation                                                                        |
-| 29   | algorithm to split safe code           | Safe code splitting algorithm                                                              |
-| 73   | jay-stack validate command             | Plugin validation command                                                                  |
-| 74   | watch linked style files in dev server | Dev server file watching                                                                   |
-| 118  | jay-html-compiler refactor             | Extract shared algorithms + split by compilation target                                    |
-| 134  | production build                       | Two-server production architecture: main server + slow render server                       |
-| 134a | build pipeline                         | Per-instance compilation, shared chunks, Vite build strategy                               |
-| 134b | main server                            | Production request handling: fast phase + SSR with pre-built artifacts                     |
-| 134c | slow render server                     | Webhook invalidation, per-instance rebuild, versioned bucket building                      |
-| 134d | server build                           | Compiling page.ts, actions, services, init.ts to production JS                             |
-| 136  | loadParams route context               | Passing inferred/route params to loadParams for multi-prefix filtering                     |
-| 139  | wix deployment separation              | Split build into frontend (CDN) + backend (container); Cloudflare-compatible fetch handler |
-| 140  | production smoke test                  | Dedicated example project validating dev, production self-hosted, and production CDN modes |
+| #    | Title                                  | Description                                                                                  |
+| ---- | -------------------------------------- | -------------------------------------------------------------------------------------------- |
+| 04   | compiler                               | Initial compiler design                                                                      |
+| 20   | component compiler                     | Component compilation                                                                        |
+| 25   | building the compiler                  | Compiler architecture, code splitting                                                        |
+| 28   | runtime compiler                       | Runtime compilation                                                                          |
+| 29   | algorithm to split safe code           | Safe code splitting algorithm                                                                |
+| 73   | jay-stack validate command             | Plugin validation command                                                                    |
+| 74   | watch linked style files in dev server | Dev server file watching                                                                     |
+| 118  | jay-html-compiler refactor             | Extract shared algorithms + split by compilation target                                      |
+| 134  | production build                       | Two-server production architecture: main server + slow render server                         |
+| 134a | build pipeline                         | Per-instance compilation, shared chunks, Vite build strategy                                 |
+| 134b | main server                            | Production request handling: fast phase + SSR with pre-built artifacts                       |
+| 134c | slow render server                     | Webhook invalidation, per-instance rebuild, versioned bucket building                        |
+| 134d | server build                           | Compiling page.ts, actions, services, init.ts to production JS                               |
+| 136  | loadParams route context               | Passing inferred/route params to loadParams for multi-prefix filtering                       |
+| 139  | wix deployment separation              | Split build into frontend (CDN) + backend (container); Cloudflare-compatible fetch handler   |
+| 140  | production smoke test                  | Dedicated example project validating dev, production self-hosted, and production CDN modes   |
+| 143  | artifact store abstraction for BaaS    | ArtifactStore interface, serve-only export, pre-imported modules for cloud deployment        |
+| 144  | per-route server elements              | One server-element.js per route instead of per instance; render from ViewState, not literals |
+| 145  | pluggable jay-html validation          | Plugin-provided validation rules for jay-html files with agent-friendly feedback             |
+| 146  | css performance fixes                  | CSS minification in production build, preload hints for route CSS                            |
 
 ---
 

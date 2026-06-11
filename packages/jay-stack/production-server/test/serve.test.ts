@@ -42,7 +42,7 @@ beforeAll(async () => {
     setDevLogger(createDevLogger('silent'));
     await fs.rm(buildRoot, { recursive: true, force: true });
     await buildVersion({
-        version: 1,
+        version: '1',
         projectRoot: fixtureRoot,
         pagesRoot: path.join(fixtureRoot, 'src/pages'),
         buildRoot,
@@ -52,7 +52,7 @@ beforeAll(async () => {
 
     await startMainServer({
         buildRoot,
-        version: 1,
+        version: '1',
         port: PORT,
     });
 
@@ -92,9 +92,10 @@ describe('home page', () => {
         expect(res.body).toMatch(/Items: 3/);
     });
 
-    it('includes CSS link', async () => {
+    it('includes CSS link with preload', async () => {
         const res = await fetch('/home');
-        expect(res.body).toMatch(/\.css/);
+        expect(res.body).toMatch(/<link rel="preload" href="[^"]*\.css" as="style" \/>/);
+        expect(res.body).toMatch(/<link rel="stylesheet" href="[^"]*\.css" \/>/);
     });
 });
 

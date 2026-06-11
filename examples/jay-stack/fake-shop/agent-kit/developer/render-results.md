@@ -17,6 +17,43 @@ return phaseOutput(
 
 CarryForward is available in the next phase via `props.carryForward` but is not part of the ViewState.
 
+### Response Headers (fast phase only)
+
+The third parameter accepts `responseHeaders` to set HTTP headers on the page response:
+
+```typescript
+return phaseOutput(
+  { memberName: member.name },
+  {},
+  { responseHeaders: { 'Cache-Control': 'no-store' } },
+);
+```
+
+Use this when the page renders per-user data that must not be cached by CDN or browser. Can be combined with `headTags` in the same options object.
+
+### Cookies (fast phase only)
+
+The fast phase receives `props.cookies` — a `Record<string, string>` parsed from the HTTP `Cookie` header:
+
+```typescript
+.withFastRender(async (props, memberService) => {
+    const token = props.cookies['session-token'];
+    if (!token) return redirect3xx(302, '/login');
+
+    const member = await memberService.validate(token);
+    if (!member) return redirect3xx(302, '/login');
+
+    return phaseOutput(
+        { memberName: member.name },
+        {},
+        { responseHeaders: { 'Cache-Control': 'no-store' } },
+    );
+})
+```
+
+- `props.cookies` is `Record<string, string>` — empty `{}` when no cookies
+- Not available in the slow phase (compile error) — same as `props.query`
+
 ## Error Results
 
 Return errors to stop rendering and show an error page:

@@ -414,6 +414,48 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
             });
         }
     }
+
+    // Validate validators (DL#145)
+    if (manifest.validators) {
+        if (!Array.isArray(manifest.validators)) {
+            result.errors.push({
+                type: 'schema',
+                message: 'Field "validators" must be an array',
+                location: 'plugin.yaml',
+            });
+        } else {
+            manifest.validators.forEach((validator, index) => {
+                if (!validator.name) {
+                    result.errors.push({
+                        type: 'schema',
+                        message: `Validator at index ${index} is missing "name" field`,
+                        location: 'plugin.yaml',
+                    });
+                }
+                if (!validator.handler) {
+                    result.errors.push({
+                        type: 'schema',
+                        message: `Validator "${validator.name || index}" is missing "handler" field`,
+                        location: 'plugin.yaml',
+                        suggestion: 'Specify the relative path to the validator handler module',
+                    });
+                }
+                if (validator.handler && !context.isNpmPackage) {
+                    const handlerPath = path.join(context.pluginPath, validator.handler);
+                    const extensions = ['', '.ts', '.js', '/index.ts', '/index.js'];
+                    const found = extensions.some((ext) => fs.existsSync(handlerPath + ext));
+                    if (!found) {
+                        result.errors.push({
+                            type: 'file-missing',
+                            message: `Validator "${validator.name}" handler not found: ${validator.handler}`,
+                            location: 'plugin.yaml validators',
+                            suggestion: `Create the validator handler at ${handlerPath}.ts`,
+                        });
+                    }
+                }
+            });
+        }
+    }
 }
 
 /**

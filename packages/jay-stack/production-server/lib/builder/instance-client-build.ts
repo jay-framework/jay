@@ -38,7 +38,7 @@ export async function buildInstanceClient(
             manifest: `${instanceId}-manifest.json`,
             rollupOptions: {
                 input: { [instanceId]: hydrateEntryPath },
-                external: (id) => id.startsWith('@jay-framework/'),
+                external: (id) => id.startsWith('@jay-framework/') || id === 'jay-route-hydrate',
                 output: {
                     entryFileNames: '[name]-[hash].js',
                     chunkFileNames: 'chunks/[name]-[hash].js',

@@ -390,6 +390,22 @@ template
     }
   }
 
+templateParts
+  = parts:(templatePartBinding / templatePartStatic)* {
+    return parts;
+  }
+
+templatePartStatic
+  = [^{}]+ {
+    return { kind: 'static', value: text() };
+  }
+
+templatePartBinding
+  = "{" [^{}]* "}" {
+    const raw = text();
+    return { kind: 'binding', value: raw.slice(1, -1).trim() };
+  }
+
 accessorExpression
   = booleanCondition
   / accessor

@@ -64,7 +64,7 @@ Validate all `.jay-html` and `.jay-contract` files.
 jay-stack validate
 
 # Validate a specific path
-jay-stack validate src/pages/products/
+jay-stack validate -p src/pages/products/
 
 # Verbose (per-file status)
 jay-stack validate -v
@@ -166,6 +166,10 @@ If not found, lists available actions:
 ❌ Action "badName" not found.
    Available actions: searchProducts, getProductBySlug, getCategories
 ```
+
+## Production Commands
+
+For `jay-stack build`, `jay-stack serve`, and `jay-stack rebuild`, see the [DevOps guides](../devops/INSTRUCTIONS.md).
 
 ## jay-stack dev
 

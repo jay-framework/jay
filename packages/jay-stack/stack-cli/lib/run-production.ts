@@ -8,7 +8,7 @@ export interface ProductionContext {
     resolvedPath: string;
     pagesRoot: string;
     buildRoot: string;
-    version: number;
+    version: string;
     tsConfigFilePath: string;
 }
 
@@ -27,9 +27,7 @@ export async function resolveProductionContext(
         // No .jay config, use defaults
     }
 
-    const version = versionOverride
-        ? parseInt(versionOverride, 10)
-        : await resolveVersionFromPackageJson(resolvedPath);
+    const version = versionOverride || (await resolveVersionFromPackageJson(resolvedPath));
 
     return {
         resolvedPath,
@@ -40,21 +38,18 @@ export async function resolveProductionContext(
     };
 }
 
-async function resolveVersionFromPackageJson(projectRoot: string): Promise<number> {
+export async function resolveVersionFromPackageJson(projectRoot: string): Promise<string> {
     try {
         const pkgJson = JSON.parse(
             await fs.readFile(path.join(projectRoot, 'package.json'), 'utf-8'),
         );
         if (pkgJson.version) {
-            const major = parseInt(pkgJson.version.split('.')[0], 10);
-            const minor = parseInt(pkgJson.version.split('.')[1] || '0', 10);
-            const patch = parseInt(pkgJson.version.split('.')[2] || '0', 10);
-            return major * 10000 + minor * 100 + patch;
+            return pkgJson.version;
         }
     } catch {
         // No package.json or no version field
     }
-    return 1;
+    return '1';
 }
 
 export function initLogger(verbose?: boolean): void {

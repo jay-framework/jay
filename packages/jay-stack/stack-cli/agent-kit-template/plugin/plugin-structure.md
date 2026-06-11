@@ -55,6 +55,17 @@ routes:
     component: ./pages/admin/page.ts
     description: Admin dashboard with product stats
 
+commands:
+  - name: upload-public
+    command: commands/upload-public.jay-command
+  - name: sync-catalog
+    command: commands/sync-catalog.jay-command
+
+validators:
+  - name: media-optimization
+    handler: ./validators/media-validator
+    description: Ensures media URLs use resize parameters
+
 setup:
   handler: setup-handler
   references: references-handler
@@ -172,6 +183,21 @@ services:
 
 Plugin routes are served by the dev server alongside project routes. If a project defines the same route path, the project's page takes precedence.
 
+### Command Entry Fields
+
+- `name` — Command name (used with `jay-stack run <plugin>/<command>`)
+- `command` — (optional) Path to `.jay-command` metadata file (declares description and input schema)
+
+Commands are CLI operations run via `jay-stack run`. Use `makeCliCommand()` to create handlers with service injection. See [commands-guide.md](commands-guide.md).
+
+### Validator Entry Fields
+
+- `name` — Validator name (shown in validation output as `plugin-name/validator-name`)
+- `handler` — Relative path to the validator module (must export a `validate` function)
+- `description` — (optional) What this validator checks
+
+Validators run during `jay-stack validate` against every parsed jay-html file. The handler module exports a `validate` function that receives a `JayHtmlValidationContext` and returns an array of findings. See [validation.md](validation.md) for implementation details.
+
 ### Setup Fields
 
 - `handler` — Setup handler for `jay-stack setup` (handles config, credentials)
@@ -193,8 +219,12 @@ my-plugin/
 │   ├── actions/
 │   │   ├── search-products.jay-action
 │   │   └── add-to-cart.jay-action
+│   ├── commands/
+│   │   └── upload-public.jay-command
 │   ├── webhooks/
 │   │   └── on-product-change.ts
+│   ├── validators/
+│   │   └── media-validator.ts
 │   ├── components/
 │   │   ├── product-page.ts
 │   │   └── product-search.ts

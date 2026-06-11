@@ -212,7 +212,6 @@ export function renderBridge(
         headlessImports,
         headlessInstanceDefs: [], // Not used for bridge
         headlessInstanceCounter: { count: 0 },
-        coordinatePrefix: [],
         coordinateCounters: new Map(),
     });
     renderedBridge = optimizeRefs(renderedBridge, headlessImports);
@@ -267,7 +266,6 @@ export function renderSandboxRoot(
         headlessImports,
         headlessInstanceDefs: [], // Not used for sandbox
         headlessInstanceCounter: { count: 0 },
-        coordinatePrefix: [],
         coordinateCounters: new Map(),
     });
     let refsPart =

@@ -2,6 +2,34 @@ import { getLogger } from '@jay-framework/logger';
 import { setClientInitData } from '@jay-framework/stack-server-runtime';
 import path from 'node:path';
 
+export interface PreImportedPlugin {
+    name: string;
+    init: { _serverInit: () => Promise<any> };
+}
+
+/**
+ * Initialize services from pre-imported plugin modules (DL#143).
+ * Used by BaaS entry.mjs where plugins are bundled by esbuild
+ * and cannot be discovered from the filesystem at runtime.
+ */
+export async function initializeServicesFromModules(
+    plugins: PreImportedPlugin[],
+    label: string,
+): Promise<void> {
+    const logger = getLogger();
+    for (const plugin of plugins) {
+        try {
+            if (plugin.init?._serverInit) {
+                logger.info(`[${label}] Running plugin init: ${plugin.name}`);
+                const data = await plugin.init._serverInit();
+                if (data) setClientInitData(plugin.name, data);
+            }
+        } catch (err: any) {
+            logger.warn(`[${label}] Plugin init failed: ${plugin.name}: ${err.message}`);
+        }
+    }
+}
+
 export async function initializeServices(
     buildDir: string,
     projectRoot: string,

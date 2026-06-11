@@ -1,0 +1,11 @@
+name: test-validator
+validators:
+  - name: check-title
+    handler: ./check-title.mjs
+    description: Ensures pages have a title element
+  - name: check-wix-image
+    handler: ./check-wix-image.mjs
+    description: Ensures wix-image bindings have resize params
+  - name: check-alt
+    handler: ./check-alt.mjs
+    description: Ensures img elements have alt attributes

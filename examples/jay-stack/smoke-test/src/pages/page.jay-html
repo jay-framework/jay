@@ -20,6 +20,7 @@
         <li><a href="/public-assets/">Public Assets</a> — public folder files</li>
         <li><a href="/foreach/">ForEach</a> — forEach and slowForEach</li>
         <li><a href="/nested/">Nested</a> — nested headfull components</li>
+        <li><a href="/html-string/">HTML String</a> — html-string dataType escaping</li>
       </ul>
     </nav>
   </div>

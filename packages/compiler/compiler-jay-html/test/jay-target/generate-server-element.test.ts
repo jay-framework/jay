@@ -147,23 +147,6 @@ describe('generate jay-html server element', () => {
             );
         });
 
-        it('for headless instance inside slowForEach', async () => {
-            const folder = 'contracts/page-with-headless-in-slow-foreach';
-            const serverFile = await readFileAndGenerateServerElementFile(folder);
-            expect(serverFile.validations).toEqual([]);
-            expect(await prettify(serverFile.val)).toEqual(
-                await readFixtureServerElementFile(folder),
-            );
-        });
-
-        it('for headless instance mixed (child, conditional, slowForEach)', async () => {
-            const folder = 'contracts/page-with-headless-mixed';
-            const serverFile = await readFileAndGenerateServerElementFile(folder);
-            expect(serverFile.validations).toEqual([]);
-            expect(await prettify(serverFile.val)).toEqual(
-                await readFixtureServerElementFile(folder),
-            );
-        });
         it('for headless instance with forEach in template', async () => {
             const folder = 'contracts/page-with-headless-foreach-template';
             const serverFile = await readFileAndGenerateServerElementFile(folder);

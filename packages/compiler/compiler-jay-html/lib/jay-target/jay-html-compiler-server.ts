@@ -23,10 +23,8 @@ import {
     checkAsync,
     ensureSingleChildElement,
     getComponentName,
-    getSlowForEachInfo,
     isConditional,
     isForEach,
-    isSlowForEach,
 } from './jay-html-helpers';
 import { generateTypes } from './jay-html-compile-types';
 import { Indent } from './indent';
@@ -45,7 +43,6 @@ import {
     escapeForJsString,
     validateAsyncAccessor,
     validateForEachAccessor,
-    validateSlowForEachAccessor,
     findHtmlStringBindings,
 } from './jay-html-compiler-shared';
 import {
@@ -68,8 +65,6 @@ interface ServerContext {
     varMappings: Record<string, string>;
     /** Whether we're inside a forEach (affects instance key computation) */
     insideForEach: boolean;
-    /** Whether we're inside a slowForEach (affects instance key computation) */
-    insideSlowForEach: boolean;
     /** Property paths whose phase is 'fast+interactive' — only these need client adoption */
     interactivePaths: Set<string>;
 }
@@ -151,8 +146,6 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
         const arrayExpr = forEachAccessor.render().rendered;
         const itemIndent = new Indent(indent.curr + '    ');
         const trackByExpr = `${forEachVariables.currentVar}.${trackBy}`;
-        // With scoped coordinates (DL#126), coordinates are static — no prefix accumulation needed.
-        // The forEach element's jay-coordinate-base is its position in the parent scope.
         const itemContext: ServerContext = {
             ...context,
             variables: forEachVariables,
@@ -182,55 +175,6 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
             itemBody.imports,
             itemBody.validations,
         );
-    }
-
-    // --- slowForEach (pre-rendered slow-phase forEach items) ---
-    if (isSlowForEach(element)) {
-        const slowForEachInfo = getSlowForEachInfo(element);
-        if (slowForEachInfo) {
-            const { arrayName, jayIndex } = slowForEachInfo;
-            const slowValidated = validateSlowForEachAccessor(arrayName, variables);
-            if (isValidationError(slowValidated)) return slowValidated;
-            const { accessor: arrayAccessor, childVariables: slowForEachVariables } = slowValidated;
-            const arrayExpr = arrayAccessor.render().rendered;
-            const itemVar = slowForEachVariables.currentVar;
-            // With scoped coordinates (DL#126), no prefix accumulation needed —
-            // coordinates are static and self-contained within each scope.
-            const itemContext: ServerContext = {
-                ...context,
-                variables: slowForEachVariables,
-                indent,
-                insideSlowForEach: true,
-            };
-            // Force jay-coordinate emission on slow forEach item root elements
-            // so the hydrate code's adoptElement can resolve them (DL#115).
-            const childContent = renderServerElementContent(element, itemContext, {
-                isRoot: true,
-            });
-            // Only wrap with item variable lookup when the content actually references
-            // the item variable (e.g., vs1). For slow-only arrays, the data may not be
-            // in the SSR ViewState (it was consumed during slow render), so guarding
-            // with `if (vs1)` would hide the pre-rendered content.
-            const needsItemVar = childContent.rendered.includes(itemVar + '.');
-            if (needsItemVar) {
-                const itemIndent = new Indent(indent.curr + '    ');
-                const indentedContext: ServerContext = {
-                    ...context,
-                    variables: slowForEachVariables,
-                    indent: itemIndent,
-                    insideSlowForEach: true,
-                };
-                const indentedContent = renderServerElementContent(element, indentedContext, {
-                    isRoot: true,
-                });
-                return new RenderFragment(
-                    `${indent.firstLine}{ const ${itemVar} = ${arrayExpr}?.[${jayIndex}]; if (${itemVar}) {\n${indentedContent.rendered}\n${indent.firstLine}}}`,
-                    indentedContent.imports,
-                    [...arrayAccessor.validations, ...indentedContent.validations],
-                );
-            }
-            return childContent;
-        }
     }
 
     // --- Async directives are handled by the parent's child processing ---
@@ -270,7 +214,7 @@ function renderServerHeadlessInstance(
 
     // Compute __headlessInstances lookup key (DL#126).
     // With scoped coordinates, the key is the full jay-coordinate-base value
-    // for static and slowForEach instances. For forEach, the key includes the
+    // for static instances. For forEach, the key includes the
     // runtime trackBy value.
     let instanceKeyExpr: string;
 
@@ -283,7 +227,7 @@ function renderServerHeadlessInstance(
                 : 'undefined';
         instanceKeyExpr = `String(${trackByExpr}) + ',${coordinateSuffix}'`;
     } else {
-        // Static or slowForEach: use the full instance coordinate as key
+        // Static: use the full instance coordinate as key
         instanceKeyExpr = `'${instanceCoord}'`;
     }
 
@@ -302,7 +246,7 @@ function renderServerHeadlessInstance(
     }
 
     // Create a context for the inline template with the instance's ViewState.
-    // Children read their own jay-coordinate-base — no coordinatePrefix needed.
+
     // Use the headless component's contract for interactivePaths — the widget's bindings
     // are resolved against the widget's contract, not the page's contract.
     const bodyIndent = ifCondition
@@ -846,12 +790,12 @@ function renderServerElementContent(
     // Root must always emit: hydrate needs adoptElement("0", ...) to resolve.
     // Interactive conditional elements (if=) must emit: hydrate adoptElement fails otherwise,
     // causing createFallback to create duplicates (SSR content + client-created).
-    // Non-interactive conditionals (slow/fast-only) are static on client and don't need coordinates.
+    // All conditionals need coordinates so the hydrate script can adopt them (DL#144).
+    // Non-interactive conditionals use guarded adoption; interactive ones use hydrateConditional.
     const refName = element.attributes.ref ? camelCase(element.attributes.ref) : null;
     const needsCoordinate =
         options?.isRoot === true ||
-        (isConditional(element) &&
-            conditionIsInteractive(element.getAttribute('if'), context.interactivePaths)) ||
+        isConditional(element) ||
         dynamicTextFragment !== null ||
         refName !== null ||
         hasDynamicAttributeBindings(element, variables) ||
@@ -872,8 +816,6 @@ function renderServerElementContent(
         parts.push(attrs);
     }
     if (coordTemplate !== null) {
-        // With scoped coordinates (DL#126), all coordinates are static — no dynamic
-        // prefix computation needed. Write the coordinate directly from jay-coordinate-base.
         parts.push(w(indent, `' jay-coordinate="${coordTemplate}"${closeTag}'`));
     } else {
         parts.push(w(indent, `'${closeTag}'`));
@@ -1116,7 +1058,6 @@ export function generateServerElementFile(
         headlessInstanceCounter: { count: 0 },
         varMappings: {},
         insideForEach: false,
-        insideSlowForEach: false,
         interactivePaths: buildInteractivePaths(jayFile.contract),
     };
 

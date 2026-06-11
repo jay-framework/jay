@@ -1231,4 +1231,79 @@ tags:
             ]);
         });
     });
+
+    describe('tag meta (DL#145)', () => {
+        it('should parse data tag with meta', () => {
+            const contract = `
+            name: test
+            tags:
+              - tag: imageUrl
+                type: data
+                dataType: string
+                meta:
+                  vendor: wix-image
+                  defaultTransform: w_300,h_200
+            `;
+
+            const result = parseContract(contract, 'test.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.tags[0].meta).toEqual({
+                vendor: 'wix-image',
+                defaultTransform: 'w_300,h_200',
+            });
+        });
+
+        it('should parse sub-contract tag with meta', () => {
+            const contract = `
+            name: test
+            tags:
+              - tag: gallery
+                type: sub-contract
+                meta:
+                  source: wix-media
+                tags:
+                  - tag: url
+                    type: data
+                    dataType: string
+                    meta:
+                      vendor: wix-image
+            `;
+
+            const result = parseContract(contract, 'test.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.tags[0].meta).toEqual({ source: 'wix-media' });
+            expect(result.val.tags[0].tags![0].meta).toEqual({ vendor: 'wix-image' });
+        });
+
+        it('should leave meta undefined when not specified', () => {
+            const contract = `
+            name: test
+            tags:
+              - tag: title
+                type: data
+                dataType: string
+            `;
+
+            const result = parseContract(contract, 'test.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.tags[0].meta).toBeUndefined();
+        });
+
+        it('should parse sub-contract with link and meta', () => {
+            const contract = `
+            name: test
+            tags:
+              - tag: details
+                type: sub-contract
+                link: ./details.jay-contract
+                meta:
+                  origin: external
+            `;
+
+            const result = parseContract(contract, 'test.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.tags[0].meta).toEqual({ origin: 'external' });
+            expect(result.val.tags[0].link).toBe('./details.jay-contract');
+        });
+    });
 });

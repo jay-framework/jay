@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/ssr-runtime",
-  "version": "0.17.4",
+  "version": "0.18.4",
   "type": "module",
   "license": "Apache-2.0",
   "main": "dist/index.js",

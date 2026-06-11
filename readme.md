@@ -102,6 +102,27 @@ The headless import format includes:
 - `src` - the location of the component implementation
 - `name` - the name of the exported component definition
 
+# AI Agent Integration
+
+Jay Stack projects include an agent kit that gives AI coding agents full context about the project's plugins, contracts, and capabilities.
+
+**To set up your AI agent with Jay:**
+
+1. Copy [`jay-skill.md`](jay-skill.md) into your agent's skill/instructions folder:
+
+   - **Claude Code**: `mkdir -p ~/.claude/skills/jay && cp jay-skill.md ~/.claude/skills/jay/SKILL.md`
+   - **Cursor**: `mkdir -p .cursor/skills/jay && cp jay-skill.md .cursor/skills/jay/SKILL.md`
+   - **Windsurf**: add the file path to your agent's context
+   - Or add it to any agent that supports instruction files
+
+2. Run setup and agent-kit in your project:
+   ```bash
+   yarn jay-stack-cli setup
+   yarn jay-stack-cli agent-kit
+   ```
+
+The skill file teaches the agent how to discover contracts, read the four role guides (designer, developer, plugin, devops), and use the CLI. The agent kit provides the project-specific data.
+
 # Why Jay?
 
 Jay set out to solve the

@@ -16,7 +16,7 @@ export interface RebuildOptions {
     projectRoot: string;
     pagesRoot: string;
     buildRoot: string;
-    version: number;
+    version: string;
     target: RebuildTarget;
     tsConfigFilePath?: string;
     minify?: boolean;
@@ -227,7 +227,7 @@ export async function rebuildContract(options: {
     projectRoot: string;
     pagesRoot: string;
     buildRoot: string;
-    version: number;
+    version: string;
     contractName: string;
     params?: Record<string, string>;
     tsConfigFilePath?: string;
@@ -294,13 +294,8 @@ function paramsMatch(
 }
 
 function collectInstanceFiles(instance: InstanceEntry): string[] {
-    if (!instance.preRenderedPath) return [];
-    const files = [
-        instance.preRenderedPath,
-        instance.preRenderedPath.replace('.jay-html', '.cache.json'),
-        instance.serverElementPath,
-        instance.clientBundlePath,
-    ];
+    if (!instance.cachePath) return [];
+    const files = [instance.cachePath, instance.serverElementPath, instance.clientBundlePath];
     if (instance.clientCssPath) files.push(instance.clientCssPath);
     return files.filter(Boolean);
 }
@@ -317,7 +312,7 @@ async function appendCleanupManifest(buildDir: string, files: string[]): Promise
     await fs.writeFile(cleanupPath, JSON.stringify(existing, null, 2));
 }
 
-export async function cleanupOrphanedFiles(buildRoot: string, version: number): Promise<number> {
+export async function cleanupOrphanedFiles(buildRoot: string, version: string): Promise<number> {
     const logger = getLogger();
     const buildDir = path.join(buildRoot, `v${version}`);
     const cleanupPath = path.join(buildDir, 'cleanup-manifest.json');

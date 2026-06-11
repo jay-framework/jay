@@ -89,6 +89,8 @@ Inside `<jay:...>`, bindings resolve to **that instance's** contract tags (not t
 
 Headfull components own their UI and can be made full-stack by adding a `contract` attribute.
 
+Headfull FS components must be placed in `src/components/` — each component in its own subdirectory with `.ts`, `.jay-html`, and `.jay-contract` files. The production build only discovers server-side component modules from `src/components/` and `src/plugins/`. Placing them inside page directories will work in dev mode but fail in production.
+
 ### Import Declaration
 
 ```html
