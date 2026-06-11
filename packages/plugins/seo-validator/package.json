@@ -27,8 +27,8 @@
     "@jay-framework/compiler-shared": "workspace:^"
   },
   "devDependencies": {
-    "@jay-framework/compiler-jay-stack": "workspace:^",
     "@jay-framework/dev-environment": "workspace:^",
+    "@jay-framework/jay-stack-cli": "workspace:^",
     "@types/node": "^22.15.21",
     "node-html-parser": "^6.1.0",
     "rimraf": "^5.0.5",
