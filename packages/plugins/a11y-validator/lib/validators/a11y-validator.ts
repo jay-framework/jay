@@ -1,13 +1,7 @@
 import type { JayHtmlValidatorFn, JayHtmlValidationFinding } from '@jay-framework/compiler-shared';
 import { walkElements } from '@jay-framework/compiler-shared';
 
-const INTERACTIVE_ELEMENTS = new Set([
-    'a',
-    'button',
-    'input',
-    'select',
-    'textarea',
-]);
+const INTERACTIVE_ELEMENTS = new Set(['a', 'button', 'input', 'select', 'textarea']);
 
 const NON_INTERACTIVE_ELEMENTS = new Set([
     'div',

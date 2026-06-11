@@ -55,7 +55,8 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
             if (!loading) {
                 findings.push({
                     severity: 'warning',
-                    message: 'Image without loading attribute — consider lazy loading for performance',
+                    message:
+                        'Image without loading attribute — consider lazy loading for performance',
                     suggestion:
                         'Add loading="lazy" to defer off-screen images. ' +
                         'Use loading="eager" only for above-the-fold images.',
@@ -74,7 +75,8 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
                 if (!ariaLabel) {
                     findings.push({
                         severity: 'warning',
-                        message: 'Anchor element has no visible text or aria-label — bad for SEO link signals',
+                        message:
+                            'Anchor element has no visible text or aria-label — bad for SEO link signals',
                         suggestion:
                             'Add descriptive text content inside the <a> tag, or add an aria-label attribute.',
                         element: '<a>',

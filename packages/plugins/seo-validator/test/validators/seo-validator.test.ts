@@ -116,9 +116,7 @@ describe('seo-validator', () => {
         });
 
         it('passes proper heading hierarchy', async () => {
-            const ctx = makeContext(
-                '<div><h1>Title</h1><h2>Section</h2><h3>Sub</h3></div>',
-            );
+            const ctx = makeContext('<div><h1>Title</h1><h2>Section</h2><h3>Sub</h3></div>');
             const findings = await validate(ctx);
             expect(findings).toEqual([]);
         });

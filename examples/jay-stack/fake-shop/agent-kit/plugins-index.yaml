@@ -65,3 +65,9 @@ plugins:
     routes:
       - path: /mood-stats
         description: Mood statistics dashboard — view mood history and trends
+  - name: a11y-validator
+    path: ./../../../packages/plugins/a11y-validator
+    contracts: []
+  - name: seo-validator
+    path: ./../../../packages/plugins/seo-validator
+    contracts: []

@@ -85,9 +85,7 @@ describe('a11y-validator', () => {
         });
 
         it('flags select without label', async () => {
-            const ctx = makeContext(
-                '<select id="country"><option>US</option></select>',
-            );
+            const ctx = makeContext('<select id="country"><option>US</option></select>');
             const findings = await validate(ctx);
             expect(findings).toEqual([
                 expect.objectContaining({
