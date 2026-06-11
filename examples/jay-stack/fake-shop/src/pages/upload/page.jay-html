@@ -18,12 +18,12 @@
       <div class="section">
         <h2>Single File Upload</h2>
         <div class="form-row">
-          <label>Product Name</label>
-          <input ref="productName" type="text" placeholder="e.g. Ceramic Vase" />
+          <label for="productName">Product Name</label>
+          <input ref="productName" id="productName" type="text" placeholder="e.g. Ceramic Vase" />
         </div>
         <div class="form-row">
-          <label>Product Image</label>
-          <input ref="fileInput" type="file" accept="image/*" />
+          <label for="fileInput">Product Image</label>
+          <input ref="fileInput" id="fileInput" type="file" accept="image/*" />
         </div>
         <button ref="uploadBtn">Upload</button>
         <div class="result" if="uploadResult">{uploadResult}</div>
@@ -32,12 +32,12 @@
       <div class="section">
         <h2>Streaming Multi-File Upload</h2>
         <div class="form-row">
-          <label>Label</label>
-          <input ref="streamLabel" type="text" placeholder="e.g. Spring Collection" />
+          <label for="streamLabel">Label</label>
+          <input ref="streamLabel" id="streamLabel" type="text" placeholder="e.g. Spring Collection" />
         </div>
         <div class="form-row">
-          <label>Images</label>
-          <input ref="multiFileInput" type="file" accept="image/*" multiple />
+          <label for="multiFileInput">Images</label>
+          <input ref="multiFileInput" id="multiFileInput" type="file" accept="image/*" multiple />
         </div>
         <button ref="streamBtn">Upload &amp; Process</button>
         <div class="result" if="streamLog">{streamLog}</div>

@@ -4255,6 +4255,23 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@jay-framework/a11y-validator@workspace:^, @jay-framework/a11y-validator@workspace:packages/plugins/a11y-validator":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/a11y-validator@workspace:packages/plugins/a11y-validator"
+  dependencies:
+    "@jay-framework/compiler-jay-stack": "workspace:^"
+    "@jay-framework/compiler-shared": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@types/node": "npm:^22.15.21"
+    node-html-parser: "npm:^6.1.0"
+    rimraf: "npm:^5.0.5"
+    tsup: "npm:^8.0.1"
+    typescript: "npm:^5.3.3"
+    vite: "npm:^5.0.11"
+    vitest: "npm:^1.2.1"
+  languageName: unknown
+  linkType: soft
+
 "@jay-framework/compiler-analyze-exported-types@workspace:^, @jay-framework/compiler-analyze-exported-types@workspace:packages/compiler/compiler-analyze-exported-types":
   version: 0.0.0-use.local
   resolution: "@jay-framework/compiler-analyze-exported-types@workspace:packages/compiler/compiler-analyze-exported-types"
@@ -4821,6 +4838,23 @@ __metadata:
     "@types/node": "npm:^20.11.5"
     caniuse-lite: "npm:^1.0.30001579"
     npm-run-all2: "npm:^6.1.1"
+    rimraf: "npm:^5.0.5"
+    tsup: "npm:^8.0.1"
+    typescript: "npm:^5.3.3"
+    vite: "npm:^5.0.11"
+    vitest: "npm:^1.2.1"
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/seo-validator@workspace:^, @jay-framework/seo-validator@workspace:packages/plugins/seo-validator":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/seo-validator@workspace:packages/plugins/seo-validator"
+  dependencies:
+    "@jay-framework/compiler-jay-stack": "workspace:^"
+    "@jay-framework/compiler-shared": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@types/node": "npm:^22.15.21"
+    node-html-parser: "npm:^6.1.0"
     rimraf: "npm:^5.0.5"
     tsup: "npm:^8.0.1"
     typescript: "npm:^5.3.3"
@@ -11835,11 +11869,13 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "example-jay-fake-shop@workspace:examples/jay-stack/fake-shop"
   dependencies:
+    "@jay-framework/a11y-validator": "workspace:^"
     "@jay-framework/dev-environment": "workspace:^"
     "@jay-framework/fullstack-component": "workspace:^"
     "@jay-framework/jay-cli": "workspace:^"
     "@jay-framework/jay-stack-cli": "workspace:^"
     "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/seo-validator": "workspace:^"
     "@jay-framework/stack-client-runtime": "workspace:^"
     "@jay-framework/stack-server-runtime": "workspace:^"
     "@jay-framework/ui-kit": "workspace:^"
@@ -16468,6 +16504,16 @@ __metadata:
   bin:
     node-gyp: bin/node-gyp.js
   checksum: 10/08ba31c1933920705e07cd3d3756b558c50582c86e85a99de8f28bf9582c0f811432b88822f34703308c26c0efafa69e91460076887a85ba40fae5cd9031d8b7
+  languageName: node
+  linkType: hard
+
+"node-html-parser@npm:^6.1.0":
+  version: 6.1.13
+  resolution: "node-html-parser@npm:6.1.13"
+  dependencies:
+    css-select: "npm:^5.1.0"
+    he: "npm:1.2.0"
+  checksum: 10/f5ebc5cea22e819e7b726b483e12241039ebdeac6eba198ebdb55a0921536798c1acd9c6f543e82f77542dc44fb2230f55891b1baae218c17969dd08f7295d14
   languageName: node
   linkType: hard
 

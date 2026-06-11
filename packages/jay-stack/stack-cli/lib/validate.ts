@@ -1059,74 +1059,98 @@ export function printJayValidationResult(result: ValidationResult, options: Vali
 
     logger.important('');
 
-    if (result.pluginValidators.length > 0) {
-        logger.important(`Plugin validators: ${result.pluginValidators.join(', ')}`);
-    }
+    // --- Core validation section ---
+    const coreErrors = result.errors.filter((e) => e.stage !== 'plugin');
+    const coreWarnings = result.warnings.filter((w) => !w.source);
 
-    if (result.valid) {
-        logger.important(chalk.green('✅ Jay Stack validation successful!\n'));
+    logger.important(chalk.bold('📦 jay-stack (core)'));
+    if (coreErrors.length === 0) {
         logger.important(
-            `Scanned ${result.jayHtmlFilesScanned} .jay-html files, ${result.contractFilesScanned} .jay-contract files`,
+            chalk.green(
+                `   ✅ ${result.jayHtmlFilesScanned} .jay-html files, ${result.contractFilesScanned} .jay-contract files — no errors`,
+            ),
         );
-        logger.important('No errors found.');
     } else {
-        logger.important(chalk.red('❌ Jay Stack validation failed\n'));
-        logger.important('Errors:');
-
-        for (const error of result.errors) {
-            const prefix = error.source ? `[${error.source}] ` : '';
-            logger.important(chalk.red(`  ❌ ${error.file}`));
-            logger.important(chalk.gray(`     ${prefix}${error.message}`));
+        for (const error of coreErrors) {
+            logger.important(chalk.red(`   ❌ ${error.file}`));
+            logger.important(chalk.gray(`      ${error.message}`));
             if (error.suggestion) {
-                logger.important(chalk.blue(`     Suggestion: ${error.suggestion}`));
+                logger.important(chalk.blue(`      Suggestion: ${error.suggestion}`));
             }
-            logger.important('');
         }
-
-        const validFiles =
-            result.jayHtmlFilesScanned + result.contractFilesScanned - result.errors.length;
-        logger.important(
-            chalk.red(`${result.errors.length} error(s) found, ${validFiles} file(s) valid.`),
-        );
+    }
+    for (const warning of coreWarnings) {
+        logger.important(chalk.yellow(`   ⚠ ${warning.file}`));
+        logger.important(chalk.gray(`     ${warning.message}`));
+        if (warning.suggestion) {
+            logger.important(chalk.blue(`     Suggestion: ${warning.suggestion}`));
+        }
     }
 
-    if (result.warnings.length > 0) {
+    // --- Plugin validator sections ---
+    const pluginErrors = result.errors.filter((e) => e.stage === 'plugin');
+    const pluginWarnings = result.warnings.filter((w) => !!w.source);
+
+    for (const validatorName of result.pluginValidators) {
+        const errs = pluginErrors.filter((e) => e.source === validatorName);
+        const warns = pluginWarnings.filter((w) => w.source === validatorName);
+
         logger.important('');
-        logger.important(chalk.yellow('Warnings:'));
-        for (const warning of result.warnings) {
-            const prefix = warning.source ? `[${warning.source}] ` : '';
-            logger.important(chalk.yellow(`  ⚠ ${warning.file}`));
-            logger.important(chalk.gray(`    ${prefix}${warning.message}`));
-            if (warning.suggestion) {
-                logger.important(chalk.blue(`    Suggestion: ${warning.suggestion}`));
+        logger.important(chalk.bold(`📦 ${validatorName}`));
+
+        if (errs.length === 0 && warns.length === 0) {
+            logger.important(chalk.green('   ✅ No issues found'));
+        }
+        for (const error of errs) {
+            logger.important(chalk.red(`   ❌ ${error.file}`));
+            logger.important(chalk.gray(`      ${error.message}`));
+            if (error.suggestion) {
+                logger.important(chalk.blue(`      Suggestion: ${error.suggestion}`));
             }
-            logger.important('');
+        }
+        for (const warning of warns) {
+            logger.important(chalk.yellow(`   ⚠ ${warning.file}`));
+            logger.important(chalk.gray(`      ${warning.message}`));
+            if (warning.suggestion) {
+                logger.important(chalk.blue(`      Suggestion: ${warning.suggestion}`));
+            }
         }
     }
 
+    // --- Tag coverage section ---
     if (result.coverage.length > 0) {
         logger.important('');
-        logger.important('Tag Coverage:');
+        logger.important(chalk.bold('📦 Tag Coverage'));
         for (const fileCov of result.coverage) {
-            logger.important(`  ${fileCov.file}`);
+            logger.important(`   ${fileCov.file}`);
             for (const contract of fileCov.contracts) {
                 const label = contract.key
                     ? `${contract.key} (${contract.contractName})`
                     : contract.contractName;
                 logger.important(
-                    `    ${label}: ${contract.usedTags}/${contract.totalTags} tags used`,
+                    `     ${label}: ${contract.usedTags}/${contract.totalTags} tags used`,
                 );
                 if (contract.unusedTags.length > 0) {
-                    logger.important(chalk.gray(`      Unused: ${contract.unusedTags.join(', ')}`));
+                    logger.important(
+                        chalk.gray(`       Unused: ${contract.unusedTags.join(', ')}`),
+                    );
                 }
                 if (contract.requiredUnusedTags.length > 0) {
                     logger.important(
                         chalk.yellow(
-                            `      ⚠ Required unused: ${contract.requiredUnusedTags.join(', ')}`,
+                            `       ⚠ Required unused: ${contract.requiredUnusedTags.join(', ')}`,
                         ),
                     );
                 }
             }
         }
+    }
+
+    // --- Summary ---
+    logger.important('');
+    if (result.valid) {
+        logger.important(chalk.green('Validation passed.'));
+    } else {
+        logger.important(chalk.red(`Validation failed — ${result.errors.length} error(s).`));
     }
 }

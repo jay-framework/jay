@@ -1,0 +1,6 @@
+name: seo-validator
+
+validators:
+  - name: seo
+    handler: validate
+    description: Validates jay-html templates for SEO best practices

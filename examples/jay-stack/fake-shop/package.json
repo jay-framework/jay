@@ -38,8 +38,10 @@
     "sirv": "^3.0.0"
   },
   "devDependencies": {
+    "@jay-framework/a11y-validator": "workspace:^",
     "@jay-framework/dev-environment": "workspace:^",
     "@jay-framework/jay-cli": "workspace:^",
+    "@jay-framework/seo-validator": "workspace:^",
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.0",
     "cross-env": "^7.0.3",

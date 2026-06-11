@@ -4,7 +4,7 @@
   </head>
   <body>
     <div>
-      products
+      <h1>Products</h1>
       <ul>
         <li foreach="products" trackby="id">
           <a href="/products/{slug}">
