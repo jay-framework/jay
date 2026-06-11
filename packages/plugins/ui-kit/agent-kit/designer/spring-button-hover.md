@@ -52,8 +52,12 @@ Put styles in the page `<style>` block or the project stylesheet. Prefer **one s
 @media (prefers-reduced-motion: reduce) {
   .ui-kit-spring-hover,
   .ui-kit-spring-hover--strong {
-    transition: transform 0.01ms, background-color 0.15s ease, color 0.15s ease,
-      border-color 0.15s ease, box-shadow 0.15s ease;
+    transition:
+      transform 0.01ms,
+      background-color 0.15s ease,
+      color 0.15s ease,
+      border-color 0.15s ease,
+      box-shadow 0.15s ease;
   }
   .ui-kit-spring-hover:hover,
   .ui-kit-spring-hover--strong:hover {
@@ -64,8 +68,12 @@ Put styles in the page `<style>` block or the project stylesheet. Prefer **one s
 @supports not (transition-timing-function: linear(0, 1)) {
   .ui-kit-spring-hover,
   .ui-kit-spring-hover--strong {
-    transition: transform 0.25s ease-out, background-color 0.25s ease-out, color 0.25s ease-out,
-      border-color 0.25s ease-out, box-shadow 0.25s ease-out;
+    transition:
+      transform 0.25s ease-out,
+      background-color 0.25s ease-out,
+      color 0.25s ease-out,
+      border-color 0.25s ease-out,
+      box-shadow 0.25s ease-out;
   }
 }
 ```

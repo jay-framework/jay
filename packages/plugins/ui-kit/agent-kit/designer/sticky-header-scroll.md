@@ -54,11 +54,7 @@ Add once per page (or in shared layout CSS). Tune `--ui-kit-sticky-scroll-range`
 
 /* Rectangle (wave size 0) — same point count as wavy for smooth interpolation */
 :root {
-  --ui-kit-sticky-shape-flat: shape(
-    from 0 0,
-    vline to 100%,
-    hline to 0
-  );
+  --ui-kit-sticky-shape-flat: shape(from 0 0, vline to 100%, hline to 0);
   /* Wavy bottom — granularity matches flat; depth ~25px (css-generators.com wavy-divider, bottom) */
   --ui-kit-sticky-shape-wavy: shape(
     from 0 0,
