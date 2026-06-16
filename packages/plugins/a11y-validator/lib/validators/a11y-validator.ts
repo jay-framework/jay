@@ -240,6 +240,37 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
         }
     });
 
+    // --- Head metadata checks ---
+    if (ctx.head) {
+        const viewport = ctx.head.meta.find((m) => m.name?.toLowerCase() === 'viewport');
+        if (viewport) {
+            const content = viewport.content.toLowerCase();
+            if (/user-scalable\s*=\s*no/.test(content)) {
+                findings.push({
+                    severity: 'error',
+                    message: 'Viewport meta disables user scaling (WCAG 1.4.4)',
+                    suggestion:
+                        'Remove user-scalable=no from the viewport meta tag. ' +
+                        'Users must be able to zoom to at least 200%.',
+                    element: '<meta>',
+                    attribute: 'content',
+                });
+            }
+            const maxScaleMatch = content.match(/maximum-scale\s*=\s*([\d.]+)/);
+            if (maxScaleMatch && parseFloat(maxScaleMatch[1]) < 2) {
+                findings.push({
+                    severity: 'error',
+                    message: `Viewport meta restricts zoom to ${maxScaleMatch[1]}x (WCAG 1.4.4)`,
+                    suggestion:
+                        'Set maximum-scale to at least 2, or remove it entirely. ' +
+                        'Users must be able to zoom to at least 200%.',
+                    element: '<meta>',
+                    attribute: 'content',
+                });
+            }
+        }
+    }
+
     return findings;
 };
 

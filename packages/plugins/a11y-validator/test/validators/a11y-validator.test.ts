@@ -1,14 +1,15 @@
 import { parse } from 'node-html-parser';
 import { describe, it, expect } from 'vitest';
 import { validate } from '../../lib/validators/a11y-validator.js';
-import type { JayHtmlValidationContext } from '@jay-framework/compiler-shared';
+import type { JayHtmlValidationContext, JayHtmlHeadMeta } from '@jay-framework/compiler-shared';
 
-function makeContext(html: string): JayHtmlValidationContext {
+function makeContext(html: string, head?: JayHtmlHeadMeta): JayHtmlValidationContext {
     return {
         body: parse(html),
         filePath: 'test/page.jay-html',
         projectRoot: '/test',
         headlessImports: [],
+        head,
     };
 }
 
@@ -267,6 +268,64 @@ describe('a11y-validator', () => {
 
         it('does not flag interactive elements without role', async () => {
             const ctx = makeContext('<button tabindex="0">OK</button>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+    });
+
+    describe('viewport zoom', () => {
+        it('flags user-scalable=no', async () => {
+            const ctx = makeContext('<div>Content</div>', {
+                title: 'Test',
+                meta: [{ name: 'viewport', content: 'width=device-width, user-scalable=no' }],
+                links: [],
+            });
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    severity: 'error',
+                    message: expect.stringContaining('WCAG 1.4.4'),
+                }),
+            ]);
+        });
+
+        it('flags maximum-scale less than 2', async () => {
+            const ctx = makeContext('<div>Content</div>', {
+                title: 'Test',
+                meta: [{ name: 'viewport', content: 'width=device-width, maximum-scale=1.0' }],
+                links: [],
+            });
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    severity: 'error',
+                    message: expect.stringContaining('1.0'),
+                }),
+            ]);
+        });
+
+        it('passes viewport with maximum-scale=2 or higher', async () => {
+            const ctx = makeContext('<div>Content</div>', {
+                title: 'Test',
+                meta: [{ name: 'viewport', content: 'width=device-width, maximum-scale=5' }],
+                links: [],
+            });
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+
+        it('passes standard viewport without zoom restrictions', async () => {
+            const ctx = makeContext('<div>Content</div>', {
+                title: 'Test',
+                meta: [{ name: 'viewport', content: 'width=device-width, initial-scale=1' }],
+                links: [],
+            });
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+
+        it('does not check viewport when no head info', async () => {
+            const ctx = makeContext('<div>Content</div>');
             const findings = await validate(ctx);
             expect(findings).toEqual([]);
         });

@@ -1,5 +1,6 @@
 import { JayImportLink, RefsTree, SourceFileFormat } from '@jay-framework/compiler-shared';
 import { JayType } from '@jay-framework/compiler-shared';
+import type { JayHtmlHeadMeta } from '@jay-framework/compiler-shared';
 import { HTMLElement } from 'node-html-parser';
 import { CompilerSourceFile } from '@jay-framework/compiler-shared';
 import { Contract } from '../contract';
@@ -60,4 +61,5 @@ export interface JayHtmlSourceFile extends CompilerSourceFile {
      * Excludes arrays with phase 'fast+interactive' (dynamic arrays that can be fully replaced).
      */
     clientTrackByMap?: Record<string, string>;
+    headMeta?: JayHtmlHeadMeta;
 }

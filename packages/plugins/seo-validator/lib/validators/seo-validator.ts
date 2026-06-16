@@ -7,6 +7,9 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
     let hasH1 = false;
     let h1Count = 0;
     let lastHeadingLevel = 0;
+    let hasMain = false;
+    let hasImage = false;
+    let hasFetchPriorityHigh = false;
 
     walkElements(ctx.body, ctx, (el) => {
         const tag: string | undefined = el.rawTagName?.toLowerCase();
@@ -14,6 +17,11 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
 
         // --- Rule: img must have alt ---
         if (tag === 'img') {
+            hasImage = true;
+            if (el.getAttribute?.('fetchpriority') === 'high') {
+                hasFetchPriorityHigh = true;
+            }
+
             const alt = el.getAttribute?.('alt');
             if (alt === undefined || alt === null) {
                 findings.push({
@@ -86,6 +94,10 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
             }
         }
 
+        if (tag === 'main') {
+            hasMain = true;
+        }
+
         // --- Rule: heading hierarchy ---
         const headingMatch = tag.match(/^h([1-6])$/);
         if (headingMatch) {
@@ -129,6 +141,83 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
                 'Use <h2> or lower for secondary headings.',
             element: '<h1>',
         });
+    }
+
+    if (!hasMain) {
+        findings.push({
+            severity: 'warning',
+            message: 'Page has no <main> landmark — helps search engines identify primary content',
+            suggestion:
+                'Wrap the primary page content in a <main> element. ' +
+                'Each page should have one <main> landmark.',
+            element: '<main>',
+        });
+    }
+
+    if (hasImage && !hasFetchPriorityHigh) {
+        findings.push({
+            severity: 'warning',
+            message: 'No image has fetchpriority="high" — the LCP image should be prioritized',
+            suggestion:
+                'Add fetchpriority="high" to the largest above-the-fold image (the LCP candidate). ' +
+                'This tells the browser to download it first, improving Largest Contentful Paint.',
+            element: '<img>',
+            attribute: 'fetchpriority',
+        });
+    }
+
+    // --- Head metadata checks ---
+    if (ctx.head) {
+        if (!ctx.head.title) {
+            findings.push({
+                severity: 'warning',
+                message: 'Page has no <title> element',
+                suggestion:
+                    'Add <title>Page Title</title> in <head>. ' +
+                    'The title appears in search results and browser tabs.',
+                element: '<title>',
+            });
+        }
+
+        const hasDescription = ctx.head.meta.some((m) => m.name?.toLowerCase() === 'description');
+        if (!hasDescription) {
+            findings.push({
+                severity: 'warning',
+                message: 'Page has no <meta name="description">',
+                suggestion:
+                    'Add <meta name="description" content="..."> in <head>. ' +
+                    'Search engines use this for result snippets.',
+                element: '<meta>',
+                attribute: 'name',
+            });
+        }
+
+        const hasCanonical = ctx.head.links.some((l) => l.rel === 'canonical');
+        if (!hasCanonical) {
+            findings.push({
+                severity: 'warning',
+                message: 'Page has no <link rel="canonical">',
+                suggestion:
+                    'Add <link rel="canonical" href="..."> in <head> to specify the preferred URL. ' +
+                    'This prevents duplicate content issues in search engines.',
+                element: '<link>',
+                attribute: 'rel',
+            });
+        }
+
+        const robotsMeta = ctx.head.meta.find((m) => m.name?.toLowerCase() === 'robots');
+        if (robotsMeta && /noindex/i.test(robotsMeta.content)) {
+            findings.push({
+                severity: 'warning',
+                message:
+                    'Page has <meta name="robots" content="noindex"> — it will not appear in search results',
+                suggestion:
+                    'Remove noindex from the robots meta tag if this page should be indexed. ' +
+                    'If intentional (e.g. admin pages), this warning can be ignored.',
+                element: '<meta>',
+                attribute: 'content',
+            });
+        }
     }
 
     return findings;

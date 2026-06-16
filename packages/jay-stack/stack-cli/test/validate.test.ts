@@ -147,7 +147,10 @@ describe('route param validation (integration)', () => {
         });
 
         expect(result.errors).toHaveLength(0);
-        expect(result.warnings).toHaveLength(0);
+        const routeWarnings = result.warnings.filter((w) =>
+            w.message.startsWith('Contract requires param'),
+        );
+        expect(routeWarnings).toHaveLength(0);
     });
 
     it('should produce no warnings when jay-params provides contract params', async () => {
@@ -156,7 +159,10 @@ describe('route param validation (integration)', () => {
         });
 
         expect(result.errors).toHaveLength(0);
-        expect(result.warnings).toHaveLength(0);
+        const routeWarnings = result.warnings.filter((w) =>
+            w.message.startsWith('Contract requires param'),
+        );
+        expect(routeWarnings).toHaveLength(0);
     });
 
     it('should produce warning when static route misses contract params', async () => {
@@ -165,8 +171,11 @@ describe('route param validation (integration)', () => {
         });
 
         expect(result.errors).toHaveLength(0);
-        expect(result.warnings).toHaveLength(1);
-        expect(result.warnings[0].message).toEqual(
+        const routeWarnings = result.warnings.filter((w) =>
+            w.message.startsWith('Contract requires param'),
+        );
+        expect(routeWarnings).toHaveLength(1);
+        expect(routeWarnings[0].message).toEqual(
             'Contract requires param "slug" but the route does not provide it. ' +
                 'Add a dynamic segment [slug] to the route path or declare it in <script type="application/jay-params">.',
         );
@@ -178,7 +187,10 @@ describe('route param validation (integration)', () => {
         });
 
         expect(result.errors).toHaveLength(0);
-        expect(result.warnings).toHaveLength(0);
+        const routeWarnings = result.warnings.filter((w) =>
+            w.message.startsWith('Contract requires param'),
+        );
+        expect(routeWarnings).toHaveLength(0);
     });
 });
 
@@ -248,8 +260,11 @@ describe('route-to-contract param validation (DL#124 Phase 1)', () => {
         });
 
         expect(result.errors).toHaveLength(0);
-        expect(result.warnings).toHaveLength(1);
-        expect(result.warnings[0].message).toEqual(
+        const routeWarnings = result.warnings.filter((w) =>
+            w.message.startsWith('Route provides param'),
+        );
+        expect(routeWarnings).toHaveLength(1);
+        expect(routeWarnings[0].message).toEqual(
             'Route provides param "slug" but no contract on this page declares it. ' +
                 'Add params: { slug: string } to the appropriate contract.',
         );

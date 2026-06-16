@@ -4,6 +4,7 @@ import {
     JayValidations,
     mkRefsTree,
     WithValidations,
+    type JayHtmlHeadMeta,
 } from '@jay-framework/compiler-shared';
 import yaml from 'js-yaml';
 import { capitalCase, pascalCase } from 'change-case';
@@ -1281,6 +1282,35 @@ function parseHeadLinks(root: HTMLElement, excludeCssLinks: boolean = false): Ja
         });
 }
 
+function parseHeadMeta(root: HTMLElement): JayHtmlHeadMeta | undefined {
+    const head = root.querySelector('head');
+    if (!head) return undefined;
+
+    const titleEl = head.querySelector('title');
+    const title = titleEl?.textContent?.trim() || undefined;
+
+    const meta: JayHtmlHeadMeta['meta'] = [];
+    for (const el of head.querySelectorAll('meta')) {
+        const content = el.getAttribute('content');
+        if (content === undefined || content === null) continue;
+        const name = el.getAttribute('name');
+        const property = el.getAttribute('property');
+        if (name || property) {
+            meta.push({ name: name || undefined, property: property || undefined, content });
+        }
+    }
+
+    const links: JayHtmlHeadMeta['links'] = [];
+    for (const el of head.querySelectorAll('link')) {
+        const rel = el.getAttribute('rel');
+        if (!rel) continue;
+        const attrs: Record<string, string> = { ...el.attributes };
+        links.push(attrs as any);
+    }
+
+    return { title, meta, links };
+}
+
 interface ExtractCssResult {
     css: string | undefined;
     linkedCssFiles: string[];
@@ -1506,6 +1536,7 @@ export async function parseJayFile(
     // Exclude CSS links from head links if CSS extraction is enabled (we have a file path)
     const excludeCssLinks = !!filePath;
     const headLinks = parseHeadLinks(root, excludeCssLinks);
+    const headMeta = parseHeadMeta(root);
 
     // Merge CSS validations with existing validations
     validations.push(...cssResult.validations);
@@ -1551,6 +1582,7 @@ export async function parseJayFile(
                 Object.keys(serverTrackByMap).length > 0 ? serverTrackByMap : undefined,
             clientTrackByMap:
                 Object.keys(clientTrackByMap).length > 0 ? clientTrackByMap : undefined,
+            headMeta,
         } as JayHtmlSourceFile,
         validations,
     );

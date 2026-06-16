@@ -37,8 +37,16 @@ Package: `@jay-framework/seo-validator` (monorepo, dev dependency)
 | Missing h1               | warning  | `<h1>`        | Page has no `<h1>` element                                                        |
 | Multiple h1              | warning  | `<h1>`        | Page has more than one `<h1>` element                                             |
 | Skipped heading level    | warning  | `<h2>`–`<h6>` | Heading level skips (e.g., `<h1>` followed by `<h3>`)                             |
+| Missing main landmark    | warning  | `<main>`      | Page body has no `<main>` element                                                 |
+| Missing fetchpriority    | warning  | `<img>`       | Page has images but none with `fetchpriority="high"` — LCP image should be prioritized |
+| Missing title            | warning  | `<title>`     | No `<title>` in `<head>` (via `ctx.head`)                                         |
+| Missing meta description | warning  | `<meta>`      | No `<meta name="description">` in `<head>`                                        |
+| Missing canonical        | warning  | `<link>`      | No `<link rel="canonical">` in `<head>`                                           |
+| Noindex robots           | warning  | `<meta>`      | `<meta name="robots">` contains `noindex`                                         |
 
 The dimensions rule accepts three forms of sizing: `width`/`height` attributes, inline `style` with `width:` and `height:`, or `srcset` (responsive images).
+
+The head metadata rules use `ctx.head` — a parsed representation of the `<head>` section added to the validation context.
 
 ### a11y-validator / accessibility
 
@@ -51,6 +59,7 @@ Package: `@jay-framework/a11y-validator` (monorepo, dev dependency)
 | Button without accessible name | error    | `<button>`                          | 4.1.2 | No text, no `aria-label`, no `aria-labelledby`, no child `<img alt>`                  |
 | Media autoplay without muted   | error    | `<video>`, `<audio>`                | 1.4.2 | `autoplay` attribute present without `muted`                                          |
 | Invalid ARIA role              | error    | any                                 | 4.1.2 | `role` attribute value not in WAI-ARIA role list                                      |
+| Viewport disables zoom         | error    | `<meta>`                            | 1.4.4 | `user-scalable=no` or `maximum-scale` < 2 in viewport meta (via `ctx.head`)           |
 | Positive tabindex              | warning  | interactive + `[role]`              | 2.4.3 | `tabindex` > 0 disrupts natural tab order                                             |
 | Focusable without role         | warning  | non-interactive                     | 4.1.2 | `<div tabindex="0">` or similar without `role` — screen readers don't know what it is |
 
@@ -66,12 +75,25 @@ The form label rule skips `type="hidden"`, `type="submit"`, `type="button"`, and
 
 No other rules overlap between plugins.
 
+## Validation Context: Head Metadata
+
+The `JayHtmlValidationContext` includes a `head?: JayHtmlHeadMeta` field parsed from the jay-html `<head>` section:
+
+```typescript
+interface JayHtmlHeadMeta {
+  title?: string;
+  meta: Array<{ name?: string; property?: string; content: string }>;
+  links: Array<{ rel: string; href: string; [key: string]: string }>;
+}
+```
+
+This enables validators to check `<title>`, `<meta>`, and `<link>` tags without needing raw HTML access.
+
 ## What's NOT statically checkable
 
 These are common accessibility/SEO concerns that can't be validated from jay-html templates:
 
-- **`<title>` / `<meta description>`** — live in the page shell, outside jay-html
-- **`<html lang>`** — outside jay-html scope
+- **`<html lang>`** — outside jay-html scope (on the `<html>` element in the page shell)
 - **Color contrast** — requires computed styles, not available at template level
 - **Keyboard traps** — requires runtime interaction testing
 - **Focus management** — requires runtime behavior analysis

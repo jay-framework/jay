@@ -6,10 +6,17 @@ export interface JayHtmlValidationFinding {
     attribute?: string;
 }
 
+export interface JayHtmlHeadMeta {
+    title?: string;
+    meta: Array<{ name?: string; property?: string; content: string }>;
+    links: Array<{ rel: string; href: string; [key: string]: string }>;
+}
+
 export interface JayHtmlValidationContext {
     body: any;
     filePath: string;
     projectRoot: string;
+    head?: JayHtmlHeadMeta;
     contract?: {
         name: string;
         tags: Array<{
