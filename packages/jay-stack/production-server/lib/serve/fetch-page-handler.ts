@@ -132,21 +132,9 @@ export async function fetchPageRequest(
     const cssPreload = cssUrl ? `    <link rel="preload" href="${cssUrl}" as="style" />` : '';
     const cssLink = cssUrl ? `    <link rel="stylesheet" href="${cssUrl}" />` : '';
 
-    const cssImportHints: string[] = [];
-    for (const url of route.cssImports ?? []) {
-        if (url.includes('fonts.googleapis.com')) {
-            cssImportHints.push(
-                '    <link rel="preconnect" href="https://fonts.googleapis.com" />',
-            );
-            cssImportHints.push(
-                '    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />',
-            );
-            cssImportHints.push(`    <link rel="stylesheet" href="${url}" />`);
-        } else {
-            cssImportHints.push(`    <link rel="preload" href="${url}" as="style" />`);
-        }
-    }
-    const cssImportPreloads = cssImportHints.join('\n');
+    const cssImportPreloads = (route.cssImports ?? [])
+        .map((url) => `    <link rel="preload" href="${url}" as="style" />`)
+        .join('\n');
 
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
