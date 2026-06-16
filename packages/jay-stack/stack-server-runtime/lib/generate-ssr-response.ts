@@ -81,6 +81,7 @@ export function headMetaToHeadTags(headMeta: JayHtmlHeadMeta | undefined): HeadT
         tags.push({ tag: 'meta', attrs });
     }
     for (const l of headMeta.links) {
+        if (l.rel === 'stylesheet' || l.rel === 'import') continue;
         tags.push({ tag: 'link', attrs: { ...l } });
     }
     return tags;
