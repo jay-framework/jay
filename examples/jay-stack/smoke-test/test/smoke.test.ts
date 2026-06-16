@@ -329,12 +329,30 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Smoke Test Home/);
         });
 
+        it('/ — head metadata from jay-html', async () => {
+            const { body } = await fetchPage(server.url, '/');
+            expect(body).toMatch(/<title>Smoke Test Home<\/title>/);
+            expect(body).toMatch(
+                /<meta name="description" content="Home page for the smoke test example"/,
+            );
+            expect(body).toMatch(/<link rel="canonical" href="\/"/);
+        });
+
         it('/phases — three rendering phases', async () => {
             const { status, body } = await fetchPage(server.url, '/phases/');
             expect(status).toBe(200);
             expectPage(body);
             expect(body).toMatch(/Phases Test/);
             expect(body).toMatch(/rendered at request time/);
+        });
+
+        it('/phases — fast render overrides static title', async () => {
+            const { body } = await fetchPage(server.url, '/phases/');
+            expect(body).toMatch(/<title>Phases Dynamic Title<\/title>/);
+            expect(body).not.toMatch(/Phases Static Title/);
+            expect(body).toMatch(
+                /<meta name="description" content="Static description for phases page"/,
+            );
         });
 
         it('/headless — headless component', async () => {
@@ -472,11 +490,29 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Smoke Test Home/);
         });
 
+        it('/ — head metadata from jay-html', async () => {
+            const { body } = await fetchPage(server.url, '/');
+            expect(body).toMatch(/<title>Smoke Test Home<\/title>/);
+            expect(body).toMatch(
+                /<meta name="description" content="Home page for the smoke test example"/,
+            );
+            expect(body).toMatch(/<link rel="canonical" href="\/"/);
+        });
+
         it('/phases — three rendering phases', async () => {
             const { status, body } = await fetchPage(server.url, '/phases/');
             expect(status).toBe(200);
             expect(body).toMatch(/Phases Test/);
             expect(body).toMatch(/rendered at request time/);
+        });
+
+        it('/phases — fast render overrides static title', async () => {
+            const { body } = await fetchPage(server.url, '/phases/');
+            expect(body).toMatch(/<title>Phases Dynamic Title<\/title>/);
+            expect(body).not.toMatch(/Phases Static Title/);
+            expect(body).toMatch(
+                /<meta name="description" content="Static description for phases page"/,
+            );
         });
 
         it('/headless — headless component', async () => {

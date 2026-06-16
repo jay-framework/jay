@@ -3,6 +3,9 @@
   <script type="application/jay-data">
     data:
   </script>
+  <title>Smoke Test Home</title>
+  <meta name="description" content="Home page for the smoke test example" />
+  <link rel="canonical" href="/" />
 </head>
 <body>
   <div>

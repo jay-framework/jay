@@ -1,3 +1,5 @@
+import type { JayHtmlHeadMeta } from '@jay-framework/compiler-shared';
+
 export interface RouteManifest {
     version: string;
     buildTimestamp: string;
@@ -31,6 +33,8 @@ export interface RouteEntry {
     routeClientBundlePath?: string;
     /** External @import URLs extracted from CSS at build time (DL#146). Used for preload hints. */
     cssImports?: string[];
+    /** Head metadata from jay-html <head> (title, meta tags). */
+    headMeta?: JayHtmlHeadMeta;
     instances: InstanceEntry[];
     isPlugin?: boolean;
     pluginName?: string;

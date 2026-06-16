@@ -391,6 +391,9 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
             if (seResult.cssImports?.length) {
                 entry.cssImports = seResult.cssImports;
             }
+            if (seResult.headMeta) {
+                entry.headMeta = seResult.headMeta;
+            }
 
             logger.important(`[Build] Route server element: ${routeDir}`);
         } catch (err: any) {

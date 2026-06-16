@@ -4,12 +4,16 @@ import {
     JAY_IMPORT_RESOLVER,
     type ServerElementOptions,
 } from '@jay-framework/compiler-jay-html';
-import { checkValidationErrors, JAY_QUERY_HYDRATE } from '@jay-framework/compiler-shared';
+import {
+    checkValidationErrors,
+    JAY_QUERY_HYDRATE,
+    type JayHtmlHeadMeta,
+} from '@jay-framework/compiler-shared';
 import { asyncSwapScript, type ServerRenderContext } from '@jay-framework/ssr-runtime';
 import type { ViteDevServer } from 'vite';
 import type { HeadTag } from '@jay-framework/fullstack-component';
 import type { DevServerPagePart } from './load-page-parts';
-import { serializeHeadTags } from './head-tags';
+import { mergeHeadTags, serializeHeadTags } from './head-tags';
 import type { TrackByMap } from '@jay-framework/view-state-merge';
 import {
     buildScriptFragments,
@@ -31,6 +35,7 @@ import { getLogger } from '@jay-framework/logger';
 interface CachedServerModule {
     renderToStream: (vs: object, ctx: ServerRenderContext) => void;
     headLinks: Array<{ rel: string; href: string; attributes: Record<string, string> }>;
+    headMeta?: JayHtmlHeadMeta;
     cssHref?: string;
 }
 
@@ -56,6 +61,29 @@ export function invalidateServerElementCache(jayHtmlPath: string): void {
  */
 export function clearServerElementCache(): void {
     serverModuleCache.clear();
+}
+
+// ============================================================================
+// Head Meta → HeadTag conversion
+// ============================================================================
+
+export function headMetaToHeadTags(headMeta: JayHtmlHeadMeta | undefined): HeadTag[] {
+    if (!headMeta) return [];
+    const tags: HeadTag[] = [];
+    if (headMeta.title) {
+        tags.push({ tag: 'title', children: headMeta.title });
+    }
+    for (const m of headMeta.meta) {
+        const attrs: Record<string, string> = {};
+        if (m.name) attrs.name = m.name;
+        if (m.property) attrs.property = m.property;
+        attrs.content = m.content;
+        tags.push({ tag: 'meta', attrs });
+    }
+    for (const l of headMeta.links) {
+        tags.push({ tag: 'link', attrs: { ...l } });
+    }
+    return tags;
 }
 
 // ============================================================================
@@ -171,31 +199,26 @@ export async function generateSSRPageHtml(
         asyncOutcomes,
     );
 
-    // Step 4: Build head links from jay-html <head> section
+    // Step 4: Build head tags
     // CSS is served via a Vite-processed <link> tag — this gives us PostCSS, @import
     // resolution, HMR, and avoids duplication with the hydrate module.
-    const headLinksHtml = cached.headLinks
-        .map((link) => {
-            const attrs = Object.entries(link.attributes)
-                .map(([k, v]) => ` ${k}="${v}"`)
-                .join('');
-            return `    <link rel="${link.rel}" href="${link.href}"${attrs} />`;
-        })
-        .join('\n');
     const cssLink = cached.cssHref ? `    <link rel="stylesheet" href="${cached.cssHref}" />` : '';
 
-    // Step 5: Build full HTML page
-    // Head tags from components (DL#127)
-    const headTagsHtml = headTags && headTags.length > 0 ? serializeHeadTags(headTags) : '';
-    const hasCustomTitle = headTags?.some((t) => t.tag.toLowerCase() === 'title');
-    const titleHtml = hasCustomTitle ? '' : '    <title>Vite + TS</title>\n';
-    const headExtras = [headLinksHtml, cssLink, headTagsHtml].filter((_) => _).join('\n');
+    // Merge head tags: jay-html <head> (static, lowest priority) + component tags (DL#127, override)
+    const headMetaTags: HeadTag[] = headMetaToHeadTags(cached.headMeta);
+    const tagSources: HeadTag[][] = [headMetaTags];
+    if (headTags && headTags.length > 0) tagSources.push(headTags);
+    const mergedTags = mergeHeadTags(tagSources);
+    const hasCustomTitle = mergedTags.some((t) => t.tag.toLowerCase() === 'title');
+    const titleTag = hasCustomTitle ? '' : '    <title>Vite + TS</title>\n';
+    const headTagsHtml = mergedTags.length > 0 ? serializeHeadTags(mergedTags) : '';
+    const headExtras = [cssLink, headTagsHtml].filter((_) => _).join('\n');
     return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-${titleHtml}${headExtras ? headExtras + '\n' : ''}  </head>
+${titleTag}${headExtras ? headExtras + '\n' : ''}  </head>
   <body>
     <div id="target">${ssrHtml}</div>${asyncScripts}
     ${hydrationScript}
@@ -283,16 +306,10 @@ export async function generateFrozenPageHtml(
     }
 
     // Full page: complete HTML document, no client scripts
-    const headLinksHtml = cached.headLinks
-        .map((link) => {
-            const attrs = Object.entries(link.attributes)
-                .map(([k, v]) => ` ${k}="${v}"`)
-                .join('');
-            return `    <link rel="${link.rel}" href="${link.href}"${attrs} />`;
-        })
-        .join('\n');
+    const frozenHeadTags = headMetaToHeadTags(cached.headMeta);
+    const frozenHeadTagsHtml = frozenHeadTags.length > 0 ? serializeHeadTags(frozenHeadTags) : '';
     const cssLink = cached.cssHref ? `    <link rel="stylesheet" href="${cached.cssHref}" />` : '';
-    const headExtras = [headLinksHtml, cssLink].filter((_) => _).join('\n');
+    const headExtras = [cssLink, frozenHeadTagsHtml].filter((_) => _).join('\n');
     const label = freezeName ? ` — ${freezeName}` : '';
 
     return `<!doctype html>
@@ -436,6 +453,7 @@ async function compileAndLoadServerElement(
             ctx: ServerRenderContext,
         ) => void,
         headLinks: parsedJayFile.headLinks,
+        headMeta: parsedJayFile.headMeta,
         cssHref,
     };
 }

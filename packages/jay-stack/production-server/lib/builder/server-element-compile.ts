@@ -7,9 +7,14 @@ import {
     generateElementHydrateFile,
     JAY_IMPORT_RESOLVER,
     injectHeadfullFSTemplates,
+    JayHtmlSourceFile,
 } from '@jay-framework/compiler-jay-html';
-import { RuntimeMode } from '@jay-framework/compiler-shared';
-import { checkValidationErrors } from '@jay-framework/compiler-shared';
+import {
+    RuntimeMode,
+    checkValidationErrors,
+    type JayHtmlHeadMeta,
+    WithValidations,
+} from '@jay-framework/compiler-shared';
 import { getLogger } from '@jay-framework/logger';
 import { parse as parseHtml } from 'node-html-parser';
 import { transform as esbuildTransform } from 'esbuild';
@@ -20,6 +25,7 @@ export interface ServerElementCompileResult {
     cssFile?: string;
     /** External URLs extracted from @import rules (e.g., Google Fonts) */
     cssImports?: string[];
+    headMeta?: JayHtmlHeadMeta;
 }
 
 export async function compileServerElement(
@@ -32,7 +38,7 @@ export async function compileServerElement(
     sourceDir?: string,
     minifyCss: boolean = true,
 ): Promise<ServerElementCompileResult> {
-    const jayFile = await parseJayFile(
+    const jayFile: WithValidations<JayHtmlSourceFile> = await parseJayFile(
         jayHtmlContent,
         jayHtmlFilename,
         jayHtmlDir,
@@ -93,7 +99,7 @@ export async function compileServerElement(
     }
 
     getLogger().info(`[Build] Compiled server element: ${path.basename(outputPath)}`);
-    return { cssFile, cssImports };
+    return { cssFile, cssImports, headMeta: parsedJayFile.headMeta };
 }
 
 /**

@@ -5,6 +5,7 @@ import {
     renderFastChangingData,
     mergeHeadTags,
     serializeHeadTags,
+    headMetaToHeadTags,
     getClientInitData,
 } from '@jay-framework/stack-server-runtime';
 import { deepMergeViewStates } from '@jay-framework/view-state-merge';
@@ -94,11 +95,14 @@ export async function fetchPageRequest(
     const fastCarryForward = (fastResult as any).carryForward || {};
 
     const headTagSources: any[][] = [];
+    if (route.headMeta) headTagSources.push(headMetaToHeadTags(route.headMeta));
     const slowHeadTags = (cached.carryForward as any).__slowHeadTags;
     if (slowHeadTags) headTagSources.push(...slowHeadTags);
     const fastHeadTags = (fastResult as any).headTags;
     if (fastHeadTags) headTagSources.push(fastHeadTags);
     const headTags = headTagSources.length > 0 ? mergeHeadTags(headTagSources) : [];
+    const hasCustomTitle = headTags.some((t: any) => t.tag?.toLowerCase() === 'title');
+    const titleTag = hasCustomTitle ? '' : '    <title>Vite + TS</title>\n';
     const headTagsHtml = headTags.length > 0 ? serializeHeadTags(headTags) + '\n' : '';
 
     const fullViewState = deepMergeViewStates(
@@ -131,7 +135,9 @@ export async function fetchPageRequest(
     const cssImportHints: string[] = [];
     for (const url of route.cssImports ?? []) {
         if (url.includes('fonts.googleapis.com')) {
-            cssImportHints.push('    <link rel="preconnect" href="https://fonts.googleapis.com" />');
+            cssImportHints.push(
+                '    <link rel="preconnect" href="https://fonts.googleapis.com" />',
+            );
             cssImportHints.push(
                 '    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />',
             );
@@ -153,10 +159,12 @@ export async function fetchPageRequest(
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-${[cssPreload, cssImportPreloads]
-    .filter(Boolean)
-    .map((l) => l + '\n')
-    .join('')}    <script type="importmap">${JSON.stringify({ imports: importMap })}</script>
+${titleTag}${[cssPreload, cssImportPreloads]
+                .filter(Boolean)
+                .map((l) => l + '\n')
+                .join(
+                    '',
+                )}    <script type="importmap">${JSON.stringify({ imports: importMap })}</script>
 ${headParts}
   </head>
   <body>

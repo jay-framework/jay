@@ -23,6 +23,7 @@ export const page = makeJayStackComponent<PageContract>()
         return Pipeline.ok({}).toPhaseOutput(() => ({
             viewState: { fastMessage: 'rendered at request time', clickCount: 0 },
             carryForward: {},
+            headTags: [{ tag: 'title', children: 'Phases Dynamic Title' }],
         }));
     })
     .withInteractive(

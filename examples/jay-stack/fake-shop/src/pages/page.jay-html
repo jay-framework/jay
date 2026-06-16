@@ -22,6 +22,9 @@
       .section {margin: 20px 0; padding: 10px; border: 1px solid #ddd}
     </style>
     <script type="application/jay-data" contract="./page.jay-contract"></script>
+      <title>fake shop home</title>
+      <meta name="description" content="fake shop example home">
+      <link rel="canonical" href="/">
   </head>
   <body>
     <div class="main">

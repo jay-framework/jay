@@ -430,3 +430,25 @@ This means:
 ### Deviations from Design
 
 None — implementation follows the design as specified.
+
+### Static Head Tags from Jay-HTML (June 2026)
+
+DL#127 originally only supported head tags from component `phaseOutput()` (dynamic, rendered at slow/fast time). Static head tags declared in the jay-html `<head>` section (`<title>`, `<meta>`, `<link>`) were not rendered in the SSR output.
+
+**Change:** Static head tags from jay-html `<head>` are now extracted during parsing (`headMeta` on `JayHtmlSourceFile`), converted to `HeadTag[]` via `headMetaToHeadTags()`, and merged as the lowest-priority source. Component head tags (slow/fast) override them via the existing `mergeHeadTags` last-write-wins dedup.
+
+Priority chain (lowest to highest):
+
+1. Jay-html `<head>` tags (static defaults)
+2. Slow phase `phaseOutput({ headTags })`
+3. Fast phase `phaseOutput({ headTags })` — overrides both
+
+**Files changed:**
+
+- `stack-server-runtime/lib/generate-ssr-response.ts` — `headMetaToHeadTags()` converts `JayHtmlHeadMeta` to `HeadTag[]`; dev SSR merges static + component tags
+- `production-server/lib/types.ts` — `headMeta` added to `RouteEntry`
+- `production-server/lib/builder/server-element-compile.ts` — extracts `headMeta` at build time
+- `production-server/lib/builder/build-pipeline.ts` — persists `headMeta` in route manifest
+- `production-server/lib/serve/fetch-page-handler.ts` — production SSR merges static + component tags
+
+**Smoke tests:** Verified in both dev and production modes — static title/description/canonical from jay-html render correctly, and fast-phase `headTags` override the static title.
