@@ -693,3 +693,10 @@ Routes like `/kitan/products/[category]/[slug]` have both `inferredParams: { pre
 4. ~~Plugin code duplication~~ — All `@jay-framework/*` packages externalized into shared chunks
 5. ~~Optional params~~ — Route matcher uses segment-derived param names only
 6. ~~Inferred + dynamic params~~ — `loadParams` runs with inferred params merged in
+7. ~~Dev plugins in production build~~ — `discoverPluginClientPackages()` now scans only `dependencies`, not `devDependencies`
+
+### Dev Plugins Excluded from Production Build (June 2026)
+
+`discoverPluginClientPackages()` in `production-server/lib/builder/build-pipeline.ts` merged both `dependencies` and `devDependencies` when scanning for `@jay-framework/*` packages with `./client` exports. This caused dev-only plugins (e.g. aiditor) to be bundled into production output as shared chunks.
+
+Fix: only scan `projectPkg.dependencies`. Plugins in `devDependencies` are dev-time tools (validators, editor plugins) and should not be included in production builds. No `--exclude-plugins` flag needed — the `devDependencies` convention is sufficient signal.

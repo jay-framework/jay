@@ -71,11 +71,7 @@ async function discoverPluginClientPackages(projectRoot: string): Promise<string
         const projectPkg = JSON.parse(
             await fs.readFile(path.join(projectRoot, 'package.json'), 'utf-8'),
         );
-        const allDeps = {
-            ...projectPkg.dependencies,
-            ...projectPkg.devDependencies,
-        };
-        for (const dep of Object.keys(allDeps)) {
+        for (const dep of Object.keys(projectPkg.dependencies || {})) {
             if (dep.startsWith('@jay-framework/')) {
                 await walk(dep);
             }
