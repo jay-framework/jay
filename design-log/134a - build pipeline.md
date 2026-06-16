@@ -700,3 +700,13 @@ Routes like `/kitan/products/[category]/[slug]` have both `inferredParams: { pre
 `discoverPluginClientPackages()` in `production-server/lib/builder/build-pipeline.ts` merged both `dependencies` and `devDependencies` when scanning for `@jay-framework/*` packages with `./client` exports. This caused dev-only plugins (e.g. aiditor) to be bundled into production output as shared chunks.
 
 Fix: only scan `projectPkg.dependencies`. Plugins in `devDependencies` are dev-time tools (validators, editor plugins) and should not be included in production builds. No `--exclude-plugins` flag needed — the `devDependencies` convention is sufficient signal.
+
+### Production Head Performance Fixes (June 2026)
+
+**File:** `production-server/lib/serve/fetch-page-handler.ts`
+
+Two issues in the production HTML `<head>`:
+
+1. **Missing client bundle modulepreload** — The route's client entry JS (`route.client-*.js`) was imported in the body `<script>` but not included in `<link rel="modulepreload">` hints. The browser only discovered it after parsing the body, causing a waterfall. Fix: include `clientBundleUrl` in the preload list alongside shared chunks.
+
+2. **Google Fonts preload pattern** — External CSS `@import` URLs (e.g. Google Fonts) were emitted as `<link rel="preload" as="style">`, which requires a matching `<link rel="stylesheet">` to actually apply. Fix: detect `fonts.googleapis.com` URLs and emit the recommended pattern: `preconnect` to both `fonts.googleapis.com` and `fonts.gstatic.com`, plus `<link rel="stylesheet">` for the font CSS URL.

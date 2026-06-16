@@ -117,16 +117,30 @@ export async function fetchPageRequest(
     if (route.routeHydratePath) {
         importMap['jay-route-hydrate'] = `${staticBaseUrl}${route.routeHydratePath}`;
     }
-    const modulePreloads = Object.values(importMap)
+    const clientBundleUrl = route.routeClientBundlePath
+        ? `${staticBaseUrl}${route.routeClientBundlePath}`
+        : `${staticBaseUrl}${instance.clientBundlePath}`;
+    const preloadUrls = [...Object.values(importMap), clientBundleUrl];
+    const modulePreloads = preloadUrls
         .map((url) => `    <link rel="modulepreload" href="${url}" />`)
         .join('\n');
     const cssUrl = instance.clientCssPath ? `${staticBaseUrl}${instance.clientCssPath}` : '';
     const cssPreload = cssUrl ? `    <link rel="preload" href="${cssUrl}" as="style" />` : '';
     const cssLink = cssUrl ? `    <link rel="stylesheet" href="${cssUrl}" />` : '';
 
-    const cssImportPreloads = (route.cssImports ?? [])
-        .map((url) => `    <link rel="preload" href="${url}" as="style" />`)
-        .join('\n');
+    const cssImportHints: string[] = [];
+    for (const url of route.cssImports ?? []) {
+        if (url.includes('fonts.googleapis.com')) {
+            cssImportHints.push('    <link rel="preconnect" href="https://fonts.googleapis.com" />');
+            cssImportHints.push(
+                '    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />',
+            );
+            cssImportHints.push(`    <link rel="stylesheet" href="${url}" />`);
+        } else {
+            cssImportHints.push(`    <link rel="preload" href="${url}" as="style" />`);
+        }
+    }
+    const cssImportPreloads = cssImportHints.join('\n');
 
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
@@ -168,9 +182,6 @@ ${headParts}
             if (asyncScripts) write(asyncScripts);
 
             const clientInitData = getClientInitData();
-            const clientBundleUrl = route.routeClientBundlePath
-                ? `${staticBaseUrl}${route.routeClientBundlePath}`
-                : `${staticBaseUrl}${instance.clientBundlePath}`;
             const initArgs = route.routeClientBundlePath
                 ? `${JSON.stringify(cached.slowViewState)}, ${JSON.stringify(fastViewState)}, ${JSON.stringify(fastCarryForward)}, ${JSON.stringify(clientInitData)}`
                 : `${JSON.stringify(fastViewState)}, ${JSON.stringify(fastCarryForward)}, ${JSON.stringify(clientInitData)}`;
