@@ -36,6 +36,10 @@ export interface DynamicContractConfig {
      *  When the generator returns multiple contracts: used as prefix (e.g., "list" → "list/recipes").
      *  When the generator returns a single contract: the name can be omitted, using just the prefix as the contract name (e.g., "product-page"). */
     prefix: string;
+    /** Head tags this component provides dynamically via phaseOutput (DL#148).
+     *  Used by validators to suppress missing-title/description warnings.
+     *  Values: "title", "meta:description", "meta:og:title", "link:canonical", etc. */
+    headTags?: string[];
 }
 
 /**
@@ -53,6 +57,10 @@ export interface PluginManifest {
         contract: string; // For NPM: export subpath (e.g., "contract.jay-contract"). For local: relative path.
         component: string; // Exported member name from module (e.g., "moodTracker")
         description?: string;
+        /** Head tags this component provides dynamically via phaseOutput (DL#148).
+         *  Used by validators to suppress missing-title/description warnings.
+         *  Values: "title", "meta:description", "meta:og:title", "link:canonical", etc. */
+        headTags?: string[];
     }>;
     dynamic_contracts?: DynamicContractConfig | DynamicContractConfig[];
     /** Named exports from plugin backend bundle that are JayAction instances.

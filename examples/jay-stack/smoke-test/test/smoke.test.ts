@@ -346,10 +346,10 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/rendered at request time/);
         });
 
-        it('/phases — fast render overrides static title', async () => {
+        it('/phases — template title with binding wins over component title', async () => {
             const { body } = await fetchPage(server.url, '/phases/');
-            expect(body).toMatch(/<title>Phases Dynamic Title<\/title>/);
-            expect(body).not.toMatch(/Phases Static Title/);
+            expect(body).toMatch(/<title>Phases Test \| Smoke Test<\/title>/);
+            expect(body).not.toMatch(/Phases Dynamic Title/);
             expect(body).toMatch(
                 /<meta name="description" content="Static description for phases page"/,
             );
@@ -506,10 +506,10 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/rendered at request time/);
         });
 
-        it('/phases — fast render overrides static title', async () => {
+        it('/phases — template title with binding wins over component title', async () => {
             const { body } = await fetchPage(server.url, '/phases/');
-            expect(body).toMatch(/<title>Phases Dynamic Title<\/title>/);
-            expect(body).not.toMatch(/Phases Static Title/);
+            expect(body).toMatch(/<title>Phases Test \| Smoke Test<\/title>/);
+            expect(body).not.toMatch(/Phases Dynamic Title/);
             expect(body).toMatch(
                 /<meta name="description" content="Static description for phases page"/,
             );

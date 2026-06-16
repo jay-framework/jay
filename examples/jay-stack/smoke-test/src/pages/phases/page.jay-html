@@ -1,7 +1,7 @@
 <html>
 <head>
   <script type="application/jay-data" contract="./page.jay-contract"></script>
-  <title>Phases Static Title</title>
+  <title>{slowTitle} | Smoke Test</title>
   <meta name="description" content="Static description for phases page" />
 </head>
 <body>

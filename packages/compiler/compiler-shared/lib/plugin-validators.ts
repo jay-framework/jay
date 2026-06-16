@@ -34,6 +34,7 @@ export interface JayHtmlValidationContext {
         key?: string;
         contractName: string;
         contract?: JayHtmlValidationContext['contract'];
+        providedHeadTags?: string[];
     }>;
 }
 

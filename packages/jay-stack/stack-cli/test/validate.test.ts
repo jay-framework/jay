@@ -401,4 +401,5 @@ describe('headless instance props validation (DL#124 Phase 2)', () => {
             expect(result.errors).toHaveLength(0);
         });
     });
+
 });

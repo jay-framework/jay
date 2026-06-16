@@ -7,6 +7,7 @@ import {
     JAY_EXTENSION,
     GenerateTarget,
     RuntimeMode,
+    findDynamicContract,
     type JayHtmlValidationContext,
     type JayHtmlValidatorFn,
 } from '@jay-framework/compiler-shared';
@@ -813,6 +814,21 @@ async function runPluginValidators(
                         const resolvedContract = imp.contract
                             ? resolveContractLinks(imp.contract, imp.contractPath)
                             : undefined;
+                        let providedHeadTags: string[] | undefined;
+                        for (const [, p] of scannedPlugins) {
+                            const entry = p.manifest.contracts?.find(
+                                (c) => c.name === imp.contractName,
+                            );
+                            if (entry?.headTags) {
+                                providedHeadTags = entry.headTags;
+                                break;
+                            }
+                            const dynEntry = findDynamicContract(p.manifest, imp.contractName);
+                            if (dynEntry?.headTags) {
+                                providedHeadTags = dynEntry.headTags;
+                                break;
+                            }
+                        }
                         return {
                             key: imp.key,
                             contractName: imp.contractName,
@@ -824,6 +840,7 @@ async function runPluginValidators(
                                       params: resolvedContract.params as any,
                                   }
                                 : undefined,
+                            providedHeadTags,
                         };
                     }),
                     projectRoot,

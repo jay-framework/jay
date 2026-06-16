@@ -21,6 +21,11 @@ A `.jay-html` file is standard HTML with jay-specific extensions.
     <!-- Headfull component imports -->
     <script type="application/jay-headfull" src="..." names="..." contract="..."></script>
 
+    <!-- SEO head tags (support {binding} syntax) -->
+    <title>{productPage.name} | My Store</title>
+    <meta name="description" content="{productPage.description}" />
+    <link rel="canonical" href="https://mystore.com/products/{productPage.slug}" />
+
     <!-- Styles -->
     <style>
       /* inline CSS */
@@ -33,6 +38,22 @@ A `.jay-html` file is standard HTML with jay-specific extensions.
   </body>
 </html>
 ```
+
+## Head Tag Bindings
+
+`<title>`, `<meta>`, and `<link>` in `<head>` support `{binding}` syntax — the same expressions used in `<body>`. Bindings resolve against the merged ViewState at SSR time.
+
+```html
+<head>
+  <title>{productPage.name} | My Store</title>
+  <meta name="description" content="{productPage.description}" />
+  <link rel="canonical" href="https://mystore.com/products/{productPage.slug}" />
+</head>
+```
+
+If a headless component also provides head tags via `phaseOutput({ headTags })`, the **template wins** — template head tags override component-provided ones. This lets you customize the head while components provide defaults.
+
+Canonical URLs must be absolute (`https://...`). The `{binding}` syntax can be used for the dynamic part (e.g., slug).
 
 ## Data Binding
 

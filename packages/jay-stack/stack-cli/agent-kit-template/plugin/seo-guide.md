@@ -71,11 +71,51 @@ const headTags = seoData.tags.map((tag) => ({
 return phaseOutput(viewState, carryForward, { headTags });
 ```
 
+## Declaring Head Tags in plugin.yaml
+
+If your component provides head tags dynamically via `phaseOutput`, declare them in `plugin.yaml` so the SEO validator knows not to warn about missing title/description on pages using your component:
+
+```yaml
+name: my-plugin
+contracts:
+  - name: product-page
+    contract: product-page.jay-contract
+    component: productPage
+    headTags:
+      - title
+      - meta:description
+      - link:canonical
+```
+
+Values: `title`, `meta:<name>` (e.g., `meta:description`, `meta:og:title`), `link:<rel>` (e.g., `link:canonical`).
+
+## Priority: Template Wins
+
+When both the jay-html template and a component provide the same head tag, the **template wins**:
+
+1. Component `phaseOutput({ headTags })` — defaults
+2. Jay-html `<head>` tags — **highest priority, overrides component**
+
+This lets designers customize head content in the template while components provide sensible defaults.
+
+The jay-html `<head>` supports `{binding}` syntax for dynamic values:
+
+```html
+<head>
+  <title>{productPage.name} | My Store</title>
+  <meta name="description" content="{productPage.description}" />
+  <link rel="canonical" href="https://mystore.com/products/{productPage.slug}" />
+</head>
+```
+
+Bindings are resolved against the merged ViewState at SSR time.
+
 ## Phase Rules
 
 - Return headTags from **slow** phase for build-time SEO data (product name, description)
 - Return headTags from **fast** phase for per-request data (pricing, availability)
 - Fast phase headTags **replace** slow phase entirely (no merge)
+- Template head tags override both (if present)
 - No interactive phase — head tags are SSR-only
 
 ## Collision Rules
@@ -91,3 +131,4 @@ return phaseOutput(viewState, carryForward, { headTags });
 
 - Head tags from components inside `forEach` are ignored
 - The framework handles HTML escaping automatically
+- Canonical URLs must be absolute (`https://...`)

@@ -268,7 +268,7 @@ describe('seo-validator', () => {
                 head: {
                     title: undefined,
                     meta: [{ name: 'description', content: 'Desc' }],
-                    links: [{ rel: 'canonical', href: '/' }],
+                    links: [],
                 },
             });
             const findings = await validate(ctx);
@@ -280,9 +280,24 @@ describe('seo-validator', () => {
             ]);
         });
 
+        it('suppresses missing title when component provides it', async () => {
+            const ctx = makeContext('<div><h1>Title</h1></div>', {
+                head: {
+                    title: undefined,
+                    meta: [{ name: 'description', content: 'Desc' }],
+                    links: [],
+                },
+            });
+            ctx.headlessImports = [
+                { contractName: 'product-page', providedHeadTags: ['title', 'meta:description'] },
+            ];
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+
         it('flags missing meta description', async () => {
             const ctx = makeContext('<div><h1>Title</h1></div>', {
-                head: { title: 'Page', meta: [], links: [{ rel: 'canonical', href: '/' }] },
+                head: { title: 'Page', meta: [], links: [] },
             });
             const findings = await validate(ctx);
             expect(findings).toEqual([
@@ -294,7 +309,48 @@ describe('seo-validator', () => {
             ]);
         });
 
-        it('flags missing canonical link', async () => {
+        it('flags relative canonical URL', async () => {
+            const ctx = makeContext('<div><h1>Title</h1></div>', {
+                head: {
+                    title: 'Page',
+                    meta: [{ name: 'description', content: 'Desc' }],
+                    links: [{ rel: 'canonical', href: '/products' }],
+                },
+            });
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    severity: 'warning',
+                    message: expect.stringContaining('absolute'),
+                }),
+            ]);
+        });
+
+        it('passes absolute canonical URL', async () => {
+            const ctx = makeContext('<div><h1>Title</h1></div>', {
+                head: {
+                    title: 'Page',
+                    meta: [{ name: 'description', content: 'Desc' }],
+                    links: [{ rel: 'canonical', href: 'https://example.com/products' }],
+                },
+            });
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+
+        it('skips canonical check when href has binding', async () => {
+            const ctx = makeContext('<div><h1>Title</h1></div>', {
+                head: {
+                    title: 'Page',
+                    meta: [{ name: 'description', content: 'Desc' }],
+                    links: [{ rel: 'canonical', href: '{siteUrl}/products' }],
+                },
+            });
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+
+        it('does not warn when canonical is absent', async () => {
             const ctx = makeContext('<div><h1>Title</h1></div>', {
                 head: {
                     title: 'Page',
@@ -303,13 +359,7 @@ describe('seo-validator', () => {
                 },
             });
             const findings = await validate(ctx);
-            expect(findings).toEqual([
-                expect.objectContaining({
-                    severity: 'warning',
-                    element: '<link>',
-                    message: expect.stringContaining('canonical'),
-                }),
-            ]);
+            expect(findings).toEqual([]);
         });
 
         it('flags noindex in robots meta', async () => {
@@ -320,7 +370,7 @@ describe('seo-validator', () => {
                         { name: 'description', content: 'Desc' },
                         { name: 'robots', content: 'noindex, nofollow' },
                     ],
-                    links: [{ rel: 'canonical', href: '/' }],
+                    links: [],
                 },
             });
             const findings = await validate(ctx);

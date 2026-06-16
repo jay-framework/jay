@@ -100,6 +100,25 @@ component: ./lib/components/product-page.ts
 component: productPage
 ```
 
+## Head Tags Declaration
+
+If your component provides head tags dynamically (via `phaseOutput({ headTags })`), declare them in `plugin.yaml` so validators don't warn about missing tags on pages using your component:
+
+```yaml
+contracts:
+  - name: product-page
+    contract: product-page.jay-contract
+    component: productPage
+    headTags:
+      - title
+      - meta:description
+      - link:canonical
+```
+
+Values: `title`, `meta:<name>` (e.g., `meta:description`), `link:<rel>` (e.g., `link:canonical`).
+
+Validators access this via `ctx.headlessImports[].providedHeadTags`.
+
 ## Plugin Validators
 
 Plugins can provide custom jay-html validation rules that run during `jay-stack validate`. Declare validators in `plugin.yaml`:
@@ -122,9 +141,11 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
   const findings: JayHtmlValidationFinding[] = [];
 
   // ctx.body — parsed DOM tree (HTMLElement from node-html-parser)
+  // ctx.head — parsed <head> metadata (title, meta tags, link tags)
   // ctx.filePath — relative path to the jay-html file
   // ctx.contract — page contract (if any), with tags including meta
   // ctx.headlessImports — headless components used in this file
+  //   .providedHeadTags — head tags the component declares in plugin.yaml
   // ctx.projectRoot — absolute project root path
 
   return findings;

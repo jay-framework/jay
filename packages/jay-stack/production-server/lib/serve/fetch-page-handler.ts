@@ -94,22 +94,24 @@ export async function fetchPageRequest(
     const fastViewState = (fastResult as any).rendered || {};
     const fastCarryForward = (fastResult as any).carryForward || {};
 
-    const headTagSources: any[][] = [];
-    if (route.headMeta) headTagSources.push(headMetaToHeadTags(route.headMeta));
-    const slowHeadTags = (cached.carryForward as any).__slowHeadTags;
-    if (slowHeadTags) headTagSources.push(...slowHeadTags);
-    const fastHeadTags = (fastResult as any).headTags;
-    if (fastHeadTags) headTagSources.push(fastHeadTags);
-    const headTags = headTagSources.length > 0 ? mergeHeadTags(headTagSources) : [];
-    const hasCustomTitle = headTags.some((t: any) => t.tag?.toLowerCase() === 'title');
-    const titleTag = hasCustomTitle ? '' : '    <title>Vite + TS</title>\n';
-    const headTagsHtml = headTags.length > 0 ? serializeHeadTags(headTags) + '\n' : '';
-
     const fullViewState = deepMergeViewStates(
         cached.slowViewState,
         fastViewState,
         route.trackByMap || {},
     );
+
+    // Merge head tags: component tags (defaults) then jay-html <head> (template wins, DL#148)
+    const headTagSources: any[][] = [];
+    const slowHeadTags = (cached.carryForward as any).__slowHeadTags;
+    if (slowHeadTags) headTagSources.push(...slowHeadTags);
+    const fastHeadTags = (fastResult as any).headTags;
+    if (fastHeadTags) headTagSources.push(fastHeadTags);
+    const templateHeadTags = headMetaToHeadTags(route.headMeta, fullViewState);
+    if (templateHeadTags.length > 0) headTagSources.push(templateHeadTags);
+    const headTags = headTagSources.length > 0 ? mergeHeadTags(headTagSources) : [];
+    const hasCustomTitle = headTags.some((t: any) => t.tag?.toLowerCase() === 'title');
+    const titleTag = hasCustomTitle ? '' : '    <title>Vite + TS</title>\n';
+    const headTagsHtml = headTags.length > 0 ? serializeHeadTags(headTags) + '\n' : '';
 
     const serverElementPath = route.serverElementPath || instance.serverElementPath;
     const tLoadStart = Date.now();

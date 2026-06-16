@@ -30,13 +30,15 @@ Head meta values (`title`, `meta.content`, `link.href`) are stored as raw string
 
 ```typescript
 function resolveHeadValue(template: string, viewState: object): string {
-    const parts = parseTemplateParts(template);
-    if (parts.every(p => p.kind === 'static')) return template;
-    return parts.map(p => {
-        if (p.kind === 'static') return p.value;
-        const resolved = getByPath(viewState, p.value);
-        return resolved !== undefined ? String(resolved) : `{${p.value}}`;
-    }).join('');
+  const parts = parseTemplateParts(template);
+  if (parts.every((p) => p.kind === 'static')) return template;
+  return parts
+    .map((p) => {
+      if (p.kind === 'static') return p.value;
+      const resolved = getByPath(viewState, p.value);
+      return resolved !== undefined ? String(resolved) : `{${p.value}}`;
+    })
+    .join('');
 }
 ```
 
@@ -46,9 +48,9 @@ Uses `parseTemplateParts` from `compiler-jay-html` (already handles nested brace
 
 ```typescript
 export function headMetaToHeadTags(
-    headMeta: JayHtmlHeadMeta | undefined,
-    viewState?: object,
-): HeadTag[]
+  headMeta: JayHtmlHeadMeta | undefined,
+  viewState?: object,
+): HeadTag[];
 ```
 
 ### Priority chain (template wins)
@@ -138,8 +140,7 @@ Component's fast render returns `headTags: [{ tag: 'title', children: 'Ceramic V
 If the binding path doesn't exist in ViewState, the `{...}` is kept as-is:
 
 ```html
-<title>{missing.path} | Store</title>
-→ <title>{missing.path} | Store</title>
+<title>{missing.path} | Store</title> → <title>{missing.path} | Store</title>
 ```
 
 ## Implementation Plan

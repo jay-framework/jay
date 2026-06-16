@@ -167,8 +167,12 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
     }
 
     // --- Head metadata checks ---
+    const componentHeadTags = new Set(
+        ctx.headlessImports.flatMap((imp) => imp.providedHeadTags ?? []),
+    );
+
     if (ctx.head) {
-        if (!ctx.head.title) {
+        if (!ctx.head.title && !componentHeadTags.has('title')) {
             findings.push({
                 severity: 'warning',
                 message: 'Page has no <title> element',
@@ -180,7 +184,7 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
         }
 
         const hasDescription = ctx.head.meta.some((m) => m.name?.toLowerCase() === 'description');
-        if (!hasDescription) {
+        if (!hasDescription && !componentHeadTags.has('meta:description')) {
             findings.push({
                 severity: 'warning',
                 message: 'Page has no <meta name="description">',
@@ -192,17 +196,24 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
             });
         }
 
-        const hasCanonical = ctx.head.links.some((l) => l.rel === 'canonical');
-        if (!hasCanonical) {
-            findings.push({
-                severity: 'warning',
-                message: 'Page has no <link rel="canonical">',
-                suggestion:
-                    'Add <link rel="canonical" href="..."> in <head> to specify the preferred URL. ' +
-                    'This prevents duplicate content issues in search engines.',
-                element: '<link>',
-                attribute: 'rel',
-            });
+        const canonical = ctx.head.links.find((l) => l.rel === 'canonical');
+        if (canonical) {
+            const href = canonical.href || '';
+            if (
+                !href.startsWith('http://') &&
+                !href.startsWith('https://') &&
+                !href.includes('{')
+            ) {
+                findings.push({
+                    severity: 'warning',
+                    message: 'Canonical URL should be absolute',
+                    suggestion:
+                        'Change the canonical href to an absolute URL (e.g., https://example.com/page). ' +
+                        'Relative canonicals may not be interpreted correctly by all search engines.',
+                    element: '<link>',
+                    attribute: 'href',
+                });
+            }
         }
 
         const robotsMeta = ctx.head.meta.find((m) => m.name?.toLowerCase() === 'robots');
