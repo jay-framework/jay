@@ -28,21 +28,21 @@ All three rules check `src` and `poster` attributes. Rule B uses `walkElements` 
 
 Package: `@jay-framework/seo-validator` (monorepo, dev dependency)
 
-| Rule                     | Severity | Element       | What it checks                                                                    |
-| ------------------------ | -------- | ------------- | --------------------------------------------------------------------------------- |
-| Image missing alt        | warning  | `<img>`       | No `alt` attribute (hurts SEO and accessibility)                                  |
-| Image missing dimensions | warning  | `<img>`       | No `width`/`height` attributes, inline style dimensions, or `srcset` — causes CLS |
-| Image missing loading    | warning  | `<img>`       | No `loading` attribute — should use `loading="lazy"` or `loading="eager"`         |
-| Empty anchor             | warning  | `<a>`         | Anchor with `href` but no visible text, no `aria-label`, and no child `<img>`     |
-| Missing h1               | warning  | `<h1>`        | Page has no `<h1>` element                                                        |
-| Multiple h1              | warning  | `<h1>`        | Page has more than one `<h1>` element                                             |
-| Skipped heading level    | warning  | `<h2>`–`<h6>` | Heading level skips (e.g., `<h1>` followed by `<h3>`)                             |
-| Missing main landmark    | warning  | `<main>`      | Page body has no `<main>` element                                                 |
+| Rule                     | Severity | Element       | What it checks                                                                         |
+| ------------------------ | -------- | ------------- | -------------------------------------------------------------------------------------- |
+| Image missing alt        | warning  | `<img>`       | No `alt` attribute (hurts SEO and accessibility)                                       |
+| Image missing dimensions | warning  | `<img>`       | No `width`/`height` attributes, inline style dimensions, or `srcset` — causes CLS      |
+| Image missing loading    | warning  | `<img>`       | No `loading` attribute — should use `loading="lazy"` or `loading="eager"`              |
+| Empty anchor             | warning  | `<a>`         | Anchor with `href` but no visible text, no `aria-label`, and no child `<img>`          |
+| Missing h1               | warning  | `<h1>`        | Page has no `<h1>` element                                                             |
+| Multiple h1              | warning  | `<h1>`        | Page has more than one `<h1>` element                                                  |
+| Skipped heading level    | warning  | `<h2>`–`<h6>` | Heading level skips (e.g., `<h1>` followed by `<h3>`)                                  |
+| Missing main landmark    | warning  | `<main>`      | Page body has no `<main>` element                                                      |
 | Missing fetchpriority    | warning  | `<img>`       | Page has images but none with `fetchpriority="high"` — LCP image should be prioritized |
-| Missing title            | warning  | `<title>`     | No `<title>` in `<head>` (via `ctx.head`)                                         |
-| Missing meta description | warning  | `<meta>`      | No `<meta name="description">` in `<head>`                                        |
-| Missing canonical        | warning  | `<link>`      | No `<link rel="canonical">` in `<head>`                                           |
-| Noindex robots           | warning  | `<meta>`      | `<meta name="robots">` contains `noindex`                                         |
+| Missing title            | warning  | `<title>`     | No `<title>` in `<head>` (via `ctx.head`)                                              |
+| Missing meta description | warning  | `<meta>`      | No `<meta name="description">` in `<head>`                                             |
+| Missing canonical        | warning  | `<link>`      | No `<link rel="canonical">` in `<head>`                                                |
+| Noindex robots           | warning  | `<meta>`      | `<meta name="robots">` contains `noindex`                                              |
 
 The dimensions rule accepts three forms of sizing: `width`/`height` attributes, inline `style` with `width:` and `height:`, or `srcset` (responsive images).
 
