@@ -225,6 +225,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 119 | async data SSR and hydration                            | Fix async data (Promise types) through SSR swap scripts, hydrate compiler, and ViewState serialization |
 | 126 | coordinate assignment rules                             | Complete rules for coordinate assignment across forEach, slowForEach, headless, headfull nesting       |
 | 127 | SEO head injection                                      | Render SEO data (title, meta, OG tags) from ViewState into `<head>` during SSR                         |
+| 148 | head tag bindings                                       | `{binding}` support in jay-html `<title>`, `<meta>`, `<link>` — resolved against ViewState at SSR time |
 | 135 | display contents for wrapper elements                   | Add `display:contents` to compiler-generated wrappers so they don't break sticky/flex/grid             |
 | 137 | production build self-containment                       | Strip headfull tags, source CSS refs, embed contracts, relative manifest paths — no src/ at runtime    |
 | 138 | safe refs stubs for unused contract refs                | No-op proxy for contract-declared refs absent from template; prevents crashes in shared plugin code    |
