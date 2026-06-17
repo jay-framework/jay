@@ -1,3 +1,5 @@
+import { TemplatePart } from './validator-utils';
+
 export interface JayHtmlValidationFinding {
     severity: 'error' | 'warning';
     message: string;
@@ -7,9 +9,17 @@ export interface JayHtmlValidationFinding {
 }
 
 export interface JayHtmlHeadMeta {
-    title?: string;
-    meta: Array<{ name?: string; property?: string; content: string }>;
-    links: Array<{ rel: string; href: string; [key: string]: string }>;
+    title?: TemplatePart[];
+    meta: Array<{
+        name?: string;
+        property?: string;
+        content: TemplatePart[];
+    }>;
+    links: Array<{
+        rel: string;
+        href: TemplatePart[];
+        [key: string]: any;
+    }>;
 }
 
 export interface JayHtmlValidationContext {

@@ -244,7 +244,10 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
     if (ctx.head) {
         const viewport = ctx.head.meta.find((m) => m.name?.toLowerCase() === 'viewport');
         if (viewport) {
-            const content = viewport.content.toLowerCase();
+            const content = viewport.content
+                .map((p) => p.value)
+                .join('')
+                .toLowerCase();
             if (/user-scalable\s*=\s*no/.test(content)) {
                 findings.push({
                     severity: 'error',

@@ -1,7 +1,15 @@
 import { parse } from 'node-html-parser';
 import { describe, it, expect } from 'vitest';
 import { validate } from '../../lib/validators/a11y-validator.js';
-import type { JayHtmlValidationContext, JayHtmlHeadMeta } from '@jay-framework/compiler-shared';
+import type {
+    JayHtmlValidationContext,
+    JayHtmlHeadMeta,
+    TemplatePart,
+} from '@jay-framework/compiler-shared';
+
+function s(value: string): TemplatePart[] {
+    return [{ kind: 'static', value }];
+}
 
 function makeContext(html: string, head?: JayHtmlHeadMeta): JayHtmlValidationContext {
     return {
@@ -276,8 +284,8 @@ describe('a11y-validator', () => {
     describe('viewport zoom', () => {
         it('flags user-scalable=no', async () => {
             const ctx = makeContext('<div>Content</div>', {
-                title: 'Test',
-                meta: [{ name: 'viewport', content: 'width=device-width, user-scalable=no' }],
+                title: s('Test'),
+                meta: [{ name: 'viewport', content: s('width=device-width, user-scalable=no') }],
                 links: [],
             });
             const findings = await validate(ctx);
@@ -291,8 +299,8 @@ describe('a11y-validator', () => {
 
         it('flags maximum-scale less than 2', async () => {
             const ctx = makeContext('<div>Content</div>', {
-                title: 'Test',
-                meta: [{ name: 'viewport', content: 'width=device-width, maximum-scale=1.0' }],
+                title: s('Test'),
+                meta: [{ name: 'viewport', content: s('width=device-width, maximum-scale=1.0') }],
                 links: [],
             });
             const findings = await validate(ctx);
@@ -306,8 +314,8 @@ describe('a11y-validator', () => {
 
         it('passes viewport with maximum-scale=2 or higher', async () => {
             const ctx = makeContext('<div>Content</div>', {
-                title: 'Test',
-                meta: [{ name: 'viewport', content: 'width=device-width, maximum-scale=5' }],
+                title: s('Test'),
+                meta: [{ name: 'viewport', content: s('width=device-width, maximum-scale=5') }],
                 links: [],
             });
             const findings = await validate(ctx);
@@ -316,8 +324,8 @@ describe('a11y-validator', () => {
 
         it('passes standard viewport without zoom restrictions', async () => {
             const ctx = makeContext('<div>Content</div>', {
-                title: 'Test',
-                meta: [{ name: 'viewport', content: 'width=device-width, initial-scale=1' }],
+                title: s('Test'),
+                meta: [{ name: 'viewport', content: s('width=device-width, initial-scale=1') }],
                 links: [],
             });
             const findings = await validate(ctx);

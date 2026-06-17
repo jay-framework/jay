@@ -198,12 +198,9 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
 
         const canonical = ctx.head.links.find((l) => l.rel === 'canonical');
         if (canonical) {
-            const href = canonical.href || '';
-            if (
-                !href.startsWith('http://') &&
-                !href.startsWith('https://') &&
-                !href.includes('{')
-            ) {
+            const hasBinding = canonical.href.some((p) => p.kind === 'binding');
+            const hrefStr = canonical.href.map((p) => p.value).join('');
+            if (!hrefStr.startsWith('http://') && !hrefStr.startsWith('https://') && !hasBinding) {
                 findings.push({
                     severity: 'warning',
                     message: 'Canonical URL should be absolute',
@@ -217,7 +214,8 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
         }
 
         const robotsMeta = ctx.head.meta.find((m) => m.name?.toLowerCase() === 'robots');
-        if (robotsMeta && /noindex/i.test(robotsMeta.content)) {
+        const robotsContent = robotsMeta?.content.map((p) => p.value).join('');
+        if (robotsContent && /noindex/i.test(robotsContent)) {
             findings.push({
                 severity: 'warning',
                 message:

@@ -2398,6 +2398,142 @@ describe('compiler', () => {
             expect(codeLink.module).toEqual('../../components/header/header');
         });
     });
+
+    describe('headMeta parsing', () => {
+        it('should parse static title as single-part array', async () => {
+            const result = await parseJayFile(
+                stripMargin(`
+                |<html>
+                |<head>
+                |  <script type="application/jay-data">data:</script>
+                |  <title>My Page</title>
+                |</head>
+                |<body><div>content</div></body>
+                |</html>`),
+                'test',
+                '.',
+                {},
+                defaultImportResolver,
+                '',
+            );
+            expect(result.validations).toEqual([]);
+            expect(result.val!.headMeta?.title).toEqual([{ kind: 'static', value: 'My Page' }]);
+        });
+
+        it('should parse title with bindings into parts', async () => {
+            const result = await parseJayFile(
+                stripMargin(`
+                |<html>
+                |<head>
+                |  <script type="application/jay-data">data:</script>
+                |  <title>{productName} | Store</title>
+                |</head>
+                |<body><div>content</div></body>
+                |</html>`),
+                'test',
+                '.',
+                {},
+                defaultImportResolver,
+                '',
+            );
+            expect(result.validations).toEqual([]);
+            expect(result.val!.headMeta?.title).toEqual([
+                { kind: 'binding', value: 'productName' },
+                { kind: 'static', value: ' | Store' },
+            ]);
+        });
+
+        it('should parse meta content with bindings into parts', async () => {
+            const result = await parseJayFile(
+                stripMargin(`
+                |<html>
+                |<head>
+                |  <script type="application/jay-data">data:</script>
+                |  <meta name="description" content="{product.description}" />
+                |</head>
+                |<body><div>content</div></body>
+                |</html>`),
+                'test',
+                '.',
+                {},
+                defaultImportResolver,
+                '',
+            );
+            expect(result.validations).toEqual([]);
+            const meta = result.val!.headMeta?.meta;
+            expect(meta).toHaveLength(1);
+            expect(meta![0].name).toBe('description');
+            expect(meta![0].content).toEqual([{ kind: 'binding', value: 'product.description' }]);
+        });
+
+        it('should parse static meta content as single-part array', async () => {
+            const result = await parseJayFile(
+                stripMargin(`
+                |<html>
+                |<head>
+                |  <script type="application/jay-data">data:</script>
+                |  <meta name="description" content="Static description" />
+                |</head>
+                |<body><div>content</div></body>
+                |</html>`),
+                'test',
+                '.',
+                {},
+                defaultImportResolver,
+                '',
+            );
+            expect(result.validations).toEqual([]);
+            expect(result.val!.headMeta?.meta[0].content).toEqual([
+                { kind: 'static', value: 'Static description' },
+            ]);
+        });
+
+        it('should parse link href with bindings into parts', async () => {
+            const result = await parseJayFile(
+                stripMargin(`
+                |<html>
+                |<head>
+                |  <script type="application/jay-data">data:</script>
+                |  <link rel="canonical" href="https://example.com/{slug}" />
+                |</head>
+                |<body><div>content</div></body>
+                |</html>`),
+                'test',
+                '.',
+                {},
+                defaultImportResolver,
+                '',
+            );
+            expect(result.validations).toEqual([]);
+            const links = result.val!.headMeta?.links;
+            expect(links).toHaveLength(1);
+            expect(links![0].rel).toBe('canonical');
+            expect(links![0].href).toEqual([
+                { kind: 'static', value: 'https://example.com/' },
+                { kind: 'binding', value: 'slug' },
+            ]);
+        });
+
+        it('should have empty meta and links when head has no seo tags', async () => {
+            const result = await parseJayFile(
+                stripMargin(`
+                |<html>
+                |<head>
+                |  <script type="application/jay-data">data:</script>
+                |</head>
+                |<body><div>content</div></body>
+                |</html>`),
+                'test',
+                '.',
+                {},
+                defaultImportResolver,
+                '',
+            );
+            expect(result.validations).toEqual([]);
+            expect(result.val!.headMeta?.title).toBeUndefined();
+            expect(result.val!.headMeta?.meta).toEqual([]);
+        });
+    });
 });
 
 function assertArrayType(value: JayType): JayArrayType {

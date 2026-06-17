@@ -1,12 +1,20 @@
 import { parse } from 'node-html-parser';
 import { describe, it, expect } from 'vitest';
 import { validate } from '../../lib/validators/seo-validator.js';
-import type { JayHtmlValidationContext, JayHtmlHeadMeta } from '@jay-framework/compiler-shared';
+import type {
+    JayHtmlValidationContext,
+    JayHtmlHeadMeta,
+    TemplatePart,
+} from '@jay-framework/compiler-shared';
+
+function s(value: string): TemplatePart[] {
+    return [{ kind: 'static', value }];
+}
 
 const completeHead: JayHtmlHeadMeta = {
-    title: 'Test Page',
-    meta: [{ name: 'description', content: 'Test description' }],
-    links: [{ rel: 'canonical', href: 'https://example.com/test' }],
+    title: s('Test Page'),
+    meta: [{ name: 'description', content: s('Test description') }],
+    links: [{ rel: 'canonical', href: s('https://example.com/test') }],
 };
 
 function makeContext(
@@ -267,7 +275,7 @@ describe('seo-validator', () => {
             const ctx = makeContext('<div><h1>Title</h1></div>', {
                 head: {
                     title: undefined,
-                    meta: [{ name: 'description', content: 'Desc' }],
+                    meta: [{ name: 'description', content: s('Desc') }],
                     links: [],
                 },
             });
@@ -284,7 +292,7 @@ describe('seo-validator', () => {
             const ctx = makeContext('<div><h1>Title</h1></div>', {
                 head: {
                     title: undefined,
-                    meta: [{ name: 'description', content: 'Desc' }],
+                    meta: [{ name: 'description', content: s('Desc') }],
                     links: [],
                 },
             });
@@ -297,7 +305,7 @@ describe('seo-validator', () => {
 
         it('flags missing meta description', async () => {
             const ctx = makeContext('<div><h1>Title</h1></div>', {
-                head: { title: 'Page', meta: [], links: [] },
+                head: { title: s('Page'), meta: [], links: [] },
             });
             const findings = await validate(ctx);
             expect(findings).toEqual([
@@ -312,9 +320,9 @@ describe('seo-validator', () => {
         it('flags relative canonical URL', async () => {
             const ctx = makeContext('<div><h1>Title</h1></div>', {
                 head: {
-                    title: 'Page',
-                    meta: [{ name: 'description', content: 'Desc' }],
-                    links: [{ rel: 'canonical', href: '/products' }],
+                    title: s('Page'),
+                    meta: [{ name: 'description', content: s('Desc') }],
+                    links: [{ rel: 'canonical', href: s('/products') }],
                 },
             });
             const findings = await validate(ctx);
@@ -329,9 +337,9 @@ describe('seo-validator', () => {
         it('passes absolute canonical URL', async () => {
             const ctx = makeContext('<div><h1>Title</h1></div>', {
                 head: {
-                    title: 'Page',
-                    meta: [{ name: 'description', content: 'Desc' }],
-                    links: [{ rel: 'canonical', href: 'https://example.com/products' }],
+                    title: s('Page'),
+                    meta: [{ name: 'description', content: s('Desc') }],
+                    links: [{ rel: 'canonical', href: s('https://example.com/products') }],
                 },
             });
             const findings = await validate(ctx);
@@ -341,9 +349,17 @@ describe('seo-validator', () => {
         it('skips canonical check when href has binding', async () => {
             const ctx = makeContext('<div><h1>Title</h1></div>', {
                 head: {
-                    title: 'Page',
-                    meta: [{ name: 'description', content: 'Desc' }],
-                    links: [{ rel: 'canonical', href: '{siteUrl}/products' }],
+                    title: s('Page'),
+                    meta: [{ name: 'description', content: s('Desc') }],
+                    links: [
+                        {
+                            rel: 'canonical',
+                            href: [
+                                { kind: 'binding', value: 'siteUrl' },
+                                { kind: 'static', value: '/products' },
+                            ],
+                        },
+                    ],
                 },
             });
             const findings = await validate(ctx);
@@ -353,8 +369,8 @@ describe('seo-validator', () => {
         it('does not warn when canonical is absent', async () => {
             const ctx = makeContext('<div><h1>Title</h1></div>', {
                 head: {
-                    title: 'Page',
-                    meta: [{ name: 'description', content: 'Desc' }],
+                    title: s('Page'),
+                    meta: [{ name: 'description', content: s('Desc') }],
                     links: [],
                 },
             });
@@ -365,10 +381,10 @@ describe('seo-validator', () => {
         it('flags noindex in robots meta', async () => {
             const ctx = makeContext('<div><h1>Title</h1></div>', {
                 head: {
-                    title: 'Page',
+                    title: s('Page'),
                     meta: [
-                        { name: 'description', content: 'Desc' },
-                        { name: 'robots', content: 'noindex, nofollow' },
+                        { name: 'description', content: s('Desc') },
+                        { name: 'robots', content: s('noindex, nofollow') },
                     ],
                     links: [],
                 },

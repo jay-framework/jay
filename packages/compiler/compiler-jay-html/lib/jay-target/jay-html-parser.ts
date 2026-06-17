@@ -5,12 +5,18 @@ import {
     mkRefsTree,
     WithValidations,
     type JayHtmlHeadMeta,
+    type TemplatePart,
 } from '@jay-framework/compiler-shared';
 import yaml from 'js-yaml';
 import { capitalCase, pascalCase } from 'change-case';
 import { camelCase } from '../case-utils';
 import pluralize from 'pluralize';
-import { parseEnumValues, parseImportNames, parseIsEnum } from '../expressions/expression-compiler';
+import {
+    parseEnumValues,
+    parseImportNames,
+    parseIsEnum,
+    parseTemplateParts,
+} from '../expressions/expression-compiler';
 import { ResolveTsConfigOptions } from '@jay-framework/compiler-analyze-exported-types';
 import path from 'path';
 import fs from 'fs/promises';
@@ -1282,12 +1288,21 @@ function parseHeadLinks(root: HTMLElement, excludeCssLinks: boolean = false): Ja
         });
 }
 
+function toParts(value: string): TemplatePart[] {
+    try {
+        return parseTemplateParts(value);
+    } catch {
+        return [{ kind: 'static', value }];
+    }
+}
+
 function parseHeadMeta(root: HTMLElement): JayHtmlHeadMeta | undefined {
     const head = root.querySelector('head');
     if (!head) return undefined;
 
     const titleEl = head.querySelector('title');
-    const title = titleEl?.textContent?.trim() || undefined;
+    const titleText = titleEl?.textContent?.trim();
+    const title = titleText ? toParts(titleText) : undefined;
 
     const meta: JayHtmlHeadMeta['meta'] = [];
     for (const el of head.querySelectorAll('meta')) {
@@ -1296,7 +1311,11 @@ function parseHeadMeta(root: HTMLElement): JayHtmlHeadMeta | undefined {
         const name = el.getAttribute('name');
         const property = el.getAttribute('property');
         if (name || property) {
-            meta.push({ name: name || undefined, property: property || undefined, content });
+            meta.push({
+                name: name || undefined,
+                property: property || undefined,
+                content: toParts(content),
+            });
         }
     }
 
@@ -1304,8 +1323,12 @@ function parseHeadMeta(root: HTMLElement): JayHtmlHeadMeta | undefined {
     for (const el of head.querySelectorAll('link')) {
         const rel = el.getAttribute('rel');
         if (!rel) continue;
-        const attrs: Record<string, string> = { ...el.attributes };
-        links.push(attrs as any);
+        const hrefRaw = el.getAttribute('href') || '';
+        const extraAttrs: Record<string, string> = {};
+        for (const [k, v] of Object.entries(el.attributes)) {
+            if (k !== 'rel' && k !== 'href') extraAttrs[k] = v;
+        }
+        links.push({ rel, href: toParts(hrefRaw), ...extraAttrs });
     }
 
     return { title, meta, links };

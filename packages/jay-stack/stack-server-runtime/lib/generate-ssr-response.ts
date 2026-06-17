@@ -1,7 +1,6 @@
 import {
     parseJayFile,
     generateServerElementFile,
-    parseTemplateParts,
     JAY_IMPORT_RESOLVER,
     type ServerElementOptions,
 } from '@jay-framework/compiler-jay-html';
@@ -9,6 +8,7 @@ import {
     checkValidationErrors,
     JAY_QUERY_HYDRATE,
     type JayHtmlHeadMeta,
+    TemplatePart,
 } from '@jay-framework/compiler-shared';
 import { asyncSwapScript, type ServerRenderContext } from '@jay-framework/ssr-runtime';
 import type { ViteDevServer } from 'vite';
@@ -78,12 +78,11 @@ function getByPath(obj: any, dotPath: string): unknown {
     return current;
 }
 
-function resolveHeadValue(template: string, viewState: object): string {
-    const parts = parseTemplateParts(template);
-    if (parts.every((p) => p.kind === 'static')) return template;
+function resolveParts(parts: Array<TemplatePart>, viewState?: object): string {
     return parts
         .map((p) => {
             if (p.kind === 'static') return p.value;
+            if (!viewState) return `{${p.value}}`;
             const resolved = getByPath(viewState, p.value);
             return resolved !== undefined && resolved !== null ? String(resolved) : `{${p.value}}`;
         })
@@ -95,23 +94,25 @@ export function headMetaToHeadTags(
     viewState?: object,
 ): HeadTag[] {
     if (!headMeta) return [];
-    const resolve = (v: string) => (viewState ? resolveHeadValue(v, viewState) : v);
     const tags: HeadTag[] = [];
     if (headMeta.title) {
-        tags.push({ tag: 'title', children: resolve(headMeta.title) });
+        tags.push({ tag: 'title', children: resolveParts(headMeta.title, viewState) });
     }
     for (const m of headMeta.meta) {
         const attrs: Record<string, string> = {};
         if (m.name) attrs.name = m.name;
         if (m.property) attrs.property = m.property;
-        attrs.content = resolve(m.content);
+        attrs.content = resolveParts(m.content, viewState);
         tags.push({ tag: 'meta', attrs });
     }
     for (const l of headMeta.links) {
         if (l.rel === 'stylesheet' || l.rel === 'import') continue;
-        const resolved = { ...l };
-        if (resolved.href) resolved.href = resolve(resolved.href);
-        tags.push({ tag: 'link', attrs: resolved });
+        const attrs: Record<string, string> = { rel: l.rel };
+        attrs.href = resolveParts(l.href, viewState);
+        for (const [k, v] of Object.entries(l)) {
+            if (k !== 'rel' && k !== 'href' && typeof v === 'string') attrs[k] = v;
+        }
+        tags.push({ tag: 'link', attrs });
     }
     return tags;
 }
