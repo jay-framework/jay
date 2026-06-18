@@ -178,7 +178,7 @@ async function ensureAgentKitDocs(
 }
 
 async function mergePluginAgentKitGuides(projectRoot: string, mode?: string): Promise<void> {
-    const plugins = await scanPlugins({ projectRoot });
+    const plugins = await scanPlugins({ projectRoot, includeDevDeps: true });
     const agentKitDir = path.join(projectRoot, 'agent-kit');
     const roles: AgentKitRole[] =
         mode && ALL_ROLES.includes(mode as AgentKitRole) ? [mode as AgentKitRole] : ALL_ROLES;

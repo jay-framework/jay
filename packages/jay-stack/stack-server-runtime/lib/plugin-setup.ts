@@ -158,6 +158,7 @@ export async function discoverPluginsWithSetup(options: {
     const allPlugins = await scanPlugins({
         projectRoot,
         verbose,
+        includeDevDeps: true,
         discoverTransitive: true,
     });
 
@@ -203,6 +204,7 @@ export async function discoverPluginsWithReferences(options: {
     const allPlugins = await scanPlugins({
         projectRoot,
         verbose,
+        includeDevDeps: true,
         discoverTransitive: true,
     });
 
