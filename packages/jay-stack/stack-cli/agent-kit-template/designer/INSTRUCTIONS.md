@@ -49,6 +49,14 @@ There is no standalone "interactive" phase. Any tag with `type: interactive` (re
 | [cli-commands.md](cli-commands.md)                         | CLI commands: setup, validate, params, action, dev server                                       |
 | `../references/<plugin>/`                                  | Pre-generated discovery data: product catalogs, collection schemas (from `jay-stack agent-kit`) |
 
+## When to Use Headfull Components
+
+Use headfull full-stack components for **shared UI sections that should look the same across pages** — headers, navigation menus, footers, sidebars. These are placed in `src/components/` and imported into any page that needs them. This keeps the shared layout in one place: update the component once and every page reflects the change.
+
+If a section is **unique to a single page**, write it directly in the page's `.jay-html` — no component needed.
+
+See [jay-html-components.md](jay-html-components.md) for import syntax and component structure.
+
 ## Quick Start
 
 ### 1. Discover plugins and contracts
