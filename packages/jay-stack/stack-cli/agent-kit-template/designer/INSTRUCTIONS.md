@@ -46,6 +46,7 @@ There is no standalone "interactive" phase. Any tag with `type: interactive` (re
 | [jay-html-styling.md](jay-html-styling.md)                 | Styling: inline, external, dynamic style bindings, class bindings                               |
 | [routing.md](routing.md)                                   | Directory-based routing: page structure, dynamic routes, route priority                         |
 | [contracts-and-plugins.md](contracts-and-plugins.md)       | Reading contracts, plugin.yaml, .jay-action files, and the materialized indexes                 |
+| [Contract Authoring Guide](../contracts/GUIDE.md)          | Writing contracts: syntax, page/component/linked contracts, examples                            |
 | [cli-commands.md](cli-commands.md)                         | CLI commands: setup, validate, params, action, dev server                                       |
 | `../references/<plugin>/`                                  | Pre-generated discovery data: product catalogs, collection schemas (from `jay-stack agent-kit`) |
 

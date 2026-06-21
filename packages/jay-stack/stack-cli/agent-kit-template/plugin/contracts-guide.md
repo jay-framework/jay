@@ -1,6 +1,8 @@
-# Contract Authoring Guide
+# Plugin Contract Guide
 
-Contracts (`.jay-contract` files) are the source of truth for a component's data shape. Define the contract before implementing the component.
+For the full contract syntax, decision tree, and examples, see the shared [Contract Authoring Guide](../contracts/GUIDE.md).
+
+This file covers plugin-specific contract concerns. Contracts (`.jay-contract` files) are the source of truth for a component's data shape. Define the contract before implementing the component.
 
 ## Basic Structure
 

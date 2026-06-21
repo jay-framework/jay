@@ -175,6 +175,36 @@ async function ensureAgentKitDocs(
             getLogger().info(chalk.gray(`   Created agent-kit/${role}/${filename}`));
         }
     }
+
+    // Copy top-level .md files (e.g., INSTRUCTIONS.md)
+    const topLevelFiles = (await fs.readdir(templateDir)).filter((f) => f.endsWith('.md'));
+    for (const filename of topLevelFiles) {
+        await fs.copyFile(path.join(templateDir, filename), path.join(agentKitDir, filename));
+        getLogger().info(chalk.gray(`   Created agent-kit/${filename}`));
+    }
+
+    // Copy shared docs (e.g., contracts/) that all roles reference
+    const sharedDirs = ['contracts'];
+    for (const dir of sharedDirs) {
+        const srcDir = path.join(templateDir, dir);
+        if (!fsSync.existsSync(srcDir)) continue;
+        await copyDirRecursive(srcDir, path.join(agentKitDir, dir));
+        getLogger().info(chalk.gray(`   Created agent-kit/${dir}/`));
+    }
+}
+
+async function copyDirRecursive(src: string, dest: string): Promise<void> {
+    await fs.mkdir(dest, { recursive: true });
+    const entries = await fs.readdir(src, { withFileTypes: true });
+    for (const entry of entries) {
+        const srcPath = path.join(src, entry.name);
+        const destPath = path.join(dest, entry.name);
+        if (entry.isDirectory()) {
+            await copyDirRecursive(srcPath, destPath);
+        } else if (entry.name.endsWith('.md')) {
+            await fs.copyFile(srcPath, destPath);
+        }
+    }
 }
 
 async function mergePluginAgentKitGuides(projectRoot: string, mode?: string): Promise<void> {

@@ -111,4 +111,4 @@ A page can have both a page contract and headless plugin contracts. The page con
 
 ## Contract Format Reference
 
-See the plugin [contracts-guide.md](../plugin/contracts-guide.md) for the full contract format: tag types, phases, sub-contracts, async data, and validation rules.
+See the shared [Contract Authoring Guide](../contracts/GUIDE.md) for the full contract format, decision tree, and examples.

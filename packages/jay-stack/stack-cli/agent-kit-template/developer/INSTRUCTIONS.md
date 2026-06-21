@@ -24,6 +24,7 @@ The developer sets up the project, configures plugins, creates page-level compon
 | [routing.md](routing.md)                     | Directory-based routing, dynamic routes                    |
 | [configuration.md](configuration.md)         | .jay file, plugin config, init.ts                          |
 | [page-contracts.md](page-contracts.md)       | Page-level contracts (page.jay-contract)                   |
+| [Contract Authoring Guide](../contracts/GUIDE.md) | Writing contracts: syntax, page/component/linked contracts, examples |
 | [page-components.md](page-components.md)     | page.ts: makeJayStackComponent for pages                   |
 | [component-state.md](component-state.md)     | createSignal, createMemo, createEffect, createDerivedArray |
 | [component-refs.md](component-refs.md)       | Refs, collection refs, element types                       |

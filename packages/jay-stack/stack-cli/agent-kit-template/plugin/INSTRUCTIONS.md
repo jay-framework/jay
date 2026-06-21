@@ -20,7 +20,8 @@ A plugin provides headless components (data + interactions, no UI) that project 
 
 | File                                             | Topic                                                                   |
 | ------------------------------------------------ | ----------------------------------------------------------------------- |
-| [contracts-guide.md](contracts-guide.md)         | Contract format: tags, types, phases, props, params, sub-contracts      |
+| [Contract Authoring Guide](../contracts/GUIDE.md) | Writing contracts: syntax, page/component/linked contracts, examples  |
+| [contracts-guide.md](contracts-guide.md)         | Plugin-specific contract concerns                                       |
 | [plugin-structure.md](plugin-structure.md)       | plugin.yaml, package layout, exports                                    |
 | [component-structure.md](component-structure.md) | makeJayStackComponent, builder API, three-phase rendering               |
 | [component-state.md](component-state.md)         | createSignal, createMemo, createEffect, createDerivedArray, createEvent |
