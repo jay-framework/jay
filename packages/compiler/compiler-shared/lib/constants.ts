@@ -17,5 +17,6 @@ export const JAY_SSR_RUNTIME = '@jay-framework/ssr-runtime';
 export const REACT = 'react';
 
 export const MAKE_JAY_COMPONENT = 'makeJayComponent';
+export const MAKE_JAY_STACK_COMPONENT = 'makeJayStackComponent';
 export const MAKE_JAY_TSX_COMPONENT = 'makeJayTsxComponent';
 export const MAKE_JAY_4_REACT_COMPONENT = 'jay4react';

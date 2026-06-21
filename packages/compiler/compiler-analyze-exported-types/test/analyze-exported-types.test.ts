@@ -173,6 +173,14 @@ describe('typescript-compiler', () => {
             );
         });
 
+        it('component using makeJayStackComponent', () => {
+            let types = analyzeExportedTypes(FIXTURES + '/components/stack-header/stack-header', {
+                relativePath: TSCONFIG,
+            });
+
+            expect(types).toEqual([new JayComponentType('StackHeader', [], true)]);
+        });
+
         it('recursive component', () => {
             let types = analyzeExportedTypes(
                 FIXTURES + '/components/recursive-components/tree-node',

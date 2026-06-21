@@ -22,6 +22,7 @@ const {
 import { resolveTsConfig, ResolveTsConfigOptions } from './resolve-ts-config';
 import {
     JAY_COMPONENT,
+    JAY_FULLSTACK_COMPONENTS,
     JayArrayType,
     JayComponentApiMember,
     JayComponentType,
@@ -31,6 +32,7 @@ import {
     JayType,
     JayUnknown,
     MAKE_JAY_COMPONENT,
+    MAKE_JAY_STACK_COMPONENT,
     resolvePrimitiveType,
 } from '@jay-framework/compiler-shared';
 export * from './resolve-ts-config';
@@ -100,6 +102,10 @@ function autoAddExtension(filename: string) {
     if (fs.existsSync(filename + '.ts')) return filename + '.ts';
     else if (fs.existsSync(filename + '.tsx')) return filename + '.tsx';
     else if (fs.existsSync(filename + '.d.ts')) return filename + '.d.ts';
+    else if (fs.existsSync(filename) && fs.statSync(filename).isDirectory())
+        throw new Error(
+            `"${filename}" is a directory. The src attribute must point to the component file, e.g. "${filename}/${filename.split('/').pop()}"`,
+        );
     else if (fs.existsSync(filename)) return filename;
     else throw new Error(`File not found. Tried ${filename}, ${filename}.ts and ${filename}.d.ts`);
 }
@@ -130,6 +136,21 @@ function loadTSCompilerOptions(options: ResolveTsConfigOptions = {}) {
     return convertCompilerOptionsFromJson(tsConfig.config.compilerOptions, tsConfigPath).options;
 }
 
+function findRootCallIdentifier(node: ts.CallExpression): ts.Identifier | undefined {
+    let expr: ts.Node = node.expression;
+    while (expr) {
+        if (isIdentifier(expr)) return expr;
+        if (isCallExpression(expr)) {
+            expr = expr.expression;
+        } else if ('expression' in expr) {
+            expr = (expr as any).expression;
+        } else {
+            return undefined;
+        }
+    }
+    return undefined;
+}
+
 function isExportedStatement(statement: ts.Statement) {
     return Boolean(
         (statement as any).modifiers &&
@@ -146,6 +167,10 @@ interface ImportedSymbol {
 }
 const SYMBOLS: Record<string, ImportedSymbol> = {
     MAKE_JAY_COMPONENT: { module: JAY_COMPONENT, namedImport: MAKE_JAY_COMPONENT },
+    MAKE_JAY_STACK_COMPONENT: {
+        module: JAY_FULLSTACK_COMPONENTS,
+        namedImport: MAKE_JAY_STACK_COMPONENT,
+    },
 };
 
 function findImportedSymbol(module: string, namedImport: string): ImportedSymbol {
@@ -189,7 +214,10 @@ export function analyzeExportedTypes(
 
     const types = [];
 
-    const { MAKE_JAY_COMPONENT } = mapImportedSymbols(sourceFile.statements, tsTypeChecker);
+    const { MAKE_JAY_COMPONENT, MAKE_JAY_STACK_COMPONENT } = mapImportedSymbols(
+        sourceFile.statements,
+        tsTypeChecker,
+    );
 
     for (const statement of sourceFile.statements.filter(isExportedStatement)) {
         if (isInterfaceDeclaration(statement)) {
@@ -221,12 +249,16 @@ export function analyzeExportedTypes(
         } else if (isVariableStatement(statement)) {
             statement.declarationList.declarations.forEach((declaration) => {
                 if (isCallExpression(declaration.initializer) && isIdentifier(declaration.name)) {
+                    const name = declaration.name.text;
+
+                    // Check for makeJayComponent(render, fn)
                     const functionType = tsTypeChecker.getTypeAtLocation(
                         declaration.initializer.expression,
                     );
-                    const name = declaration.name.text;
-                    if (functionType.symbol === MAKE_JAY_COMPONENT.symbol) {
-                        // function = makeJayComponent => (props) => ComponentType
+                    if (
+                        MAKE_JAY_COMPONENT.symbol &&
+                        functionType.symbol === MAKE_JAY_COMPONENT.symbol
+                    ) {
                         const callMakeJayComponentSignature = tsTypeChecker.getResolvedSignature(
                             declaration.initializer,
                         );
@@ -236,6 +268,19 @@ export function analyzeExportedTypes(
                         let componentType = componentConstructorSignature[0].getReturnType();
 
                         types.push(getComponentType(tsTypeChecker, name, componentType));
+                        return;
+                    }
+
+                    // Check for makeJayStackComponent() builder chains
+                    if (MAKE_JAY_STACK_COMPONENT.symbol) {
+                        const rootIdentifier = findRootCallIdentifier(declaration.initializer);
+                        if (rootIdentifier) {
+                            const rootType = tsTypeChecker.getTypeAtLocation(rootIdentifier);
+                            if (rootType.symbol === MAKE_JAY_STACK_COMPONENT.symbol) {
+                                types.push(new JayComponentType(name, [], true));
+                                return;
+                            }
+                        }
                     }
                 }
             });

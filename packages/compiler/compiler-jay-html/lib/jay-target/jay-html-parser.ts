@@ -593,7 +593,11 @@ function parseHeadfullImports(
 
             for (const name of names) {
                 const exportedType = exportedTypes.find((_) => _.name === name.name);
-                if (exportedType && exportedType !== JayUnknown)
+                if (exportedType instanceof JayComponentType && exportedType.fullStack) {
+                    validations.push(
+                        `${name.name} from ${module} is a full-stack component (makeJayStackComponent). Create a .jay-contract file for the component and add a contract attribute to the import`,
+                    );
+                } else if (exportedType && exportedType !== JayUnknown)
                     name.type = new JayImportedType(name.as ? name.as : name.name, exportedType);
                 else if (exportedType === JayUnknown)
                     validations.push(

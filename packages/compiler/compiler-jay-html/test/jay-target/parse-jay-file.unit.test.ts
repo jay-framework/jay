@@ -8,6 +8,7 @@ import {
 import {
     JayArrayType,
     JayBoolean,
+    JayComponentType,
     JayEnumType,
     JayNumber,
     JayObjectType,
@@ -677,6 +678,7 @@ describe('compiler', () => {
                                     isOptional: false,
                                     type: {
                                         api: [],
+                                        fullStack: false,
                                         name: 'comp1',
                                         kind: JayTypeKind.component,
                                     },
@@ -697,6 +699,7 @@ describe('compiler', () => {
                                     isOptional: false,
                                     type: {
                                         api: [],
+                                        fullStack: false,
                                         name: 'comp2',
                                         kind: JayTypeKind.component,
                                     },
@@ -716,6 +719,7 @@ describe('compiler', () => {
                                     isOptional: false,
                                     type: {
                                         api: [],
+                                        fullStack: false,
                                         name: 'comp4',
                                         kind: JayTypeKind.component,
                                     },
@@ -735,6 +739,7 @@ describe('compiler', () => {
                                     isOptional: false,
                                     type: {
                                         api: [],
+                                        fullStack: false,
                                         name: 'comp5',
                                         kind: JayTypeKind.component,
                                     },
@@ -754,6 +759,7 @@ describe('compiler', () => {
                                     isOptional: false,
                                     type: {
                                         api: [],
+                                        fullStack: false,
                                         name: 'comp6',
                                         kind: JayTypeKind.component,
                                     },
@@ -2048,6 +2054,43 @@ describe('compiler', () => {
             expect(jayFile.val.imports.some((i) => i.names.some((n) => n.name === 'counter'))).toBe(
                 true,
             );
+        });
+
+        it('should error when full-stack component is imported without contract attribute', async () => {
+            const resolver: JayImportResolver = {
+                ...defaultImportResolver,
+                resolveLink(importingModule: string, link: string): string {
+                    return '/resolved/' + link;
+                },
+                analyzeExportedTypes() {
+                    return [new JayComponentType('SiteHeader', [], true)];
+                },
+                readJayHtml() {
+                    return null;
+                },
+            };
+
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |   title: string
+                        |`,
+                    `<body><div>{title}</div></body>`,
+                    `<script type="application/jay-headfull"
+                        |   src="./site-header"
+                        |   names="SiteHeader"
+                        | ></script>`,
+                ),
+                'Page',
+                '/pages',
+                {},
+                resolver,
+                '',
+            );
+
+            expect(jayFile.validations).toEqual([
+                'SiteHeader from ./site-header is a full-stack component (makeJayStackComponent). Create a .jay-contract file for the component and add a contract attribute to the import',
+            ]);
         });
 
         it('should error when jay-html file is not found', async () => {

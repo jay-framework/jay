@@ -98,6 +98,7 @@ export class JayComponentType implements JayType {
     constructor(
         public readonly name: string,
         public readonly api: Array<JayComponentApiMember>,
+        public readonly fullStack: boolean = false,
     ) {}
     readonly kind = JayTypeKind.component;
 }
