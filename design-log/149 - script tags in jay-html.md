@@ -58,14 +58,14 @@ When the jay-html parser encounters a `<script>` tag that is not a `type="applic
 | **Local src** (`./`, `../`, relative path) | **error**            | **error** (never allowed)   |
 | **External src** (`https://...`)           | **warning**          | Allowed, included in output |
 
-Error message (inline/local without `jay-script`):
-> "Inline scripts are not supported in jay-html. Use page.ts with makeJayStackComponent for page behavior. If this is a third-party script that must be included as-is, add jay-script="allow"."
+Error message (inline without `jay-script`):
+> "Inline scripts are not supported in jay-html. Use page.ts with makeJayStackComponent for page behavior. If this is a third-party script that must be included as-is, add jay-script="allow". See designer/script-tags.md."
+
+Error message (local src):
+> "Local script imports are not supported in jay-html. Move the script logic into page.ts with makeJayStackComponent. See designer/script-tags.md."
 
 Warning message (external without `jay-script`):
-> "External scripts should be explicitly marked. If this script is required (e.g., analytics or tag manager), add jay-script="allow". Prefer page.ts for page behavior."
-
-Error message (local src with `jay-script`):
-> "Local script imports are not supported. Move the script logic into page.ts with makeJayStackComponent."
+> "External scripts should be explicitly marked. If this script is required (e.g., analytics or tag manager), add jay-script="allow". Prefer page.ts for page behavior. See designer/script-tags.md."
 
 ### Script passthrough
 
@@ -97,7 +97,7 @@ Scripts marked with `jay-script="allow"` are collected during parsing and includ
 
 ### Agent-kit guidance
 
-Create a new shared agent-kit guide `contracts/script-tags.md` (referenced from designer instructions) covering:
+Create a new agent-kit guide `designer/script-tags.md` (referenced from designer INSTRUCTIONS.md) covering:
 
 - **Default rule**: use `page.ts` with `makeJayStackComponent` for all page behavior
 - **When scripts are needed**: third-party analytics, tag managers, consent tools, chat widgets
@@ -125,7 +125,7 @@ Create a new shared agent-kit guide `contracts/script-tags.md` (referenced from 
 - Serialize into SSR output, preserving all other attributes
 
 ### Phase 3: Agent-kit docs
-- Create `contracts/script-tags.md` with full guidance
+- Create `designer/script-tags.md` with full guidance
 - Update designer `INSTRUCTIONS.md` to reference it
 - Add to the reference docs table
 
@@ -146,4 +146,4 @@ Create a new shared agent-kit guide `contracts/script-tags.md` (referenced from 
 - SSR: `jay-script="allow"` scripts appear in rendered output without the `jay-script` attribute
 - SSR: head scripts appear in `<head>`, body scripts appear in `<body>` at correct position
 - Frozen pages: allowed scripts appear in static output
-- Agent-kit: `script-tags.md` guide exists and is referenced from designer instructions
+- Agent-kit: `designer/script-tags.md` guide exists and is referenced from designer INSTRUCTIONS.md
