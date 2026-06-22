@@ -137,9 +137,7 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
                     }
                 }
                 if (invalidated) {
-                    server.ws.send({
-                        type: 'full-reload',
-                    });
+                    getLogger().info(`[watchChange] invalidated modules for ${id}`);
                 }
             }
         },

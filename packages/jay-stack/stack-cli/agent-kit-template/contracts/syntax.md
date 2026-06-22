@@ -89,7 +89,7 @@ Linked (reference another contract file):
 ```yaml
 - tag: author
   type: sub-contract
-  link: ./author  # relative path, resolves to author.jay-contract
+  link: ./author # relative path, resolves to author.jay-contract
 ```
 
 ### `sub-contract` with `repeated: true` — Arrays
@@ -113,12 +113,12 @@ Linked (reference another contract file):
 
 ## Rendering Phases
 
-| Phase | When | Use for |
-|-------|------|---------|
-| `slow` | Build time (SSG) | Static content, SEO data, product names |
-| `fast` | Request time (SSR) | Per-request data, live pricing, stock status |
-| `fast+interactive` | Request + client | Data that also updates on the client |
-| _(no phase)_ | All phases | Available everywhere |
+| Phase              | When               | Use for                                      |
+| ------------------ | ------------------ | -------------------------------------------- |
+| `slow`             | Build time (SSG)   | Static content, SEO data, product names      |
+| `fast`             | Request time (SSR) | Per-request data, live pricing, stock status |
+| `fast+interactive` | Request + client   | Data that also updates on the client         |
+| _(no phase)_       | All phases         | Available everywhere                         |
 
 **How to choose:**
 
@@ -150,9 +150,9 @@ Params come from dynamic route segments. Use for page-level routing.
 
 ```yaml
 params:
-  slug: string       # required — from [slug]
-  lang: string?      # optional — from [[lang]]
-  path: string[]     # catch-all — from [...path]
+  slug: string # required — from [slug]
+  lang: string? # optional — from [[lang]]
+  path: string[] # catch-all — from [...path]
 ```
 
 ## Async Data

@@ -52,7 +52,21 @@ export async function createViteServer(options: CreateViteServerOptions): Promis
             watch: { ignored: ['**/build/**'] },
         },
         // Use Jay Stack compiler for .jay-html and other custom transforms
-        plugins: [...jayStackCompiler(jayRollupConfig)],
+        plugins: [
+            ...jayStackCompiler(jayRollupConfig),
+            {
+                name: 'jay-stack-hmr',
+                handleHotUpdate({ file }) {
+                    if (
+                        file.endsWith('.jay-html') ||
+                        file.endsWith('.jay-contract') ||
+                        file.endsWith('page.ts')
+                    ) {
+                        return [];
+                    }
+                },
+            },
+        ],
         // Custom app type (no default middleware)
         appType: 'custom',
         // Base URL path

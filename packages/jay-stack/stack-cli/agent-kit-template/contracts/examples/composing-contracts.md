@@ -28,7 +28,7 @@ name: media
 description: Single media item.
 tags:
   - { tag: url, type: data, dataType: string, meta: { mediaType: wix-image } }
-  - { tag: mediaType, type: variant, dataType: "enum (IMAGE | VIDEO)" }
+  - { tag: mediaType, type: variant, dataType: 'enum (IMAGE | VIDEO)' }
 ```
 
 ## Level 2: Composing leaves
@@ -80,18 +80,17 @@ The same `product-options.jay-contract` is linked by both the product page (inli
 ```yaml
 # In product-card.jay-contract
 - { tag: quickOption, type: sub-contract, link: ./product-options }
-
 # In product-page.jay-contract — options are defined inline because they have
 # page-specific additions (text choice dropdown, modifier support)
 ```
 
 ## When to extract vs inline
 
-| Extract into a linked file | Keep inline |
-|---|---|
-| Used by 2+ contracts | Used by only one contract |
+| Extract into a linked file                                 | Keep inline                             |
+| ---------------------------------------------------------- | --------------------------------------- |
+| Used by 2+ contracts                                       | Used by only one contract               |
 | Complex enough to be its own concept (media, product-card) | Simple nested object (pricing, summary) |
-| Has its own identity that designers/developers reference | Just a grouping of related fields |
+| Has its own identity that designers/developers reference   | Just a grouping of related fields       |
 
 ## Benefits of composition
 

@@ -58,7 +58,8 @@ tags:
 The import must include the `contract` attribute:
 
 ```html
-<script type="application/jay-headfull"
+<script
+  type="application/jay-headfull"
   src="../components/site-header/site-header"
   names="SiteHeader"
   contract="../components/site-header/site-header.jay-contract"
@@ -73,9 +74,9 @@ Usage in the page body:
 
 ## Component Contract vs Page Contract
 
-| | Page contract | Component contract |
-|---|---|---|
-| **Location** | `src/pages/.../page.jay-contract` | `src/components/<name>/<name>.jay-contract` |
-| **Params** | Yes (from route segments) | No (components don't own routes) |
-| **Props** | Rarely | Yes (configured by parent) |
-| **Import** | `<script type="application/jay-data">` | `<script type="application/jay-headfull">` with `contract` attribute |
+|              | Page contract                          | Component contract                                                   |
+| ------------ | -------------------------------------- | -------------------------------------------------------------------- |
+| **Location** | `src/pages/.../page.jay-contract`      | `src/components/<name>/<name>.jay-contract`                          |
+| **Params**   | Yes (from route segments)              | No (components don't own routes)                                     |
+| **Props**    | Rarely                                 | Yes (configured by parent)                                           |
+| **Import**   | `<script type="application/jay-data">` | `<script type="application/jay-headfull">` with `contract` attribute |

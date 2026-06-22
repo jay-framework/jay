@@ -35,9 +35,9 @@ Declare `params` matching the route's dynamic segments:
 ```yaml
 name: product-page
 params:
-  slug: string       # required — from [slug]
-  prefix: string?    # optional — from [[prefix]]
-  category: string?  # optional
+  slug: string # required — from [slug]
+  prefix: string? # optional — from [[prefix]]
+  category: string? # optional
 tags:
   - tag: title
     type: data
@@ -57,8 +57,11 @@ A page can have both a page contract and headless plugin contracts. The page con
 <html>
   <head>
     <script type="application/jay-data" contract="./page.jay-contract"></script>
-    <script type="application/jay-headless"
-      plugin="wix-stores" contract="product-page" key="product"
+    <script
+      type="application/jay-headless"
+      plugin="wix-stores"
+      contract="product-page"
+      key="product"
     ></script>
   </head>
   <body>

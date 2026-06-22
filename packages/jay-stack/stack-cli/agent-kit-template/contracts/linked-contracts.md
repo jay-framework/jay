@@ -23,7 +23,7 @@ Reference another contract file with a relative path:
 ```yaml
 - tag: mediaGallery
   type: sub-contract
-  link: ./media-gallery  # resolves to media-gallery.jay-contract in same directory
+  link: ./media-gallery # resolves to media-gallery.jay-contract in same directory
 ```
 
 For cross-package references (e.g., dynamic contracts linking to static ones):
@@ -31,7 +31,7 @@ For cross-package references (e.g., dynamic contracts linking to static ones):
 ```yaml
 - tag: gallery
   type: sub-contract
-  link: '@my-org/my-plugin/media-gallery'  # package path
+  link: '@my-org/my-plugin/media-gallery' # package path
 ```
 
 ## Composition Pattern

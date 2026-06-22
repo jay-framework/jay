@@ -15,7 +15,7 @@ tags:
   - { tag: description, type: data, dataType: html-string }
   - { tag: brand, type: data, dataType: string }
   - { tag: ribbon, type: data, dataType: string }
-  - { tag: productType, type: variant, dataType: "enum (PHYSICAL | DIGITAL)" }
+  - { tag: productType, type: variant, dataType: 'enum (PHYSICAL | DIGITAL)' }
 
   # Linked sub-contract for the media gallery
   - tag: mediaGallery
@@ -27,7 +27,12 @@ tags:
   - { tag: sku, type: data, dataType: string, phase: fast+interactive }
   - { tag: price, type: data, dataType: string, phase: fast+interactive }
   - { tag: strikethroughPrice, type: data, dataType: string, phase: fast+interactive }
-  - { tag: stockStatus, type: variant, dataType: "enum (OUT_OF_STOCK | IN_STOCK)", phase: fast+interactive }
+  - {
+      tag: stockStatus,
+      type: variant,
+      dataType: 'enum (OUT_OF_STOCK | IN_STOCK)',
+      phase: fast+interactive,
+    }
 
   # Quantity controls — dual-type tag (data + interactive)
   - tag: quantity
@@ -35,7 +40,12 @@ tags:
     tags:
       - { tag: decrementButton, type: interactive, elementType: HTMLButtonElement }
       - { tag: incrementButton, type: interactive, elementType: HTMLButtonElement }
-      - { tag: quantity, type: [data, interactive], dataType: number, elementType: HTMLInputElement }
+      - {
+          tag: quantity,
+          type: [data, interactive],
+          dataType: number,
+          elementType: HTMLInputElement,
+        }
 
   # Call to action
   - { tag: addToCartButton, type: interactive, elementType: HTMLButtonElement, required: true }
@@ -50,7 +60,11 @@ tags:
     tags:
       - { tag: _id, type: data, dataType: string }
       - { tag: name, type: data, dataType: string }
-      - { tag: optionRenderType, type: variant, dataType: "enum (TEXT_CHOICES | COLOR_SWATCH_CHOICES)" }
+      - {
+          tag: optionRenderType,
+          type: variant,
+          dataType: 'enum (TEXT_CHOICES | COLOR_SWATCH_CHOICES)',
+        }
       - { tag: textChoice, type: interactive, elementType: HTMLSelectElement }
 
       - tag: choices
@@ -100,8 +114,9 @@ tags:
   <h3>{name}</h3>
   <div if="optionRenderType===COLOR_SWATCH_CHOICES">
     <div forEach="choices" trackBy="choiceId">
-      <button ref="choiceButton" style="background: {colorCode}"
-        class="swatch" if="isSelected">selected</button>
+      <button ref="choiceButton" style="background: {colorCode}" class="swatch" if="isSelected">
+        selected
+      </button>
     </div>
   </div>
 </div>

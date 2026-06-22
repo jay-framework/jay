@@ -41,16 +41,16 @@ A reusable piece extracted from a larger contract and linked via `link:` syntax.
 
 ## Decision Checklist
 
-| Question | If yes |
-|----------|--------|
-| Does the component own a URL route? | Add `params` — see [page-contracts.md](page-contracts.md) |
-| Is it configured by a parent? | Add `props` — see [component-contracts.md](component-contracts.md) |
-| Does it have nested repeated data? | Use `sub-contract` with `repeated: true` and `trackBy` |
+| Question                                            | If yes                                                                                   |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Does the component own a URL route?                 | Add `params` — see [page-contracts.md](page-contracts.md)                                |
+| Is it configured by a parent?                       | Add `props` — see [component-contracts.md](component-contracts.md)                       |
+| Does it have nested repeated data?                  | Use `sub-contract` with `repeated: true` and `trackBy`                                   |
 | Is a sub-contract reused across multiple contracts? | Extract to a separate file, use `link:` — see [linked-contracts.md](linked-contracts.md) |
-| Does data change per request? | Use `fast` or `fast+interactive` phase |
-| Does data update on the client after interaction? | Use `fast+interactive` phase |
-| Is the data static / known at build time? | Use `slow` phase |
-| Does the user click, type, or select something? | Add `interactive` tag with the right `elementType` |
+| Does data change per request?                       | Use `fast` or `fast+interactive` phase                                                   |
+| Does data update on the client after interaction?   | Use `fast+interactive` phase                                                             |
+| Is the data static / known at build time?           | Use `slow` phase                                                                         |
+| Does the user click, type, or select something?     | Add `interactive` tag with the right `elementType`                                       |
 
 ## Contract Syntax Reference
 
@@ -60,11 +60,11 @@ See [syntax.md](syntax.md) for the full YAML format: tag types, phases, data typ
 
 Start with the simplest example that matches your use case, then add complexity as needed:
 
-| Example | Complexity | Key patterns |
-|---------|-----------|--------------|
-| [mini-cart](examples/mini-cart.md) | Trivial | Variant + interactive refs |
-| [cart-indicator](examples/cart-indicator.md) | Simple | Flat data, variants, phase choices |
-| [category-list](examples/category-list.md) | Medium | Props, repeated sub-contracts |
-| [product-card](examples/product-card.md) | Medium-complex | Linked sub-contracts, variants, multiple ref types |
-| [product-page](examples/product-page.md) | Complex | Params, nested repeated sub-contracts, linked sub-contracts |
-| [composing-contracts](examples/composing-contracts.md) | Pattern | How contracts link together into a hierarchy |
+| Example                                                | Complexity     | Key patterns                                                |
+| ------------------------------------------------------ | -------------- | ----------------------------------------------------------- |
+| [mini-cart](examples/mini-cart.md)                     | Trivial        | Variant + interactive refs                                  |
+| [cart-indicator](examples/cart-indicator.md)           | Simple         | Flat data, variants, phase choices                          |
+| [category-list](examples/category-list.md)             | Medium         | Props, repeated sub-contracts                               |
+| [product-card](examples/product-card.md)               | Medium-complex | Linked sub-contracts, variants, multiple ref types          |
+| [product-page](examples/product-page.md)               | Complex        | Params, nested repeated sub-contracts, linked sub-contracts |
+| [composing-contracts](examples/composing-contracts.md) | Pattern        | How contracts link together into a hierarchy                |

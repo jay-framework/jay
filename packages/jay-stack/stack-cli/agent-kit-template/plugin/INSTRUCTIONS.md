@@ -18,26 +18,26 @@ A plugin provides headless components (data + interactions, no UI) that project 
 
 ## Guides
 
-| File                                             | Topic                                                                   |
-| ------------------------------------------------ | ----------------------------------------------------------------------- |
-| [Contract Authoring Guide](../contracts/GUIDE.md) | Writing contracts: syntax, page/component/linked contracts, examples  |
-| [contracts-guide.md](contracts-guide.md)         | Plugin-specific contract concerns                                       |
-| [plugin-structure.md](plugin-structure.md)       | plugin.yaml, package layout, exports                                    |
-| [component-structure.md](component-structure.md) | makeJayStackComponent, builder API, three-phase rendering               |
-| [component-state.md](component-state.md)         | createSignal, createMemo, createEffect, createDerivedArray, createEvent |
-| [component-refs.md](component-refs.md)           | Refs, collection refs, element types                                    |
-| [component-data.md](component-data.md)           | Immutable data, JSON Patch, createPatchableSignal                       |
-| [component-context.md](component-context.md)     | Context hooks: provide, reactive, global                                |
-| [render-results.md](render-results.md)           | phaseOutput, RenderPipeline, errors, redirects                          |
-| [actions-guide.md](actions-guide.md)             | makeJayAction, makeJayQuery, .jay-action files                          |
-| [webhooks-guide.md](webhooks-guide.md)           | makeWebhook, data change invalidation, renderer server                  |
-| [services-guide.md](services-guide.md)           | createJayService, makeJayInit                                           |
-| [plugin-routes.md](plugin-routes.md)             | Plugin-provided pages: routes, jay-html templates, page components      |
-| [seo-guide.md](seo-guide.md)                     | SEO head tags: title, meta, OG, canonical via phaseOutput               |
-| [commands-guide.md](commands-guide.md)           | makeCliCommand, .jay-command files, CONSOLE_CONTEXT, jay-stack run      |
-| [validation.md](validation.md)                   | jay-stack validate-plugin, writing custom jay-html validators           |
-| [dev-server-service.md](dev-server-service.md)   | Dev server service API: routes, params, freeze management               |
-| `../references/<plugin>/`                        | Plugin reference data                                                   |
+| File                                              | Topic                                                                   |
+| ------------------------------------------------- | ----------------------------------------------------------------------- |
+| [Contract Authoring Guide](../contracts/GUIDE.md) | Writing contracts: syntax, page/component/linked contracts, examples    |
+| [contracts-guide.md](contracts-guide.md)          | Plugin-specific contract concerns                                       |
+| [plugin-structure.md](plugin-structure.md)        | plugin.yaml, package layout, exports                                    |
+| [component-structure.md](component-structure.md)  | makeJayStackComponent, builder API, three-phase rendering               |
+| [component-state.md](component-state.md)          | createSignal, createMemo, createEffect, createDerivedArray, createEvent |
+| [component-refs.md](component-refs.md)            | Refs, collection refs, element types                                    |
+| [component-data.md](component-data.md)            | Immutable data, JSON Patch, createPatchableSignal                       |
+| [component-context.md](component-context.md)      | Context hooks: provide, reactive, global                                |
+| [render-results.md](render-results.md)            | phaseOutput, RenderPipeline, errors, redirects                          |
+| [actions-guide.md](actions-guide.md)              | makeJayAction, makeJayQuery, .jay-action files                          |
+| [webhooks-guide.md](webhooks-guide.md)            | makeWebhook, data change invalidation, renderer server                  |
+| [services-guide.md](services-guide.md)            | createJayService, makeJayInit                                           |
+| [plugin-routes.md](plugin-routes.md)              | Plugin-provided pages: routes, jay-html templates, page components      |
+| [seo-guide.md](seo-guide.md)                      | SEO head tags: title, meta, OG, canonical via phaseOutput               |
+| [commands-guide.md](commands-guide.md)            | makeCliCommand, .jay-command files, CONSOLE_CONTEXT, jay-stack run      |
+| [validation.md](validation.md)                    | jay-stack validate-plugin, writing custom jay-html validators           |
+| [dev-server-service.md](dev-server-service.md)    | Dev server service API: routes, params, freeze management               |
+| `../references/<plugin>/`                         | Plugin reference data                                                   |
 
 ## Key Principles
 
