@@ -306,13 +306,53 @@ export function mergeContractStubRefs(templateRefs: RefsTree, contractRefs: Refs
             );
         }
     }
-    if (stubRefs.length === 0) return templateRefs;
+
+    const mergedChildren: Record<string, RefsTree> = { ...templateRefs.children };
+    for (const [childName, contractChild] of Object.entries(contractRefs.children)) {
+        if (mergedChildren[childName]) {
+            mergedChildren[childName] = mergeContractStubRefs(
+                mergedChildren[childName],
+                contractChild,
+            );
+        } else {
+            mergedChildren[childName] = markAllRefsAsStubs(contractChild);
+        }
+    }
+
+    const childrenChanged =
+        Object.keys(mergedChildren).length !== Object.keys(templateRefs.children).length;
+    if (stubRefs.length === 0 && !childrenChanged) return templateRefs;
     return mkRefsTree(
         [...templateRefs.refs, ...stubRefs],
-        templateRefs.children,
+        mergedChildren,
         templateRefs.repeated,
         templateRefs.imported?.refsTypeName,
         templateRefs.imported?.repeatedRefsTypeName,
+    );
+}
+
+function markAllRefsAsStubs(tree: RefsTree): RefsTree {
+    const stubbedRefs = tree.refs.map((ref) =>
+        mkRef(
+            ref.originalName,
+            ref.originalName,
+            camelCase(`ref ${ref.originalName}`),
+            ref.repeated,
+            true,
+            ref.viewStateType,
+            ref.elementType,
+        ),
+    );
+    const stubbedChildren: Record<string, RefsTree> = {};
+    for (const [name, child] of Object.entries(tree.children)) {
+        stubbedChildren[name] = markAllRefsAsStubs(child);
+    }
+    return mkRefsTree(
+        stubbedRefs,
+        stubbedChildren,
+        tree.repeated,
+        tree.imported?.refsTypeName,
+        tree.imported?.repeatedRefsTypeName,
     );
 }
 

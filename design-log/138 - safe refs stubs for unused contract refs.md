@@ -223,3 +223,19 @@ Two options were considered:
 3. Event listeners on stub refs don't fire (expected)
 4. Conditional ref behavior unchanged (listeners still auto-attach when element renders)
 5. TypeScript types unchanged — contract refs are already typed as present
+
+## Implementation Results
+
+### Initial implementation
+
+`mergeContractStubRefs()` was added to `jay-html-compiler-shared.ts`. It merges contract-declared refs into the template's RefsTree as `autoRef: true` stubs. Called from both the element and hydrate compiler targets when compiling headless instance inline templates.
+
+### Bug fix: nested sub-contract refs (2026-06-23)
+
+The initial implementation only merged refs at the top level — it ignored `contractRefs.children`. When a contract had a sub-contract like `sortBy` containing `sortDropdown`, and the template didn't use any refs from `sortBy`, the entire child tree was dropped.
+
+**Symptom:** `refs.sortBy.sortDropdown.oninput(...)` crashed with `Cannot read properties of undefined (reading 'sortDropdown')` on the onsko-shop home page, which uses `<jay:product-search>` without including the sort UI.
+
+**Fix:** Made `mergeContractStubRefs` recursive — it now merges children from both template and contract. Added `markAllRefsAsStubs()` helper that recursively marks all refs in a tree as `autoRef: true` for contract children that have no template counterpart.
+
+**No deviations from original design** — the fix extends the same approach (stub refs as autoRef entries) to nested sub-contracts.
