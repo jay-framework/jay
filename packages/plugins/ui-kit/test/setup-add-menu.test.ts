@@ -153,7 +153,7 @@ describe('setupUiKit add-menu catalog (Design Log #142 U3)', () => {
         const result = await setupUiKit(makeCtx(projectRoot));
 
         expect(result.status).toBe('configured');
-        expect(result.configCreated).toBeUndefined();
+        expect(result.configCreated ?? []).not.toContain(ADD_MENU_OUTPUT_REL);
 
         const written = loadYaml(readFileSync(join(addMenuDir, 'ui-kit.yaml'), 'utf-8'));
         expect(written).toEqual({ items: [] });
@@ -192,5 +192,19 @@ describe('setupUiKit add-menu catalog (Design Log #142 U3)', () => {
         expect(readFileSync(join(skillDir, 'sticky-header-scroll.md'), 'utf-8')).toEqual(
             expect.stringMatching(/\.ui-kit-sticky-header/),
         );
+    });
+
+    it('copies Add Menu thumbnails into public/ on setup', async () => {
+        const result = await setupUiKit(makeCtx(projectRoot));
+
+        expect(result.status).toBe('configured');
+        expect(result.configCreated).toEqual(
+            expect.arrayContaining(['public/aiditor-add-menu-thumbnails/ui-kit/popover-menu.svg']),
+        );
+        expect(
+            existsSync(
+                join(projectRoot, 'public/aiditor-add-menu-thumbnails/ui-kit/popover-menu.svg'),
+            ),
+        ).toBe(true);
     });
 });
