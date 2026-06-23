@@ -3,6 +3,7 @@ import {
     generateServerElementFile,
     JAY_IMPORT_RESOLVER,
     type ServerElementOptions,
+    type JayHtmlScript,
 } from '@jay-framework/compiler-jay-html';
 import {
     checkValidationErrors,
@@ -152,6 +153,8 @@ export async function generateSSRPageHtml(
     sourceDir?: string,
     /** Head tags to inject into <head> during SSR (Design Log #127) */
     headTags?: HeadTag[],
+    /** Script tags with jay-script="allow" (DL#149) */
+    scripts?: JayHtmlScript[],
 ): Promise<string> {
     const jayHtmlPath = path.join(jayHtmlDir, jayHtmlFilename);
 
@@ -244,7 +247,9 @@ export async function generateSSRPageHtml(
     const hasCustomTitle = mergedTags.some((t) => t.tag.toLowerCase() === 'title');
     const titleTag = hasCustomTitle ? '' : '    <title>Vite + TS</title>\n';
     const headTagsHtml = mergedTags.length > 0 ? serializeHeadTags(mergedTags) : '';
-    const headExtras = [cssLink, headTagsHtml].filter((_) => _).join('\n');
+    const headScriptsHtml = serializeScripts(scripts, 'head');
+    const bodyScriptsHtml = serializeScripts(scripts, 'body');
+    const headExtras = [cssLink, headTagsHtml, headScriptsHtml].filter((_) => _).join('\n');
     return `<!doctype html>
 <html lang="en">
   <head>
@@ -253,7 +258,7 @@ export async function generateSSRPageHtml(
 ${titleTag}${headExtras ? headExtras + '\n' : ''}  </head>
   <body>
     <div id="target">${ssrHtml}</div>${asyncScripts}
-    ${hydrationScript}
+    ${hydrationScript}${bodyScriptsHtml ? '\n    ' + bodyScriptsHtml : ''}
   </body>
 </html>`;
 }
@@ -377,6 +382,24 @@ ${headExtras ? headExtras + '\n' : ''}    <style>
  * The compiler calculates import paths relative to the source jay-html directory,
  * but the generated server-element file lives in a different directory (build/pre-rendered/{routeDir}/).
  */
+function serializeScripts(scripts: JayHtmlScript[] | undefined, position: 'head' | 'body'): string {
+    if (!scripts) return '';
+    const filtered = scripts.filter((s) => s.position === position);
+    if (filtered.length === 0) return '';
+    return filtered
+        .map((s) => {
+            const attrs = Object.entries(s.attributes)
+                .map(([k, v]) => (v === '' ? k : `${k}="${v}"`))
+                .join(' ');
+            const attrStr = attrs ? ' ' + attrs : '';
+            if (s.src) {
+                return `    <script src="${s.src}"${attrStr}></script>`;
+            }
+            return `    <script${attrStr}>${s.inline}</script>`;
+        })
+        .join('\n');
+}
+
 function rebaseRelativeImports(code: string, fromDir: string, toDir: string): string {
     return code.replace(/from "(\.\.\/[^"]+)"/g, (_match, relPath) => {
         const absolutePath = path.resolve(fromDir, relPath);

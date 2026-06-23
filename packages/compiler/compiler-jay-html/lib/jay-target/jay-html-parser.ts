@@ -42,6 +42,7 @@ import {
     JayHtmlSourceFile,
     JayHtmlHeadLink,
 } from './jay-html-source-file';
+import type { JayHtmlScript } from './jay-html-source-file';
 
 import { JayImportResolver } from './jay-import-resolver';
 import { contractToImportsViewStateAndRefs, EnumToImport } from '../contract';
@@ -1265,6 +1266,63 @@ function normalizeFilename(filename: string): string {
     return filename.replace('.jay-html', '');
 }
 
+function isLocalSrc(src: string): boolean {
+    return (
+        src.startsWith('./') ||
+        src.startsWith('../') ||
+        (!src.includes('://') && !src.startsWith('//'))
+    );
+}
+
+function validateAndCollectScripts(
+    root: HTMLElement,
+    validations: JayValidations,
+): JayHtmlScript[] {
+    const scripts: JayHtmlScript[] = [];
+    const allScripts = root.querySelectorAll('script');
+
+    for (const script of allScripts) {
+        const type = script.getAttribute('type');
+        if (type?.startsWith('application/jay-')) continue;
+
+        const jayScript = script.getAttribute('jay-script');
+        const src = script.getAttribute('src');
+        const inline = script.textContent?.trim();
+        const isInHead = !!script.closest('head');
+
+        if (src && isLocalSrc(src)) {
+            validations.push(
+                `Local script imports are not supported in jay-html. Move the script logic into page.ts with makeJayStackComponent. See designer/script-tags.md.`,
+            );
+            continue;
+        }
+
+        if (jayScript === 'allow') {
+            const attributes = { ...script.attributes };
+            delete attributes['jay-script'];
+            delete attributes['src'];
+            if (src) {
+                scripts.push({ src, attributes, position: isInHead ? 'head' : 'body' });
+            } else if (inline) {
+                scripts.push({ inline, attributes, position: isInHead ? 'head' : 'body' });
+            }
+            continue;
+        }
+
+        if (src) {
+            validations.push(
+                `External scripts should be explicitly marked. If this script is required (e.g., analytics or tag manager), add jay-script="allow". Prefer page.ts for page behavior. See designer/script-tags.md.`,
+            );
+        } else if (inline) {
+            validations.push(
+                `Inline scripts are not supported in jay-html. Use page.ts with makeJayStackComponent for page behavior. If this is a third-party script that must be included as-is, add jay-script="allow". See designer/script-tags.md.`,
+            );
+        }
+    }
+
+    return scripts;
+}
+
 function parseHeadLinks(root: HTMLElement, excludeCssLinks: boolean = false): JayHtmlHeadLink[] {
     const allLinks = root.querySelectorAll('head link');
     return allLinks
@@ -1564,6 +1622,7 @@ export async function parseJayFile(
     const excludeCssLinks = !!filePath;
     const headLinks = parseHeadLinks(root, excludeCssLinks);
     const headMeta = parseHeadMeta(root);
+    const scripts = validateAndCollectScripts(root, validations);
 
     // Merge CSS validations with existing validations
     validations.push(...cssResult.validations);
@@ -1610,6 +1669,7 @@ export async function parseJayFile(
             clientTrackByMap:
                 Object.keys(clientTrackByMap).length > 0 ? clientTrackByMap : undefined,
             headMeta,
+            scripts: scripts.length > 0 ? scripts : undefined,
         } as JayHtmlSourceFile,
         validations,
     );

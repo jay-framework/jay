@@ -28,6 +28,13 @@ export interface JayHtmlHeadLink {
     attributes: Record<string, string>;
 }
 
+export interface JayHtmlScript {
+    src?: string;
+    inline?: string;
+    attributes: Record<string, string>;
+    position: 'head' | 'body';
+}
+
 export interface JayHtmlSourceFile extends CompilerSourceFile {
     format: SourceFileFormat.JayHtml;
     baseElementName: string;
@@ -62,4 +69,5 @@ export interface JayHtmlSourceFile extends CompilerSourceFile {
      */
     clientTrackByMap?: Record<string, string>;
     headMeta?: JayHtmlHeadMeta;
+    scripts?: JayHtmlScript[];
 }

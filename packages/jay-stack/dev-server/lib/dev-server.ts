@@ -19,6 +19,7 @@ import {
 } from '@jay-framework/stack-server-runtime';
 import type {
     ClientError4xx,
+    HeadTag,
     PageProps,
     Redirect3xx,
     ServerError5xx,
@@ -55,6 +56,7 @@ import {
     discoverHeadlessInstances,
     injectHeadfullFSTemplates,
     assignCoordinatesToJayHtml,
+    type JayHtmlScript,
 } from '@jay-framework/compiler-jay-html';
 import {
     LoadedPageParts,
@@ -498,6 +500,7 @@ async function handleCachedRequest(
         usedPackages,
         linkedCssFiles,
         linkedComponentFiles,
+        scripts: pageScripts,
     } = pagePartsResult.val;
 
     // Register linked files for watching (absolute paths from jay-html parser)
@@ -576,6 +579,7 @@ async function handleCachedRequest(
         timing,
         undefined,
         headTags,
+        pageScripts,
     );
 }
 
@@ -758,6 +762,7 @@ async function handleClientOnlyRequest(
         forEachInstances,
         linkedCssFiles,
         linkedComponentFiles,
+        scripts: initialPageScripts,
     } = pagePartsResult.val;
 
     // Register linked files for watching
@@ -887,7 +892,8 @@ async function sendResponse(
     slowViewState?: object,
     timing?: RequestTiming,
     preLoadedContent?: string,
-    headTags?: import('@jay-framework/fullstack-component').HeadTag[],
+    headTags?: HeadTag[],
+    scripts?: JayHtmlScript[],
 ): Promise<void> {
     let pageHtml: string;
 
@@ -921,6 +927,7 @@ async function sendResponse(
             },
             undefined,
             headTags,
+            scripts,
         );
     } catch (err) {
         // Fall back to client-only rendering
@@ -1003,8 +1010,6 @@ async function handleFrozenRequest(
         const sourceDir = path.dirname(route.jayHtmlPath);
 
         // Inject headfull FS templates (component jay-html)
-        const { injectHeadfullFSTemplates } = await import('@jay-framework/compiler-jay-html');
-        const { JAY_IMPORT_RESOLVER } = await import('@jay-framework/compiler-jay-html');
         const fullJayHtml = injectHeadfullFSTemplates(
             jayHtmlContent,
             sourceDir,

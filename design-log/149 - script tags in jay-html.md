@@ -24,6 +24,7 @@ No, not even with `jay-script`. Local scripts should be part of `page.ts`. Only 
 
 **Q3: Where can third-party scripts be placed?**
 In `<head>` or in `<body>` (top or bottom). Placement matters for performance:
+
 - `<head>` with `async` or `defer` — loads without blocking rendering
 - End of `<body>` — loads after page content
 - `<head>` without `async`/`defer` — blocks rendering (discouraged)
@@ -45,6 +46,7 @@ A value-carrying attribute that marks a script for inclusion. Currently supports
 - `jay-script="allow"` — include this script as-is in the rendered output
 
 Future values (not implemented now):
+
 - `jay-script="sandbox"` — run in an isolated context
 - `jay-script="defer"` — framework-managed deferred loading
 
@@ -53,18 +55,21 @@ Future values (not implemented now):
 When the jay-html parser encounters a `<script>` tag that is not a `type="application/jay-*"` declaration:
 
 | Script type                                | Without `jay-script` | With `jay-script="allow"`   |
-|--------------------------------------------|----------------------|-----------------------------|
+| ------------------------------------------ | -------------------- | --------------------------- |
 | **Inline** (has body)                      | **error**            | Allowed, included in output |
 | **Local src** (`./`, `../`, relative path) | **error**            | **error** (never allowed)   |
-| **External src** (`https://...`)           | **warning**          | Allowed, included in output |
+| **External src** (`https://...`)           | **error**            | Allowed, included in output |
 
 Error message (inline without `jay-script`):
+
 > "Inline scripts are not supported in jay-html. Use page.ts with makeJayStackComponent for page behavior. If this is a third-party script that must be included as-is, add jay-script="allow". See designer/script-tags.md."
 
 Error message (local src):
+
 > "Local script imports are not supported in jay-html. Move the script logic into page.ts with makeJayStackComponent. See designer/script-tags.md."
 
-Warning message (external without `jay-script`):
+Error message (external without `jay-script`):
+
 > "External scripts should be explicitly marked. If this script is required (e.g., analytics or tag manager), add jay-script="allow". Prefer page.ts for page behavior. See designer/script-tags.md."
 
 ### Script passthrough
@@ -74,16 +79,27 @@ Scripts marked with `jay-script="allow"` are collected during parsing and includ
 ```html
 <head>
   <!-- External script: loads GTM library -->
-  <script src="https://www.googletagmanager.com/gtag/js?id=G-XXXXX" async jay-script="allow"></script>
+  <script
+    src="https://www.googletagmanager.com/gtag/js?id=G-XXXXX"
+    async
+    jay-script="allow"
+  ></script>
   <!-- Inline script: GTM bootstrap with site parameters -->
   <script jay-script="allow">
     window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
+    function gtag() {
+      dataLayer.push(arguments);
+    }
     gtag('js', new Date());
     gtag('config', 'G-XXXXX');
   </script>
   <!-- Framework declaration: no jay-script needed -->
-  <script type="application/jay-headless" plugin="wix-stores" contract="product-page" key="product"></script>
+  <script
+    type="application/jay-headless"
+    plugin="wix-stores"
+    contract="product-page"
+    key="product"
+  ></script>
 </head>
 ```
 
@@ -112,19 +128,22 @@ Create a new agent-kit guide `designer/script-tags.md` (referenced from designer
 ## Implementation Plan
 
 ### Phase 1: Validation
+
 - Add validation in jay-html parser for non-jay script tags
 - Inline scripts without `jay-script="allow"` → error
 - Local src scripts → always error (even with `jay-script`)
-- External src scripts without `jay-script="allow"` → warning
+- External src scripts without `jay-script="allow"` → error
 - Scripts with `jay-script="allow"` (non-local) → no error/warning
 
 ### Phase 2: Script passthrough
+
 - Collect `jay-script="allow"` scripts during parsing (both head and body)
 - Preserve placement (head vs body position)
 - Strip `jay-script` attribute from output
 - Serialize into SSR output, preserving all other attributes
 
 ### Phase 3: Agent-kit docs
+
 - Create `designer/script-tags.md` with full guidance
 - Update designer `INSTRUCTIONS.md` to reference it
 - Add to the reference docs table
@@ -132,7 +151,7 @@ Create a new agent-kit guide `designer/script-tags.md` (referenced from designer
 ## Trade-offs
 
 - **Strictness vs flexibility**: errors for unmarked scripts prevent footguns. `jay-script="allow"` is an explicit opt-in that forces a conscious decision.
-- **Warnings for external scripts**: not an error because external scripts are a legitimate use case, but the warning ensures they're explicitly acknowledged.
+- **Errors for external scripts**: all script types require explicit `jay-script="allow"` — no exceptions. This forces a conscious decision for every script inclusion.
 - **No local scripts**: opinionated — all local JS goes through the component model. Simplifies the mental model.
 - **Extensible attribute**: `jay-script="allow"` is slightly more verbose than a boolean `jay-allow`, but leaves room for future modes without attribute proliferation.
 - **Frozen pages**: allowed scripts should also appear in frozen/static page output (DL#127).
@@ -141,7 +160,7 @@ Create a new agent-kit guide `designer/script-tags.md` (referenced from designer
 
 - Validation: inline `<script>` without `jay-script` → error mentioning page.ts and jay-script
 - Validation: `<script src="./local.js">` → always error, even with `jay-script`
-- Validation: `<script src="https://cdn.example.com/lib.js">` without `jay-script` → warning
+- Validation: `<script src="https://cdn.example.com/lib.js">` without `jay-script` → error
 - Validation: inline and external with `jay-script="allow"` → no error/warning
 - SSR: `jay-script="allow"` scripts appear in rendered output without the `jay-script` attribute
 - SSR: head scripts appear in `<head>`, body scripts appear in `<body>` at correct position
