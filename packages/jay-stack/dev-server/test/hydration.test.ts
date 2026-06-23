@@ -1875,4 +1875,14 @@ describe('hydration', () => {
             },
         });
     });
+
+    describe('13a. Empty text binding', () => {
+        testFixture('13a-empty-text-binding', {
+            expectedViewState: { title: 'Hello', subtitle: '' },
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Hello');
+                expect(await page.textContent('#target .subtitle')).toEqual('');
+            },
+        });
+    });
 });
