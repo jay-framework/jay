@@ -104,27 +104,17 @@ export async function renderFastChangingData(
             const comp = componentByContractName.get(instance.contractName);
             if (!comp) continue;
 
-            // Instance slow ViewState: available from instancePhaseData.slowViewStates
-            // (pre-render path) or carryForward.__instanceSlowViewStates (runSlowlyForPage path).
-            const instanceSlowVS =
-                instancePhaseData.slowViewStates?.[coordKey] ??
-                (carryForward as any)?.__instanceSlowViewStates?.[coordKey];
-
             if (comp.compDefinition.fastRender) {
                 const services = resolveServices(comp.compDefinition.services);
                 const cf = instancePhaseData.carryForwards[coordKey];
 
-                // fastRender signature depends on whether slow phase exists
                 const instanceProps = { ...instance.props, query, cookies };
                 const fastResult = comp.compDefinition.slowlyRender
                     ? await comp.compDefinition.fastRender(instanceProps, cf, ...services)
                     : await comp.compDefinition.fastRender(instanceProps, ...services);
 
                 if (fastResult.kind === 'PhaseOutput') {
-                    // Merge instance slow ViewState (if any) with fast ViewState.
-                    instanceViewStates[coordKey] = instanceSlowVS
-                        ? { ...instanceSlowVS, ...fastResult.rendered }
-                        : fastResult.rendered;
+                    instanceViewStates[coordKey] = fastResult.rendered;
                     if (fastResult.carryForward) {
                         instanceCarryForwards[coordKey] = fastResult.carryForward;
                     }
@@ -136,9 +126,8 @@ export async function renderFastChangingData(
                     }
                 }
             } else {
-                // No fastRender — populate with slow ViewState if available,
-                // or empty object for static-only components (no phases at all).
-                instanceViewStates[coordKey] = instanceSlowVS ?? {};
+                // No fastRender — the dev server merges slow VS separately.
+                instanceViewStates[coordKey] = {};
             }
         }
     }

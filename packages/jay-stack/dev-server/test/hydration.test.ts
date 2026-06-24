@@ -1885,4 +1885,19 @@ describe('hydration', () => {
             },
         });
     });
+
+    describe('14a. Instance with nested slow+fast sub-contract', () => {
+        testFixture('14a-instance-nested-slow-fast', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Spotlight Test');
+                // Slow-phase fields must survive the merge with fast-phase fields
+                expect(await page.textContent('#target .name')).toEqual('Product vase');
+                expect(await page.getAttribute('#target .image', 'src')).toContain(
+                    'https://example.com/vase.jpg',
+                );
+                // Fast-phase field
+                expect(await page.textContent('#target .price')).toEqual('$99.00');
+            },
+        });
+    });
 });

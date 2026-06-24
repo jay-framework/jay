@@ -77,11 +77,12 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
                 componentByContractName.set(comp.contractName, comp);
             }
 
+            const instanceSlowViewStates: Record<string, object> = {};
             const instancePhaseData: InstancePhaseData = {
                 discovered: [],
                 carryForwards: {},
+                slowViewStates: instanceSlowViewStates,
             };
-            const instanceSlowViewStates: Record<string, object> = {};
             const instanceResolvedData: InstanceSlowRenderResult['resolvedData'] = [];
 
             for (const instance of discoveredInstances) {
@@ -132,7 +133,6 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
 
             // Store instance data in carryForward for downstream consumption
             (carryForward as any).__instances = instancePhaseData;
-            (carryForward as any).__instanceSlowViewStates = instanceSlowViewStates;
             (carryForward as any).__instanceResolvedData = instanceResolvedData;
         }
 

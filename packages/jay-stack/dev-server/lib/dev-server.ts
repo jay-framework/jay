@@ -554,9 +554,17 @@ async function handleCachedRequest(
         renderedFast.headTags ??
         mergeHeadTags((cachedEntry.carryForward as any)?.__slowHeadTags ?? []);
 
+    // Reconstruct full slow VS including instance slow data from carryForward.
+    // Page-level slow VS is in cachedEntry.slowViewState (may be empty).
+    // Instance slow VS is in carryForward.__instances.slowViewStates.
+    const instanceSlowViewStates = instancePhaseData?.slowViewStates;
+    const fullSlowViewState = instanceSlowViewStates && Object.keys(instanceSlowViewStates).length > 0
+        ? { ...cachedEntry.slowViewState, __headlessInstances: instanceSlowViewStates }
+        : cachedEntry.slowViewState;
+
     // DL#144: compile from original jay-html with merged slow+fast ViewState
     const fullViewState = deepMergeViewStates(
-        cachedEntry.slowViewState,
+        fullSlowViewState,
         fastViewState,
         clientTrackByMap || {},
     );
@@ -828,9 +836,15 @@ async function handleClientOnlyRequest(
         }
     }
 
+    // Reconstruct full slow VS including instance slow data from carryForward.
+    const nonCachedInstanceSlowVS = instancePhaseData?.slowViewStates;
+    const fullSlowVS = nonCachedInstanceSlowVS && Object.keys(nonCachedInstanceSlowVS).length > 0
+        ? { ...renderedSlowly.rendered, __headlessInstances: nonCachedInstanceSlowVS }
+        : renderedSlowly.rendered;
+
     // Merge slow + fast viewState using deep merge (DL#108).
     const viewState: object = deepMergeViewStates(
-        renderedSlowly.rendered,
+        fullSlowVS,
         renderedFast.rendered,
         serverTrackByMap || {},
     );
