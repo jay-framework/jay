@@ -1,0 +1,7 @@
+plugins:
+  - name: test-spotlight
+    path: ./src/plugins/test-spotlight
+    contracts:
+      - name: spotlight
+        type: static
+        path: ./spotlight.jay-contract

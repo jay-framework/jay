@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-headless"
+            plugin="test-spotlight"
+            contract="spotlight"></script>
+    <script type="application/jay-data" contract="./page.jay-contract">
+    </script>
+</head>
+<body>
+    <div>
+        <h1>{pageTitle}</h1>
+        <jay:spotlight slug="vase">
+            <div class="spotlight">
+                <span class="name">{product.name}</span>
+                <span class="price">{product.price}</span>
+                <img class="image" src="{product.imageUrl}" alt="{product.name}" />
+            </div>
+        </jay:spotlight>
+    </div>
+</body>
+</html>

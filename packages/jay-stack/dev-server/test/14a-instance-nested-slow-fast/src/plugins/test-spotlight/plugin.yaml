@@ -1,0 +1,6 @@
+name: test-spotlight
+module: ../../../spotlight
+contracts:
+  - name: spotlight
+    contract: ../../../spotlight.jay-contract
+    component: spotlight
