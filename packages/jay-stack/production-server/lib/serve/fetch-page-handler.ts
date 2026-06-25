@@ -96,9 +96,10 @@ export async function fetchPageRequest(
 
     // Reconstruct full slow VS including instance slow data from carryForward.
     const instanceSlowVS = ((cached.carryForward as any)?.__instances as any)?.slowViewStates;
-    const fullSlowViewState = instanceSlowVS && Object.keys(instanceSlowVS).length > 0
-        ? { ...cached.slowViewState, __headlessInstances: instanceSlowVS }
-        : cached.slowViewState;
+    const fullSlowViewState =
+        instanceSlowVS && Object.keys(instanceSlowVS).length > 0
+            ? { ...cached.slowViewState, __headlessInstances: instanceSlowVS }
+            : cached.slowViewState;
 
     const fullViewState = deepMergeViewStates(
         fullSlowViewState,

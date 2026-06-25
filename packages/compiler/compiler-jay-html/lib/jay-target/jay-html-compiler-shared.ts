@@ -319,8 +319,9 @@ export function mergeContractStubRefs(templateRefs: RefsTree, contractRefs: Refs
         }
     }
 
-    const childrenChanged = Object.keys(mergedChildren).length !== Object.keys(templateRefs.children).length
-        || Object.keys(mergedChildren).some((k) => mergedChildren[k] !== templateRefs.children[k]);
+    const childrenChanged =
+        Object.keys(mergedChildren).length !== Object.keys(templateRefs.children).length ||
+        Object.keys(mergedChildren).some((k) => mergedChildren[k] !== templateRefs.children[k]);
     if (stubRefs.length === 0 && !childrenChanged) return templateRefs;
     return mkRefsTree(
         [...templateRefs.refs, ...stubRefs],
