@@ -138,9 +138,12 @@ export async function startRendererServer(options: RendererServerOptions): Promi
                 const manifest: RouteManifest = JSON.parse(
                     await fs.readFile(path.join(buildDir, 'route-manifest.json'), 'utf-8'),
                 );
+                const metadata = JSON.parse(
+                    await fs.readFile(path.join(buildDir, 'build-metadata.json'), 'utf-8'),
+                );
                 const status = {
                     version: options.version,
-                    buildTimestamp: manifest.buildTimestamp,
+                    buildTimestamp: metadata.buildTimestamp,
                     instanceCount: manifest.routes.reduce((n, r) => n + r.instances.length, 0),
                     uptime: Math.floor((Date.now() - startTime) / 1000),
                     webhooks: [...webhookMap.keys()],

@@ -560,7 +560,6 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
 
     const manifest: RouteManifest = {
         version: options.version,
-        buildTimestamp: new Date().toISOString(),
         projectRoot: options.projectRoot,
         sharedManifest,
         routes: routeEntries.map((r) => r.entry),
@@ -584,7 +583,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
     const metadata: BuildMetadata = {
         version: options.version,
         sourceHash,
-        buildTimestamp: manifest.buildTimestamp,
+        buildTimestamp: new Date().toISOString(),
         nodeVersion: process.version,
         instanceCount,
     };
