@@ -2357,6 +2357,87 @@ describe('compiler', () => {
             expect(jayFile.val.css).toEqual('.header { color: blue; }');
         });
 
+        it('should resolve headfull FS files from sourceDir when filePath is pre-rendered cache', async () => {
+            const componentJayHtml = `<html>
+<head>
+    <script type="application/jay-data">
+        data:
+            logoUrl: string
+    </script>
+</head>
+<body>
+    <header><img src="{logoUrl}" /></header>
+</body>
+</html>`;
+
+            const resolver = makeHeadfullFSResolver({
+                readJayHtml(importingModuleDir: string, src: string) {
+                    if (
+                        importingModuleDir ===
+                            '/project/src/pages/kitan/products/[[category]]' &&
+                        src.includes('kitan-header')
+                    ) {
+                        return {
+                            content: componentJayHtml,
+                            componentDir: '/project/src/components/kitan-header',
+                            filePath:
+                                '/project/src/components/kitan-header/kitan-header.jay-html',
+                        };
+                    }
+                    return null;
+                },
+                loadContract(fullPath: string) {
+                    return new WithValidations(headerContract, []);
+                },
+                resolveLink(importingModule: string, link: string) {
+                    return '/project/src/components/kitan-header';
+                },
+            });
+
+            const pageHtml = jayFileWith(
+                `data:
+                    |   title: string
+                    |`,
+                `<body>
+                    |   <jay:kitanheader />
+                    | </body>`,
+                `<script type="application/jay-headfull"
+                    |   src="../../../../components/kitan-header"
+                    |   contract="../../../../components/kitan-header/kitan-header.jay-contract"
+                    |   names="KitanHeader"
+                    | ></script>`,
+            );
+
+            const preRenderedCacheDir =
+                '/project/build/dev/pre-rendered/kitan/products/[[category]]';
+            const sourcePageDir = '/project/src/pages/kitan/products/[[category]]';
+
+            const withoutSourceDir = await parseJayFile(
+                pageHtml,
+                'page_9a3382c5.jay-html',
+                preRenderedCacheDir,
+                {},
+                resolver,
+                '/project',
+            );
+            expect(withoutSourceDir.validations).toEqual([
+                'jay-html file not found for headfull FS component ../../../../components/kitan-header (expected ../../../../components/kitan-header.jay-html)',
+            ]);
+
+            const withSourceDir = await parseJayFile(
+                pageHtml,
+                'page_9a3382c5.jay-html',
+                preRenderedCacheDir,
+                {},
+                resolver,
+                '/project',
+                sourcePageDir,
+            );
+            expect(withSourceDir.validations).toEqual([]);
+            expect(withSourceDir.val.headlessImports).toHaveLength(1);
+            expect(withSourceDir.val.headlessImports[0].contractName).toEqual('kitanheader');
+        });
+
         it('should resolve module path from filePath for source files', async () => {
             // Ensures deeply nested pages resolve module imports from the page directory,
             // not from projectRoot (which would produce wrong paths)

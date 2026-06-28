@@ -1021,7 +1021,7 @@ async function handleFrozenRequest(
             options.projectRootFolder!,
             routeDir,
             options.jayRollupConfig?.tsConfigFilePath,
-            undefined,
+            sourceDir,
             format,
             entry.name,
         );
