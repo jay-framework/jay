@@ -30,6 +30,7 @@ export async function buildInstanceClient(
 
     await viteBuild({
         root: projectRoot,
+        publicDir: false,
         plugins: [...jayStackCompiler(fullJayOptions)],
         build: {
             outDir: outputDir,

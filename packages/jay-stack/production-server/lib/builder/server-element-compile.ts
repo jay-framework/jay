@@ -61,6 +61,7 @@ export async function compileServerElement(
 
     await viteBuild({
         root: projectRoot,
+        publicDir: false,
         plugins: [jayRuntime(jayOptions)],
         build: {
             outDir: outputDir,
@@ -183,6 +184,7 @@ export async function compileRouteHydrateScript(
 
     await viteBuild({
         root: projectRoot,
+        publicDir: false,
         plugins: [...jayStackCompiler(jayOptions)],
         build: {
             outDir: outputDir,

@@ -126,6 +126,7 @@ export async function buildServerCode(
 
     await viteBuild({
         root: projectRoot,
+        publicDir: false,
         plugins: [...jayStackCompiler(jayOptions)],
         build: {
             ssr: true,
