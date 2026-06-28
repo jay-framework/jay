@@ -2577,6 +2577,127 @@ describe('compiler', () => {
             expect(result.val!.headMeta?.meta).toEqual([]);
         });
     });
+
+    describe('script tag validation', () => {
+        it('should error on inline script without jay-script', async () => {
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |`,
+                    `<body><div>hello</div><script>alert("hi")</script></body>`,
+                ),
+                'Page',
+                '.',
+                {},
+                defaultImportResolver,
+                '',
+            );
+            expect(jayFile.validations).toEqual([
+                expect.stringContaining('Inline scripts are not supported'),
+            ]);
+        });
+
+        it('should error on local script src', async () => {
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |`,
+                    `<body><div>hello</div></body>`,
+                    `<script src="./local.js"></script>`,
+                ),
+                'Page',
+                '.',
+                {},
+                defaultImportResolver,
+                '',
+            );
+            expect(jayFile.validations).toEqual([
+                expect.stringContaining('Local script imports are not supported'),
+            ]);
+        });
+
+        it('should error on external script without jay-script', async () => {
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |`,
+                    `<body><div>hello</div></body>`,
+                    `<script src="https://cdn.example.com/lib.js"></script>`,
+                ),
+                'Page',
+                '.',
+                {},
+                defaultImportResolver,
+                '',
+            );
+            expect(jayFile.validations).toEqual([
+                expect.stringContaining('External scripts should be explicitly marked'),
+            ]);
+        });
+
+        it('should allow inline script with jay-script="allow"', async () => {
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |`,
+                    `<body><div>hello</div></body>`,
+                    `<script jay-script="allow">window.dataLayer = [];</script>`,
+                ),
+                'Page',
+                '.',
+                {},
+                defaultImportResolver,
+                '',
+            );
+            expect(jayFile.validations).toEqual([]);
+            expect(jayFile.val!.scripts).toEqual([
+                { inline: 'window.dataLayer = [];', attributes: {}, position: 'head' },
+            ]);
+        });
+
+        it('should allow external script with jay-script="allow"', async () => {
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |`,
+                    `<body><div>hello</div></body>`,
+                    `<script src="https://cdn.example.com/lib.js" async jay-script="allow"></script>`,
+                ),
+                'Page',
+                '.',
+                {},
+                defaultImportResolver,
+                '',
+            );
+            expect(jayFile.validations).toEqual([]);
+            expect(jayFile.val!.scripts).toEqual([
+                {
+                    src: 'https://cdn.example.com/lib.js',
+                    attributes: { async: '' },
+                    position: 'head',
+                },
+            ]);
+        });
+
+        it('should still error on local script even with jay-script="allow"', async () => {
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |`,
+                    `<body><div>hello</div></body>`,
+                    `<script src="./local.js" jay-script="allow"></script>`,
+                ),
+                'Page',
+                '.',
+                {},
+                defaultImportResolver,
+                '',
+            );
+            expect(jayFile.validations).toEqual([
+                expect.stringContaining('Local script imports are not supported'),
+            ]);
+        });
+    });
 });
 
 function assertArrayType(value: JayType): JayArrayType {

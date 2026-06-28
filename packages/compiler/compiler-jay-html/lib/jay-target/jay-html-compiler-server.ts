@@ -114,6 +114,12 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
         return renderServerHeadlessInstance(element, context, componentMatch.name);
     }
 
+    if (isConditional(element) && isForEach(element)) {
+        return new RenderFragment('', Imports.none(), [
+            `"if" and "forEach" cannot be on the same element. Wrap the forEach in a separate element: <div if="..."><div forEach="...">...</div></div>`,
+        ]);
+    }
+
     // --- Conditional (if=) ---
     if (isConditional(element)) {
         const condition = element.getAttribute('if');

@@ -1,0 +1,21 @@
+name: Spotlight
+props:
+  - name: slug
+    type: string
+    required: true
+tags:
+  - tag: product
+    type: sub-contract
+    tags:
+      - tag: name
+        type: data
+        dataType: string
+        phase: slow
+      - tag: imageUrl
+        type: data
+        dataType: string
+        phase: slow
+      - tag: price
+        type: data
+        dataType: string
+        phase: fast+interactive

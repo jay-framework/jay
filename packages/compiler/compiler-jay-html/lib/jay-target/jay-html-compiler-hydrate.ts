@@ -257,6 +257,12 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         );
     }
 
+    if (isConditional(element) && isForEach(element)) {
+        return new RenderFragment('', Imports.none(), [
+            `"if" and "forEach" cannot be on the same element. Wrap the forEach in a separate element: <div if="..."><div forEach="...">...</div></div>`,
+        ]);
+    }
+
     // --- Non-interactive conditional (DL#144) ---
     // With per-route hydrate scripts, non-interactive conditions (slow/fast) are present
     // in the original jay-html. Guard the adoption with a ViewState check — the element

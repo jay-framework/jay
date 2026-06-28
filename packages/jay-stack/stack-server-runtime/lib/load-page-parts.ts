@@ -13,6 +13,7 @@ import {
     assignCoordinatesToJayHtml,
     type DiscoveredHeadlessInstance,
     type ForEachHeadlessInstance,
+    type JayHtmlScript,
 } from '@jay-framework/compiler-jay-html';
 import { AnyJayStackComponentDefinition } from '@jay-framework/fullstack-component';
 import { JayRollupConfig } from '@jay-framework/rollup-plugin';
@@ -65,6 +66,8 @@ export interface LoadedPageParts {
     linkedCssFiles: string[];
     /** Absolute paths to headfull FS component jay-html files for dev-server watching */
     linkedComponentFiles: string[];
+    /** Script tags with jay-script="allow" to include in SSR output */
+    scripts?: JayHtmlScript[];
 }
 
 export interface LoadPagePartsOptions {
@@ -242,6 +245,7 @@ export async function loadPageParts(
             forEachInstances: discoveryResult.forEachInstances,
             linkedCssFiles: jayHtml.linkedCssFiles ?? [],
             linkedComponentFiles: jayHtml.linkedComponentFiles ?? [],
+            scripts: jayHtml.scripts,
         };
     });
 }

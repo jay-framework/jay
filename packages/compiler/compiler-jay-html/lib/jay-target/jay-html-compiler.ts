@@ -1096,6 +1096,10 @@ const ${componentSymbol} = makeHeadlessInstanceComponent(
                         mkRefsTree([], {}),
                     );
                 }
+            } else if (isConditional(htmlElement) && isForEach(htmlElement)) {
+                return new RenderFragment('', Imports.none(), [
+                    `"if" and "forEach" cannot be on the same element. Wrap the forEach in a separate element: <div if="..."><div forEach="...">...</div></div>`,
+                ]);
             } else if (isConditional(htmlElement)) {
                 let condition = htmlElement.getAttribute('if');
                 let childElement = renderHtmlElement(htmlElement, {

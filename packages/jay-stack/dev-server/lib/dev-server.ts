@@ -19,6 +19,7 @@ import {
 } from '@jay-framework/stack-server-runtime';
 import type {
     ClientError4xx,
+    HeadTag,
     PageProps,
     Redirect3xx,
     ServerError5xx,
@@ -55,6 +56,7 @@ import {
     discoverHeadlessInstances,
     injectHeadfullFSTemplates,
     assignCoordinatesToJayHtml,
+    type JayHtmlScript,
 } from '@jay-framework/compiler-jay-html';
 import {
     LoadedPageParts,
@@ -498,6 +500,7 @@ async function handleCachedRequest(
         usedPackages,
         linkedCssFiles,
         linkedComponentFiles,
+        scripts: pageScripts,
     } = pagePartsResult.val;
 
     // Register linked files for watching (absolute paths from jay-html parser)
@@ -551,9 +554,18 @@ async function handleCachedRequest(
         renderedFast.headTags ??
         mergeHeadTags((cachedEntry.carryForward as any)?.__slowHeadTags ?? []);
 
+    // Reconstruct full slow VS including instance slow data from carryForward.
+    // Page-level slow VS is in cachedEntry.slowViewState (may be empty).
+    // Instance slow VS is in carryForward.__instances.slowViewStates.
+    const instanceSlowViewStates = instancePhaseData?.slowViewStates;
+    const fullSlowViewState =
+        instanceSlowViewStates && Object.keys(instanceSlowViewStates).length > 0
+            ? { ...cachedEntry.slowViewState, __headlessInstances: instanceSlowViewStates }
+            : cachedEntry.slowViewState;
+
     // DL#144: compile from original jay-html with merged slow+fast ViewState
     const fullViewState = deepMergeViewStates(
-        cachedEntry.slowViewState,
+        fullSlowViewState,
         fastViewState,
         clientTrackByMap || {},
     );
@@ -576,6 +588,7 @@ async function handleCachedRequest(
         timing,
         undefined,
         headTags,
+        pageScripts,
     );
 }
 
@@ -758,6 +771,7 @@ async function handleClientOnlyRequest(
         forEachInstances,
         linkedCssFiles,
         linkedComponentFiles,
+        scripts: initialPageScripts,
     } = pagePartsResult.val;
 
     // Register linked files for watching
@@ -823,9 +837,16 @@ async function handleClientOnlyRequest(
         }
     }
 
+    // Reconstruct full slow VS including instance slow data from carryForward.
+    const nonCachedInstanceSlowVS = instancePhaseData?.slowViewStates;
+    const fullSlowVS =
+        nonCachedInstanceSlowVS && Object.keys(nonCachedInstanceSlowVS).length > 0
+            ? { ...renderedSlowly.rendered, __headlessInstances: nonCachedInstanceSlowVS }
+            : renderedSlowly.rendered;
+
     // Merge slow + fast viewState using deep merge (DL#108).
     const viewState: object = deepMergeViewStates(
-        renderedSlowly.rendered,
+        fullSlowVS,
         renderedFast.rendered,
         serverTrackByMap || {},
     );
@@ -887,7 +908,8 @@ async function sendResponse(
     slowViewState?: object,
     timing?: RequestTiming,
     preLoadedContent?: string,
-    headTags?: import('@jay-framework/fullstack-component').HeadTag[],
+    headTags?: HeadTag[],
+    scripts?: JayHtmlScript[],
 ): Promise<void> {
     let pageHtml: string;
 
@@ -921,6 +943,7 @@ async function sendResponse(
             },
             undefined,
             headTags,
+            scripts,
         );
     } catch (err) {
         // Fall back to client-only rendering
@@ -1003,8 +1026,6 @@ async function handleFrozenRequest(
         const sourceDir = path.dirname(route.jayHtmlPath);
 
         // Inject headfull FS templates (component jay-html)
-        const { injectHeadfullFSTemplates } = await import('@jay-framework/compiler-jay-html');
-        const { JAY_IMPORT_RESOLVER } = await import('@jay-framework/compiler-jay-html');
         const fullJayHtml = injectHeadfullFSTemplates(
             jayHtmlContent,
             sourceDir,

@@ -94,8 +94,15 @@ export async function fetchPageRequest(
     const fastViewState = (fastResult as any).rendered || {};
     const fastCarryForward = (fastResult as any).carryForward || {};
 
+    // Reconstruct full slow VS including instance slow data from carryForward.
+    const instanceSlowVS = ((cached.carryForward as any)?.__instances as any)?.slowViewStates;
+    const fullSlowViewState =
+        instanceSlowVS && Object.keys(instanceSlowVS).length > 0
+            ? { ...cached.slowViewState, __headlessInstances: instanceSlowVS }
+            : cached.slowViewState;
+
     const fullViewState = deepMergeViewStates(
-        cached.slowViewState,
+        fullSlowViewState,
         fastViewState,
         route.trackByMap || {},
     );

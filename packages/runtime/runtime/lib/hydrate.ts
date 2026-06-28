@@ -93,12 +93,12 @@ export function adoptText<ViewState>(
     }
 
     const index = childIndex ?? 0;
-    const textNode = getSignificantChild(element, index);
+    let textNode = getSignificantChild(element, index);
     if (!textNode || textNode.nodeType !== Node.TEXT_NODE) {
-        console.warn(
-            `[jay hydration] adoptText(${coordinate}, childIndex=${index}): expected text node`,
-        );
-        return { dom: undefined as any, update: noopUpdate, mount: noopMount, unmount: noopMount };
+        // SSR rendered an empty string — no text node in the DOM.
+        // Create one so subsequent updates have a node to write to.
+        textNode = document.createTextNode('');
+        element.insertBefore(textNode, element.childNodes[index] || null);
     }
 
     // Initialize content from the DOM text (not the accessor) so the first

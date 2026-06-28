@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/stack-route-scanner",
-  "version": "0.19.6",
+  "version": "0.19.7",
   "license": "Apache-2.0",
   "main": "dist/index.mjs",
   "types": "dist/index.d.mts",
