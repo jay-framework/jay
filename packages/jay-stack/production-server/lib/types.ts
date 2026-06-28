@@ -3,7 +3,6 @@ import type { JayHtmlHeadMeta } from '@jay-framework/compiler-shared';
 export interface RouteManifest {
     version: string;
     buildTimestamp: string;
-    sourceHash: string;
     projectRoot: string;
     sharedManifest: Record<string, string>;
     routes: RouteEntry[];

@@ -561,7 +561,6 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
     const manifest: RouteManifest = {
         version: options.version,
         buildTimestamp: new Date().toISOString(),
-        sourceHash: '',
         projectRoot: options.projectRoot,
         sharedManifest,
         routes: routeEntries.map((r) => r.entry),
