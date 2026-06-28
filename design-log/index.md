@@ -150,6 +150,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 144  | per-route server elements              | One server-element.js per route instead of per instance; render from ViewState, not literals |
 | 145  | pluggable jay-html validation          | Plugin-provided validation rules for jay-html files with agent-friendly feedback             |
 | 146  | css performance fixes                  | CSS minification in production build, preload hints for route CSS                            |
+| 150  | build content hash                     | SHA-256 content hash of build output for deployment client/server sync                       |
 | 147  | jay-html validation rules catalog      | Complete catalog of all validation rules across wix-media, SEO, and a11y                     |
 
 ---
