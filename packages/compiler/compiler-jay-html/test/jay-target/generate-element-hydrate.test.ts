@@ -106,6 +106,15 @@ describe('generate jay-html element hydrate', () => {
                 await readFixtureElementHydrateFile(folder),
             );
         });
+
+        it('for conditions with static sibling containing dynamic content', async () => {
+            const folder = 'conditions/conditions-with-static-sibling';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
     });
 
     describe('collections', () => {

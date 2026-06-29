@@ -397,3 +397,18 @@ const accumulatedJayTrackBy = context.slowForEachJayTrackBy
 - 616/616 compiler-jay-html tests pass
 - 68/68 packages build successfully
 - 10a now validates nested slowForEach with interactive content (hydration warnings + DOM checks)
+
+### Fix: Static sibling flattening in adoptDynamicElement (Bug I)
+
+When a parent uses `adoptDynamicElement` (Kindergarten) because it has conditional children, static sibling elements with dynamic descendants had their content **flattened** into the parent's children array. This broke the 1-group-per-DOM-child mapping.
+
+Example: `<main>` with `<section>` (containing dynamic text) + conditional `<div if="showContent">` + `<footer>`:
+- **Bug**: Kindergarten saw 3 children (adoptText, hydrateConditional, STATIC) but DOM had 3 different elements (section, div, footer) — adoptText claimed the section element instead of navigating inside it
+- **Symptom**: conditional elements inserted at wrong DOM position when toggled true
+
+**Root cause:** `renderHydrateElementContent` with `!needsAdoption` flattens children via `mergeHydrateFragments`. The `adoptDynamicElement` builder pushed these flattened fragments as separate children without wrapping.
+
+**Fix:** In the `adoptDynamicElement` builder, plain static elements (not components, not non-interactive conditionals) use `renderHydrateElementContent` with `forceAdopt=true`, producing `adoptElement("coord", {}, [...descendants...])` instead of leaking descendants.
+
+**File:** `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler-hydrate.ts`
+**Test:** `test/fixtures/conditions/conditions-with-static-sibling/`

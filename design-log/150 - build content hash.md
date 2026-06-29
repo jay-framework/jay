@@ -54,3 +54,21 @@ No type changes needed — `BuildMetadata.sourceHash` already exists.
 - `jay-stack-cli build` on an example project → `build-metadata.json` has non-empty `sourceHash`
 - Two identical builds → same hash
 - Change a source file, rebuild → different hash
+
+## Implementation Results
+
+### Hash computation — implemented as designed
+
+- `computeBuildHash()` added to `build-pipeline.ts`, called after all artifacts written
+- `sourceHash` removed from `RouteManifest` (only lives in `BuildMetadata`)
+- `buildTimestamp` removed from `RouteManifest` (moved to `BuildMetadata` only) to ensure the manifest is deterministic — same source produces same hash
+
+### Public folder duplication fix (discovered during implementation)
+
+All Vite build calls in the production pipeline used `root: projectRoot` without `publicDir: false`. Vite's default behavior copies `public/` into every build output directory. This caused ~190 images duplicated across `backend/server/` and every `backend/pre-rendered/{route}/` directory.
+
+Fix: added `publicDir: false` to all 5 Vite build calls (server-code-build, server-element-compile x2, instance-client-build, shared-chunks-build). The build pipeline already explicitly copies `public/` to `frontend/public/`.
+
+### Hydration flattening bug fix
+
+Discovered and fixed during this work — see DL#106 "Bug I" for details.
