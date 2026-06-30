@@ -1,0 +1,65 @@
+---
+description: "In Jay projects, reach DOM through refs — not document.querySelector or imperative createElement"
+globs:
+  - "**/*.ts"
+  - "**/*.jay-html"
+alwaysApply: false
+---
+
+# Jay DOM Access — Prefer Refs
+
+Jay Stack owns the DOM lifecycle. Component logic (`page.ts`, headfull components) should cooperate with the framework, not bypass it.
+
+## Default approach
+
+1. **Declare elements in `page.jay-html`** (or the component template) with `ref="myElement"`.
+2. **Bind data** with ViewState (`{value}`, `forEach`, `if`) — do not build lists with `document.createElement` in a loop.
+3. **Interact** via Jay ref handlers (`refs.myElement.onclick`, `oninput`, …) or `refs.myElement.exec$((el) => …)` when you need imperative DOM APIs (focus, scroll, measure).
+
+```typescript
+// Good — ref from jay-html
+refs.chatInput.exec$((el) => {
+  (el as HTMLTextAreaElement).focus();
+});
+```
+
+```html
+<!-- Good — UI lives in the template -->
+<div if="showPanel" ref="myPanel" style="left:{panelLeft}px">
+  <button forEach="rows" trackBy="id" ref="rowBtn">{label}</button>
+</div>
+```
+
+## Avoid unless necessary
+
+- `document.querySelector` / `getElementById` to find elements Jay already renders
+- `document.body.appendChild` for UI that belongs in the page
+- `document.addEventListener('mousemove'|'mouseup')` for drags — use **`setPointerCapture`** on the ref element that started the drag, then listen on that element
+
+```typescript
+// Good — drag stays on the handle ref element
+captureElement.setPointerCapture(event.pointerId);
+captureElement.addEventListener('pointermove', onMove);
+captureElement.addEventListener('pointerup', onEnd, { once: true });
+```
+
+## When `document` is acceptable
+
+Use sparingly. Add a one-line comment explaining why.
+
+| Case | Example |
+|------|---------|
+| Offscreen/non-UI nodes | `document.createElement('canvas')` for image export |
+| Hit-testing at arbitrary coordinates | `document.elementFromPoint` during cross-overlay drag |
+| Tests | `document.dispatchEvent` in Vitest |
+
+Global shortcuts or paste routing: prefer a root shell ref (`ref="appRoot"`) with capture listeners before falling back to `document`.
+
+## Checklist before adding `document.*`
+
+1. Is there already a `ref` in jay-html for this element?
+2. Can this UI be driven by ViewState instead of imperative DOM?
+3. For drags: can pointer capture on the starting ref replace document-level listeners?
+4. If still needed: document the exception in a design log or inline comment.
+
+See also: skill `jay-dom-refs`, `agent-kit-template/developer/component-refs.md`.

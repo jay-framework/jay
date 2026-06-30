@@ -11,7 +11,7 @@ Jay Stack is a full-stack framework where:
 - **jay-html** templates provide the UI that binds to contract data
 - **Rendering phases** determine when data is available (build-time, request-time, client-side)
 
-Your job is to create `.jay-html` pages that bind to the data and interactions defined by contracts.
+Your job is to create `.jay-html` pages that bind to the data and interactions defined by contracts. **All visible UI structure belongs in jay-html** — not in `page.ts` via `document.createElement`. Behavior and state live in `page.ts`; elements are reached through **refs** declared in the template.
 
 ## Rendering Phases
 

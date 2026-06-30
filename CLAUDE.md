@@ -86,6 +86,17 @@ A `.jay-contract` (YAML) compiles to TypeScript types:
 - **ViewState**: Data and variant states the component provides to the view
 - **Refs**: Named HTML elements/sub-components the component can interact with
 
+### DOM Access — Prefer Refs
+
+Jay Stack owns the DOM lifecycle. In `page.ts`, plugins, and headfull components:
+
+- **Declare UI in jay-html** with `ref="..."`; drive visibility, lists, and layout with ViewState (`if`, `forEach`, bindings) — not `document.createElement` or `document.body.appendChild`.
+- **Reach elements through refs** — `refs.myElement.onclick`, `oninput`, or `refs.myElement.exec$((el) => …)` for focus, scroll, and measure. Do not use `document.querySelector` / `getElementById` for elements the template already renders.
+- **Drags and pointer tracking** — use `setPointerCapture` on the ref element that started the interaction; avoid `document.addEventListener('mousemove'|'mouseup')`.
+- **`document` is a last resort** — offscreen nodes (e.g. export `canvas`), `elementFromPoint` for coordinate hit-testing, or tests. Add a one-line comment explaining why.
+
+Cursor rule: `.cursor/rules/jay-dom-refs.mdc`. Skill: `.cursor/skills/jay-dom-refs/SKILL.md`. Agent kit: `packages/jay-stack/stack-cli/agent-kit-template/developer/component-refs.md`.
+
 ### Component Types
 
 - **Headfull** (jay-html + component): Has both UI and logic
