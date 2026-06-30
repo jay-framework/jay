@@ -34,7 +34,7 @@ export function renderToStream(vs: AsyncArraysViewState, ctx: ServerRenderContex
     }
     w('<div jay-async="pa1:pending">');
     w('<span');
-    w('>');
+    w(' jay-coordinate="S0/0/1">');
     w('still loading');
     w('</span>');
     w('</div>');

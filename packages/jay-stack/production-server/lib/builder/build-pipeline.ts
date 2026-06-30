@@ -99,9 +99,7 @@ async function collectFiles(dir: string, base = ''): Promise<string[]> {
 }
 
 async function computeBuildHash(buildDir: string): Promise<string> {
-    const files = (await collectFiles(buildDir)).filter(
-        (f) => f !== 'backend/build-metadata.json',
-    );
+    const files = (await collectFiles(buildDir)).filter((f) => f !== 'backend/build-metadata.json');
     files.sort();
     const hash = createHash('sha256');
     for (const file of files) {
@@ -592,7 +590,9 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         JSON.stringify(metadata, null, 2),
     );
 
-    logger.important(`[Build] Done! ${instanceCount} instances built in ${buildDir} (hash: ${sourceHash})`);
+    logger.important(
+        `[Build] Done! ${instanceCount} instances built in ${buildDir} (hash: ${sourceHash})`,
+    );
 
     return manifest;
 }

@@ -1056,10 +1056,8 @@ function renderHydrateElementContent(
                         context.headlessContractNames,
                     ) !== null;
                 const isNonInteractiveConditional =
-                    isConditional(htmlChild) && !conditionIsInteractive(
-                        htmlChild.getAttribute('if'),
-                        context.interactivePaths,
-                    );
+                    isConditional(htmlChild) &&
+                    !conditionIsInteractive(htmlChild.getAttribute('if'), context.interactivePaths);
                 // Plain static elements with dynamic descendants get flattened
                 // by renderHydrateNode — wrap in adoptElement so they occupy
                 // exactly one Kindergarten group matching their one DOM child.

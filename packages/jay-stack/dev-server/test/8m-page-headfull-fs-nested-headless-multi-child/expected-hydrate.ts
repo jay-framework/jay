@@ -9,7 +9,6 @@ import {
     childCompHydrate,
     hydrateConditional,
     adoptDynamicElement,
-    STATIC,
     // @ts-ignore
 } from '/@fs{{ROOT}}/packages/runtime/runtime/dist/index.js';
 // @ts-ignore
@@ -23,7 +22,7 @@ function _headlessWidget1HydrateRender(options) {
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
             adoptDynamicElement('S2/0', {}, [
-                STATIC,
+                adoptElement('S2/0/0', {}, []),
                 hydrateConditional(
                     (vs) => !vs.showBadge,
                     () => adoptElement('S2/0/1', {}, [adoptText('S2/0/1/0', (vs) => vs.value)]),

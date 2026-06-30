@@ -29,7 +29,7 @@ export function renderToStream(vs: AsyncObjectsViewState, ctx: ServerRenderConte
     w('</span>');
     w('<div jay-async="po1:pending">');
     w('<div');
-    w('>');
+    w(' jay-coordinate="S0/0/2">');
     w('still loading the object');
     w('</div>');
     w('</div>');

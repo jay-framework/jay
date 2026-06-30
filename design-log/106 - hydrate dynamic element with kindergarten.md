@@ -403,6 +403,7 @@ const accumulatedJayTrackBy = context.slowForEachJayTrackBy
 When a parent uses `adoptDynamicElement` (Kindergarten) because it has conditional children, static sibling elements with dynamic descendants had their content **flattened** into the parent's children array. This broke the 1-group-per-DOM-child mapping.
 
 Example: `<main>` with `<section>` (containing dynamic text) + conditional `<div if="showContent">` + `<footer>`:
+
 - **Bug**: Kindergarten saw 3 children (adoptText, hydrateConditional, STATIC) but DOM had 3 different elements (section, div, footer) — adoptText claimed the section element instead of navigating inside it
 - **Symptom**: conditional elements inserted at wrong DOM position when toggled true
 
@@ -412,3 +413,16 @@ Example: `<main>` with `<section>` (containing dynamic text) + conditional `<div
 
 **File:** `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler-hydrate.ts`
 **Test:** `test/fixtures/conditions/conditions-with-static-sibling/`
+
+#### SSR coordinate gap (Bug I follow-up)
+
+The hydrate fix exposed a second issue: `adoptElement("coord", ...)` on the static wrapper element requires `jay-coordinate="coord"` in the SSR DOM, but the server element compiler only emits coordinates on elements it considers dynamic.
+
+**Fix:** Added `parentHasInteractiveChildren` flag to `ServerContext`. When rendering children of an element whose children include conditionals/forEach/async, the flag is set to `true`. The `needsCoordinate` check now includes this flag, ensuring static siblings get `jay-coordinate` in SSR output.
+
+**File:** `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler-server.ts`
+
+### Test results (after Bug I)
+
+- 660/660 compiler-jay-html tests pass (3 async server-element fixtures updated)
+- 678/678 dev-server hydration tests pass (fixtures regenerated via `UPDATE_FIXTURES=1`)

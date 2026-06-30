@@ -34,6 +34,7 @@ In `build-pipeline.ts`, after all build artifacts are written (route manifest, s
 **File:** `packages/jay-stack/production-server/lib/builder/build-pipeline.ts`
 
 1. Add a `computeBuildHash(dir: string): Promise<string>` function:
+
    - Recursively collect all file paths under `dir`
    - Filter out `build-metadata.json`
    - Sort paths lexicographically
@@ -41,6 +42,7 @@ In `build-pipeline.ts`, after all build artifacts are written (route manifest, s
    - Return first 12 hex chars
 
 2. Call it at ~line 546 (after `writeRouteManifest` and public folder copy, before metadata write):
+
    ```ts
    const sourceHash = await computeBuildHash(buildDir);
    ```
