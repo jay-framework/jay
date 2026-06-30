@@ -1333,6 +1333,18 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
             filteredProjectRoutes,
         );
         const scannedJayRoutes = [...filteredProjectRoutes, ...pluginRoutes];
+        const scannedRawRoutes = new Set(scannedJayRoutes.map((r) => r.rawRoute));
+
+        for (let i = devServerRoutes.length - 1; i >= 0; i--) {
+            const route = devServerRoutes[i]!;
+            const fsPath = route.fsRoute.jayHtmlPath;
+            const stillOnDisk =
+                scannedRawRoutes.has(route.fsRoute.rawRoute) && fsSync.existsSync(fsPath);
+            if (!stillOnDisk) {
+                devServerRoutes.splice(i, 1);
+            }
+        }
+
         const existingRawRoutes = new Set(devServerRoutes.map((r) => r.fsRoute.rawRoute));
         const added: DevServerRoute[] = [];
         for (const jayRoute of scannedJayRoutes) {

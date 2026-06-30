@@ -346,6 +346,46 @@ describe('DevServerService', () => {
         await devServer.viteServer.close();
         await fs.rm(tmpRoot, { recursive: true, force: true });
     });
+
+    it('refreshRoutes drops routes whose page.jay-html was removed', async () => {
+        const fs = await import('node:fs/promises');
+        const os = await import('node:os');
+        const tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'jay-dev-routes-rm-'));
+        const pagesRoot = path.join(tmpRoot, 'src/pages');
+        await fs.mkdir(path.join(pagesRoot, 'home'), { recursive: true });
+        await fs.mkdir(path.join(pagesRoot, 'pricing'), { recursive: true });
+        await fs.writeFile(
+            path.join(pagesRoot, 'home/page.jay-html'),
+            `<!DOCTYPE html><html><body><h1>Home</h1></body></html>`,
+            'utf-8',
+        );
+        await fs.writeFile(
+            path.join(pagesRoot, 'pricing/page.jay-html'),
+            `<!DOCTYPE html><html><body><h1>Pricing</h1></body></html>`,
+            'utf-8',
+        );
+
+        const httpServer = http.createServer();
+        const devServer = await mkDevServer({
+            ...baseOptions,
+            pagesRootFolder: pagesRoot,
+            projectRootFolder: tmpRoot,
+            httpServer,
+        });
+
+        expect(devServer.service.listRoutes().map((r) => r.path).sort()).toEqual([
+            '/home',
+            '/pricing',
+        ]);
+
+        await fs.unlink(path.join(pagesRoot, 'pricing/page.jay-html'));
+
+        const routes = await devServer.service.refreshRoutes();
+        expect(routes.map((r) => r.path)).toEqual(['/home']);
+
+        await devServer.viteServer.close();
+        await fs.rm(tmpRoot, { recursive: true, force: true });
+    });
 });
 
 function clearScriptForTest(script: string) {
