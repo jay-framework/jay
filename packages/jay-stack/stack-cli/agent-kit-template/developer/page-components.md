@@ -81,6 +81,12 @@ export const page = makeJayStackComponent<ProductPageContract>()
   });
 ```
 
+## DOM access in interactive phase
+
+Reach rendered elements through **refs** only. Put overlays, panels, and lists in **jay-html**; drive them with ViewState from `.withInteractive`. Do not use `document.querySelector`, imperative `createElement` UI, or document-level drag listeners.
+
+See [component-refs.md](component-refs.md#dom-access-rules-jay-stack-pages).
+
 ## Calling File Upload Actions
 
 Actions created with `.withFiles()` accept browser `File` objects directly. Use `oninput` events on file inputs to drive signals, then pass them to the action:
