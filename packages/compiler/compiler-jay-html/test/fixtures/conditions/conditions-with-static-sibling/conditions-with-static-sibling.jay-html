@@ -1,0 +1,19 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    count: number
+    showContent: boolean
+    </script>
+</head>
+<body>
+<main>
+    <section class="hero">
+        <h1>title</h1>
+        <p>{count} items</p>
+    </section>
+    <div if="showContent">content here</div>
+    <footer>footer</footer>
+</main>
+</body>
+</html>

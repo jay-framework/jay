@@ -67,6 +67,8 @@ interface ServerContext {
     insideForEach: boolean;
     /** Property paths whose phase is 'fast+interactive' — only these need client adoption */
     interactivePaths: Set<string>;
+    /** Parent has interactive children (conditionals/forEach) — siblings need jay-coordinate for Kindergarten */
+    parentHasInteractiveChildren: boolean;
 }
 
 /** Helper: create a single-line w() statement as a RenderFragment */
@@ -806,7 +808,8 @@ function renderServerElementContent(
         refName !== null ||
         hasDynamicAttributeBindings(element, variables) ||
         hasInteractiveChildElements(childNodes) ||
-        hasMixedContentDynamicTextInteractive(childNodes, context.interactivePaths);
+        hasMixedContentDynamicTextInteractive(childNodes, context.interactivePaths) ||
+        context.parentHasInteractiveChildren;
 
     // Read pre-assigned coordinate value from jay-coordinate-base (DL#103)
     const coordTemplate = needsCoordinate ? element.getAttribute(COORD_ATTR) : null;
@@ -852,6 +855,7 @@ function renderServerElementContent(
         const childContext: ServerContext = {
             ...context,
             indent: new Indent(indent.curr + '    '),
+            parentHasInteractiveChildren: hasInteractiveChildElements(childNodes),
         };
         // Collect async groups for this element's children
         const asyncGroups = collectAsyncGroups(childNodes);
@@ -1065,6 +1069,7 @@ export function generateServerElementFile(
         varMappings: {},
         insideForEach: false,
         interactivePaths: buildInteractivePaths(jayFile.contract),
+        parentHasInteractiveChildren: false,
     };
 
     // Render root element — coordinate comes from jay-coordinate-base.

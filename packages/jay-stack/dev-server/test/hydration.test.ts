@@ -25,7 +25,7 @@ function normalizeHtml(html: string): string {
         html
             .split('\n')
             .map((l) => l.trim())
-            .join(''),
+            .join(' '),
         { indent_size: 2, inline: [] },
     );
 }

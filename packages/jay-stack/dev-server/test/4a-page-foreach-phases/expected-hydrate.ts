@@ -7,7 +7,6 @@ import {
     adoptElement,
     hydrateForEach,
     adoptDynamicElement,
-    STATIC,
     // @ts-ignore
 } from '/@fs{{ROOT}}/packages/runtime/runtime/dist/index.js';
 export function hydrate(rootElement, options) {
@@ -44,7 +43,7 @@ export function hydrate(rootElement, options) {
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('S0/0', {}, [
                 adoptDynamicElement('S0/0/1', {}, [
-                    STATIC,
+                    adoptElement('S0/0/1/0', {}, []),
                     hydrateForEach(
                         (vs) => vs.slowItems,
                         '_id',
@@ -56,7 +55,7 @@ export function hydrate(rootElement, options) {
                     ),
                 ]),
                 adoptDynamicElement('S0/0/2', {}, [
-                    STATIC,
+                    adoptElement('S0/0/2/0', {}, []),
                     hydrateForEach(
                         (vs) => vs.fastItems,
                         '_id',
@@ -68,7 +67,7 @@ export function hydrate(rootElement, options) {
                     ),
                 ]),
                 adoptDynamicElement('S0/0/3', {}, [
-                    STATIC,
+                    adoptElement('S0/0/3/0', {}, []),
                     hydrateForEach(
                         (vs) => vs.fastMixedItems,
                         '_id',
@@ -88,7 +87,7 @@ export function hydrate(rootElement, options) {
                     ),
                 ]),
                 adoptDynamicElement('S0/0/4', {}, [
-                    STATIC,
+                    adoptElement('S0/0/4/0', {}, []),
                     hydrateForEach(
                         (vs) => vs.interactiveItems,
                         '_id',

@@ -15,7 +15,7 @@ export function renderToStream(vs: AsyncSimpleTypesViewState, ctx: ServerRenderC
     w('</span>');
     w('<div jay-async="p1:pending">');
     w('<span');
-    w('>');
+    w(' jay-coordinate="S0/0/2">');
     w('Still loading');
     w('</span>');
     w('</div>');

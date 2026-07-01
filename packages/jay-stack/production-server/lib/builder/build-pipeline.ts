@@ -19,6 +19,7 @@ import {
 import { getLogger } from '@jay-framework/logger';
 import { JayRouteParamType, type JayRoute } from '@jay-framework/stack-route-scanner';
 import { createRequire } from 'node:module';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 
@@ -81,6 +82,31 @@ async function discoverPluginClientPackages(projectRoot: string): Promise<string
     }
 
     return result;
+}
+
+async function collectFiles(dir: string, base = ''): Promise<string[]> {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    const paths: string[] = [];
+    for (const entry of entries) {
+        const rel = base ? `${base}/${entry.name}` : entry.name;
+        if (entry.isDirectory()) {
+            paths.push(...(await collectFiles(path.join(dir, entry.name), rel)));
+        } else {
+            paths.push(rel);
+        }
+    }
+    return paths;
+}
+
+async function computeBuildHash(buildDir: string): Promise<string> {
+    const files = (await collectFiles(buildDir)).filter((f) => f !== 'backend/build-metadata.json');
+    files.sort();
+    const hash = createHash('sha256');
+    for (const file of files) {
+        hash.update(file);
+        hash.update(await fs.readFile(path.join(buildDir, file)));
+    }
+    return hash.digest('hex').slice(0, 12);
 }
 
 export async function buildVersion(options: BuildOptions): Promise<RouteManifest> {
@@ -532,8 +558,6 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
 
     const manifest: RouteManifest = {
         version: options.version,
-        buildTimestamp: new Date().toISOString(),
-        sourceHash: '',
         projectRoot: options.projectRoot,
         sharedManifest,
         routes: routeEntries.map((r) => r.entry),
@@ -542,18 +566,6 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
     };
 
     await writeRouteManifest(manifest, backendDir);
-
-    const metadata: BuildMetadata = {
-        version: options.version,
-        sourceHash: '',
-        buildTimestamp: manifest.buildTimestamp,
-        nodeVersion: process.version,
-        instanceCount,
-    };
-    await fs.writeFile(
-        path.join(backendDir, 'build-metadata.json'),
-        JSON.stringify(metadata, null, 2),
-    );
 
     // Copy public folder to frontend/
     const publicFolder = path.join(options.projectRoot, 'public');
@@ -565,7 +577,22 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         // No public folder — skip
     }
 
-    logger.important(`[Build] Done! ${instanceCount} instances built in ${buildDir}`);
+    const sourceHash = await computeBuildHash(buildDir);
+    const metadata: BuildMetadata = {
+        version: options.version,
+        sourceHash,
+        buildTimestamp: new Date().toISOString(),
+        nodeVersion: process.version,
+        instanceCount,
+    };
+    await fs.writeFile(
+        path.join(backendDir, 'build-metadata.json'),
+        JSON.stringify(metadata, null, 2),
+    );
+
+    logger.important(
+        `[Build] Done! ${instanceCount} instances built in ${buildDir} (hash: ${sourceHash})`,
+    );
 
     return manifest;
 }

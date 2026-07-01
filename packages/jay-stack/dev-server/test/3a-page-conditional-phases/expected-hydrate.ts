@@ -5,7 +5,6 @@ import {
     adoptElement,
     hydrateConditional,
     adoptDynamicElement,
-    STATIC,
     // @ts-ignore
 } from '/@fs{{ROOT}}/packages/runtime/runtime/dist/index.js';
 export function hydrate(rootElement, options) {
@@ -19,8 +18,8 @@ export function hydrate(rootElement, options) {
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptDynamicElement('S0/0', {}, [
-                STATIC,
-                STATIC,
+                adoptElement('S0/0/0', {}, []),
+                adoptElement('S0/0/1', {}, []),
                 ...(viewState.fastVisible ? [adoptElement('S0/0/2', {}, [])] : []),
                 ...(viewState.fastHidden ? [adoptElement('S0/0/3', {}, [])] : []),
                 hydrateConditional(

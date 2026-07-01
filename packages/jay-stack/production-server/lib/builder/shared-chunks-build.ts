@@ -43,6 +43,7 @@ export async function buildSharedChunks(
     const dedupePackages = [...allPackages, '@jay-framework/list-compare'];
 
     await viteBuild({
+        publicDir: false,
         build: {
             outDir: outputDir,
             emptyOutDir: true,

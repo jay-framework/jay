@@ -1048,10 +1048,32 @@ function renderHydrateElementContent(
                     if (frag.refs) childRefs.push(frag.refs);
                 }
             } else {
-                // Static or adopted child: check if it produces hydrate code
-                const frag = renderHydrateNode(child, context);
+                const htmlChild = child as HTMLElement;
+                const isComponent =
+                    getComponentName(
+                        htmlChild.rawTagName,
+                        context.importedSymbols,
+                        context.headlessContractNames,
+                    ) !== null;
+                const isNonInteractiveConditional =
+                    isConditional(htmlChild) &&
+                    !conditionIsInteractive(htmlChild.getAttribute('if'), context.interactivePaths);
+                // Plain static elements with dynamic descendants get flattened
+                // by renderHydrateNode — wrap in adoptElement so they occupy
+                // exactly one Kindergarten group matching their one DOM child.
+                // Components and non-interactive conditionals already produce
+                // properly scoped output and must not be wrapped.
+                const needsWrap = !isComponent && !isNonInteractiveConditional;
+                const frag = needsWrap
+                    ? renderHydrateElementContent(
+                          htmlChild,
+                          context,
+                          buildRenderContext(context),
+                          null,
+                          true,
+                      )
+                    : renderHydrateNode(child, context);
                 if (frag.rendered.trim()) {
-                    // Has hydrate code (e.g. dynamic text, refs) — render as regular child
                     childParts.push(frag.rendered);
                     childImports = childImports.plus(frag.imports);
                     childValidations.push(...frag.validations);

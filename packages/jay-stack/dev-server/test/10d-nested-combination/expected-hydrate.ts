@@ -32,7 +32,7 @@ export function hydrate(rootElement, options) {
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptDynamicElement('S0/0', {}, [
-                STATIC,
+                adoptElement('S0/0/0', {}, []),
                 hydrateForEach(
                     (vs) => vs.categories,
                     '_id',

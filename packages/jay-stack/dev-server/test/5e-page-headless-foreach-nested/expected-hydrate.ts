@@ -9,7 +9,6 @@ import {
     childCompHydrate,
     hydrateForEach,
     adoptDynamicElement,
-    STATIC,
     // @ts-ignore
 } from '/@fs{{ROOT}}/packages/runtime/runtime/dist/index.js';
 // @ts-ignore
@@ -57,7 +56,7 @@ export function hydrate(rootElement, options) {
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('S0/0', {}, [
                 adoptDynamicElement('S0/0/2', {}, [
-                    STATIC,
+                    adoptElement('S0/0/2/0', {}, []),
                     hydrateForEach(
                         (vs) => vs.items,
                         '_id',
