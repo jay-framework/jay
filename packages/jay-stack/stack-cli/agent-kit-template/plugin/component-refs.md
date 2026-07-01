@@ -142,11 +142,11 @@ Refs are the **only supported path** from TypeScript to elements Jay renders. Di
 
 Use only when no ref can exist, with an inline comment:
 
-| Case | Example |
-|------|---------|
-| Offscreen processing | `document.createElement('canvas')` for image export |
+| Case                   | Example                                               |
+| ---------------------- | ----------------------------------------------------- |
+| Offscreen processing   | `document.createElement('canvas')` for image export   |
 | Coordinate hit-testing | `document.elementFromPoint` during cross-overlay drag |
-| Tests | `document.dispatchEvent` in Vitest |
+| Tests                  | `document.dispatchEvent` in Vitest                    |
 
 Global shortcuts or paste: prefer a root shell ref (`ref="appRoot"`) with capture listeners.
 

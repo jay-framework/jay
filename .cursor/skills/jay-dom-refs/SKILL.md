@@ -55,11 +55,11 @@ captureElement.addEventListener('pointerup', onEnd, { once: true });
 
 Use sparingly. Add a one-line comment explaining why.
 
-| Case | Example |
-|------|---------|
-| Offscreen / non-UI nodes | `document.createElement('canvas')` for image export |
+| Case                                 | Example                                               |
+| ------------------------------------ | ----------------------------------------------------- |
+| Offscreen / non-UI nodes             | `document.createElement('canvas')` for image export   |
 | Hit-testing at arbitrary coordinates | `document.elementFromPoint` during cross-overlay drag |
-| Tests | `document.dispatchEvent` in Vitest |
+| Tests                                | `document.dispatchEvent` in Vitest                    |
 
 Global shortcuts or paste routing: prefer a root shell ref (`ref="appRoot"`) with capture listeners before `document`.
 

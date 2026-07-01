@@ -373,10 +373,12 @@ describe('DevServerService', () => {
             httpServer,
         });
 
-        expect(devServer.service.listRoutes().map((r) => r.path).sort()).toEqual([
-            '/home',
-            '/pricing',
-        ]);
+        expect(
+            devServer.service
+                .listRoutes()
+                .map((r) => r.path)
+                .sort(),
+        ).toEqual(['/home', '/pricing']);
 
         await fs.unlink(path.join(pagesRoot, 'pricing/page.jay-html'));
 

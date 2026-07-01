@@ -115,8 +115,7 @@ Map elements to contract `interactive` tags using `ref`:
 **Page-level refs** (not from a headless contract) — declare `interactive` tags on `page.jay-contract` and bind in jay-html:
 
 ```html
-<button ref="saveDraft">Save</button>
-<textarea ref="notesInput" value="{notes}"></textarea>
+<button ref="saveDraft">Save</button> <textarea ref="notesInput" value="{notes}"></textarea>
 ```
 
 Handle them in `page.ts` via `refs.saveDraft.onclick(...)` — never `document.querySelector` for elements the page template renders.
