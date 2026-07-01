@@ -5,6 +5,7 @@ items:
     subCategory: Components
     pluginName: ui-kit
     packageName: '@jay-framework/ui-kit'
+    thumbnail: thumbnails/ui-kit/popover-menu.svg
     prompt: |
       Use headless component @jay-framework/ui-kit / contract popover-menu.
       Read agent-kit/designer/popover-menu.md for import, refs (trigger, popover), and CSS.
@@ -16,6 +17,12 @@ items:
     subCategory: Components
     pluginName: ui-kit
     packageName: '@jay-framework/ui-kit'
+    thumbnail: thumbnails/ui-kit/scroll-carousel.svg
+    interaction:
+      mode: stage-place
+      persistOnPage: true
+      stagePromptTemplate: |
+        Add a scroll carousel at this marker location on the page.
     prompt: |
       Use headless component @jay-framework/ui-kit / contract scroll-carousel.
       Read agent-kit/designer/scroll-carousel.md for import, refs (container, prev, next), and ViewState (atStart, atEnd).
@@ -26,6 +33,7 @@ items:
     subCategory: Components
     pluginName: ui-kit
     packageName: '@jay-framework/ui-kit'
+    thumbnail: thumbnails/ui-kit/clipboard-copy.svg
     prompt: |
       Use headless component @jay-framework/ui-kit / contract clipboard-copy.
       Read agent-kit/designer/clipboard-copy.md for import, copyBtn ref, text prop, and copied ViewState.
@@ -36,6 +44,12 @@ items:
     subCategory: Typography
     pluginName: ui-kit
     packageName: '@jay-framework/ui-kit'
+    thumbnail: thumbnails/ui-kit/word-split.svg
+    interaction:
+      mode: stage-place
+      persistOnPage: true
+      stagePromptTemplate: |
+        Add word-split text at this marker location on the page.
     prompt: |
       Use headless component @jay-framework/ui-kit / contract word-split.
       Read agent-kit/designer/word-split.md for import, text prop, words loop, and accessibility (aria-label).
@@ -46,6 +60,12 @@ items:
     subCategory: Typography
     pluginName: ui-kit
     packageName: '@jay-framework/ui-kit'
+    thumbnail: thumbnails/ui-kit/letter-split.svg
+    interaction:
+      mode: stage-place
+      persistOnPage: true
+      stagePromptTemplate: |
+        Add letter-split text at this marker location on the page.
     prompt: |
       Use headless component @jay-framework/ui-kit / contract letter-split.
       Read agent-kit/designer/letter-split.md for import, text prop, letters loop, and accessibility (aria-label).
@@ -56,6 +76,12 @@ items:
     subCategory: Animation
     pluginName: ui-kit
     packageName: '@jay-framework/ui-kit'
+    thumbnail: thumbnails/ui-kit/spring-button-hover-motion.svg
+    interaction:
+      mode: stage-place
+      persistOnPage: true
+      stagePromptTemplate: |
+        Apply the spring hover effect to the button at this marker location.
     prompt: |
       Apply the CSS spring hover effect for buttons on this page.
       Read agent-kit/aiditor/skills/ui-kit/spring-button-hover.md for class names (.ui-kit-spring-hover),
@@ -69,6 +95,12 @@ items:
     subCategory: Animation
     pluginName: ui-kit
     packageName: '@jay-framework/ui-kit'
+    thumbnail: thumbnails/ui-kit/sticky-header-scroll.svg
+    interaction:
+      mode: stage-place
+      persistOnPage: true
+      stagePromptTemplate: |
+        Apply the sticky header scroll morph effect to the header at this marker location.
     prompt: |
       Apply the scroll-driven sticky header effect on this page.
       Read agent-kit/aiditor/skills/ui-kit/sticky-header-scroll.md for class .ui-kit-sticky-header,

@@ -35,6 +35,7 @@ Read these as needed:
 | [jay-contracts-and-plugins](../jay-contracts-and-plugins/SKILL.md) | Reading plugin.yaml, materialized contracts, plugins-index                                         |
 | [jay-cli-commands](../jay-cli-commands/SKILL.md)                   | Running `jay-stack params`, `validate`, or `action` commands                                       |
 | [jay-dev-server-test](../jay-dev-server-test/SKILL.md)             | Starting dev server in test mode, smoke testing                                                    |
+| [jay-dom-refs](../jay-dom-refs/SKILL.md)                           | DOM access in `page.ts` — refs and ViewState first; avoid direct `document` usage                  |
 
 Also see the agent-kit generated docs (run `jay-stack agent-kit`):
 
@@ -152,3 +153,13 @@ yarn jay-stack validate
 | `agent-kit/materialized-contracts/` | Generated contracts, indexes (run `jay-stack agent-kit`) |
 | `agent-kit/references/<plugin>/`    | Pre-generated discovery data (run `jay-stack agent-kit`) |
 | `node_modules/<plugin>/`            | Plugin packages with `plugin.yaml`                       |
+
+## DOM access (page.ts and headfull components)
+
+Jay Stack owns rendering. When adding interactivity beyond jay-html bindings:
+
+1. Put structure in **jay-html**; put state in **ViewState** signals returned from `.withInteractive`.
+2. Use **refs** for events and imperative DOM (`exec$` inside handlers only).
+3. Avoid `document.querySelector`, imperative `createElement` UI, and document-level drag listeners.
+
+Read [jay-dom-refs](../jay-dom-refs/SKILL.md) before reaching for `document.*`.

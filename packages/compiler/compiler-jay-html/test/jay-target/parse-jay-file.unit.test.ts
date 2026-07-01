@@ -2337,8 +2337,8 @@ describe('compiler', () => {
         });
 
         it('should resolve component directory correctly for directory-convention imports', async () => {
-            // Simulates: src="../../../../components/kitan-header" where the jay-html is at
-            // components/kitan-header/kitan-header.jay-html (directory convention, not file convention).
+            // Simulates: src="../../../../components/biz-header" where the jay-html is at
+            // components/biz-header/biz-header.jay-html (directory convention, not file convention).
             // The componentDir returned by readJayHtml determines where CSS links are resolved from.
             const componentJayHtml = `<html>
 <head>
@@ -2355,12 +2355,12 @@ describe('compiler', () => {
 
             const resolver = makeHeadfullFSResolver({
                 readJayHtml(importingModuleDir: string, src: string) {
-                    if (src.includes('kitan-header')) {
+                    if (src.includes('biz-header')) {
                         // Directory convention: componentDir is the directory itself
                         return {
                             content: componentJayHtml,
-                            componentDir: '/project/src/components/kitan-header',
-                            filePath: '/project/src/components/kitan-header/kitan-header.jay-html',
+                            componentDir: '/project/src/components/biz-header',
+                            filePath: '/project/src/components/biz-header/biz-header.jay-html',
                         };
                     }
                     return null;
@@ -2369,7 +2369,7 @@ describe('compiler', () => {
                     return new WithValidations(headerContract, []);
                 },
                 resolveLink(importingModule: string, link: string) {
-                    return '/project/src/components/kitan-header';
+                    return '/project/src/components/biz-header';
                 },
             });
 
@@ -2379,16 +2379,16 @@ describe('compiler', () => {
                         |   title: string
                         |`,
                     `<body>
-                        |   <jay:kitanheader />
+                        |   <jay:bizheader />
                         | </body>`,
                     `<script type="application/jay-headfull"
-                        |   src="../../../../components/kitan-header"
-                        |   contract="../../../../components/kitan-header/kitan-header.jay-contract"
-                        |   names="KitanHeader"
+                        |   src="../../../../components/biz-header"
+                        |   contract="../../../../components/biz-header/biz-header.jay-contract"
+                        |   names="BizHeader"
                         | ></script>`,
                 ),
                 'Page',
-                '/project/src/pages/products/kitan/category',
+                '/project/src/pages/products/biz/category',
                 {},
                 resolver,
                 '/project',
@@ -2396,8 +2396,87 @@ describe('compiler', () => {
 
             expect(jayFile.validations).toEqual([]);
             expect(jayFile.val.headlessImports).toHaveLength(1);
-            expect(jayFile.val.headlessImports[0].contractName).toEqual('kitanheader');
+            expect(jayFile.val.headlessImports[0].contractName).toEqual('bizheader');
             expect(jayFile.val.css).toEqual('.header { color: blue; }');
+        });
+
+        it('should resolve headfull FS files from sourceDir when filePath is pre-rendered cache', async () => {
+            const componentJayHtml = `<html>
+<head>
+    <script type="application/jay-data">
+        data:
+            logoUrl: string
+    </script>
+</head>
+<body>
+    <header><img src="{logoUrl}" /></header>
+</body>
+</html>`;
+
+            const resolver = makeHeadfullFSResolver({
+                readJayHtml(importingModuleDir: string, src: string) {
+                    if (
+                        importingModuleDir === '/project/src/pages/biz/products/[[category]]' &&
+                        src.includes('biz-header')
+                    ) {
+                        return {
+                            content: componentJayHtml,
+                            componentDir: '/project/src/components/biz-header',
+                            filePath: '/project/src/components/biz-header/biz-header.jay-html',
+                        };
+                    }
+                    return null;
+                },
+                loadContract(fullPath: string) {
+                    return new WithValidations(headerContract, []);
+                },
+                resolveLink(importingModule: string, link: string) {
+                    return '/project/src/components/biz-header';
+                },
+            });
+
+            const pageHtml = jayFileWith(
+                `data:
+                    |   title: string
+                    |`,
+                `<body>
+                    |   <jay:bizheader />
+                    | </body>`,
+                `<script type="application/jay-headfull"
+                    |   src="../../../../components/biz-header"
+                    |   contract="../../../../components/biz-header/biz-header.jay-contract"
+                    |   names="BizHeader"
+                    | ></script>`,
+            );
+
+            const preRenderedCacheDir =
+                '/project/build/dev/pre-rendered/biz/products/[[category]]';
+            const sourcePageDir = '/project/src/pages/biz/products/[[category]]';
+
+            const withoutSourceDir = await parseJayFile(
+                pageHtml,
+                'page_9a3382c5.jay-html',
+                preRenderedCacheDir,
+                {},
+                resolver,
+                '/project',
+            );
+            expect(withoutSourceDir.validations).toEqual([
+                'jay-html file not found for headfull FS component ../../../../components/biz-header (expected ../../../../components/biz-header.jay-html)',
+            ]);
+
+            const withSourceDir = await parseJayFile(
+                pageHtml,
+                'page_9a3382c5.jay-html',
+                preRenderedCacheDir,
+                {},
+                resolver,
+                '/project',
+                sourcePageDir,
+            );
+            expect(withSourceDir.validations).toEqual([]);
+            expect(withSourceDir.val.headlessImports).toHaveLength(1);
+            expect(withSourceDir.val.headlessImports[0].contractName).toEqual('bizheader');
         });
 
         it('should resolve module path from filePath for source files', async () => {

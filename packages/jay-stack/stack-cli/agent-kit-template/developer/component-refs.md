@@ -119,3 +119,35 @@ A tag can be both data and interactive:
 ```
 
 This generates both a ViewState field and a ref.
+
+## DOM access rules (Jay Stack pages)
+
+Refs are the **only supported path** from TypeScript to elements Jay renders. Direct `document` access bypasses the framework and can break rendering, updates, and performance.
+
+### Do
+
+- Declare elements in **jay-html** with `ref="..."`.
+- Drive overlays, lists, and visibility with **ViewState** (`if`, `forEach`, signal-backed bindings).
+- Attach handlers with ref APIs: `refs.myRef.onclick`, `oninput`, `onkeydown`, etc.
+- Use `refs.myRef.exec$((element, viewState) => …)` **inside handlers** for focus, scroll, measure, or native APIs.
+- For drags: `setPointerCapture` on the ref element that received `pointerdown`, then listen on that element.
+
+### Avoid
+
+- `document.querySelector` / `getElementById` to find template elements
+- `document.createElement` + `appendChild` for UI that belongs in jay-html
+- `document.addEventListener('mousemove'|'mouseup')` for drags (use pointer capture instead)
+
+### Rare `document` exceptions
+
+Use only when no ref can exist, with an inline comment:
+
+| Case                   | Example                                               |
+| ---------------------- | ----------------------------------------------------- |
+| Offscreen processing   | `document.createElement('canvas')` for image export   |
+| Coordinate hit-testing | `document.elementFromPoint` during cross-overlay drag |
+| Tests                  | `document.dispatchEvent` in Vitest                    |
+
+Global shortcuts or paste: prefer a root shell ref (`ref="appRoot"`) with capture listeners.
+
+See also: `.cursor/skills/jay-dom-refs/SKILL.md` in the jay monorepo.

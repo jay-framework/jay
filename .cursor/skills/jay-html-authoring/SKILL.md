@@ -112,6 +112,25 @@ Map elements to contract `interactive` tags using `ref`:
 </div>
 ```
 
+**Page-level refs** (not from a headless contract) — declare `interactive` tags on `page.jay-contract` and bind in jay-html:
+
+```html
+<button ref="saveDraft">Save</button> <textarea ref="notesInput" value="{notes}"></textarea>
+```
+
+Handle them in `page.ts` via `refs.saveDraft.onclick(...)` — never `document.querySelector` for elements the page template renders.
+
+## DOM access from TypeScript
+
+Jay Stack owns the DOM. In `page.ts` and headfull components:
+
+- **UI structure** belongs in jay-html (`ref`, `if`, `forEach`, `{bindings}`).
+- **Imperative DOM** (focus, scroll, measure) goes through refs: `refs.myRef.exec$((el) => …)` inside event handlers only.
+- **Do not** use `document.querySelector`, `document.body.appendChild`, or build UI with `document.createElement` in loops.
+- **Drags** — pointer capture on the starting ref element, not `document` `mousemove`/`mouseup` listeners.
+
+See skill [jay-dom-refs](../jay-dom-refs/SKILL.md) and `agent-kit/developer/component-refs.md`.
+
 ## Headless Components
 
 ### Pattern 1: Key-Based Import

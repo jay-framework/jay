@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="240" viewBox="0 0 320 240" fill="none">
+  <rect width="320" height="240" fill="#f8fafc"/>
+  <rect x="96" y="88" width="128" height="64" rx="12" fill="#2563eb"/>
+  <text x="132" y="128" fill="#fff" font-family="system-ui,sans-serif" font-size="16" font-weight="600">Hover me</text>
+  <circle cx="160" cy="168" r="28" fill="none" stroke="#93c5fd" stroke-width="3" stroke-dasharray="6 6" opacity="0.9"/>
+  <circle cx="208" cy="72" r="20" fill="none" stroke="#bfdbfe" stroke-width="2" stroke-dasharray="4 4"/>
+</svg>

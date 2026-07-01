@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="240" viewBox="0 0 320 240" fill="none">
+  <rect width="320" height="240" fill="#f8fafc"/>
+  <rect x="40" y="48" width="96" height="32" rx="8" fill="#2563eb"/>
+  <text x="58" y="68" fill="#fff" font-family="system-ui,sans-serif" font-size="12">Menu</text>
+  <path d="M148 56 L156 64 L148 72" stroke="#94a3b8" stroke-width="2" fill="none"/>
+  <rect x="168" y="40" width="112" height="96" rx="8" fill="#fff" stroke="#cbd5e1"/>
+  <rect x="180" y="56" width="72" height="10" rx="3" fill="#cbd5e1"/>
+  <rect x="180" y="76" width="56" height="10" rx="3" fill="#e2e8f0"/>
+  <rect x="180" y="96" width="64" height="10" rx="3" fill="#e2e8f0"/>
+</svg>

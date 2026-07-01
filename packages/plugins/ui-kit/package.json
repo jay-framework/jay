@@ -25,7 +25,7 @@
     "definitions": "jay-cli definitions lib",
     "build:client": "vite build",
     "build:server": "vite build --ssr",
-    "build:copy-assets": "cp lib/*.jay-contract* dist/ && mkdir -p dist/agent-kit/aiditor dist/agent-kit/designer && cp agent-kit/aiditor/add-menu.template.yaml dist/agent-kit/aiditor/ && cp agent-kit/designer/spring-button-hover.md agent-kit/designer/sticky-header-scroll.md dist/agent-kit/designer/",
+    "build:copy-assets": "cp lib/*.jay-contract* dist/ && mkdir -p dist/agent-kit/aiditor dist/agent-kit/designer && cp agent-kit/aiditor/add-menu.template.yaml dist/agent-kit/aiditor/ && cp -R agent-kit/aiditor/thumbnails dist/agent-kit/aiditor/ && cp agent-kit/designer/spring-button-hover.md agent-kit/designer/sticky-header-scroll.md dist/agent-kit/designer/",
     "build:check-types": "tsc",
     "clean": "rimraf dist",
     "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",

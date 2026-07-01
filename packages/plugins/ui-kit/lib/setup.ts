@@ -9,6 +9,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import type { PluginSetupContext, PluginSetupResult } from '@jay-framework/stack-server-runtime';
+import { copyAiditorAddMenuThumbnails } from './add-menu/copy-aiditor-thumbnails.js';
 
 const ADD_MENU_OUTPUT_REL = 'agent-kit/aiditor/add-menu/ui-kit.yaml';
 
@@ -88,6 +89,7 @@ export async function setupUiKit(ctx: PluginSetupContext): Promise<PluginSetupRe
         configCreated.push(addMenuCreated);
     }
     configCreated.push(...writeAiditorSkills(ctx));
+    configCreated.push(...copyAiditorAddMenuThumbnails(ctx, resolvePackageAgentKitPath, 'ui-kit'));
 
     const message =
         configCreated.length > 0
