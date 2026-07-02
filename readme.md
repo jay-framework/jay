@@ -1,119 +1,121 @@
-# The Jay Project
+# Jay
 
-**Experimental Framework!!**
+### Guiding AI to guaranteed, production-ready results.
 
-![jay-head.gif](docs%2Fmedia%2Fjay-head.gif)
+![Jay Logo](docs/media/Jay%20Logo%202.png)
 
-**Experimental Framework!!**
+Jay is a self-correcting visual ecosystem for AI-native web development. It bridges the gap between probabilistic AI outputs and deterministic engineering standards through a development-time feedback loop that validates agent actions, promotes smart code reuse, and ensures code is production-ready before deployment.
 
-Jay is aiming to solve the design to code challenge. How designers and developers cooperate on a software project.
-**The designer to use any design tool, from which `jay-html` files are generated. The `jay-html` files include the UI as well
-as the contract between design and code, which the developer imports when coding Headless Components**, or
-**The developer creates an Headless Component from which a contract is extracted, loaded into the designer design tool to
-build the UI with**.
+## The Feedback Loop
 
-# Key Concepts of Jay
+![Feedback Loop](docs/media/feedback%20loop.jpeg)
 
-- Jay is a contract between design tools and headless components.
-- Jay allows the designer, in their design tools, to create the user interface and deploy the application (yes, the designer)
-  pending CI flows.
-- Jay frees the developer from writing HTML, CSS and JSX.
-- Jay Components are headless components, who can be tested and verified regardless of the UI.
-- Jay can generate React applications, reusing all the existing React ecosystem
-- Jay can generate Jay native applications, which enables way more aggressive optimizations
-- Jay can generate safe 3rd party applications, allowing to incorporate 3rd party components and plugins in isolation,
-  with next to zero performance and DevEx impact.
-- **Jay can have headless components in packages and build a website without coding, just reusing headless components from packages, providing only the design in the website.**
+Jay doesn't let AI guess if its code works. The framework automatically validates every output:
 
-# Component Types in Jay
+1. **AI agents** (Designer, Developer, Plugin Developer) read explicit contracts and instructions to know exactly what to build
+2. **Declarative output** — designers generate logic-free templates (`.jay-html`), developers write application logic (`page.ts`), with strict separation between the two
+3. **Validation engine** — `jay-stack validate`, tag coverage reports, TypeScript type checking, and plugin validation catch errors immediately
+4. **Context-rich feedback** — failures point the agent back to contracts, the plugins index, and agent-kit guides so it can self-correct
+5. **Plugins** — inject new capabilities and validation rules, making the loop smarter as the project scales
 
-Jay supports different types of components across two setups:
+## AI Agent Roles
 
-## Jay Setup (Client-Only)
+![AI Roles](docs/media/AI%20Roles%203.png)
 
-Jay itself only supports **Headfull Components** for client-only applications.
+- **AI Designer** — Generates declarative, logic-free visual templates (`.jay-html`) by mapping contract data to UI
+- **AI Developer** — Builds full-stack application logic and data flow (`page.ts`) against strict contracts, without writing markup
+- **AI Plugin Developer** — Packages reusable business logic and headless components into installable plugins
+- **AI DevOps** — Manages deployments via the two-server architecture, pre-compiled builds, and caching infrastructure
 
-![Jay Components.png](docs%2Fmedia%2FJay%20Components.png)
+## Key Concepts
 
-### Headfull Components (Client-Only)
+**Jay** is the minimal client-side runtime (~1,200 lines) — contracts, fine-grained reactivity, and secure sandboxing. **Jay Stack** is the full-stack framework built on top — three-phase rendering, dev server, production builds, and plugins. Most users work with Jay Stack.
 
-- **Definition**: Components that include both the contract and the UI design
-- **Created with**: `makeJayComponent`, component constructor + jay-html files (`.jay-html`)
-- **Use case**: Complete components with specific UI design that can be reused in client-only applications.
-- **Examples**:
-  - Design Library.
-  - A counter component with specific styling and layout
+### The Contract
 
-## Jay-Stack Setup (Fullstack)
+At the heart of Jay is the `.jay-contract` — a YAML agreement that decouples design from code. It defines the exact schema of a component: data tags, interactive elements, and variant states.
 
-Jay-Stack supports both **Headfull** and **Headless** components for fullstack applications with pages and routing.
-
-![Jay Stack Components.png](docs%2Fmedia%2FJay%20Stack%20Components.png)
-
-### Headfull Components (Fullstack)
-
-- **Definition**: Fullstack components that include both the contract and the UI design
-- **Created with**: `makeJayStackComponent`, component constructor, server rendering and jay-html files (`.jay-html`)
-- **Use case**: Complete fullstack components with specific UI design
-- **Features**:
-  - Server-side rendering (slow and fast rendering)
-  - Client-side interactivity
-  - URL parameter handling
-  - Context injection
-
-### Headless Components (Fullstack)
-
-- **Definition**: Fullstack components that define only the contract (data structure and behavior) without any UI
-- **Created with**: `makeJayStackComponent` + contract files (`.jay-contract`)
-- **Use case**: Reusable fullstack logic that can be used across different UI designs
-- **Features**:
-  - Server-side rendering (slow and fast rendering)
-  - Client-side interactivity
-  - URL parameter handling
-  - Context injection
-- **Example**: A counter component that provides count state and increment/decrement functions
-
-## Component Import in Jay-HTML
-
-Jay-HTML files can import both headfull and headless components using different script types:
-
-### Importing Headfull Components
-
-```html
-<script type="application/jay-headfull" src="./item" names="Item"></script>
+```yaml
+# counter.jay-contract
+name: counter
+tags:
+  - tag: count
+    dataType: number
+  - tag: adderButton
+    type: interactive
+    elementType: HTMLButtonElement
+  - tag: subtracter
+    type: interactive
+    elementType: HTMLButtonElement
 ```
 
-### Importing Headless Components
+The contract compiles to TypeScript types. The **AI Designer** uses it to build the UI:
 
 ```html
-<script
-  type="application/jay-headless"
-  contract="../named-counter/named-counter.jay-contract"
-  src="../named-counter/named-counter"
-  name="namedCounter"
-  key="namedCounter"
-></script>
+<div>
+  <button ref="subtracter">-</button>
+  <span>{count}</span>
+  <button ref="adder-button">+</button>
+</div>
 ```
 
-The headless import format includes:
+The **AI Developer** codes against the generated types — no HTML, no CSS:
 
-- `contract` - the location of the contract to import
-- `key` - the attribute name under which the component's Contract ViewState and Refs are nested
-- `src` - the location of the component implementation
-- `name` - the name of the exported component definition
+```typescript
+import { render, CounterElementRefs } from './counter.jay-html';
+import { createSignal, makeJayComponent, Props } from '@jay-framework/component';
 
-# AI Agent Integration
+function CounterConstructor({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
+  const [count, setCount] = createSignal(initialValue);
+  refs.subtracter.onclick(() => setCount(count() - 1));
+  refs.adderButton.onclick(() => setCount(count() + 1));
+  return { render: () => ({ count }) };
+}
+
+export const Counter = makeJayComponent(render, CounterConstructor);
+```
+
+Either side can iterate independently — the designer can redesign the UI without the developer changing a line of logic.
+
+### Three-Phase Rendering
+
+Jay Stack's full-stack framework renders in three phases for optimal performance:
+
+1. **Slow** (build time / SSG) — static content, pre-rendered at build
+2. **Fast** (request time / SSR) — per-request data, server-rendered
+3. **Interactive** (client-side) — reactive updates in the browser
+
+```typescript
+export const page = makeJayStackComponent<PageContract>()
+  .withProps<PageProps>()
+  .withSlowlyRender(async (props) => {
+    return phaseOutput({ title: 'My Page' }, {});
+  })
+  .withFastRender(async (props, carryForward) => {
+    return phaseOutput({ dynamicData: await fetchData() }, {});
+  })
+  .withInteractive((props, refs, viewState) => {
+    return { render: () => ({ liveCount: count() }) };
+  });
+```
+
+### Plugins
+
+AI agents favor reusing code over generating logic from scratch. Jay plugins are NPM packages that bundle headless components, server actions, and contracts:
+
+- **Zero-coding integration** — drop complex features (storefronts, auth, CMS) into a page instantly
+- **Reduced risk** — inherit performance, security, and SEO from battle-tested packages
+- **Zero trust architecture** (in development) — plugin code runs in an isolated sandbox
+
+## AI Agent Integration
 
 Jay Stack projects include an agent kit that gives AI coding agents full context about the project's plugins, contracts, and capabilities.
-
-**To set up your AI agent with Jay:**
 
 1. Copy [`jay-skill.md`](jay-skill.md) into your agent's skill/instructions folder:
 
    - **Claude Code**: `mkdir -p ~/.claude/skills/jay && cp jay-skill.md ~/.claude/skills/jay/SKILL.md`
    - **Cursor**: `mkdir -p .cursor/skills/jay && cp jay-skill.md .cursor/skills/jay/SKILL.md`
    - **Windsurf**: add the file path to your agent's context
-   - Or add it to any agent that supports instruction files
 
 2. Run setup and agent-kit in your project:
    ```bash
@@ -123,254 +125,60 @@ Jay Stack projects include an agent kit that gives AI coding agents full context
 
 The skill file teaches the agent how to discover contracts, read the four role guides (designer, developer, plugin, devops), and use the CLI. The agent kit provides the project-specific data.
 
-# Why Jay?
+## Building the Monorepo
 
-Jay set out to solve the
-[Design handover problem](./design-log/000%20-%20design%20handover%20problem.md).
-The solution for the handover problem, introducing a contract, is actually a solution for another problem of
-[Extending user interface with 3rd party components](./design-log/001%20-%203rd%20party%20code%20problem.md).
-
-# Quick intro to Jay
-
-## Jay Contract
-
-Jay Contracts define the interface between design and code. They specify the data, interactive elements, variants (states), and linked contracts that a component must support. This contract is the source of truth for both the design tool and the developer, ensuring that the UI and logic remain in sync.
-
-A Jay Contract includes 4 building blocks:
-
-1. **Data**: The data to display in the user interface
-2. **Interactive Elements**: Elements that interact with the user (e.g., buttons, inputs)
-3. **Variants**: Design variations or states that control what and how data and interactive elements are visualized
-4. **Linked Contracts**: Contract composition for modularity and reuse
-
-Here is an example Jay Contract (YAML format):
-
-```yaml
-# todo-list.jay-contract
-name: todo
-tags:
-  - tag: activeTodoWord
-  - tag: activeTodoCount
-    dataType: number
-  - tag: hasItems
-    dataType: boolean
-  - tag: filter
-    dataType: enum (all | active | completed)
-  - tag: filterAll
-    type: interactive
-    elementType: [HTMLAnchorType, HTMLButtonElement]
-  - tag: filterActive
-    type: interactive
-    elementType: [HTMLAnchorType, HTMLButtonElement]
-  - tag: items
-    type: sub-contract
-    repeated: true
-    tags:
-      - tag: title
-        type: [data, interactive]
-        dataType: string
-        elementType: HTMLInputElement
-      - tag: completed
-        type: [data, interactive]
-        dataType: boolean
-        elementType: HTMLInputElement
+```bash
+yarn install              # Install dependencies (Yarn 4, Node >= 20)
+yarn build                # Build all packages
+yarn test                 # Run all tests
+yarn confirm              # Full validation: rebuild + type check + test + format
 ```
 
-The contract is used by design tools to create the actual user interface, such as HTML and CSS, with Jay-specific directives such as `if`, `forEach`, and `{data}` binding.
+## Examples
 
-The contract is compiled into programmatic types that are used to code the headless or headfull components:
+Example projects are in the `examples/` folder. After `yarn install && yarn build`:
 
-1. The **view state**: Data and selected variants (which appear as boolean or enumerations) that a Jay Component hands over to the view or Jay Element to render
-2. The **refs**: Named HTML elements or sub-components in the view (Jay Element) to interact with
+- **Jay** — [counter](examples/jay/counter), [form](examples/jay/form), [todo](examples/jay/todo), [scrum-board](examples/jay/scrum-board), [tree](examples/jay/tree), [mini-benchmark](examples/jay/mini-benchmark)
+- **Jay Context** — [scrum-board-with-context](examples/jay-context/scrum-board-with-context), [todo-with-context](examples/jay-context/todo-with-context)
+- **Jay Stack** — [fake-shop](examples/jay-stack/fake-shop), [mood-tracker-plugin](examples/jay-stack/mood-tracker-plugin)
+- **React** — [mini-benchmark-react](examples/react/mini-benchmark-react) (comparison)
 
-## Jay Element / jay-html
+## Monorepo Structure
 
-The jay element is a `jay-html` file is **expected to be generated from design tools** of an extended HTML format.
-**No developers should write HTML / CSS / JSX anymore!**
+Yarn workspaces with `wsrun` for cross-package commands. All packages scoped `@jay-framework/`.
 
-```html
-<html>
-  <head>
-    <script type="application/yaml-jay">
-      data:
-        count: number
-    </script>
-  </head>
-  <body>
-    <div>
-      <button ref="subtracter">-</button>
-      <span style="margin: 0 16px">{count}</span>
-      <button ref="adder-button">+</button>
-    </div>
-  </body>
-</html>
-```
+| Group | Path | Description |
+|-------|------|-------------|
+| **Runtime** | `packages/runtime/` | Client-side libraries — reactivity, components, DOM manipulation, security sandbox |
+| **Compiler** | `packages/compiler/` | Build-time tools — jay-html parsing, code generation, Vite/Rollup plugins, CLI |
+| **Jay Stack** | `packages/jay-stack/` | Full-stack framework — three-phase rendering, dev server, production server, editor integration |
+| **Plugins** | `packages/plugins/` | Plugin implementations — ui-kit, gemini-agent, webmcp, validators |
 
-Read more about Jay Elements format in [jay-file.md](packages%2Fcompiler%2Fcompiler%2Fdocs%2Fjay-file.md)
+## Development Setup
 
-## Jay Component / the headless component
+Install Node version from [.nvmrc](.nvmrc). Recommended to use [nvm](https://github.com/nvm-sh/nvm).
 
-Jay Components are headless component working with the contract TS `.d.ts` files generated from the `jay-html`.
-
-```typescript
-import { render, CounterElementRefs } from './counter.jay-html';
-import { createSignal, makeJayComponent, Props } from '@jay-framework/component';
-
-export interface CounterProps {
-  initialValue: number;
-}
-
-function CounterConstructor({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
-  const [count, setCount] = createSignal(initialValue);
-
-  refs.subtracter.onclick(() => setCount(count() - 1));
-  refs.adderButton.onclick(() => setCount(count() + 1));
-
-  return {
-    render: () => ({ count }),
-  };
-}
-
-export const Counter = makeJayComponent(render, CounterConstructor);
-```
-
-Read more about Jay Components in [readme.md](packages%2Fruntime%2Fcomponent%2Freadme.md)
-
-## Jay Stack Component / the fullstack component
-
-Jay Stack Components provide server-side rendering with client-side interactivity using the fluent builder API. They can be either **headfull** (with jay-html) or **headless** (with contract files).
-
-### Headfull Fullstack Component (with jay-html)
-
-```typescript
-import { PageContract, PageElementRefs } from './page.jay-html';
-import { makeJayStackComponent, partialRender } from '@jay-framework/fullstack-component';
-
-export const page = makeJayStackComponent<PageContract>()
-  .withProps<PageProps>()
-  .withSlowlyRender(async (props) => {
-    return partialRender({ title: 'My Page', content: 'Static content' }, { pageId: '1' });
-  })
-  .withFastRender(async (props) => {
-    return partialRender({ dynamicData: 'Fast changing data' }, { pageId: '1' });
-  })
-  .withInteractive((props, refs) => {
-    return {
-      render: () => ({ interactiveData: 'Client-side data' }),
-    };
-  });
-```
-
-### Headless Fullstack Component (with contract)
-
-```typescript
-import { ComponentContract } from './component.jay-contract';
-import { makeJayStackComponent, partialRender } from '@jay-framework/fullstack-component';
-
-export const component = makeJayStackComponent<ComponentContract>()
-  .withProps()
-  .withSlowlyRender(async () => {
-    return partialRender({ content: 'This is from the headless component' }, {});
-  });
-```
-
-Read more about Jay Stack Components in [readme.md](packages%2Fjay-stack%2Ffull-stack-component%2FREADME.md)
-
-# Examples
-
-Jay example projects can be found at the examples folder.
-
-To build and run the examples, run in the jay project root:
-
-```shell
+```bash
+npm i -g corepack
+corepack enable
 yarn install
 yarn build
 ```
 
-Then, under each example open the `html` files under the `dist` folder.
+For Jay Stack examples, run `yarn dev` from the example directory — you get full hot reload. For client-only Jay examples, use `yarn build:watch` from the monorepo root to rebuild packages on change.
 
-The examples are organized into 5 categories
+If you get dependency errors when running commands from a package directory, prefix with `yarn run`.
 
-- Jay examples
-  - [counter](examples%2Fjay%2Fcounter) - simple counter
-  - [form](examples%2Fjay%2Fform) - simple form
-  - [mini-benchmark](examples%2Fjay%2Fmini-benchmark) - mini benchmark to show Jay performance, with and without security
-  - [scrum-board](examples%2Fjay%2Fscrum-board) - scrum board showing 3 levels of nested components
-  - [todo](examples%2Fjay%2Ftodo) - todo list as two levels of nested components
-  - [todo-one-flat-component](examples%2Fjay%2Ftodo-one-flat-component) - todo list as one big component
-  - [todo-rollup-build](examples%2Fjay%2Ftodo-rollup-build) - todo list built using rollup and not using vite
-  - [tree](examples%2Fjay%2Ftree) - a recursive tree example
-- Jay Context
-  - [scrum-board-with-context](examples%2Fjay-context%2Fscrum-board-with-context) - the same scrum board example using jay context
-  - [todo-with-context](examples%2Fjay-context%2Ftodo-with-context) - the same todo list example using jay context
-- Jay Low Leven APIs
-  - [counter-raw](examples%2Fjay-low-level-apis%2Fcounter-raw) - counter example not using the Jay Component APIs. Only using @jay-framework/runtime.
-  - [todo-raw](examples%2Fjay-low-level-apis%2Ftodo-raw) - todo list not using the Jay Component APIs. Only using @jay-framework/runtime.
-- Jay Stack
-  - [fake-shop](examples%2Fjay-stack%2Ffake-shop) - fullstack e-commerce example
-  - [mood-tracker-plugin](examples%2Fjay-stack%2Fmood-tracker-plugin) - plugin system example
-- React
-  - [mini-benchmark-react](examples%2Freact%2Fmini-benchmark-react) - the same mini benchmark implemented as a React application for comparison.
-
-# Design log
-
-The design log is a log of design decisions taken when building Jay.
-It is organized in chronological order.
-
-- The design log is not documentation of Jay. It documents the design decisions taken over time, not the current product.
-- Each document is true to the time it was written. If that was updated later on, a new document will introduce the reasons why.
-
-# Contribution
-
-## Development Environment Setup
-
-Install Node version from [./.nvmrc]. Recommended to use [nvm](https://github.com/nvm-sh/nvm).
-
-```shell
-# setup yarn
-npm i -g npm # making sure you're using newest npm
-npm i -g corepack
-corepack enable
-yarn set version 3.6.4
-npm run reinstall
-
-yarn run build
-```
-
-Mark `.yarn` directory as excluded in IntelliJ.
-
-## Development Environment Setup
-
-For IntelliJ IDEA, copy vitest runtime configuration to show console logs in test results:
-
-```shell
-cp -r dev-environment/editor-setup/idea .idea/
-```
-
-Afterward, delete all the Vitest configurations (Run -> Edit Configurations) and restart IntelliJ.
-
-During development, it's convenient to watch for changes.
-You can run the following command from root to watch for all the packages,
-or run it from the specific package.
-
-```shell
-yarn build:watch
-```
-
-### Running commands from packages
-
-If you get errors of some dependency not found when running commands from packages, try running them with yarn:
+### Before submitting a PR
 
 ```bash
-yarn run build # for commands
+yarn confirm    # rebuild + type check + test + format
 ```
 
-### Creating a pull request
+## Design Log
 
-Before creating a pull request, make sure that all the code compilers and tests pass.
-There is a single command to do it for all the packages.
-Run it from jay project root:
+The [design log](design-log/) documents design decisions taken over time. Each entry is true to when it was written — it's not documentation of the current state, but a record of the reasoning behind architectural choices.
 
-```bash
-yarn confirm
-```
+## Why Jay?
+
+Jay set out to solve the [design handover problem](design-log/000%20-%20design%20handover%20problem.md). The contract-based solution also addresses [extending UIs with 3rd party components](design-log/001%20-%203rd%20party%20code%20problem.md).
