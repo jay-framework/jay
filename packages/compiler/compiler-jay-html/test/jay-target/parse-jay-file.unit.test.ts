@@ -2449,8 +2449,7 @@ describe('compiler', () => {
                     | ></script>`,
             );
 
-            const preRenderedCacheDir =
-                '/project/build/dev/pre-rendered/biz/products/[[category]]';
+            const preRenderedCacheDir = '/project/build/dev/pre-rendered/biz/products/[[category]]';
             const sourcePageDir = '/project/src/pages/biz/products/[[category]]';
 
             const withoutSourceDir = await parseJayFile(
