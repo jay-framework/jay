@@ -25,7 +25,18 @@ items:
         Add a scroll carousel at this marker location on the page.
     prompt: |
       Use headless component @jay-framework/ui-kit / contract scroll-carousel.
-      Read agent-kit/designer/scroll-carousel.md for import, refs (container, prev, next), and ViewState (atStart, atEnd).
+      Read agent-kit/designer/scroll-carousel.md — use Pattern 1 (Arrow Navigation) for import, refs (container, prev, next), and ViewState (atStart, atEnd).
+
+  - id: ui-kit:snap-center-gallery
+    title: Snap-to-center gallery
+    category: UI Kit
+    subCategory: Components
+    pluginName: ui-kit
+    packageName: '@jay-framework/ui-kit'
+    prompt: |
+      Use headless component @jay-framework/ui-kit / contract scroll-carousel.
+      Read agent-kit/designer/scroll-carousel.md — use Pattern 2 (Snap-to-Center Gallery) for import, container ref, and CSS (scroll-snap-align: center with container padding).
+      Swipe/drag gallery where the active item snaps to center and side items bleed off-screen.
 
   - id: ui-kit:clipboard-copy
     title: Clipboard copy
