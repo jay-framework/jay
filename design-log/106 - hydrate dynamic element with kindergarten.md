@@ -430,6 +430,7 @@ The hydrate fix exposed a second issue: `adoptElement("coord", ...)` on the stat
 ### Fix: Production server missing `__headlessInstances` in client init args (Bug J)
 
 Production build works in dev but fails in production with three errors:
+
 1. `[Jay] Headless instance "S0/0/0/0/0/2/login-indicator:AR0" has no server data and no clientDefaults`
 2. `[jay hydration] adoptBase coordinate "S1/0/0" not found in DOM`
 3. `[jay hydration] adoptBase coordinate "S1/0" not found in DOM`

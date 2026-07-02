@@ -147,12 +147,12 @@ Example projects are in the `examples/` folder. After `yarn install && yarn buil
 
 Yarn workspaces with `wsrun` for cross-package commands. All packages scoped `@jay-framework/`.
 
-| Group | Path | Description |
-|-------|------|-------------|
-| **Runtime** | `packages/runtime/` | Client-side libraries — reactivity, components, DOM manipulation, security sandbox |
-| **Compiler** | `packages/compiler/` | Build-time tools — jay-html parsing, code generation, Vite/Rollup plugins, CLI |
+| Group         | Path                  | Description                                                                                     |
+| ------------- | --------------------- | ----------------------------------------------------------------------------------------------- |
+| **Runtime**   | `packages/runtime/`   | Client-side libraries — reactivity, components, DOM manipulation, security sandbox              |
+| **Compiler**  | `packages/compiler/`  | Build-time tools — jay-html parsing, code generation, Vite/Rollup plugins, CLI                  |
 | **Jay Stack** | `packages/jay-stack/` | Full-stack framework — three-phase rendering, dev server, production server, editor integration |
-| **Plugins** | `packages/plugins/` | Plugin implementations — ui-kit, gemini-agent, webmcp, validators |
+| **Plugins**   | `packages/plugins/`   | Plugin implementations — ui-kit, gemini-agent, webmcp, validators                               |
 
 ## Development Setup
 

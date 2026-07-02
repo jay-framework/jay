@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/a11y-validator",
-  "version": "0.19.7",
+  "version": "0.19.8",
   "type": "module",
   "description": "Accessibility validation plugin for Jay Framework — checks jay-html templates for WCAG best practices",
   "license": "Apache-2.0",
