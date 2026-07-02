@@ -426,3 +426,20 @@ The hydrate fix exposed a second issue: `adoptElement("coord", ...)` on the stat
 
 - 660/660 compiler-jay-html tests pass (3 async server-element fixtures updated)
 - 678/678 dev-server hydration tests pass (fixtures regenerated via `UPDATE_FIXTURES=1`)
+
+### Fix: Production server missing `__headlessInstances` in client init args (Bug J)
+
+Production build works in dev but fails in production with three errors:
+1. `[Jay] Headless instance "S0/0/0/0/0/2/login-indicator:AR0" has no server data and no clientDefaults`
+2. `[jay hydration] adoptBase coordinate "S1/0/0" not found in DOM`
+3. `[jay hydration] adoptBase coordinate "S1/0" not found in DOM`
+
+**Root cause:** In `fetch-page-handler.ts`, the serve-time code correctly constructs `fullSlowViewState` (with `__headlessInstances` from `carryForward.__instances.slowViewStates`) for SSR rendering. But when serializing the client init args, it passed `cached.slowViewState` (without `__headlessInstances`) instead of `fullSlowViewState`.
+
+The SSR uses `fullViewState` (which includes `__headlessInstances`), so the server element guard `if (vs_login_indicator0)` works and the inline template is rendered with coordinates. But the client receives a `slowViewState` without `__headlessInstances`. When `deepMergeViewStates(slowViewState, fastViewState)` runs on the client, it only gets instance data from the fast phase. For components without `fastRender` (render-only or slow+render), the fast phase stores `{}` — which may be insufficient for the headless instance context to find meaningful data.
+
+**Fix:** Changed line 191 in `fetch-page-handler.ts` from `cached.slowViewState` to `fullSlowViewState`.
+
+**File:** `packages/jay-stack/production-server/lib/serve/fetch-page-handler.ts`
+
+**Note:** The DL106 compiler fixes (assignCoordinates, parentHasInteractiveChildren, forceAdopt) are automatically used by the production build since `compileRouteServerElement` and `compileRouteHydrateScript` both call `generateServerElementFile`/`generateElementHydrateFile` from compiler-jay-html. No changes needed in the build pipeline for the compiler fixes.

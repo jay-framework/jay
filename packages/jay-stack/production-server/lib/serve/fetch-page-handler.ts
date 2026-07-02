@@ -8,6 +8,7 @@ import {
     headMetaToHeadTags,
     getClientInitData,
 } from '@jay-framework/stack-server-runtime';
+import type { HeadTag } from '@jay-framework/fullstack-component';
 import { deepMergeViewStates } from '@jay-framework/view-state-merge';
 import { asyncSwapScript } from '@jay-framework/ssr-runtime';
 import { buildImportMap } from './import-map';
@@ -64,13 +65,14 @@ export async function fetchPageRequest(
     const tData = Date.now();
 
     const query = Object.fromEntries(requestUrl.searchParams.entries());
+    const cf = cached.carryForward as any;
 
     const fastResult = await renderFastChangingData(
         match.params,
         { params: match.params, query },
         cached.carryForward,
         pageParts.parts,
-        (cached.carryForward as any).__instances,
+        cf.__instances,
         pageParts.forEachInstances,
         pageParts.headlessInstanceComponents,
         cached.slowViewState,
@@ -79,23 +81,23 @@ export async function fetchPageRequest(
     );
     const tFast = Date.now();
 
-    if (fastResult.kind === 'Redirect3xx') {
+    if (fastResult.kind === 'Redirect') {
         return new Response(null, {
-            status: (fastResult as any).status,
-            headers: { Location: (fastResult as any).location },
+            status: fastResult.status,
+            headers: { Location: fastResult.location },
         });
     }
-    if (fastResult.kind === 'ServerError5xx' || fastResult.kind === 'ClientError4xx') {
-        return new Response((fastResult as any).message || 'Error', {
-            status: (fastResult as any).status,
+    if (fastResult.kind === 'ServerError' || fastResult.kind === 'ClientError') {
+        return new Response(fastResult.message || 'Error', {
+            status: fastResult.status,
         });
     }
 
-    const fastViewState = (fastResult as any).rendered || {};
-    const fastCarryForward = (fastResult as any).carryForward || {};
+    const fastViewState = fastResult.rendered || {};
+    const fastCarryForward = fastResult.carryForward || {};
 
     // Reconstruct full slow VS including instance slow data from carryForward.
-    const instanceSlowVS = ((cached.carryForward as any)?.__instances as any)?.slowViewStates;
+    const instanceSlowVS = cf.__instances?.slowViewStates;
     const fullSlowViewState =
         instanceSlowVS && Object.keys(instanceSlowVS).length > 0
             ? { ...cached.slowViewState, __headlessInstances: instanceSlowVS }
@@ -108,15 +110,14 @@ export async function fetchPageRequest(
     );
 
     // Merge head tags: component tags (defaults) then jay-html <head> (template wins, DL#148)
-    const headTagSources: any[][] = [];
-    const slowHeadTags = (cached.carryForward as any).__slowHeadTags;
+    const headTagSources: HeadTag[][] = [];
+    const slowHeadTags = cf.__slowHeadTags;
     if (slowHeadTags) headTagSources.push(...slowHeadTags);
-    const fastHeadTags = (fastResult as any).headTags;
-    if (fastHeadTags) headTagSources.push(fastHeadTags);
+    if (fastResult.headTags) headTagSources.push(fastResult.headTags);
     const templateHeadTags = headMetaToHeadTags(route.headMeta, fullViewState);
     if (templateHeadTags.length > 0) headTagSources.push(templateHeadTags);
     const headTags = headTagSources.length > 0 ? mergeHeadTags(headTagSources) : [];
-    const hasCustomTitle = headTags.some((t: any) => t.tag?.toLowerCase() === 'title');
+    const hasCustomTitle = headTags.some((t) => t.tag?.toLowerCase() === 'title');
     const titleTag = hasCustomTitle ? '' : '    <title>Vite + TS</title>\n';
     const headTagsHtml = headTags.length > 0 ? serializeHeadTags(headTags) + '\n' : '';
 
@@ -188,7 +189,7 @@ ${headParts}
 
             const clientInitData = getClientInitData();
             const initArgs = route.routeClientBundlePath
-                ? `${JSON.stringify(cached.slowViewState)}, ${JSON.stringify(fastViewState)}, ${JSON.stringify(fastCarryForward)}, ${JSON.stringify(clientInitData)}`
+                ? `${JSON.stringify(fullSlowViewState)}, ${JSON.stringify(fastViewState)}, ${JSON.stringify(fastCarryForward)}, ${JSON.stringify(clientInitData)}`
                 : `${JSON.stringify(fastViewState)}, ${JSON.stringify(fastCarryForward)}, ${JSON.stringify(clientInitData)}`;
             const tTotal = Date.now() - t0;
             const tLoadMs = tLoad - tLoadStart;
@@ -225,7 +226,7 @@ ${headParts}
         },
     });
 
-    const responseHeaders = (fastResult as any).responseHeaders || {};
+    const responseHeaders = fastResult.responseHeaders || {};
     return new Response(stream, {
         headers: { 'Content-Type': 'text/html; charset=utf-8', ...responseHeaders },
     });
