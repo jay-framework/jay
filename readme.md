@@ -126,6 +126,7 @@ AI agents favor reusing code over generating logic from scratch. Jay plugins are
 | Plugin | Package | Description |
 | --- | --- | --- |
 | **wix-stores** | `@jay-framework/wix-stores` | Product search, category lists, product spotlight, and dynamic product pages with variant/inventory support |
+| **wix-stores-v1** | `@jay-framework/wix-stores-v1` | Wix Stores using Catalog V1 API — product pages, search, collections |
 | **wix-cart** | `@jay-framework/wix-cart` | Shopping cart — cart indicator, full cart page, and mini-cart drawer |
 | **wix-members** | `@jay-framework/wix-members` | Authentication — login indicator, OAuth callback, and protected page guard |
 | **wix-data** | `@jay-framework/wix-data` | Dynamic CMS contracts generated from Wix Data collection schemas (item, list, table, card) |
