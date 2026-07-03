@@ -107,6 +107,38 @@ AI agents favor reusing code over generating logic from scratch. Jay plugins are
 - **Reduced risk** — inherit performance, security, and SEO from battle-tested packages
 - **Zero trust architecture** (in development) — plugin code runs in an isolated sandbox
 
+## Available Plugins
+
+> Current list — more plugins are in development.
+
+### Jay Framework (`packages/plugins/`)
+
+| Plugin | Package | Description |
+| --- | --- | --- |
+| **ui-kit** | `@jay-framework/ui-kit` | Headless UI components — popover menu, scroll carousel, clipboard copy, word/letter split for text animation |
+| **gemini-agent** | `@jay-framework/gemini-agent-plugin` | AI chat agent powered by Gemini with page automation capabilities |
+| **webmcp** | `@jay-framework/webmcp-plugin` | Web-based MCP (Model Context Protocol) bridge |
+| **a11y-validator** | `@jay-framework/a11y-validator` | Accessibility validation rules for jay-html pages |
+| **seo-validator** | `@jay-framework/seo-validator` | SEO validation rules for jay-html pages |
+
+### Wix Plugins ([jay-framework/wix](https://github.com/jay-framework/wix))
+
+| Plugin | Package | Description |
+| --- | --- | --- |
+| **wix-stores** | `@jay-framework/wix-stores` | Product search, category lists, product spotlight, and dynamic product pages with variant/inventory support |
+| **wix-cart** | `@jay-framework/wix-cart` | Shopping cart — cart indicator, full cart page, and mini-cart drawer |
+| **wix-members** | `@jay-framework/wix-members` | Authentication — login indicator, OAuth callback, and protected page guard |
+| **wix-data** | `@jay-framework/wix-data` | Dynamic CMS contracts generated from Wix Data collection schemas (item, list, table, card) |
+| **wix-media** | `@jay-framework/wix-media` | Media optimization validator, upload commands, and media index generation |
+| **wix-server-client** | `@jay-framework/wix-server-client` | Core Wix SDK client configuration and API key authentication |
+| **wix-deploy** | `@jay-framework/wix-deploy` | Build and deploy commands for Wix-hosted Jay Stack sites |
+
+### AIditor
+
+| Plugin | Package | Description |
+| --- | --- | --- |
+| **aiditor** | `@jay-framework/aiditor` | Visual AI-driven code editor — page creation, plugin management, asset handling, and one-click publish |
+
 ## AI Agent Integration
 
 Jay Stack projects include an agent kit that gives AI coding agents full context about the project's plugins, contracts, and capabilities.
