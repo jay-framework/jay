@@ -2,14 +2,15 @@
 
 ## Background
 
-We want a build-time linting plugin that enforces UI conformity against a design system specification. The plugin validates `.jay-html` files against defined design tokens (colors, typography, spacing, radii) and structural rules.
+We want a build-time linting plugin that enforces UI conformity against a [DESIGN.md](https://github.com/google-labs-code/design.md) specification. The plugin validates `.jay-html` files and their CSS against defined design tokens (colors, typography, spacing, rounded, components) and structural rules.
 
-An initial spec proposed using Happy DOM + `getComputedStyle()` via a Vite `transform` hook to validate computed styles against tokens. This design log evaluates that approach and proposes an alternative.
+An initial spec proposed using Happy DOM + `getComputedStyle()` via a Vite `transform` hook. This design log evaluates that approach, identifies its problems, and proposes an alternative based on static CSS analysis with cascade resolution.
 
 ### Related
 
 - DL#145 — Pluggable jay-html validation (existing system)
 - DL#147 — Jay-html validation rules catalog
+- [DESIGN.md spec](https://github.com/google-labs-code/design.md/blob/main/docs/spec.md)
 - `packages/plugins/a11y-validator/` — Reference validation plugin
 - `packages/plugins/seo-validator/` — Reference validation plugin
 
@@ -17,81 +18,109 @@ An initial spec proposed using Happy DOM + `getComputedStyle()` via a Vite `tran
 
 ### 1. Happy DOM doesn't compute CSS
 
-`getComputedStyle()` in Happy DOM returns inline styles or empty strings. It does not:
-- Resolve external/internal stylesheets
-- Apply CSS cascade or specificity
-- Evaluate CSS custom properties (`var(--token)`)
-- Process media queries
-- Compute layout (flexbox, grid)
+`getComputedStyle()` in Happy DOM returns inline styles or empty strings. It does not resolve stylesheets, cascade, specificity, CSS custom properties, or media queries. Resizing `window.innerWidth` won't trigger media query re-evaluation either — there is no layout engine.
 
-This is the foundation of the proposed architecture, and it doesn't work. Resizing `window.innerWidth` also won't trigger media query re-evaluation — Happy DOM doesn't implement a layout engine.
-
-To get real computed styles you'd need a full browser engine (Playwright/Puppeteer), which is too slow for a build-time linter and requires a running dev server.
+To get real computed styles you'd need a full browser engine (Playwright/Puppeteer), which is too slow for a build-time linter.
 
 ### 2. Wrong integration point
 
-Jay-html files don't go through Vite's `transform` hook — they go through the jay-html compiler. Jay already has a pluggable validation system (DL#145) with:
-- `JayHtmlValidatorFn` interface
-- Parsed DOM tree (node-html-parser)
-- Contract data, headless imports, head metadata
-- `walkElements()` utility with automatic scope tracking
-- Agent-friendly error reporting with suggestions
+Jay-html files go through the jay-html compiler, not Vite's `transform` hook. Jay already has a pluggable validation system (DL#145) with `JayHtmlValidatorFn`, parsed DOM tree, contract data, `walkElements()` utility, and agent-friendly error reporting.
 
-The a11y-validator and seo-validator already use this system successfully.
+### 3. Static analysis with cascade resolution covers the real use cases
 
-### 3. Static analysis covers most use cases
+Design token validation is primarily about checking that resolved CSS values match a known set. With `css-tree` for parsing and `@bramus/specificity` for specificity calculation, we can resolve the cascade statically — no browser needed.
 
-Design token validation is primarily about checking that values used in CSS and attributes match a known set. This is a parsing problem, not a rendering problem:
-- CSS custom properties → check `var(--token-name)` references exist in the token map
-- Inline styles → parse and validate values
-- Color literals → flag hardcoded colors that should use tokens
-- Spacing/radius values → check against the scale
+## Questions & Answers
+
+**Q1:** The DESIGN.md spec uses `{path.to.token}` variable references (e.g., `{colors.primary-60}`, `{rounded.md}`). Should we support this syntax?
+
+**A1:** Yes. The token parser must resolve `{path.to.token}` references to their final values before validation. This is required by the spec and used heavily in the `components` section.
+
+**Q2:** Where should DESIGN.md files live? Project root only, or per-route?
+
+**A2:** DESIGN.md lives alongside pages. If more than one exists, it takes effect on the route it is placed in and on all child routes, unless a child route also has its own DESIGN.md (which overrides). This lets different sections of a site have different design systems.
+
+**Q3:** How do we handle exceptions — cases where a value intentionally breaks the design system (e.g., a one-off padding)?
+
+**Q4:** Can we validate CSS inside headless component inline templates (inside `<jay:component-name>` blocks)?
+
+**Q5:** Jay-html allows linking external CSS files via `<link rel="stylesheet">`. Should we parse and validate those too?
+
+**Q6:** Can we support CSS cascade resolution without a browser engine? The original assessment said we can't, but with `css-tree` + `@bramus/specificity` we might be able to.
 
 ## Design
 
 ### DESIGN.md Format
 
-A `DESIGN.md` file at the project root with YAML frontmatter defining tokens and rules:
+Following the [DESIGN.md spec](https://github.com/google-labs-code/design.md/blob/main/docs/spec.md):
 
 ```yaml
 ---
-tokens:
-  colors:
-    primary: "#2563eb"
-    primary-hover: "#1d4ed8"
-    secondary: "#64748b"
-    text: "#0f172a"
-    text-muted: "#64748b"
-    background: "#ffffff"
-    surface: "#f8fafc"
-    border: "#e2e8f0"
-    error: "#dc2626"
-    success: "#16a34a"
+name: Onsko Clean Beauty
 
-  typography:
-    heading-1: { size: "2.5rem", weight: 700, lineHeight: 1.2 }
-    heading-2: { size: "2rem", weight: 700, lineHeight: 1.3 }
-    heading-3: { size: "1.5rem", weight: 600, lineHeight: 1.4 }
-    body: { size: "1rem", weight: 400, lineHeight: 1.6 }
-    small: { size: "0.875rem", weight: 400, lineHeight: 1.5 }
+colors:
+  primary: "#2563eb"
+  primary-hover: "#1d4ed8"
+  secondary: "#64748b"
+  text: "#0f172a"
+  text-muted: "#64748b"
+  background: "#ffffff"
+  surface: "#f8fafc"
+  border: "#e2e8f0"
+  error: "#dc2626"
+  success: "#16a34a"
 
-  spacing:
-    - 0
-    - 0.25rem
-    - 0.5rem
-    - 0.75rem
-    - 1rem
-    - 1.5rem
-    - 2rem
-    - 3rem
-    - 4rem
+typography:
+  headline-lg:
+    fontFamily: Inter
+    fontSize: 2.5rem
+    fontWeight: 700
+    lineHeight: 1.2
+  headline-md:
+    fontFamily: Inter
+    fontSize: 2rem
+    fontWeight: 700
+    lineHeight: 1.3
+  body-md:
+    fontFamily: Inter
+    fontSize: 1rem
+    fontWeight: 400
+    lineHeight: 1.6
+  label-sm:
+    fontFamily: Inter
+    fontSize: 0.875rem
+    fontWeight: 500
+    lineHeight: 1.5
 
-  radii:
-    none: "0"
-    sm: "0.25rem"
-    md: "0.5rem"
-    lg: "0.75rem"
-    full: "9999px"
+spacing:
+  xs: 0.25rem
+  sm: 0.5rem
+  md: 1rem
+  lg: 1.5rem
+  xl: 2rem
+  2xl: 3rem
+  3xl: 4rem
+
+rounded:
+  none: 0
+  sm: 0.25rem
+  md: 0.5rem
+  lg: 0.75rem
+  full: 9999px
+
+components:
+  button-primary:
+    backgroundColor: "{colors.primary}"
+    textColor: "{colors.background}"
+    typography: "{typography.label-sm}"
+    rounded: "{rounded.md}"
+    padding: "{spacing.sm} {spacing.lg}"
+  button-primary-hover:
+    backgroundColor: "{colors.primary-hover}"
+  card:
+    backgroundColor: "{colors.surface}"
+    rounded: "{rounded.lg}"
+    padding: "{spacing.lg}"
 
 rules:
   max-font-weights: 3
@@ -101,12 +130,46 @@ rules:
 
 # Onsko Design System
 
-Design guidelines and usage instructions below...
+Brand guidelines and usage instructions...
 ```
 
-**Question: should we support CSS custom property names in token values (e.g., `primary: "var(--color-primary)"`) so the validator can match either the var reference or the resolved value?**
+### DESIGN.md Scoping (Route Hierarchy)
 
-**Question: should DESIGN.md live at project root, or should plugins be able to provide their own design system specs?**
+DESIGN.md files are placed alongside pages:
+
+```
+src/pages/
+  DESIGN.md                   # applies to all routes
+  page.jay-html
+  products/
+    DESIGN.md                 # overrides for /products and children
+    page.jay-html
+    [[category]]/
+      page.jay-html           # inherits products/DESIGN.md
+  admin/
+    DESIGN.md                 # separate design system for /admin
+    page.jay-html
+```
+
+Resolution: walk up from the page's directory to the project root, use the first DESIGN.md found. This mirrors how CSS cascades — closest wins.
+
+### Exception Mechanism
+
+Sometimes a value intentionally breaks the design system. Similar to `jay-script="allow"` for script tags, use a CSS comment directive:
+
+```css
+.hero-banner {
+  padding: 7.5rem 0; /* design-system: allow */
+}
+```
+
+And for inline styles on elements:
+
+```html
+<div style="margin-top: 7.5rem" jay-design="allow">
+```
+
+The validator skips any declaration or element marked with these directives. This is the same pattern used by ESLint (`eslint-disable`), Stylelint (`stylelint-disable`), and Prettier (`prettier-ignore`).
 
 ### Plugin Architecture
 
@@ -116,11 +179,13 @@ Standard Jay validation plugin (DL#145 pattern):
 packages/plugins/design-system-validator/
   lib/
     validators/
-      design-tokens.ts      # Token conformance rules
-      design-structure.ts   # Structural rules (max weights, primary buttons, etc.)
-      design-contrast.ts    # Color contrast checking
-    parse-design-md.ts      # DESIGN.md parser
-    token-matcher.ts         # CSS value → token matching utilities
+      design-tokens.ts        # Token conformance (colors, spacing, rounded, typography)
+      design-components.ts    # Component conformance
+      design-structure.ts     # Structural rules (max weights, primary buttons)
+      design-contrast.ts      # WCAG AA color contrast
+    parse-design-md.ts        # DESIGN.md parser + token resolution
+    css-cascade.ts            # CSS cascade resolver (css-tree + specificity)
+    token-matcher.ts          # CSS value → token matching
   plugin.yaml
   package.json
 ```
@@ -130,8 +195,11 @@ packages/plugins/design-system-validator/
 name: design-system
 validators:
   - name: design-tokens
-    handler: validate
-    description: Validates CSS values against design system tokens
+    handler: validateTokens
+    description: Validates CSS values against DESIGN.md tokens
+  - name: design-components
+    handler: validateComponents
+    description: Validates component styles against DESIGN.md component specs
   - name: design-structure
     handler: validateStructure
     description: Enforces structural design rules
@@ -140,122 +208,146 @@ validators:
     description: Checks WCAG AA color contrast compliance
 ```
 
-### Validation Approach — Static CSS Analysis
+### CSS Cascade Resolution (The Engine)
 
-Instead of rendering HTML and reading computed styles, parse the CSS directly:
+Instead of a browser engine, build a lightweight cascade resolver using existing libraries:
 
-#### 1. Token matching (design-tokens validator)
+**Libraries:**
+- [`css-tree`](https://github.com/csstree/csstree) — Parse CSS into AST with selectors and declarations
+- [`@bramus/specificity`](https://github.com/bramus/specificity) — Compute specificity for selectors (also uses css-tree internally)
+- `node-html-parser` — Already available in validation context; supports `querySelectorAll` for selector matching
 
-Parse the `<style>` block from jay-html and validate property values:
+**Algorithm:**
 
 ```
-Input CSS:
-  .card { background: #ff0000; padding: 13px; border-radius: 0.5rem; }
+1. Collect all CSS sources:
+   - <style> blocks in the jay-html
+   - Linked CSS files (<link rel="stylesheet">)
+   - Inline style="" attributes on elements
 
-Findings:
-  ⚠ Hardcoded color #ff0000 — use a design token (e.g., var(--color-error))
-  ⚠ Padding 13px not in spacing scale [0, 0.25rem, 0.5rem, ... 4rem]
-  ✓ border-radius 0.5rem matches radii.md
+2. Parse CSS into rules:
+   For each CSS source → css-tree.parse() → list of (selector, declarations[])
+
+3. For each element in the jay-html DOM:
+   a. Find all matching CSS rules (use node-html-parser's selector matching)
+   b. Compute specificity for each matching rule (via @bramus/specificity)
+   c. Sort by: (source order for same specificity, specificity for different)
+   d. Apply cascade: later/higher-specificity wins, inline styles win all
+   e. Result: resolved property→value map for this element
+
+4. Validate resolved values against design tokens
 ```
 
-**What to validate:**
-- Color properties (`color`, `background-color`, `border-color`, etc.) — flag hardcoded hex/rgb values not in the token map
-- Spacing properties (`padding`, `margin`, `gap`) — check values against the spacing scale
-- Border-radius — check against radii tokens
-- Typography — check `font-size`, `font-weight`, `line-height` combinations against typography tokens
-- CSS custom property references — check `var(--name)` references resolve to known tokens
+**What this handles:**
+- Multiple selectors targeting the same element (cascade)
+- Class, ID, attribute, and pseudo-class specificity
+- Source order tiebreaking
+- Inline style override
+- `!important` declarations
+- Media query blocks (each breakpoint validated independently)
 
-**What NOT to validate:**
-- Computed/cascaded values (can't do statically)
-- Values set by JavaScript at runtime
-- Third-party CSS (only validate `<style>` blocks within jay-html)
+**What this does NOT handle (acceptable limitations):**
+- Inherited values from parent elements (e.g., `color` inheriting through the tree) — would require walking up the DOM for each inheritable property; possible as a future enhancement
+- `calc()`, `min()`, `max()` expressions — flag as "cannot validate statically"
+- Values set by JavaScript at runtime — out of scope
+- CSS custom properties defined outside the validated files — flag as unresolvable
 
-#### 2. Structural rules (design-structure validator)
+### Validation Rules
 
-Use the parsed DOM tree (already provided by the validation context):
+#### 1. Token conformance (design-tokens validator)
 
-- **Max font weights**: Walk all elements, collect unique `font-weight` values from inline styles and CSS classes, warn if exceeding `rules.max-font-weights`
-- **Max primary buttons**: Count elements matching primary button patterns (class-based or attribute-based), warn if exceeding `rules.max-primary-buttons`
-- **Custom structural rules**: Extensible pattern for project-specific DOM structure checks
+For each element's resolved CSS values:
+- **Colors** (`color`, `background-color`, `border-color`, `outline-color`, etc.) — flag hardcoded values not in the token map; suggest the closest token
+- **Spacing** (`padding`, `margin`, `gap`, `top`, `right`, `bottom`, `left`) — check values against spacing scale
+- **Rounded** (`border-radius`) — check against rounded tokens
+- **Typography** (`font-size`, `font-weight`, `line-height`, `letter-spacing`, `font-family`) — check combinations against typography tokens
 
-#### 3. Contrast checking (design-contrast validator)
+CSS custom property references (`var(--name)`) are checked for existence in the token map but not resolved further.
 
-For statically determinable color pairs:
+#### 2. Component conformance (design-components validator)
 
-- Parse CSS to build a map of element selectors → color/background-color values
-- Where both foreground and background are known token values (or hardcoded colors), compute contrast ratio
-- Use the WCAG 2.1 relative luminance formula (no DOM needed — it's a color math calculation)
+Elements matching component selectors (defined in DESIGN.md `components` section) are validated as a composite — all specified properties must match the component spec simultaneously.
+
+This works inside headless component inline templates too — elements within `<jay:component-name>` blocks are validated the same as any other elements.
+
+#### 3. Structural rules (design-structure validator)
+
+Uses the parsed DOM tree:
+- **Max font weights**: Collect unique `font-weight` values across the page, warn if exceeding `rules.max-font-weights`
+- **Max primary buttons**: Count distinct primary action buttons by (ref, text content) pairs — the same button appearing multiple times (same ref, same text) counts as one
+- **Custom structural rules**: Extensible for project-specific checks
+
+#### 4. Contrast checking (design-contrast validator)
+
+For elements where both foreground color and background color are statically determinable:
+- Compute WCAG 2.1 relative luminance for each color
+- Calculate contrast ratio
+- Flag pairs below 4.5:1 (AA normal text) or 3:1 (AA large text)
 - Skip elements where colors are dynamic bindings or inherited from unknown ancestors
 
-**Limitations to document clearly:**
-- Static analysis can't check inherited background colors through the cascade
-- Dynamic colors (bindings like `style="color: {themeColor}"`) can't be validated
-- Media-query-dependent color changes can't be checked
+#### 5. Responsive breakpoint validation
 
-### CSS Parsing
+Parse media query blocks in the CSS. For each breakpoint:
+- Run the same token/component/structural validation on the rules within that media query
+- Report findings grouped by breakpoint
+- No visual/layout checking — purely token conformance per breakpoint
 
-Use a lightweight CSS parser (e.g., `css-tree` or `postcss`) to parse the `<style>` block:
+### External CSS Files
 
-```typescript
-import { parse as parseCss } from 'css-tree';
-
-function extractStyleValues(css: string): StyleDeclaration[] {
-  const ast = parseCss(css);
-  // Walk declarations, collect property → value pairs with selector context
-}
-```
-
-This gives us structured access to all CSS declarations without needing a browser engine.
+Jay-html supports `<link rel="stylesheet" href="...">`. The validator resolves these paths relative to the jay-html file and parses them alongside `<style>` blocks. All rules from linked files participate in cascade resolution with lower priority than inline `<style>` blocks (per CSS source order).
 
 ### Integration with Existing Validators
 
-The design-system validator complements (doesn't replace) the existing validators:
+The design-system validator complements existing validators:
 - **a11y-validator** → structural accessibility (alt text, ARIA, form labels)
 - **seo-validator** → SEO metadata and semantics
-- **design-system-validator** → visual conformity to design tokens
-
-### What About Responsive Validation?
-
-Static CSS analysis CAN check media query breakpoint values (e.g., "all breakpoints use the defined set") and CAN validate that token usage is consistent within each media query block. It CANNOT verify that the rendered layout looks correct at each breakpoint — that requires visual regression testing, which is a different tool.
+- **design-system-validator** → visual conformity to design tokens and component specs
 
 ## Implementation Plan
 
-### Phase 1: Token parser + CSS validation
+### Phase 1: Token parser + basic CSS validation (no cascade)
 
-1. Implement `parse-design-md.ts` — parse YAML frontmatter from DESIGN.md into token map
-2. Implement `token-matcher.ts` — utilities to match CSS values against token scales
-3. Implement `design-tokens` validator — parse `<style>` block, validate color/spacing/radius/typography against tokens
-4. Register as Jay validation plugin via `plugin.yaml`
+1. `parse-design-md.ts` — parse YAML frontmatter, resolve `{path.to.token}` references, DESIGN.md route-scoping resolution
+2. `token-matcher.ts` — match CSS values against token scales (color normalization, unit conversion)
+3. `design-tokens` validator — parse `<style>` blocks, validate values against tokens, support `/* design-system: allow */` exceptions
+4. Register as Jay validation plugin
 
-### Phase 2: Structural rules
+### Phase 2: Cascade resolver
 
-5. Implement `design-structure` validator — DOM tree analysis for max font weights, primary button count, custom rules
+5. `css-cascade.ts` — parse CSS with `css-tree`, compute specificity with `@bramus/specificity`, resolve cascade per element
+6. Support linked external CSS files
+7. Support inline `style=""` attributes with `jay-design="allow"` exceptions
+8. Update token validator to use resolved cascade values instead of raw declarations
 
-### Phase 3: Contrast checking
+### Phase 3: Component + structural validation
 
-6. Implement `design-contrast` validator — static color pair analysis with WCAG AA contrast ratio computation
+9. `design-components` validator — composite component spec matching
+10. `design-structure` validator — font weight count, primary button count (by ref+text identity)
 
-### Phase 4: Inline style validation
+### Phase 4: Contrast + responsive
 
-7. Extend token validator to also check `style="..."` attributes on elements (not just `<style>` blocks)
+11. `design-contrast` validator — WCAG AA contrast ratio on static color pairs
+12. Responsive breakpoint validation — per-media-query token conformance
 
 ## Trade-offs
 
 | Approach | Pros | Cons |
 |----------|------|------|
-| **Static CSS analysis (this design)** | Fast, no external deps, works in CI, deterministic | Can't check cascade/inheritance, misses runtime styles |
-| **Happy DOM computed styles** | Theoretically checks cascade | Doesn't actually work — Happy DOM doesn't compute CSS |
+| **Static CSS + cascade resolver (this design)** | Fast, deterministic, works in CI, handles cascade | No inheritance; complex expressions skipped |
+| **Happy DOM computed styles** | Theoretically checks cascade | Doesn't work — Happy DOM doesn't compute CSS |
 | **Playwright/browser rendering** | Real computed styles, real media queries | Slow, requires running server, flaky in CI |
-| **Stylelint custom rules** | Mature CSS linting ecosystem | Doesn't understand jay-html structure, no contract awareness |
-
-Static analysis is the right trade-off for a build-time linter. For visual regression testing (pixel-perfect responsive validation), that's a separate tool (e.g., Playwright screenshot comparison) — not a validation plugin.
+| **Stylelint custom rules** | Mature CSS linting ecosystem | No jay-html structure awareness, no contracts |
 
 ## Verification Criteria
 
 1. Plugin loads via standard `plugin.yaml` registration
 2. `jay-stack validate` runs design-system rules alongside a11y and seo validators
-3. Hardcoded colors in `<style>` blocks produce warnings with token suggestions
-4. Spacing values outside the scale produce warnings
-5. Structural rules (max font weights, max primary buttons) are enforced
-6. Contrast violations on statically determinable color pairs are flagged
-7. Agent-friendly suggestions reference the DESIGN.md token names
+3. DESIGN.md scoping resolves correctly (child route inherits, override replaces)
+4. Hardcoded colors in CSS produce warnings with closest token suggestion
+5. Spacing/rounded values outside the scale produce warnings
+6. `/* design-system: allow */` and `jay-design="allow"` suppress findings
+7. Cascade resolver correctly determines winning value when multiple selectors match
+8. Component conformance validates composite specs from DESIGN.md components section
+9. Primary button count uses (ref, text) identity — duplicates don't count
+10. Contrast violations flagged on statically determinable color pairs
+11. Media query blocks validated independently per breakpoint
