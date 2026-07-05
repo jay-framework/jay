@@ -28,7 +28,7 @@ Jay-html files go through the jay-html compiler, not Vite's `transform` hook. Ja
 
 ### 3. Static analysis with cascade resolution covers the real use cases
 
-Design token validation is primarily about checking that resolved CSS values match a known set. With `css-tree` for parsing and `@bramus/specificity` for specificity calculation, we can resolve the cascade statically — no browser needed.
+Design token validation is primarily about checking that resolved CSS values match a known set. With `postcss` for parsing and `@csstools/selector-specificity` for specificity calculation, we can resolve the cascade statically — no browser needed.
 
 ## Questions & Answers
 
@@ -42,11 +42,19 @@ Design token validation is primarily about checking that resolved CSS values mat
 
 **Q3:** How do we handle exceptions — cases where a value intentionally breaks the design system (e.g., a one-off padding)?
 
+**A3:** CSS comment directive `/* design-system: allow */` on the declaration, or `jay-design="allow"` attribute on elements for inline styles. Same pattern as ESLint/Stylelint disable comments.
+
 **Q4:** Can we validate CSS inside headless component inline templates (inside `<jay:component-name>` blocks)?
+
+**A4:** Yes. Elements inside `<jay:component-name>` blocks are part of the DOM tree the validator receives. They are validated the same as any other elements — the walker doesn't distinguish.
 
 **Q5:** Jay-html allows linking external CSS files via `<link rel="stylesheet">`. Should we parse and validate those too?
 
-**Q6:** Can we support CSS cascade resolution without a browser engine? The original assessment said we can't, but with `css-tree` + `@bramus/specificity` we might be able to.
+**A5:** Yes. Resolve paths relative to the jay-html file and parse alongside `<style>` blocks. Linked files participate in cascade resolution with source-order priority.
+
+**Q6:** Can we support CSS cascade resolution without a browser engine? The original assessment said we can't, but with PostCSS + `@csstools/selector-specificity` we can.
+
+**A6:** Yes. PostCSS parses CSS into rules with selectors and declarations. `@csstools/selector-specificity` computes specificity per selector. `node-html-parser` (already available) matches selectors to elements. Combine these to resolve which value wins per element — no browser needed.
 
 ## Design
 
@@ -109,6 +117,7 @@ rounded:
   full: 9999px
 
 components:
+  # HTML elements — matched by CSS selector
   button-primary:
     backgroundColor: "{colors.primary}"
     textColor: "{colors.background}"
@@ -121,6 +130,18 @@ components:
     backgroundColor: "{colors.surface}"
     rounded: "{rounded.lg}"
     padding: "{spacing.lg}"
+
+  # Jay headless components — matched by <jay:component-name>
+  jay:login-indicator:
+    textColor: "{colors.text}"
+    typography: "{typography.label-sm}"
+  jay:cart-indicator:
+    textColor: "{colors.text}"
+    typography: "{typography.label-sm}"
+  jay:product-card:
+    backgroundColor: "{colors.surface}"
+    rounded: "{rounded.lg}"
+    padding: "{spacing.md}"
 
 rules:
   max-font-weights: 3
@@ -184,7 +205,7 @@ packages/plugins/design-system-validator/
       design-structure.ts     # Structural rules (max weights, primary buttons)
       design-contrast.ts      # WCAG AA color contrast
     parse-design-md.ts        # DESIGN.md parser + token resolution
-    css-cascade.ts            # CSS cascade resolver (css-tree + specificity)
+    css-cascade.ts            # CSS cascade resolver (postcss + selector-specificity)
     token-matcher.ts          # CSS value → token matching
   plugin.yaml
   package.json
@@ -213,8 +234,9 @@ validators:
 Instead of a browser engine, build a lightweight cascade resolver using existing libraries:
 
 **Libraries:**
-- [`css-tree`](https://github.com/csstree/csstree) — Parse CSS into AST with selectors and declarations
-- [`@bramus/specificity`](https://github.com/bramus/specificity) — Compute specificity for selectors (also uses css-tree internally)
+- [`postcss`](https://github.com/postcss/postcss) — Parse CSS into AST with rules, selectors, and declarations
+- [`postcss-selector-parser`](https://github.com/postcss/postcss-selector-parser) — Parse selectors into AST nodes
+- [`@csstools/selector-specificity`](https://github.com/csstools/postcss-plugins/tree/main/packages/selector-specificity) — Compute specificity from `postcss-selector-parser` AST nodes
 - `node-html-parser` — Already available in validation context; supports `querySelectorAll` for selector matching
 
 **Algorithm:**
@@ -226,11 +248,12 @@ Instead of a browser engine, build a lightweight cascade resolver using existing
    - Inline style="" attributes on elements
 
 2. Parse CSS into rules:
-   For each CSS source → css-tree.parse() → list of (selector, declarations[])
+   For each CSS source → postcss.parse() → walk rules → (selector, declarations[])
+   For each selector → postcss-selector-parser → AST → selectorSpecificity()
 
 3. For each element in the jay-html DOM:
    a. Find all matching CSS rules (use node-html-parser's selector matching)
-   b. Compute specificity for each matching rule (via @bramus/specificity)
+   b. Compute specificity for each matching rule (via @csstools/selector-specificity)
    c. Sort by: (source order for same specificity, specificity for different)
    d. Apply cascade: later/higher-specificity wins, inline styles win all
    e. Result: resolved property→value map for this element
@@ -268,7 +291,12 @@ CSS custom property references (`var(--name)`) are checked for existence in the 
 
 Elements matching component selectors (defined in DESIGN.md `components` section) are validated as a composite — all specified properties must match the component spec simultaneously.
 
-This works inside headless component inline templates too — elements within `<jay:component-name>` blocks are validated the same as any other elements.
+Two kinds of component targets:
+
+- **HTML components** (e.g., `button-primary`, `card`) — matched by CSS class or selector against DOM elements
+- **Jay headless components** (e.g., `jay:login-indicator`, `jay:product-card`) — matched by the `<jay:component-name>` tag. The validator checks the resolved styles on the inline template root element(s) inside the `<jay:...>` block
+
+The `jay:` prefix in the components section maps directly to jay-html headless component tags. This lets the design system define style expectations for any headless component — page-level instances, nested instances, plugin components.
 
 #### 3. Structural rules (design-structure validator)
 
@@ -303,6 +331,43 @@ The design-system validator complements existing validators:
 - **seo-validator** → SEO metadata and semantics
 - **design-system-validator** → visual conformity to design tokens and component specs
 
+### Designer Role Guide
+
+The plugin should include an agent-kit designer guide (`agent-kit/designer/design-system.md`) that:
+
+1. Explains how DESIGN.md works — tokens, `{references}`, components section
+2. Shows how to use tokens in CSS (via custom properties or direct values)
+3. Lists the validation errors the designer will encounter and how to fix them
+4. Explains the exception mechanism (`/* design-system: allow */`)
+
+Example validation errors the guide should document:
+
+```
+⚠ Hardcoded color #ff0000 not in design system
+  Suggestion: Use token {colors.error} ("#dc2626") or add to DESIGN.md
+
+⚠ Padding "13px" not in spacing scale
+  Suggestion: Use {spacing.md} ("1rem") or {spacing.lg} ("1.5rem"),
+  or add /* design-system: allow */ to exempt this value
+
+⚠ border-radius "10px" not in rounded scale
+  Suggestion: Use {rounded.lg} ("0.75rem") or {rounded.full} ("9999px")
+
+⚠ <jay:product-card> inline template: backgroundColor does not match
+  component spec. Expected "{colors.surface}" (#f8fafc), found "#ffffff"
+  Suggestion: Update background-color to match DESIGN.md
+  jay:product-card component definition
+
+⚠ 4 unique font-weight values found (max: 3)
+  Suggestion: Reduce to 3 font-weight values from the typography tokens
+
+⚠ Contrast ratio 2.8:1 below WCAG AA (4.5:1) for text "{colors.text-muted}"
+  on background "{colors.surface}"
+  Suggestion: Darken text color or lighten background
+```
+
+The guide should be concise — the validation errors themselves are the primary teaching tool, with the guide providing the mental model for why tokens matter.
+
 ## Implementation Plan
 
 ### Phase 1: Token parser + basic CSS validation (no cascade)
@@ -314,7 +379,7 @@ The design-system validator complements existing validators:
 
 ### Phase 2: Cascade resolver
 
-5. `css-cascade.ts` — parse CSS with `css-tree`, compute specificity with `@bramus/specificity`, resolve cascade per element
+5. `css-cascade.ts` — parse CSS with `postcss`, compute specificity with `@csstools/selector-specificity`, resolve cascade per element
 6. Support linked external CSS files
 7. Support inline `style=""` attributes with `jay-design="allow"` exceptions
 8. Update token validator to use resolved cascade values instead of raw declarations
@@ -328,6 +393,10 @@ The design-system validator complements existing validators:
 
 11. `design-contrast` validator — WCAG AA contrast ratio on static color pairs
 12. Responsive breakpoint validation — per-media-query token conformance
+
+### Phase 5: Designer guide
+
+13. `agent-kit/designer/design-system.md` — tokens, usage, validation errors, exceptions
 
 ## Trade-offs
 
