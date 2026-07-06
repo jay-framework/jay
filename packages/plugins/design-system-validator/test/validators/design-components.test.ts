@@ -1,10 +1,13 @@
 import { parse } from 'node-html-parser';
 import { describe, it, expect } from 'vitest';
-import { validateComponents } from '../../lib/validators/design-components.js';
+import { validateComponents } from '../../lib';
 import type { JayHtmlValidationContext } from '@jay-framework/compiler-shared';
 import path from 'node:path';
 
 const fixturesDir = path.join(__dirname, '..', 'fixtures', 'components');
+const DESIGN_MD = 'DESIGN.md';
+const GUIDE = 'agent-kit/designer/design-system.md';
+const REFS = `See ${DESIGN_MD} for component specs, ${GUIDE} for usage guide.`;
 
 function makeContext(html: string): JayHtmlValidationContext {
     return {
@@ -28,6 +31,7 @@ describe('design-components validator', () => {
             {
                 severity: 'warning',
                 message: '<jay:product-card> inline template: background-color should be "#f8fafc" per jay:product-card component spec, found "#ffffff"',
+                suggestion: REFS,
                 element: '<div>',
             },
         ]);
@@ -54,6 +58,7 @@ describe('design-components validator', () => {
             {
                 severity: 'warning',
                 message: 'Component "button-primary": background-color should be "#2563eb" per button-primary component spec, found "#ff0000"',
+                suggestion: REFS,
                 element: '<button>',
             },
         ]);

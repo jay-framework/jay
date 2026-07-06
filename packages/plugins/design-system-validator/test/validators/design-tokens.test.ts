@@ -5,6 +5,9 @@ import type { JayHtmlValidationContext } from '@jay-framework/compiler-shared';
 import path from 'node:path';
 
 const fixturesDir = path.join(__dirname, '..', 'fixtures', 'basic');
+const DESIGN_MD = 'DESIGN.md';
+const GUIDE = 'agent-kit/designer/design-system.md';
+const REFS = `\nSee ${DESIGN_MD} for tokens, ${GUIDE} for usage guide.`;
 
 function makeContext(html: string): JayHtmlValidationContext {
     return {
@@ -26,7 +29,7 @@ describe('design-tokens validator', () => {
             {
                 severity: 'warning',
                 message: 'Hardcoded color "#ff0000" for color not in design system',
-                suggestion: expect.any(String),
+                suggestion: `Use token {colors.error} ("#dc2626")${REFS}`,
                 element: '<div>',
             },
         ]);
@@ -51,7 +54,7 @@ describe('design-tokens validator', () => {
             {
                 severity: 'warning',
                 message: 'padding value "13px" not in spacing scale',
-                suggestion: expect.any(String),
+                suggestion: `Use a spacing token: {spacing.xs} ("0.25rem"), {spacing.sm} ("0.5rem"), {spacing.md} ("1rem"), {spacing.lg} ("1.5rem"), {spacing.xl} ("2rem")${REFS}`,
                 element: '<div>',
             },
         ]);
@@ -76,7 +79,7 @@ describe('design-tokens validator', () => {
             {
                 severity: 'warning',
                 message: 'border-radius "10px" not in rounded scale',
-                suggestion: expect.any(String),
+                suggestion: `Use a rounded token: {rounded.none} ("0"), {rounded.sm} ("0.25rem"), {rounded.md} ("0.5rem"), {rounded.lg} ("0.75rem"), {rounded.full} ("9999px")${REFS}`,
                 element: '<div>',
             },
         ]);
@@ -123,7 +126,7 @@ describe('design-tokens validator', () => {
             {
                 severity: 'warning',
                 message: '[(max-width: 768px)] padding value "13px" not in spacing scale',
-                suggestion: expect.any(String),
+                suggestion: `Use a spacing token: {spacing.xs} ("0.25rem"), {spacing.sm} ("0.5rem"), {spacing.md} ("1rem"), {spacing.lg} ("1.5rem"), {spacing.xl} ("2rem")${REFS}`,
                 element: '<div>',
             },
         ]);
@@ -156,7 +159,7 @@ describe('design-tokens validator', () => {
             {
                 severity: 'warning',
                 message: 'transition-duration "200ms" not in animation presets',
-                suggestion: 'Use an animation preset duration: fade-in (300ms), micro (150ms)',
+                suggestion: `Use an animation preset duration: fade-in (300ms), micro (150ms)${REFS}`,
                 element: '<div>',
             },
         ]);
@@ -187,13 +190,13 @@ describe('design-tokens validator', () => {
             {
                 severity: 'warning',
                 message: 'transition-timing-function "ease" not in animation presets',
-                suggestion: 'Use an animation preset easing: fade-in (cubic-bezier(0, 0, 0.2, 1)), micro (ease-in-out)',
+                suggestion: `Use an animation preset easing: fade-in (cubic-bezier(0, 0, 0.2, 1)), micro (ease-in-out)${REFS}`,
                 element: '<div>',
             },
             {
                 severity: 'warning',
                 message: '[(prefers-reduced-motion: reduce)] transition-timing-function "ease" not in animation presets',
-                suggestion: 'Use an animation preset easing: fade-in (cubic-bezier(0, 0, 0.2, 1)), micro (ease-in-out)',
+                suggestion: `Use an animation preset easing: fade-in (cubic-bezier(0, 0, 0.2, 1)), micro (ease-in-out)${REFS}`,
                 element: '<div>',
             },
         ]);
@@ -221,7 +224,7 @@ describe('design-tokens validator', () => {
             {
                 severity: 'warning',
                 message: 'Page uses transitions/animations but has no @media (prefers-reduced-motion) override',
-                suggestion: 'Add @media (prefers-reduced-motion: reduce) { * { transition-duration: 0s !important; animation-duration: 0s !important; } }',
+                suggestion: `Add @media (prefers-reduced-motion: reduce) { * { transition-duration: 0s !important; animation-duration: 0s !important; } }${REFS}`,
             },
         ]);
     });

@@ -3,10 +3,14 @@ import { walkElements } from '@jay-framework/compiler-shared';
 import { findDesignMd } from '../parse-design-md.js';
 import { resolveCascade, extractCssSources } from '../css-cascade.js';
 
-export const validateStructure: JayHtmlValidatorFn = (ctx) => {
-    const tokens = findDesignMd(ctx.filePath, ctx.projectRoot);
-    if (!tokens) return [];
+const DESIGNER_GUIDE = 'agent-kit/designer/design-system.md';
 
+export const validateStructure: JayHtmlValidatorFn = (ctx) => {
+    const found = findDesignMd(ctx.filePath, ctx.projectRoot);
+    if (!found) return [];
+
+    const { tokens, designMdPath } = found;
+    const refs = `\nSee ${designMdPath} for rules, ${DESIGNER_GUIDE} for usage guide.`;
     const findings: JayHtmlValidationFinding[] = [];
 
     if (tokens.rules['max-font-weights']) {
@@ -24,7 +28,7 @@ export const validateStructure: JayHtmlValidatorFn = (ctx) => {
             findings.push({
                 severity: 'warning',
                 message: `${fontWeights.size} unique font-weight values found (max: ${max}): ${[...fontWeights].join(', ')}`,
-                suggestion: `Reduce to ${max} font-weight values from the typography tokens`,
+                suggestion: `Reduce to ${max} font-weight values from the typography tokens.${refs}`,
             });
         }
     }
@@ -50,7 +54,7 @@ export const validateStructure: JayHtmlValidatorFn = (ctx) => {
             findings.push({
                 severity: 'warning',
                 message: `${primaryButtons.size} distinct primary buttons found (max: ${max})`,
-                suggestion: `Reduce to ${max} primary action button per page. Same button (same ref and text) appearing multiple times counts as one.`,
+                suggestion: `Reduce to ${max} primary action button per page. Same button (same ref and text) appearing multiple times counts as one.${refs}`,
             });
         }
     }

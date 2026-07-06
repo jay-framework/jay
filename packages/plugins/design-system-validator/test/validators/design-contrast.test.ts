@@ -1,10 +1,13 @@
 import { parse } from 'node-html-parser';
 import { describe, it, expect } from 'vitest';
-import { validateContrast } from '../../lib/validators/design-contrast.js';
+import { validateContrast } from '../../lib';
 import type { JayHtmlValidationContext } from '@jay-framework/compiler-shared';
 import path from 'node:path';
 
 const fixturesDir = path.join(__dirname, '..', 'fixtures', 'basic');
+const DESIGN_MD = 'DESIGN.md';
+const GUIDE = 'agent-kit/designer/design-system.md';
+const REFS = `\nSee ${DESIGN_MD} for color tokens, ${GUIDE} for usage guide.`;
 
 function makeContext(html: string): JayHtmlValidationContext {
     return {
@@ -26,7 +29,7 @@ describe('design-contrast validator', () => {
             {
                 severity: 'warning',
                 message: expect.stringMatching(/^Contrast ratio \d+\.\d+:1 below WCAG AA \(4\.5:1\) for color "#94a3b8" on background "#f8fafc"$/),
-                suggestion: 'Darken text color or lighten background to meet minimum contrast',
+                suggestion: `Darken text color or lighten background to meet minimum contrast.${REFS}`,
                 element: '<p>',
             },
         ]);

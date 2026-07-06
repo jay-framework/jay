@@ -3,7 +3,9 @@ import { findDesignMd } from '../parse-design-md.js';
 import { resolveCascade, extractCssSources } from '../css-cascade.js';
 import { hexToRgbValues, relativeLuminance, contrastRatio } from '../token-matcher.js';
 
-function resolveColorValue(value: string, colorTokens: Record<string, string>): string | null {
+const DESIGNER_GUIDE = 'agent-kit/designer/design-system.md';
+
+function resolveColorValue(value: string): string | null {
     if (value.startsWith('#')) return value;
     if (value.startsWith('rgb')) {
         const match = value.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
@@ -31,9 +33,11 @@ function isLargeText(fontSize: string | undefined, fontWeight: string | undefine
 }
 
 export const validateContrast: JayHtmlValidatorFn = (ctx) => {
-    const tokens = findDesignMd(ctx.filePath, ctx.projectRoot);
-    if (!tokens || !tokens.rules['require-contrast-aa']) return [];
+    const found = findDesignMd(ctx.filePath, ctx.projectRoot);
+    if (!found || !found.tokens.rules['require-contrast-aa']) return [];
 
+    const { tokens, designMdPath } = found;
+    const refs = `\nSee ${designMdPath} for color tokens, ${DESIGNER_GUIDE} for usage guide.`;
     const findings: JayHtmlValidationFinding[] = [];
     const cssSources = extractCssSources(ctx.body, ctx.filePath);
     if (cssSources.length === 0) return [];
@@ -47,8 +51,8 @@ export const validateContrast: JayHtmlValidatorFn = (ctx) => {
         if (!colorStyle || !bgStyle) continue;
         if (colorStyle.allowed || bgStyle.allowed) continue;
 
-        const fgHex = resolveColorValue(colorStyle.value, tokens.colors);
-        const bgHex = resolveColorValue(bgStyle.value, tokens.colors);
+        const fgHex = resolveColorValue(colorStyle.value);
+        const bgHex = resolveColorValue(bgStyle.value);
 
         if (!fgHex || !bgHex) continue;
 
@@ -68,7 +72,7 @@ export const validateContrast: JayHtmlValidatorFn = (ctx) => {
             findings.push({
                 severity: 'warning',
                 message: `Contrast ratio ${ratio.toFixed(1)}:1 below WCAG AA (${threshold}:1) for color "${colorStyle.value}" on background "${bgStyle.value}"`,
-                suggestion: 'Darken text color or lighten background to meet minimum contrast',
+                suggestion: `Darken text color or lighten background to meet minimum contrast.${refs}`,
                 element: `<${tag}>`,
             });
         }

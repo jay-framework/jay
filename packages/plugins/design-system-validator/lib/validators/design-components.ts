@@ -4,10 +4,14 @@ import { resolveCascade, extractCssSources } from '../css-cascade.js';
 import { matchComponent } from '../token-matcher.js';
 import type { HTMLElement } from 'node-html-parser';
 
-export const validateComponents: JayHtmlValidatorFn = (ctx) => {
-    const tokens = findDesignMd(ctx.filePath, ctx.projectRoot);
-    if (!tokens || Object.keys(tokens.components).length === 0) return [];
+const DESIGNER_GUIDE = 'agent-kit/designer/design-system.md';
 
+export const validateComponents: JayHtmlValidatorFn = (ctx) => {
+    const found = findDesignMd(ctx.filePath, ctx.projectRoot);
+    if (!found || Object.keys(found.tokens.components).length === 0) return [];
+
+    const { tokens, designMdPath } = found;
+    const refs = `\nSee ${designMdPath} for component specs, ${DESIGNER_GUIDE} for usage guide.`;
     const findings: JayHtmlValidationFinding[] = [];
     const cssSources = extractCssSources(ctx.body, ctx.filePath);
     const cascade = resolveCascade(cssSources, ctx.body);
@@ -60,6 +64,7 @@ export const validateComponents: JayHtmlValidatorFn = (ctx) => {
                     findings.push({
                         severity: 'warning',
                         message: `<${componentName}> inline template: ${result.suggestion}`,
+                        suggestion: refs.trim(),
                         element: `<${el.rawTagName || 'element'}>`,
                     });
                 }
@@ -90,6 +95,7 @@ export const validateComponents: JayHtmlValidatorFn = (ctx) => {
                     findings.push({
                         severity: 'warning',
                         message: `Component "${componentName}": ${result.suggestion}`,
+                        suggestion: refs.trim(),
                         element: `<${el.rawTagName || 'element'}>`,
                     });
                 }

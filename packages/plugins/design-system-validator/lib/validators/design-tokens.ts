@@ -19,15 +19,23 @@ import {
 import type { DesignTokens } from '../parse-design-md.js';
 import type { HTMLElement } from 'node-html-parser';
 
+const DESIGNER_GUIDE = 'agent-kit/designer/design-system.md';
+
+function ref(designMdPath: string): string {
+    return `\nSee ${designMdPath} for tokens, ${DESIGNER_GUIDE} for usage guide.`;
+}
+
 function validateElementStyles(
     el: HTMLElement,
     styles: Record<string, ResolvedStyle>,
     tokens: DesignTokens,
     breakpointLabel: string,
+    designMdPath: string,
     findings: JayHtmlValidationFinding[],
 ): void {
     const tag = el.rawTagName?.toLowerCase() || 'element';
     const prefix = breakpointLabel ? `[${breakpointLabel}] ` : '';
+    const refs = ref(designMdPath);
 
     for (const [property, resolved] of Object.entries(styles)) {
         if (resolved.allowed) continue;
@@ -38,7 +46,7 @@ function validateElementStyles(
                 findings.push({
                     severity: 'warning',
                     message: `${prefix}Hardcoded color "${resolved.value}" for ${property} not in design system`,
-                    suggestion: result.suggestion,
+                    suggestion: result.suggestion + refs,
                     element: `<${tag}>`,
                 });
             }
@@ -50,7 +58,7 @@ function validateElementStyles(
                 findings.push({
                     severity: 'warning',
                     message: `${prefix}${property} value "${resolved.value}" not in spacing scale`,
-                    suggestion: result.suggestion,
+                    suggestion: result.suggestion + refs,
                     element: `<${tag}>`,
                 });
             }
@@ -62,7 +70,7 @@ function validateElementStyles(
                 findings.push({
                     severity: 'warning',
                     message: `${prefix}border-radius "${resolved.value}" not in rounded scale`,
-                    suggestion: result.suggestion,
+                    suggestion: result.suggestion + refs,
                     element: `<${tag}>`,
                 });
             }
@@ -74,7 +82,7 @@ function validateElementStyles(
                 findings.push({
                     severity: 'warning',
                     message: `${prefix}${property} value "${resolved.value}" not in typography tokens`,
-                    suggestion: result.suggestion,
+                    suggestion: result.suggestion + refs,
                     element: `<${tag}>`,
                 });
             }
@@ -86,7 +94,7 @@ function validateElementStyles(
                 findings.push({
                     severity: 'warning',
                     message: `${prefix}${property} "${resolved.value}" not in animation presets`,
-                    suggestion: result.suggestion,
+                    suggestion: result.suggestion + refs,
                     element: `<${tag}>`,
                 });
             }
@@ -98,7 +106,7 @@ function validateElementStyles(
                 findings.push({
                     severity: 'warning',
                     message: `${prefix}${property} "${resolved.value}" not in animation presets`,
-                    suggestion: result.suggestion,
+                    suggestion: result.suggestion + refs,
                     element: `<${tag}>`,
                 });
             }
@@ -107,9 +115,10 @@ function validateElementStyles(
 }
 
 export const validateTokens: JayHtmlValidatorFn = (ctx) => {
-    const tokens = findDesignMd(ctx.filePath, ctx.projectRoot);
-    if (!tokens) return [];
+    const found = findDesignMd(ctx.filePath, ctx.projectRoot);
+    if (!found) return [];
 
+    const { tokens, designMdPath } = found;
     const findings: JayHtmlValidationFinding[] = [];
     const cssSources = extractCssSources(ctx.body, ctx.filePath);
     if (cssSources.length === 0) return [];
@@ -119,12 +128,12 @@ export const validateTokens: JayHtmlValidatorFn = (ctx) => {
     for (const [breakpoint, cascade] of byBreakpoint) {
         const label = breakpoint || '';
         for (const [el, styles] of cascade) {
-            validateElementStyles(el, styles, tokens, label, findings);
+            validateElementStyles(el, styles, tokens, label, designMdPath, findings);
         }
     }
 
     if (Object.keys(tokens.animations).length > 0) {
-        checkReducedMotion(cssSources, findings);
+        checkReducedMotion(cssSources, designMdPath, findings);
     }
 
     return findings;
@@ -135,7 +144,7 @@ const ANIMATION_PROPERTIES = new Set([
     'animation', 'animation-duration', 'animation-name',
 ]);
 
-function checkReducedMotion(cssSources: string[], findings: JayHtmlValidationFinding[]): void {
+function checkReducedMotion(cssSources: string[], designMdPath: string, findings: JayHtmlValidationFinding[]): void {
     let hasAnimations = false;
     let hasReducedMotion = false;
 
@@ -160,7 +169,8 @@ function checkReducedMotion(cssSources: string[], findings: JayHtmlValidationFin
             severity: 'warning',
             message: 'Page uses transitions/animations but has no @media (prefers-reduced-motion) override',
             suggestion:
-                'Add @media (prefers-reduced-motion: reduce) { * { transition-duration: 0s !important; animation-duration: 0s !important; } }',
+                'Add @media (prefers-reduced-motion: reduce) { * { transition-duration: 0s !important; animation-duration: 0s !important; } }' +
+                ref(designMdPath),
         });
     }
 }
