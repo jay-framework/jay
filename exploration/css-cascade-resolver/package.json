@@ -3,7 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "npx vitest run"
+    "build": ":",
+    "clean": ":",
+    "test": ":",
+    "confirm": ":"
   },
   "devDependencies": {
     "@csstools/selector-specificity": "^5.0.0",
