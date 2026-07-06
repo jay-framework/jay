@@ -1,11 +1,14 @@
 import { parse } from 'node-html-parser';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { validate } from '../../lib/validators/seo-validator.js';
 import type {
     JayHtmlValidationContext,
     JayHtmlHeadMeta,
     TemplatePart,
 } from '@jay-framework/compiler-shared';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
 
 function s(value: string): TemplatePart[] {
     return [{ kind: 'static', value }];
@@ -419,6 +422,77 @@ describe('seo-validator', () => {
             );
             const findings = await validate(ctx);
             expect(findings).toEqual([]);
+        });
+    });
+
+    describe('CSS @import external URL', () => {
+        it('flags @import url() with https', async () => {
+            const ctx = makeContext(
+                `<style>@import url('https://fonts.googleapis.com/css2?family=Inter');</style>
+                <h1>Title</h1>`,
+            );
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                {
+                    severity: 'warning',
+                    message: 'CSS @import of external URL "https://fonts.googleapis.com/css2?family=Inter" creates a chained blocking request that delays page rendering',
+                    suggestion: 'Move this to a <link rel="stylesheet" href="..."> tag in the HTML <head> instead. This allows the browser preload scanner to discover both resources in parallel.',
+                    element: '<style>',
+                },
+            ]);
+        });
+
+        it('flags @import string with http', async () => {
+            const ctx = makeContext(
+                `<style>@import 'http://example.com/styles.css';</style>
+                <h1>Title</h1>`,
+            );
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                {
+                    severity: 'warning',
+                    message: 'CSS @import of external URL "http://example.com/styles.css" creates a chained blocking request that delays page rendering',
+                    suggestion: 'Move this to a <link rel="stylesheet" href="..."> tag in the HTML <head> instead. This allows the browser preload scanner to discover both resources in parallel.',
+                    element: '<style>',
+                },
+            ]);
+        });
+
+        it('does not flag relative @import', async () => {
+            const ctx = makeContext(
+                `<style>@import './reset.css'; @import '../tokens/colors.css';</style>
+                <h1>Title</h1>`,
+            );
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+
+        it('flags @import in linked CSS files', async () => {
+            const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'seo-test-'));
+            const cssContent = `@import url('https://fonts.googleapis.com/css2?family=Inter');\nbody { margin: 0; }`;
+            fs.writeFileSync(path.join(tmpDir, 'theme.css'), cssContent, 'utf-8');
+
+            const ctx: JayHtmlValidationContext = {
+                body: parse(
+                    `<main><link rel="stylesheet" href="./theme.css"><h1>Title</h1></main>`,
+                ),
+                filePath: 'page.jay-html',
+                projectRoot: tmpDir,
+                headlessImports: [],
+                head: completeHead,
+            };
+
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                {
+                    severity: 'warning',
+                    message: 'CSS @import of external URL "https://fonts.googleapis.com/css2?family=Inter" creates a chained blocking request that delays page rendering',
+                    suggestion: 'Move this to a <link rel="stylesheet" href="..."> tag in the HTML <head> instead. This allows the browser preload scanner to discover both resources in parallel.',
+                    element: '<link href="./theme.css">',
+                },
+            ]);
+
+            fs.rmSync(tmpDir, { recursive: true, force: true });
         });
     });
 });

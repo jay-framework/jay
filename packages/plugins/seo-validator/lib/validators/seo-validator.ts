@@ -1,5 +1,7 @@
 import type { JayHtmlValidatorFn, JayHtmlValidationFinding } from '@jay-framework/compiler-shared';
 import { walkElements } from '@jay-framework/compiler-shared';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 
 export const validate: JayHtmlValidatorFn = (ctx) => {
     const findings: JayHtmlValidationFinding[] = [];
@@ -164,6 +166,48 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
             element: '<img>',
             attribute: 'fetchpriority',
         });
+    }
+
+    // --- Rule: no @import of external URLs in CSS ---
+    const cssSources: Array<{ css: string; source: string }> = [];
+
+    const styleBlocks = ctx.body.querySelectorAll?.('style') ?? [];
+    for (const styleEl of styleBlocks) {
+        const cssText = (styleEl as any).textContent || '';
+        if (cssText) cssSources.push({ css: cssText, source: '<style>' });
+    }
+
+    const linkedFiles = ctx.body.querySelectorAll?.('link[rel="stylesheet"]') ?? [];
+    for (const link of linkedFiles) {
+        const href = (link as any).getAttribute?.('href');
+        if (href && !href.startsWith('http')) {
+            try {
+                const dir = path.dirname(path.resolve(ctx.projectRoot, ctx.filePath));
+                const cssPath = path.resolve(dir, href);
+                const cssText = fs.readFileSync(cssPath, 'utf-8');
+                cssSources.push({ css: cssText, source: href });
+            } catch {
+                // linked file not found — skip
+            }
+        }
+    }
+
+    for (const { css, source } of cssSources) {
+        const importRegex = /@import\s+(?:url\(\s*['"]?([^'")]+)['"]?\s*\)|['"]([^'"]+)['"])/g;
+        let importMatch: RegExpExecArray | null;
+        while ((importMatch = importRegex.exec(css)) !== null) {
+            const url = importMatch[1] || importMatch[2];
+            if (url.startsWith('https://') || url.startsWith('http://')) {
+                findings.push({
+                    severity: 'warning',
+                    message: `CSS @import of external URL "${url}" creates a chained blocking request that delays page rendering`,
+                    suggestion:
+                        'Move this to a <link rel="stylesheet" href="..."> tag in the HTML <head> instead. ' +
+                        'This allows the browser preload scanner to discover both resources in parallel.',
+                    element: source === '<style>' ? '<style>' : `<link href="${source}">`,
+                });
+            }
+        }
     }
 
     // --- Head metadata checks ---
