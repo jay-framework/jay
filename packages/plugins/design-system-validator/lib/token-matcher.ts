@@ -104,7 +104,13 @@ export function isAnimationEasingProperty(property: string): boolean {
 
 export function matchColor(value: string, colorTokens: Record<string, string>): MatchResult {
     if (value.startsWith('var(')) return { matches: true };
-    if (value === 'transparent' || value === 'inherit' || value === 'currentColor' || value === 'initial' || value === 'unset') {
+    if (
+        value === 'transparent' ||
+        value === 'inherit' ||
+        value === 'currentColor' ||
+        value === 'initial' ||
+        value === 'unset'
+    ) {
         return { matches: true };
     }
 
@@ -147,7 +153,14 @@ function colorDistance(a: string, b: string): number {
 }
 
 export function matchSpacing(value: string, spacingTokens: Record<string, string>): MatchResult {
-    if (value.startsWith('var(') || value === 'auto' || value === '0' || value === 'inherit' || value === 'initial' || value === 'unset') {
+    if (
+        value.startsWith('var(') ||
+        value === 'auto' ||
+        value === '0' ||
+        value === 'inherit' ||
+        value === 'initial' ||
+        value === 'unset'
+    ) {
         return { matches: true };
     }
 
@@ -172,7 +185,13 @@ export function matchSpacing(value: string, spacingTokens: Record<string, string
 }
 
 export function matchRounded(value: string, roundedTokens: Record<string, string>): MatchResult {
-    if (value.startsWith('var(') || value === '0' || value === 'inherit' || value === 'initial' || value === 'unset') {
+    if (
+        value.startsWith('var(') ||
+        value === '0' ||
+        value === 'inherit' ||
+        value === 'initial' ||
+        value === 'unset'
+    ) {
         return { matches: true };
     }
 
@@ -197,16 +216,24 @@ export function matchTypographyProperty(
     value: string,
     typographyTokens: Record<string, TypographyToken>,
 ): MatchResult {
-    if (value.startsWith('var(') || value === 'inherit' || value === 'initial' || value === 'unset') {
+    if (
+        value.startsWith('var(') ||
+        value === 'inherit' ||
+        value === 'initial' ||
+        value === 'unset'
+    ) {
         return { matches: true };
     }
 
     const tokenValues = new Set<string>();
     for (const token of Object.values(typographyTokens)) {
         if (property === 'font-size' && token.fontSize) tokenValues.add(token.fontSize);
-        if (property === 'font-weight' && token.fontWeight != null) tokenValues.add(String(token.fontWeight));
-        if (property === 'line-height' && token.lineHeight != null) tokenValues.add(String(token.lineHeight));
-        if (property === 'letter-spacing' && token.letterSpacing) tokenValues.add(token.letterSpacing);
+        if (property === 'font-weight' && token.fontWeight != null)
+            tokenValues.add(String(token.fontWeight));
+        if (property === 'line-height' && token.lineHeight != null)
+            tokenValues.add(String(token.lineHeight));
+        if (property === 'letter-spacing' && token.letterSpacing)
+            tokenValues.add(token.letterSpacing);
         if (property === 'font-family' && token.fontFamily) tokenValues.add(token.fontFamily);
     }
 
@@ -231,7 +258,14 @@ export function matchAnimationDuration(
     value: string,
     animationTokens: Record<string, AnimationPreset>,
 ): MatchResult {
-    if (value.startsWith('var(') || value === '0s' || value === '0ms' || value === 'inherit' || value === 'initial' || value === 'unset') {
+    if (
+        value.startsWith('var(') ||
+        value === '0s' ||
+        value === '0ms' ||
+        value === 'inherit' ||
+        value === 'initial' ||
+        value === 'unset'
+    ) {
         return { matches: true };
     }
 
@@ -258,7 +292,12 @@ export function matchAnimationEasing(
     value: string,
     animationTokens: Record<string, AnimationPreset>,
 ): MatchResult {
-    if (value.startsWith('var(') || value === 'inherit' || value === 'initial' || value === 'unset') {
+    if (
+        value.startsWith('var(') ||
+        value === 'inherit' ||
+        value === 'initial' ||
+        value === 'unset'
+    ) {
         return { matches: true };
     }
 

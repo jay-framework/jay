@@ -67,16 +67,16 @@ Following the [DESIGN.md spec](https://github.com/google-labs-code/design.md/blo
 name: Onsko Clean Beauty
 
 colors:
-  primary: "#2563eb"
-  primary-hover: "#1d4ed8"
-  secondary: "#64748b"
-  text: "#0f172a"
-  text-muted: "#64748b"
-  background: "#ffffff"
-  surface: "#f8fafc"
-  border: "#e2e8f0"
-  error: "#dc2626"
-  success: "#16a34a"
+  primary: '#2563eb'
+  primary-hover: '#1d4ed8'
+  secondary: '#64748b'
+  text: '#0f172a'
+  text-muted: '#64748b'
+  background: '#ffffff'
+  surface: '#f8fafc'
+  border: '#e2e8f0'
+  error: '#dc2626'
+  success: '#16a34a'
 
 typography:
   headline-lg:
@@ -130,36 +130,35 @@ animations:
 components:
   # HTML elements — matched by CSS selector
   button-primary:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.background}"
-    typography: "{typography.label-sm}"
-    rounded: "{rounded.md}"
-    padding: "{spacing.sm} {spacing.lg}"
+    backgroundColor: '{colors.primary}'
+    textColor: '{colors.background}'
+    typography: '{typography.label-sm}'
+    rounded: '{rounded.md}'
+    padding: '{spacing.sm} {spacing.lg}'
   button-primary-hover:
-    backgroundColor: "{colors.primary-hover}"
+    backgroundColor: '{colors.primary-hover}'
   card:
-    backgroundColor: "{colors.surface}"
-    rounded: "{rounded.lg}"
-    padding: "{spacing.lg}"
+    backgroundColor: '{colors.surface}'
+    rounded: '{rounded.lg}'
+    padding: '{spacing.lg}'
 
   # Jay headless components — matched by <jay:component-name>
   jay:login-indicator:
-    textColor: "{colors.text}"
-    typography: "{typography.label-sm}"
+    textColor: '{colors.text}'
+    typography: '{typography.label-sm}'
   jay:cart-indicator:
-    textColor: "{colors.text}"
-    typography: "{typography.label-sm}"
+    textColor: '{colors.text}'
+    typography: '{typography.label-sm}'
   jay:product-card:
-    backgroundColor: "{colors.surface}"
-    rounded: "{rounded.lg}"
-    padding: "{spacing.md}"
+    backgroundColor: '{colors.surface}'
+    rounded: '{rounded.lg}'
+    padding: '{spacing.md}'
 
 rules:
   max-font-weights: 3
   max-primary-buttons: 1
   require-contrast-aa: true
 ---
-
 # Onsko Design System
 
 Brand guidelines and usage instructions...
@@ -198,7 +197,7 @@ Sometimes a value intentionally breaks the design system. Similar to `jay-script
 And for inline styles on elements:
 
 ```html
-<div style="margin-top: 7.5rem" jay-design="allow">
+<div style="margin-top: 7.5rem" jay-design="allow"></div>
 ```
 
 The validator skips any declaration or element marked with these directives. This is the same pattern used by ESLint (`eslint-disable`), Stylelint (`stylelint-disable`), and Prettier (`prettier-ignore`).
@@ -223,6 +222,7 @@ packages/plugins/design-system-validator/
 ```
 
 `plugin.yaml`:
+
 ```yaml
 name: design-system
 validators:
@@ -245,6 +245,7 @@ validators:
 Instead of a browser engine, build a lightweight cascade resolver using existing libraries:
 
 **Libraries:**
+
 - [`postcss`](https://github.com/postcss/postcss) — Parse CSS into AST with rules, selectors, and declarations
 - [`postcss-selector-parser`](https://github.com/postcss/postcss-selector-parser) — Parse selectors into AST nodes
 - [`@csstools/selector-specificity`](https://github.com/csstools/postcss-plugins/tree/main/packages/selector-specificity) — Compute specificity from `postcss-selector-parser` AST nodes
@@ -273,6 +274,7 @@ Instead of a browser engine, build a lightweight cascade resolver using existing
 ```
 
 **What this handles:**
+
 - Multiple selectors targeting the same element (cascade)
 - Class, ID, attribute, and pseudo-class specificity
 - Source order tiebreaking
@@ -281,6 +283,7 @@ Instead of a browser engine, build a lightweight cascade resolver using existing
 - Media query blocks (each breakpoint validated independently)
 
 **What this does NOT handle (acceptable limitations):**
+
 - Inherited values from parent elements (e.g., `color` inheriting through the tree) — would require walking up the DOM for each inheritable property; possible as a future enhancement
 - `calc()`, `min()`, `max()` expressions — flag as "cannot validate statically"
 - Values set by JavaScript at runtime — out of scope
@@ -291,6 +294,7 @@ Instead of a browser engine, build a lightweight cascade resolver using existing
 #### 1. Token conformance (design-tokens validator)
 
 For each element's resolved CSS values:
+
 - **Colors** (`color`, `background-color`, `border-color`, `outline-color`, etc.) — flag hardcoded values not in the token map; suggest the closest token
 - **Spacing** (`padding`, `margin`, `gap`, `top`, `right`, `bottom`, `left`) — check values against spacing scale
 - **Rounded** (`border-radius`) — check against rounded tokens
@@ -314,6 +318,7 @@ The `jay:` prefix in the components section maps directly to jay-html headless c
 #### 3. Structural rules (design-structure validator)
 
 Uses the parsed DOM tree:
+
 - **Max font weights**: Collect unique `font-weight` values across the page, warn if exceeding `rules.max-font-weights`
 - **Max primary buttons**: Count distinct primary action buttons by (ref, text content) pairs — the same button appearing multiple times (same ref, same text) counts as one
 - **Custom structural rules**: Extensible for project-specific checks
@@ -321,6 +326,7 @@ Uses the parsed DOM tree:
 #### 4. Contrast checking (design-contrast validator)
 
 For elements where both foreground color and background color are statically determinable:
+
 - Compute WCAG 2.1 relative luminance for each color
 - Calculate contrast ratio
 - Flag pairs below 4.5:1 (AA normal text) or 3:1 (AA large text)
@@ -329,6 +335,7 @@ For elements where both foreground color and background color are statically det
 #### 5. Responsive breakpoint validation
 
 Parse media query blocks in the CSS. For each breakpoint:
+
 - Run the same token/component/structural validation on the rules within that media query
 - Report findings grouped by breakpoint
 - No visual/layout checking — purely token conformance per breakpoint
@@ -340,6 +347,7 @@ Jay-html supports `<link rel="stylesheet" href="...">`. The validator resolves t
 ### Integration with Existing Validators
 
 The design-system validator complements existing validators:
+
 - **a11y-validator** → structural accessibility (alt text, ARIA, form labels)
 - **seo-validator** → SEO metadata and semantics
 - **design-system-validator** → visual conformity to design tokens and component specs
@@ -414,12 +422,12 @@ The guide should be concise — the validation errors themselves are the primary
 
 ## Trade-offs
 
-| Approach | Pros | Cons |
-|----------|------|------|
-| **Static CSS + cascade resolver (this design)** | Fast, deterministic, works in CI, handles cascade | No inheritance; complex expressions skipped |
-| **Happy DOM computed styles** | Theoretically checks cascade | Doesn't work — Happy DOM doesn't compute CSS |
-| **Playwright/browser rendering** | Real computed styles, real media queries | Slow, requires running server, flaky in CI |
-| **Stylelint custom rules** | Mature CSS linting ecosystem | No jay-html structure awareness, no contracts |
+| Approach                                        | Pros                                              | Cons                                          |
+| ----------------------------------------------- | ------------------------------------------------- | --------------------------------------------- |
+| **Static CSS + cascade resolver (this design)** | Fast, deterministic, works in CI, handles cascade | No inheritance; complex expressions skipped   |
+| **Happy DOM computed styles**                   | Theoretically checks cascade                      | Doesn't work — Happy DOM doesn't compute CSS  |
+| **Playwright/browser rendering**                | Real computed styles, real media queries          | Slow, requires running server, flaky in CI    |
+| **Stylelint custom rules**                      | Mature CSS linting ecosystem                      | No jay-html structure awareness, no contracts |
 
 ## Verification Criteria
 

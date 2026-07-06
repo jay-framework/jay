@@ -11,7 +11,7 @@ validators:
 
   - name: design-components
     handler: validateComponents
-    description: "Validates component styles against DESIGN.md component specs (HTML and jay: components)"
+    description: 'Validates component styles against DESIGN.md component specs (HTML and jay: components)'
 
   - name: design-structure
     handler: validateStructure

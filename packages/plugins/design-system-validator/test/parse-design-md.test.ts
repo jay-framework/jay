@@ -3,10 +3,7 @@ import { parseDesignMd } from '../lib/parse-design-md.js';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const basicDesign = fs.readFileSync(
-    path.join(__dirname, 'fixtures/basic/DESIGN.md'),
-    'utf-8',
-);
+const basicDesign = fs.readFileSync(path.join(__dirname, 'fixtures/basic/DESIGN.md'), 'utf-8');
 
 const componentDesign = fs.readFileSync(
     path.join(__dirname, 'fixtures/components/DESIGN.md'),

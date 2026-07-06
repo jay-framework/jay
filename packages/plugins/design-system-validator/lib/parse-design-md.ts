@@ -78,7 +78,9 @@ function resolveReferences(tokens: RawDesignMd): void {
     }
 }
 
-function normalizeStringValues(map: Record<string, string | number> | undefined): Record<string, string> {
+function normalizeStringValues(
+    map: Record<string, string | number> | undefined,
+): Record<string, string> {
     if (!map) return {};
     const result: Record<string, string> = {};
     for (const [key, value] of Object.entries(map)) {

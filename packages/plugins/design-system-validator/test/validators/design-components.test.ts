@@ -30,7 +30,8 @@ describe('design-components validator', () => {
         expect(findings).toEqual([
             {
                 severity: 'warning',
-                message: '<jay:product-card> inline template: background-color should be "#f8fafc" per jay:product-card component spec, found "#ffffff"',
+                message:
+                    '<jay:product-card> inline template: background-color should be "#f8fafc" per jay:product-card component spec, found "#ffffff"',
                 suggestion: REFS,
                 element: '<div>',
             },
@@ -57,7 +58,8 @@ describe('design-components validator', () => {
         expect(findings).toEqual([
             {
                 severity: 'warning',
-                message: 'Component "button-primary": background-color should be "#2563eb" per button-primary component spec, found "#ff0000"',
+                message:
+                    'Component "button-primary": background-color should be "#2563eb" per button-primary component spec, found "#ff0000"',
                 suggestion: REFS,
                 element: '<button>',
             },
@@ -66,7 +68,9 @@ describe('design-components validator', () => {
 
     it('returns no findings when no components defined', async () => {
         const ctx = {
-            body: parse('<html><body><style>.x{color:red}</style><div class="x">X</div></body></html>'),
+            body: parse(
+                '<html><body><style>.x{color:red}</style><div class="x">X</div></body></html>',
+            ),
             filePath: path.join(fixturesDir, 'page.jay-html'),
             projectRoot: path.join(__dirname, '..', 'fixtures', 'basic'),
             headlessImports: [],

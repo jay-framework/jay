@@ -51,12 +51,12 @@ function hasAllowComment(decl: Declaration): boolean {
 }
 
 function getMediaQuery(rule: Rule): string | undefined {
-    let parent = rule.parent;
-    while (parent) {
-        if (parent.type === 'atrule' && (parent as AtRule).name === 'media') {
-            return (parent as AtRule).params;
+    let node: postcss.Container | postcss.Document | undefined = rule.parent;
+    while (node && 'type' in node) {
+        if (node.type === 'atrule' && (node as AtRule).name === 'media') {
+            return (node as AtRule).params;
         }
-        parent = parent.parent;
+        node = (node as any).parent;
     }
     return undefined;
 }

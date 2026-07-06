@@ -2,13 +2,13 @@
 name: Test Design System
 
 colors:
-  primary: "#2563eb"
-  secondary: "#64748b"
-  text: "#0f172a"
-  text-muted: "#94a3b8"
-  background: "#ffffff"
-  surface: "#f8fafc"
-  error: "#dc2626"
+  primary: '#2563eb'
+  secondary: '#64748b'
+  text: '#0f172a'
+  text-muted: '#94a3b8'
+  background: '#ffffff'
+  surface: '#f8fafc'
+  error: '#dc2626'
 
 typography:
   headline-lg:

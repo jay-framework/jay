@@ -28,7 +28,9 @@ describe('design-contrast validator', () => {
         expect(findings).toEqual([
             {
                 severity: 'warning',
-                message: expect.stringMatching(/^Contrast ratio \d+\.\d+:1 below WCAG AA \(4\.5:1\) for color "#94a3b8" on background "#f8fafc"$/),
+                message: expect.stringMatching(
+                    /^Contrast ratio \d+\.\d+:1 below WCAG AA \(4\.5:1\) for color "#94a3b8" on background "#f8fafc"$/,
+                ),
                 suggestion: `Darken text color or lighten background to meet minimum contrast.${REFS}`,
                 element: '<p>',
             },

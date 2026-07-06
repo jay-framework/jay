@@ -435,8 +435,10 @@ describe('seo-validator', () => {
             expect(findings).toEqual([
                 {
                     severity: 'warning',
-                    message: 'CSS @import of external URL "https://fonts.googleapis.com/css2?family=Inter" creates a chained blocking request that delays page rendering',
-                    suggestion: 'Move this to a <link rel="stylesheet" href="..."> tag in the HTML <head> instead. This allows the browser preload scanner to discover both resources in parallel.',
+                    message:
+                        'CSS @import of external URL "https://fonts.googleapis.com/css2?family=Inter" creates a chained blocking request that delays page rendering',
+                    suggestion:
+                        'Move this to a <link rel="stylesheet" href="..."> tag in the HTML <head> instead. This allows the browser preload scanner to discover both resources in parallel.',
                     element: '<style>',
                 },
             ]);
@@ -451,8 +453,10 @@ describe('seo-validator', () => {
             expect(findings).toEqual([
                 {
                     severity: 'warning',
-                    message: 'CSS @import of external URL "http://example.com/styles.css" creates a chained blocking request that delays page rendering',
-                    suggestion: 'Move this to a <link rel="stylesheet" href="..."> tag in the HTML <head> instead. This allows the browser preload scanner to discover both resources in parallel.',
+                    message:
+                        'CSS @import of external URL "http://example.com/styles.css" creates a chained blocking request that delays page rendering',
+                    suggestion:
+                        'Move this to a <link rel="stylesheet" href="..."> tag in the HTML <head> instead. This allows the browser preload scanner to discover both resources in parallel.',
                     element: '<style>',
                 },
             ]);
@@ -486,8 +490,10 @@ describe('seo-validator', () => {
             expect(findings).toEqual([
                 {
                     severity: 'warning',
-                    message: 'CSS @import of external URL "https://fonts.googleapis.com/css2?family=Inter" creates a chained blocking request that delays page rendering',
-                    suggestion: 'Move this to a <link rel="stylesheet" href="..."> tag in the HTML <head> instead. This allows the browser preload scanner to discover both resources in parallel.',
+                    message:
+                        'CSS @import of external URL "https://fonts.googleapis.com/css2?family=Inter" creates a chained blocking request that delays page rendering',
+                    suggestion:
+                        'Move this to a <link rel="stylesheet" href="..."> tag in the HTML <head> instead. This allows the browser preload scanner to discover both resources in parallel.',
                     element: '<link href="./theme.css">',
                 },
             ]);

@@ -1,7 +1,11 @@
 import type { JayHtmlValidatorFn, JayHtmlValidationFinding } from '@jay-framework/compiler-shared';
 import postcss from 'postcss';
 import { findDesignMd } from '../parse-design-md.js';
-import { resolveCascadeByBreakpoint, extractCssSources, type ResolvedStyle } from '../css-cascade.js';
+import {
+    resolveCascadeByBreakpoint,
+    extractCssSources,
+    type ResolvedStyle,
+} from '../css-cascade.js';
 import {
     isColorProperty,
     isSpacingProperty,
@@ -140,11 +144,19 @@ export const validateTokens: JayHtmlValidatorFn = (ctx) => {
 };
 
 const ANIMATION_PROPERTIES = new Set([
-    'transition', 'transition-duration', 'transition-property',
-    'animation', 'animation-duration', 'animation-name',
+    'transition',
+    'transition-duration',
+    'transition-property',
+    'animation',
+    'animation-duration',
+    'animation-name',
 ]);
 
-function checkReducedMotion(cssSources: string[], designMdPath: string, findings: JayHtmlValidationFinding[]): void {
+function checkReducedMotion(
+    cssSources: string[],
+    designMdPath: string,
+    findings: JayHtmlValidationFinding[],
+): void {
     let hasAnimations = false;
     let hasReducedMotion = false;
 
@@ -167,7 +179,8 @@ function checkReducedMotion(cssSources: string[], designMdPath: string, findings
     if (hasAnimations && !hasReducedMotion) {
         findings.push({
             severity: 'warning',
-            message: 'Page uses transitions/animations but has no @media (prefers-reduced-motion) override',
+            message:
+                'Page uses transitions/animations but has no @media (prefers-reduced-motion) override',
             suggestion:
                 'Add @media (prefers-reduced-motion: reduce) { * { transition-duration: 0s !important; animation-duration: 0s !important; } }' +
                 ref(designMdPath),

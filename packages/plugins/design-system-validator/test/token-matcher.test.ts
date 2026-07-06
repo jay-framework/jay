@@ -130,7 +130,9 @@ describe('matchTypographyProperty', () => {
     });
 
     it('matches font-family ignoring quotes', () => {
-        expect(matchTypographyProperty('font-family', '"Inter", sans-serif', typography).matches).toEqual(true);
+        expect(
+            matchTypographyProperty('font-family', '"Inter", sans-serif', typography).matches,
+        ).toEqual(true);
     });
 });
 

@@ -94,10 +94,14 @@ describe('generateDesignSystemReferences', () => {
         const outputPath = path.join(tempDir, 'agent-kit/aiditor/add-menu/design-system.yaml');
         const content = yaml.load(fs.readFileSync(outputPath, 'utf-8')) as any;
 
-        const btnItem = content.items.find((i: any) => i.id === 'design-system:component-button-primary');
+        const btnItem = content.items.find(
+            (i: any) => i.id === 'design-system:component-button-primary',
+        );
         expect(btnItem).toBeDefined();
 
-        const jayItem = content.items.find((i: any) => i.id === 'design-system:component-jay:product-card');
+        const jayItem = content.items.find(
+            (i: any) => i.id === 'design-system:component-jay:product-card',
+        );
         expect(jayItem).toBeDefined();
         expect(jayItem.title).toEqual('jay:product-card');
     });

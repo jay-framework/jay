@@ -195,7 +195,8 @@ describe('design-tokens validator', () => {
             },
             {
                 severity: 'warning',
-                message: '[(prefers-reduced-motion: reduce)] transition-timing-function "ease" not in animation presets',
+                message:
+                    '[(prefers-reduced-motion: reduce)] transition-timing-function "ease" not in animation presets',
                 suggestion: `Use an animation preset easing: fade-in (cubic-bezier(0, 0, 0.2, 1)), micro (ease-in-out)${REFS}`,
                 element: '<div>',
             },
@@ -223,7 +224,8 @@ describe('design-tokens validator', () => {
         expect(findings).toEqual([
             {
                 severity: 'warning',
-                message: 'Page uses transitions/animations but has no @media (prefers-reduced-motion) override',
+                message:
+                    'Page uses transitions/animations but has no @media (prefers-reduced-motion) override',
                 suggestion: `Add @media (prefers-reduced-motion: reduce) { * { transition-duration: 0s !important; animation-duration: 0s !important; } }${REFS}`,
             },
         ]);
@@ -245,7 +247,9 @@ describe('design-tokens validator', () => {
 
     it('returns no findings when no DESIGN.md', async () => {
         const ctx = {
-            body: parse('<html><body><style>.x{color:red}</style><div class="x">X</div></body></html>'),
+            body: parse(
+                '<html><body><style>.x{color:red}</style><div class="x">X</div></body></html>',
+            ),
             filePath: '/nonexistent/page.jay-html',
             projectRoot: '/nonexistent',
             headlessImports: [],
