@@ -3424,6 +3424,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@csstools/selector-specificity@npm:^5.0.0":
+  version: 5.0.0
+  resolution: "@csstools/selector-specificity@npm:5.0.0"
+  peerDependencies:
+    postcss-selector-parser: ^7.0.0
+  checksum: 10/8df1a01a1fa52b66c7ba0286e1c77d1faff45009876f09ddcac542a1c4bca9f34ee92a10acf056b8e7b7ac93679c1635496c6cdfd7d88dbaff2b6afd1eb823ec
+  languageName: node
+  linkType: hard
+
 "@esbuild/aix-ppc64@npm:0.20.2":
   version: 0.20.2
   resolution: "@esbuild/aix-ppc64@npm:0.20.2"
@@ -4430,6 +4439,29 @@ __metadata:
     "@jay-framework/runtime": "workspace:^"
     "@testing-library/jest-dom": "npm:^6.2.0"
     "@types/node": "npm:^20.11.5"
+    rimraf: "npm:^5.0.5"
+    tsup: "npm:^8.0.1"
+    typescript: "npm:^5.3.3"
+    vite: "npm:^5.0.11"
+    vitest: "npm:^1.2.1"
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/design-system-validator@workspace:packages/plugins/design-system-validator":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/design-system-validator@workspace:packages/plugins/design-system-validator"
+  dependencies:
+    "@csstools/selector-specificity": "npm:^5.0.0"
+    "@jay-framework/compiler-shared": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-stack-cli": "workspace:^"
+    "@jay-framework/stack-server-runtime": "workspace:^"
+    "@types/js-yaml": "npm:^4.0.9"
+    "@types/node": "npm:^22.15.21"
+    js-yaml: "npm:^4.1.0"
+    node-html-parser: "npm:^6.1.0"
+    postcss: "npm:^8.5.6"
+    postcss-selector-parser: "npm:^7.1.0"
     rimraf: "npm:^5.0.5"
     tsup: "npm:^8.0.1"
     typescript: "npm:^5.3.3"
@@ -9572,6 +9604,18 @@ __metadata:
   checksum: 10/3c4a258c27e719cd8f841b4c652247f2a25c0a04edff6a5a70bf91ad9fe539665013e0a2d357abd6f04f04cceaef99f4cbe29a2fc9bb8d7a5f1935d9b610209a
   languageName: node
   linkType: hard
+
+"css-cascade-resolver-spike@workspace:exploration/css-cascade-resolver":
+  version: 0.0.0-use.local
+  resolution: "css-cascade-resolver-spike@workspace:exploration/css-cascade-resolver"
+  dependencies:
+    "@csstools/selector-specificity": "npm:^5.0.0"
+    node-html-parser: "npm:^7.0.1"
+    postcss: "npm:^8.5.6"
+    postcss-selector-parser: "npm:^7.1.0"
+    vitest: "npm:^3.2.1"
+  languageName: unknown
+  linkType: soft
 
 "css-declaration-sorter@npm:^6.3.1":
   version: 6.4.1
@@ -16527,6 +16571,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"node-html-parser@npm:^7.0.1":
+  version: 7.1.0
+  resolution: "node-html-parser@npm:7.1.0"
+  dependencies:
+    css-select: "npm:^5.1.0"
+    he: "npm:1.2.0"
+  checksum: 10/370569dd329e56bc46883aa6f7123dd67c2f428325ec71788c167c1d216e1d45832fd75e068ce9f08be2750f692178e74391ea0921ad11fea6b990d58006bf6c
+  languageName: node
+  linkType: hard
+
 "node-int64@npm:^0.4.0":
   version: 0.4.0
   resolution: "node-int64@npm:0.4.0"
@@ -18175,6 +18229,16 @@ __metadata:
     cssesc: "npm:^3.0.0"
     util-deprecate: "npm:^1.0.2"
   checksum: 10/190034c94d809c115cd2f32ee6aade84e933450a43ec3899c3e78e7d7b33efd3a2a975bb45d7700b6c5b196c06a7d9acf3f1ba6f1d87032d9675a29d8bca1dd3
+  languageName: node
+  linkType: hard
+
+"postcss-selector-parser@npm:^7.1.0":
+  version: 7.1.4
+  resolution: "postcss-selector-parser@npm:7.1.4"
+  dependencies:
+    cssesc: "npm:^3.0.0"
+    util-deprecate: "npm:^1.0.2"
+  checksum: 10/c6d36b37defd387d65b5e0b778cd441303d147eb4a4b7135c6a0452fa777310027218db3ff71a19fb831d067bcdf45a776c6ed71d83bd2ced8afc2e3d5b03385
   languageName: node
   linkType: hard
 

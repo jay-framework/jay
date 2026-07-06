@@ -1,0 +1,22 @@
+name: design-system-validator
+
+setup:
+  references: generateDesignSystemReferences
+  description: Generate AIditor add-menu entries from DESIGN.md tokens
+
+validators:
+  - name: design-tokens
+    handler: validateTokens
+    description: Validates CSS values against DESIGN.md tokens (colors, spacing, rounded, typography)
+
+  - name: design-components
+    handler: validateComponents
+    description: "Validates component styles against DESIGN.md component specs (HTML and jay: components)"
+
+  - name: design-structure
+    handler: validateStructure
+    description: Enforces structural design rules (max font weights, primary button count)
+
+  - name: design-contrast
+    handler: validateContrast
+    description: Checks WCAG AA color contrast compliance on statically determinable color pairs

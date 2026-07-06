@@ -116,6 +116,17 @@ rounded:
   lg: 0.75rem
   full: 9999px
 
+animations:
+  fade-in:
+    duration: 300ms
+    easing: cubic-bezier(0, 0, 0.2, 1)
+  slide-up:
+    duration: 500ms
+    easing: cubic-bezier(0.4, 0, 0.2, 1)
+  micro:
+    duration: 150ms
+    easing: ease-in-out
+
 components:
   # HTML elements — matched by CSS selector
   button-primary:
@@ -284,6 +295,8 @@ For each element's resolved CSS values:
 - **Spacing** (`padding`, `margin`, `gap`, `top`, `right`, `bottom`, `left`) — check values against spacing scale
 - **Rounded** (`border-radius`) — check against rounded tokens
 - **Typography** (`font-size`, `font-weight`, `line-height`, `letter-spacing`, `font-family`) — check combinations against typography tokens
+- **Animations** (`transition-duration`, `animation-duration`, `transition-timing-function`, `animation-timing-function`) — check duration and easing values against animation presets. Named presets define composites of duration + easing; individual properties are validated against the union of all preset values for that property
+- **Reduced motion** — if any `transition` or `animation` declaration exists, warn if no `@media (prefers-reduced-motion)` block is present in the same CSS source. This is a page-level check, not per-element
 
 CSS custom property references (`var(--name)`) are checked for existence in the token map but not resolved further.
 
@@ -394,9 +407,10 @@ The guide should be concise — the validation errors themselves are the primary
 11. `design-contrast` validator — WCAG AA contrast ratio on static color pairs
 12. Responsive breakpoint validation — per-media-query token conformance
 
-### Phase 5: Designer guide
+### Phase 5: Designer guide + AIditor add-menu
 
 13. `agent-kit/designer/design-system.md` — tokens, usage, validation errors, exceptions
+14. AIditor add-menu integration — surface DESIGN.md tokens as add-menu items so the AI Designer can browse and apply tokens directly from the visual editor. Parse the project's DESIGN.md at agent-kit generation time and emit add-menu entries for color palettes, typography presets, spacing scale, and component specs. This makes the design system discoverable inside the AIditor without the designer needing to read the raw DESIGN.md file.
 
 ## Trade-offs
 
