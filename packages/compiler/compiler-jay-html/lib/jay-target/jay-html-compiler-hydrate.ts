@@ -1295,15 +1295,29 @@ export function renderHydrate(
         return new RenderFragment('', Imports.none(), rootElement.validations);
     }
 
-    // Always adopt the root element — it provides the single-expression
-    // return value for the constructor, composing all children.
-    let renderedHydrate = renderHydrateElementContent(
-        rootElement.val,
-        context,
-        buildRenderContext(context),
-        null,
-        true, // forceAdopt — root element always needs adoption
+    // Check if the root element is a headless instance (<jay:xxx>).
+    // renderHydrateElementContent doesn't detect headless instances — that's done by
+    // renderHydrateElement. When the root IS a headless instance, we must route through
+    // renderHydrateElement so the component's Variables and interactivePaths are used.
+    const rootComponentMatch = getComponentName(
+        rootElement.val.rawTagName,
+        context.importedSymbols,
+        context.headlessContractNames,
     );
+    let renderedHydrate: RenderFragment;
+    if (rootComponentMatch !== null && rootComponentMatch.kind === 'headless-instance') {
+        renderedHydrate = renderHydrateElement(rootElement.val, context);
+    } else {
+        // Always adopt the root element — it provides the single-expression
+        // return value for the constructor, composing all children.
+        renderedHydrate = renderHydrateElementContent(
+            rootElement.val,
+            context,
+            buildRenderContext(context),
+            null,
+            true, // forceAdopt — root element always needs adoption
+        );
+    }
     renderedHydrate = optimizeRefs(renderedHydrate, headlessImports);
 
     const { renderedRefsManager, refsManagerImport } = renderReferenceManager(

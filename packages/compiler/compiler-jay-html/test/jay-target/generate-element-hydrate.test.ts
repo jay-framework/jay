@@ -226,5 +226,11 @@ describe('generate jay-html element hydrate', () => {
                 await readFixtureElementHydrateFile(folder),
             );
         });
+
+        it('for headless instance as root element', async () => {
+            const folder = 'contracts/page-with-headless-root-instance';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+        });
     });
 });
