@@ -410,13 +410,7 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
 
     // Validate init handler
     if (manifest.init) {
-        validateHandlerRef(
-            manifest.init,
-            'Init handler',
-            'plugin.yaml init',
-            context,
-            result,
-        );
+        validateHandlerRef(manifest.init, 'Init handler', 'plugin.yaml init', context, result);
     }
 
     // Validate routes (DL#130)
@@ -541,10 +535,7 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
  * Check if a named export exists in the plugin's main entry file.
  * Reads the built .js or .d.ts and searches for the export name.
  */
-function checkExportExists(
-    exportName: string,
-    context: PluginContext,
-): boolean {
+function checkExportExists(exportName: string, context: PluginContext): boolean {
     const packageJsonPath = path.join(context.pluginPath, 'package.json');
     if (!fs.existsSync(packageJsonPath)) return true;
 

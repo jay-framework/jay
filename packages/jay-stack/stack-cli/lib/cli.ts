@@ -3,7 +3,13 @@ import chalk from 'chalk';
 import { getLogger } from '@jay-framework/logger';
 import { initializeServicesForCli } from './cli-services';
 import { runDev } from './run-dev';
-import { runBuild, runServe, runRebuild, initLogger, resolveProductionContext } from './run-production';
+import {
+    runBuild,
+    runServe,
+    runRebuild,
+    initLogger,
+    resolveProductionContext,
+} from './run-production';
 import { runValidate, runValidatePlugin } from './run-validate';
 import { runAgentKit } from './run-agent-kit';
 import { runAction } from './run-action';
