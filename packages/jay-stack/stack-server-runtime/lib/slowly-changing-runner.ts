@@ -9,6 +9,7 @@ import { DevServerPagePart, HeadlessInstanceComponent } from './load-page-parts'
 import { resolveServices } from './services';
 import type { DiscoveredHeadlessInstance } from '@jay-framework/compiler-jay-html';
 import type { InstancePhaseData, InstanceSlowRenderResult } from './instance-slow-render';
+import { normalizeAndResolveInstanceProps } from './resolve-instance-props';
 
 export interface SlowlyChangingPhase {
     runSlowlyForPage(
@@ -91,15 +92,11 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
 
                 const coordKey = instance.coordinate.join('/');
 
-                // Normalize props
-                const contractProps = comp.contract?.props ?? [];
-                const normalizedProps: Record<string, string> = {};
-                for (const [key, value] of Object.entries(instance.props)) {
-                    const match = contractProps.find(
-                        (p) => p.name.toLowerCase() === key.toLowerCase(),
-                    );
-                    normalizedProps[match ? match.name : key] = value;
-                }
+                const normalizedProps = normalizeAndResolveInstanceProps(
+                    instance.props,
+                    comp.contract?.props,
+                    { pageViewState: slowlyViewState, pageParams, pageProps },
+                );
 
                 // Always add to discovered (enables fast phase for all instances)
                 instancePhaseData.discovered.push({

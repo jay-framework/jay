@@ -15,6 +15,11 @@ import type { HeadlessInstanceComponent } from './load-page-parts';
 import type { Coordinate } from '@jay-framework/runtime';
 import type { Contract } from '@jay-framework/compiler-jay-html';
 import { resolveServices } from './services';
+import {
+    type InstanceBindingContext,
+    normalizeAndResolveInstanceProps,
+} from './resolve-instance-props';
+export type { InstanceBindingContext } from './resolve-instance-props';
 
 /**
  * Data needed by the fast phase to render headless instances.
@@ -60,6 +65,7 @@ export interface InstanceSlowRenderResult {
 export async function slowRenderInstances(
     discovered: DiscoveredHeadlessInstance[],
     headlessInstanceComponents: HeadlessInstanceComponent[],
+    bindingContext?: InstanceBindingContext,
 ): Promise<InstanceSlowRenderResult | undefined> {
     // Build a lookup from contract name to component info
     const componentByContractName = new Map<string, HeadlessInstanceComponent>();
@@ -76,15 +82,12 @@ export async function slowRenderInstances(
         const comp = componentByContractName.get(instance.contractName);
         if (!comp) continue;
 
-        // Normalize props to match contract prop names (case-insensitive).
-        // HTML parsers may lowercase attributes (e.g. productId -> productid);
-        // components expect the contract's prop names (e.g. productId).
-        const contractProps = comp.contract?.props ?? [];
-        const normalizedProps: Record<string, string> = {};
-        for (const [key, value] of Object.entries(instance.props)) {
-            const match = contractProps.find((p) => p.name.toLowerCase() === key.toLowerCase());
-            normalizedProps[match ? match.name : key] = value;
-        }
+        // Normalize prop names and resolve `{key.field}` bindings from page ViewState.
+        const normalizedProps = normalizeAndResolveInstanceProps(
+            instance.props,
+            comp.contract?.props,
+            bindingContext,
+        );
 
         // Always add to discovered so the fast phase sees all instances —
         // even those without slowlyRender (e.g., fast-only components).

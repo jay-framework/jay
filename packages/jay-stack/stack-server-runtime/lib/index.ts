@@ -10,6 +10,7 @@ export {
 } from './load-page-parts';
 export * from './services';
 export * from './instance-slow-render';
+export * from './resolve-instance-props';
 export * from './action-registry';
 export * from './action-discovery';
 export * from './action-metadata';

@@ -63,6 +63,7 @@ import {
     getServiceRegistry,
     materializeContracts,
     slowRenderInstances,
+    normalizeAndResolveInstanceProps,
     type HeadlessInstanceComponent,
     type InstancePhaseData,
     type ForEachHeadlessInstance,
@@ -665,6 +666,8 @@ async function handlePreRenderRequest(
         initialPartsResult.val.headlessContracts,
         initialPartsResult.val.headlessInstanceComponents,
         partKeys,
+        pageParams,
+        pageProps,
     );
     timing?.recordSlowRender(Date.now() - slowStart);
 
@@ -1081,6 +1084,8 @@ interface PreRenderResult {
  * @param headlessContracts - Key-based headless contracts (from loadPageParts)
  * @param headlessInstanceComponents - Instance-only headless components (from loadPageParts)
  * @param partKeys - Keys from keyed page parts (plugins), used to distinguish plugin data from page-level data
+ * @param pageParams - Route params for resolving instance prop bindings like `{category}`
+ * @param pageProps - Page props passed to the render pipeline
  */
 async function preRenderJayHtml(
     route: JayRoute,
@@ -1088,6 +1093,8 @@ async function preRenderJayHtml(
     headlessContracts: HeadlessContractInfo[],
     headlessInstanceComponents: HeadlessInstanceComponent[],
     partKeys: string[] = [],
+    pageParams: Record<string, string> = {},
+    pageProps: PageProps = { language: 'en', url: '' },
 ): Promise<PreRenderResult | undefined> {
     const jayHtmlContent = await fs.readFile(route.jayHtmlPath, 'utf-8');
     const sourceDir = path.dirname(route.jayHtmlPath);
@@ -1150,6 +1157,7 @@ async function preRenderJayHtml(
             const slowResult = await slowRenderInstances(
                 finalDiscovery.instances,
                 headlessInstanceComponents,
+                { pageViewState: slowViewState, pageParams, pageProps },
             );
             if (slowResult) {
                 instancePhaseData = slowResult.instancePhaseData;
@@ -1165,14 +1173,13 @@ async function preRenderJayHtml(
                         .filter((i) => componentByContractName.has(i.contractName))
                         .map((i) => {
                             const comp = componentByContractName.get(i.contractName)!;
-                            const contractProps = comp.contract?.props ?? [];
-                            const normalizedProps: Record<string, string> = {};
-                            for (const [key, value] of Object.entries(i.props)) {
-                                const match = contractProps.find(
-                                    (p) => p.name.toLowerCase() === key.toLowerCase(),
-                                );
-                                normalizedProps[match ? match.name : key] = String(value);
-                            }
+                            const normalizedProps = normalizeAndResolveInstanceProps(
+                                Object.fromEntries(
+                                    Object.entries(i.props).map(([k, v]) => [k, String(v)]),
+                                ),
+                                comp.contract?.props,
+                                { pageViewState: slowViewState, pageParams, pageProps },
+                            );
                             return {
                                 contractName: i.contractName,
                                 props: normalizedProps,

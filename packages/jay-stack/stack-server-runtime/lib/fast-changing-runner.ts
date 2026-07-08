@@ -9,25 +9,11 @@ import { resolveServices } from './services';
 import type { InstancePhaseData } from './instance-slow-render';
 import type { ForEachHeadlessInstance } from '@jay-framework/compiler-jay-html';
 import { computeForEachInstanceKey } from '@jay-framework/compiler-shared';
-
-/**
- * Resolve a dot-path value from an object (e.g., "allProducts.items" → obj.allProducts.items).
- */
-function resolvePathValue(obj: any, path: string): any {
-    return path.split('.').reduce((current, segment) => current?.[segment], obj);
-}
-
-/**
- * Resolve a binding expression against a forEach item.
- * Handles "{fieldName}" → item.fieldName, or literal strings.
- */
-function resolveBinding(binding: string, item: any): string {
-    const match = binding.match(/^\{(.+)\}$/);
-    if (match) {
-        return String(item[match[1]] ?? '');
-    }
-    return binding;
-}
+import {
+    normalizeAndResolveInstanceProps,
+    resolvePathValue,
+    resolvePropBinding,
+} from './resolve-instance-props';
 
 export async function renderFastChangingData(
     pageParams: object,
@@ -108,7 +94,15 @@ export async function renderFastChangingData(
                 const services = resolveServices(comp.compDefinition.services);
                 const cf = instancePhaseData.carryForwards[coordKey];
 
-                const instanceProps = { ...instance.props, query, cookies };
+                const instanceProps = {
+                    ...normalizeAndResolveInstanceProps(instance.props, comp.contract?.props, {
+                        pageViewState: { ...(mergedSlowViewState || {}), ...fastViewState },
+                        pageParams,
+                        pageProps,
+                    }),
+                    query,
+                    cookies,
+                };
                 const fastResult = comp.compDefinition.slowlyRender
                     ? await comp.compDefinition.fastRender(instanceProps, cf, ...services)
                     : await comp.compDefinition.fastRender(instanceProps, ...services);
@@ -156,7 +150,7 @@ export async function renderFastChangingData(
                 const trackByValue = String(item[instance.trackBy]);
                 const props: Record<string, string> = {};
                 for (const [propName, binding] of Object.entries(instance.propBindings)) {
-                    props[normalizePropName(propName)] = resolveBinding(String(binding), item);
+                    props[normalizePropName(propName)] = resolvePropBinding(String(binding), item);
                 }
 
                 if (comp.compDefinition.fastRender) {
