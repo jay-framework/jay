@@ -32,14 +32,14 @@ export async function runValidatePlugin(
         generateTypes: options.generateTypes,
     });
 
-    printValidationResult(result, options.verbose ?? false);
+    printPluginValidationResult(result, options.verbose ?? false);
 
     if (!result.valid || (options.strict && result.warnings.length > 0)) {
         process.exit(1);
     }
 }
 
-function printValidationResult(result: ValidationResult, verbose: boolean): void {
+function printPluginValidationResult(result: ValidationResult, verbose: boolean): void {
     const logger = getLogger();
     if (result.valid && result.warnings.length === 0) {
         logger.important(chalk.green('Plugin validation successful!\n'));

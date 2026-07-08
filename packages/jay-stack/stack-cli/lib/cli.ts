@@ -3,7 +3,7 @@ import chalk from 'chalk';
 import { getLogger } from '@jay-framework/logger';
 import { initializeServicesForCli } from './cli-services';
 import { runDev } from './run-dev';
-import { runBuild, runServe, runRebuild } from './run-production';
+import { runBuild, runServe, runRebuild, initLogger, resolveProductionContext } from './run-production';
 import { runValidate, runValidatePlugin } from './run-validate';
 import { runAgentKit } from './run-agent-kit';
 import { runAction } from './run-action';
@@ -100,7 +100,6 @@ program
     .option('-p, --path <path>', 'Project root (default: cwd)')
     .action(async (options) => {
         try {
-            const { initLogger, resolveProductionContext } = await import('./run-production');
             initLogger();
             const ctx = await resolveProductionContext(options.path, options.version);
             const { cleanupOrphanedFiles } = await import('@jay-framework/production-server');

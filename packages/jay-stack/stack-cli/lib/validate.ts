@@ -752,6 +752,7 @@ async function runPluginValidators(
         if (!plugin.manifest.validators) continue;
 
         for (const validatorDef of plugin.manifest.validators) {
+            const source = `${plugin.name}/${validatorDef.name}`;
             let validatorFn: JayHtmlValidatorFn;
             try {
                 let handlerModule: any;
@@ -771,7 +772,9 @@ async function runPluginValidators(
                         file: `plugin:${plugin.name}`,
                         message: `Validator "${validatorDef.name}" handler does not export a "validate" function`,
                         stage: 'plugin',
+                        source,
                     });
+                    loadedValidators.push(source);
                     continue;
                 }
             } catch (loadErr: any) {
@@ -779,12 +782,11 @@ async function runPluginValidators(
                     file: `plugin:${plugin.name}`,
                     message: `Failed to load validator "${validatorDef.name}": ${loadErr.message}`,
                     stage: 'plugin',
+                    source,
                 });
-
+                loadedValidators.push(source);
                 continue;
             }
-
-            const source = `${plugin.name}/${validatorDef.name}`;
             loadedValidators.push(source);
 
             for (const { relativePath, parsed } of parsedFiles) {

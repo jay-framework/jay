@@ -453,8 +453,132 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
                         });
                     }
                 }
+                if (validator.handler && context.isNpmPackage) {
+                    if (validator.handler.startsWith('./') || validator.handler.startsWith('../')) {
+                        result.errors.push({
+                            type: 'export-mismatch',
+                            message: `Validator "${validator.name}" handler "${validator.handler}" is a relative path, but NPM plugins must use an export name`,
+                            location: 'plugin.yaml validators',
+                            suggestion: `Export the validator function from the package entry point and use the export name (e.g., "validate${validator.name.split('-').map(s => s[0].toUpperCase() + s.slice(1)).join('')}")`,
+                        });
+                    } else if (!checkExportExists(validator.handler, context)) {
+                        result.errors.push({
+                            type: 'export-mismatch',
+                            message: `Validator "${validator.name}" handler "${validator.handler}" is not exported from the package`,
+                            location: 'plugin.yaml validators',
+                            suggestion: `Add "export { ${validator.handler} } from '...'" to the package entry point`,
+                        });
+                    }
+                }
             });
         }
+    }
+
+    // Validate setup handler exports
+    if (manifest.setup) {
+        if (manifest.setup.handler) {
+            if (context.isNpmPackage) {
+                if (manifest.setup.handler.startsWith('./') || manifest.setup.handler.startsWith('../')) {
+                    result.errors.push({
+                        type: 'export-mismatch',
+                        message: `Setup handler "${manifest.setup.handler}" is a relative path, but NPM plugins must use an export name`,
+                        location: 'plugin.yaml setup.handler',
+                        suggestion: `Export the setup function from the package entry point and use the export name`,
+                    });
+                } else if (!checkExportExists(manifest.setup.handler, context)) {
+                    result.errors.push({
+                        type: 'export-mismatch',
+                        message: `Setup handler "${manifest.setup.handler}" is not exported from the package`,
+                        location: 'plugin.yaml setup.handler',
+                        suggestion: `Add "export { ${manifest.setup.handler} } from '...'" to the package entry point`,
+                    });
+                }
+            } else {
+                const handlerPath = path.join(context.pluginPath, manifest.setup.handler);
+                const extensions = ['', '.ts', '.js', '/index.ts', '/index.js'];
+                const found = extensions.some((ext) => fs.existsSync(handlerPath + ext));
+                if (!found) {
+                    result.errors.push({
+                        type: 'file-missing',
+                        message: `Setup handler not found: ${manifest.setup.handler}`,
+                        location: 'plugin.yaml setup.handler',
+                        suggestion: `Create the setup handler at ${handlerPath}.ts`,
+                    });
+                }
+            }
+        }
+        if (manifest.setup.references) {
+            if (context.isNpmPackage) {
+                if (manifest.setup.references.startsWith('./') || manifest.setup.references.startsWith('../')) {
+                    result.errors.push({
+                        type: 'export-mismatch',
+                        message: `References handler "${manifest.setup.references}" is a relative path, but NPM plugins must use an export name`,
+                        location: 'plugin.yaml setup.references',
+                        suggestion: `Export the references function from the package entry point and use the export name`,
+                    });
+                } else if (!checkExportExists(manifest.setup.references, context)) {
+                    result.errors.push({
+                        type: 'export-mismatch',
+                        message: `References handler "${manifest.setup.references}" is not exported from the package`,
+                        location: 'plugin.yaml setup.references',
+                        suggestion: `Add "export { ${manifest.setup.references} } from '...'" to the package entry point`,
+                    });
+                }
+            } else {
+                const handlerPath = path.join(context.pluginPath, manifest.setup.references);
+                const extensions = ['', '.ts', '.js', '/index.ts', '/index.js'];
+                const found = extensions.some((ext) => fs.existsSync(handlerPath + ext));
+                if (!found) {
+                    result.errors.push({
+                        type: 'file-missing',
+                        message: `References handler not found: ${manifest.setup.references}`,
+                        location: 'plugin.yaml setup.references',
+                        suggestion: `Create the references handler at ${handlerPath}.ts`,
+                    });
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Check if a named export exists in the plugin's main entry file.
+ * Reads the built .js or .d.ts and searches for the export name.
+ */
+function checkExportExists(
+    exportName: string,
+    context: PluginContext,
+): boolean {
+    const packageJsonPath = path.join(context.pluginPath, 'package.json');
+    if (!fs.existsSync(packageJsonPath)) return true;
+
+    let mainPath: string | undefined;
+    try {
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+        if (packageJson.exports?.['.']) {
+            const entry = packageJson.exports['.'];
+            const entryPath = typeof entry === 'string' ? entry : entry.default || entry.import;
+            if (entryPath) mainPath = path.join(context.pluginPath, entryPath);
+        }
+        if (!mainPath && packageJson.main) {
+            mainPath = path.join(context.pluginPath, packageJson.main);
+        }
+    } catch {
+        return true;
+    }
+
+    if (!mainPath || !fs.existsSync(mainPath)) return true;
+
+    try {
+        const content = fs.readFileSync(mainPath, 'utf-8');
+        const patterns = [
+            new RegExp(`export\\s*\\{[^}]*\\b${exportName}\\b[^}]*\\}`, 'm'),
+            new RegExp(`export\\s+(?:async\\s+)?function\\s+${exportName}\\b`),
+            new RegExp(`export\\s+(?:const|let|var)\\s+${exportName}\\b`),
+        ];
+        return patterns.some((p) => p.test(content));
+    } catch {
+        return true;
     }
 }
 
