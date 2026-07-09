@@ -70,7 +70,8 @@ When test mode is enabled, the startup output includes the test endpoints:
 ```
 🚀 Jay Stack dev server started successfully!
 📱 Dev Server: http://localhost:3300
-🎨 Editor Server: http://localhost:3301 (ID: init)
+🎨 Editor (AIditor): http://localhost:3300/aiditor
+   (editor socket server on http://localhost:3301, ID: init)
 📁 Pages directory: ./src/pages
 🧪 Test Mode: enabled
    Health: http://localhost:3300/_jay/health
