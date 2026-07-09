@@ -48,6 +48,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 95  | jay-action contract references               | Reference contract ViewState types from .jay-action output schemas          |
 | 120 | record type in jay-action                    | `record(T)` type notation for typed Record maps in action schemas           |
 | 122 | enum name collision across linked contracts  | Fix import shadowing and duplication when linked contracts share enum names |
+| 152 | phase-aware contract props                   | Optional `phase` on props so the framework can validate binding availability |
 
 ---
 
