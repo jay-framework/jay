@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/design-system-validator",
-  "version": "0.20.0",
+  "version": "0.21.0",
   "type": "module",
   "description": "Design system validation plugin for Jay Framework — validates jay-html CSS against DESIGN.md tokens",
   "license": "Apache-2.0",
