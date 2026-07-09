@@ -117,21 +117,21 @@ The create command knows about available plugins from a built-in registry:
 
 ```typescript
 interface PluginEntry {
-    name: string;           // npm package name
-    label: string;          // display name
-    description: string;    // one-line description
-    group: string;          // grouping: 'Jay Framework', 'Wix', 'AIditor'
-    default: boolean;       // pre-selected in the checkbox menu
+  name: string; // npm package name
+  label: string; // display name
+  description: string; // one-line description
+  group: string; // grouping: 'Jay Framework', 'Wix', 'AIditor'
+  default: boolean; // pre-selected in the checkbox menu
 }
 ```
 
 Groups:
 
-| Group | Packages |
-|-------|----------|
+| Group         | Packages                                                       |
+| ------------- | -------------------------------------------------------------- |
 | Jay Framework | ui-kit, a11y-validator, seo-validator, design-system-validator |
-| Wix | wix-stores, wix-members, wix-media, wix-data |
-| AIditor | aiditor |
+| Wix           | wix-stores, wix-members, wix-media, wix-data                   |
+| AIditor       | aiditor                                                        |
 
 Jay Framework packages are pre-selected by default. Wix and AIditor are opt-in.
 
@@ -205,6 +205,7 @@ Creating project in ./my-store...
 ### Interactive Prompts Library
 
 Use `@inquirer/prompts` (lightweight, ESM-compatible) for:
+
 - `input()` — project name
 - `checkbox()` — plugin selection
 

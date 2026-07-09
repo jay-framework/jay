@@ -7,7 +7,7 @@
     "strict": true,
     "skipLibCheck": true,
     "outDir": "dist",
-    "declaration": false
+    "declaration": false,
   },
-  "include": ["lib"]
+  "include": ["lib"],
 }

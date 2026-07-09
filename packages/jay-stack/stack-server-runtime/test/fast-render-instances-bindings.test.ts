@@ -44,7 +44,7 @@ describe('renderFastChangingData prop binding resolution', () => {
 
         await renderFastChangingData(
             {},
-            { language:'', url: '' },
+            { language: '', url: '' },
             {},
             [],
             instancePhaseData,
@@ -103,7 +103,7 @@ describe('renderFastChangingData prop binding resolution', () => {
 
         await renderFastChangingData(
             {},
-            { language:'', url: '' },
+            { language: '', url: '' },
             {},
             [pagePartDef],
             instancePhaseData,
@@ -176,9 +176,7 @@ describe('renderFastChangingData prop binding resolution', () => {
                 contractName: 'category-products',
                 contract: {
                     name: 'category-products',
-                    props: [
-                        { name: 'limit', dataType: { kind: 'primitive', name: 'number' } },
-                    ],
+                    props: [{ name: 'limit', dataType: { kind: 'primitive', name: 'number' } }],
                     tags: [],
                 } as any,
                 compDefinition: {
@@ -210,8 +208,6 @@ describe('renderFastChangingData prop binding resolution', () => {
             {},
         );
 
-        expect(fastRender).toHaveBeenCalledWith(
-            expect.objectContaining({ limit: '4' }),
-        );
+        expect(fastRender).toHaveBeenCalledWith(expect.objectContaining({ limit: '4' }));
     });
 });

@@ -39,7 +39,11 @@ async function main(): Promise<void> {
         run('npx jay-stack agent-kit', projectDir);
         console.log(chalk.green('  ✓ Generated agent-kit'));
     } catch {
-        console.log(chalk.yellow('  ⚠ Agent-kit generation skipped (can run later with: jay-stack agent-kit)'));
+        console.log(
+            chalk.yellow(
+                '  ⚠ Agent-kit generation skipped (can run later with: jay-stack agent-kit)',
+            ),
+        );
     }
 
     console.log(chalk.dim('  Running plugin setup...'));

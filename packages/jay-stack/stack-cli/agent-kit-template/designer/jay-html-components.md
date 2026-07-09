@@ -101,11 +101,11 @@ Inside `<jay:...>`, bindings resolve to **that instance's** contract tags (not t
 
 ### Prop binding summary
 
-| Syntax | Resolves to | Example |
-|--------|-------------|---------|
-| `prop="literal"` | Literal string value | `productId="prod-1"` |
-| `prop="{field}"` | Page ViewState field | `slug="{p.categorySlug}"` |
-| `prop="{field}"` (inside forEach) | ForEach item field | `productId="{_id}"` |
+| Syntax                            | Resolves to          | Example                   |
+| --------------------------------- | -------------------- | ------------------------- |
+| `prop="literal"`                  | Literal string value | `productId="prod-1"`      |
+| `prop="{field}"`                  | Page ViewState field | `slug="{p.categorySlug}"` |
+| `prop="{field}"` (inside forEach) | ForEach item field   | `productId="{_id}"`       |
 
 ### Prop phase constraints
 
@@ -121,10 +121,10 @@ If a slow prop binds to a fast-phase field, `jay-stack validate` flags an error 
 props:
   - name: categorySlug
     type: string
-    phase: slow        # Must be available at build time
+    phase: slow # Must be available at build time
   - name: filter
     type: string
-    phase: fast         # Only needs to be available at request time
+    phase: fast # Only needs to be available at request time
 ```
 
 ## Headfull Components

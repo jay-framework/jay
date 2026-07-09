@@ -1023,7 +1023,9 @@ tags:
 
             const result = parseContract(contract, 'contract.jay-contract');
             expect(result.validations).toEqual([]);
-            expect(result.val.props).toEqual([{ name: 'label', dataType: JayString, phase: 'slow' }]);
+            expect(result.val.props).toEqual([
+                { name: 'label', dataType: JayString, phase: 'slow' },
+            ]);
         });
 
         it('should parse props with enum type', () => {

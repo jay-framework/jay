@@ -735,7 +735,10 @@ export function checkHeadlessInstanceProps(jayHtml: JayHtmlSourceFile, file: str
                 const passedPropsLower = new Set([...passedProps].map((p) => p.toLowerCase()));
                 if (contract.props) {
                     for (const contractProp of contract.props) {
-                        if (contractProp.required && !passedPropsLower.has(contractProp.name.toLowerCase())) {
+                        if (
+                            contractProp.required &&
+                            !passedPropsLower.has(contractProp.name.toLowerCase())
+                        ) {
                             warnings.push(
                                 `<jay:${contractName}> is missing required prop ` +
                                     `"${contractProp.name}" declared in the "${contract.name}" contract.`,

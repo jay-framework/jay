@@ -133,11 +133,12 @@ Plugins can provide custom jay-html validation rules that run during `jay-stack 
 ```yaml
 validators:
   - name: media-optimization
-    handler: validateMediaOptimization    # export name from package entry point
+    handler: validateMediaOptimization # export name from package entry point
     description: Ensures media URLs use resize parameters
 ```
 
 **Handler format:**
+
 - **NPM plugins** — `handler` is an export name from the package entry point (e.g., `validateMediaOptimization`). The function must be exported from `lib/index.ts`.
 - **Local plugins** (`src/plugins/`) — `handler` is a relative path to the module (e.g., `./validators/media-validator`). The module must export a `validate` function.
 

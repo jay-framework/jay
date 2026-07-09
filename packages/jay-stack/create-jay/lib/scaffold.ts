@@ -21,10 +21,7 @@ function writeFile(projectDir: string, relativePath: string, content: string): v
     fs.writeFileSync(fullPath, content, 'utf-8');
 }
 
-function generatePackageJson(
-    name: string,
-    selectedPlugins: PluginEntry[],
-): string {
+function generatePackageJson(name: string, selectedPlugins: PluginEntry[]): string {
     const deps: Record<string, string> = {};
     for (const dep of CORE_DEPS) {
         deps[dep] = 'latest';
@@ -78,7 +75,11 @@ export function scaffoldProject(
     fs.mkdirSync(projectDir, { recursive: true });
 
     writeFile(projectDir, 'package.json', generatePackageJson(name, selectedPlugins));
-    writeFile(projectDir, 'src/pages/page.jay-html', readTemplate('page.jay-html').replace(/\{\{name\}\}/g, name));
+    writeFile(
+        projectDir,
+        'src/pages/page.jay-html',
+        readTemplate('page.jay-html').replace(/\{\{name\}\}/g, name),
+    );
     writeFile(projectDir, 'src/pages/page.ts', readTemplate('page.ts'));
     writeFile(projectDir, 'src/pages/page.jay-contract', readTemplate('page.jay-contract'));
     writeFile(projectDir, 'src/styles/theme.css', readTemplate('theme.css'));

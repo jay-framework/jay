@@ -24,9 +24,7 @@ props:
 
 ```html
 <!-- Page uses a keyed component `p` that provides categorySlug at fast phase -->
-<jay:category-products categorySlug="{p.categorySlug}">
-  ...
-</jay:category-products>
+<jay:category-products categorySlug="{p.categorySlug}"> ... </jay:category-products>
 ```
 
 The `category-products` component has `slowlyRender(props)` that queries the database by `categorySlug`. But `p.categorySlug` is only available after the page's fast render. During slow render:
@@ -73,22 +71,22 @@ Add a `phase` field to contract prop definitions, following the same rules as ta
 props:
   - name: categorySlug
     type: string
-    phase: slow              # Default — must be available at build time
+    phase: slow # Default — must be available at build time
     description: Category slug to filter products by
 
   - name: productId
     type: string
-    phase: fast              # Only needs to be available at request time
+    phase: fast # Only needs to be available at request time
     description: Product ID to exclude from results
 ```
 
 Phase values for props (same as tags):
 
-| Phase | Default | Meaning | Binding source must be |
-|-------|---------|---------|----------------------|
-| `slow` | Yes | Available at build time | Literal, route param, or slow-phase tag |
-| `fast` | No | Available at request time | Any of above, or fast-phase tag |
-| `fast+interactive` | No | Can also change on client | Same as fast (fast === fast+interactive in practice) |
+| Phase              | Default | Meaning                   | Binding source must be                               |
+| ------------------ | ------- | ------------------------- | ---------------------------------------------------- |
+| `slow`             | Yes     | Available at build time   | Literal, route param, or slow-phase tag              |
+| `fast`             | No      | Available at request time | Any of above, or fast-phase tag                      |
+| `fast+interactive` | No      | Can also change on client | Same as fast (fast === fast+interactive in practice) |
 
 **Default is `slow`** — same as tags. This means existing contracts without `phase` on props will now be validated as slow, which may surface binding mismatches that were previously silent. This is a **regression fix** — the empty-prop-at-slow-time bug was always there, just undetected.
 
@@ -96,7 +94,7 @@ Phase values for props (same as tags):
 
 A `phase: slow` prop binding must resolve to a value available during slow render:
 
-- **Literal values** — always available: `categorySlug="best-sellers"` 
+- **Literal values** — always available: `categorySlug="best-sellers"`
 - **Route params** — always available: `categorySlug="{category}"` (from URL segments)
 - **Slow-phase keyed ViewState** — available if the keyed component has `slowlyRender`: `categorySlug="{p.categorySlug}"` where `p.categorySlug` is a slow tag
 - **Page slow ViewState** — available: `slug="{pageSlug}"` where `pageSlug` has `phase: slow`
@@ -189,9 +187,9 @@ tags:
 
 ## Trade-offs
 
-| Approach | Pros | Cons |
-|----------|------|------|
-| **Phase annotation on props (this design)** | Explicit, validates at compile time, documents intent | New concept for plugin developers to learn |
-| **Infer from component usage** | No schema change needed | Can't validate without analyzing component source code |
-| **Runtime-only warning** | Simple, no schema change | Catches issues late (at build/serve time, not at validate time) |
-| **No validation** | Zero effort | Silent bugs — empty props at slow render with no feedback |
+| Approach                                    | Pros                                                  | Cons                                                            |
+| ------------------------------------------- | ----------------------------------------------------- | --------------------------------------------------------------- |
+| **Phase annotation on props (this design)** | Explicit, validates at compile time, documents intent | New concept for plugin developers to learn                      |
+| **Infer from component usage**              | No schema change needed                               | Can't validate without analyzing component source code          |
+| **Runtime-only warning**                    | Simple, no schema change                              | Catches issues late (at build/serve time, not at validate time) |
+| **No validation**                           | Zero effort                                           | Silent bugs — empty props at slow render with no feedback       |

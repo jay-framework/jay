@@ -35,19 +35,19 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ## Contracts & Type System
 
-| #   | Title                                        | Description                                                                 |
-| --- | -------------------------------------------- | --------------------------------------------------------------------------- |
-| 35  | partial and complementary types              | Type composition patterns                                                   |
-| 38  | Contract File                                | Jay contract file format (YAML), ViewState and Refs types                   |
-| 45  | View State Types                             | ViewState type system                                                       |
-| 50  | rendering phases in contracts                | Phase annotations (`slow`, `fast`, `fast+interactive`) for type safety      |
-| 51  | jay-html with contract references            | Contract references in templates                                            |
-| 51  | Project Structure Identification             | Pages vs Components identification                                          |
-| 61  | json-patch typed JSONPointer                 | Typed JSON operations                                                       |
-| 79  | linked contracts with mixed phase properties | Linked sub-contracts across rendering phases                                |
-| 95  | jay-action contract references               | Reference contract ViewState types from .jay-action output schemas          |
-| 120 | record type in jay-action                    | `record(T)` type notation for typed Record maps in action schemas           |
-| 122 | enum name collision across linked contracts  | Fix import shadowing and duplication when linked contracts share enum names |
+| #   | Title                                        | Description                                                                  |
+| --- | -------------------------------------------- | ---------------------------------------------------------------------------- |
+| 35  | partial and complementary types              | Type composition patterns                                                    |
+| 38  | Contract File                                | Jay contract file format (YAML), ViewState and Refs types                    |
+| 45  | View State Types                             | ViewState type system                                                        |
+| 50  | rendering phases in contracts                | Phase annotations (`slow`, `fast`, `fast+interactive`) for type safety       |
+| 51  | jay-html with contract references            | Contract references in templates                                             |
+| 51  | Project Structure Identification             | Pages vs Components identification                                           |
+| 61  | json-patch typed JSONPointer                 | Typed JSON operations                                                        |
+| 79  | linked contracts with mixed phase properties | Linked sub-contracts across rendering phases                                 |
+| 95  | jay-action contract references               | Reference contract ViewState types from .jay-action output schemas           |
+| 120 | record type in jay-action                    | `record(T)` type notation for typed Record maps in action schemas            |
+| 122 | enum name collision across linked contracts  | Fix import shadowing and duplication when linked contracts share enum names  |
 | 152 | phase-aware contract props                   | Optional `phase` on props so the framework can validate binding availability |
 
 ---
@@ -153,7 +153,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 145  | pluggable jay-html validation          | Plugin-provided validation rules for jay-html files with agent-friendly feedback             |
 | 146  | css performance fixes                  | CSS minification in production build, preload hints for route CSS                            |
 | 150  | build content hash                     | SHA-256 content hash of build output for deployment client/server sync                       |
-| 153  | npm create jay                         | Interactive project scaffolding: name, plugin selection, agent-kit, setup banner              |
+| 153  | npm create jay                         | Interactive project scaffolding: name, plugin selection, agent-kit, setup banner             |
 | 147  | jay-html validation rules catalog      | Complete catalog of all validation rules across wix-media, SEO, and a11y                     |
 
 ---

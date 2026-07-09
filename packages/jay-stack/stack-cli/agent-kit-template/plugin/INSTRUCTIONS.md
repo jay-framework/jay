@@ -22,12 +22,12 @@ A plugin provides headless components (data + interactions, no UI) that project 
 
 The plugin participates in four CLI commands, each running different hooks:
 
-| Command | When | What runs from your plugin |
-|---------|------|---------------------------|
-| `jay-stack validate-plugin` | Plugin development | Checks plugin.yaml structure, contracts, exports, handler references |
-| `jay-stack setup <plugin>` | Project setup | `setup.handler` — creates config files, validates credentials |
-| `jay-stack agent-kit` | Before development | `setup.references` — generates add-menu items, reference data |
-| `jay-stack validate` | During development | `validators[].handler` — runs your validation rules against project jay-html files |
+| Command                     | When               | What runs from your plugin                                                         |
+| --------------------------- | ------------------ | ---------------------------------------------------------------------------------- |
+| `jay-stack validate-plugin` | Plugin development | Checks plugin.yaml structure, contracts, exports, handler references               |
+| `jay-stack setup <plugin>`  | Project setup      | `setup.handler` — creates config files, validates credentials                      |
+| `jay-stack agent-kit`       | Before development | `setup.references` — generates add-menu items, reference data                      |
+| `jay-stack validate`        | During development | `validators[].handler` — runs your validation rules against project jay-html files |
 
 **`validate-plugin`** validates YOUR plugin's structure. Run it during plugin development.  
 **`validate`** runs your plugin's validators against a PROJECT that uses your plugin. Run it from the project.

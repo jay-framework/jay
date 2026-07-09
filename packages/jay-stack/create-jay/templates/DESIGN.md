@@ -2,16 +2,16 @@
 name: My Design System
 
 colors:
-  primary: "#2563eb"
-  primary-hover: "#1d4ed8"
-  secondary: "#64748b"
-  text: "#0f172a"
-  text-muted: "#64748b"
-  background: "#ffffff"
-  surface: "#f8fafc"
-  border: "#e2e8f0"
-  error: "#dc2626"
-  success: "#16a34a"
+  primary: '#2563eb'
+  primary-hover: '#1d4ed8'
+  secondary: '#64748b'
+  text: '#0f172a'
+  text-muted: '#64748b'
+  background: '#ffffff'
+  surface: '#f8fafc'
+  border: '#e2e8f0'
+  error: '#dc2626'
+  success: '#16a34a'
 
 typography:
   headline-lg:
