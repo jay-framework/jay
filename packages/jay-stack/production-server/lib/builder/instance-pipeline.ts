@@ -166,6 +166,11 @@ export async function buildInstance(
         const slowResult = await slowRenderInstances(
             pageParts.discoveredInstances,
             pageParts.headlessInstanceComponents,
+            {
+                pageViewState: slowViewState,
+                pageParams: params,
+                pageProps: { language: 'en', url: '' },
+            },
         );
 
         if (slowResult) {
