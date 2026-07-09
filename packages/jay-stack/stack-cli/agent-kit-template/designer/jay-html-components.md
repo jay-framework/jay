@@ -107,6 +107,26 @@ Inside `<jay:...>`, bindings resolve to **that instance's** contract tags (not t
 | `prop="{field}"` | Page ViewState field | `slug="{p.categorySlug}"` |
 | `prop="{field}"` (inside forEach) | ForEach item field | `productId="{_id}"` |
 
+### Prop phase constraints
+
+Contract props can declare a `phase` (defaults to `slow`). The binding source must be available at that phase:
+
+- A **slow** prop (default) must bind to a literal, a route param, or a slow-phase tag
+- A **fast** prop can also bind to fast-phase tags
+
+If a slow prop binds to a fast-phase field, `jay-stack validate` flags an error — the component's slow render would receive an empty value.
+
+```yaml
+# In the component's contract:
+props:
+  - name: categorySlug
+    type: string
+    phase: slow        # Must be available at build time
+  - name: filter
+    type: string
+    phase: fast         # Only needs to be available at request time
+```
+
 ## Headfull Components
 
 In Jay Stack, headfull components are full-stack. They must have a `.jay-contract` file and are created using `makeJayStackComponent` in their `.ts` file. They support server rendering (slow/fast/interactive phases) and must include a `contract` attribute in the import.

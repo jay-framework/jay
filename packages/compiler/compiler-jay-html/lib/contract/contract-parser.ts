@@ -40,6 +40,7 @@ interface ParsedYamlProp {
     name: string;
     type?: string;
     required?: boolean;
+    phase?: string;
     description?: string | string[];
     default?: string;
 }
@@ -348,10 +349,23 @@ function parseProp(prop: ParsedYamlProp): WithValidations<ContractProp> {
 
     const description = parseDescription(prop.description);
 
+    let phase: RenderingPhase = 'slow';
+    if (prop.phase) {
+        const validPhases: RenderingPhase[] = ['slow', 'fast', 'fast+interactive'];
+        if (!validPhases.includes(prop.phase as RenderingPhase)) {
+            validations.push(
+                `Prop [${prop.name}] has invalid phase [${prop.phase}]. Valid phases are: ${validPhases.join(', ')}`,
+            );
+        } else {
+            phase = prop.phase as RenderingPhase;
+        }
+    }
+
     const contractProp: ContractProp = {
         name: prop.name,
         dataType,
         ...(prop.required && { required: prop.required }),
+        phase,
         ...(description && { description }),
         ...(prop.default !== undefined && { default: prop.default }),
     };

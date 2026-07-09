@@ -23,6 +23,7 @@ import {
     getLinkedContractDir,
     type ContractTag,
     type Contract,
+    type RenderingPhase,
     type JayHtmlSourceFile,
 } from '@jay-framework/compiler-jay-html';
 import { getLogger } from '@jay-framework/logger';
@@ -644,12 +645,50 @@ const HEADLESS_SKIP_ATTRS = new Set([
     'jay-scope',
 ]);
 
+const PHASE_ORDER: Record<string, number> = {
+    slow: 0,
+    fast: 1,
+    'fast+interactive': 2,
+};
+
+/**
+ * Resolve a binding path to its source tag and effective phase.
+ * Handles keyed component paths (e.g., "p.categorySlug") and page-level paths.
+ */
+function resolveBindingPhase(
+    bindingPath: string,
+    jayHtml: JayHtmlSourceFile,
+): RenderingPhase | undefined {
+    const segments = bindingPath.split('.');
+    const root = segments[0];
+
+    // Check if root is a keyed headless import
+    const keyedImport = jayHtml.headlessImports.find((i) => i.key === root && i.contract);
+    if (keyedImport?.contract) {
+        const tagPath = segments.slice(1).join('.');
+        if (!tagPath) return undefined;
+        const tag = resolveContractTag(keyedImport.contract, tagPath);
+        if (!tag) return undefined;
+        return tag.phase || 'slow';
+    }
+
+    // Check page contract
+    if (jayHtml.contract) {
+        const tag = resolveContractTag(jayHtml.contract, bindingPath);
+        if (!tag) return undefined;
+        return tag.phase || 'slow';
+    }
+
+    return undefined;
+}
+
 /**
  * Check that <jay:xxx> instance attributes match contract props (DL#124 Phase 2).
  *
  * For each <jay:xxx> element:
  * 1. Non-directive attributes should be declared as contract props
  * 2. Required contract props should be present as attributes
+ * 3. Binding source phase must be ≤ prop phase (DL#152)
  *
  * @internal Exported for testing
  */
@@ -676,12 +715,13 @@ export function checkHeadlessInstanceProps(jayHtml: JayHtmlSourceFile, file: str
                     }
                 }
 
-                // Check each passed prop is declared in contract
+                // Check each passed prop is declared in contract (case-insensitive)
                 if (passedProps.size > 0) {
-                    const contractPropNames = new Set((contract.props || []).map((p) => p.name));
+                    const contractPropNamesLower = new Set(
+                        (contract.props || []).map((p) => p.name.toLowerCase()),
+                    );
                     for (const prop of passedProps) {
-                        if (!contractPropNames.has(prop)) {
-                            const label = imp.key ? `${imp.key} (${contractName})` : contractName;
+                        if (!contractPropNamesLower.has(prop.toLowerCase())) {
                             warnings.push(
                                 `<jay:${contractName}> passes attribute "${prop}" but the ` +
                                     `"${contract.name}" contract does not declare it as a prop. ` +
@@ -691,13 +731,46 @@ export function checkHeadlessInstanceProps(jayHtml: JayHtmlSourceFile, file: str
                     }
                 }
 
-                // Check required contract props are present
+                // Check required contract props are present (case-insensitive)
+                const passedPropsLower = new Set([...passedProps].map((p) => p.toLowerCase()));
                 if (contract.props) {
                     for (const contractProp of contract.props) {
-                        if (contractProp.required && !passedProps.has(contractProp.name)) {
+                        if (contractProp.required && !passedPropsLower.has(contractProp.name.toLowerCase())) {
                             warnings.push(
                                 `<jay:${contractName}> is missing required prop ` +
                                     `"${contractProp.name}" declared in the "${contract.name}" contract.`,
+                            );
+                        }
+                    }
+                }
+
+                // Check binding phase compatibility (DL#152)
+                if (contract.props) {
+                    const lowerAttrs: Record<string, string> = {};
+                    for (const [k, v] of Object.entries(attrs)) {
+                        lowerAttrs[k.toLowerCase()] = v;
+                    }
+                    for (const contractProp of contract.props) {
+                        const attrValue = lowerAttrs[contractProp.name.toLowerCase()];
+                        if (!attrValue) continue;
+
+                        const bindingMatch = attrValue.match(/^\{(.+)\}$/);
+                        if (!bindingMatch) continue;
+
+                        const bindingPath = bindingMatch[1];
+                        const sourcePhase = resolveBindingPhase(bindingPath, jayHtml);
+                        if (!sourcePhase) continue;
+
+                        const propPhase = contractProp.phase ?? 'slow';
+                        const sourceOrder = PHASE_ORDER[sourcePhase] ?? 0;
+                        const propOrder = PHASE_ORDER[propPhase] ?? 0;
+
+                        if (sourceOrder > propOrder) {
+                            warnings.push(
+                                `<jay:${contractName}> prop "${contractProp.name}" (phase: ${propPhase}) ` +
+                                    `is bound to {${bindingPath}} which is phase: ${sourcePhase}. ` +
+                                    `The binding source phase must be ≤ the prop phase. ` +
+                                    `Use a ${propPhase}-phase binding, a route param, or a literal value.`,
                             );
                         }
                     }

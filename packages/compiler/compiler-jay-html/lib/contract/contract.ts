@@ -29,6 +29,7 @@ export interface ContractProp {
     name: string;
     dataType: JayType;
     required?: boolean;
+    phase?: RenderingPhase;
     description?: Array<string>;
     default?: string;
 }

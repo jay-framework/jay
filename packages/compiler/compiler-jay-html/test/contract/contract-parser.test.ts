@@ -977,6 +977,7 @@ tags:
                     name: 'productId',
                     dataType: JayString,
                     required: true,
+                    phase: 'slow',
                     description: ['The ID of the product to display'],
                 },
             ]);
@@ -1003,9 +1004,9 @@ tags:
             const result = parseContract(contract, 'contract.jay-contract');
             expect(result.validations).toEqual([]);
             expect(result.val.props).toEqual([
-                { name: 'productId', dataType: JayString, required: true },
-                { name: 'quantity', dataType: JayNumber },
-                { name: 'showPrice', dataType: JayBoolean },
+                { name: 'productId', dataType: JayString, required: true, phase: 'slow' },
+                { name: 'quantity', dataType: JayNumber, phase: 'slow' },
+                { name: 'showPrice', dataType: JayBoolean, phase: 'slow' },
             ]);
         });
 
@@ -1022,7 +1023,7 @@ tags:
 
             const result = parseContract(contract, 'contract.jay-contract');
             expect(result.validations).toEqual([]);
-            expect(result.val.props).toEqual([{ name: 'label', dataType: JayString }]);
+            expect(result.val.props).toEqual([{ name: 'label', dataType: JayString, phase: 'slow' }]);
         });
 
         it('should parse props with enum type', () => {
@@ -1045,6 +1046,7 @@ tags:
                     name: 'variant',
                     dataType: new JayEnumType('Variant', ['compact', 'full', 'minimal']),
                     required: true,
+                    phase: 'slow',
                 },
             ]);
         });
@@ -1065,7 +1067,7 @@ tags:
             const result = parseContract(contract, 'contract.jay-contract');
             expect(result.validations).toEqual([]);
             expect(result.val.props).toEqual([
-                { name: 'currency', dataType: JayString, default: 'USD' },
+                { name: 'currency', dataType: JayString, phase: 'slow', default: 'USD' },
             ]);
         });
 
@@ -1122,6 +1124,88 @@ tags:
             expect(result.val.props[0].description).toEqual([
                 'The product identifier',
                 'Must be a valid product ID from the catalog',
+            ]);
+        });
+    });
+
+    describe('prop phase (DL#152)', () => {
+        it('should parse prop with phase: slow', () => {
+            const contract = `
+            name: CategoryProducts
+            props:
+              - name: categorySlug
+                type: string
+                phase: slow
+            tags:
+              - tag: name
+            `;
+
+            const result = parseContract(contract, 'contract.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.props[0].phase).toEqual('slow');
+        });
+
+        it('should parse prop with phase: fast', () => {
+            const contract = `
+            name: CategoryProducts
+            props:
+              - name: productId
+                type: string
+                phase: fast
+            tags:
+              - tag: name
+            `;
+
+            const result = parseContract(contract, 'contract.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.props[0].phase).toEqual('fast');
+        });
+
+        it('should parse prop with phase: fast+interactive', () => {
+            const contract = `
+            name: CategoryProducts
+            props:
+              - name: filter
+                type: string
+                phase: fast+interactive
+            tags:
+              - tag: name
+            `;
+
+            const result = parseContract(contract, 'contract.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.props[0].phase).toEqual('fast+interactive');
+        });
+
+        it('should default prop phase to slow when not specified', () => {
+            const contract = `
+            name: CategoryProducts
+            props:
+              - name: categorySlug
+                type: string
+            tags:
+              - tag: name
+            `;
+
+            const result = parseContract(contract, 'contract.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.props[0].phase).toEqual('slow');
+        });
+
+        it('should reject invalid prop phase', () => {
+            const contract = `
+            name: CategoryProducts
+            props:
+              - name: categorySlug
+                type: string
+                phase: interactive
+            tags:
+              - tag: name
+            `;
+
+            const result = parseContract(contract, 'contract.jay-contract');
+            expect(result.validations).toEqual([
+                'Prop [categorySlug] has invalid phase [interactive]. Valid phases are: slow, fast, fast+interactive',
             ]);
         });
     });

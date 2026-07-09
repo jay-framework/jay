@@ -5,6 +5,7 @@ import {
     extractRouteParams,
     extractJayParams,
     checkRefElementTypes,
+    checkHeadlessInstanceProps,
 } from '../lib/validate';
 import { parseJayFile, JAY_IMPORT_RESOLVER } from '@jay-framework/compiler-jay-html';
 import { promises as fsp } from 'fs';
@@ -344,6 +345,115 @@ describe('headless instance props validation (DL#124 Phase 2)', () => {
                 w.message.includes('missing required prop'),
         );
         expect(propWarnings).toHaveLength(0);
+    });
+
+    describe('prop binding phase validation (DL#152)', () => {
+        function makeJayHtml(options: {
+            pageTagPhase?: string;
+            propPhase?: string;
+            propValue: string;
+        }): any {
+            const { pageTagPhase, propPhase, propValue } = options;
+            return {
+                body: {
+                    childNodes: [
+                        {
+                            nodeType: 1,
+                            rawTagName: 'jay:category-products',
+                            attributes: { categoryslug: propValue },
+                            childNodes: [],
+                        },
+                    ],
+                },
+                headlessImports: [
+                    {
+                        contractName: 'category-products',
+                        contract: {
+                            name: 'category-products',
+                            tags: [],
+                            props: [
+                                {
+                                    name: 'categorySlug',
+                                    dataType: { kind: 'primitive', name: 'string' },
+                                    ...(propPhase ? { phase: propPhase } : {}),
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        key: 'p',
+                        contractName: 'product-page',
+                        contract: {
+                            name: 'product-page',
+                            tags: [
+                                {
+                                    tag: 'categorySlug',
+                                    type: [0],
+                                    ...(pageTagPhase ? { phase: pageTagPhase } : {}),
+                                },
+                            ],
+                        },
+                    },
+                ],
+                contract: { name: 'page', tags: [] },
+            };
+        }
+
+        it('should warn when fast-phase binding is used for slow-phase prop', () => {
+            const jayHtml = makeJayHtml({
+                pageTagPhase: 'fast+interactive',
+                propValue: '{p.categorySlug}',
+            });
+            const warnings = checkHeadlessInstanceProps(jayHtml, 'test.jay-html');
+            expect(warnings).toEqual([
+                '<jay:category-products> prop "categorySlug" (phase: slow) is bound to {p.categorySlug} which is phase: fast+interactive. ' +
+                    'The binding source phase must be ≤ the prop phase. ' +
+                    'Use a slow-phase binding, a route param, or a literal value.',
+            ]);
+        });
+
+        it('should not warn when slow-phase binding is used for fast-phase prop', () => {
+            const jayHtml = makeJayHtml({
+                pageTagPhase: 'slow',
+                propPhase: 'fast',
+                propValue: '{p.categorySlug}',
+            });
+            const warnings = checkHeadlessInstanceProps(jayHtml, 'test.jay-html');
+            const phaseWarnings = warnings.filter((w) => w.includes('phase'));
+            expect(phaseWarnings).toEqual([]);
+        });
+
+        it('should not warn for literal prop values', () => {
+            const jayHtml = makeJayHtml({
+                propValue: 'best-sellers',
+            });
+            const warnings = checkHeadlessInstanceProps(jayHtml, 'test.jay-html');
+            const phaseWarnings = warnings.filter((w) => w.includes('phase'));
+            expect(phaseWarnings).toEqual([]);
+        });
+
+        it('should not warn when phases match', () => {
+            const jayHtml = makeJayHtml({
+                pageTagPhase: 'slow',
+                propValue: '{p.categorySlug}',
+            });
+            const warnings = checkHeadlessInstanceProps(jayHtml, 'test.jay-html');
+            const phaseWarnings = warnings.filter((w) => w.includes('phase'));
+            expect(phaseWarnings).toEqual([]);
+        });
+
+        it('should warn when fast binding used for prop with no explicit phase (defaults slow)', () => {
+            const jayHtml = makeJayHtml({
+                pageTagPhase: 'fast',
+                propValue: '{p.categorySlug}',
+            });
+            const warnings = checkHeadlessInstanceProps(jayHtml, 'test.jay-html');
+            expect(warnings).toEqual([
+                '<jay:category-products> prop "categorySlug" (phase: slow) is bound to {p.categorySlug} which is phase: fast. ' +
+                    'The binding source phase must be ≤ the prop phase. ' +
+                    'Use a slow-phase binding, a route param, or a literal value.',
+            ]);
+        });
     });
 
     describe('plugin validators (DL#145)', () => {
