@@ -12,9 +12,25 @@ A plugin provides headless components (data + interactions, no UI) that project 
 2. **Implement components** matching the contracts
 3. **Define actions** with `.jay-action` metadata
 4. **Optionally add routes** — pages for admin tools and dashboards
-5. **Set up `plugin.yaml`** — list contracts, actions, services, contexts, routes
-6. **Configure build** — dual entry points (server + client), vite.config.ts, package.json exports
-7. **Validate** with `jay-stack validate-plugin`
+5. **Optionally add validators** — custom jay-html validation rules
+6. **Optionally add setup/references handlers** — config templating, add-menu generation
+7. **Set up `plugin.yaml`** — list contracts, actions, services, contexts, routes, validators, setup
+8. **Configure build** — dual entry points (server + client), vite.config.ts, package.json exports
+9. **Validate** with `jay-stack validate-plugin`
+
+## Plugin Lifecycle — CLI Commands
+
+The plugin participates in four CLI commands, each running different hooks:
+
+| Command | When | What runs from your plugin |
+|---------|------|---------------------------|
+| `jay-stack validate-plugin` | Plugin development | Checks plugin.yaml structure, contracts, exports, handler references |
+| `jay-stack setup <plugin>` | Project setup | `setup.handler` — creates config files, validates credentials |
+| `jay-stack agent-kit` | Before development | `setup.references` — generates add-menu items, reference data |
+| `jay-stack validate` | During development | `validators[].handler` — runs your validation rules against project jay-html files |
+
+**`validate-plugin`** validates YOUR plugin's structure. Run it during plugin development.  
+**`validate`** runs your plugin's validators against a PROJECT that uses your plugin. Run it from the project.
 
 ## Guides
 
@@ -36,6 +52,7 @@ A plugin provides headless components (data + interactions, no UI) that project 
 | [seo-guide.md](seo-guide.md)                      | SEO head tags: title, meta, OG, canonical via phaseOutput               |
 | [commands-guide.md](commands-guide.md)            | makeCliCommand, .jay-command files, CONSOLE_CONTEXT, jay-stack run      |
 | [validation.md](validation.md)                    | jay-stack validate-plugin, writing custom jay-html validators           |
+| [setup-guide.md](setup-guide.md)                  | Setup handlers, references handlers, add-menu generation                |
 | [dev-server-service.md](dev-server-service.md)    | Dev server service API: routes, params, freeze management               |
 | `../references/<plugin>/`                         | Plugin reference data                                                   |
 

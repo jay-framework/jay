@@ -1,5 +1,12 @@
 # Plugin Validation
 
+Two separate validation commands:
+
+- **`jay-stack validate-plugin`** — validates your plugin's own structure (run during plugin development)
+- **`jay-stack validate`** — validates a project's jay-html files, including running your plugin's custom validators (run from a project that uses your plugin)
+
+## validate-plugin
+
 Run `jay-stack validate-plugin` to check your plugin for errors.
 
 ## Usage
@@ -119,20 +126,26 @@ Values: `title`, `meta:<name>` (e.g., `meta:description`), `link:<rel>` (e.g., `
 
 Validators access this via `ctx.headlessImports[].providedHeadTags`.
 
-## Plugin Validators
+## Plugin Validators (jay-stack validate)
 
-Plugins can provide custom jay-html validation rules that run during `jay-stack validate`. Declare validators in `plugin.yaml`:
+Plugins can provide custom jay-html validation rules that run during `jay-stack validate` in projects that use your plugin. Declare validators in `plugin.yaml`:
 
 ```yaml
 validators:
   - name: media-optimization
-    handler: ./validators/media-validator
+    handler: validateMediaOptimization    # export name from package entry point
     description: Ensures media URLs use resize parameters
 ```
 
+**Handler format:**
+- **NPM plugins** — `handler` is an export name from the package entry point (e.g., `validateMediaOptimization`). The function must be exported from `lib/index.ts`.
+- **Local plugins** (`src/plugins/`) — `handler` is a relative path to the module (e.g., `./validators/media-validator`). The module must export a `validate` function.
+
+`jay-stack validate-plugin` checks that the handler exists and is correctly exported.
+
 ### Writing a Validator
 
-The handler module exports a `validate` function:
+Export the validator function from the package entry point (for NPM) or from the handler module (for local):
 
 ```typescript
 import type { JayHtmlValidatorFn, JayHtmlValidationFinding } from '@jay-framework/compiler-shared';
