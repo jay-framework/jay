@@ -41,44 +41,56 @@ No error or warning is produced. The designer has no way to know that this bindi
 
 **Q1:** Should props have a `phase` annotation like tags?
 
+**A1:** Yes. Same system as tags.
+
 **Q2:** What phases make sense for props? Tags use `slow`, `fast`, `fast+interactive`. Props are inputs from the template, not rendered outputs — do the same phases apply?
+
+**A2:** Same phases as tags. `slow` (default), `fast`, `fast+interactive`. In practice `fast` === `fast+interactive` because interactive-phase props can change on the client.
 
 **Q3:** Should the phase on a prop indicate when the VALUE is expected to be available, or when the component USES it?
 
+**A3:** These are the same thing — the expectation that a value is available is defined by when the component uses it.
+
 **Q4:** How should the framework validate that a prop binding provides data at the right phase?
+
+**A4:** The binding's source tag phase must be ≤ the prop's phase. A slow tag can bind to a fast prop. A fast tag cannot bind to a slow prop.
 
 **Q5:** Should this be a compile-time validation error, a runtime warning, or both?
 
+**A5:** Compile error, like any other tag phase mismatch.
+
 **Q6:** What about literal props like `limit="4"` — are they always available at all phases?
+
+**A6:** Yes. Literal values and route params are always available at all phases.
 
 ## Design
 
 ### Prop Phase Annotation
 
-Add an optional `phase` field to contract prop definitions:
+Add a `phase` field to contract prop definitions, following the same rules as tag phases:
 
 ```yaml
 props:
   - name: categorySlug
     type: string
-    phase: slow              # This prop must be available at slow render time
+    phase: slow              # Default — must be available at build time
     description: Category slug to filter products by
 
   - name: productId
     type: string
-    phase: fast              # This prop only needs to be available at fast render time
+    phase: fast              # Only needs to be available at request time
     description: Product ID to exclude from results
 ```
 
-Phase values for props:
+Phase values for props (same as tags):
 
-| Phase | Meaning | Available at |
-|-------|---------|-------------|
-| `slow` | Required at build time | Slow render and later |
-| `fast` | Required at request time | Fast render and later |
-| (none) | No constraint | Any phase (no validation) |
+| Phase | Default | Meaning | Binding source must be |
+|-------|---------|---------|----------------------|
+| `slow` | Yes | Available at build time | Literal, route param, or slow-phase tag |
+| `fast` | No | Available at request time | Any of above, or fast-phase tag |
+| `fast+interactive` | No | Can also change on client | Same as fast (fast === fast+interactive in practice) |
 
-`interactive` doesn't apply to props — props are server-side inputs from the template, not reactive client values.
+**Default is `slow`** — same as tags. This means existing contracts without `phase` on props will now be validated as slow, which may surface binding mismatches that were previously silent. This is a **regression fix** — the empty-prop-at-slow-time bug was always there, just undetected.
 
 ### What Can Provide Slow-Phase Props
 
@@ -97,33 +109,29 @@ A `phase: fast` prop can bind to anything available at request time — slow or 
 
 ### Validation
 
-#### Compile-time (jay-stack validate)
+Compile-time error in `jay-stack validate`, same as tag phase mismatches.
 
-When a `<jay:component>` instance has a prop with `phase: slow`, and the binding references a field from the page's contract:
+When a `<jay:component>` instance has a prop binding, the validator:
 
-1. Resolve the binding path (e.g., `p.categorySlug`)
-2. Find the source tag in the page's contract or keyed component's contract
-3. Check the source tag's phase — if it's `fast` or `fast+interactive` and the prop requires `slow`, flag an error
+1. Resolves the binding path (e.g., `p.categorySlug`)
+2. Finds the source tag in the page's contract or keyed component's contract
+3. Checks: source tag phase must be ≤ prop phase
+
+Phase ordering: `slow` < `fast` ≤ `fast+interactive`
+
+A slow source can bind to any prop phase. A fast source cannot bind to a slow prop.
 
 ```
-❌ <jay:category-products> prop "categorySlug" requires phase: slow,
-   but binding {p.categorySlug} resolves to a fast+interactive field.
-   The component's slowlyRender will receive an empty value.
+❌ <jay:category-products> prop "categorySlug" (phase: slow) bound to
+   {p.categorySlug} which is phase: fast+interactive.
    Suggestion: Use a slow-phase binding, a route param, or a literal value.
 ```
 
-#### Runtime (slow render)
-
-If a `phase: slow` prop resolves to an empty string during `slowRenderInstances`, log a warning:
-
-```
-⚠ [SlowRender] category-products prop "categorySlug" is empty at slow render time.
-  The prop is declared as phase: slow — check that the binding provides a slow-phase value.
-```
+Literal values and route params are always considered `slow` (always available).
 
 ### Default Behavior
 
-When `phase` is omitted from a prop, no validation is performed — this preserves backward compatibility. Existing contracts continue to work as before.
+Props default to `phase: slow`, same as tags. Existing contracts without explicit `phase` on props will now be validated — bindings to fast-phase fields that were silently producing empty values at slow render will surface as compile errors.
 
 ### Contract Example
 
@@ -162,28 +170,22 @@ tags:
 
 ### Phase 1: Contract schema
 
-1. Add optional `phase` field to `ContractProp` type in compiler-shared
+1. Add `phase` field to `ContractProp` type in compiler-shared (defaults to `slow`)
 2. Update contract parser to accept `phase` on props
 3. Update `validate-plugin` to validate phase values
 
 ### Phase 2: Compile-time validation
 
-4. In `jay-stack validate`, when processing `<jay:component>` instances with bindings:
+4. In `jay-stack validate`, when processing `<jay:component>` instances with `{binding}` props:
    - Resolve the binding path to the source contract tag
-   - Compare source tag phase vs prop phase
-   - Flag mismatches
+   - Compare source tag phase vs prop phase (source must be ≤ prop)
+   - Flag mismatches as errors
 
-### Phase 3: Runtime warning
+### Phase 3: Documentation
 
-5. In `slowRenderInstances`, after resolving props:
-   - Check if any `phase: slow` prop resolved to empty
-   - Log a warning with the prop name and binding
-
-### Phase 4: Documentation
-
-6. Update designer guide with phase-aware prop examples
-7. Update plugin developer contract guide
-8. Update agent-kit contract authoring guide
+5. Update designer guide with phase-aware prop examples and binding rules
+6. Update plugin developer contract guide
+7. Update agent-kit contract authoring guide
 
 ## Trade-offs
 
