@@ -44,17 +44,13 @@ Creating project in ./my-store...
   ✓ Created project structure
   ✓ Installed dependencies
   ✓ Generated agent-kit
+  ✓ Plugin setup complete
 
 ┌─────────────────────────────────────────┐
-│  Next steps:                            │
+│  🐦 Ready!                             │
 │                                         │
 │  cd my-store                            │
-│  yarn jay-stack setup                   │
 │  yarn dev                               │
-│                                         │
-│  Setup configures plugin credentials    │
-│  and generates reference data.          │
-│  Run it before starting development.    │
 └─────────────────────────────────────────┘
 ```
 
@@ -171,14 +167,40 @@ Jay Framework packages are pre-selected by default. Wix and AIditor are opt-in.
 }
 ```
 
+### Package Manager Detection
+
+Detect which package manager invoked the create command via `process.env.npm_config_user_agent`:
+
+```
+npm/10.2.4 node/v20.11.0 darwin arm64
+yarn/4.12.0 node/v20.11.0 darwin arm64
+```
+
+Parse the first segment to determine `npm` vs `yarn`. All output commands (`install`, `dev`, `setup`) use the detected manager. Default to `npm` if undetectable.
+
 ### Post-Scaffold Steps
 
-After creating files and installing dependencies:
+After creating files:
 
-1. **Run `jay-stack agent-kit`** — generates materialized contracts, discovery indexes, role guides
-2. **Display banner** — clear next-steps with `cd`, `yarn jay-stack setup`, `yarn dev`
+1. **Run install** — `yarn install` or `npm install` (based on detected package manager)
+2. **Run `jay-stack agent-kit`** — generates materialized contracts, discovery indexes, role guides (static, no services needed)
+3. **Run `jay-stack setup`** — creates config files, copies AIditor assets. May depend on agent-kit output (e.g., materialized contracts). If a plugin needs credentials that aren't configured, it reports `needs-config` — the user sees the message and can re-run `setup` later.
+4. **Display banner** — just `cd` and `dev`
 
-Setup is NOT run automatically — it may require credentials, API keys, or interactive configuration. The banner tells the user to run it.
+```
+Creating project in ./my-store...
+  ✓ Created project structure
+  ✓ Installed dependencies
+  ✓ Generated agent-kit
+  ✓ Plugin setup complete
+
+┌─────────────────────────────────────────┐
+│  🐦 Ready!                              │
+│                                         │
+│  cd my-store                            │
+│  yarn dev                               │
+└─────────────────────────────────────────┘
+```
 
 ### Interactive Prompts Library
 
@@ -203,11 +225,19 @@ Minimal dependencies — the create package should install fast.
 
 **Q1:** Should `npm create jay` also copy the `jay-skill.md` file for AI agents?
 
+**A1:** Yes. Copy to the project root. This is the file that teaches AI agents how to discover contracts and use the CLI.
+
 **Q2:** Should we generate a DESIGN.md template if the design-system-validator is selected?
+
+**A2:** Yes. Generate a starter DESIGN.md with placeholder tokens (colors, typography, spacing, rounded) at the project root.
 
 **Q3:** Should the template include a vite.config.ts or rely on jay-stack-cli defaults?
 
+**A3:** Include both `vite.config.ts` and `tsconfig.json` in the template. The project should be self-contained.
+
 **Q4:** How do we handle version pinning? Should the create command pin to its own version, or use `^latest`?
+
+**A4:** Use `latest` — always install the newest published versions.
 
 ## Implementation Plan
 
