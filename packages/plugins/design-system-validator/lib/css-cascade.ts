@@ -264,10 +264,19 @@ export function resolveCascadeByBreakpoint(
     return result;
 }
 
+function findDocumentRoot(el: HTMLElement): HTMLElement {
+    let node: any = el;
+    while (node.parentNode) {
+        node = node.parentNode;
+    }
+    return node as HTMLElement;
+}
+
 export function extractCssSources(root: HTMLElement, filePath: string): string[] {
     const sources: string[] = [];
+    const docRoot = findDocumentRoot(root);
 
-    const linkedFiles = root.querySelectorAll('link[rel="stylesheet"]');
+    const linkedFiles = docRoot.querySelectorAll('link[rel="stylesheet"]');
     for (const link of linkedFiles) {
         const href = (link as HTMLElement).getAttribute('href');
         if (href && !href.startsWith('http')) {
@@ -282,7 +291,7 @@ export function extractCssSources(root: HTMLElement, filePath: string): string[]
         }
     }
 
-    const styleBlocks = root.querySelectorAll('style');
+    const styleBlocks = docRoot.querySelectorAll('style');
     for (const style of styleBlocks) {
         const text = (style as HTMLElement).textContent;
         if (text) sources.push(text);

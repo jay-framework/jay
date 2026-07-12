@@ -32,6 +32,7 @@ function normalizeColor(value: string): string | null {
 
 const COLOR_PROPERTIES = new Set([
     'color',
+    'background',
     'background-color',
     'border-color',
     'border-top-color',

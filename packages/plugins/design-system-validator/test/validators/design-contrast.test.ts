@@ -10,8 +10,10 @@ const GUIDE = 'agent-kit/designer/design-system.md';
 const REFS = `\nSee ${DESIGN_MD} for color tokens, ${GUIDE} for usage guide.`;
 
 function makeContext(html: string): JayHtmlValidationContext {
+    const root = parse(html);
+    const body = root.querySelector('body') || root;
     return {
-        body: parse(html),
+        body,
         filePath: path.join(fixturesDir, 'page.jay-html'),
         projectRoot: fixturesDir,
         headlessImports: [],

@@ -10,8 +10,10 @@ const GUIDE = 'agent-kit/designer/design-system.md';
 const REFS = `See ${DESIGN_MD} for component specs, ${GUIDE} for usage guide.`;
 
 function makeContext(html: string): JayHtmlValidationContext {
+    const root = parse(html);
+    const body = root.querySelector('body') || root;
     return {
-        body: parse(html),
+        body,
         filePath: path.join(fixturesDir, 'page.jay-html'),
         projectRoot: fixturesDir,
         headlessImports: [],
@@ -67,10 +69,11 @@ describe('design-components validator', () => {
     });
 
     it('returns no findings when no components defined', async () => {
+        const root = parse(
+            '<html><body><style>.x{color:red}</style><div class="x">X</div></body></html>',
+        );
         const ctx = {
-            body: parse(
-                '<html><body><style>.x{color:red}</style><div class="x">X</div></body></html>',
-            ),
+            body: root.querySelector('body') || root,
             filePath: path.join(fixturesDir, 'page.jay-html'),
             projectRoot: path.join(__dirname, '..', 'fixtures', 'basic'),
             headlessImports: [],

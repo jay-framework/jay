@@ -10,8 +10,10 @@ const GUIDE = 'agent-kit/designer/design-system.md';
 const REFS = `\nSee ${DESIGN_MD} for tokens, ${GUIDE} for usage guide.`;
 
 function makeContext(html: string): JayHtmlValidationContext {
+    const root = parse(html);
+    const body = root.querySelector('body') || root;
     return {
-        body: parse(html),
+        body,
         filePath: path.join(fixturesDir, 'page.jay-html'),
         projectRoot: fixturesDir,
         headlessImports: [],
@@ -245,11 +247,56 @@ describe('design-tokens validator', () => {
         expect(findings).toEqual([]);
     });
 
+    it('finds styles in <head> (not just <body>)', async () => {
+        const ctx = makeContext(`<html>
+            <head><style>.card { color: #ff0000; }</style></head>
+            <body><div class="card">Text</div></body>
+        </html>`);
+        const findings = await validateTokens(ctx);
+        expect(findings.length).toBeGreaterThan(0);
+        expect(findings[0].message).toEqual(
+            'Hardcoded color "#ff0000" for color not in design system',
+        );
+    });
+
+    it('validates background shorthand with color value', async () => {
+        const ctx = makeContext(`<html>
+            <head><style>.card { background: #ff0000; }</style></head>
+            <body><div class="card">Text</div></body>
+        </html>`);
+        const findings = await validateTokens(ctx);
+        expect(findings.length).toBeGreaterThan(0);
+        expect(findings[0].message).toEqual(
+            'Hardcoded color "#ff0000" for background not in design system',
+        );
+    });
+
+    it('passes background shorthand with gradient (not a simple color)', async () => {
+        const ctx = makeContext(`<html>
+            <head><style>.card { background: linear-gradient(to right, #ff0000, #00ff00); }</style></head>
+            <body><div class="card">Text</div></body>
+        </html>`);
+        const findings = await validateTokens(ctx);
+        const bgFindings = findings.filter((f) => f.message.includes('background'));
+        expect(bgFindings).toEqual([]);
+    });
+
+    it('passes background shorthand with token color', async () => {
+        const ctx = makeContext(`<html>
+            <head><style>.card { background: #2563eb; }</style></head>
+            <body><div class="card">Text</div></body>
+        </html>`);
+        const findings = await validateTokens(ctx);
+        const bgFindings = findings.filter((f) => f.message.includes('background'));
+        expect(bgFindings).toEqual([]);
+    });
+
     it('returns no findings when no DESIGN.md', async () => {
+        const root = parse(
+            '<html><body><style>.x{color:red}</style><div class="x">X</div></body></html>',
+        );
         const ctx = {
-            body: parse(
-                '<html><body><style>.x{color:red}</style><div class="x">X</div></body></html>',
-            ),
+            body: root.querySelector('body') || root,
             filePath: '/nonexistent/page.jay-html',
             projectRoot: '/nonexistent',
             headlessImports: [],
