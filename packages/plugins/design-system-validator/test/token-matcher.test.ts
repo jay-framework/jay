@@ -10,6 +10,7 @@ import {
     hexToRgbValues,
     relativeLuminance,
     contrastRatio,
+    extractBackgroundColors,
 } from '../lib/token-matcher.js';
 
 const colors = {
@@ -212,5 +213,51 @@ describe('contrast utilities', () => {
         const white = relativeLuminance(255, 255, 255);
         const black = relativeLuminance(0, 0, 0);
         expect(contrastRatio(white, black)).toBeCloseTo(21, 0);
+    });
+});
+
+describe('extractBackgroundColors', () => {
+    it('extracts plain hex color', () => {
+        expect(extractBackgroundColors('#0f172a')).toEqual(['#0f172a']);
+    });
+
+    it('extracts fallback color after gradient', () => {
+        expect(
+            extractBackgroundColors(
+                'linear-gradient(180deg, rgba(15,23,42,0.85) 0%, rgba(15,23,42,0.4) 100%), #0f172a',
+            ),
+        ).toEqual(['#0f172a']);
+    });
+
+    it('extracts fallback color after multiple gradients', () => {
+        expect(
+            extractBackgroundColors(
+                'radial-gradient(circle at 20% 30%, #4f46e5 0%, transparent 40%), radial-gradient(circle at 80% 20%, #db2777 0%, transparent 45%), #0f172a',
+            ),
+        ).toEqual(['#0f172a']);
+    });
+
+    it('returns empty for gradient-only background', () => {
+        expect(extractBackgroundColors('linear-gradient(135deg, #111 0%, #222 100%)')).toEqual([]);
+    });
+
+    it('returns empty for url background', () => {
+        expect(extractBackgroundColors("url('img.jpg') center/cover no-repeat")).toEqual([]);
+    });
+
+    it('extracts color from color + url layer', () => {
+        expect(extractBackgroundColors("#fff url('image.jpg')")).toEqual(['#fff']);
+    });
+
+    it('returns empty for var()', () => {
+        expect(extractBackgroundColors('var(--bg-primary)')).toEqual([]);
+    });
+
+    it('returns empty for transparent', () => {
+        expect(extractBackgroundColors('transparent')).toEqual([]);
+    });
+
+    it('returns empty for none', () => {
+        expect(extractBackgroundColors('none')).toEqual([]);
     });
 });

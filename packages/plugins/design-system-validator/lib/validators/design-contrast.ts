@@ -1,6 +1,6 @@
 import type { JayHtmlValidatorFn, JayHtmlValidationFinding } from '@jay-framework/compiler-shared';
 import { findDesignMd } from '../parse-design-md.js';
-import { resolveCascade, extractCssSources } from '../css-cascade.js';
+import { resolveCascade } from '../css-cascade.js';
 import { hexToRgbValues, relativeLuminance, contrastRatio } from '../token-matcher.js';
 
 const DESIGNER_GUIDE = 'agent-kit/designer/design-system.md';
@@ -39,10 +39,9 @@ export const validateContrast: JayHtmlValidatorFn = (ctx) => {
     const { tokens, designMdPath } = found;
     const refs = `\nSee ${designMdPath} for color tokens, ${DESIGNER_GUIDE} for usage guide.`;
     const findings: JayHtmlValidationFinding[] = [];
-    const cssSources = extractCssSources(ctx.body, ctx.filePath);
-    if (cssSources.length === 0) return [];
+    if (!ctx.css) return [];
 
-    const cascade = resolveCascade(cssSources, ctx.body);
+    const cascade = resolveCascade([ctx.css], ctx.body);
 
     for (const [el, styles] of cascade) {
         const colorStyle = styles['color'];

@@ -1,11 +1,7 @@
 import type { JayHtmlValidatorFn, JayHtmlValidationFinding } from '@jay-framework/compiler-shared';
 import postcss from 'postcss';
 import { findDesignMd } from '../parse-design-md.js';
-import {
-    resolveCascadeByBreakpoint,
-    extractCssSources,
-    type ResolvedStyle,
-} from '../css-cascade.js';
+import { resolveCascadeByBreakpoint, type ResolvedStyle } from '../css-cascade.js';
 import {
     isColorProperty,
     isSpacingProperty,
@@ -13,12 +9,14 @@ import {
     isTypographyProperty,
     isAnimationDurationProperty,
     isAnimationEasingProperty,
+    isBackgroundShorthand,
     matchColor,
     matchSpacing,
     matchRounded,
     matchTypographyProperty,
     matchAnimationDuration,
     matchAnimationEasing,
+    extractBackgroundColors,
 } from '../token-matcher.js';
 import type { DesignTokens } from '../parse-design-md.js';
 import type { HTMLElement } from 'node-html-parser';
@@ -115,6 +113,21 @@ function validateElementStyles(
                 });
             }
         }
+
+        if (isBackgroundShorthand(property) && Object.keys(tokens.colors).length > 0) {
+            const bgColors = extractBackgroundColors(resolved.value);
+            for (const bgColor of bgColors) {
+                const result = matchColor(bgColor, tokens.colors);
+                if (!result.matches) {
+                    findings.push({
+                        severity: 'warning',
+                        message: `${prefix}Hardcoded color "${bgColor}" in background not in design system`,
+                        suggestion: result.suggestion + refs,
+                        element: `<${tag}>`,
+                    });
+                }
+            }
+        }
     }
 }
 
@@ -124,8 +137,8 @@ export const validateTokens: JayHtmlValidatorFn = (ctx) => {
 
     const { tokens, designMdPath } = found;
     const findings: JayHtmlValidationFinding[] = [];
-    const cssSources = extractCssSources(ctx.body, ctx.filePath);
-    if (cssSources.length === 0) return [];
+    if (!ctx.css) return [];
+    const cssSources = [ctx.css];
 
     const byBreakpoint = resolveCascadeByBreakpoint(cssSources, ctx.body);
 

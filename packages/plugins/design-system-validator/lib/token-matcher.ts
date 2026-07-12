@@ -32,7 +32,6 @@ function normalizeColor(value: string): string | null {
 
 const COLOR_PROPERTIES = new Set([
     'color',
-    'background',
     'background-color',
     'border-color',
     'border-top-color',
@@ -356,6 +355,63 @@ export function matchComponent(
     }
 
     return findings;
+}
+
+export function isBackgroundShorthand(property: string): boolean {
+    return property === 'background';
+}
+
+function splitTopLevelCommas(value: string): string[] {
+    const parts: string[] = [];
+    let depth = 0;
+    let current = '';
+    for (const ch of value) {
+        if (ch === '(' || ch === '[') depth++;
+        else if (ch === ')' || ch === ']') depth--;
+        if (ch === ',' && depth === 0) {
+            parts.push(current.trim());
+            current = '';
+        } else {
+            current += ch;
+        }
+    }
+    if (current.trim()) parts.push(current.trim());
+    return parts;
+}
+
+export function extractBackgroundColors(value: string): string[] {
+    if (
+        value.startsWith('var(') ||
+        value === 'transparent' ||
+        value === 'none' ||
+        value === 'inherit' ||
+        value === 'initial' ||
+        value === 'unset'
+    ) {
+        return [];
+    }
+
+    const layers = splitTopLevelCommas(value);
+    const colors: string[] = [];
+
+    for (const layer of layers) {
+        if (/^(linear-gradient|radial-gradient|conic-gradient|repeating-|url)\s*\(/i.test(layer)) {
+            continue;
+        }
+
+        const hexMatch = layer.match(/(^|\s)(#[0-9a-fA-F]{3,8})(\s|$)/);
+        if (hexMatch) {
+            colors.push(hexMatch[2]);
+            continue;
+        }
+
+        const rgbMatch = layer.match(/(^|\s)(rgba?\s*\([^)]+\))/);
+        if (rgbMatch) {
+            colors.push(rgbMatch[2]);
+        }
+    }
+
+    return colors;
 }
 
 export function hexToRgbValues(hex: string): [number, number, number] | null {

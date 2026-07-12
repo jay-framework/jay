@@ -263,39 +263,3 @@ export function resolveCascadeByBreakpoint(
 
     return result;
 }
-
-function findDocumentRoot(el: HTMLElement): HTMLElement {
-    let node: any = el;
-    while (node.parentNode) {
-        node = node.parentNode;
-    }
-    return node as HTMLElement;
-}
-
-export function extractCssSources(root: HTMLElement, filePath: string): string[] {
-    const sources: string[] = [];
-    const docRoot = findDocumentRoot(root);
-
-    const linkedFiles = docRoot.querySelectorAll('link[rel="stylesheet"]');
-    for (const link of linkedFiles) {
-        const href = (link as HTMLElement).getAttribute('href');
-        if (href && !href.startsWith('http')) {
-            try {
-                const dir = require('node:path').dirname(filePath);
-                const cssPath = require('node:path').resolve(dir, href);
-                const css = require('node:fs').readFileSync(cssPath, 'utf-8');
-                sources.push(css);
-            } catch {
-                // linked file not found — skip
-            }
-        }
-    }
-
-    const styleBlocks = docRoot.querySelectorAll('style');
-    for (const style of styleBlocks) {
-        const text = (style as HTMLElement).textContent;
-        if (text) sources.push(text);
-    }
-
-    return sources;
-}

@@ -1101,7 +1101,8 @@ async function validatePackageJson(
                     type: 'export-mismatch',
                     message: 'agent-kit directory exists but is not listed in package.json "files"',
                     location: packageJsonPath,
-                    suggestion: 'Add "agent-kit" to the "files" array so agent-kit files are shipped with the package',
+                    suggestion:
+                        'Add "agent-kit" to the "files" array so agent-kit files are shipped with the package',
                 });
             }
         }

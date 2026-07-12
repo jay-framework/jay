@@ -879,6 +879,7 @@ async function runPluginValidators(
                 const ctx: JayHtmlValidationContext = {
                     filePath: relativePath,
                     body: parsed.body,
+                    css: parsed.css,
                     head: parsed.headMeta,
                     contract: resolvedPageContract
                         ? {

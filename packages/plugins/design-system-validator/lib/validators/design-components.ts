@@ -1,6 +1,6 @@
 import type { JayHtmlValidatorFn, JayHtmlValidationFinding } from '@jay-framework/compiler-shared';
 import { findDesignMd } from '../parse-design-md.js';
-import { resolveCascade, extractCssSources } from '../css-cascade.js';
+import { resolveCascade } from '../css-cascade.js';
 import { matchComponent } from '../token-matcher.js';
 import type { HTMLElement } from 'node-html-parser';
 
@@ -13,8 +13,8 @@ export const validateComponents: JayHtmlValidatorFn = (ctx) => {
     const { tokens, designMdPath } = found;
     const refs = `\nSee ${designMdPath} for component specs, ${DESIGNER_GUIDE} for usage guide.`;
     const findings: JayHtmlValidationFinding[] = [];
-    const cssSources = extractCssSources(ctx.body, ctx.filePath);
-    const cascade = resolveCascade(cssSources, ctx.body);
+    if (!ctx.css) return [];
+    const cascade = resolveCascade([ctx.css], ctx.body);
 
     const jayComponents = new Map<string, HTMLElement[]>();
     const htmlComponents = new Map<string, string>();

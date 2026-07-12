@@ -1,7 +1,7 @@
 import type { JayHtmlValidatorFn, JayHtmlValidationFinding } from '@jay-framework/compiler-shared';
 import { walkElements } from '@jay-framework/compiler-shared';
 import { findDesignMd } from '../parse-design-md.js';
-import { resolveCascade, extractCssSources } from '../css-cascade.js';
+import { resolveCascade } from '../css-cascade.js';
 
 const DESIGNER_GUIDE = 'agent-kit/designer/design-system.md';
 
@@ -13,9 +13,8 @@ export const validateStructure: JayHtmlValidatorFn = (ctx) => {
     const refs = `\nSee ${designMdPath} for rules, ${DESIGNER_GUIDE} for usage guide.`;
     const findings: JayHtmlValidationFinding[] = [];
 
-    if (tokens.rules['max-font-weights']) {
-        const cssSources = extractCssSources(ctx.body, ctx.filePath);
-        const cascade = resolveCascade(cssSources, ctx.body);
+    if (tokens.rules['max-font-weights'] && ctx.css) {
+        const cascade = resolveCascade([ctx.css], ctx.body);
         const fontWeights = new Set<string>();
 
         for (const [, styles] of cascade) {

@@ -9,11 +9,21 @@ const DESIGN_MD = 'DESIGN.md';
 const GUIDE = 'agent-kit/designer/design-system.md';
 const REFS = `\nSee ${DESIGN_MD} for rules, ${GUIDE} for usage guide.`;
 
+function extractCss(root: ReturnType<typeof parse>): string | undefined {
+    const parts: string[] = [];
+    for (const style of root.querySelectorAll('style')) {
+        const text = style.textContent;
+        if (text) parts.push(text);
+    }
+    return parts.length > 0 ? parts.join('\n') : undefined;
+}
+
 function makeContext(html: string): JayHtmlValidationContext {
     const root = parse(html);
     const body = root.querySelector('body') || root;
     return {
         body,
+        css: extractCss(root),
         filePath: path.join(fixturesDir, 'page.jay-html'),
         projectRoot: fixturesDir,
         headlessImports: [],

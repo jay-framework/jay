@@ -9,11 +9,21 @@ const DESIGN_MD = 'DESIGN.md';
 const GUIDE = 'agent-kit/designer/design-system.md';
 const REFS = `\nSee ${DESIGN_MD} for tokens, ${GUIDE} for usage guide.`;
 
+function extractCss(root: ReturnType<typeof parse>): string | undefined {
+    const parts: string[] = [];
+    for (const style of root.querySelectorAll('style')) {
+        const text = style.textContent;
+        if (text) parts.push(text);
+    }
+    return parts.length > 0 ? parts.join('\n') : undefined;
+}
+
 function makeContext(html: string): JayHtmlValidationContext {
     const root = parse(html);
     const body = root.querySelector('body') || root;
     return {
         body,
+        css: extractCss(root),
         filePath: path.join(fixturesDir, 'page.jay-html'),
         projectRoot: fixturesDir,
         headlessImports: [],
@@ -267,7 +277,7 @@ describe('design-tokens validator', () => {
         const findings = await validateTokens(ctx);
         expect(findings.length).toBeGreaterThan(0);
         expect(findings[0].message).toEqual(
-            'Hardcoded color "#ff0000" for background not in design system',
+            'Hardcoded color "#ff0000" in background not in design system',
         );
     });
 
@@ -291,12 +301,36 @@ describe('design-tokens validator', () => {
         expect(bgFindings).toEqual([]);
     });
 
+    it('flags fallback color in multi-layer background', async () => {
+        const ctx = makeContext(`<html>
+            <head><style>.hero { background: radial-gradient(circle, #4f46e5 0%, transparent 40%), #ff0000; }</style></head>
+            <body><div class="hero">Text</div></body>
+        </html>`);
+        const findings = await validateTokens(ctx);
+        const bgFindings = findings.filter((f) => f.message.includes('background'));
+        expect(bgFindings.length).toEqual(1);
+        expect(bgFindings[0].message).toEqual(
+            'Hardcoded color "#ff0000" in background not in design system',
+        );
+    });
+
+    it('passes multi-layer background with only gradients', async () => {
+        const ctx = makeContext(`<html>
+            <head><style>.hero { background: linear-gradient(135deg, #111 0%, #222 100%); }</style></head>
+            <body><div class="hero">Text</div></body>
+        </html>`);
+        const findings = await validateTokens(ctx);
+        const bgFindings = findings.filter((f) => f.message.includes('background'));
+        expect(bgFindings).toEqual([]);
+    });
+
     it('returns no findings when no DESIGN.md', async () => {
         const root = parse(
             '<html><body><style>.x{color:red}</style><div class="x">X</div></body></html>',
         );
         const ctx = {
             body: root.querySelector('body') || root,
+            css: extractCss(root),
             filePath: '/nonexistent/page.jay-html',
             projectRoot: '/nonexistent',
             headlessImports: [],

@@ -26,6 +26,7 @@ export interface JayHtmlValidationContext {
     body: any;
     filePath: string;
     projectRoot: string;
+    css?: string;
     head?: JayHtmlHeadMeta;
     contract?: {
         name: string;

@@ -9,11 +9,21 @@ const DESIGN_MD = 'DESIGN.md';
 const GUIDE = 'agent-kit/designer/design-system.md';
 const REFS = `See ${DESIGN_MD} for component specs, ${GUIDE} for usage guide.`;
 
+function extractCss(root: ReturnType<typeof parse>): string | undefined {
+    const parts: string[] = [];
+    for (const style of root.querySelectorAll('style')) {
+        const text = style.textContent;
+        if (text) parts.push(text);
+    }
+    return parts.length > 0 ? parts.join('\n') : undefined;
+}
+
 function makeContext(html: string): JayHtmlValidationContext {
     const root = parse(html);
     const body = root.querySelector('body') || root;
     return {
         body,
+        css: extractCss(root),
         filePath: path.join(fixturesDir, 'page.jay-html'),
         projectRoot: fixturesDir,
         headlessImports: [],
@@ -74,6 +84,7 @@ describe('design-components validator', () => {
         );
         const ctx = {
             body: root.querySelector('body') || root,
+            css: extractCss(root),
             filePath: path.join(fixturesDir, 'page.jay-html'),
             projectRoot: path.join(__dirname, '..', 'fixtures', 'basic'),
             headlessImports: [],
