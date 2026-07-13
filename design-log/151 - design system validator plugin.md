@@ -488,7 +488,47 @@ background: #fff url('image.jpg') center/cover no-repeat;
 
 Colors _inside_ gradient functions (e.g., `#4f46e5` in `radial-gradient(circle at 20%, #4f46e5 0%, ...)`) are not extracted — they are gradient stops, not background colors.
 
+### CSS custom property resolution
+
+**Problem:** Values like `var(--radius-md)` were compared literally against resolved spec values like `8px`, producing false positives when the var resolves to the correct value.
+
+**Fix:** The cascade resolver now collects `:root` custom property declarations during CSS parsing and resolves `var()` references in resolved styles. This eliminated ~3000 false positives in the test project. Unresolvable vars (from external stylesheets) are left as `var(...)` and still auto-pass through token matchers.
+
+### Component findings: grouping and element identification
+
+**Problem:** Component spec mismatches were reported as individual findings per property, making it hard to see which element was being flagged or what component spec was referenced.
+
+**Fixes:**
+
+1. **Grouped mismatches** — Multiple property mismatches for the same component+element are grouped into a single numbered finding instead of separate warnings.
+
+2. **DESIGN.md path notation** — Component findings use `DESIGN.md components.btn-cta` dotted path to disambiguate from Jay headless components.
+
+3. **Element descriptions** — Findings include tag name, CSS classes, and first 2-3 words of text content: `<button class="btn btn-cta" > "shop now"`.
+
+4. **Raw token references** — Component spec values show both the original DESIGN.md reference and resolved value: `{colors.primary} (#2563eb)`.
+
+### Token findings: element context
+
+**Problem:** Token findings like `font-size value "24px" not in typography tokens` didn't identify which element was affected.
+
+**Fix:** Each finding now includes an element hint with tag, class, and text: `<h1 class="policy-title" > "Refund Policy" — font-size value "28px" not in typography tokens`.
+
+### Validation output: per-file grouping with deduped suggestions
+
+**Problem:** Every finding repeated the same suggestion text and DESIGN.md path. With hundreds of findings, the output was dominated by repeated boilerplate.
+
+**Fixes:**
+
+1. **Suggestions simplified** — Token matchers return short suggestions (`Use a DESIGN.md spacing token`) instead of listing all available tokens. The DESIGN.md placeholder is replaced with the actual path (`src/pages/DESIGN.md`).
+
+2. **Per-file grouping** — The stack-cli renderer groups findings by file within each validator section. The file path appears once, all findings are listed, then unique suggestions are printed once at the bottom.
+
+3. **Suggestion deduplication** — Identical suggestions within a file group are shown only once.
+
 ### Deviations
 
 - The original design did not anticipate that `ctx.body` would be only the `<body>` element (not the full document). The validator interface now carries extracted CSS directly rather than re-parsing it from the DOM.
 - `background` shorthand was not listed in the original design's color properties list. It requires special extraction logic rather than simple property-set membership.
+- CSS custom property resolution was not in the original design (listed as a limitation). Added because the test project uses CSS vars extensively and produces many false positives without resolution.
+- The validation output format was redesigned for readability: per-file grouping, element identification, and suggestion deduplication were not in the original design.

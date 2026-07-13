@@ -1,17 +1,29 @@
 import type { JayHtmlValidatorFn, JayHtmlValidationFinding } from '@jay-framework/compiler-shared';
 import { findDesignMd } from '../parse-design-md.js';
 import { resolveCascade } from '../css-cascade.js';
-import { matchComponent } from '../token-matcher.js';
+import { matchComponent, formatComponentMismatches } from '../token-matcher.js';
 import type { HTMLElement } from 'node-html-parser';
 
-const DESIGNER_GUIDE = 'agent-kit/designer/design-system.md';
+const GUIDE_SUGGESTION = 'See design-system-validator agent-kit/designer/design-system.md for usage guide';
+
+function describeElement(el: HTMLElement): string {
+    const tag = el.rawTagName?.toLowerCase() || 'element';
+    const cls = el.getAttribute?.('class');
+    const ref = el.getAttribute?.('ref');
+    const text = el.textContent?.trim().slice(0, 30);
+    const parts = [`<${tag}`];
+    if (cls) parts.push(`class="${cls}"`);
+    if (ref) parts.push(`ref="${ref}"`);
+    parts.push('>');
+    if (text) parts.push(`"${text}${el.textContent!.trim().length > 30 ? '…' : ''}"`);
+    return parts.join(' ');
+}
 
 export const validateComponents: JayHtmlValidatorFn = (ctx) => {
     const found = findDesignMd(ctx.filePath, ctx.projectRoot);
     if (!found || Object.keys(found.tokens.components).length === 0) return [];
 
     const { tokens, designMdPath } = found;
-    const refs = `\nSee ${designMdPath} for component specs, ${DESIGNER_GUIDE} for usage guide.`;
     const findings: JayHtmlValidationFinding[] = [];
     if (!ctx.css) return [];
     const cascade = resolveCascade([ctx.css], ctx.body);
@@ -47,6 +59,7 @@ export const validateComponents: JayHtmlValidatorFn = (ctx) => {
     for (const [contractName, elements] of jayComponents) {
         const componentName = `jay:${contractName}`;
         const spec = tokens.components[componentName];
+        const rawSpec = tokens.rawComponents[componentName];
         if (!spec) continue;
 
         for (const el of elements) {
@@ -58,22 +71,22 @@ export const validateComponents: JayHtmlValidatorFn = (ctx) => {
                 if (!resolved.allowed) styleValues[prop] = resolved.value;
             }
 
-            const results = matchComponent(styleValues, spec, componentName);
-            for (const result of results) {
-                if (!result.matches) {
-                    findings.push({
-                        severity: 'warning',
-                        message: `<${componentName}> inline template: ${result.suggestion}`,
-                        suggestion: refs.trim(),
-                        element: `<${el.rawTagName || 'element'}>`,
-                    });
-                }
+            const mismatches = matchComponent(styleValues, spec, rawSpec);
+            if (mismatches.length > 0) {
+                const desc = describeElement(el);
+                findings.push({
+                    severity: 'warning',
+                    message: formatComponentMismatches(componentName, mismatches, desc),
+                    suggestion: `See ${designMdPath} components section`,
+                    element: desc,
+                });
             }
         }
     }
 
     for (const [componentName, selector] of htmlComponents) {
         const spec = tokens.components[componentName];
+        const rawSpec = tokens.rawComponents[componentName];
         if (!spec) continue;
 
         for (const [el, styles] of cascade) {
@@ -89,18 +102,21 @@ export const validateComponents: JayHtmlValidatorFn = (ctx) => {
                 if (!resolved.allowed) styleValues[prop] = resolved.value;
             }
 
-            const results = matchComponent(styleValues, spec, componentName);
-            for (const result of results) {
-                if (!result.matches) {
-                    findings.push({
-                        severity: 'warning',
-                        message: `Component "${componentName}": ${result.suggestion}`,
-                        suggestion: refs.trim(),
-                        element: `<${el.rawTagName || 'element'}>`,
-                    });
-                }
+            const mismatches = matchComponent(styleValues, spec, rawSpec);
+            if (mismatches.length > 0) {
+                const desc = describeElement(el);
+                findings.push({
+                    severity: 'warning',
+                    message: formatComponentMismatches(componentName, mismatches, desc),
+                    suggestion: `See ${designMdPath} components section`,
+                    element: desc,
+                });
             }
         }
+    }
+
+    if (findings.length > 0) {
+        findings.push({ severity: 'warning', message: '', suggestion: GUIDE_SUGGESTION });
     }
 
     return findings;

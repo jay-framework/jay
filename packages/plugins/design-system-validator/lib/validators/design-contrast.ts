@@ -3,8 +3,6 @@ import { findDesignMd } from '../parse-design-md.js';
 import { resolveCascade } from '../css-cascade.js';
 import { hexToRgbValues, relativeLuminance, contrastRatio } from '../token-matcher.js';
 
-const DESIGNER_GUIDE = 'agent-kit/designer/design-system.md';
-
 function resolveColorValue(value: string): string | null {
     if (value.startsWith('#')) return value;
     if (value.startsWith('rgb')) {
@@ -36,8 +34,7 @@ export const validateContrast: JayHtmlValidatorFn = (ctx) => {
     const found = findDesignMd(ctx.filePath, ctx.projectRoot);
     if (!found || !found.tokens.rules['require-contrast-aa']) return [];
 
-    const { tokens, designMdPath } = found;
-    const refs = `\nSee ${designMdPath} for color tokens, ${DESIGNER_GUIDE} for usage guide.`;
+    const { tokens } = found;
     const findings: JayHtmlValidationFinding[] = [];
     if (!ctx.css) return [];
 
@@ -71,7 +68,7 @@ export const validateContrast: JayHtmlValidatorFn = (ctx) => {
             findings.push({
                 severity: 'warning',
                 message: `Contrast ratio ${ratio.toFixed(1)}:1 below WCAG AA (${threshold}:1) for color "${colorStyle.value}" on background "${bgStyle.value}"`,
-                suggestion: `Darken text color or lighten background to meet minimum contrast.${refs}`,
+                suggestion: 'Darken text color or lighten background to meet minimum contrast',
                 element: `<${tag}>`,
             });
         }

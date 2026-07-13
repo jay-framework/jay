@@ -171,12 +171,9 @@ export function matchSpacing(value: string, spacingTokens: Record<string, string
     for (const part of parts) {
         if (part === '0' || part === 'auto' || part.startsWith('var(')) continue;
         if (!tokenValues.has(part)) {
-            const suggestions = Object.entries(spacingTokens)
-                .map(([name, val]) => `{spacing.${name}} ("${val}")`)
-                .join(', ');
             return {
                 matches: false,
-                suggestion: `Use a spacing token: ${suggestions}`,
+                suggestion: `Use a DESIGN.md spacing token`,
             };
         }
     }
@@ -199,12 +196,9 @@ export function matchRounded(value: string, roundedTokens: Record<string, string
     tokenValues.add('0');
 
     if (!tokenValues.has(value)) {
-        const suggestions = Object.entries(roundedTokens)
-            .map(([name, val]) => `{rounded.${name}} ("${val}")`)
-            .join(', ');
         return {
             matches: false,
-            suggestion: `Use a rounded token: ${suggestions}`,
+            suggestion: `Use a DESIGN.md rounded token`,
         };
     }
 
@@ -250,7 +244,7 @@ export function matchTypographyProperty(
 
     return {
         matches: false,
-        suggestion: `Value "${value}" for ${property} not in typography tokens`,
+        suggestion: `Use a DESIGN.md typography token`,
     };
 }
 
@@ -277,14 +271,9 @@ export function matchAnimationDuration(
     if (durations.size === 0) return { matches: true };
     if (durations.has(value)) return { matches: true };
 
-    const suggestions = Object.entries(animationTokens)
-        .filter(([, p]) => p.duration)
-        .map(([name, p]) => `${name} (${p.duration})`)
-        .join(', ');
-
     return {
         matches: false,
-        suggestion: `Use an animation preset duration: ${suggestions}`,
+        suggestion: `Use a DESIGN.md animation preset duration`,
     };
 }
 
@@ -314,23 +303,25 @@ export function matchAnimationEasing(
         if (e.replace(/\s/g, '') === normalizedValue) return { matches: true };
     }
 
-    const suggestions = Object.entries(animationTokens)
-        .filter(([, p]) => p.easing)
-        .map(([name, p]) => `${name} (${p.easing})`)
-        .join(', ');
-
     return {
         matches: false,
-        suggestion: `Use an animation preset easing: ${suggestions}`,
+        suggestion: `Use a DESIGN.md animation preset easing`,
     };
+}
+
+export interface ComponentMismatch {
+    cssProp: string;
+    expected: string;
+    expectedRaw?: string;
+    actual: string;
 }
 
 export function matchComponent(
     elementStyles: Record<string, string>,
     componentSpec: ComponentSpec,
-    componentName: string,
-): MatchResult[] {
-    const findings: MatchResult[] = [];
+    rawSpec?: ComponentSpec,
+): ComponentMismatch[] {
+    const mismatches: ComponentMismatch[] = [];
 
     const propertyMapping: Record<string, string> = {
         backgroundColor: 'background-color',
@@ -347,14 +338,35 @@ export function matchComponent(
         const actualValue = elementStyles[cssProp];
 
         if (actualValue && actualValue !== expectedValue) {
-            findings.push({
-                matches: false,
-                suggestion: `${cssProp} should be "${expectedValue}" per ${componentName} component spec, found "${actualValue}"`,
+            const rawValue = rawSpec?.[specProp];
+            mismatches.push({
+                cssProp,
+                expected: expectedValue,
+                expectedRaw: rawValue !== expectedValue ? rawValue : undefined,
+                actual: actualValue,
             });
         }
     }
 
-    return findings;
+    return mismatches;
+}
+
+export function formatComponentMismatches(
+    componentName: string,
+    mismatches: ComponentMismatch[],
+    elementDescription?: string,
+): string {
+    const specPath = `DESIGN.md components.${componentName}`;
+    const header = elementDescription ? `${specPath} on ${elementDescription}:` : `${specPath}:`;
+    const lines: string[] = [header];
+    for (let i = 0; i < mismatches.length; i++) {
+        const m = mismatches[i];
+        const expectedDisplay = m.expectedRaw
+            ? `${m.expectedRaw} (${m.expected})`
+            : `"${m.expected}"`;
+        lines.push(`  ${i + 1}. ${m.cssProp} should be ${expectedDisplay}, found "${m.actual}"`);
+    }
+    return lines.join('\n');
 }
 
 export function isBackgroundShorthand(property: string): boolean {

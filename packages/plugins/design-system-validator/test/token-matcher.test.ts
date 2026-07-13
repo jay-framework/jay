@@ -150,7 +150,7 @@ describe('matchAnimationDuration', () => {
     it('rejects unknown duration', () => {
         const result = matchAnimationDuration('200ms', animations);
         expect(result.matches).toEqual(false);
-        expect(result.suggestion).toMatch(/fade-in.*300ms/);
+        expect(result.suggestion).toEqual('Use a DESIGN.md animation preset duration');
     });
 
     it('allows 0s', () => {
@@ -183,18 +183,40 @@ describe('matchAnimationEasing', () => {
 });
 
 describe('matchComponent', () => {
-    it('passes when styles match spec', () => {
+    it('returns empty when styles match spec', () => {
         const styles = { 'background-color': '#2563eb', color: '#ffffff' };
         const spec = { backgroundColor: '#2563eb', textColor: '#ffffff' };
-        const results = matchComponent(styles, spec, 'button-primary');
-        expect(results.every((r) => r.matches)).toEqual(true);
+        const mismatches = matchComponent(styles, spec);
+        expect(mismatches).toEqual([]);
     });
 
-    it('fails when a property mismatches', () => {
+    it('returns mismatches when a property differs', () => {
         const styles = { 'background-color': '#ff0000', color: '#ffffff' };
         const spec = { backgroundColor: '#2563eb', textColor: '#ffffff' };
-        const results = matchComponent(styles, spec, 'button-primary');
-        expect(results.some((r) => !r.matches)).toEqual(true);
+        const mismatches = matchComponent(styles, spec);
+        expect(mismatches).toEqual([
+            {
+                cssProp: 'background-color',
+                expected: '#2563eb',
+                expectedRaw: undefined,
+                actual: '#ff0000',
+            },
+        ]);
+    });
+
+    it('includes raw reference when it differs from resolved', () => {
+        const styles = { 'background-color': '#ff0000' };
+        const spec = { backgroundColor: '#2563eb' };
+        const rawSpec = { backgroundColor: '{colors.primary}' };
+        const mismatches = matchComponent(styles, spec, rawSpec);
+        expect(mismatches).toEqual([
+            {
+                cssProp: 'background-color',
+                expected: '#2563eb',
+                expectedRaw: '{colors.primary}',
+                actual: '#ff0000',
+            },
+        ]);
     });
 });
 

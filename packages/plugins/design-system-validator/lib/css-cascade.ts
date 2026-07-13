@@ -61,12 +61,27 @@ function getMediaQuery(rule: Rule): string | undefined {
     return undefined;
 }
 
-function parseRules(css: string, sourceIndexOffset: number = 0): CssRule[] {
+function parseRules(
+    css: string,
+    sourceIndexOffset: number = 0,
+    customProperties?: Map<string, string>,
+): CssRule[] {
     const rules: CssRule[] = [];
     let ruleIndex = sourceIndexOffset;
 
     const root = postcss.parse(css);
     root.walkRules((rule: Rule) => {
+        if (customProperties && !getMediaQuery(rule)) {
+            const isRoot = rule.selectors.some((s) => s.trim() === ':root' || s.trim() === 'html');
+            if (isRoot) {
+                rule.walkDecls((decl: Declaration) => {
+                    if (decl.prop.startsWith('--')) {
+                        customProperties.set(decl.prop, decl.value);
+                    }
+                });
+            }
+        }
+
         const declarations: CssRule['declarations'] = [];
         rule.walkDecls((decl: Declaration) => {
             declarations.push({
@@ -96,6 +111,18 @@ function parseRules(css: string, sourceIndexOffset: number = 0): CssRule[] {
     return rules;
 }
 
+function resolveVarReferences(value: string, customProperties: Map<string, string>): string {
+    return value.replace(
+        /var\(\s*(--[a-zA-Z0-9-]+)(?:\s*,\s*([^)]+))?\s*\)/g,
+        (_, name, fallback) => {
+            const resolved = customProperties.get(name);
+            if (resolved !== undefined) return resolveVarReferences(resolved, customProperties);
+            if (fallback !== undefined) return fallback.trim();
+            return _;
+        },
+    );
+}
+
 function parseInlineStyles(
     style: string,
 ): Array<{ property: string; value: string; allowed: boolean }> {
@@ -112,13 +139,18 @@ function parseInlineStyles(
     return declarations;
 }
 
-function matchesSelector(element: HTMLElement, selector: string, root: HTMLElement): boolean {
-    try {
-        const matches = root.querySelectorAll(selector);
-        return matches.some((el) => el === element);
-    } catch {
-        return false;
+function buildSelectorCache(rules: CssRule[], root: HTMLElement): Map<string, Set<HTMLElement>> {
+    const cache = new Map<string, Set<HTMLElement>>();
+    for (const rule of rules) {
+        if (cache.has(rule.selector)) continue;
+        try {
+            const matches = root.querySelectorAll(rule.selector);
+            cache.set(rule.selector, new Set(matches as HTMLElement[]));
+        } catch {
+            cache.set(rule.selector, new Set());
+        }
     }
+    return cache;
 }
 
 function compareSpecificity(a: [number, number, number], b: [number, number, number]): number {
@@ -130,11 +162,13 @@ function compareSpecificity(a: [number, number, number], b: [number, number, num
 function resolveForElement(
     element: HTMLElement,
     rules: CssRule[],
-    root: HTMLElement,
+    selectorCache: Map<string, Set<HTMLElement>>,
 ): Record<string, ResolvedStyle> {
     const resolved: Record<string, ResolvedStyle> = {};
 
-    const matchingRules = rules.filter((rule) => matchesSelector(element, rule.selector, root));
+    const matchingRules = rules.filter(
+        (rule) => selectorCache.get(rule.selector)?.has(element) ?? false,
+    );
 
     matchingRules.sort((a, b) => {
         const specCmp = compareSpecificity(a.specificity, b.specificity);
@@ -188,17 +222,26 @@ export function resolveCascade(
 ): Map<HTMLElement, Record<string, ResolvedStyle>> {
     let offset = 0;
     const allRules: CssRule[] = [];
+    const customProperties = new Map<string, string>();
     for (const css of cssSources) {
-        const rules = parseRules(css, offset);
+        const rules = parseRules(css, offset, customProperties);
         allRules.push(...rules);
         offset += rules.length;
     }
 
+    const selectorCache = buildSelectorCache(allRules, root);
     const result = new Map<HTMLElement, Record<string, ResolvedStyle>>();
 
     function walk(el: HTMLElement) {
-        const resolved = resolveForElement(el, allRules, root);
+        const resolved = resolveForElement(el, allRules, selectorCache);
         if (Object.keys(resolved).length > 0) {
+            if (customProperties.size > 0) {
+                for (const style of Object.values(resolved)) {
+                    if (style.value.includes('var(')) {
+                        style.value = resolveVarReferences(style.value, customProperties);
+                    }
+                }
+            }
             result.set(el, resolved);
         }
         for (const child of el.childNodes) {
@@ -224,8 +267,9 @@ export function resolveCascadeByBreakpoint(
 ): Map<string | undefined, Map<HTMLElement, Record<string, ResolvedStyle>>> {
     let offset = 0;
     const allRules: CssRule[] = [];
+    const customProperties = new Map<string, string>();
     for (const css of cssSources) {
-        const rules = parseRules(css, offset);
+        const rules = parseRules(css, offset, customProperties);
         allRules.push(...rules);
         offset += rules.length;
     }
@@ -242,11 +286,19 @@ export function resolveCascadeByBreakpoint(
             (r) => r.mediaQuery === undefined || r.mediaQuery === breakpoint,
         );
 
+        const selectorCache = buildSelectorCache(rulesForBreakpoint, root);
         const breakpointResult = new Map<HTMLElement, Record<string, ResolvedStyle>>();
 
         function walk(el: HTMLElement) {
-            const resolved = resolveForElement(el, rulesForBreakpoint, root);
+            const resolved = resolveForElement(el, rulesForBreakpoint, selectorCache);
             if (Object.keys(resolved).length > 0) {
+                if (customProperties.size > 0) {
+                    for (const style of Object.values(resolved)) {
+                        if (style.value.includes('var(')) {
+                            style.value = resolveVarReferences(style.value, customProperties);
+                        }
+                    }
+                }
                 breakpointResult.set(el, resolved);
             }
             for (const child of el.childNodes) {

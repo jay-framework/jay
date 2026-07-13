@@ -5,9 +5,6 @@ import type { JayHtmlValidationContext } from '@jay-framework/compiler-shared';
 import path from 'node:path';
 
 const fixturesDir = path.join(__dirname, '..', 'fixtures', 'basic');
-const DESIGN_MD = 'DESIGN.md';
-const GUIDE = 'agent-kit/designer/design-system.md';
-const REFS = `\nSee ${DESIGN_MD} for tokens, ${GUIDE} for usage guide.`;
 
 function extractCss(root: ReturnType<typeof parse>): string | undefined {
     const parts: string[] = [];
@@ -30,19 +27,30 @@ function makeContext(html: string): JayHtmlValidationContext {
     };
 }
 
+function withoutGuide(findings: any[]) {
+    return findings.filter((f: any) => f.message !== '');
+}
+
+const H = {
+    cardText: '<div class="card" > "Text"',
+    boxText: '<div class="box" > "Text"',
+    fadeText: '<div class="fade" > "Text"',
+    heroText: '<div class="hero" > "Text"',
+};
+
 describe('design-tokens validator', () => {
     it('flags hardcoded color not in tokens', async () => {
         const ctx = makeContext(`<html><body>
             <style>.card { color: #ff0000; }</style>
             <div class="card">Text</div>
         </body></html>`);
-        const findings = await validateTokens(ctx);
+        const findings = withoutGuide(await validateTokens(ctx));
         expect(findings).toEqual([
             {
                 severity: 'warning',
-                message: 'Hardcoded color "#ff0000" for color not in design system',
-                suggestion: `Use token {colors.error} ("#dc2626")${REFS}`,
-                element: '<div>',
+                message: `${H.cardText} — Hardcoded color "#ff0000" for color not in design system`,
+                suggestion: 'Use token {colors.error} ("#dc2626")',
+                element: H.cardText,
             },
         ]);
     });
@@ -61,13 +69,13 @@ describe('design-tokens validator', () => {
             <style>.box { padding: 13px; }</style>
             <div class="box">Text</div>
         </body></html>`);
-        const findings = await validateTokens(ctx);
+        const findings = withoutGuide(await validateTokens(ctx));
         expect(findings).toEqual([
             {
                 severity: 'warning',
-                message: 'padding value "13px" not in spacing scale',
-                suggestion: `Use a spacing token: {spacing.xs} ("0.25rem"), {spacing.sm} ("0.5rem"), {spacing.md} ("1rem"), {spacing.lg} ("1.5rem"), {spacing.xl} ("2rem")${REFS}`,
-                element: '<div>',
+                message: `${H.boxText} — padding value "13px" not in spacing scale`,
+                suggestion: 'Use a DESIGN.md spacing token',
+                element: H.boxText,
             },
         ]);
     });
@@ -86,13 +94,13 @@ describe('design-tokens validator', () => {
             <style>.card { border-radius: 10px; }</style>
             <div class="card">Text</div>
         </body></html>`);
-        const findings = await validateTokens(ctx);
+        const findings = withoutGuide(await validateTokens(ctx));
         expect(findings).toEqual([
             {
                 severity: 'warning',
-                message: 'border-radius "10px" not in rounded scale',
-                suggestion: `Use a rounded token: {rounded.none} ("0"), {rounded.sm} ("0.25rem"), {rounded.md} ("0.5rem"), {rounded.lg} ("0.75rem"), {rounded.full} ("9999px")${REFS}`,
-                element: '<div>',
+                message: `${H.cardText} — border-radius "10px" not in rounded scale`,
+                suggestion: 'Use a DESIGN.md rounded token',
+                element: H.cardText,
             },
         ]);
     });
@@ -133,13 +141,13 @@ describe('design-tokens validator', () => {
             </style>
             <div class="card">Text</div>
         </body></html>`);
-        const findings = await validateTokens(ctx);
+        const findings = withoutGuide(await validateTokens(ctx));
         expect(findings).toEqual([
             {
                 severity: 'warning',
-                message: '[(max-width: 768px)] padding value "13px" not in spacing scale',
-                suggestion: `Use a spacing token: {spacing.xs} ("0.25rem"), {spacing.sm} ("0.5rem"), {spacing.md} ("1rem"), {spacing.lg} ("1.5rem"), {spacing.xl} ("2rem")${REFS}`,
-                element: '<div>',
+                message: `[(max-width: 768px)] ${H.cardText} — padding value "13px" not in spacing scale`,
+                suggestion: 'Use a DESIGN.md spacing token',
+                element: H.cardText,
             },
         ]);
     });
@@ -166,13 +174,13 @@ describe('design-tokens validator', () => {
             </style>
             <div class="fade">Text</div>
         </body></html>`);
-        const findings = await validateTokens(ctx);
+        const findings = withoutGuide(await validateTokens(ctx));
         expect(findings).toEqual([
             {
                 severity: 'warning',
-                message: 'transition-duration "200ms" not in animation presets',
-                suggestion: `Use an animation preset duration: fade-in (300ms), micro (150ms)${REFS}`,
-                element: '<div>',
+                message: `${H.fadeText} — transition-duration "200ms" not in animation presets`,
+                suggestion: 'Use a DESIGN.md animation preset duration',
+                element: H.fadeText,
             },
         ]);
     });
@@ -197,20 +205,19 @@ describe('design-tokens validator', () => {
             </style>
             <div class="fade">Text</div>
         </body></html>`);
-        const findings = await validateTokens(ctx);
+        const findings = withoutGuide(await validateTokens(ctx));
         expect(findings).toEqual([
             {
                 severity: 'warning',
-                message: 'transition-timing-function "ease" not in animation presets',
-                suggestion: `Use an animation preset easing: fade-in (cubic-bezier(0, 0, 0.2, 1)), micro (ease-in-out)${REFS}`,
-                element: '<div>',
+                message: `${H.fadeText} — transition-timing-function "ease" not in animation presets`,
+                suggestion: 'Use a DESIGN.md animation preset easing',
+                element: H.fadeText,
             },
             {
                 severity: 'warning',
-                message:
-                    '[(prefers-reduced-motion: reduce)] transition-timing-function "ease" not in animation presets',
-                suggestion: `Use an animation preset easing: fade-in (cubic-bezier(0, 0, 0.2, 1)), micro (ease-in-out)${REFS}`,
-                element: '<div>',
+                message: `[(prefers-reduced-motion: reduce)] ${H.fadeText} — transition-timing-function "ease" not in animation presets`,
+                suggestion: 'Use a DESIGN.md animation preset easing',
+                element: H.fadeText,
             },
         ]);
     });
@@ -232,13 +239,14 @@ describe('design-tokens validator', () => {
             <style>.fade { transition: opacity 300ms; }</style>
             <div class="fade">Text</div>
         </body></html>`);
-        const findings = await validateTokens(ctx);
+        const findings = withoutGuide(await validateTokens(ctx));
         expect(findings).toEqual([
             {
                 severity: 'warning',
                 message:
                     'Page uses transitions/animations but has no @media (prefers-reduced-motion) override',
-                suggestion: `Add @media (prefers-reduced-motion: reduce) { * { transition-duration: 0s !important; animation-duration: 0s !important; } }${REFS}`,
+                suggestion:
+                    'Add @media (prefers-reduced-motion: reduce) { * { transition-duration: 0s !important; animation-duration: 0s !important; } }',
             },
         ]);
     });
@@ -264,8 +272,8 @@ describe('design-tokens validator', () => {
         </html>`);
         const findings = await validateTokens(ctx);
         expect(findings.length).toBeGreaterThan(0);
-        expect(findings[0].message).toEqual(
-            'Hardcoded color "#ff0000" for color not in design system',
+        expect(findings[0].message).toMatch(
+            /Hardcoded color "#ff0000" for color not in design system/,
         );
     });
 
@@ -276,8 +284,8 @@ describe('design-tokens validator', () => {
         </html>`);
         const findings = await validateTokens(ctx);
         expect(findings.length).toBeGreaterThan(0);
-        expect(findings[0].message).toEqual(
-            'Hardcoded color "#ff0000" in background not in design system',
+        expect(findings[0].message).toMatch(
+            /Hardcoded color "#ff0000" in background not in design system/,
         );
     });
 
@@ -309,8 +317,8 @@ describe('design-tokens validator', () => {
         const findings = await validateTokens(ctx);
         const bgFindings = findings.filter((f) => f.message.includes('background'));
         expect(bgFindings.length).toEqual(1);
-        expect(bgFindings[0].message).toEqual(
-            'Hardcoded color "#ff0000" in background not in design system',
+        expect(bgFindings[0].message).toMatch(
+            /Hardcoded color "#ff0000" in background not in design system/,
         );
     });
 

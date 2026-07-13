@@ -5,9 +5,11 @@ import type { JayHtmlValidationContext } from '@jay-framework/compiler-shared';
 import path from 'node:path';
 
 const fixturesDir = path.join(__dirname, '..', 'fixtures', 'components');
-const DESIGN_MD = 'DESIGN.md';
-const GUIDE = 'agent-kit/designer/design-system.md';
-const REFS = `See ${DESIGN_MD} for component specs, ${GUIDE} for usage guide.`;
+const REFS = 'See DESIGN.md components section'; // path is relative to fixtures dir
+
+function withoutGuide(findings: any[]) {
+    return findings.filter((f: any) => f.message !== '');
+}
 
 function extractCss(root: ReturnType<typeof parse>): string | undefined {
     const parts: string[] = [];
@@ -38,14 +40,14 @@ describe('design-components validator', () => {
                 <div class="card">Product</div>
             </jay:product-card>
         </body></html>`);
-        const findings = await validateComponents(ctx);
+        const findings = withoutGuide(await validateComponents(ctx));
         expect(findings).toEqual([
             {
                 severity: 'warning',
                 message:
-                    '<jay:product-card> inline template: background-color should be "#f8fafc" per jay:product-card component spec, found "#ffffff"',
+                    'DESIGN.md components.jay:product-card on <div class="card" > "Product":\n  1. background-color should be {colors.surface} (#f8fafc), found "#ffffff"',
                 suggestion: REFS,
-                element: '<div>',
+                element: '<div class="card" > "Product"',
             },
         ]);
     });
@@ -66,14 +68,14 @@ describe('design-components validator', () => {
             <style>.button-primary { background-color: #ff0000; color: #ffffff; }</style>
             <button class="button-primary">Click</button>
         </body></html>`);
-        const findings = await validateComponents(ctx);
+        const findings = withoutGuide(await validateComponents(ctx));
         expect(findings).toEqual([
             {
                 severity: 'warning',
                 message:
-                    'Component "button-primary": background-color should be "#2563eb" per button-primary component spec, found "#ff0000"',
+                    'DESIGN.md components.button-primary on <button class="button-primary" > "Click":\n  1. background-color should be {colors.primary} (#2563eb), found "#ff0000"',
                 suggestion: REFS,
-                element: '<button>',
+                element: '<button class="button-primary" > "Click"',
             },
         ]);
     });
