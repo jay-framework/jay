@@ -155,4 +155,41 @@ items:
         expect(result.errors).toEqual([]);
         expect(result.warnings.map((w) => w.code)).toEqual(['gif-missing-poster']);
     });
+
+    it('errors on unknown browse.size', () => {
+        const validated = validateAddMenuCatalogFile(
+            parseCatalog(`
+items:
+  - id: test-plugin:bad-size
+    title: Bad size
+    category: Test
+    browse:
+      size: xlarge
+    prompt: ok
+`),
+            SOURCE,
+        );
+        expect(validated.file).toBeNull();
+        expect(validated.errors.some((e) => e.code === 'browse-unknown-size')).toBe(true);
+    });
+
+    it('warns when large browse item has no presentation', () => {
+        const validated = validateAddMenuCatalogFile(
+            parseCatalog(`
+items:
+  - id: test-plugin:large-no-preview
+    title: Large hero
+    category: Test
+    browse:
+      size: large
+    prompt: ok
+`),
+            SOURCE,
+        );
+        expect(validated.errors).toEqual([]);
+        const linted = lintAddMenuCatalog(validated.file!.items, SOURCE);
+        expect(linted.warnings.map((w) => w.code)).toEqual([
+            'browse-large-without-presentation',
+        ]);
+    });
 });

@@ -23,7 +23,12 @@ export type AddMenuItem = {
     subCategory?: string;
     thumbnail?: string;
     presentation?: AddMenuPresentation;
+    browse?: {
+        size?: AddMenuBrowseSize;
+    };
 };
+
+type AddMenuBrowseSize = 'large' | 'medium' | 'small';
 
 type AddMenuPresentation =
     | { type: 'image'; src: string }
@@ -201,6 +206,35 @@ function validatePresentation(
     return { type: 'html-fragment', html: htmlValue };
 }
 
+const BROWSE_SIZES: ReadonlySet<AddMenuBrowseSize> = new Set(['large', 'medium', 'small']);
+
+function validateBrowse(
+    raw: unknown,
+    itemPath: string,
+    errors: AddMenuValidationError[],
+): AddMenuItem['browse'] | undefined {
+    if (raw === undefined) return undefined;
+    if (!isRecord(raw)) {
+        errors.push({ path: itemPath, message: 'browse must be an object' });
+        return undefined;
+    }
+
+    const sizeRaw = raw.size;
+    if (sizeRaw === undefined) {
+        return {};
+    }
+    if (typeof sizeRaw !== 'string' || !BROWSE_SIZES.has(sizeRaw as AddMenuBrowseSize)) {
+        errors.push({
+            path: `${itemPath}.size`,
+            message: 'browse.size must be "large", "medium", or "small"',
+            code: 'browse-unknown-size',
+        });
+        return undefined;
+    }
+
+    return { size: sizeRaw as AddMenuBrowseSize };
+}
+
 export function validateAddMenuItem(
     raw: unknown,
     itemPath: string,
@@ -231,6 +265,7 @@ export function validateAddMenuItem(
     }
 
     const presentation = validatePresentation(raw.presentation, `${itemPath}.presentation`, errors);
+    const browse = validateBrowse(raw.browse, `${itemPath}.browse`, errors);
     if (errors.length > 0) {
         return { item: null, errors };
     }
@@ -246,6 +281,7 @@ export function validateAddMenuItem(
             subCategory: optionalString(raw, 'subCategory'),
             thumbnail: optionalString(raw, 'thumbnail'),
             ...(presentation ? { presentation } : {}),
+            ...(browse ? { browse } : {}),
         },
         errors,
     };
@@ -398,6 +434,23 @@ function lintGifPoster(item: AddMenuItem, sourcePath: string): AddMenuCatalogLin
     ];
 }
 
+function lintBrowseLargeWithoutPresentation(
+    item: AddMenuItem,
+    sourcePath: string,
+): AddMenuCatalogLintWarning[] {
+    const size = item.browse?.size ?? 'medium';
+    if (size !== 'large') return [];
+    if (normalizeAddMenuPresentation(item)) return [];
+    return [
+        catalogWarning(
+            'browse-large-without-presentation',
+            `large browse item "${item.id}" has no presentation or thumbnail — add a preview`,
+            item.id,
+            sourcePath,
+        ),
+    ];
+}
+
 export function lintAddMenuCatalog(
     items: AddMenuItem[],
     sourcePath: string,
@@ -407,6 +460,7 @@ export function lintAddMenuCatalog(
 
     for (const item of items) {
         warnings.push(...lintGifPoster(item, sourcePath));
+        warnings.push(...lintBrowseLargeWithoutPresentation(item, sourcePath));
         const htmlLint = lintHtmlFragment(item, sourcePath);
         errors.push(...htmlLint.errors);
         warnings.push(...htmlLint.warnings);
