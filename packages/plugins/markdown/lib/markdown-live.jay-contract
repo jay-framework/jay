@@ -1,0 +1,13 @@
+name: markdown-live
+description: Renders markdown with fast+interactive updates
+
+props:
+  - name: markdown
+    kind: required
+    description: Markdown string to render
+
+tags:
+  - tag: html
+    type: data
+    dataType: html-string
+    phase: fast+interactive

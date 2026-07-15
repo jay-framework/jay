@@ -4983,6 +4983,30 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@jay-framework/markdown@workspace:^, @jay-framework/markdown@workspace:packages/plugins/markdown":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/markdown@workspace:packages/plugins/markdown"
+  dependencies:
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/fullstack-component": "workspace:^"
+    "@jay-framework/jay-stack-cli": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/stack-client-runtime": "workspace:^"
+    "@jay-framework/stack-server-runtime": "workspace:^"
+    "@types/js-yaml": "npm:^4.0.9"
+    "@types/node": "npm:^22.15.21"
+    js-yaml: "npm:^4.1.0"
+    marked: "npm:^15.0.0"
+    rimraf: "npm:^5.0.5"
+    tsup: "npm:^8.0.1"
+    typescript: "npm:^5.3.3"
+    vite: "npm:^5.0.11"
+    vitest: "npm:^1.2.1"
+  languageName: unknown
+  linkType: soft
+
 "@jay-framework/plugin-validator@workspace:^, @jay-framework/plugin-validator@workspace:packages/jay-stack/plugin-validator":
   version: 0.0.0-use.local
   resolution: "@jay-framework/plugin-validator@workspace:packages/jay-stack/plugin-validator"
@@ -12399,6 +12423,7 @@ __metadata:
     "@jay-framework/dev-environment": "workspace:^"
     "@jay-framework/fullstack-component": "workspace:^"
     "@jay-framework/jay-stack-cli": "workspace:^"
+    "@jay-framework/markdown": "workspace:^"
     "@jay-framework/runtime": "workspace:^"
     "@jay-framework/stack-client-runtime": "workspace:^"
     "@jay-framework/stack-server-runtime": "workspace:^"
@@ -16244,6 +16269,15 @@ __metadata:
   dependencies:
     tmpl: "npm:1.0.5"
   checksum: 10/4c66ddfc654537333da952c084f507fa4c30c707b1635344eb35be894d797ba44c901a9cebe914aa29a7f61357543ba09b09dddbd7f65b4aee756b450f169f40
+  languageName: node
+  linkType: hard
+
+"marked@npm:^15.0.0":
+  version: 15.0.12
+  resolution: "marked@npm:15.0.12"
+  bin:
+    marked: bin/marked.js
+  checksum: 10/deeb619405c0c46af00c99b18b3365450abeb309104b24e3658f46142344f6b7c4117608c3b5834084d8738e92f81240c19f596e6ee369260f96e52b3457eaee
   languageName: node
   linkType: hard
 

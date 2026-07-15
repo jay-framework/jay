@@ -25,6 +25,8 @@
         <li><a href="/nested/">Nested</a> — nested headfull components</li>
         <li><a href="/html-string/">HTML String</a> — html-string dataType escaping</li>
         <li><a href="/headless-props/">Headless Props</a> — keyed headless component with YAML body props</li>
+        <li><a href="/markdown/hello/">Markdown</a> — markdown-pages component rendering .md files</li>
+        <li><a href="/markdown/second-page/">Markdown</a> — markdown-pages, second page with mermaid diagram</li>
       </ul>
     </nav>
   </div>

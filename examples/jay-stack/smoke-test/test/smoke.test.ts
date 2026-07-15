@@ -475,6 +475,15 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Headless Props Test/);
             expect(body).toMatch(/Widget from-props/);
         });
+
+        it('/markdown/hello — markdown-pages component renders .md file', async () => {
+            const { status, body } = await fetchPage(server.url, '/markdown/hello/');
+            expect(status).toBe(200);
+            expectPage(body);
+            expect(body).toMatch(/Hello from Markdown/);
+            expect(body).toMatch(/test post/);
+            expect(body).toMatch(/md-code/);
+        });
     });
 
     describe('production self-hosted', () => {
