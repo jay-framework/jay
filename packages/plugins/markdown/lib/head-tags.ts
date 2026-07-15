@@ -1,6 +1,14 @@
 import type { HeadTag } from '@jay-framework/fullstack-component';
 
-const KNOWN_FIELDS = new Set(['title', 'description', 'canonical', 'image', 'author', 'date', 'tags']);
+const KNOWN_FIELDS = new Set([
+    'title',
+    'description',
+    'canonical',
+    'image',
+    'author',
+    'date',
+    'tags',
+]);
 
 export function frontmatterToHeadTags(fm: Record<string, any>): HeadTag[] {
     const tags: HeadTag[] = [];

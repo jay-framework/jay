@@ -14,17 +14,27 @@ export default defineConfig(({ isSsrBuild }) => ({
             formats: ['es'],
         },
         rollupOptions: {
-            external: [
-                '@jay-framework/component',
-                '@jay-framework/fullstack-component',
-                '@jay-framework/stack-client-runtime',
-                '@jay-framework/stack-server-runtime',
-                '@jay-framework/reactive',
-                '@jay-framework/runtime',
-                'node:fs',
-                'node:fs/promises',
-                'node:path',
-            ],
+            external: isSsrBuild
+                ? [
+                      '@jay-framework/component',
+                      '@jay-framework/fullstack-component',
+                      '@jay-framework/stack-client-runtime',
+                      '@jay-framework/stack-server-runtime',
+                      '@jay-framework/reactive',
+                      '@jay-framework/runtime',
+                      'node:fs',
+                      'node:fs/promises',
+                      'node:path',
+                      'node:child_process',
+                      'node:os',
+                  ]
+                : [
+                      '@jay-framework/component',
+                      '@jay-framework/fullstack-component',
+                      '@jay-framework/stack-client-runtime',
+                      '@jay-framework/reactive',
+                      '@jay-framework/runtime',
+                  ],
         },
     },
     test: {

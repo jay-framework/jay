@@ -1,4 +1,9 @@
-const ESCAPE_MAP: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
+const ESCAPE_MAP: Record<string, string> = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+};
 function esc(s: string): string {
     return s.replace(/[&<>"]/g, (c) => ESCAPE_MAP[c]);
 }
@@ -59,7 +64,10 @@ const JSON_RULES: TokenRule[] = [
 const BASH_RULES: TokenRule[] = [
     { cls: 'comment', re: /#[^\n]*/g },
     { cls: 'string', re: /"(?:[^"\\]|\\.)*"|'[^']*'/g },
-    { cls: 'keyword', re: /\b(if|then|else|elif|fi|for|while|do|done|case|esac|function|return|exit|export|source|local|readonly|declare|set|unset|cd|echo|printf|test)\b/g },
+    {
+        cls: 'keyword',
+        re: /\b(if|then|else|elif|fi|for|while|do|done|case|esac|function|return|exit|export|source|local|readonly|declare|set|unset|cd|echo|printf|test)\b/g,
+    },
     { cls: 'function', re: /\b[a-zA-Z_][\w-]*(?=\s)/g },
     { cls: 'operator', re: /[|&;<>!$]+/g },
     { cls: 'punctuation', re: /[(){}[\]]/g },
@@ -68,7 +76,10 @@ const BASH_RULES: TokenRule[] = [
 const PYTHON_RULES: TokenRule[] = [
     { cls: 'comment', re: /#[^\n]*/g },
     { cls: 'string', re: /"""[\s\S]*?"""|'''[\s\S]*?'''|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'/g },
-    { cls: 'keyword', re: /\b(and|as|assert|async|await|break|class|continue|def|del|elif|else|except|finally|for|from|global|if|import|in|is|lambda|nonlocal|not|or|pass|raise|return|try|while|with|yield|True|False|None)\b/g },
+    {
+        cls: 'keyword',
+        re: /\b(and|as|assert|async|await|break|class|continue|def|del|elif|else|except|finally|for|from|global|if|import|in|is|lambda|nonlocal|not|or|pass|raise|return|try|while|with|yield|True|False|None)\b/g,
+    },
     { cls: 'number', re: /\b\d+(?:\.\d+)?(?:e[+-]?\d+)?j?\b/gi },
     { cls: 'function', re: /\b([a-zA-Z_]\w*)\s*(?=\()/g },
     { cls: 'operator', re: /[+\-*/%=!<>&|^~@:]+/g },
@@ -106,7 +117,12 @@ export function highlightCode(code: string, lang: string): string {
         const re = new RegExp(rule.re.source, rule.re.flags);
         let match: RegExpExecArray | null;
         while ((match = re.exec(code)) !== null) {
-            tokens.push({ start: match.index, end: match.index + match[0].length, cls: rule.cls, text: match[0] });
+            tokens.push({
+                start: match.index,
+                end: match.index + match[0].length,
+                cls: rule.cls,
+                text: match[0],
+            });
         }
     }
 

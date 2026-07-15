@@ -625,3 +625,60 @@ contracts:
 6. `markdown-live` renders at fast phase and re-renders on client when value changes
 7. Plugin validates with `jay-stack validate-plugin`
 8. Example page in a test project renders correctly
+
+---
+
+## Implementation Results
+
+### What was built
+
+Plugin at `packages/plugins/markdown/` with 29 tests, dual build (server + client), validates clean.
+
+**Core library:**
+- `parse-markdown.ts` — `Marked` parser with configurable mermaid renderer via `createMarkedParser(mermaidRenderer?)`. Without mermaid renderer, fences output `<pre class="md-mermaid-source">` fallback.
+- `code-highlighter.ts` — regex-based CSS-class tokenizer for 8 languages
+- `head-tags.ts` — frontmatter → HeadTag mapping with unknown-field pass-through
+- `mermaid-renderer.ts` — shells out to `mmdc` (via `@mermaid-js/mermaid-cli` + Puppeteer) for build-time SVG
+
+**Three components:**
+- `markdownPages` — keyed headless, reads `.md` files by slug from `contentDir` (via DL#156 headless props), uses `loadParams` to enumerate slugs, renders with mermaid SVG
+- `markdownContent` — instance-based, static slow-phase renderer with mermaid SVG
+- `markdownLive` — instance-based, fast+interactive renderer WITHOUT mermaid (client-side only)
+
+**Three CSS themes:** default, docs, blog
+
+**Agent kit:** `markdown-usage.md`
+
+**Smoke tests:** Two test pages in `examples/jay-stack/smoke-test/`:
+- `/markdown/[slug]/` — `markdown-pages` component rendering `.md` files with mermaid diagrams
+- `/markdown-live/` — `markdown-live` component rendering markdown at request time
+
+### Framework changes (DL#156)
+
+- `LoadParams` type accepts optional `props` parameter
+- `runLoadParams` passes `part.headlessProps` so `loadParams` can access component configuration (e.g., `contentDir`)
+- Both dev server and production build pipeline pass headless props through
+
+### Key architectural decision: Server vs client mermaid rendering
+
+Mermaid requires a DOM to render SVGs. We evaluated four approaches:
+
+1. **`@mermaid-js/mermaid-cli` (chosen for server)** — shells out to `mmdc` which uses Puppeteer/Chromium. Produces real SVGs at build time. Heavy dev dependency (~150MB with Chromium) but correct output.
+2. **Mermaid + JSDOM** — lighter but rendering quirks with mermaid's DOM usage.
+3. **Client-side rendering** — no build dependency but ~500KB client bundle and layout shift.
+4. **Placeholder only** — no rendering, just styled source blocks.
+
+**Result: split architecture.** Server components (`markdown-pages`, `markdown-content`) use mmdc for real SVG output. Client component (`markdown-live`) outputs `<pre class="md-mermaid-source">` placeholder — client-side mermaid.js can be added by the project if needed.
+
+The `createMarkedParser(mermaidRenderer?)` factory enables this split: server code passes `renderMermaidBlock`, client code passes nothing. No conditional imports, no Node.js APIs in the client bundle.
+
+### Production build limitation
+
+Routes with headless-only components (no `page.ts`) don't get compiled into production server elements. The `markdown/[slug]` route works in dev mode but the production build skips it. Pages using `markdown-pages` need a `page.ts` (even an empty one) for production builds. This is a pre-existing build pipeline limitation, not specific to the markdown plugin.
+
+### Deviations from design
+
+- **Mermaid rendering is split** between server (Puppeteer SVG) and client (source fallback), rather than a single build-time-only approach. The design assumed build-time-only, but the `markdown-live` client component can't use Puppeteer.
+- **`loadParams` required a framework change** — `LoadParams` type updated to accept optional props parameter. Not anticipated in the original DL#155 design (was expected to be covered by DL#156 alone, but `loadParams` is a separate code path from render).
+- **`@mermaid-js/mermaid-cli` requires Puppeteer** as a peer dependency, which downloads Chromium (~150MB). This is heavier than the "~50MB" estimate in the trade-offs table. Acceptable for build-time tooling but worth noting.
+- **`markdown-pages` contract `tags` sub-contract** needed `trackBy: name` — the original contract design omitted this, caught by the validate command.

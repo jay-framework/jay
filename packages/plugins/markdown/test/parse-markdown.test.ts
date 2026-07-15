@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { extractFrontmatter, parseMarkdown, parseMarkdownBody } from '../lib/parse-markdown';
+import {
+    extractFrontmatter,
+    parseMarkdown,
+    parseMarkdownBody,
+    createMarkedParser,
+} from '../lib/parse-markdown';
+import { renderMermaidBlock } from '../lib/mermaid-renderer';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -65,14 +71,23 @@ describe('parseMarkdown', () => {
         expect(html).toMatch(/<pre class="md-code"><code class="language-js">/);
     });
 
-    it('renders mermaid fences as md-mermaid blocks', () => {
+    it('renders mermaid fences as SVG when mermaid renderer is provided', () => {
+        const content = fs.readFileSync(path.join(fixturesDir, 'mermaid-post.md'), 'utf-8');
+        const serverMarked = createMarkedParser(renderMermaidBlock);
+        const { html } = parseMarkdown(content, serverMarked);
+
+        expect(html).toMatch(/class="md-mermaid"/);
+        expect(html).toMatch(/<svg/);
+        expect(html).toMatch(/class="md-code"/);
+    });
+
+    it('renders mermaid fences as source fallback without mermaid renderer', () => {
         const content = fs.readFileSync(path.join(fixturesDir, 'mermaid-post.md'), 'utf-8');
         const { html } = parseMarkdown(content);
 
         expect(html).toMatch(/class="md-mermaid"/);
         expect(html).toMatch(/class="md-mermaid-source"/);
         expect(html).toMatch(/graph LR/);
-        expect(html).toMatch(/class="md-code"/);
     });
 
     it('handles code blocks without language', () => {

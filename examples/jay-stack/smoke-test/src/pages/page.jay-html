@@ -27,6 +27,7 @@
         <li><a href="/headless-props/">Headless Props</a> — keyed headless component with YAML body props</li>
         <li><a href="/markdown/hello/">Markdown</a> — markdown-pages component rendering .md files</li>
         <li><a href="/markdown/second-page/">Markdown</a> — markdown-pages, second page with mermaid diagram</li>
+        <li><a href="/markdown-live/">Markdown Live</a> — client-rendered markdown via markdown-live component</li>
       </ul>
     </nav>
   </div>

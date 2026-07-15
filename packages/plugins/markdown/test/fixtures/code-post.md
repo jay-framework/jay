@@ -8,17 +8,17 @@ title: Code Examples
 
 ```javascript
 function greet(name) {
-    return `Hello, ${name}!`;
+  return `Hello, ${name}!`;
 }
-const result = greet("world");
+const result = greet('world');
 ```
 
 ## HTML
 
 ```html
 <div class="container">
-    <h1>Title</h1>
-    <p>Content here</p>
+  <h1>Title</h1>
+  <p>Content here</p>
 </div>
 ```
 
@@ -26,10 +26,10 @@ const result = greet("world");
 
 ```css
 .container {
-    display: flex;
-    gap: 1rem;
-    padding: 16px;
-    background: #f0f0f0;
+  display: flex;
+  gap: 1rem;
+  padding: 16px;
+  background: #f0f0f0;
 }
 ```
 

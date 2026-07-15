@@ -34,9 +34,7 @@ describe('frontmatterToHeadTags', () => {
 
     it('maps author to meta', () => {
         const tags = frontmatterToHeadTags({ author: 'Jane Doe' });
-        expect(tags).toEqual([
-            { tag: 'meta', attrs: { name: 'author', content: 'Jane Doe' } },
-        ]);
+        expect(tags).toEqual([{ tag: 'meta', attrs: { name: 'author', content: 'Jane Doe' } }]);
     });
 
     it('maps date to article:published_time', () => {

@@ -9,15 +9,18 @@ The `@jay-framework/markdown` plugin renders markdown content as HTML in jay-htm
 Scans a directory of `.md` files and provides page data. Each file becomes a routable page.
 
 ```html
-<script type="application/jay-headless"
+<script
+  type="application/jay-headless"
   plugin="@jay-framework/markdown"
   contract="markdown-pages"
-  key="post">
+  key="post"
+>
   contentDir: ./content
 </script>
 ```
 
 The component provides these ViewState fields (all slow phase):
+
 - `{post.title}` — title from frontmatter
 - `{post.content}` — rendered HTML
 - `{post.description}` — description from frontmatter
@@ -60,19 +63,19 @@ tags: [tutorial, beginner]
 
 # Getting Started
 
-Your content here with **bold**, *italic*, and [links](https://example.com).
+Your content here with **bold**, _italic_, and [links](https://example.com).
 ```
 
 ### Frontmatter Fields
 
-| Field | Purpose | Auto-injected as |
-|---|---|---|
-| `title` | Page title | `<title>`, `og:title` |
+| Field         | Purpose         | Auto-injected as                       |
+| ------------- | --------------- | -------------------------------------- |
+| `title`       | Page title      | `<title>`, `og:title`                  |
 | `description` | SEO description | `<meta description>`, `og:description` |
-| `date` | Publish date | `article:published_time` |
-| `author` | Author name | `<meta author>` |
-| `image` | Cover image | `og:image` |
-| `canonical` | Canonical URL | `<link canonical>` |
+| `date`        | Publish date    | `article:published_time`               |
+| `author`      | Author name     | `<meta author>`                        |
+| `image`       | Cover image     | `og:image`                             |
+| `canonical`   | Canonical URL   | `<link canonical>`                     |
 
 Any other field (e.g., `category: guides`) becomes `<meta name="category" content="guides">`.
 
@@ -110,6 +113,7 @@ Import a theme in your project CSS:
 ```
 
 Available themes:
+
 - `markdown-default.css` — clean, neutral
 - `markdown-docs.css` — documentation style (narrower, tighter)
 - `markdown-blog.css` — blog style (wider body text, generous spacing)

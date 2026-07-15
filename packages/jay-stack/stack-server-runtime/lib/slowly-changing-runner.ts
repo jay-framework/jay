@@ -154,7 +154,10 @@ export async function* runLoadParams(
     for (const part of parts) {
         if (part.compDefinition.loadParams) {
             const services = resolveServices(part.compDefinition.services);
-            for await (const batch of part.compDefinition.loadParams(services, part.headlessProps)) {
+            for await (const batch of part.compDefinition.loadParams(
+                services,
+                part.headlessProps,
+            )) {
                 yield batch;
             }
         }

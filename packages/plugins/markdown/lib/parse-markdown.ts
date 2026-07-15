@@ -1,14 +1,16 @@
 import { Marked } from 'marked';
 import yaml from 'js-yaml';
 import { highlightCode } from './code-highlighter.js';
-import { renderMermaidBlock } from './mermaid-renderer.js';
 
 export interface ParsedMarkdown {
     frontmatter: Record<string, any>;
     html: string;
 }
 
-export function extractFrontmatter(content: string): { frontmatter: Record<string, any>; body: string } {
+export function extractFrontmatter(content: string): {
+    frontmatter: Record<string, any>;
+    body: string;
+} {
     const match = content.match(/^---\s*\n([\s\S]*?)\n---\s*\n?([\s\S]*)$/);
     if (!match) return { frontmatter: {}, body: content };
     const raw = yaml.load(match[1]);
@@ -18,32 +20,38 @@ export function extractFrontmatter(content: string): { frontmatter: Record<strin
     };
 }
 
-const codeRenderer = {
-    code({ text, lang }: { text: string; lang?: string }): string | false {
-        if (lang === 'mermaid') return renderMermaidBlock(text);
-        const language = lang || '';
-        const highlighted = highlightCode(text, language);
-        const langClass = language ? ` language-${language}` : '';
-        return `<pre class="md-code"><code class="${langClass.trim()}">${highlighted}</code></pre>\n`;
-    },
-};
+function mermaidFallback(code: string): string {
+    const escaped = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return `<div class="md-mermaid"><pre class="md-mermaid-source">${escaped}</pre></div>\n`;
+}
 
-function createMarked(): Marked {
+function createCodeRenderer(mermaidRenderer?: (code: string) => string) {
+    return {
+        code({ text, lang }: { text: string; lang?: string }): string | false {
+            if (lang === 'mermaid') {
+                return mermaidRenderer ? mermaidRenderer(text) : mermaidFallback(text);
+            }
+            const language = lang || '';
+            const highlighted = highlightCode(text, language);
+            const langClass = language ? ` language-${language}` : '';
+            return `<pre class="md-code"><code class="${langClass.trim()}">${highlighted}</code></pre>\n`;
+        },
+    };
+}
+
+export function createMarkedParser(mermaidRenderer?: (code: string) => string): Marked {
     const marked = new Marked();
-    marked.use({ renderer: codeRenderer });
+    marked.use({ renderer: createCodeRenderer(mermaidRenderer) });
     return marked;
 }
 
-let sharedMarked: Marked | undefined;
-
-export function parseMarkdown(content: string): ParsedMarkdown {
-    const { frontmatter, body } = extractFrontmatter(content);
-    if (!sharedMarked) sharedMarked = createMarked();
-    const html = sharedMarked.parse(body) as string;
-    return { frontmatter, html };
+export function parseMarkdownBody(markdown: string, marked?: Marked): string {
+    const parser = marked ?? createMarkedParser();
+    return parser.parse(markdown) as string;
 }
 
-export function parseMarkdownBody(markdown: string): string {
-    if (!sharedMarked) sharedMarked = createMarked();
-    return sharedMarked.parse(markdown) as string;
+export function parseMarkdown(content: string, marked?: Marked): ParsedMarkdown {
+    const { frontmatter, body } = extractFrontmatter(content);
+    const html = parseMarkdownBody(body, marked);
+    return { frontmatter, html };
 }

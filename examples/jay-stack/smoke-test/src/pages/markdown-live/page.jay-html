@@ -1,0 +1,17 @@
+<html>
+<head>
+  <script type="application/jay-headless"
+          plugin="@jay-framework/markdown"
+          contract="markdown-live"></script>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+  <div>
+    <h1>Markdown Live Test</h1>
+    <p class="raw-source">{markdownSource}</p>
+    <jay:markdown-live markdown="{markdownSource}">
+      <div class="md-output">{html}</div>
+    </jay:markdown-live>
+  </div>
+</body>
+</html>

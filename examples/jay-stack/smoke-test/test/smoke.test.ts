@@ -484,6 +484,14 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/test post/);
             expect(body).toMatch(/md-code/);
         });
+
+        it('/markdown-live — markdown-live component renders markdown at request time', async () => {
+            const { status, body } = await fetchPage(server.url, '/markdown-live/');
+            expect(status).toBe(200);
+            expectPage(body);
+            expect(body).toMatch(/Markdown Live Test/);
+            expect(body).toMatch(/dynamically rendered/);
+        });
     });
 
     describe('production self-hosted', () => {
@@ -615,6 +623,13 @@ describe('Smoke Test', () => {
             const { status, body } = await fetchPage(server.url, '/headless-props/');
             expect(status).toBe(200);
             expect(body).toMatch(/Widget from-props/);
+        });
+
+        it('/markdown-live — markdown-live component', async () => {
+            const { status, body } = await fetchPage(server.url, '/markdown-live/');
+            expect(status).toBe(200);
+            expect(body).toMatch(/Live Markdown/);
+            expect(body).toMatch(/dynamically rendered/);
         });
     });
 
