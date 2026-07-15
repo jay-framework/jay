@@ -297,7 +297,69 @@ The `highlightCode` function uses regex-based tokenization per language:
 - Numbers → `<span class="token number">`
 - Punctuation → `<span class="token punctuation">`
 
-Ship `markdown-code.css` with default theme using CSS custom properties for easy theming.
+#### Markdown Theme CSS
+
+Ship complete markdown theme CSS files — not just code highlighting, but the full rendered output: headings, paragraphs, blockquotes, lists, tables, code blocks, mermaid containers. This gives agents a working starting point to choose from or customize.
+
+**Shipped themes:**
+
+```
+lib/themes/
+  markdown-default.css     # Clean, neutral — works on light backgrounds
+  markdown-docs.css        # Documentation-style (wider code blocks, tighter spacing)
+  markdown-blog.css        # Blog-style (larger body text, generous spacing)
+```
+
+Each theme uses CSS custom properties for easy overrides:
+
+```css
+.md {
+  --md-font-body: inherit;
+  --md-font-code: 'Fira Code', monospace;
+  --md-color-heading: inherit;
+  --md-color-link: #2563eb;
+  --md-color-code-bg: #f1f5f9;
+  --md-color-blockquote-border: #e2e8f0;
+  --md-spacing-block: 1.5rem;
+}
+
+.md h1 { font-size: 2rem; font-weight: 700; color: var(--md-color-heading); }
+.md h2 { font-size: 1.5rem; font-weight: 600; color: var(--md-color-heading); }
+.md p { line-height: 1.7; margin-bottom: var(--md-spacing-block); }
+.md blockquote { border-left: 3px solid var(--md-color-blockquote-border); padding-left: 1rem; }
+.md pre.md-code { background: var(--md-color-code-bg); border-radius: 0.5rem; padding: 1rem; overflow-x: auto; }
+.md .md-mermaid { text-align: center; margin: var(--md-spacing-block) 0; }
+/* ... */
+```
+
+Code highlighting tokens in each theme:
+```css
+.md .token.keyword { color: #8b5cf6; }
+.md .token.string { color: #059669; }
+.md .token.comment { color: #94a3b8; font-style: italic; }
+.md .token.number { color: #d97706; }
+.md .token.punctuation { color: #64748b; }
+```
+
+**Consuming themes:** The jay-html compiler resolves `<link>` CSS paths relative to the page directory — it does not resolve npm package paths. Instead, the page's linked CSS file uses `@import` (which Vite resolves from `node_modules`):
+
+```css
+/* src/styles/markdown-theme.css */
+@import '@jay-framework/markdown/themes/markdown-blog.css';
+
+/* Override custom properties to match project DESIGN.md */
+.md {
+  --md-color-link: var(--accent);
+  --md-color-heading: var(--text-primary);
+}
+```
+
+```html
+<!-- page.jay-html -->
+<link rel="stylesheet" href="../styles/markdown-theme.css" />
+```
+
+This uses Vite's built-in `@import` resolution for npm packages. No framework changes needed.
 
 #### Mermaid extension
 
@@ -318,6 +380,80 @@ const mermaidRenderer: marked.RendererExtension = {
 
 Mermaid initialization runs once at build time. The `mermaid` package renders to SVG string using its `renderToSVG` API (or the CLI wrapper). This is a server-only dependency — not shipped to the client.
 
+### Frontmatter and SEO
+
+The `markdown-pages` component automatically maps frontmatter fields to `<head>` tags via the existing `headTags` mechanism (DL#127). The component returns `headTags` in its `phaseOutput`:
+
+**Recognized frontmatter fields:**
+
+| Frontmatter field | Maps to | Example |
+|---|---|---|
+| `title` | `<title>` + `<meta property="og:title">` | `<title>Getting Started</title>` |
+| `description` | `<meta name="description">` + `<meta property="og:description">` | SEO description |
+| `canonical` | `<link rel="canonical">` | Canonical URL |
+| `image` | `<meta property="og:image">` | Open Graph image |
+| `author` | `<meta name="author">` | Author name |
+| `date` | `<meta property="article:published_time">` | ISO 8601 date |
+
+**Unrecognized fields** become `<meta name="fieldName" content="value">` automatically. This lets markdown authors add arbitrary metadata without framework changes:
+
+```yaml
+---
+title: My Post
+category: tutorials
+reading-time: 5 min
+---
+```
+
+Produces:
+```html
+<title>My Post</title>
+<meta property="og:title" content="My Post">
+<meta name="category" content="tutorials">
+<meta name="reading-time" content="5 min">
+```
+
+Array values like `tags: [tutorial, beginner]` are skipped for `<meta>` — they're available via the `frontmatter` JSON string in ViewState for template rendering.
+
+**Implementation in the component:**
+
+```typescript
+const KNOWN_FIELDS = new Set(['title', 'description', 'canonical', 'image', 'author', 'date', 'tags']);
+
+function frontmatterToHeadTags(fm: Record<string, any>): HeadTag[] {
+  const tags: HeadTag[] = [];
+  if (fm.title) {
+    tags.push({ tag: 'title', children: fm.title });
+    tags.push({ tag: 'meta', attrs: { property: 'og:title', content: fm.title } });
+  }
+  if (fm.description) {
+    tags.push({ tag: 'meta', attrs: { name: 'description', content: fm.description } });
+    tags.push({ tag: 'meta', attrs: { property: 'og:description', content: fm.description } });
+  }
+  if (fm.canonical) {
+    tags.push({ tag: 'link', attrs: { rel: 'canonical', href: fm.canonical } });
+  }
+  if (fm.image) {
+    tags.push({ tag: 'meta', attrs: { property: 'og:image', content: fm.image } });
+  }
+  if (fm.author) {
+    tags.push({ tag: 'meta', attrs: { name: 'author', content: fm.author } });
+  }
+  if (fm.date) {
+    tags.push({ tag: 'meta', attrs: { property: 'article:published_time', content: new Date(fm.date).toISOString() } });
+  }
+  for (const [key, value] of Object.entries(fm)) {
+    if (KNOWN_FIELDS.has(key)) continue;
+    if (typeof value === 'string' || typeof value === 'number') {
+      tags.push({ tag: 'meta', attrs: { name: key, content: String(value) } });
+    }
+  }
+  return tags;
+}
+```
+
+**Merge behavior:** The page's `page.jay-html` can define static `<title>` and `<meta>` in `<head>`. Component-injected head tags merge with (and override) the static ones — component tags win for same-name meta tags.
+
 ### Plugin Structure
 
 ```
@@ -332,6 +468,11 @@ packages/plugins/markdown/
     parse-markdown.ts              # marked setup, frontmatter, extensions
     code-highlighter.ts            # CSS-class tokenizer per language
     mermaid-renderer.ts            # Mermaid → SVG at build time
+    head-tags.ts                   # Frontmatter → headTags SEO mapping
+    themes/
+      markdown-default.css         # Clean, neutral
+      markdown-docs.css            # Documentation-style
+      markdown-blog.css            # Blog-style
     components/
       markdown-pages.ts            # Directory → pages
       markdown-content.ts          # Static renderer
@@ -342,6 +483,7 @@ packages/plugins/markdown/
   test/
     parse-markdown.test.ts
     code-highlighter.test.ts
+    head-tags.test.ts
     fixtures/
       sample-post.md
       code-post.md
