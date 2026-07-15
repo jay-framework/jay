@@ -635,12 +635,14 @@ contracts:
 Plugin at `packages/plugins/markdown/` with 29 tests, dual build (server + client), validates clean.
 
 **Core library:**
+
 - `parse-markdown.ts` — `Marked` parser with configurable mermaid renderer via `createMarkedParser(mermaidRenderer?)`. Without mermaid renderer, fences output `<pre class="md-mermaid-source">` fallback.
 - `code-highlighter.ts` — regex-based CSS-class tokenizer for 8 languages
 - `head-tags.ts` — frontmatter → HeadTag mapping with unknown-field pass-through
 - `mermaid-renderer.ts` — shells out to `mmdc` (via `@mermaid-js/mermaid-cli` + Puppeteer) for build-time SVG
 
 **Three components:**
+
 - `markdownPages` — keyed headless, reads `.md` files by slug from `contentDir` (via DL#156 headless props), uses `loadParams` to enumerate slugs, renders with mermaid SVG
 - `markdownContent` — instance-based, static slow-phase renderer with mermaid SVG
 - `markdownLive` — instance-based, fast+interactive renderer WITHOUT mermaid (client-side only)
@@ -650,6 +652,7 @@ Plugin at `packages/plugins/markdown/` with 29 tests, dual build (server + clien
 **Agent kit:** `markdown-usage.md`
 
 **Smoke tests:** Two test pages in `examples/jay-stack/smoke-test/`:
+
 - `/markdown/[slug]/` — `markdown-pages` component rendering `.md` files with mermaid diagrams
 - `/markdown-live/` — `markdown-live` component rendering markdown at request time
 
@@ -672,9 +675,18 @@ Mermaid requires a DOM to render SVGs. We evaluated four approaches:
 
 The `createMarkedParser(mermaidRenderer?)` factory enables this split: server code passes `renderMermaidBlock`, client code passes nothing. No conditional imports, no Node.js APIs in the client bundle.
 
-### Production build limitation
+### Production build fix: headless props vs route params
 
-Routes with headless-only components (no `page.ts`) don't get compiled into production server elements. The `markdown/[slug]` route works in dev mode but the production build skips it. Pages using `markdown-pages` need a `page.ts` (even an empty one) for production builds. This is a pre-existing build pipeline limitation, not specific to the markdown plugin.
+**Problem:** The production build skipped `markdown/[slug]` entirely — `loadParams` yielded `[{slug: "hello"}]` correctly, but the route materialization step filtered it out.
+
+**Root cause:** The route scanner's `parseHeadlessProps` (DL#156) merged ALL headless YAML body values into `route.inferredParams`. For the markdown route, this included `{contentDir: "src/pages/markdown/content"}`. The `materializeRouteParams` function then compared `loadParams` output (`{slug: "hello"}`) against `inferredParams` (`{contentDir: "..."}`) via `paramsMatchInferred` — which failed because `contentDir` isn't a route param, causing all param combinations to be skipped.
+
+**Fix in `route-scanner.ts`:** Filter headless props based on route type:
+
+- **Dynamic routes** (with `[slug]` etc.): only include props whose keys match dynamic segment names. Component props like `contentDir` are excluded — they're configuration, not route params.
+- **Static routes** (no dynamic segments): include all props as `inferredParams`. This preserves the static override pattern where `slug: ceramic-flower-vase` tells the build which product a static page represents.
+
+**Debugging note:** Required rebuilding `route-scanner` and `production-server` dist — the stack-cli imports from pre-built dist, not source. Source changes without rebuild are invisible to the build pipeline.
 
 ### Deviations from design
 
@@ -682,3 +694,4 @@ Routes with headless-only components (no `page.ts`) don't get compiled into prod
 - **`loadParams` required a framework change** — `LoadParams` type updated to accept optional props parameter. Not anticipated in the original DL#155 design (was expected to be covered by DL#156 alone, but `loadParams` is a separate code path from render).
 - **`@mermaid-js/mermaid-cli` requires Puppeteer** as a peer dependency, which downloads Chromium (~150MB). This is heavier than the "~50MB" estimate in the trade-offs table. Acceptable for build-time tooling but worth noting.
 - **`markdown-pages` contract `tags` sub-contract** needed `trackBy: name` — the original contract design omitted this, caught by the validate command.
+- **Route scanner needed to distinguish component props from route params** — headless YAML body values serve two purposes (component configuration and route param declaration). The scanner now filters by route type to avoid production build failures.

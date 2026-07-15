@@ -631,6 +631,12 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Live Markdown/);
             expect(body).toMatch(/dynamically rendered/);
         });
+
+        it('/markdown/hello — markdown-pages component in production', async () => {
+            const { status, body } = await fetchPage(server.url, '/markdown/hello/');
+            expect(status).toBe(200);
+            expect(body).toMatch(/Hello from Markdown/);
+        });
     });
 
     describe('production CDN mode', () => {

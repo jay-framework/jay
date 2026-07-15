@@ -104,7 +104,27 @@ async function scanDirectory(
             const route = convertToRoutePath(BASE_DIR, fullPath, options);
             const { params, validations } = await parseHeadlessProps(fullPath);
             if (params) {
-                route.inferredParams = params;
+                const hasDynamicSegments = route.segments.some((s) => typeof s !== 'string');
+                if (hasDynamicSegments) {
+                    const dynamicParamNames = new Set(
+                        route.segments
+                            .filter(
+                                (s): s is { name: string; type: number } => typeof s !== 'string',
+                            )
+                            .map((s) => s.name),
+                    );
+                    const routeParams: Record<string, string> = {};
+                    for (const [k, v] of Object.entries(params)) {
+                        if (dynamicParamNames.has(k)) {
+                            routeParams[k] = v;
+                        }
+                    }
+                    if (Object.keys(routeParams).length > 0) {
+                        route.inferredParams = routeParams;
+                    }
+                } else {
+                    route.inferredParams = params;
+                }
             }
             if (validations.length > 0) {
                 for (const v of validations) {
