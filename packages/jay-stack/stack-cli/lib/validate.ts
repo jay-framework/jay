@@ -879,6 +879,7 @@ async function runPluginValidators(
                 const ctx: JayHtmlValidationContext = {
                     filePath: relativePath,
                     body: parsed.body,
+                    css: parsed.css,
                     head: parsed.headMeta,
                     contract: resolvedPageContract
                         ? {
@@ -1204,11 +1205,26 @@ export function printJayValidationResult(result: ValidationResult, options: Vali
                 logger.important(chalk.blue(`      Suggestion: ${error.suggestion}`));
             }
         }
+
+        const fileGroups = new Map<string, typeof warns>();
         for (const warning of warns) {
-            logger.important(chalk.yellow(`   ⚠ ${warning.file}`));
-            logger.important(chalk.gray(`      ${warning.message}`));
-            if (warning.suggestion) {
-                logger.important(chalk.blue(`      Suggestion: ${warning.suggestion}`));
+            const group = fileGroups.get(warning.file) || [];
+            group.push(warning);
+            fileGroups.set(warning.file, group);
+        }
+        for (const [file, groupWarns] of fileGroups) {
+            logger.important(chalk.yellow(`   ⚠ ${file}`));
+            for (const warning of groupWarns) {
+                if (warning.message) {
+                    logger.important(chalk.gray(`      ${warning.message}`));
+                }
+            }
+            const suggestions = [...new Set(groupWarns.map((w) => w.suggestion).filter(Boolean))];
+            if (suggestions.length > 0) {
+                logger.important(chalk.blue(`      Suggestions:`));
+                for (const s of suggestions) {
+                    logger.important(chalk.blue(`        ${s}`));
+                }
             }
         }
     }

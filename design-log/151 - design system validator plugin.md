@@ -442,3 +442,93 @@ The guide should be concise — the validation errors themselves are the primary
 9. Primary button count uses (ref, text) identity — duplicates don't count
 10. Contrast violations flagged on statically determinable color pairs
 11. Media query blocks validated independently per breakpoint
+
+---
+
+## Implementation Results
+
+### Phase 1–5: Initial implementation (prior to this log entry)
+
+All phases implemented and working. 85 tests passing across 7 test files.
+
+### Bug Fix: CSS discovery from `<head>` (DL#154-related)
+
+**Problem:** `extractCssSources(ctx.body, filePath)` searched for `<style>` and `<link>` elements only inside `ctx.body` (the `<body>` element). In real jay-html files, CSS lives in `<head>`. The validator never found any CSS.
+
+**Root cause:** The validator context passes `body` as an `HTMLElement` (the `<body>` tag), but CSS is declared in `<head>`. Tests masked this because they passed `parse(html)` (the document root) as `body`.
+
+**Two-part fix:**
+
+1. **Validator interface** — Add `css?: string` to `JayHtmlValidationContext` in `compiler-shared`. The jay-html parser already extracts all CSS (from `<head>` `<style>` blocks and linked `<link>` stylesheets) into `parsed.css`. Pass it through the context so validators don't need to re-discover CSS from the DOM.
+
+2. **Validators** — Use `ctx.css` when available instead of `extractCssSources`. Remove `findDocumentRoot` (the interim parent-traversal fix). Keep `extractCssSources` as fallback for backward compatibility.
+
+**Test fix:** All `makeContext` helpers changed from `body: parse(html)` to `body: root.querySelector('body') || root` to match real-world usage.
+
+### Bug Fix: `background` shorthand color validation
+
+**Problem:** The `background` CSS shorthand was not in `COLOR_PROPERTIES`, so `background: #fff` was never validated. Simply adding `background` to `COLOR_PROPERTIES` is insufficient because compound values like multi-layer backgrounds contain embedded colors mixed with gradients:
+
+```css
+/* Single layer, simple — works with naive approach */
+background: #0f172a;
+
+/* Multi-layer with fallback — naive approach misses #0f172a */
+background: radial-gradient(circle at 20% 30%, #4f46e5 0%, transparent 40%), #0f172a;
+
+/* Color + image — naive approach gets the compound string */
+background: #fff url('image.jpg') center/cover no-repeat;
+```
+
+**Fix:** Do not add `background` to `COLOR_PROPERTIES`. Instead:
+
+1. Add `extractBackgroundColors(value): string[]` to `token-matcher.ts` — splits on top-level commas (respecting parenthesized nesting), identifies standalone color values (hex or rgb/rgba not inside a function), returns them for individual validation.
+
+2. In `validateElementStyles`, add a separate `background` shorthand check that extracts colors and validates each one against the color token set.
+
+Colors _inside_ gradient functions (e.g., `#4f46e5` in `radial-gradient(circle at 20%, #4f46e5 0%, ...)`) are not extracted — they are gradient stops, not background colors.
+
+### CSS custom property resolution
+
+**Problem:** Values like `var(--radius-md)` were compared literally against resolved spec values like `8px`, producing false positives when the var resolves to the correct value.
+
+**Fix:** The cascade resolver now collects `:root` custom property declarations during CSS parsing and resolves `var()` references in resolved styles. This eliminated ~3000 false positives in the test project. Unresolvable vars (from external stylesheets) are left as `var(...)` and still auto-pass through token matchers.
+
+### Component findings: grouping and element identification
+
+**Problem:** Component spec mismatches were reported as individual findings per property, making it hard to see which element was being flagged or what component spec was referenced.
+
+**Fixes:**
+
+1. **Grouped mismatches** — Multiple property mismatches for the same component+element are grouped into a single numbered finding instead of separate warnings.
+
+2. **DESIGN.md path notation** — Component findings use `DESIGN.md components.btn-cta` dotted path to disambiguate from Jay headless components.
+
+3. **Element descriptions** — Findings include tag name, CSS classes, and first 2-3 words of text content: `<button class="btn btn-cta" > "shop now"`.
+
+4. **Raw token references** — Component spec values show both the original DESIGN.md reference and resolved value: `{colors.primary} (#2563eb)`.
+
+### Token findings: element context
+
+**Problem:** Token findings like `font-size value "24px" not in typography tokens` didn't identify which element was affected.
+
+**Fix:** Each finding now includes an element hint with tag, class, and text: `<h1 class="policy-title" > "Refund Policy" — font-size value "28px" not in typography tokens`.
+
+### Validation output: per-file grouping with deduped suggestions
+
+**Problem:** Every finding repeated the same suggestion text and DESIGN.md path. With hundreds of findings, the output was dominated by repeated boilerplate.
+
+**Fixes:**
+
+1. **Suggestions simplified** — Token matchers return short suggestions (`Use a DESIGN.md spacing token`) instead of listing all available tokens. The DESIGN.md placeholder is replaced with the actual path (`src/pages/DESIGN.md`).
+
+2. **Per-file grouping** — The stack-cli renderer groups findings by file within each validator section. The file path appears once, all findings are listed, then unique suggestions are printed once at the bottom.
+
+3. **Suggestion deduplication** — Identical suggestions within a file group are shown only once.
+
+### Deviations
+
+- The original design did not anticipate that `ctx.body` would be only the `<body>` element (not the full document). The validator interface now carries extracted CSS directly rather than re-parsing it from the DOM.
+- `background` shorthand was not listed in the original design's color properties list. It requires special extraction logic rather than simple property-set membership.
+- CSS custom property resolution was not in the original design (listed as a limitation). Added because the test project uses CSS vars extensively and produces many false positives without resolution.
+- The validation output format was redesigned for readability: per-file grouping, element identification, and suggestion deduplication were not in the original design.

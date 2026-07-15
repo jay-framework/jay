@@ -1,11 +1,7 @@
 import type { JayHtmlValidatorFn, JayHtmlValidationFinding } from '@jay-framework/compiler-shared';
 import postcss from 'postcss';
 import { findDesignMd } from '../parse-design-md.js';
-import {
-    resolveCascadeByBreakpoint,
-    extractCssSources,
-    type ResolvedStyle,
-} from '../css-cascade.js';
+import { resolveCascadeByBreakpoint, type ResolvedStyle } from '../css-cascade.js';
 import {
     isColorProperty,
     isSpacingProperty,
@@ -13,20 +9,31 @@ import {
     isTypographyProperty,
     isAnimationDurationProperty,
     isAnimationEasingProperty,
+    isBackgroundShorthand,
     matchColor,
     matchSpacing,
     matchRounded,
     matchTypographyProperty,
     matchAnimationDuration,
     matchAnimationEasing,
+    extractBackgroundColors,
 } from '../token-matcher.js';
 import type { DesignTokens } from '../parse-design-md.js';
 import type { HTMLElement } from 'node-html-parser';
 
-const DESIGNER_GUIDE = 'agent-kit/designer/design-system.md';
+const GUIDE_SUGGESTION = 'See design-system-validator agent-kit/designer/design-system.md for usage guide';
 
-function ref(designMdPath: string): string {
-    return `\nSee ${designMdPath} for tokens, ${DESIGNER_GUIDE} for usage guide.`;
+function elementHint(el: HTMLElement): string {
+    const tag = el.rawTagName?.toLowerCase() || 'element';
+    const cls = el.getAttribute?.('class');
+    const text = el.textContent?.trim();
+    const words = text ? text.split(/\s+/).slice(0, 3).join(' ') : '';
+    const truncated = words && text!.split(/\s+/).length > 3 ? words + '...' : words;
+    const parts = [`<${tag}`];
+    if (cls) parts.push(`class="${cls}"`);
+    parts.push('>');
+    if (truncated) parts.push(`"${truncated}"`);
+    return parts.join(' ');
 }
 
 function validateElementStyles(
@@ -37,9 +44,9 @@ function validateElementStyles(
     designMdPath: string,
     findings: JayHtmlValidationFinding[],
 ): void {
-    const tag = el.rawTagName?.toLowerCase() || 'element';
+    const hint = elementHint(el);
     const prefix = breakpointLabel ? `[${breakpointLabel}] ` : '';
-    const refs = ref(designMdPath);
+    const sug = (s?: string) => s?.replace('DESIGN.md', designMdPath);
 
     for (const [property, resolved] of Object.entries(styles)) {
         if (resolved.allowed) continue;
@@ -49,9 +56,9 @@ function validateElementStyles(
             if (!result.matches) {
                 findings.push({
                     severity: 'warning',
-                    message: `${prefix}Hardcoded color "${resolved.value}" for ${property} not in design system`,
-                    suggestion: result.suggestion + refs,
-                    element: `<${tag}>`,
+                    message: `${prefix}${hint} — Hardcoded color "${resolved.value}" for ${property} not in design system`,
+                    suggestion: sug(result.suggestion),
+                    element: hint,
                 });
             }
         }
@@ -61,9 +68,9 @@ function validateElementStyles(
             if (!result.matches) {
                 findings.push({
                     severity: 'warning',
-                    message: `${prefix}${property} value "${resolved.value}" not in spacing scale`,
-                    suggestion: result.suggestion + refs,
-                    element: `<${tag}>`,
+                    message: `${prefix}${hint} — ${property} value "${resolved.value}" not in spacing scale`,
+                    suggestion: sug(result.suggestion),
+                    element: hint,
                 });
             }
         }
@@ -73,9 +80,9 @@ function validateElementStyles(
             if (!result.matches) {
                 findings.push({
                     severity: 'warning',
-                    message: `${prefix}border-radius "${resolved.value}" not in rounded scale`,
-                    suggestion: result.suggestion + refs,
-                    element: `<${tag}>`,
+                    message: `${prefix}${hint} — border-radius "${resolved.value}" not in rounded scale`,
+                    suggestion: sug(result.suggestion),
+                    element: hint,
                 });
             }
         }
@@ -85,9 +92,9 @@ function validateElementStyles(
             if (!result.matches) {
                 findings.push({
                     severity: 'warning',
-                    message: `${prefix}${property} value "${resolved.value}" not in typography tokens`,
-                    suggestion: result.suggestion + refs,
-                    element: `<${tag}>`,
+                    message: `${prefix}${hint} — ${property} value "${resolved.value}" not in typography tokens`,
+                    suggestion: sug(result.suggestion),
+                    element: hint,
                 });
             }
         }
@@ -97,9 +104,9 @@ function validateElementStyles(
             if (!result.matches) {
                 findings.push({
                     severity: 'warning',
-                    message: `${prefix}${property} "${resolved.value}" not in animation presets`,
-                    suggestion: result.suggestion + refs,
-                    element: `<${tag}>`,
+                    message: `${prefix}${hint} — ${property} "${resolved.value}" not in animation presets`,
+                    suggestion: sug(result.suggestion),
+                    element: hint,
                 });
             }
         }
@@ -109,10 +116,25 @@ function validateElementStyles(
             if (!result.matches) {
                 findings.push({
                     severity: 'warning',
-                    message: `${prefix}${property} "${resolved.value}" not in animation presets`,
-                    suggestion: result.suggestion + refs,
-                    element: `<${tag}>`,
+                    message: `${prefix}${hint} — ${property} "${resolved.value}" not in animation presets`,
+                    suggestion: sug(result.suggestion),
+                    element: hint,
                 });
+            }
+        }
+
+        if (isBackgroundShorthand(property) && Object.keys(tokens.colors).length > 0) {
+            const bgColors = extractBackgroundColors(resolved.value);
+            for (const bgColor of bgColors) {
+                const result = matchColor(bgColor, tokens.colors);
+                if (!result.matches) {
+                    findings.push({
+                        severity: 'warning',
+                        message: `${prefix}${hint} — Hardcoded color "${bgColor}" in background not in design system`,
+                        suggestion: sug(result.suggestion),
+                        element: hint,
+                    });
+                }
             }
         }
     }
@@ -124,8 +146,8 @@ export const validateTokens: JayHtmlValidatorFn = (ctx) => {
 
     const { tokens, designMdPath } = found;
     const findings: JayHtmlValidationFinding[] = [];
-    const cssSources = extractCssSources(ctx.body, ctx.filePath);
-    if (cssSources.length === 0) return [];
+    if (!ctx.css) return [];
+    const cssSources = [ctx.css];
 
     const byBreakpoint = resolveCascadeByBreakpoint(cssSources, ctx.body);
 
@@ -137,7 +159,11 @@ export const validateTokens: JayHtmlValidatorFn = (ctx) => {
     }
 
     if (Object.keys(tokens.animations).length > 0) {
-        checkReducedMotion(cssSources, designMdPath, findings);
+        checkReducedMotion(cssSources, findings);
+    }
+
+    if (findings.length > 0) {
+        findings.push({ severity: 'warning', message: '', suggestion: GUIDE_SUGGESTION });
     }
 
     return findings;
@@ -152,11 +178,7 @@ const ANIMATION_PROPERTIES = new Set([
     'animation-name',
 ]);
 
-function checkReducedMotion(
-    cssSources: string[],
-    designMdPath: string,
-    findings: JayHtmlValidationFinding[],
-): void {
+function checkReducedMotion(cssSources: string[], findings: JayHtmlValidationFinding[]): void {
     let hasAnimations = false;
     let hasReducedMotion = false;
 
@@ -182,8 +204,7 @@ function checkReducedMotion(
             message:
                 'Page uses transitions/animations but has no @media (prefers-reduced-motion) override',
             suggestion:
-                'Add @media (prefers-reduced-motion: reduce) { * { transition-duration: 0s !important; animation-duration: 0s !important; } }' +
-                ref(designMdPath),
+                'Add @media (prefers-reduced-motion: reduce) { * { transition-duration: 0s !important; animation-duration: 0s !important; } }',
         });
     }
 }

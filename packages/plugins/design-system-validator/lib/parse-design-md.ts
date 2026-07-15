@@ -33,6 +33,7 @@ export interface DesignTokens {
     rounded: Record<string, string>;
     animations: Record<string, AnimationPreset>;
     components: Record<string, ComponentSpec>;
+    rawComponents: Record<string, ComponentSpec>;
     rules: DesignRules;
 }
 
@@ -96,6 +97,13 @@ export function parseDesignMd(content: string): DesignTokens | null {
     const raw = yaml.load(frontmatter) as RawDesignMd;
     if (!raw || typeof raw !== 'object') return null;
 
+    const rawComponents: Record<string, ComponentSpec> = {};
+    if (raw.components) {
+        for (const [name, spec] of Object.entries(raw.components)) {
+            rawComponents[name] = { ...spec };
+        }
+    }
+
     resolveReferences(raw);
 
     return {
@@ -106,6 +114,7 @@ export function parseDesignMd(content: string): DesignTokens | null {
         rounded: normalizeStringValues(raw.rounded),
         animations: raw.animations || {},
         components: raw.components || {},
+        rawComponents,
         rules: raw.rules || {},
     };
 }

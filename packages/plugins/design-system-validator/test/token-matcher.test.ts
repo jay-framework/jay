@@ -10,6 +10,7 @@ import {
     hexToRgbValues,
     relativeLuminance,
     contrastRatio,
+    extractBackgroundColors,
 } from '../lib/token-matcher.js';
 
 const colors = {
@@ -149,7 +150,7 @@ describe('matchAnimationDuration', () => {
     it('rejects unknown duration', () => {
         const result = matchAnimationDuration('200ms', animations);
         expect(result.matches).toEqual(false);
-        expect(result.suggestion).toMatch(/fade-in.*300ms/);
+        expect(result.suggestion).toEqual('Use a DESIGN.md animation preset duration');
     });
 
     it('allows 0s', () => {
@@ -182,18 +183,40 @@ describe('matchAnimationEasing', () => {
 });
 
 describe('matchComponent', () => {
-    it('passes when styles match spec', () => {
+    it('returns empty when styles match spec', () => {
         const styles = { 'background-color': '#2563eb', color: '#ffffff' };
         const spec = { backgroundColor: '#2563eb', textColor: '#ffffff' };
-        const results = matchComponent(styles, spec, 'button-primary');
-        expect(results.every((r) => r.matches)).toEqual(true);
+        const mismatches = matchComponent(styles, spec);
+        expect(mismatches).toEqual([]);
     });
 
-    it('fails when a property mismatches', () => {
+    it('returns mismatches when a property differs', () => {
         const styles = { 'background-color': '#ff0000', color: '#ffffff' };
         const spec = { backgroundColor: '#2563eb', textColor: '#ffffff' };
-        const results = matchComponent(styles, spec, 'button-primary');
-        expect(results.some((r) => !r.matches)).toEqual(true);
+        const mismatches = matchComponent(styles, spec);
+        expect(mismatches).toEqual([
+            {
+                cssProp: 'background-color',
+                expected: '#2563eb',
+                expectedRaw: undefined,
+                actual: '#ff0000',
+            },
+        ]);
+    });
+
+    it('includes raw reference when it differs from resolved', () => {
+        const styles = { 'background-color': '#ff0000' };
+        const spec = { backgroundColor: '#2563eb' };
+        const rawSpec = { backgroundColor: '{colors.primary}' };
+        const mismatches = matchComponent(styles, spec, rawSpec);
+        expect(mismatches).toEqual([
+            {
+                cssProp: 'background-color',
+                expected: '#2563eb',
+                expectedRaw: '{colors.primary}',
+                actual: '#ff0000',
+            },
+        ]);
     });
 });
 
@@ -212,5 +235,51 @@ describe('contrast utilities', () => {
         const white = relativeLuminance(255, 255, 255);
         const black = relativeLuminance(0, 0, 0);
         expect(contrastRatio(white, black)).toBeCloseTo(21, 0);
+    });
+});
+
+describe('extractBackgroundColors', () => {
+    it('extracts plain hex color', () => {
+        expect(extractBackgroundColors('#0f172a')).toEqual(['#0f172a']);
+    });
+
+    it('extracts fallback color after gradient', () => {
+        expect(
+            extractBackgroundColors(
+                'linear-gradient(180deg, rgba(15,23,42,0.85) 0%, rgba(15,23,42,0.4) 100%), #0f172a',
+            ),
+        ).toEqual(['#0f172a']);
+    });
+
+    it('extracts fallback color after multiple gradients', () => {
+        expect(
+            extractBackgroundColors(
+                'radial-gradient(circle at 20% 30%, #4f46e5 0%, transparent 40%), radial-gradient(circle at 80% 20%, #db2777 0%, transparent 45%), #0f172a',
+            ),
+        ).toEqual(['#0f172a']);
+    });
+
+    it('returns empty for gradient-only background', () => {
+        expect(extractBackgroundColors('linear-gradient(135deg, #111 0%, #222 100%)')).toEqual([]);
+    });
+
+    it('returns empty for url background', () => {
+        expect(extractBackgroundColors("url('img.jpg') center/cover no-repeat")).toEqual([]);
+    });
+
+    it('extracts color from color + url layer', () => {
+        expect(extractBackgroundColors("#fff url('image.jpg')")).toEqual(['#fff']);
+    });
+
+    it('returns empty for var()', () => {
+        expect(extractBackgroundColors('var(--bg-primary)')).toEqual([]);
+    });
+
+    it('returns empty for transparent', () => {
+        expect(extractBackgroundColors('transparent')).toEqual([]);
+    });
+
+    it('returns empty for none', () => {
+        expect(extractBackgroundColors('none')).toEqual([]);
     });
 });

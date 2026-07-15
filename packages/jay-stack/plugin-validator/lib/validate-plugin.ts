@@ -1095,6 +1095,21 @@ async function validatePackageJson(
                 suggestion: 'Add "./plugin.yaml": "./plugin.yaml" to exports field',
             });
         }
+
+        // Check that agent-kit directory is included in files if it exists
+        const agentKitDir = path.join(context.pluginPath, 'agent-kit');
+        if (fs.existsSync(agentKitDir) && fs.statSync(agentKitDir).isDirectory()) {
+            const filesArray: string[] | undefined = packageJson.files;
+            if (!filesArray || !filesArray.includes('agent-kit')) {
+                result.warnings.push({
+                    type: 'export-mismatch',
+                    message: 'agent-kit directory exists but is not listed in package.json "files"',
+                    location: packageJsonPath,
+                    suggestion:
+                        'Add "agent-kit" to the "files" array so agent-kit files are shipped with the package',
+                });
+            }
+        }
     } catch (error: any) {
         result.errors.push({
             type: 'schema',
