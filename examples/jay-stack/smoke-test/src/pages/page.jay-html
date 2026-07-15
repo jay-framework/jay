@@ -24,6 +24,7 @@
         <li><a href="/foreach/">ForEach</a> — forEach and slowForEach</li>
         <li><a href="/nested/">Nested</a> — nested headfull components</li>
         <li><a href="/html-string/">HTML String</a> — html-string dataType escaping</li>
+        <li><a href="/headless-props/">Headless Props</a> — keyed headless component with YAML body props</li>
       </ul>
     </nav>
   </div>

@@ -48,6 +48,7 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
                         contractName: contractInfo.contractName,
                         metadata: contractInfo.metadata,
                     }),
+                    ...(part.headlessProps || {}),
                 };
 
                 const slowlyRenderedPart = await compDefinition.slowlyRender(

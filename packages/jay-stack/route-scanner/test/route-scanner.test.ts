@@ -112,15 +112,14 @@ describe('RouteScanner', () => {
         expect(vaseIndex).toBeLessThan(slugIndex);
     });
 
-    it('should read explicit params from jay-params tag', async () => {
+    it('should read explicit params from headless component props', async () => {
         const routes = await scanRoutes('./test/fixtures/priority', options);
 
-        // Static override route has <script type="application/jay-params">
         const vaseRoute = routes.find((r) => r.rawRoute === '/products/ceramic-flower-vase');
         expect(vaseRoute?.inferredParams).toEqual({ slug: 'ceramic-flower-vase' });
     });
 
-    it('should not have params for routes without jay-params tag', async () => {
+    it('should not have params for routes without headless props', async () => {
         const routes = await scanRoutes('./test/fixtures/priority', options);
 
         const slugRoute = routes.find((r) => r.rawRoute === '/products/[slug]');
@@ -197,16 +196,16 @@ describe('sortRoutesByPriority', () => {
     });
 });
 
-describe('jay-params parsing', () => {
+describe('headless props parsing (DL#156)', () => {
     const options: ScanFilesOptions = { jayHtmlFilename: 'page.jay-html', compFilename: 'page.ts' };
 
-    it('should parse jay-params from jay-html with head tag', async () => {
+    it('should parse props from headless component YAML body', async () => {
         const routes = await scanRoutes('./test/fixtures/jay-params', options);
         const route = routes.find((r) => r.rawRoute === '/with-params');
         expect(route?.inferredParams).toEqual({ slug: 'my-product', category: 'electronics' });
     });
 
-    it('should handle jay-html without jay-params tag', async () => {
+    it('should handle jay-html without headless props', async () => {
         const routes = await scanRoutes('./test/fixtures/jay-params', options);
         const route = routes.find((r) => r.rawRoute === '/no-params');
         expect(route?.inferredParams).toBeUndefined();

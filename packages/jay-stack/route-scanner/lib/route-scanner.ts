@@ -24,7 +24,7 @@ export type JayRoute = {
     /** NPM package name for plugin routes. Used by build to generate portable module paths. */
     packageName?: string;
     /**
-     * Explicit params declared via <script type="application/jay-params"> in the jay-html.
+     * Explicit params declared via YAML body in headless component script tags (DL#156).
      * Used by static override routes to provide param values.
      * e.g., /products/ceramic-flower-vase declares { slug: 'ceramic-flower-vase' }.
      */
@@ -102,8 +102,7 @@ async function scanDirectory(
             routes = [...routes, ...(await scanDirectory(BASE_DIR, fullPath, options))];
         } else if (item.name === options.jayHtmlFilename) {
             const route = convertToRoutePath(BASE_DIR, fullPath, options);
-            // Read jay-html and extract explicit params from <script type="application/jay-params">
-            const { params, validations } = await parseJayParams(fullPath);
+            const { params, validations } = await parseHeadlessProps(fullPath);
             if (params) {
                 route.inferredParams = params;
             }
@@ -191,13 +190,11 @@ function dedentYaml(text: string): string {
 }
 
 /**
- * Parse <script type="application/jay-params"> from a jay-html file.
- * Uses node-html-parser (same parser as the compiler) for robust parsing.
- * Returns the parsed params and any validation errors.
- *
- * @see Design Log #113
+ * Extract static props/params from headless script tag YAML bodies (DL#156).
+ * Replaces the deprecated <script type="application/jay-params"> mechanism (DL#113).
+ * Merges all headless YAML bodies into a single params object for route matching.
  */
-async function parseJayParams(
+async function parseHeadlessProps(
     jayHtmlPath: string,
 ): Promise<{ params: Record<string, string> | undefined; validations: string[] }> {
     let content: string;
@@ -212,30 +209,42 @@ async function parseJayParams(
         blockTextElements: { script: true, style: true },
     });
     const head = root.querySelector('head');
+    const validations: string[] = [];
+
     const paramScripts = (head ?? root).querySelectorAll('script[type="application/jay-params"]');
-
-    if (paramScripts.length === 0) return { params: undefined, validations: [] };
-
-    if (paramScripts.length > 1) {
-        return {
-            params: undefined,
-            validations: [
-                'Multiple <script type="application/jay-params"> tags found — expected at most one',
-            ],
-        };
+    if (paramScripts.length > 0) {
+        validations.push(
+            '<script type="application/jay-params"> is deprecated. ' +
+                'Move the values into the YAML body of the headless component that uses them. ' +
+                'See agent-kit/developer/routing.md for details.',
+        );
     }
 
-    const body = dedentYaml(paramScripts[0].textContent ?? '');
-    if (!body) return { params: undefined, validations: [] };
+    const headlessScripts = (head ?? root).querySelectorAll(
+        'script[type="application/jay-headless"]',
+    );
+    let merged: Record<string, string> | undefined;
 
-    try {
-        return { params: YAML.parse(body), validations: [] };
-    } catch (e) {
-        return {
-            params: undefined,
-            validations: [`Failed to parse jay-params YAML: ${(e as Error).message}`],
-        };
+    for (const script of headlessScripts) {
+        const body = dedentYaml(script.textContent ?? '');
+        if (!body) continue;
+
+        try {
+            const parsed = YAML.parse(body);
+            if (parsed && typeof parsed === 'object') {
+                if (!merged) merged = {};
+                for (const [k, v] of Object.entries(parsed)) {
+                    merged[k] = String(v);
+                }
+            }
+        } catch (e) {
+            validations.push(
+                `Failed to parse headless component props YAML: ${(e as Error).message}`,
+            );
+        }
     }
+
+    return { params: merged, validations };
 }
 
 /**
@@ -289,7 +298,7 @@ export async function scanRoutes(baseDir: string, options: ScanFilesOptions): Pr
     // Log explicit params for debugging
     const routesWithParams = sortedRoutes.filter((r) => r.inferredParams);
     if (routesWithParams.length > 0) {
-        getLogger().info('[route-scanner] Routes with explicit params (jay-params):');
+        getLogger().info('[route-scanner] Routes with explicit params (headless props):');
         for (const route of routesWithParams) {
             getLogger().info(`  ${route.rawRoute} → ${JSON.stringify(route.inferredParams)}`);
         }

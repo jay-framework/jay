@@ -113,8 +113,12 @@ breakpoints:
 Use only these values in `@media (max-width: ...)` queries:
 
 ```css
-@media (max-width: 768px) { /* tablet ✓ */ }
-@media (max-width: 750px) { /* not in breakpoints ✗ */ }
+@media (max-width: 768px) {
+  /* tablet ✓ */
+}
+@media (max-width: 750px) {
+  /* not in breakpoints ✗ */
+}
 ```
 
 ## Component Specs

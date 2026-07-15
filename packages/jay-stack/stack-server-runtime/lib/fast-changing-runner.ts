@@ -49,6 +49,7 @@ export async function renderFastChangingData(
                     contractName: contractInfo.contractName,
                     metadata: contractInfo.metadata,
                 }),
+                ...(part.headlessProps || {}),
             };
 
             const fastRenderedPart = compDefinition.slowlyRender

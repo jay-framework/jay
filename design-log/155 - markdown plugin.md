@@ -48,15 +48,17 @@ A5: Yes — two components. `markdown-content` renders at slow phase (static). `
 A headless component that scans a directory of `.md` files and provides page data. The page's `page.jay-html` references it, and it contributes a `slug` param via `loadParams`.
 
 **Usage in page.jay-html:**
+
 ```html
 <html>
   <head>
-    <script type="application/jay-headless"
+    <script
+      type="application/jay-headless"
       plugin="@jay-framework/markdown"
       contract="markdown-pages"
       key="post"
-      props='{ "contentDir": "./content" }'>
-    </script>
+      props='{ "contentDir": "./content" }'
+    ></script>
   </head>
   <body>
     <article>
@@ -69,6 +71,7 @@ A headless component that scans a directory of `.md` files and provides page dat
 ```
 
 **Directory structure:**
+
 ```
 src/pages/blog/[slug]/
   page.jay-html          ← references markdown-pages
@@ -80,7 +83,8 @@ src/pages/blog/[slug]/
 ```
 
 **Markdown file format:**
-~~~markdown
+
+````markdown
 ---
 title: Getting Started
 date: 2026-07-15
@@ -100,9 +104,10 @@ const hello = 'world';
 graph LR
   A[Start] --> B[End]
 ```
-~~~
+````
 
 **Component behavior:**
+
 - `loadParams` scans `contentDir` relative to the page, yields `{ slug }` for each `.md` file (filename without extension)
 - Slow render: reads the markdown file, extracts frontmatter, parses markdown to HTML (with code highlighting and mermaid SVG), returns ViewState
 - No fast or interactive phases needed — content is static
@@ -112,6 +117,7 @@ graph LR
 Takes a markdown string via props, renders to HTML at build time.
 
 **Usage:**
+
 ```html
 <jay:markdown-content>
   <div>{html}</div>
@@ -125,6 +131,7 @@ The component receives markdown via props (from the parent page's data), renders
 Takes a markdown string that can change at request time or on the client.
 
 **Usage:**
+
 ```html
 <jay:markdown-live>
   <div>{html}</div>
@@ -144,12 +151,13 @@ Takes a markdown string that can change at request time or on the client.
 **Proposed fix:** Add `props` attribute parsing to `parseHeadlessImports`. The attribute value is a JSON string. Parsed props are passed to the component's `withSlowlyRender` / `withFastRender` via the existing `props` parameter.
 
 ```html
-<script type="application/jay-headless"
+<script
+  type="application/jay-headless"
   plugin="@jay-framework/markdown"
   contract="markdown-pages"
   key="post"
-  props='{ "contentDir": "./content" }'>
-</script>
+  props='{ "contentDir": "./content" }'
+></script>
 ```
 
 This is a small, backward-compatible change — existing headless imports without `props` continue to work. The contract's `props` section declares the expected shape, and the validate command checks consistency (DL#124, DL#152).
@@ -157,6 +165,7 @@ This is a small, backward-compatible change — existing headless imports withou
 ### Contracts
 
 **markdown-pages.jay-contract:**
+
 ```yaml
 name: markdown-pages
 description: Renders a directory of markdown files as pages
@@ -213,6 +222,7 @@ tags:
 ```
 
 **markdown-content.jay-contract:**
+
 ```yaml
 name: markdown-content
 description: Renders a markdown string to HTML at build time
@@ -230,6 +240,7 @@ tags:
 ```
 
 **markdown-live.jay-contract:**
+
 ```yaml
 name: markdown-live
 description: Renders markdown with fast+interactive updates
@@ -291,6 +302,7 @@ const codeRenderer: marked.RendererExtension = {
 ```
 
 The `highlightCode` function uses regex-based tokenization per language:
+
 - Keywords → `<span class="token keyword">`
 - Strings → `<span class="token string">`
 - Comments → `<span class="token comment">`
@@ -323,22 +335,56 @@ Each theme uses CSS custom properties for easy overrides:
   --md-spacing-block: 1.5rem;
 }
 
-.md h1 { font-size: 2rem; font-weight: 700; color: var(--md-color-heading); }
-.md h2 { font-size: 1.5rem; font-weight: 600; color: var(--md-color-heading); }
-.md p { line-height: 1.7; margin-bottom: var(--md-spacing-block); }
-.md blockquote { border-left: 3px solid var(--md-color-blockquote-border); padding-left: 1rem; }
-.md pre.md-code { background: var(--md-color-code-bg); border-radius: 0.5rem; padding: 1rem; overflow-x: auto; }
-.md .md-mermaid { text-align: center; margin: var(--md-spacing-block) 0; }
+.md h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--md-color-heading);
+}
+.md h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--md-color-heading);
+}
+.md p {
+  line-height: 1.7;
+  margin-bottom: var(--md-spacing-block);
+}
+.md blockquote {
+  border-left: 3px solid var(--md-color-blockquote-border);
+  padding-left: 1rem;
+}
+.md pre.md-code {
+  background: var(--md-color-code-bg);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  overflow-x: auto;
+}
+.md .md-mermaid {
+  text-align: center;
+  margin: var(--md-spacing-block) 0;
+}
 /* ... */
 ```
 
 Code highlighting tokens in each theme:
+
 ```css
-.md .token.keyword { color: #8b5cf6; }
-.md .token.string { color: #059669; }
-.md .token.comment { color: #94a3b8; font-style: italic; }
-.md .token.number { color: #d97706; }
-.md .token.punctuation { color: #64748b; }
+.md .token.keyword {
+  color: #8b5cf6;
+}
+.md .token.string {
+  color: #059669;
+}
+.md .token.comment {
+  color: #94a3b8;
+  font-style: italic;
+}
+.md .token.number {
+  color: #d97706;
+}
+.md .token.punctuation {
+  color: #64748b;
+}
 ```
 
 **Consuming themes:** The jay-html compiler resolves `<link>` CSS paths relative to the page directory — it does not resolve npm package paths. Instead, the page's linked CSS file uses `@import` (which Vite resolves from `node_modules`):
@@ -386,14 +432,14 @@ The `markdown-pages` component automatically maps frontmatter fields to `<head>`
 
 **Recognized frontmatter fields:**
 
-| Frontmatter field | Maps to | Example |
-|---|---|---|
-| `title` | `<title>` + `<meta property="og:title">` | `<title>Getting Started</title>` |
-| `description` | `<meta name="description">` + `<meta property="og:description">` | SEO description |
-| `canonical` | `<link rel="canonical">` | Canonical URL |
-| `image` | `<meta property="og:image">` | Open Graph image |
-| `author` | `<meta name="author">` | Author name |
-| `date` | `<meta property="article:published_time">` | ISO 8601 date |
+| Frontmatter field | Maps to                                                          | Example                          |
+| ----------------- | ---------------------------------------------------------------- | -------------------------------- |
+| `title`           | `<title>` + `<meta property="og:title">`                         | `<title>Getting Started</title>` |
+| `description`     | `<meta name="description">` + `<meta property="og:description">` | SEO description                  |
+| `canonical`       | `<link rel="canonical">`                                         | Canonical URL                    |
+| `image`           | `<meta property="og:image">`                                     | Open Graph image                 |
+| `author`          | `<meta name="author">`                                           | Author name                      |
+| `date`            | `<meta property="article:published_time">`                       | ISO 8601 date                    |
 
 **Unrecognized fields** become `<meta name="fieldName" content="value">` automatically. This lets markdown authors add arbitrary metadata without framework changes:
 
@@ -406,11 +452,12 @@ reading-time: 5 min
 ```
 
 Produces:
+
 ```html
 <title>My Post</title>
-<meta property="og:title" content="My Post">
-<meta name="category" content="tutorials">
-<meta name="reading-time" content="5 min">
+<meta property="og:title" content="My Post" />
+<meta name="category" content="tutorials" />
+<meta name="reading-time" content="5 min" />
 ```
 
 Array values like `tags: [tutorial, beginner]` are skipped for `<meta>` — they're available via the `frontmatter` JSON string in ViewState for template rendering.
@@ -418,7 +465,15 @@ Array values like `tags: [tutorial, beginner]` are skipped for `<meta>` — they
 **Implementation in the component:**
 
 ```typescript
-const KNOWN_FIELDS = new Set(['title', 'description', 'canonical', 'image', 'author', 'date', 'tags']);
+const KNOWN_FIELDS = new Set([
+  'title',
+  'description',
+  'canonical',
+  'image',
+  'author',
+  'date',
+  'tags',
+]);
 
 function frontmatterToHeadTags(fm: Record<string, any>): HeadTag[] {
   const tags: HeadTag[] = [];
@@ -440,7 +495,10 @@ function frontmatterToHeadTags(fm: Record<string, any>): HeadTag[] {
     tags.push({ tag: 'meta', attrs: { name: 'author', content: fm.author } });
   }
   if (fm.date) {
-    tags.push({ tag: 'meta', attrs: { property: 'article:published_time', content: new Date(fm.date).toISOString() } });
+    tags.push({
+      tag: 'meta',
+      attrs: { property: 'article:published_time', content: new Date(fm.date).toISOString() },
+    });
   }
   for (const [key, value] of Object.entries(fm)) {
     if (KNOWN_FIELDS.has(key)) continue;
@@ -550,12 +608,12 @@ contracts:
 
 ## Trade-offs
 
-| Decision | Pro | Con |
-|----------|-----|-----|
-| `marked` over `remark` | Fast, lightweight, simple API | Less extensible AST, fewer plugins |
-| CSS-only code highlighting | No client JS, theme-able, fast | Less accurate than Shiki/Prism, limited language support |
-| Build-time mermaid SVG | No client JS, no layout shift | Requires mermaid as build dep (~50MB), can't update diagrams interactively |
-| Props on headless script tag | Per-page config, familiar pattern | Framework change needed |
+| Decision                     | Pro                               | Con                                                                        |
+| ---------------------------- | --------------------------------- | -------------------------------------------------------------------------- |
+| `marked` over `remark`       | Fast, lightweight, simple API     | Less extensible AST, fewer plugins                                         |
+| CSS-only code highlighting   | No client JS, theme-able, fast    | Less accurate than Shiki/Prism, limited language support                   |
+| Build-time mermaid SVG       | No client JS, no layout shift     | Requires mermaid as build dep (~50MB), can't update diagrams interactively |
+| Props on headless script tag | Per-page config, familiar pattern | Framework change needed                                                    |
 
 ## Verification Criteria
 

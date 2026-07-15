@@ -467,6 +467,14 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/&lt;b&gt;This should be escaped&lt;\/b&gt;/);
             expect(body).toMatch(/<b>This should be bold<\/b> and <em>italic<\/em>/);
         });
+
+        it('/headless-props — keyed headless component with YAML body props', async () => {
+            const { status, body } = await fetchPage(server.url, '/headless-props/');
+            expect(status).toBe(200);
+            expectPage(body);
+            expect(body).toMatch(/Headless Props Test/);
+            expect(body).toMatch(/Widget from-props/);
+        });
     });
 
     describe('production self-hosted', () => {
@@ -592,6 +600,12 @@ describe('Smoke Test', () => {
             expect(status).toBe(200);
             expect(body).toMatch(/&lt;b&gt;This should be escaped&lt;\/b&gt;/);
             expect(body).toMatch(/<b>This should be bold<\/b> and <em>italic<\/em>/);
+        });
+
+        it('/headless-props — keyed headless component with YAML body props', async () => {
+            const { status, body } = await fetchPage(server.url, '/headless-props/');
+            expect(status).toBe(200);
+            expect(body).toMatch(/Widget from-props/);
         });
     });
 

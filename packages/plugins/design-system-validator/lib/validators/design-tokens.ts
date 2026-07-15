@@ -21,7 +21,8 @@ import {
 import type { DesignTokens } from '../parse-design-md.js';
 import type { HTMLElement } from 'node-html-parser';
 
-const GUIDE_SUGGESTION = 'See design-system-validator agent-kit/designer/design-system.md for usage guide';
+const GUIDE_SUGGESTION =
+    'See design-system-validator agent-kit/designer/design-system.md for usage guide';
 
 function elementHint(el: HTMLElement): string {
     const tag = el.rawTagName?.toLowerCase() || 'element';
@@ -159,7 +160,12 @@ export const validateTokens: JayHtmlValidatorFn = (ctx) => {
     const byBreakpoint = resolveCascadeByBreakpoint(cssSources, ctx.body);
 
     for (const [breakpoint, cascade] of byBreakpoint) {
-        if (breakpoint && hasBreakpoints && breakpoint.includes('max-width') && !breakpointNames.has(breakpoint)) {
+        if (
+            breakpoint &&
+            hasBreakpoints &&
+            breakpoint.includes('max-width') &&
+            !breakpointNames.has(breakpoint)
+        ) {
             if (!flaggedBreakpoints.has(breakpoint)) {
                 flaggedBreakpoints.add(breakpoint);
                 const defined = Object.entries(tokens.breakpoints)

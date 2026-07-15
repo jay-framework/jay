@@ -37,6 +37,7 @@ export interface HeadlessModuleInfo {
     key?: string;
     propNames?: string[];
     contractInfo?: { contractName: string; metadata?: Record<string, unknown> };
+    headlessProps?: Record<string, string>;
 }
 
 export interface ProductionPageParts {
@@ -136,6 +137,7 @@ export async function loadProductionPageParts(
                 clientImport: '',
                 clientPart: '',
                 contractInfo: ci,
+                headlessProps: headlessImport.headlessProps,
             });
             keyedPartModules.push({
                 key: headlessImport.key,
@@ -148,6 +150,7 @@ export async function loadProductionPageParts(
                 isLocal: isLocalModule,
                 key: headlessImport.key,
                 contractInfo: ci,
+                headlessProps: headlessImport.headlessProps,
             });
         }
 
@@ -219,6 +222,7 @@ export interface PagePartsConfig {
         PagePartsConfigEntry & {
             key?: string;
             contractInfo?: { contractName: string; metadata?: Record<string, unknown> };
+            headlessProps?: Record<string, string>;
         }
     >;
     instanceComponents: Array<
@@ -263,6 +267,7 @@ export function buildPagePartsConfig(
                 source: info.isLocal ? 'local' : 'npm',
                 key: info.key,
                 contractInfo: info.contractInfo,
+                headlessProps: info.headlessProps,
             });
         }
     }
@@ -323,6 +328,7 @@ export async function loadPagePartsFromConfig(
             clientImport: '',
             clientPart: '',
             contractInfo: entry.contractInfo,
+            headlessProps: entry.headlessProps,
         });
     }
 

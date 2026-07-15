@@ -4,7 +4,8 @@ import { resolveCascade } from '../css-cascade.js';
 import { matchComponent, formatComponentMismatches } from '../token-matcher.js';
 import type { HTMLElement } from 'node-html-parser';
 
-const GUIDE_SUGGESTION = 'See design-system-validator agent-kit/designer/design-system.md for usage guide';
+const GUIDE_SUGGESTION =
+    'See design-system-validator agent-kit/designer/design-system.md for usage guide';
 
 function describeElement(el: HTMLElement): string {
     const tag = el.rawTagName?.toLowerCase() || 'element';

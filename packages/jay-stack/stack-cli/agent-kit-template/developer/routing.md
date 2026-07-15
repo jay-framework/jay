@@ -51,23 +51,22 @@ src/pages/products/
 
 The static `ceramic-flower-vase/` route takes priority over `[slug]/` for that URL, but all other product URLs still use the dynamic route.
 
-### Static Override Params (`jay-params`)
+### Static Override Params and Headless Component Props
 
-Static override routes often use the same contract as the dynamic route they override. Since the static route has no dynamic directory segment, the params must be declared explicitly using `<script type="application/jay-params">`:
+Static override routes use the same headless component as the dynamic route they override. Since the static route has no dynamic directory segment, the params must be declared in the headless component's YAML body:
 
 ```html
 <!-- src/pages/products/ceramic-flower-vase/page.jay-html -->
 <html>
   <head>
-    <script type="application/jay-params">
-      slug: ceramic-flower-vase
-    </script>
     <script
       type="application/jay-headless"
       plugin="wix-stores"
       contract="product-page"
       key="product"
-    ></script>
+    >
+      slug: ceramic-flower-vase
+    </script>
   </head>
   <body>
     <h1>{product.productName}</h1>
@@ -75,7 +74,20 @@ Static override routes often use the same contract as the dynamic route they ove
 </html>
 ```
 
-The script body is YAML. The declared params are passed to the component as if extracted from a dynamic URL segment. Without this, the component would receive no param values.
+The script body is YAML. Values are passed to the component as props alongside route params. This same mechanism is used for any per-component configuration:
+
+```html
+<script
+  type="application/jay-headless"
+  plugin="@jay-framework/markdown"
+  contract="markdown-pages"
+  key="post"
+>
+  contentDir: ./content
+</script>
+```
+
+> **Note:** `<script type="application/jay-params">` is deprecated. Move param values into the headless component's script tag body.
 
 ## Page Files
 
