@@ -84,32 +84,68 @@ The YAML body contains prop values. These flow to the component's `withSlowlyRen
 
 ### Consolidating jay-params
 
-`jay-params` currently provides route params for static override routes:
+The page component has its own `page.ts` — it doesn't need external values from the template.
 
+The only components that need template-provided values are **reusable headless components** — they're generic and can't hardcode per-page configuration. This includes both props (like `contentDir` for the markdown plugin) and params (like `slug` for a product page override).
+
+`jay-params` (DL#113) was a page-wide mechanism, but the values it provides actually belong to a specific headless component. A static override page at `/products/ceramic-flower-vase/` provides `slug: ceramic-flower-vase` for the `wix-stores/product-page` component — not for the page itself.
+
+**Before (jay-params — page-wide, no component association):**
 ```html
-<!-- Before: separate tag -->
 <script type="application/jay-params">
   slug: ceramic-flower-vase
 </script>
+<script type="application/jay-headless"
+  plugin="@jay-framework/wix-stores"
+  contract="product-page"
+  key="productPage"></script>
 ```
 
-After consolidation, route params are expressed as props on the page's data script tag or as a `params` section in a headless component:
-
-**Option A — Keep jay-params as syntactic sugar:**
-
-`jay-params` continues to work unchanged. Internally, its values merge into the page component's props (same pipeline). No migration needed.
-
-**Option B — Move params into the contract script:**
-
+**After — values on the component that needs them:**
 ```html
-<script type="application/jay-data" contract="./page.jay-contract">
+<script type="application/jay-headless"
+  plugin="@jay-framework/wix-stores"
+  contract="product-page"
+  key="productPage">
   slug: ceramic-flower-vase
 </script>
 ```
 
-The `jay-data` script tag already has a YAML body for inline data structure. Extend it to also accept params when used with a contract reference.
+**Props example — same mechanism:**
+```html
+<script type="application/jay-headless"
+  plugin="@jay-framework/markdown"
+  contract="markdown-pages"
+  key="post">
+  contentDir: ./content
+</script>
+```
 
-**Recommendation:** Option A. Keep `jay-params` for backward compatibility and clarity. The mental model is simpler: params are about routing, props are about component configuration. Internally they share the same mechanism.
+One mechanism: YAML body in the headless script tag provides static values (params and props) for that specific component. No `page.ts` or separate script tag needed.
+
+### Migration: jay-params validator rule
+
+Add a jay-html validation rule that detects `<script type="application/jay-params">` and tells the agent how to migrate:
+
+```
+⚠ <script type="application/jay-params"> is deprecated.
+  Move the values into the YAML body of the headless component that uses them:
+  <script type="application/jay-headless" plugin="..." contract="..." key="...">
+    slug: ceramic-flower-vase
+  </script>
+```
+
+The validator should identify which headless component on the page has a contract with matching param names, and include that in the suggestion.
+
+**Implementation:** Add to the core jay-stack validation rules (not a plugin validator) since this is a framework-level concern.
+
+### Route scanner changes
+
+The route scanner currently reads `jay-params` to extract `inferredParams`. After this change:
+
+1. Remove `jay-params` parsing from `route-scanner.ts`
+2. Instead, read the YAML body of `jay-headless` script tags
+3. Extract param values from the headless component whose contract declares matching params
 
 ### Parser changes
 
@@ -164,13 +200,15 @@ In the validation pipeline, when validating headless imports, check that provide
 ### Data flow after this change
 
 ```
-                        jay-params           instance props          keyed headless props
-Where declared:         <script> in head     <jay:xxx attr="val">    YAML body in <script>
-Scope:                  page-wide            per-instance            per-component
-Format:                 YAML body            HTML attributes         YAML body
-Flows to component as:  pageParams           normalizedProps         merged into props
-Validated against:      contract params      contract props          contract props
+                        instance props          keyed headless body
+Where declared:         <jay:xxx attr="val">    YAML body in <script jay-headless>
+Scope:                  per-instance            per-component
+Format:                 HTML attributes         YAML body
+Flows to component as:  normalizedProps         merged into props
+Validated against:      contract props          contract props
 ```
+
+Both provide values to reusable headless components — instance props for inline instances, YAML body for keyed page-level components. The page component itself needs neither.
 
 ## Implementation Plan
 
@@ -180,22 +218,34 @@ Validated against:      contract params      contract props          contract pr
 2. Add `headlessProps` to `JayHeadlessImports` interface
 3. Pass props through to the stack-cli validation context
 
-### Phase 2: Runtime
+### Phase 2: Remove jay-params
+
+1. Remove `jay-params` parsing from route scanner
+2. Update route scanner to read params from headless script tag YAML bodies
+3. Migrate existing pages that use `jay-params` — move values into the relevant headless script tag
+
+### Phase 3: Runtime
 
 1. Update `slowly-changing-runner.ts` to pass headless props to component
 2. Update fast render runner similarly
 3. Update client hydration to receive props
 
-### Phase 3: Validation
+### Phase 4: Validation
 
 1. Update `checkComponentPropsAndParams` for keyed headless prop validation
 2. Update `validate.ts` to check headless props against contract
+3. Add jay-html validation rule that flags `<script type="application/jay-params">` with migration instructions
 
-### Phase 4: Tests
+### Phase 5: Smoke test
 
-1. Parser tests with YAML body in headless script tags
-2. Runtime tests with props flowing to slow render
-3. Validation tests for missing/extra props
+1. Add an example page in `examples/jay-stack/smoke-test/` that uses a keyed headless component with props via YAML body
+2. Verify props flow through to the component's slow render
+3. Verify the dev server renders the page correctly
+
+### Phase 6: Migration
+
+1. Update existing pages that use `jay-params` to use `jay-data` body
+2. Update agent-kit documentation
 
 ## Trade-offs
 
@@ -211,5 +261,5 @@ Validated against:      contract params      contract props          contract pr
 2. Props flow to component's `slowlyRender` as part of `props` parameter
 3. Empty body (no props) continues to work unchanged
 4. Contract `props` validation catches missing required props
-5. `jay-params` continues to work unchanged
-6. Example markdown-pages component receives `contentDir` prop correctly
+5. `<script type="application/jay-params">` produces a validation warning with migration instructions
+6. Smoke test in `examples/jay-stack/smoke-test/` demonstrates a keyed headless component receiving props via YAML body, rendering correctly in the dev server
