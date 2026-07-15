@@ -105,6 +105,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 151 | design system validator plugin                    | Static CSS analysis against DESIGN.md tokens; replaces Happy DOM approach  |
 | 154 | plugin package shipping validation                | Validate agent-kit directory is listed in package.json files               |
 | 155 | markdown plugin                                   | Markdown rendering: directory-to-pages, inline content, code + mermaid     |
+| 156 | keyed headless component props                    | YAML body props for keyed headless components; consolidation with jay-params |
 
 ---
 
