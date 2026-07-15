@@ -31,6 +31,7 @@ export interface DesignTokens {
     typography: Record<string, TypographyToken>;
     spacing: Record<string, string>;
     rounded: Record<string, string>;
+    breakpoints: Record<string, string>;
     animations: Record<string, AnimationPreset>;
     components: Record<string, ComponentSpec>;
     rawComponents: Record<string, ComponentSpec>;
@@ -43,6 +44,7 @@ interface RawDesignMd {
     typography?: Record<string, TypographyToken>;
     spacing?: Record<string, string | number>;
     rounded?: Record<string, string | number>;
+    breakpoints?: Record<string, string | number>;
     animations?: Record<string, AnimationPreset>;
     components?: Record<string, ComponentSpec>;
     rules?: DesignRules;
@@ -112,6 +114,7 @@ export function parseDesignMd(content: string): DesignTokens | null {
         typography: raw.typography || {},
         spacing: normalizeStringValues(raw.spacing),
         rounded: normalizeStringValues(raw.rounded),
+        breakpoints: normalizeStringValues(raw.breakpoints),
         animations: raw.animations || {},
         components: raw.components || {},
         rawComponents,

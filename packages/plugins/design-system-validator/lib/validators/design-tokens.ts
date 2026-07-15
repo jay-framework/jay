@@ -149,10 +149,31 @@ export const validateTokens: JayHtmlValidatorFn = (ctx) => {
     if (!ctx.css) return [];
     const cssSources = [ctx.css];
 
+    const breakpointNames = new Map<string, string>();
+    for (const [name, value] of Object.entries(tokens.breakpoints)) {
+        breakpointNames.set(`(max-width: ${value})`, name);
+    }
+    const hasBreakpoints = Object.keys(tokens.breakpoints).length > 0;
+    const flaggedBreakpoints = new Set<string>();
+
     const byBreakpoint = resolveCascadeByBreakpoint(cssSources, ctx.body);
 
     for (const [breakpoint, cascade] of byBreakpoint) {
-        const label = breakpoint || '';
+        if (breakpoint && hasBreakpoints && breakpoint.includes('max-width') && !breakpointNames.has(breakpoint)) {
+            if (!flaggedBreakpoints.has(breakpoint)) {
+                flaggedBreakpoints.add(breakpoint);
+                const defined = Object.entries(tokens.breakpoints)
+                    .map(([n, v]) => `${n} (${v})`)
+                    .join(', ');
+                findings.push({
+                    severity: 'warning',
+                    message: `Media query @media ${breakpoint} not in DESIGN.md breakpoints`,
+                    suggestion: `Use a ${designMdPath} breakpoint: ${defined}`,
+                });
+            }
+        }
+        const name = breakpoint ? breakpointNames.get(breakpoint) : undefined;
+        const label = name ? `${name}` : breakpoint || '';
         for (const [el, styles] of cascade) {
             validateElementStyles(el, styles, tokens, label, designMdPath, findings);
         }
