@@ -198,7 +198,8 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
     httpServer.listen(devServerPort, () => {
         log.important(`🚀 Jay Stack dev server started successfully!`);
         log.important(`📱 Dev Server: http://localhost:${devServerPort}`);
-        log.important(`🎨 Editor Server: http://localhost:${editorPort} (ID: ${editorId})`);
+        log.important(`🎨 Editor (AIditor): http://localhost:${devServerPort}/aiditor`);
+        log.important(`   (editor socket server on http://localhost:${editorPort}, ID: ${editorId})`);
         log.important(`📁 Pages directory: ${resolvedConfig.devServer.pagesBase}`);
         if (fs.existsSync(publicPath)) {
             log.important(`📁 Public folder: ${resolvedConfig.devServer.publicFolder}`);
