@@ -1,4 +1,24 @@
-/** Add Menu catalog schema validation and lint for validate-plugin. */
+/**
+ * Add Menu catalog schema validation and lint.
+ *
+ * Source of truth for plugin authors (`jay-stack validate-plugin`) and for
+ * AIditor runtime catalog loading. When changing Add Menu schema or lint rules,
+ * update this module and `agent-kit/plugin/aiditor-add-menu.md` in the same change.
+ */
+
+export type AddMenuBrowseSize = 'large' | 'medium' | 'small';
+
+export type AddMenuPresentation =
+    | { type: 'image'; src: string }
+    | { type: 'gif'; src: string; poster?: string }
+    | { type: 'html-fragment'; html: string };
+
+export type AddMenuInteraction = {
+    mode: 'reference' | 'stage-place';
+    /** @ ignored at runtime — do not rely on disk registries */
+    persistOnPage?: boolean;
+    stagePromptTemplate?: string;
+};
 
 export type AddMenuCatalogLintWarning = {
     code: string;
@@ -21,23 +41,23 @@ export type AddMenuItem = {
     pluginName?: string;
     packageName?: string;
     subCategory?: string;
+    folderPath?: string[];
     thumbnail?: string;
     presentation?: AddMenuPresentation;
     browse?: {
         size?: AddMenuBrowseSize;
     };
+    interaction?: AddMenuInteraction;
 };
 
-type AddMenuBrowseSize = 'large' | 'medium' | 'small';
-
-type AddMenuPresentation =
-    | { type: 'image'; src: string }
-    | { type: 'gif'; src: string; poster?: string }
-    | { type: 'html-fragment'; html: string };
+export type AddMenuCatalogFile = {
+    items: AddMenuItem[];
+};
 
 const REJECTED_ITEM_FIELDS = ['kind', 'parameters', 'component', 'allowedScopes'] as const;
 const HTML_SOFT_LIMIT_BYTES = 8 * 1024;
 const HTML_HARD_LIMIT_BYTES = 32 * 1024;
+const FOLDER_PATH_MAX_SEGMENTS = 32;
 
 const BLOCKED_TAGS =
     /<\s*(script|iframe|object|embed)\b[^>]*>[\s\S]*?<\/\s*\1\s*>|<\s*(script|iframe|object|embed)\b[^>]*\/?>/gi;
@@ -108,12 +128,14 @@ function requiredString(
     field: string,
     itemPath: string,
     errors: AddMenuValidationError[],
+    code?: string,
 ): string | null {
     const value = obj[field];
     if (typeof value !== 'string' || value.trim().length === 0) {
         errors.push({
             path: `${itemPath}.${field}`,
             message: 'required non-empty string',
+            ...(code ? { code } : {}),
         });
         return null;
     }
@@ -128,6 +150,41 @@ function optionalString(obj: Record<string, unknown>, field: string): string | u
     return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function optionalBoolean(obj: Record<string, unknown>, field: string): boolean | undefined {
+    const value = obj[field];
+    return typeof value === 'boolean' ? value : undefined;
+}
+
+function validateInteraction(
+    raw: unknown,
+    itemPath: string,
+    errors: AddMenuValidationError[],
+): AddMenuInteraction | undefined {
+    if (raw === undefined) return undefined;
+    if (!isRecord(raw)) {
+        errors.push({
+            path: itemPath,
+            message: 'interaction must be an object',
+            code: 'interaction-not-object',
+        });
+        return undefined;
+    }
+    const mode = raw.mode;
+    if (mode !== 'reference' && mode !== 'stage-place') {
+        errors.push({
+            path: `${itemPath}.mode`,
+            message: 'interaction.mode must be "reference" or "stage-place"',
+            code: 'interaction-invalid-mode',
+        });
+        return undefined;
+    }
+    return {
+        mode,
+        persistOnPage: optionalBoolean(raw, 'persistOnPage'),
+        stagePromptTemplate: optionalString(raw, 'stagePromptTemplate'),
+    };
+}
+
 function validatePresentation(
     raw: unknown,
     itemPath: string,
@@ -135,7 +192,11 @@ function validatePresentation(
 ): AddMenuPresentation | undefined {
     if (raw === undefined) return undefined;
     if (!isRecord(raw)) {
-        errors.push({ path: itemPath, message: 'presentation must be an object' });
+        errors.push({
+            path: itemPath,
+            message: 'presentation must be an object',
+            code: 'presentation-not-object',
+        });
         return undefined;
     }
 
@@ -150,13 +211,13 @@ function validatePresentation(
     }
 
     if (type === 'image') {
-        const src = requiredString(raw, 'src', itemPath, errors);
+        const src = requiredString(raw, 'src', itemPath, errors, 'presentation-missing-src');
         if (!src) return undefined;
         return { type: 'image', src };
     }
 
     if (type === 'gif') {
-        const src = requiredString(raw, 'src', itemPath, errors);
+        const src = requiredString(raw, 'src', itemPath, errors, 'presentation-missing-src');
         if (!src) return undefined;
         return {
             type: 'gif',
@@ -215,7 +276,11 @@ function validateBrowse(
 ): AddMenuItem['browse'] | undefined {
     if (raw === undefined) return undefined;
     if (!isRecord(raw)) {
-        errors.push({ path: itemPath, message: 'browse must be an object' });
+        errors.push({
+            path: itemPath,
+            message: 'browse must be an object',
+            code: 'browse-not-object',
+        });
         return undefined;
     }
 
@@ -235,6 +300,72 @@ function validateBrowse(
     return { size: sizeRaw as AddMenuBrowseSize };
 }
 
+function validateFolderPath(
+    raw: unknown,
+    itemPath: string,
+    errors: AddMenuValidationError[],
+): string[] | undefined {
+    if (raw === undefined) return undefined;
+    if (!Array.isArray(raw)) {
+        errors.push({
+            path: `${itemPath}.folderPath`,
+            message: 'folderPath must be an array of strings',
+            code: 'folder-path-not-array',
+        });
+        return undefined;
+    }
+
+    const segments: string[] = [];
+    for (let index = 0; index < raw.length; index++) {
+        const value = raw[index];
+        if (typeof value !== 'string') {
+            errors.push({
+                path: `${itemPath}.folderPath[${index}]`,
+                message: 'folderPath segments must be strings',
+                code: 'folder-path-segment-type',
+            });
+            return undefined;
+        }
+        const trimmed = value.trim();
+        if (trimmed.length === 0) {
+            errors.push({
+                path: `${itemPath}.folderPath[${index}]`,
+                message: 'folderPath segments must be non-empty',
+                code: 'folder-path-empty-segment',
+            });
+            return undefined;
+        }
+        if (trimmed === '..' || trimmed.includes('/') || trimmed.includes('\\')) {
+            errors.push({
+                path: `${itemPath}.folderPath[${index}]`,
+                message: 'folderPath segments must not contain ".." or path separators',
+                code: 'folder-path-invalid-segment',
+            });
+            return undefined;
+        }
+        if (segments.at(-1) === trimmed) {
+            errors.push({
+                path: `${itemPath}.folderPath[${index}]`,
+                message: 'folderPath must not contain duplicate adjacent segments',
+                code: 'folder-path-adjacent-duplicate',
+            });
+            return undefined;
+        }
+        segments.push(trimmed);
+    }
+
+    if (segments.length > FOLDER_PATH_MAX_SEGMENTS) {
+        errors.push({
+            path: `${itemPath}.folderPath`,
+            message: `folderPath exceeds ${FOLDER_PATH_MAX_SEGMENTS} segments`,
+            code: 'folder-path-too-deep',
+        });
+        return undefined;
+    }
+
+    return segments.length > 0 ? segments : undefined;
+}
+
 export function validateAddMenuItem(
     raw: unknown,
     itemPath: string,
@@ -243,7 +374,7 @@ export function validateAddMenuItem(
     if (!isRecord(raw)) {
         return {
             item: null,
-            errors: [{ path: itemPath, message: 'item must be an object' }],
+            errors: [{ path: itemPath, message: 'item must be an object', code: 'item-not-object' }],
         };
     }
 
@@ -252,20 +383,24 @@ export function validateAddMenuItem(
             errors.push({
                 path: `${itemPath}.${field}`,
                 message: `field "${field}" is not allowed in Add Menu catalog items`,
+                code: `rejected-field-${field}`,
             });
         }
     }
 
-    const id = requiredString(raw, 'id', itemPath, errors);
-    const title = requiredString(raw, 'title', itemPath, errors);
-    const category = requiredString(raw, 'category', itemPath, errors);
-    const prompt = requiredString(raw, 'prompt', itemPath, errors);
+    const id = requiredString(raw, 'id', itemPath, errors, 'missing-id');
+    const title = requiredString(raw, 'title', itemPath, errors, 'missing-title');
+    const category = requiredString(raw, 'category', itemPath, errors, 'missing-category');
+    const prompt = requiredString(raw, 'prompt', itemPath, errors, 'missing-prompt');
     if (errors.length > 0 || !id || !title || !category || !prompt) {
         return { item: null, errors };
     }
 
+    const interaction = validateInteraction(raw.interaction, `${itemPath}.interaction`, errors);
     const presentation = validatePresentation(raw.presentation, `${itemPath}.presentation`, errors);
     const browse = validateBrowse(raw.browse, `${itemPath}.browse`, errors);
+    const folderPath = validateFolderPath(raw.folderPath, itemPath, errors);
+
     if (errors.length > 0) {
         return { item: null, errors };
     }
@@ -279,9 +414,11 @@ export function validateAddMenuItem(
             pluginName: optionalString(raw, 'pluginName'),
             packageName: optionalString(raw, 'packageName'),
             subCategory: optionalString(raw, 'subCategory'),
+            ...(folderPath ? { folderPath } : {}),
             thumbnail: optionalString(raw, 'thumbnail'),
             ...(presentation ? { presentation } : {}),
             ...(browse ? { browse } : {}),
+            ...(interaction ? { interaction } : {}),
         },
         errors,
     };
@@ -290,18 +427,30 @@ export function validateAddMenuItem(
 export function validateAddMenuCatalogFile(
     raw: unknown,
     sourcePath: string,
-): { file: { items: AddMenuItem[] } | null; errors: AddMenuValidationError[] } {
+): { file: AddMenuCatalogFile | null; errors: AddMenuValidationError[] } {
     const errors: AddMenuValidationError[] = [];
     if (!isRecord(raw)) {
         return {
             file: null,
-            errors: [{ path: sourcePath, message: 'catalog file must be an object' }],
+            errors: [
+                {
+                    path: sourcePath,
+                    message: 'catalog file must be an object',
+                    code: 'catalog-not-object',
+                },
+            ],
         };
     }
     if (!Array.isArray(raw.items)) {
         return {
             file: null,
-            errors: [{ path: `${sourcePath}.items`, message: 'items must be an array' }],
+            errors: [
+                {
+                    path: `${sourcePath}.items`,
+                    message: 'items must be an array',
+                    code: 'catalog-items-not-array',
+                },
+            ],
         };
     }
 
@@ -326,6 +475,10 @@ function normalizeAddMenuPresentation(item: AddMenuItem): AddMenuPresentation | 
         return { type: 'gif', src: thumbnail };
     }
     return { type: 'image', src: thumbnail };
+}
+
+function normalizeAddMenuBrowseSize(item: AddMenuItem): AddMenuBrowseSize {
+    return item.browse?.size ?? 'medium';
 }
 
 function hasSingleRootDiv(html: string): boolean {
@@ -438,8 +591,7 @@ function lintBrowseLargeWithoutPresentation(
     item: AddMenuItem,
     sourcePath: string,
 ): AddMenuCatalogLintWarning[] {
-    const size = item.browse?.size ?? 'medium';
-    if (size !== 'large') return [];
+    if (normalizeAddMenuBrowseSize(item) !== 'large') return [];
     if (normalizeAddMenuPresentation(item)) return [];
     return [
         catalogWarning(
@@ -468,3 +620,45 @@ export function lintAddMenuCatalog(
 
     return { errors, warnings };
 }
+
+/** Human-readable fix hints for validate-plugin output. */
+export const ADD_MENU_VALIDATION_SUGGESTIONS: Record<string, string> = {
+    'gif-missing-poster':
+        'Add presentation.poster with a static image for prefers-reduced-motion accessibility',
+    'html-fragment-missing-root-div':
+        'Wrap preview markup in a single root <div class="am-preview"> — see agent-kit/plugin/aiditor-add-menu.md',
+    'html-fragment-missing-at-scope':
+        'Add <style> with @scope (.am-preview) inside the root div — see agent-kit/plugin/aiditor-add-menu.md',
+    'html-fragment-missing-html':
+        'Set presentation.html with inline markup — external preview files are not supported',
+    'html-fragment-src-not-allowed':
+        'Remove presentation.src; use presentation.html for html-fragment previews',
+    'html-fragment-unsafe-markup':
+        'Remove scripts, event handlers, and javascript: URLs from presentation.html',
+    'html-fragment-oversize-soft':
+        'Trim inline html or use a gif preview for rich motion',
+    'html-fragment-oversize-hard':
+        'Reduce presentation.html below 32 KB after sanitize',
+    'browse-large-without-presentation':
+        'Add presentation or thumbnail — large browse tiles need a visual preview',
+    'browse-unknown-size': 'Set browse.size to large, medium, or small',
+    'presentation-unknown-type': 'Set presentation.type to image, gif, or html-fragment',
+    'interaction-invalid-mode': 'Set interaction.mode to reference (default) or stage-place',
+    'folder-path-not-array': 'folderPath must be a yaml array of folder name strings',
+    'folder-path-segment-type': 'Each folderPath entry must be a non-empty string',
+    'folder-path-empty-segment': 'Remove empty folderPath segments',
+    'folder-path-invalid-segment':
+        'Use separate array elements per folder level — no "/" or "\\" in segment names',
+    'folder-path-adjacent-duplicate': 'Remove duplicate consecutive folderPath segments',
+    'folder-path-too-deep': `Shorten folderPath to at most ${FOLDER_PATH_MAX_SEGMENTS} segments`,
+    'rejected-field-kind':
+        'Remove kind — express item intent in prompt text',
+    'rejected-field-parameters':
+        'Remove parameters — materialize values into prompt',
+    'rejected-field-component':
+        'Remove component — use prompt plus contract paths in agent-kit',
+    'rejected-field-allowedScopes':
+        'Remove allowedScopes — attachment scope is chosen in the AIditor UI',
+    'add-menu-missing-agentkit-handler':
+        'Declare setup.references in plugin.yaml and generate catalogs in jay-stack agent-kit — not in setup handler',
+};
