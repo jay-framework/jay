@@ -1,8 +1,5 @@
 <html>
 <head>
-    <script type="application/jay-params">
-      slug: ceramic-flower-vase
-    </script>
     <script type="application/jay-data" contract="./page.jay-contract"></script>
 </head>
 <body>

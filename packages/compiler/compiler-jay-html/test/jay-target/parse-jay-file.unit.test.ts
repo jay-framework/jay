@@ -1876,6 +1876,99 @@ describe('compiler', () => {
         });
     });
 
+    describe('headless props (DL#156)', () => {
+        const counterContract: Contract = {
+            name: 'counter',
+            tags: [{ tag: 'count', type: [ContractTagType.data], dataType: JayNumber }],
+        };
+
+        const propsResolver: JayImportResolver = {
+            ...defaultImportResolver,
+            loadPluginContract(pluginName: string, contractName: string) {
+                if (pluginName === 'test-counter' && contractName === 'counter') {
+                    return new WithValidations(
+                        {
+                            contract: counterContract,
+                            contractPath: '/path/to/counter.jay-contract',
+                        },
+                        [],
+                    );
+                }
+                return new WithValidations(null as any, ['Plugin not found']);
+            },
+        };
+
+        it('should parse YAML body as headlessProps', async () => {
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                    |   title: string
+                    |`,
+                    '<body></body>',
+                    `<script type="application/jay-headless" plugin="test-counter" contract="counter" key="myCounter">
+                    |   itemId: from-props
+                    |   color: blue
+                    | </script>`,
+                ),
+                'Page',
+                '',
+                {},
+                propsResolver,
+                '',
+            );
+
+            expect(jayFile.validations).toEqual([]);
+            expect(jayFile.val!.headlessImports).toHaveLength(1);
+            expect(jayFile.val!.headlessImports[0].headlessProps).toEqual({
+                itemId: 'from-props',
+                color: 'blue',
+            });
+        });
+
+        it('should leave headlessProps undefined for empty body', async () => {
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                    |   title: string
+                    |`,
+                    '<body></body>',
+                    `<script type="application/jay-headless" plugin="test-counter" contract="counter" key="myCounter"></script>`,
+                ),
+                'Page',
+                '',
+                {},
+                propsResolver,
+                '',
+            );
+
+            expect(jayFile.val.headlessImports).toHaveLength(1);
+            expect(jayFile.val.headlessImports[0].headlessProps).toBeUndefined();
+        });
+
+        it('should report validation error for invalid YAML body', async () => {
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                    |   title: string
+                    |`,
+                    '<body></body>',
+                    `<script type="application/jay-headless" plugin="test-counter" contract="counter" key="myCounter">
+                    |   invalid: [broken
+                    | </script>`,
+                ),
+                'Page',
+                '',
+                {},
+                propsResolver,
+                '',
+            );
+
+            expect(jayFile.validations.some((v) => v.includes('Failed to parse props YAML'))).toBe(
+                true,
+            );
+        });
+    });
+
     describe('headfull full-stack imports', () => {
         const headerContract: Contract = {
             name: 'Header',

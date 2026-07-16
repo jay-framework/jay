@@ -528,7 +528,48 @@ Colors _inside_ gradient functions (e.g., `#4f46e5` in `radial-gradient(circle a
 
 ### Deviations
 
+### Breakpoint validation
+
+Added `breakpoints` section to DESIGN.md frontmatter:
+
+```yaml
+breakpoints:
+  mobile: 600px
+  tablet: 768px
+  desktop: 1024px
+```
+
+Two features:
+
+1. **Named labels** — Media query findings use the breakpoint name instead of raw CSS: `[tablet]` instead of `[(max-width: 768px)]`.
+
+2. **Non-standard breakpoint detection** — `@media (max-width: 750px)` flagged if not in the defined breakpoints. Only `max-width` queries are checked; `prefers-reduced-motion`, `prefers-color-scheme`, etc. are left alone.
+
+Parser changes: `breakpoints` added to `RawDesignMd`, `DesignTokens`, and `parseDesignMd()`. Agent-kit guide updated with breakpoint documentation.
+
+### Performance: selector cache
+
+`matchesSelector` was called once per element per CSS rule — 235K calls for a single page, taking 3.3s. Replaced with `buildSelectorCache`: run `querySelectorAll` once per unique selector, store results in a `Map<string, Set<HTMLElement>>`. Per-element lookup becomes `Set.has()` — O(1). Token validator went from 3,301ms to 11ms (~300x speedup).
+
+### Deviations
+
 - The original design did not anticipate that `ctx.body` would be only the `<body>` element (not the full document). The validator interface now carries extracted CSS directly rather than re-parsing it from the DOM.
 - `background` shorthand was not listed in the original design's color properties list. It requires special extraction logic rather than simple property-set membership.
 - CSS custom property resolution was not in the original design (listed as a limitation). Added because the test project uses CSS vars extensively and produces many false positives without resolution.
 - The validation output format was redesigned for readability: per-file grouping, element identification, and suggestion deduplication were not in the original design.
+- Breakpoint validation was not in the original design. Added to support named breakpoint labels and non-standard breakpoint detection.
+
+### Add-menu: per-token granularity
+
+The `generateDesignSystemReferences` handler (runs during `jay-stack agent-kit`) was rewritten to produce individual add-menu items per design token instead of one item per category.
+
+**Before:** One "Color palette" item listing all colors in its prompt. One "Typography presets" item, etc.
+
+**After:** Each color, typography preset, spacing value, rounded value, breakpoint, animation, and component gets its own add-menu entry. This lets the AIditor present a browsable catalog of tokens.
+
+**Structure:**
+- **Category** — derived from DESIGN.md `name` field, or directory-based for page-level files (e.g., "Design System (products)")
+- **Sub-category** — one per token type: Colors, Typography, Spacing, Rounded, Breakpoints, Animations, Components
+- **Items** — one per token. Title includes the value (e.g., "primary (#2563eb)"). Prompt is a targeted instruction for that specific token.
+
+Multiple DESIGN.md files produce items under separate categories, with deduplication by ID.

@@ -25,7 +25,7 @@ function makeContext(projectRoot: string): PluginReferencesContext {
 }
 
 const BASIC_DESIGN_MD = `---
-name: Test
+name: Test Design
 colors:
   primary: "#2563eb"
   background: "#ffffff"
@@ -39,6 +39,12 @@ spacing:
   md: 1rem
 rounded:
   md: 0.5rem
+breakpoints:
+  mobile: 600px
+animations:
+  fade-in:
+    duration: 300ms
+    easing: ease
 components:
   button-primary:
     backgroundColor: "{colors.primary}"
@@ -47,6 +53,11 @@ components:
 ---
 # Test
 `;
+
+function readOutput(dir: string): any {
+    const outputPath = path.join(dir, 'agent-kit/aiditor/add-menu/design-system.yaml');
+    return yaml.load(fs.readFileSync(outputPath, 'utf-8')) as any;
+}
 
 describe('generateDesignSystemReferences', () => {
     let tempDir: string;
@@ -59,45 +70,67 @@ describe('generateDesignSystemReferences', () => {
         fs.rmSync(tempDir, { recursive: true, force: true });
     });
 
-    it('generates add-menu YAML from DESIGN.md tokens', async () => {
+    it('generates add-menu YAML with individual items per token', async () => {
         const ctx = makeContext(tempDir);
         const result = await generateDesignSystemReferences(ctx);
 
         expect(result.referencesCreated).toEqual(['agent-kit/aiditor/add-menu/design-system.yaml']);
-
-        const outputPath = path.join(tempDir, 'agent-kit/aiditor/add-menu/design-system.yaml');
-        expect(fs.existsSync(outputPath)).toEqual(true);
-
-        const content = yaml.load(fs.readFileSync(outputPath, 'utf-8')) as any;
-        expect(content.items).toBeDefined();
-        expect(content.items.length).toBeGreaterThan(0);
+        const content = readOutput(tempDir);
+        expect(content.items.length).toEqual(10);
     });
 
-    it('generates color palette item', async () => {
+    it('generates one item per color token with HTML preview', async () => {
         const ctx = makeContext(tempDir);
         await generateDesignSystemReferences(ctx);
+        const content = readOutput(tempDir);
 
-        const outputPath = path.join(tempDir, 'agent-kit/aiditor/add-menu/design-system.yaml');
-        const content = yaml.load(fs.readFileSync(outputPath, 'utf-8')) as any;
-        const colorItem = content.items.find((i: any) => i.id === 'design-system:color-palette');
+        const primaryItem = content.items.find((i: any) => i.id === 'design-system:color-primary');
+        expect(primaryItem).toBeDefined();
+        expect(primaryItem.title).toEqual('primary (#2563eb)');
+        expect(primaryItem.category).toEqual('Test Design');
+        expect(primaryItem.subCategory).toEqual('Colors');
+        expect(primaryItem.html).toMatch(/background:#2563eb/);
+        expect(primaryItem.html).toMatch(/primary/);
 
-        expect(colorItem).toBeDefined();
-        expect(colorItem.category).toEqual('Design System');
-        expect(colorItem.subCategory).toEqual('Colors');
-        expect(colorItem.prompt).toMatch(/primary.*#2563eb/);
+        const bgItem = content.items.find((i: any) => i.id === 'design-system:color-background');
+        expect(bgItem).toBeDefined();
     });
 
-    it('generates component items including jay: components', async () => {
+    it('generates typography items with HTML preview', async () => {
         const ctx = makeContext(tempDir);
         await generateDesignSystemReferences(ctx);
+        const content = readOutput(tempDir);
 
-        const outputPath = path.join(tempDir, 'agent-kit/aiditor/add-menu/design-system.yaml');
-        const content = yaml.load(fs.readFileSync(outputPath, 'utf-8')) as any;
+        const bodyItem = content.items.find((i: any) => i.id === 'design-system:typography-body-md');
+        expect(bodyItem).toBeDefined();
+        expect(bodyItem.subCategory).toEqual('Typography');
+        expect(bodyItem.prompt).toMatch(/Inter/);
+        expect(bodyItem.html).toMatch(/font-family:Inter/);
+        expect(bodyItem.html).toMatch(/The quick brown fox/);
+    });
+
+    it('generates items for spacing, rounded, breakpoints, and animations', async () => {
+        const ctx = makeContext(tempDir);
+        await generateDesignSystemReferences(ctx);
+        const content = readOutput(tempDir);
+
+        expect(content.items.find((i: any) => i.id === 'design-system:spacing-sm')).toBeDefined();
+        expect(content.items.find((i: any) => i.id === 'design-system:rounded-md')).toBeDefined();
+        expect(content.items.find((i: any) => i.id === 'design-system:breakpoint-mobile')).toBeDefined();
+        expect(content.items.find((i: any) => i.id === 'design-system:animation-fade-in')).toBeDefined();
+    });
+
+    it('generates component items with resolved token values', async () => {
+        const ctx = makeContext(tempDir);
+        await generateDesignSystemReferences(ctx);
+        const content = readOutput(tempDir);
 
         const btnItem = content.items.find(
             (i: any) => i.id === 'design-system:component-button-primary',
         );
         expect(btnItem).toBeDefined();
+        expect(btnItem.prompt).toMatch(/{colors\.primary}/);
+        expect(btnItem.prompt).toMatch(/#2563eb/);
 
         const jayItem = content.items.find(
             (i: any) => i.id === 'design-system:component-jay:product-card',
@@ -106,16 +139,15 @@ describe('generateDesignSystemReferences', () => {
         expect(jayItem.title).toEqual('jay:product-card');
     });
 
-    it('returns empty when no DESIGN.md exists', async () => {
-        const emptyDir = makeTempProject();
-        const ctx = makeContext(emptyDir);
-        const result = await generateDesignSystemReferences(ctx);
+    it('uses DESIGN.md name as category', async () => {
+        const ctx = makeContext(tempDir);
+        await generateDesignSystemReferences(ctx);
+        const content = readOutput(tempDir);
 
-        expect(result.referencesCreated).toEqual([]);
-        fs.rmSync(emptyDir, { recursive: true, force: true });
+        expect(content.items[0].category).toEqual('Test Design');
     });
 
-    it('finds DESIGN.md in src/pages/ subdirectories', async () => {
+    it('uses directory-based category for page-level DESIGN.md', async () => {
         const pagesDir = path.join(tempDir, 'src', 'pages', 'products');
         fs.mkdirSync(pagesDir, { recursive: true });
         fs.writeFileSync(
@@ -126,10 +158,19 @@ describe('generateDesignSystemReferences', () => {
 
         const ctx = makeContext(tempDir);
         await generateDesignSystemReferences(ctx);
+        const content = readOutput(tempDir);
 
-        const outputPath = path.join(tempDir, 'agent-kit/aiditor/add-menu/design-system.yaml');
-        const content = yaml.load(fs.readFileSync(outputPath, 'utf-8')) as any;
-        const colorItem = content.items.find((i: any) => i.id === 'design-system:color-palette');
-        expect(colorItem.prompt).toMatch(/primary.*#2563eb/);
+        const accentItem = content.items.find((i: any) => i.id === 'design-system:color-accent');
+        expect(accentItem).toBeDefined();
+        expect(accentItem.category).toEqual('Design System (products)');
+    });
+
+    it('returns empty when no DESIGN.md exists', async () => {
+        const emptyDir = makeTempProject();
+        const ctx = makeContext(emptyDir);
+        const result = await generateDesignSystemReferences(ctx);
+
+        expect(result.referencesCreated).toEqual([]);
+        fs.rmSync(emptyDir, { recursive: true, force: true });
     });
 });

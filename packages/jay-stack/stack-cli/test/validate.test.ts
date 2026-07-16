@@ -3,7 +3,7 @@ import path from 'path';
 import {
     validateJayFiles,
     extractRouteParams,
-    extractJayParams,
+    extractHeadlessPropsParamNames,
     checkRefElementTypes,
     checkHeadlessInstanceProps,
 } from '../lib/validate';
@@ -109,33 +109,32 @@ describe('extractRouteParams', () => {
     });
 });
 
-describe('extractJayParams', () => {
-    it('should extract param names from jay-params script', () => {
-        const html = `<html><head>
-            <script type="application/jay-params">
-              slug: ceramic-flower-vase
-              category: home
-            </script>
-        </head><body></body></html>`;
-        const params = extractJayParams(html);
+describe('extractHeadlessPropsParamNames', () => {
+    it('should extract param names from headless props', () => {
+        const parsedFile = {
+            headlessImports: [{ headlessProps: { slug: 'ceramic-flower-vase', category: 'home' } }],
+        } as any;
+        const params = extractHeadlessPropsParamNames(parsedFile);
         expect(params).toEqual(new Set(['slug', 'category']));
     });
 
-    it('should return empty set when no jay-params script', () => {
-        const html = `<html><head>
-            <script type="application/jay-data">
-              data:
-                title: string
-            </script>
-        </head><body></body></html>`;
-        const params = extractJayParams(html);
+    it('should return empty set when no headless props', () => {
+        const parsedFile = {
+            headlessImports: [{ contractName: 'test' }],
+        } as any;
+        const params = extractHeadlessPropsParamNames(parsedFile);
         expect(params).toEqual(new Set());
     });
 
-    it('should return empty set when no head', () => {
-        const html = `<div>No head</div>`;
-        const params = extractJayParams(html);
-        expect(params).toEqual(new Set());
+    it('should merge props from multiple headless imports', () => {
+        const parsedFile = {
+            headlessImports: [
+                { headlessProps: { slug: 'value' } },
+                { headlessProps: { category: 'home' } },
+            ],
+        } as any;
+        const params = extractHeadlessPropsParamNames(parsedFile);
+        expect(params).toEqual(new Set(['slug', 'category']));
     });
 });
 
@@ -145,18 +144,6 @@ describe('route param validation (integration)', () => {
     it('should produce no warnings when dynamic route provides contract params', async () => {
         const result = await validateJayFiles({
             path: path.join(baseFixturesDir, 'route-params-valid'),
-        });
-
-        expect(result.errors).toHaveLength(0);
-        const routeWarnings = result.warnings.filter((w) =>
-            w.message.startsWith('Contract requires param'),
-        );
-        expect(routeWarnings).toHaveLength(0);
-    });
-
-    it('should produce no warnings when jay-params provides contract params', async () => {
-        const result = await validateJayFiles({
-            path: path.join(baseFixturesDir, 'route-params-static-override'),
         });
 
         expect(result.errors).toHaveLength(0);
@@ -178,8 +165,19 @@ describe('route param validation (integration)', () => {
         expect(routeWarnings).toHaveLength(1);
         expect(routeWarnings[0].message).toEqual(
             'Contract requires param "slug" but the route does not provide it. ' +
-                'Add a dynamic segment [slug] to the route path or declare it in <script type="application/jay-params">.',
+                "Add a dynamic segment [slug] to the route path or provide it in the headless component's YAML body.",
         );
+    });
+
+    it('should warn when static override uses deprecated jay-params', async () => {
+        const result = await validateJayFiles({
+            path: path.join(baseFixturesDir, 'route-params-static-override'),
+        });
+
+        const routeWarnings = result.warnings.filter((w) =>
+            w.message.startsWith('Contract requires param'),
+        );
+        expect(routeWarnings.length).toBeGreaterThan(0);
     });
 
     it('should produce no warnings when page has no contract params', async () => {

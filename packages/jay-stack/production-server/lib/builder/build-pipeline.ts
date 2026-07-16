@@ -378,7 +378,6 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         if (!byRoute.has(info)) byRoute.set(info, []);
         byRoute.get(info)!.push(materialized.params);
     }
-
     // ── Step 3b: Compile per-route server elements (DL#144) ──
 
     for (const [info] of byRoute) {

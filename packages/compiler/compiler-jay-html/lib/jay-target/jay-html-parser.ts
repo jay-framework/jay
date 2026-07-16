@@ -619,6 +619,13 @@ function parseHeadfullImports(
     });
 }
 
+function dedentYaml(text: string): string {
+    const lines = text.split('\n').filter((l) => l.trim().length > 0);
+    if (lines.length === 0) return '';
+    const minIndent = Math.min(...lines.map((l) => l.match(/^\s*/)?.[0].length ?? 0));
+    return lines.map((l) => l.slice(minIndent)).join('\n');
+}
+
 async function parseHeadlessImports(
     elements: HTMLElement[],
     validations: Array<string>,
@@ -644,8 +651,24 @@ async function parseHeadlessImports(
             continue;
         }
 
-        // key is optional: if absent, the component is used only via <jay:contract-name> instances
-        // if present, it also serves as a page-level data binding namespace
+        // Parse YAML body as headless props (DL#156)
+        let headlessProps: Record<string, string> | undefined;
+        const propsText = dedentYaml(element.textContent ?? '');
+        if (propsText) {
+            try {
+                const parsed = yaml.load(propsText);
+                if (parsed && typeof parsed === 'object') {
+                    headlessProps = {};
+                    for (const [k, v] of Object.entries(parsed)) {
+                        headlessProps[k] = String(v);
+                    }
+                }
+            } catch (e) {
+                validations.push(
+                    `Failed to parse props YAML in <script type="application/jay-headless" contract="${contractAttr}">: ${(e as Error).message}`,
+                );
+            }
+        }
 
         // Resolve plugin to actual paths using the resolver
         const resolveResult = importResolver.resolvePluginComponent(
@@ -786,6 +809,7 @@ async function parseHeadlessImports(
                     contract: loadedContract,
                     contractPath: contractFile,
                     metadata: contractMetadata,
+                    headlessProps,
                 });
             });
         } catch (e) {

@@ -31,6 +31,8 @@ export interface DevServerPagePart {
         contractName: string;
         metadata?: Record<string, unknown>;
     };
+    /** Static props from YAML body in the headless script tag (DL#156) */
+    headlessProps?: Record<string, string>;
 }
 
 /**
@@ -175,13 +177,13 @@ export async function loadPageParts(
                     compDefinition,
                     clientImport: `import {${name}} from '${clientModuleImport}'`,
                     clientPart: `{comp: ${name}.comp, contextMarkers: ${name}.contexts || [], key: '${key}'}`,
-                    // Include contract info for dynamic contract components
                     contractInfo: headlessImport.contract
                         ? {
                               contractName: headlessImport.contract.name,
                               metadata: headlessImport.metadata,
                           }
                         : undefined,
+                    headlessProps: headlessImport.headlessProps,
                 };
                 parts.push(part);
             }

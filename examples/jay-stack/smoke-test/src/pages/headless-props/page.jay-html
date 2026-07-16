@@ -1,0 +1,24 @@
+<html>
+<head>
+  <script type="application/jay-headless"
+          plugin="test-plugin"
+          contract="test-widget"
+          key="widget">
+    itemId: from-props
+  </script>
+  <script type="application/jay-data">
+    data:
+  </script>
+</head>
+<body>
+  <div>
+    <h1>Headless Props Test</h1>
+    <p>Widget label should show "Widget from-props":</p>
+    <div class="widget">
+      <span class="widget-label">{widget.label}</span>
+      <span class="widget-value">{widget.value}</span>
+      <button ref="widget.increment">+1</button>
+    </div>
+  </div>
+</body>
+</html>

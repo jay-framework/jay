@@ -1,0 +1,53 @@
+name: markdown-pages
+description: Renders a directory of markdown files as routable pages
+
+props:
+  - name: contentDir
+    kind: required
+    description: Path to markdown directory (relative to page)
+
+params:
+  - name: slug
+    kind: required
+
+tags:
+  - tag: title
+    type: data
+    dataType: string
+    phase: slow
+    description: Title from frontmatter
+
+  - tag: content
+    type: data
+    dataType: html-string
+    phase: slow
+    description: Rendered HTML from markdown body
+
+  - tag: description
+    type: data
+    dataType: string
+    phase: slow
+    description: Description from frontmatter
+
+  - tag: date
+    type: data
+    dataType: string
+    phase: slow
+    description: Date from frontmatter (ISO string)
+
+  - tag: tags
+    type: sub-contract
+    repeated: true
+    trackBy: name
+    phase: slow
+    description: Tags from frontmatter
+    tags:
+      - tag: name
+        type: data
+        dataType: string
+
+  - tag: frontmatter
+    type: data
+    dataType: string
+    phase: slow
+    description: Full frontmatter as JSON string (for custom fields)

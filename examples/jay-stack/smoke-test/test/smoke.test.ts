@@ -467,6 +467,31 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/&lt;b&gt;This should be escaped&lt;\/b&gt;/);
             expect(body).toMatch(/<b>This should be bold<\/b> and <em>italic<\/em>/);
         });
+
+        it('/headless-props — keyed headless component with YAML body props', async () => {
+            const { status, body } = await fetchPage(server.url, '/headless-props/');
+            expect(status).toBe(200);
+            expectPage(body);
+            expect(body).toMatch(/Headless Props Test/);
+            expect(body).toMatch(/Widget from-props/);
+        });
+
+        it('/markdown/hello — markdown-pages component renders .md file', async () => {
+            const { status, body } = await fetchPage(server.url, '/markdown/hello/');
+            expect(status).toBe(200);
+            expectPage(body);
+            expect(body).toMatch(/Hello from Markdown/);
+            expect(body).toMatch(/test post/);
+            expect(body).toMatch(/md-code/);
+        });
+
+        it('/markdown-live — markdown-live component renders markdown at request time', async () => {
+            const { status, body } = await fetchPage(server.url, '/markdown-live/');
+            expect(status).toBe(200);
+            expectPage(body);
+            expect(body).toMatch(/Markdown Live Test/);
+            expect(body).toMatch(/dynamically rendered/);
+        });
     });
 
     describe('production self-hosted', () => {
@@ -592,6 +617,25 @@ describe('Smoke Test', () => {
             expect(status).toBe(200);
             expect(body).toMatch(/&lt;b&gt;This should be escaped&lt;\/b&gt;/);
             expect(body).toMatch(/<b>This should be bold<\/b> and <em>italic<\/em>/);
+        });
+
+        it('/headless-props — keyed headless component with YAML body props', async () => {
+            const { status, body } = await fetchPage(server.url, '/headless-props/');
+            expect(status).toBe(200);
+            expect(body).toMatch(/Widget from-props/);
+        });
+
+        it('/markdown-live — markdown-live component', async () => {
+            const { status, body } = await fetchPage(server.url, '/markdown-live/');
+            expect(status).toBe(200);
+            expect(body).toMatch(/Live Markdown/);
+            expect(body).toMatch(/dynamically rendered/);
+        });
+
+        it('/markdown/hello — markdown-pages component in production', async () => {
+            const { status, body } = await fetchPage(server.url, '/markdown/hello/');
+            expect(status).toBe(200);
+            expect(body).toMatch(/Hello from Markdown/);
         });
     });
 

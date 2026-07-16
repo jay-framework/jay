@@ -1,0 +1,27 @@
+@import './markdown-default.css';
+
+.md {
+  --md-spacing-block: 1.75rem;
+  max-width: 42rem;
+  font-size: 1.125rem;
+}
+
+.md h1 {
+  font-size: 2.25rem;
+  margin-top: 0;
+}
+.md h2 {
+  font-size: 1.625rem;
+  margin-top: 2.5rem;
+}
+.md p {
+  line-height: 1.8;
+}
+.md blockquote {
+  font-size: 1.05rem;
+  line-height: 1.7;
+  font-style: italic;
+}
+.md img {
+  margin: var(--md-spacing-block) 0;
+}

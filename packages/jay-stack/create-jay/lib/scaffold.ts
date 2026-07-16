@@ -87,6 +87,8 @@ export function scaffoldProject(
     writeFile(projectDir, 'vite.config.ts', readTemplate('vite.config.ts'));
     writeFile(projectDir, 'tsconfig.json', readTemplate('tsconfig.json'));
 
+    writeFile(projectDir, 'CLAUDE.md', readTemplate('CLAUDE.md'));
+
     const jaySkillPath = path.join(templatesDir(), 'jay-skill.md');
     if (fs.existsSync(jaySkillPath)) {
         writeFile(projectDir, 'jay-skill.md', fs.readFileSync(jaySkillPath, 'utf-8'));
