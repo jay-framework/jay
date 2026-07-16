@@ -558,3 +558,18 @@ Parser changes: `breakpoints` added to `RawDesignMd`, `DesignTokens`, and `parse
 - CSS custom property resolution was not in the original design (listed as a limitation). Added because the test project uses CSS vars extensively and produces many false positives without resolution.
 - The validation output format was redesigned for readability: per-file grouping, element identification, and suggestion deduplication were not in the original design.
 - Breakpoint validation was not in the original design. Added to support named breakpoint labels and non-standard breakpoint detection.
+
+### Add-menu: per-token granularity
+
+The `generateDesignSystemReferences` handler (runs during `jay-stack agent-kit`) was rewritten to produce individual add-menu items per design token instead of one item per category.
+
+**Before:** One "Color palette" item listing all colors in its prompt. One "Typography presets" item, etc.
+
+**After:** Each color, typography preset, spacing value, rounded value, breakpoint, animation, and component gets its own add-menu entry. This lets the AIditor present a browsable catalog of tokens.
+
+**Structure:**
+- **Category** — derived from DESIGN.md `name` field, or directory-based for page-level files (e.g., "Design System (products)")
+- **Sub-category** — one per token type: Colors, Typography, Spacing, Rounded, Breakpoints, Animations, Components
+- **Items** — one per token. Title includes the value (e.g., "primary (#2563eb)"). Prompt is a targeted instruction for that specific token.
+
+Multiple DESIGN.md files produce items under separate categories, with deduplication by ID.
