@@ -13,8 +13,8 @@ A plugin provides headless components (data + interactions, no UI) that project 
 3. **Define actions** with `.jay-action` metadata
 4. **Optionally add routes** — pages for admin tools and dashboards
 5. **Optionally add validators** — custom jay-html validation rules
-6. **Optionally add setup/references handlers** — config templating, add-menu generation
-7. **Set up `plugin.yaml`** — list contracts, actions, services, contexts, routes, validators, setup
+6. **Optionally add setup/agentkit handlers** — config templating, add-menu generation
+7. **Set up `plugin.yaml`** — list contracts, actions, services, contexts, routes, validators, setup, agentkit
 8. **Configure build** — dual entry points (server + client), vite.config.ts, package.json exports
 9. **Validate** with `jay-stack validate-plugin`
 
@@ -25,8 +25,8 @@ The plugin participates in four CLI commands, each running different hooks:
 | Command                     | When               | What runs from your plugin                                                         |
 | --------------------------- | ------------------ | ---------------------------------------------------------------------------------- |
 | `jay-stack validate-plugin` | Plugin development | Checks plugin.yaml structure, contracts, exports, handler references               |
-| `jay-stack setup <plugin>`  | Project setup      | `setup.handler` — creates config files, validates credentials                      |
-| `jay-stack agent-kit`       | Before development | `setup.references` — generates add-menu items, reference data                      |
+| `jay-stack setup <plugin>`  | Project setup      | `setup` — creates config files, validates credentials                              |
+| `jay-stack agent-kit`       | Before development | `agentkit` — generates add-menu items, reference data, skills, thumbnails          |
 | `jay-stack validate`        | During development | `validators[].handler` — runs your validation rules against project jay-html files |
 
 **`validate-plugin`** validates YOUR plugin's structure. Run it during plugin development.  

@@ -66,12 +66,9 @@ validators:
     handler: validateMediaOptimization
     description: Ensures media URLs use resize parameters
 
-setup:
-  handler: setup-handler
-  references: references-handler
-  configTemplate:
-    - source: templates/config.yaml
-      target: my-plugin.yaml
+setup: setup-handler
+agentkit: agentkit-handler
+description: Configure My Plugin
 ```
 
 ### Contract Entry Fields
@@ -201,16 +198,16 @@ Commands are CLI operations run via `jay-stack run`. Use `makeCliCommand()` to c
 
 Validators run during `jay-stack validate` against every parsed jay-html file in the project. See [validation.md](validation.md) for implementation details.
 
-### Setup Fields
+### Setup and agent-kit fields
 
-- `handler` — Export name (NPM) or relative path (local) for `jay-stack setup <plugin>`. Creates config files, validates credentials and services.
-- `references` — Export name (NPM) or relative path (local) for `jay-stack agent-kit`. Generates discovery data: add-menu items, reference files.
-- `description` — (optional) What this setup does
+- `setup` — Export name (NPM) or relative path (local) for `jay-stack setup <plugin>`. Creates config files, validates credentials and services.
+- `agentkit` — Export name (NPM) or relative path (local) for `jay-stack agent-kit`. Generates discovery data: add-menu catalogs, reference files, skills, thumbnails.
+- `description` — (optional, top-level) Human-readable description of what setup validates
 
-**NPM plugins:** `handler` and `references` are export names from the package entry point.  
+**NPM plugins:** `setup` and `agentkit` are export names from the package entry point.  
 **Local plugins:** relative paths to the handler modules.
 
-`jay-stack validate-plugin` checks that these handlers exist and are correctly exported.
+`jay-stack validate-plugin` checks that declared handlers exist and are correctly exported.
 
 See [setup-guide.md](setup-guide.md) for implementation details.
 

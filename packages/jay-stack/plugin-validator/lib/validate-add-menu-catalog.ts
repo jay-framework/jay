@@ -70,14 +70,14 @@ function pluginShipsAddMenuCatalog(context: PluginContext): boolean {
 function validateAddMenuAgentKitHandler(context: PluginContext, result: ValidationResult): void {
     if (!pluginShipsAddMenuCatalog(context)) return;
 
-    const referencesHandler = context.manifest.setup?.references;
-    if (referencesHandler) return;
+    const agentKitHandler = context.manifest.agentkit;
+    if (agentKitHandler) return;
 
     result.warnings.push({
         type: 'add-menu-catalog',
         code: 'add-menu-missing-agentkit-handler',
         message:
-            '[add-menu-missing-agentkit-handler] Plugin ships add-menu catalog yaml but plugin.yaml has no setup.references handler — catalogs must be generated during jay-stack agent-kit, not setup',
+            '[add-menu-missing-agentkit-handler] Plugin ships add-menu catalog yaml but plugin.yaml has no agentkit handler — catalogs must be generated during jay-stack agent-kit, not setup',
         location: 'plugin.yaml',
         suggestion: suggestionForCode('add-menu-missing-agentkit-handler'),
     });
@@ -112,7 +112,9 @@ async function validateAddMenuCatalogFileAtPath(
     }
 
     const linted = lintAddMenuCatalog(validated.file.items, relPath);
-    result.errors.push(...linted.errors.map((finding) => mapLintFinding(finding, relPath, 'error')));
+    result.errors.push(
+        ...linted.errors.map((finding) => mapLintFinding(finding, relPath, 'error')),
+    );
     result.warnings.push(
         ...linted.warnings.map((finding) => mapLintFinding(finding, relPath, 'warning')),
     );

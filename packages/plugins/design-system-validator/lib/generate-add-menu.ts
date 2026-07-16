@@ -8,8 +8,8 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type {
-    PluginReferencesContext,
-    PluginReferencesResult,
+    PluginAgentKitContext,
+    PluginAgentKitResult,
 } from '@jay-framework/stack-server-runtime';
 import { parseDesignMd, type DesignTokens } from './parse-design-md.js';
 import yaml from 'js-yaml';
@@ -145,13 +145,13 @@ function findAllDesignMdFiles(projectRoot: string): string[] {
     return files;
 }
 
-export async function generateDesignSystemReferences(
-    ctx: PluginReferencesContext,
-): Promise<PluginReferencesResult> {
+export async function generateDesignSystemAgentKit(
+    ctx: PluginAgentKitContext,
+): Promise<PluginAgentKitResult> {
     const designMdFiles = findAllDesignMdFiles(ctx.projectRoot);
 
     if (designMdFiles.length === 0) {
-        return { referencesCreated: [], message: 'No DESIGN.md found in project' };
+        return { agentKitCreated: [], message: 'No DESIGN.md found in project' };
     }
 
     const allItems: AddMenuItem[] = [];
@@ -179,7 +179,7 @@ export async function generateDesignSystemReferences(
     }
 
     if (allItems.length === 0) {
-        return { referencesCreated: [], message: 'DESIGN.md found but no tokens defined' };
+        return { agentKitCreated: [], message: 'DESIGN.md found but no tokens defined' };
     }
 
     const outputPath = path.join(ctx.projectRoot, ADD_MENU_OUTPUT_REL);
@@ -187,7 +187,7 @@ export async function generateDesignSystemReferences(
     fs.writeFileSync(outputPath, yaml.dump({ items: allItems }, { lineWidth: 120 }), 'utf-8');
 
     return {
-        referencesCreated: [ADD_MENU_OUTPUT_REL],
+        agentKitCreated: [ADD_MENU_OUTPUT_REL],
         message: `Generated ${allItems.length} add-menu items from DESIGN.md tokens`,
     };
 }

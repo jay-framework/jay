@@ -4,11 +4,11 @@ import path from 'path';
 import YAML from 'yaml';
 import { describe, it, expect, afterEach } from 'vitest';
 
+import { lintAddMenuCatalog, validateAddMenuCatalogFile } from '../lib/add-menu-catalog-lint';
 import {
-    lintAddMenuCatalog,
-    validateAddMenuCatalogFile,
-} from '../lib/add-menu-catalog-lint';
-import { validateAddMenuCatalog, ADD_MENU_CATALOG_REL_PATHS } from '../lib/validate-add-menu-catalog';
+    validateAddMenuCatalog,
+    ADD_MENU_CATALOG_REL_PATHS,
+} from '../lib/validate-add-menu-catalog';
 import type { ValidationResult } from '../lib/types';
 
 const SOURCE = 'add-menu.template.yaml';
@@ -55,9 +55,7 @@ items:
 `),
             SOURCE,
         );
-        expect(validated.errors.some((e) => e.code === 'html-fragment-src-not-allowed')).toBe(
-            true,
-        );
+        expect(validated.errors.some((e) => e.code === 'html-fragment-src-not-allowed')).toBe(true);
     });
 
     it('accepts html-fragment with scoped root div', () => {
@@ -120,9 +118,7 @@ items:
         );
         expect(validated.errors).toEqual([]);
         const linted = lintAddMenuCatalog(validated.file!.items, SOURCE);
-        expect(linted.warnings.map((w) => w.code)).toEqual([
-            'browse-large-without-presentation',
-        ]);
+        expect(linted.warnings.map((w) => w.code)).toEqual(['browse-large-without-presentation']);
     });
 
     it('rejects invalid interaction.mode', () => {
@@ -176,9 +172,7 @@ items:
             SOURCE,
         );
         expect(validated.file).toBeNull();
-        expect(validated.errors.some((e) => e.code === 'folder-path-invalid-segment')).toBe(
-            true,
-        );
+        expect(validated.errors.some((e) => e.code === 'folder-path-invalid-segment')).toBe(true);
     });
 });
 
@@ -218,7 +212,10 @@ describe('validateAddMenuCatalog (validate-plugin step)', () => {
             errors: [],
             warnings: [],
         };
-        await validateAddMenuCatalog({ manifest: { name: 'no-catalog-fixture' }, pluginPath: dir, isNpmPackage: false }, result);
+        await validateAddMenuCatalog(
+            { manifest: { name: 'no-catalog-fixture' }, pluginPath: dir, isNpmPackage: false },
+            result,
+        );
 
         expect(result.errors).toEqual([]);
         expect(result.warnings).toEqual([]);
@@ -244,7 +241,8 @@ items:
             {
                 manifest: {
                     name: 'add-menu-test-fixture',
-                    setup: { handler: 'setup', references: 'generateAgentKit' },
+                    setup: 'setup',
+                    agentkit: 'generateAgentKit',
                 },
                 pluginPath,
                 isNpmPackage: false,
@@ -276,10 +274,10 @@ items:
         );
 
         expect(result.warnings.map((w) => w.code)).toEqual(['add-menu-missing-agentkit-handler']);
-        expect(result.warnings[0]?.suggestion).toMatch(/setup.references/);
+        expect(result.warnings[0]?.suggestion).toMatch(/agentkit/);
     });
 
-    it('does not warn about agentkit handler when references is declared', async () => {
+    it('does not warn about agentkit handler when agentkit is declared', async () => {
         const pluginPath = makePluginWithCatalog(`
 items:
   - id: test-plugin:ok
@@ -289,7 +287,7 @@ items:
 `);
         fs.writeFileSync(
             path.join(pluginPath, 'plugin.yaml'),
-            'name: add-menu-test-fixture\nsetup:\n  handler: setup\n  references: generateAgentKit\n',
+            'name: add-menu-test-fixture\nsetup: setup\nagentkit: generateAgentKit\n',
         );
         const result: ValidationResult = {
             valid: true,
@@ -300,7 +298,8 @@ items:
             {
                 manifest: {
                     name: 'add-menu-test-fixture',
-                    setup: { handler: 'setup', references: 'generateAgentKit' },
+                    setup: 'setup',
+                    agentkit: 'generateAgentKit',
                 },
                 pluginPath,
                 isNpmPackage: false,

@@ -512,26 +512,18 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
         }
     }
 
-    // Validate setup handler exports
+    // Validate setup and agent-kit handler exports
     if (manifest.setup) {
-        if (manifest.setup.handler) {
-            validateHandlerRef(
-                manifest.setup.handler,
-                'Setup handler',
-                'plugin.yaml setup.handler',
-                context,
-                result,
-            );
-        }
-        if (manifest.setup.references) {
-            validateHandlerRef(
-                manifest.setup.references,
-                'References handler',
-                'plugin.yaml setup.references',
-                context,
-                result,
-            );
-        }
+        validateHandlerRef(manifest.setup, 'Setup handler', 'plugin.yaml setup', context, result);
+    }
+    if (manifest.agentkit) {
+        validateHandlerRef(
+            manifest.agentkit,
+            'Agent-kit handler',
+            'plugin.yaml agentkit',
+            context,
+            result,
+        );
     }
 }
 

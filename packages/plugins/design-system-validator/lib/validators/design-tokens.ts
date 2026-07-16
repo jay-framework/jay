@@ -21,7 +21,8 @@ import {
 import type { DesignTokens } from '../parse-design-md.js';
 import type { HTMLElement } from 'node-html-parser';
 
-const GUIDE_SUGGESTION = 'See design-system-validator agent-kit/designer/design-system.md for usage guide';
+const GUIDE_SUGGESTION =
+    'See design-system-validator agent-kit/designer/design-system.md for usage guide';
 
 function elementHint(el: HTMLElement): string {
     const tag = el.rawTagName?.toLowerCase() || 'element';

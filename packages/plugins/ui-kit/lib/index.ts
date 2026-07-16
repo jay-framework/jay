@@ -3,4 +3,4 @@ export { scrollCarousel } from './scroll-carousel';
 export { clipboardCopy } from './clipboard-copy';
 export { wordSplit } from './word-split';
 export { letterSplit } from './letter-split';
-export { setupUiKit } from './setup';
+export { generateUiKitAgentKit } from './agentkit';

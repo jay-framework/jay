@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { generateDesignSystemReferences } from '../lib/generate-add-menu.js';
-import type { PluginReferencesContext } from '@jay-framework/stack-server-runtime';
+import { generateDesignSystemAgentKit } from '../lib/generate-add-menu.js';
+import type { PluginAgentKitContext } from '@jay-framework/stack-server-runtime';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -14,7 +14,7 @@ function makeTempProject(designMdContent?: string): string {
     return dir;
 }
 
-function makeContext(projectRoot: string): PluginReferencesContext {
+function makeContext(projectRoot: string): PluginAgentKitContext {
     return {
         pluginName: 'design-system-validator',
         projectRoot,
@@ -48,7 +48,7 @@ components:
 # Test
 `;
 
-describe('generateDesignSystemReferences', () => {
+describe('generateDesignSystemAgentKit', () => {
     let tempDir: string;
 
     beforeEach(() => {
@@ -61,9 +61,9 @@ describe('generateDesignSystemReferences', () => {
 
     it('generates add-menu YAML from DESIGN.md tokens', async () => {
         const ctx = makeContext(tempDir);
-        const result = await generateDesignSystemReferences(ctx);
+        const result = await generateDesignSystemAgentKit(ctx);
 
-        expect(result.referencesCreated).toEqual(['agent-kit/aiditor/add-menu/design-system.yaml']);
+        expect(result.agentKitCreated).toEqual(['agent-kit/aiditor/add-menu/design-system.yaml']);
 
         const outputPath = path.join(tempDir, 'agent-kit/aiditor/add-menu/design-system.yaml');
         expect(fs.existsSync(outputPath)).toEqual(true);
@@ -75,7 +75,7 @@ describe('generateDesignSystemReferences', () => {
 
     it('generates color palette item', async () => {
         const ctx = makeContext(tempDir);
-        await generateDesignSystemReferences(ctx);
+        await generateDesignSystemAgentKit(ctx);
 
         const outputPath = path.join(tempDir, 'agent-kit/aiditor/add-menu/design-system.yaml');
         const content = yaml.load(fs.readFileSync(outputPath, 'utf-8')) as any;
@@ -89,7 +89,7 @@ describe('generateDesignSystemReferences', () => {
 
     it('generates component items including jay: components', async () => {
         const ctx = makeContext(tempDir);
-        await generateDesignSystemReferences(ctx);
+        await generateDesignSystemAgentKit(ctx);
 
         const outputPath = path.join(tempDir, 'agent-kit/aiditor/add-menu/design-system.yaml');
         const content = yaml.load(fs.readFileSync(outputPath, 'utf-8')) as any;
@@ -109,9 +109,9 @@ describe('generateDesignSystemReferences', () => {
     it('returns empty when no DESIGN.md exists', async () => {
         const emptyDir = makeTempProject();
         const ctx = makeContext(emptyDir);
-        const result = await generateDesignSystemReferences(ctx);
+        const result = await generateDesignSystemAgentKit(ctx);
 
-        expect(result.referencesCreated).toEqual([]);
+        expect(result.agentKitCreated).toEqual([]);
         fs.rmSync(emptyDir, { recursive: true, force: true });
     });
 
@@ -125,7 +125,7 @@ describe('generateDesignSystemReferences', () => {
         );
 
         const ctx = makeContext(tempDir);
-        await generateDesignSystemReferences(ctx);
+        await generateDesignSystemAgentKit(ctx);
 
         const outputPath = path.join(tempDir, 'agent-kit/aiditor/add-menu/design-system.yaml');
         const content = yaml.load(fs.readFileSync(outputPath, 'utf-8')) as any;

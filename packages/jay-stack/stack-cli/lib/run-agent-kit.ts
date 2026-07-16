@@ -40,7 +40,7 @@ export async function runAgentKit(options: {
             await ensureAgentKitDocs(projectRoot, options.force, options.mode);
             await mergePluginAgentKitGuides(projectRoot, options.mode);
             if (options.references !== false) {
-                await generatePluginReferences(projectRoot, options, initErrors, viteServer);
+                await generatePluginAgentKit(projectRoot, options, initErrors, viteServer);
             }
         }
     } finally {
@@ -291,17 +291,17 @@ async function mergePluginAgentKitGuides(projectRoot: string, mode?: string): Pr
     }
 }
 
-async function generatePluginReferences(
+async function generatePluginAgentKit(
     projectRoot: string,
     options: { plugin?: string; force?: boolean; verbose?: boolean },
     initErrors: Map<string, Error>,
     viteServer?: Awaited<ReturnType<typeof createViteForCli>>,
 ): Promise<void> {
-    const { discoverPluginsWithReferences, executePluginReferences } = await import(
+    const { discoverPluginsWithAgentKit, executePluginAgentKit } = await import(
         '@jay-framework/stack-server-runtime'
     );
 
-    const plugins = await discoverPluginsWithReferences({
+    const plugins = await discoverPluginsWithAgentKit({
         projectRoot,
         verbose: options.verbose,
         pluginFilter: options.plugin,
@@ -311,38 +311,38 @@ async function generatePluginReferences(
 
     const logger = getLogger();
     logger.important('');
-    logger.important(chalk.bold('Generating plugin references...'));
+    logger.important(chalk.bold('Generating plugin agent-kit data...'));
 
     for (const plugin of plugins) {
         const pluginInitError = initErrors.get(plugin.name);
         if (pluginInitError) {
             logger.warn(
                 chalk.yellow(
-                    `   ${plugin.name}: references skipped — init failed: ${pluginInitError.message}`,
+                    `   ${plugin.name}: agent-kit skipped — init failed: ${pluginInitError.message}`,
                 ),
             );
             continue;
         }
 
         try {
-            const result = await executePluginReferences(plugin, {
+            const result = await executePluginAgentKit(plugin, {
                 projectRoot,
                 force: options.force ?? false,
                 viteServer,
                 verbose: options.verbose,
             });
 
-            if (result.referencesCreated.length > 0) {
+            if (result.agentKitCreated.length > 0) {
                 logger.important(chalk.green(`   ${plugin.name}:`));
-                for (const ref of result.referencesCreated) {
-                    logger.important(chalk.gray(`      ${ref}`));
+                for (const created of result.agentKitCreated) {
+                    logger.important(chalk.gray(`      ${created}`));
                 }
                 if (result.message) {
                     logger.important(chalk.gray(`      ${result.message}`));
                 }
             }
         } catch (error: any) {
-            logger.warn(chalk.yellow(`   ${plugin.name}: references skipped — ${error.message}`));
+            logger.warn(chalk.yellow(`   ${plugin.name}: agent-kit skipped — ${error.message}`));
         }
     }
 }
