@@ -15,8 +15,6 @@ export type AddMenuPresentation =
 
 export type AddMenuInteraction = {
     mode: 'reference' | 'stage-place';
-    /** @ ignored at runtime — do not rely on disk registries */
-    persistOnPage?: boolean;
     stagePromptTemplate?: string;
 };
 
@@ -150,11 +148,6 @@ function optionalString(obj: Record<string, unknown>, field: string): string | u
     return trimmed.length > 0 ? trimmed : undefined;
 }
 
-function optionalBoolean(obj: Record<string, unknown>, field: string): boolean | undefined {
-    const value = obj[field];
-    return typeof value === 'boolean' ? value : undefined;
-}
-
 function validateInteraction(
     raw: unknown,
     itemPath: string,
@@ -169,6 +162,7 @@ function validateInteraction(
         });
         return undefined;
     }
+
     const mode = raw.mode;
     if (mode !== 'reference' && mode !== 'stage-place') {
         errors.push({
@@ -180,7 +174,6 @@ function validateInteraction(
     }
     return {
         mode,
-        persistOnPage: optionalBoolean(raw, 'persistOnPage'),
         stagePromptTemplate: optionalString(raw, 'stagePromptTemplate'),
     };
 }
