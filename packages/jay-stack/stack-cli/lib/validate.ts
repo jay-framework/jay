@@ -498,30 +498,17 @@ function dedentYaml(text: string): string {
     return lines.map((l) => l.slice(minIndent)).join('\n');
 }
 
-/** @internal Exported for testing */
-export function extractJayParams(content: string): Set<string> {
-    const root = parseHtml(content, {
-        comment: true,
-        blockTextElements: { script: true, style: true },
-    });
-    const head = root.querySelector('head');
-    if (!head) return new Set();
-
-    const paramScripts = head.querySelectorAll('script[type="application/jay-params"]');
-    if (paramScripts.length !== 1) return new Set();
-
-    const body = dedentYaml(paramScripts[0].textContent ?? '');
-    if (!body) return new Set();
-
-    try {
-        const parsed = YAML.parse(body);
-        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-            return new Set(Object.keys(parsed));
+/** @internal Exported for testing — extracts param names from headless script tag YAML bodies (DL#156) */
+export function extractHeadlessPropsParamNames(parsedFile: JayHtmlSourceFile): Set<string> {
+    const names = new Set<string>();
+    for (const imp of parsedFile.headlessImports) {
+        if (imp.headlessProps) {
+            for (const key of Object.keys(imp.headlessProps)) {
+                names.add(key);
+            }
         }
-        return new Set();
-    } catch {
-        return new Set();
     }
+    return names;
 }
 
 /** @internal Exported for testing */
@@ -529,7 +516,6 @@ export function checkRouteParams(
     parsedFile: JayHtmlSourceFile,
     filePath: string,
     pagesBase: string,
-    jayHtmlContent: string,
 ): string[] {
     // Collect required and catch-all param names from contracts on this page (skip optional)
     const requiredParams = new Set<string>();
@@ -554,17 +540,16 @@ export function checkRouteParams(
 
     if (requiredParams.size === 0) return [];
 
-    // Collect available params from route segments and jay-params
     const routeParams = extractRouteParams(filePath, pagesBase);
-    const jayParams = extractJayParams(jayHtmlContent);
-    const availableParams = new Set([...routeParams, ...jayParams]);
+    const headlessProps = extractHeadlessPropsParamNames(parsedFile);
+    const availableParams = new Set([...routeParams, ...headlessProps]);
 
     const warnings: string[] = [];
     for (const param of requiredParams) {
         if (!availableParams.has(param)) {
             warnings.push(
                 `Contract requires param "${param}" but the route does not provide it. ` +
-                    `Add a dynamic segment [${param}] to the route path or declare it in <script type="application/jay-params">.`,
+                    `Add a dynamic segment [${param}] to the route path or provide it in the headless component's YAML body.`,
             );
         }
     }
@@ -1053,8 +1038,19 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
 
             parsedFiles.push({ relativePath, parsed: parsedFile.val! });
 
+            // Check for deprecated jay-params (DL#156)
+            if (content.includes('application/jay-params')) {
+                warnings.push({
+                    file: relativePath,
+                    message:
+                        '<script type="application/jay-params"> is deprecated. ' +
+                        'Move the values into the YAML body of the headless component that uses them. ' +
+                        'See agent-kit/developer/routing.md for details.',
+                });
+            }
+
             // Check route params match contract params (contract→route)
-            const routeParamWarnings = checkRouteParams(parsedFile.val!, jayFile, scanDir, content);
+            const routeParamWarnings = checkRouteParams(parsedFile.val!, jayFile, scanDir);
             for (const msg of routeParamWarnings) {
                 warnings.push({ file: relativePath, message: msg });
             }

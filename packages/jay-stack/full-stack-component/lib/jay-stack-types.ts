@@ -179,8 +179,9 @@ export type FastRenderResult<ViewState extends object, CarryForward = {}> = Rend
 >;
 export type AnyFastRenderResult = FastRenderResult<object, object>;
 
-export type LoadParams<Services, Params extends UrlParams> = (
+export type LoadParams<Services, Params extends UrlParams, PropsT extends object = {}> = (
     contexts: Services,
+    props?: PropsT,
 ) => AsyncIterable<Params[]>;
 
 export type RenderSlowly<

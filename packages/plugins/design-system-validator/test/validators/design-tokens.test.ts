@@ -131,7 +131,7 @@ describe('design-tokens validator', () => {
         expect(findings).toEqual([]);
     });
 
-    it('flags violations inside media queries with breakpoint label', async () => {
+    it('labels media queries with breakpoint name from DESIGN.md', async () => {
         const ctx = makeContext(`<html><body>
             <style>
                 .card { color: #2563eb; }
@@ -145,11 +145,28 @@ describe('design-tokens validator', () => {
         expect(findings).toEqual([
             {
                 severity: 'warning',
-                message: `[(max-width: 768px)] ${H.cardText} — padding value "13px" not in spacing scale`,
+                message: `[tablet] ${H.cardText} — padding value "13px" not in spacing scale`,
                 suggestion: 'Use a DESIGN.md spacing token',
                 element: H.cardText,
             },
         ]);
+    });
+
+    it('flags non-standard breakpoint', async () => {
+        const ctx = makeContext(`<html><body>
+            <style>
+                @media (max-width: 750px) {
+                    .card { padding: 13px; }
+                }
+            </style>
+            <div class="card">Text</div>
+        </body></html>`);
+        const findings = withoutGuide(await validateTokens(ctx));
+        const bpFinding = findings.find((f) => f.message.includes('not in DESIGN.md breakpoints'));
+        expect(bpFinding).toBeDefined();
+        expect(bpFinding!.message).toEqual(
+            'Media query @media (max-width: 750px) not in DESIGN.md breakpoints',
+        );
     });
 
     it('validates base and media query rules independently', async () => {

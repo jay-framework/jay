@@ -1,0 +1,13 @@
+name: markdown-content
+description: Renders a markdown string to HTML at build time
+
+props:
+  - name: markdown
+    kind: required
+    description: Markdown string to render
+
+tags:
+  - tag: html
+    type: data
+    dataType: html-string
+    phase: slow

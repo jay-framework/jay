@@ -48,6 +48,7 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
                         contractName: contractInfo.contractName,
                         metadata: contractInfo.metadata,
                     }),
+                    ...(part.headlessProps || {}),
                 };
 
                 const slowlyRenderedPart = await compDefinition.slowlyRender(
@@ -145,6 +146,7 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
 /**
  * Run loadParams for all parts (page + keyed headless components).
  * Yields param batches from each part that has loadParams.
+ * Passes headless props (DL#156) so components can access configuration like contentDir.
  */
 export async function* runLoadParams(
     parts: DevServerPagePart[],
@@ -152,7 +154,10 @@ export async function* runLoadParams(
     for (const part of parts) {
         if (part.compDefinition.loadParams) {
             const services = resolveServices(part.compDefinition.services);
-            for await (const batch of part.compDefinition.loadParams(services)) {
+            for await (const batch of part.compDefinition.loadParams(
+                services,
+                part.headlessProps,
+            )) {
                 yield batch;
             }
         }

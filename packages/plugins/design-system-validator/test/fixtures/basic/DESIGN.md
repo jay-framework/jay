@@ -41,6 +41,11 @@ rounded:
   lg: 0.75rem
   full: 9999px
 
+breakpoints:
+  mobile: 600px
+  tablet: 768px
+  desktop: 1024px
+
 animations:
   fade-in:
     duration: 300ms

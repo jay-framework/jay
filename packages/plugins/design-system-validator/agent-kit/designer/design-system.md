@@ -49,6 +49,11 @@ rounded:
   md: 0.5rem
   full: 9999px
 
+breakpoints:
+  mobile: 600px
+  tablet: 768px
+  desktop: 1024px
+
 components:
   button-primary:
     backgroundColor: '{colors.primary}'
@@ -92,7 +97,29 @@ Use the token values directly in your `<style>` blocks:
 }
 ```
 
-CSS custom properties (`var(--name)`) are always accepted.
+CSS custom properties (`var(--name)`) are resolved statically when defined in `:root`. Unresolvable vars are accepted without validation.
+
+## Breakpoints
+
+The `breakpoints` section defines approved responsive breakpoints. Media queries using `max-width` values not in this list are flagged. Breakpoint names are used in validation output for readability.
+
+```yaml
+breakpoints:
+  mobile: 600px
+  tablet: 768px
+  desktop: 1024px
+```
+
+Use only these values in `@media (max-width: ...)` queries:
+
+```css
+@media (max-width: 768px) {
+  /* tablet ✓ */
+}
+@media (max-width: 750px) {
+  /* not in breakpoints ✗ */
+}
+```
 
 ## Component Specs
 
@@ -177,6 +204,13 @@ These are the errors the validator produces. Use them to align your CSS with the
 ```
 ⚠ Page uses transitions/animations but has no @media (prefers-reduced-motion) override
   Suggestion: Add @media (prefers-reduced-motion: reduce) { * { transition-duration: 0s !important; animation-duration: 0s !important; } }
+```
+
+**Non-standard breakpoint:**
+
+```
+⚠ Media query @media (max-width: 750px) not in DESIGN.md breakpoints
+  Suggestion: Use a DESIGN.md breakpoint: mobile (600px), tablet (768px), desktop (1024px)
 ```
 
 **Low contrast:**

@@ -1,0 +1,6 @@
+name: MarkdownLivePage
+tags:
+  - tag: markdownSource
+    type: data
+    dataType: string
+    phase: fast+interactive

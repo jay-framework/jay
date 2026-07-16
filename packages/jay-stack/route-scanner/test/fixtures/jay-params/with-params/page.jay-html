@@ -1,6 +1,6 @@
 <html>
 <head>
-    <script type="application/jay-params">
+    <script type="application/jay-headless" plugin="test-store" contract="product" key="product">
       slug: my-product
       category: electronics
     </script>

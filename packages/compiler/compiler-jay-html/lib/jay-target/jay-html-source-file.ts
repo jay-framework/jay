@@ -20,6 +20,7 @@ export interface JayHeadlessImports {
     contract?: Contract; // The loaded contract for this headless component
     contractPath?: string; // Absolute path to the contract file (for resolving linked sub-contracts)
     metadata?: Record<string, unknown>; // Optional metadata from dynamic contract generator
+    headlessProps?: Record<string, string>; // Static props from YAML body in the script tag
 }
 
 export interface JayHtmlHeadLink {

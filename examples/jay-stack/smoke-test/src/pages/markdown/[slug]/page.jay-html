@@ -1,0 +1,20 @@
+<html>
+<head>
+  <script type="application/jay-headless"
+          plugin="@jay-framework/markdown"
+          contract="markdown-pages"
+          key="post">
+    contentDir: src/pages/markdown/content
+  </script>
+  <script type="application/jay-data">
+    data:
+  </script>
+</head>
+<body>
+  <div>
+    <h1>Markdown Test: {post.title}</h1>
+    <p>{post.description}</p>
+    <div class="md">{post.content}</div>
+  </div>
+</body>
+</html>
