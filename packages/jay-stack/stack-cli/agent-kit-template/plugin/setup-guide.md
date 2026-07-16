@@ -2,8 +2,8 @@
 
 Plugins can provide two hooks for project configuration and AI agent discovery:
 
-- **Setup handler** — runs during `jay-stack setup <plugin>`. Creates config files, validates credentials, copies AIditor assets.
-- **References handler** — runs during `jay-stack agent-kit`. Generates discovery data (add-menu items, reference files) using live services.
+- **Setup handler** — runs during `jay-stack setup <plugin>`. Creates config files and validates credentials.
+- **References handler** — runs during `jay-stack agent-kit`. Generates discovery data (add-menu catalogs, reference files) using live services or static templates.
 
 ## When Each Runs
 
@@ -43,13 +43,12 @@ export async function setupMyPlugin(ctx: PluginSetupContext): Promise<PluginSetu
   }
 
   const configCreated: string[] = [];
+  const configPath = path.join(ctx.configDir, '.my-plugin.yaml');
 
-  // Write AIditor add-menu catalog
-  const addMenuPath = path.join(ctx.projectRoot, 'agent-kit/aiditor/add-menu/my-plugin.yaml');
-  if (!fs.existsSync(addMenuPath) || ctx.force) {
-    fs.mkdirSync(path.dirname(addMenuPath), { recursive: true });
-    fs.writeFileSync(addMenuPath, templateContent, 'utf-8');
-    configCreated.push('agent-kit/aiditor/add-menu/my-plugin.yaml');
+  if (!fs.existsSync(configPath) || ctx.force) {
+    fs.mkdirSync(ctx.configDir, { recursive: true });
+    fs.writeFileSync(configPath, '# My Plugin config\n', 'utf-8');
+    configCreated.push('config/.my-plugin.yaml');
   }
 
   return {
@@ -57,8 +56,8 @@ export async function setupMyPlugin(ctx: PluginSetupContext): Promise<PluginSetu
     configCreated,
     message:
       configCreated.length > 0
-        ? 'My Plugin catalog installed.'
-        : 'My Plugin catalog already present (use --force to rewrite).',
+        ? 'My Plugin config installed.'
+        : 'My Plugin config already present (use --force to rewrite).',
   };
 }
 ```
@@ -139,14 +138,16 @@ export async function generateMyReferences(
 
 | Use case                                                             | Handler            | Why                                                             |
 | -------------------------------------------------------------------- | ------------------ | --------------------------------------------------------------- |
-| Copy static template files (add-menu catalog, skill guides)          | `setup.handler`    | Templates don't change — copy once                              |
+| Copy static add-menu template and thumbnails                         | `setup.references` | Catalogs are discovery data — materialize during `jay-stack agent-kit` |
 | Generate data from live services (product catalogs, CMS schemas)     | `setup.references` | Needs services initialized; regenerated on each `agent-kit` run |
 | Validate credentials / API keys                                      | `setup.handler`    | Part of initial project configuration                           |
 | Write AIditor add-menu from project-specific data (DESIGN.md tokens) | `setup.references` | Data comes from project files, not static templates             |
 
 ## AIditor Add-Menu Items
 
-Both handlers can write to `agent-kit/aiditor/add-menu/<plugin-name>.yaml`. The AIditor discovers and loads all YAML files in this directory.
+The **references handler** writes to `agent-kit/aiditor/add-menu/<plugin-name>.yaml`. The AIditor discovers and loads all YAML files in this directory. **Setup handlers must not write add-menu catalogs** — use `setup.references` instead.
+
+See `agent-kit/plugin/aiditor-add-menu.md` for the full contributor guide.
 
 Each item:
 
