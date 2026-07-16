@@ -6,6 +6,7 @@ import { parseContract } from '@jay-framework/compiler-jay-html';
 import { ts } from '@jay-framework/typescript-bridge';
 import type { ValidatePluginOptions, ValidationResult, PluginContext } from './types';
 import { checkComponentPropsAndParams } from './check-component-contract';
+import { validateAddMenuCatalog } from './validate-add-menu-catalog';
 
 /**
  * Validates a Jay Stack plugin package or local plugin directory.
@@ -101,6 +102,9 @@ async function validatePluginPackage(
     if (pluginManifest.dynamic_contracts) {
         await validateDynamicContracts(context, result);
     }
+
+    // 7. Add Menu catalog lint (Design Log #30b)
+    await validateAddMenuCatalog(context, result);
 
     // Final result
     result.valid = result.errors.length === 0;

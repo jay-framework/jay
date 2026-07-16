@@ -20,7 +20,6 @@ items:
     thumbnail: thumbnails/ui-kit/scroll-carousel.svg
     interaction:
       mode: stage-place
-      persistOnPage: true
       stagePromptTemplate: |
         Add a scroll carousel at this marker location on the page.
     prompt: |
@@ -58,7 +57,6 @@ items:
     thumbnail: thumbnails/ui-kit/word-split.svg
     interaction:
       mode: stage-place
-      persistOnPage: true
       stagePromptTemplate: |
         Add word-split text at this marker location on the page.
     prompt: |
@@ -74,7 +72,6 @@ items:
     thumbnail: thumbnails/ui-kit/letter-split.svg
     interaction:
       mode: stage-place
-      persistOnPage: true
       stagePromptTemplate: |
         Add letter-split text at this marker location on the page.
     prompt: |
@@ -90,7 +87,6 @@ items:
     thumbnail: thumbnails/ui-kit/spring-button-hover-motion.svg
     interaction:
       mode: stage-place
-      persistOnPage: true
       stagePromptTemplate: |
         Apply the spring hover effect to the button at this marker location.
     prompt: |
@@ -109,7 +105,6 @@ items:
     thumbnail: thumbnails/ui-kit/sticky-header-scroll.svg
     interaction:
       mode: stage-place
-      persistOnPage: true
       stagePromptTemplate: |
         Apply the sticky header scroll morph effect to the header at this marker location.
     prompt: |

@@ -26,10 +26,14 @@ export interface ValidationError {
         | 'export-mismatch'
         | 'contract-invalid'
         | 'component-contract-mismatch'
-        | 'type-generation-failed';
+        | 'type-generation-failed'
+        | 'add-menu-catalog';
     message: string;
     location?: string;
     suggestion?: string;
+    /** Add Menu lint / schema code (Design Log #30) */
+    code?: string;
+    itemId?: string;
 }
 
 export interface ValidationWarning {
@@ -37,6 +41,9 @@ export interface ValidationWarning {
     message: string;
     location?: string;
     suggestion?: string;
+    /** Add Menu lint code (Design Log #30) */
+    code?: string;
+    itemId?: string;
 }
 
 export interface PluginContext {
