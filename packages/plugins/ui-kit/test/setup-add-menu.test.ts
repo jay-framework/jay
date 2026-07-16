@@ -5,8 +5,8 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { load as loadYaml } from 'js-yaml';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { PluginSetupContext } from '@jay-framework/stack-server-runtime';
-import { setupUiKit } from '../lib/setup';
+import type { PluginReferencesContext } from '@jay-framework/stack-server-runtime';
+import { generateUiKitReferences } from '../lib/setup';
 
 // Canonical shape reference (no @jay-framework/aiditor import):
 // jay-aiditor/packages/aiditor/test/fixtures/add-menu/valid-item.yaml
@@ -20,12 +20,12 @@ const STICKY_SKILL_OUTPUT_REL = 'agent-kit/aiditor/skills/ui-kit/sticky-header-s
 
 function makeCtx(
     projectRoot: string,
-    overrides: Partial<PluginSetupContext> = {},
-): PluginSetupContext {
+    overrides: Partial<PluginReferencesContext> = {},
+): PluginReferencesContext {
     return {
         pluginName: 'ui-kit',
         projectRoot,
-        configDir: join(projectRoot, 'config'),
+        referencesDir: join(projectRoot, 'agent-kit/references/ui-kit'),
         services: new Map(),
         force: false,
         ...overrides,
@@ -49,11 +49,11 @@ function assertAddMenuCatalogShape(catalog: unknown): void {
     }
 }
 
-describe('setupUiKit add-menu catalog (Design Log #142 U3)', () => {
+describe('generateUiKitReferences add-menu catalog (Design Log #142 U3)', () => {
     let projectRoot: string;
 
     beforeEach(() => {
-        projectRoot = mkdtempSync(join(tmpdir(), 'ui-kit-setup-'));
+        projectRoot = mkdtempSync(join(tmpdir(), 'ui-kit-agentkit-'));
         mkdirSync(join(projectRoot, 'config'), { recursive: true });
     });
 
@@ -62,10 +62,9 @@ describe('setupUiKit add-menu catalog (Design Log #142 U3)', () => {
     });
 
     it('writes ui-kit.yaml with valid catalog items', async () => {
-        const result = await setupUiKit(makeCtx(projectRoot));
+        const result = await generateUiKitReferences(makeCtx(projectRoot));
 
-        expect(result.status).toBe('configured');
-        expect(result.configCreated).toEqual(
+        expect(result.referencesCreated).toEqual(
             expect.arrayContaining([
                 ADD_MENU_OUTPUT_REL,
                 SPRING_SKILL_OUTPUT_REL,
@@ -81,7 +80,7 @@ describe('setupUiKit add-menu catalog (Design Log #142 U3)', () => {
     });
 
     it('writes effect skill markdown files for AIditor', async () => {
-        await setupUiKit(makeCtx(projectRoot));
+        await generateUiKitReferences(makeCtx(projectRoot));
 
         const springPath = join(projectRoot, SPRING_SKILL_OUTPUT_REL);
         expect(existsSync(springPath)).toBe(true);
@@ -106,10 +105,9 @@ describe('setupUiKit add-menu catalog (Design Log #142 U3)', () => {
         writeFileSync(join(skillDir, 'spring-button-hover.md'), '# stale\n');
         writeFileSync(join(skillDir, 'sticky-header-scroll.md'), '# stale\n');
 
-        const result = await setupUiKit(makeCtx(projectRoot));
+        const result = await generateUiKitReferences(makeCtx(projectRoot));
 
-        expect(result.status).toBe('configured');
-        expect(result.configCreated ?? []).not.toContain(ADD_MENU_OUTPUT_REL);
+        expect(result.referencesCreated).not.toContain(ADD_MENU_OUTPUT_REL);
 
         const written = loadYaml(readFileSync(join(addMenuDir, 'ui-kit.yaml'), 'utf-8'));
         expect(written).toEqual({ items: [] });
@@ -127,10 +125,9 @@ describe('setupUiKit add-menu catalog (Design Log #142 U3)', () => {
         writeFileSync(join(skillDir, 'spring-button-hover.md'), '# stale\n');
         writeFileSync(join(skillDir, 'sticky-header-scroll.md'), '# stale\n');
 
-        const result = await setupUiKit(makeCtx(projectRoot, { force: true }));
+        const result = await generateUiKitReferences(makeCtx(projectRoot, { force: true }));
 
-        expect(result.status).toBe('configured');
-        expect(result.configCreated).toEqual(
+        expect(result.referencesCreated).toEqual(
             expect.arrayContaining([
                 ADD_MENU_OUTPUT_REL,
                 SPRING_SKILL_OUTPUT_REL,
@@ -149,11 +146,10 @@ describe('setupUiKit add-menu catalog (Design Log #142 U3)', () => {
         );
     });
 
-    it('copies Add Menu thumbnails into public/ on setup', async () => {
-        const result = await setupUiKit(makeCtx(projectRoot));
+    it('copies Add Menu thumbnails into public/ on agent-kit', async () => {
+        const result = await generateUiKitReferences(makeCtx(projectRoot));
 
-        expect(result.status).toBe('configured');
-        expect(result.configCreated).toEqual(
+        expect(result.referencesCreated).toEqual(
             expect.arrayContaining(['public/aiditor-add-menu-thumbnails/ui-kit/popover-menu.svg']),
         );
         expect(
