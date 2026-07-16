@@ -31,7 +31,6 @@ export interface ValidationError {
     message: string;
     location?: string;
     suggestion?: string;
-    /** Add Menu lint / schema code (Design Log #30) */
     code?: string;
     itemId?: string;
 }
@@ -41,7 +40,6 @@ export interface ValidationWarning {
     message: string;
     location?: string;
     suggestion?: string;
-    /** Add Menu lint code (Design Log #30) */
     code?: string;
     itemId?: string;
 }
