@@ -22,11 +22,11 @@ export default defineConfig(({ isSsrBuild }) => ({
                       '@jay-framework/stack-server-runtime',
                       '@jay-framework/reactive',
                       '@jay-framework/runtime',
+                      'beautiful-mermaid',
                       'node:fs',
                       'node:fs/promises',
                       'node:path',
-                      'node:child_process',
-                      'node:os',
+                      'node:module',
                   ]
                 : [
                       '@jay-framework/component',

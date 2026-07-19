@@ -40,16 +40,15 @@
     "@jay-framework/runtime": "workspace:^",
     "@jay-framework/stack-client-runtime": "workspace:^",
     "@jay-framework/stack-server-runtime": "workspace:^",
+    "beautiful-mermaid": "^1.1.3",
     "js-yaml": "^4.1.0",
     "marked": "^15.0.0"
   },
   "devDependencies": {
     "@jay-framework/dev-environment": "workspace:^",
     "@jay-framework/jay-stack-cli": "workspace:^",
-    "@mermaid-js/mermaid-cli": "^11.16.0",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.15.21",
-    "puppeteer": "^25.3.0",
     "rimraf": "^5.0.5",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3",

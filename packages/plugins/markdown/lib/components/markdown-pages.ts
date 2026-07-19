@@ -1,6 +1,5 @@
 import { makeJayStackComponent, phaseOutput } from '@jay-framework/fullstack-component';
-import { createMarkedParser, parseMarkdown } from '../parse-markdown.js';
-import { renderMermaidBlock } from '../mermaid-renderer.js';
+import { parseMarkdownWithMermaid } from '../parse-markdown.js';
 import { frontmatterToHeadTags } from '../head-tags.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -9,8 +8,6 @@ export interface MarkdownPagesProps {
     contentDir: string;
     slug: string;
 }
-
-const serverMarked = createMarkedParser(renderMermaidBlock);
 
 export const markdownPages = makeJayStackComponent()
     .withProps<MarkdownPagesProps>()
@@ -30,7 +27,7 @@ export const markdownPages = makeJayStackComponent()
     .withSlowlyRender(async (props: MarkdownPagesProps) => {
         const filePath = path.join(props.contentDir, `${props.slug}.md`);
         const content = await fs.readFile(filePath, 'utf-8');
-        const { frontmatter, html } = parseMarkdown(content, serverMarked);
+        const { frontmatter, html } = await parseMarkdownWithMermaid(content);
 
         const tags = Array.isArray(frontmatter.tags)
             ? frontmatter.tags.map((name: string) => ({ name: String(name) }))
