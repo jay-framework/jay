@@ -5,8 +5,8 @@ import { tmpdir } from 'os';
 import { join } from 'path';
 import { load as loadYaml } from 'js-yaml';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { PluginReferencesContext } from '@jay-framework/stack-server-runtime';
-import { generateUiKitReferences } from '../lib/setup';
+import type { PluginAgentKitContext } from '@jay-framework/stack-server-runtime';
+import { generateUiKitAgentKit } from '../lib/agentkit';
 
 // Canonical shape reference (no @jay-framework/aiditor import):
 // jay-aiditor/packages/aiditor/test/fixtures/add-menu/valid-item.yaml
@@ -20,8 +20,8 @@ const STICKY_SKILL_OUTPUT_REL = 'agent-kit/aiditor/skills/ui-kit/sticky-header-s
 
 function makeCtx(
     projectRoot: string,
-    overrides: Partial<PluginReferencesContext> = {},
-): PluginReferencesContext {
+    overrides: Partial<PluginAgentKitContext> = {},
+): PluginAgentKitContext {
     return {
         pluginName: 'ui-kit',
         projectRoot,
@@ -49,7 +49,7 @@ function assertAddMenuCatalogShape(catalog: unknown): void {
     }
 }
 
-describe('generateUiKitReferences add-menu catalog (Design Log #142 U3)', () => {
+describe('generateUiKitAgentKit add-menu catalog (Design Log #142 U3)', () => {
     let projectRoot: string;
 
     beforeEach(() => {
@@ -62,9 +62,9 @@ describe('generateUiKitReferences add-menu catalog (Design Log #142 U3)', () => 
     });
 
     it('writes ui-kit.yaml with valid catalog items', async () => {
-        const result = await generateUiKitReferences(makeCtx(projectRoot));
+        const result = await generateUiKitAgentKit(makeCtx(projectRoot));
 
-        expect(result.referencesCreated).toEqual(
+        expect(result.agentKitCreated).toEqual(
             expect.arrayContaining([
                 ADD_MENU_OUTPUT_REL,
                 SPRING_SKILL_OUTPUT_REL,
@@ -80,7 +80,7 @@ describe('generateUiKitReferences add-menu catalog (Design Log #142 U3)', () => 
     });
 
     it('writes effect skill markdown files for AIditor', async () => {
-        await generateUiKitReferences(makeCtx(projectRoot));
+        await generateUiKitAgentKit(makeCtx(projectRoot));
 
         const springPath = join(projectRoot, SPRING_SKILL_OUTPUT_REL);
         expect(existsSync(springPath)).toBe(true);
@@ -105,9 +105,9 @@ describe('generateUiKitReferences add-menu catalog (Design Log #142 U3)', () => 
         writeFileSync(join(skillDir, 'spring-button-hover.md'), '# stale\n');
         writeFileSync(join(skillDir, 'sticky-header-scroll.md'), '# stale\n');
 
-        const result = await generateUiKitReferences(makeCtx(projectRoot));
+        const result = await generateUiKitAgentKit(makeCtx(projectRoot));
 
-        expect(result.referencesCreated).not.toContain(ADD_MENU_OUTPUT_REL);
+        expect(result.agentKitCreated).not.toContain(ADD_MENU_OUTPUT_REL);
 
         const written = loadYaml(readFileSync(join(addMenuDir, 'ui-kit.yaml'), 'utf-8'));
         expect(written).toEqual({ items: [] });
@@ -125,9 +125,9 @@ describe('generateUiKitReferences add-menu catalog (Design Log #142 U3)', () => 
         writeFileSync(join(skillDir, 'spring-button-hover.md'), '# stale\n');
         writeFileSync(join(skillDir, 'sticky-header-scroll.md'), '# stale\n');
 
-        const result = await generateUiKitReferences(makeCtx(projectRoot, { force: true }));
+        const result = await generateUiKitAgentKit(makeCtx(projectRoot, { force: true }));
 
-        expect(result.referencesCreated).toEqual(
+        expect(result.agentKitCreated).toEqual(
             expect.arrayContaining([
                 ADD_MENU_OUTPUT_REL,
                 SPRING_SKILL_OUTPUT_REL,
@@ -147,9 +147,9 @@ describe('generateUiKitReferences add-menu catalog (Design Log #142 U3)', () => 
     });
 
     it('copies Add Menu thumbnails into public/ on agent-kit', async () => {
-        const result = await generateUiKitReferences(makeCtx(projectRoot));
+        const result = await generateUiKitAgentKit(makeCtx(projectRoot));
 
-        expect(result.referencesCreated).toEqual(
+        expect(result.agentKitCreated).toEqual(
             expect.arrayContaining(['public/aiditor-add-menu-thumbnails/ui-kit/popover-menu.svg']),
         );
         expect(

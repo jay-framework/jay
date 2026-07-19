@@ -1,18 +1,16 @@
 /**
- * References handler for ui-kit plugin (Design Log #142).
+ * Agent-kit handler for ui-kit plugin (Design Log #142).
  *
- * Runs during `jay-stack agent-kit` to write:
- * - agent-kit/aiditor/add-menu/ui-kit.yaml
- * - agent-kit/aiditor/skills/ui-kit/*.md
- * - public/aiditor-add-menu-thumbnails/ui-kit/*
+ * Writes AIditor Add Menu catalog: agent-kit/aiditor/add-menu/ui-kit.yaml
+ * Copies effect skill markdown into agent-kit/aiditor/skills/ui-kit/
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import type {
-    PluginReferencesContext,
-    PluginReferencesResult,
+    PluginAgentKitContext,
+    PluginAgentKitResult,
 } from '@jay-framework/stack-server-runtime';
 import { copyAiditorAddMenuThumbnails } from './add-menu/copy-aiditor-thumbnails.js';
 
@@ -43,7 +41,7 @@ function resolveAddMenuTemplatePath(): string {
     return resolvePackageAgentKitPath('agent-kit/aiditor/add-menu.template.yaml');
 }
 
-function writeAiditorSkills(ctx: PluginReferencesContext): string[] {
+function writeAiditorSkills(ctx: PluginAgentKitContext): string[] {
     const created: string[] = [];
 
     for (const { sourceRel, outputRel } of AIDITOR_SKILL_COPIES) {
@@ -64,7 +62,7 @@ function writeAiditorSkills(ctx: PluginReferencesContext): string[] {
     return created;
 }
 
-function writeAddMenuCatalog(ctx: PluginReferencesContext): string | null {
+function writeAddMenuCatalog(ctx: PluginAgentKitContext): string | null {
     const outputPath = path.join(ctx.projectRoot, ADD_MENU_OUTPUT_REL);
 
     if (fs.existsSync(outputPath) && !ctx.force) {
@@ -80,27 +78,33 @@ function writeAddMenuCatalog(ctx: PluginReferencesContext): string | null {
     return ADD_MENU_OUTPUT_REL;
 }
 
-export async function generateUiKitReferences(
-    ctx: PluginReferencesContext,
-): Promise<PluginReferencesResult> {
+export async function generateUiKitAgentKit(
+    ctx: PluginAgentKitContext,
+): Promise<PluginAgentKitResult> {
     if (ctx.initError) {
-        return { referencesCreated: [], message: `Skipped: ${ctx.initError.message}` };
+        return {
+            agentKitCreated: [],
+            message: `ui-kit initialization failed: ${ctx.initError.message}`,
+        };
     }
 
-    const referencesCreated: string[] = [];
+    const agentKitCreated: string[] = [];
     const addMenuCreated = writeAddMenuCatalog(ctx);
     if (addMenuCreated) {
-        referencesCreated.push(addMenuCreated);
+        agentKitCreated.push(addMenuCreated);
     }
-    referencesCreated.push(...writeAiditorSkills(ctx));
-    referencesCreated.push(
+    agentKitCreated.push(...writeAiditorSkills(ctx));
+    agentKitCreated.push(
         ...copyAiditorAddMenuThumbnails(ctx, resolvePackageAgentKitPath, 'ui-kit'),
     );
 
     const message =
-        referencesCreated.length > 0
+        agentKitCreated.length > 0
             ? 'ui-kit Add Menu catalog and effect skills generated.'
             : 'ui-kit Add Menu catalog already present (use --force to rewrite).';
 
-    return { referencesCreated, message };
+    return {
+        agentKitCreated,
+        message,
+    };
 }

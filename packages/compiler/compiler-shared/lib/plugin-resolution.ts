@@ -111,15 +111,12 @@ export interface PluginManifest {
         handler: string;
         description?: string;
     }>;
-    /** Plugin setup configuration (Design Log #87) */
-    setup?: {
-        /** Export name (NPM) or relative path (local) to setup handler function */
-        handler: string;
-        /** Export name for reference data generation (called by jay-stack agent-kit) */
-        references?: string;
-        /** Human-readable description of what setup does */
-        description?: string;
-    };
+    /** Export name (NPM) or relative path (local) to setup handler — `jay-stack setup` */
+    setup?: string;
+    /** Export name for agent-kit handler — `jay-stack agent-kit` (add-menu, references, skills) */
+    agentkit?: string;
+    /** Human-readable description of what setup validates or configures */
+    description?: string;
 }
 
 /**

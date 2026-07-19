@@ -650,5 +650,9 @@ export const ADD_MENU_VALIDATION_SUGGESTIONS: Record<string, string> = {
     'rejected-field-allowedScopes':
         'Remove allowedScopes — attachment scope is chosen in the AIditor UI',
     'add-menu-missing-agentkit-handler':
-        'Declare setup.references in plugin.yaml and generate catalogs in jay-stack agent-kit — not in setup handler',
+        'Declare agentkit in plugin.yaml pointing at an agent-kit handler export; run jay-stack agent-kit (project yarn agent-kit) to materialize catalogs — not jay-stack setup',
+    'add-menu-legacy-setup-handler':
+        'Move add-menu catalog writes from the setup handler to agentkit. Setup is for config/credentials only; run jay-stack agent-kit to generate agent-kit/aiditor/add-menu/*.yaml',
+    'deprecated-nested-setup-keys':
+        'Replace nested setup.handler / setup.references with flat keys: setup: <handler> and agentkit: <handler>',
 };

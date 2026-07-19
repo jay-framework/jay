@@ -25,6 +25,4 @@ contracts:
     component: letterSplit
     description: Splits text into a span per letter for individual letter styling
 
-setup:
-  references: generateUiKitReferences
-  description: Install ui-kit Add Menu catalog for AIditor
+agentkit: generateUiKitAgentKit

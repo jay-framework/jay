@@ -1,36 +1,38 @@
-# Plugin Setup & References
+# Plugin Setup & Agent-Kit
 
 Plugins can provide two hooks for project configuration and AI agent discovery:
 
-- **Setup handler** — runs during `jay-stack setup <plugin>`. Creates config files and validates credentials.
-- **References handler** — runs during `jay-stack agent-kit`. Generates discovery data (add-menu catalogs, reference files) using live services or static templates.
+- **Setup handler** (`setup` in `plugin.yaml`) — runs during `jay-stack setup <plugin>`. Creates config files, validates credentials.
+- **Agent-kit handler** (`agentkit` in `plugin.yaml`) — runs during `jay-stack agent-kit`. Generates discovery data (add-menu catalogs, reference files, skills, thumbnails) using live services when needed.
 
 ## When Each Runs
 
 ```
-jay-stack setup <plugin>     →  setup.handler()
-jay-stack agent-kit          →  setup.references()  (after contract materialization)
+jay-stack setup <plugin>     →  setup handler (config + credentials)
+jay-stack agent-kit          →  agentkit handler (after contract materialization)
 ```
 
-Setup runs once when a project first installs the plugin. Agent-kit runs whenever the developer regenerates the agent kit — it can use live services to produce fresh data.
+Setup runs when a project configures the plugin. Agent-kit runs whenever the developer regenerates the agent kit — it can use live services to produce fresh data.
 
 ## Declaring in plugin.yaml
 
 ```yaml
-setup:
-  handler: setupMyPlugin # export name (NPM) or ./path (local)
-  references: generateMyReferences # export name (NPM) or ./path (local)
-  description: Install My Plugin config and AIditor catalog
+name: my-plugin
+setup: setupMyPlugin # export name (NPM) or ./path (local) — optional
+agentkit: generateMyAgentKit # export name (NPM) or ./path (local) — optional
+description: Validate credentials and install config # optional, top-level
 ```
 
-**NPM plugins:** both values are export names from the package entry point (`lib/index.ts`).  
-**Local plugins:** relative paths to the handler modules.
+**NPM plugins:** `setup` and `agentkit` are export names from the package entry point (`lib/index.ts`).  
+**Local plugins:** relative paths to handler modules (e.g. `agentkit: ./agentkit` — export `agentkit` or `default` from that module).
 
-`jay-stack validate-plugin` checks that these exist and are correctly exported.
+`jay-stack validate-plugin` checks that declared handlers exist and are correctly exported.
 
 ## Writing a Setup Handler
 
-The setup handler creates config files and AIditor assets. It receives a `PluginSetupContext` and returns a `PluginSetupResult`.
+The setup handler creates config files and validates services. It receives a `PluginSetupContext` and returns a `PluginSetupResult`.
+
+**Do not** write add-menu catalogs in setup — use the agent-kit handler.
 
 ```typescript
 import type { PluginSetupContext, PluginSetupResult } from '@jay-framework/stack-server-runtime';
@@ -81,42 +83,42 @@ export async function setupMyPlugin(ctx: PluginSetupContext): Promise<PluginSetu
 | `configCreated` | `string[]?`                                 | Config files created (relative to project root) |
 | `message`       | `string?`                                   | Human-readable status message                   |
 
-## Writing a References Handler
+## Writing an Agent-Kit Handler
 
-The references handler generates discovery data at agent-kit time. It can use live services (database queries, API calls) to produce dynamic content.
+The agent-kit handler generates discovery data at agent-kit time: add-menu catalogs, `agent-kit/references/<plugin>/` files, skills, thumbnails. It can use live services (database queries, API calls) to produce dynamic content.
 
 ```typescript
 import type {
-  PluginReferencesContext,
-  PluginReferencesResult,
+  PluginAgentKitContext,
+  PluginAgentKitResult,
 } from '@jay-framework/stack-server-runtime';
 import fs from 'node:fs';
 import path from 'node:path';
+import yaml from 'yaml';
 
-export async function generateMyReferences(
-  ctx: PluginReferencesContext,
-): Promise<PluginReferencesResult> {
+export async function generateMyAgentKit(
+  ctx: PluginAgentKitContext,
+): Promise<PluginAgentKitResult> {
   if (ctx.initError) {
-    return { referencesCreated: [], message: `Skipped: ${ctx.initError.message}` };
+    return { agentKitCreated: [], message: `Skipped: ${ctx.initError.message}` };
   }
 
-  // Example: generate add-menu items from live data
   const outputPath = path.join(ctx.projectRoot, 'agent-kit/aiditor/add-menu/my-plugin.yaml');
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 
   const items = [
     { id: 'my-plugin:feature-1', title: 'Feature 1', category: 'My Plugin', prompt: '...' },
   ];
-  fs.writeFileSync(outputPath, yaml.dump({ items }), 'utf-8');
+  fs.writeFileSync(outputPath, yaml.stringify({ items }), 'utf-8');
 
   return {
-    referencesCreated: ['agent-kit/aiditor/add-menu/my-plugin.yaml'],
+    agentKitCreated: ['agent-kit/aiditor/add-menu/my-plugin.yaml'],
     message: `Generated ${items.length} add-menu items`,
   };
 }
 ```
 
-### PluginReferencesContext
+### PluginAgentKitContext
 
 | Field           | Type      | Description                                                     |
 | --------------- | --------- | --------------------------------------------------------------- |
@@ -127,27 +129,25 @@ export async function generateMyReferences(
 | `initError`     | `Error?`  | Present if plugin init failed                                   |
 | `force`         | `boolean` | Whether `--force` flag was passed                               |
 
-### PluginReferencesResult
+### PluginAgentKitResult
 
-| Field               | Type       | Description                              |
-| ------------------- | ---------- | ---------------------------------------- |
-| `referencesCreated` | `string[]` | Files created (relative to project root) |
-| `message`           | `string?`  | Human-readable status message            |
+| Field             | Type       | Description                              |
+| ----------------- | ---------- | ---------------------------------------- |
+| `agentKitCreated` | `string[]` | Files created (relative to project root) |
+| `message`         | `string?`  | Human-readable status message            |
 
-## Setup vs References — When to Use Which
+## Setup vs Agent-Kit — When to Use Which
 
-| Use case                                                             | Handler            | Why                                                                    |
-| -------------------------------------------------------------------- | ------------------ | ---------------------------------------------------------------------- |
-| Copy static add-menu template and thumbnails                         | `setup.references` | Catalogs are discovery data — materialize during `jay-stack agent-kit` |
-| Generate data from live services (product catalogs, CMS schemas)     | `setup.references` | Needs services initialized; regenerated on each `agent-kit` run        |
-| Validate credentials / API keys                                      | `setup.handler`    | Part of initial project configuration                                  |
-| Write AIditor add-menu from project-specific data (DESIGN.md tokens) | `setup.references` | Data comes from project files, not static templates                    |
+| Use case                                                             | Hook       | Why                                                         |
+| -------------------------------------------------------------------- | ---------- | ----------------------------------------------------------- |
+| Copy static add-menu template, skills, thumbnails                    | `agentkit` | Discovery data — regenerated on `jay-stack agent-kit`       |
+| Generate data from live services (product catalogs, CMS schemas)     | `agentkit` | Needs services initialized; refreshed on each agent-kit run |
+| Validate credentials / API keys                                      | `setup`    | Part of initial project configuration                       |
+| Write AIditor add-menu from project-specific data (DESIGN.md tokens) | `agentkit` | Data comes from project files at agent-kit time             |
 
 ## AIditor Add-Menu Items
 
-The **references handler** writes to `agent-kit/aiditor/add-menu/<plugin-name>.yaml`. The AIditor discovers and loads all YAML files in this directory. **Setup handlers must not write add-menu catalogs** — use `setup.references` instead.
-
-See `agent-kit/plugin/aiditor-add-menu.md` for the full contributor guide.
+The agent-kit handler writes to `agent-kit/aiditor/add-menu/<plugin-name>.yaml`. The AIditor discovers and loads all YAML files in this directory.
 
 Each item:
 
@@ -164,15 +164,17 @@ items:
       Read agent-kit/designer/feature-name.md for usage guide.
 ```
 
+See `agent-kit/plugin/aiditor-add-menu.md` (installed by `jay-stack setup aiditor`) for the full contributor guide.
+
 ## Exporting Handlers
 
-For NPM plugins, export the handlers from the package entry point:
+For NPM plugins, export handlers from the package entry point:
 
 ```typescript
 // lib/index.ts
 export { setupMyPlugin } from './setup.js';
-export { generateMyReferences } from './references.js';
+export { generateMyAgentKit } from './agentkit.js';
 // ... other exports (components, actions, services)
 ```
 
-For local plugins, use relative paths in plugin.yaml instead of export names.
+For local plugins, use relative paths in `plugin.yaml` and export `agentkit` or `default` from the handler module.
