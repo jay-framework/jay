@@ -512,26 +512,35 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
         }
     }
 
-    // Validate setup handler exports
+    // Validate setup and agent-kit handler exports
     if (manifest.setup) {
-        if (manifest.setup.handler) {
+        if (typeof manifest.setup !== 'string') {
+            result.errors.push({
+                type: 'schema',
+                message:
+                    'Deprecated nested setup keys (setup.handler / setup.references) — use flat setup: and agentkit: in plugin.yaml',
+                location: 'plugin.yaml setup',
+                suggestion:
+                    'Replace setup.handler with top-level setup: and setup.references with top-level agentkit:',
+            });
+        } else {
             validateHandlerRef(
-                manifest.setup.handler,
+                manifest.setup,
                 'Setup handler',
-                'plugin.yaml setup.handler',
+                'plugin.yaml setup',
                 context,
                 result,
             );
         }
-        if (manifest.setup.references) {
-            validateHandlerRef(
-                manifest.setup.references,
-                'References handler',
-                'plugin.yaml setup.references',
-                context,
-                result,
-            );
-        }
+    }
+    if (manifest.agentkit) {
+        validateHandlerRef(
+            manifest.agentkit,
+            'Agent-kit handler',
+            'plugin.yaml agentkit',
+            context,
+            result,
+        );
     }
 }
 

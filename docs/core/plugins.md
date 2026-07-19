@@ -22,10 +22,9 @@ actions:
 
 init: myPluginInit
 
-setup:
-  handler: setupMyPlugin
-  references: generateMyPluginReferences
-  description: Configure API credentials
+setup: setupMyPlugin
+agentkit: generateMyPluginAgentKit
+description: Configure API credentials
 ```
 
 ### Fields
@@ -41,7 +40,9 @@ setup:
 | `actions`           | array?           | Server action exports                                                        |
 | `routes`            | array?           | Plugin-provided pages (backoffice tools, admin dashboards)                   |
 | `init`              | string?          | Export name for `JayInit` constant (auto-discovers `lib/init.ts` if omitted) |
-| `setup`             | object?          | Setup command configuration                                                  |
+| `setup`             | string?          | Export name for setup handler (`jay-stack setup`)                            |
+| `agentkit`          | string?          | Export name for agent-kit handler (`jay-stack agent-kit`)                    |
+| `description`       | string?          | Human-readable setup description (top-level)                                 |
 
 ### contracts
 
@@ -121,10 +122,9 @@ CLI commands for admin and batch operations. Run via `jay-stack run <plugin>/<co
 ### setup
 
 ```yaml
-setup:
-  handler: setupMyPlugin # Export name for setup handler
-  references: generateReferences # Export name for reference data generation
-  description: Configure API key # Human-readable description
+setup: setupMyPlugin # Export name for setup handler
+agentkit: generateMyAgentKit # Export name for agent-kit handler
+description: Configure API key # Human-readable description (top-level, optional)
 ```
 
 ## Plugin Resolution

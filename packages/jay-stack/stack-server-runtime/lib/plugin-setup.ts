@@ -1,19 +1,19 @@
 /**
- * Plugin Setup and References (Design Log #87)
+ * Plugin Setup and Agent-Kit (Design Log #87)
  *
  * Two separate concerns:
  *   - **Setup** (jay-stack setup): Config creation + credential/service validation
- *   - **References** (jay-stack agent-kit): Generate discovery data using live services
+ *   - **Agent-kit** (jay-stack agent-kit): Generate discovery data using live services
  *
  * Setup flow:
- *   1. Scan plugins for `setup.handler` in plugin.yaml
+ *   1. Scan plugins for `setup` in plugin.yaml
  *   2. Run init for all plugins (dependency-ordered)
  *   3. For each target plugin: load setup handler → call it → report result
  *
- * References flow (called by agent-kit after materializing contracts):
- *   1. Scan plugins for `setup.references` in plugin.yaml
+ * Agent-kit flow (called by agent-kit after materializing contracts):
+ *   1. Scan plugins for `agentkit` in plugin.yaml
  *   2. Services are already initialized (agent-kit does this for contract materialization)
- *   3. For each plugin: load references handler → call it → report result
+ *   3. For each plugin: load agent-kit handler → call it → report result
  */
 
 import * as fs from 'node:fs';
@@ -62,14 +62,14 @@ export interface PluginSetupResult {
 export type PluginSetupHandler = (context: PluginSetupContext) => Promise<PluginSetupResult>;
 
 // ============================================================================
-// References Types (jay-stack agent-kit)
+// Agent-kit Types (jay-stack agent-kit)
 // ============================================================================
 
 /**
- * Context passed to a plugin's references handler.
+ * Context passed to a plugin's agent-kit handler.
  * Services may or may not be initialized — check initError if your handler needs them.
  */
-export interface PluginReferencesContext {
+export interface PluginAgentKitContext {
     /** Plugin name (from plugin.yaml) */
     pluginName: string;
     /** Project root directory */
@@ -85,19 +85,19 @@ export interface PluginReferencesContext {
 }
 
 /**
- * Result returned by a plugin's references handler.
+ * Result returned by a plugin's agent-kit handler.
  */
-export interface PluginReferencesResult {
-    /** Reference files created (relative to project root) */
-    referencesCreated: string[];
+export interface PluginAgentKitResult {
+    /** Agent-kit output files created (relative to project root) */
+    agentKitCreated: string[];
     /** Human-readable status message */
     message?: string;
 }
 
-/** A plugin's references handler function signature. */
-export type PluginReferencesHandler = (
-    context: PluginReferencesContext,
-) => Promise<PluginReferencesResult>;
+/** A plugin's agent-kit handler function signature. */
+export type PluginAgentKitHandler = (
+    context: PluginAgentKitContext,
+) => Promise<PluginAgentKitResult>;
 
 // ============================================================================
 // Shared plugin info
@@ -124,9 +124,9 @@ export interface PluginWithSetup {
 }
 
 /**
- * Information about a discovered plugin with a references handler.
+ * Information about a discovered plugin with an agent-kit handler.
  */
-export interface PluginWithReferences {
+export interface PluginWithAgentKit {
     /** Plugin name from plugin.yaml */
     name: string;
     /** Plugin path (directory containing plugin.yaml) */
@@ -135,8 +135,8 @@ export interface PluginWithReferences {
     packageName: string;
     /** Whether this is a local plugin */
     isLocal: boolean;
-    /** References handler export name */
-    referencesHandler: string;
+    /** Agent-kit handler export name */
+    agentKitHandler: string;
     /** Dependencies from package.json (for ordering) */
     dependencies: string[];
 }
@@ -146,7 +146,7 @@ export interface PluginWithReferences {
 // ============================================================================
 
 /**
- * Discovers all plugins that have a `setup.handler` in plugin.yaml.
+ * Discovers all plugins that have a `setup` handler in plugin.yaml.
  */
 export async function discoverPluginsWithSetup(options: {
     projectRoot: string;
@@ -165,7 +165,7 @@ export async function discoverPluginsWithSetup(options: {
     const pluginsWithSetup: PluginWithSetup[] = [];
 
     for (const [packageName, plugin] of allPlugins) {
-        if (!plugin.manifest.setup?.handler) continue;
+        if (!plugin.manifest.setup) continue;
 
         // Filter to specific plugin if requested
         if (pluginFilter && plugin.name !== pluginFilter && packageName !== pluginFilter) {
@@ -177,8 +177,8 @@ export async function discoverPluginsWithSetup(options: {
             pluginPath: plugin.pluginPath,
             packageName: plugin.packageName,
             isLocal: plugin.isLocal,
-            setupHandler: plugin.manifest.setup.handler,
-            setupDescription: plugin.manifest.setup.description,
+            setupHandler: plugin.manifest.setup,
+            setupDescription: plugin.manifest.description,
             dependencies: plugin.dependencies,
         });
 
@@ -192,13 +192,13 @@ export async function discoverPluginsWithSetup(options: {
 }
 
 /**
- * Discovers all plugins that have a `setup.references` in plugin.yaml.
+ * Discovers all plugins that have an `agentkit` handler in plugin.yaml.
  */
-export async function discoverPluginsWithReferences(options: {
+export async function discoverPluginsWithAgentKit(options: {
     projectRoot: string;
     verbose?: boolean;
     pluginFilter?: string;
-}): Promise<PluginWithReferences[]> {
+}): Promise<PluginWithAgentKit[]> {
     const { projectRoot, verbose, pluginFilter } = options;
 
     const allPlugins = await scanPlugins({
@@ -208,30 +208,30 @@ export async function discoverPluginsWithReferences(options: {
         discoverTransitive: true,
     });
 
-    const pluginsWithRefs: PluginWithReferences[] = [];
+    const pluginsWithAgentKit: PluginWithAgentKit[] = [];
 
     for (const [packageName, plugin] of allPlugins) {
-        if (!plugin.manifest.setup?.references) continue;
+        if (!plugin.manifest.agentkit) continue;
 
         if (pluginFilter && plugin.name !== pluginFilter && packageName !== pluginFilter) {
             continue;
         }
 
-        pluginsWithRefs.push({
+        pluginsWithAgentKit.push({
             name: plugin.name,
             pluginPath: plugin.pluginPath,
             packageName: plugin.packageName,
             isLocal: plugin.isLocal,
-            referencesHandler: plugin.manifest.setup.references,
+            agentKitHandler: plugin.manifest.agentkit,
             dependencies: plugin.dependencies,
         });
 
         if (verbose) {
-            getLogger().info(`[AgentKit] Found plugin with references: ${plugin.name}`);
+            getLogger().info(`[AgentKit] Found plugin with agent-kit handler: ${plugin.name}`);
         }
     }
 
-    return sortByDependencies(pluginsWithRefs);
+    return sortByDependencies(pluginsWithAgentKit);
 }
 
 /**
@@ -266,7 +266,7 @@ export async function executePluginSetup(
         verbose?: boolean;
     },
 ): Promise<PluginSetupResult> {
-    const { projectRoot, configDir, force, initError, viteServer, verbose } = options;
+    const { projectRoot, configDir, force, initError, viteServer } = options;
 
     const context: PluginSetupContext = {
         pluginName: plugin.name,
@@ -285,14 +285,14 @@ export async function executePluginSetup(
 }
 
 // ============================================================================
-// References Execution (jay-stack agent-kit)
+// Agent-kit Execution (jay-stack agent-kit)
 // ============================================================================
 
 /**
- * Loads and executes a plugin's references handler.
+ * Loads and executes a plugin's agent-kit handler.
  */
-export async function executePluginReferences(
-    plugin: PluginWithReferences,
+export async function executePluginAgentKit(
+    plugin: PluginWithAgentKit,
     options: {
         projectRoot: string;
         force: boolean;
@@ -300,12 +300,12 @@ export async function executePluginReferences(
         viteServer?: ViteSSRLoader;
         verbose?: boolean;
     },
-): Promise<PluginReferencesResult> {
+): Promise<PluginAgentKitResult> {
     const { projectRoot, force, initError, viteServer } = options;
 
     const referencesDir = path.join(projectRoot, 'agent-kit', 'references', plugin.name);
 
-    const context: PluginReferencesContext = {
+    const context: PluginAgentKitContext = {
         pluginName: plugin.name,
         projectRoot,
         referencesDir,
@@ -314,9 +314,9 @@ export async function executePluginReferences(
         force,
     };
 
-    const handler = await loadHandler<PluginReferencesHandler>(
+    const handler = await loadHandler<PluginAgentKitHandler>(
         plugin,
-        plugin.referencesHandler,
+        plugin.agentKitHandler,
         viteServer,
     );
 
@@ -348,6 +348,7 @@ async function loadHandler<T extends (...args: any[]) => any>(
 
         // For local plugins, try common export names
         if (typeof module[handlerName] === 'function') return module[handlerName];
+        if (typeof module.agentkit === 'function') return module.agentkit;
         if (typeof module.setup === 'function') return module.setup;
         if (typeof module.default === 'function') return module.default;
 

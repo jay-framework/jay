@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { generateDesignSystemReferences } from '../lib/generate-add-menu.js';
-import type { PluginReferencesContext } from '@jay-framework/stack-server-runtime';
+import { generateDesignSystemAgentKit } from '../lib/generate-add-menu.js';
+import type { PluginAgentKitContext } from '@jay-framework/stack-server-runtime';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
@@ -14,7 +14,7 @@ function makeTempProject(designMdContent?: string): string {
     return dir;
 }
 
-function makeContext(projectRoot: string): PluginReferencesContext {
+function makeContext(projectRoot: string): PluginAgentKitContext {
     return {
         pluginName: 'design-system-validator',
         projectRoot,
@@ -59,7 +59,7 @@ function readOutput(dir: string): any {
     return yaml.load(fs.readFileSync(outputPath, 'utf-8')) as any;
 }
 
-describe('generateDesignSystemReferences', () => {
+describe('generateDesignSystemAgentKit', () => {
     let tempDir: string;
 
     beforeEach(() => {
@@ -72,16 +72,16 @@ describe('generateDesignSystemReferences', () => {
 
     it('generates add-menu YAML with individual items per token', async () => {
         const ctx = makeContext(tempDir);
-        const result = await generateDesignSystemReferences(ctx);
+        const result = await generateDesignSystemAgentKit(ctx);
 
-        expect(result.referencesCreated).toEqual(['agent-kit/aiditor/add-menu/design-system.yaml']);
+        expect(result.agentKitCreated).toEqual(['agent-kit/aiditor/add-menu/design-system.yaml']);
         const content = readOutput(tempDir);
         expect(content.items.length).toEqual(10);
     });
 
     it('generates one item per color token with HTML preview', async () => {
         const ctx = makeContext(tempDir);
-        await generateDesignSystemReferences(ctx);
+        await generateDesignSystemAgentKit(ctx);
         const content = readOutput(tempDir);
 
         const primaryItem = content.items.find((i: any) => i.id === 'design-system:color-primary');
@@ -98,10 +98,12 @@ describe('generateDesignSystemReferences', () => {
 
     it('generates typography items with HTML preview', async () => {
         const ctx = makeContext(tempDir);
-        await generateDesignSystemReferences(ctx);
+        await generateDesignSystemAgentKit(ctx);
         const content = readOutput(tempDir);
 
-        const bodyItem = content.items.find((i: any) => i.id === 'design-system:typography-body-md');
+        const bodyItem = content.items.find(
+            (i: any) => i.id === 'design-system:typography-body-md',
+        );
         expect(bodyItem).toBeDefined();
         expect(bodyItem.subCategory).toEqual('Typography');
         expect(bodyItem.prompt).toMatch(/Inter/);
@@ -111,18 +113,22 @@ describe('generateDesignSystemReferences', () => {
 
     it('generates items for spacing, rounded, breakpoints, and animations', async () => {
         const ctx = makeContext(tempDir);
-        await generateDesignSystemReferences(ctx);
+        await generateDesignSystemAgentKit(ctx);
         const content = readOutput(tempDir);
 
         expect(content.items.find((i: any) => i.id === 'design-system:spacing-sm')).toBeDefined();
         expect(content.items.find((i: any) => i.id === 'design-system:rounded-md')).toBeDefined();
-        expect(content.items.find((i: any) => i.id === 'design-system:breakpoint-mobile')).toBeDefined();
-        expect(content.items.find((i: any) => i.id === 'design-system:animation-fade-in')).toBeDefined();
+        expect(
+            content.items.find((i: any) => i.id === 'design-system:breakpoint-mobile'),
+        ).toBeDefined();
+        expect(
+            content.items.find((i: any) => i.id === 'design-system:animation-fade-in'),
+        ).toBeDefined();
     });
 
     it('generates component items with resolved token values', async () => {
         const ctx = makeContext(tempDir);
-        await generateDesignSystemReferences(ctx);
+        await generateDesignSystemAgentKit(ctx);
         const content = readOutput(tempDir);
 
         const btnItem = content.items.find(
@@ -141,7 +147,7 @@ describe('generateDesignSystemReferences', () => {
 
     it('uses DESIGN.md name as category', async () => {
         const ctx = makeContext(tempDir);
-        await generateDesignSystemReferences(ctx);
+        await generateDesignSystemAgentKit(ctx);
         const content = readOutput(tempDir);
 
         expect(content.items[0].category).toEqual('Test Design');
@@ -157,7 +163,7 @@ describe('generateDesignSystemReferences', () => {
         );
 
         const ctx = makeContext(tempDir);
-        await generateDesignSystemReferences(ctx);
+        await generateDesignSystemAgentKit(ctx);
         const content = readOutput(tempDir);
 
         const accentItem = content.items.find((i: any) => i.id === 'design-system:color-accent');
@@ -168,9 +174,9 @@ describe('generateDesignSystemReferences', () => {
     it('returns empty when no DESIGN.md exists', async () => {
         const emptyDir = makeTempProject();
         const ctx = makeContext(emptyDir);
-        const result = await generateDesignSystemReferences(ctx);
+        const result = await generateDesignSystemAgentKit(ctx);
 
-        expect(result.referencesCreated).toEqual([]);
+        expect(result.agentKitCreated).toEqual([]);
         fs.rmSync(emptyDir, { recursive: true, force: true });
     });
 });

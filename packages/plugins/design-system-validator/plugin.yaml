@@ -1,8 +1,7 @@
 name: design-system-validator
 
-setup:
-  references: generateDesignSystemReferences
-  description: Generate AIditor add-menu entries from DESIGN.md tokens
+agentkit: generateDesignSystemAgentKit
+description: Generate AIditor add-menu entries from DESIGN.md tokens
 
 validators:
   - name: design-tokens

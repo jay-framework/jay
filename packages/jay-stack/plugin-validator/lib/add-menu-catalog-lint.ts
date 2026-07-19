@@ -367,7 +367,9 @@ export function validateAddMenuItem(
     if (!isRecord(raw)) {
         return {
             item: null,
-            errors: [{ path: itemPath, message: 'item must be an object', code: 'item-not-object' }],
+            errors: [
+                { path: itemPath, message: 'item must be an object', code: 'item-not-object' },
+            ],
         };
     }
 
@@ -628,10 +630,8 @@ export const ADD_MENU_VALIDATION_SUGGESTIONS: Record<string, string> = {
         'Remove presentation.src; use presentation.html for html-fragment previews',
     'html-fragment-unsafe-markup':
         'Remove scripts, event handlers, and javascript: URLs from presentation.html',
-    'html-fragment-oversize-soft':
-        'Trim inline html or use a gif preview for rich motion',
-    'html-fragment-oversize-hard':
-        'Reduce presentation.html below 32 KB after sanitize',
+    'html-fragment-oversize-soft': 'Trim inline html or use a gif preview for rich motion',
+    'html-fragment-oversize-hard': 'Reduce presentation.html below 32 KB after sanitize',
     'browse-large-without-presentation':
         'Add presentation or thumbnail — large browse tiles need a visual preview',
     'browse-unknown-size': 'Set browse.size to large, medium, or small',
@@ -644,14 +644,15 @@ export const ADD_MENU_VALIDATION_SUGGESTIONS: Record<string, string> = {
         'Use separate array elements per folder level — no "/" or "\\" in segment names',
     'folder-path-adjacent-duplicate': 'Remove duplicate consecutive folderPath segments',
     'folder-path-too-deep': `Shorten folderPath to at most ${FOLDER_PATH_MAX_SEGMENTS} segments`,
-    'rejected-field-kind':
-        'Remove kind — express item intent in prompt text',
-    'rejected-field-parameters':
-        'Remove parameters — materialize values into prompt',
-    'rejected-field-component':
-        'Remove component — use prompt plus contract paths in agent-kit',
+    'rejected-field-kind': 'Remove kind — express item intent in prompt text',
+    'rejected-field-parameters': 'Remove parameters — materialize values into prompt',
+    'rejected-field-component': 'Remove component — use prompt plus contract paths in agent-kit',
     'rejected-field-allowedScopes':
         'Remove allowedScopes — attachment scope is chosen in the AIditor UI',
     'add-menu-missing-agentkit-handler':
-        'Declare setup.references in plugin.yaml and generate catalogs in jay-stack agent-kit — not in setup handler',
+        'Declare agentkit in plugin.yaml pointing at an agent-kit handler export; run jay-stack agent-kit (project yarn agent-kit) to materialize catalogs — not jay-stack setup',
+    'add-menu-legacy-setup-handler':
+        'Move add-menu catalog writes from the setup handler to agentkit. Setup is for config/credentials only; run jay-stack agent-kit to generate agent-kit/aiditor/add-menu/*.yaml',
+    'deprecated-nested-setup-keys':
+        'Replace nested setup.handler / setup.references with flat keys: setup: <handler> and agentkit: <handler>',
 };
