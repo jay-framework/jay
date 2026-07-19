@@ -136,12 +136,12 @@ export async function generateMyReferences(
 
 ## Setup vs References — When to Use Which
 
-| Use case                                                             | Handler            | Why                                                             |
-| -------------------------------------------------------------------- | ------------------ | --------------------------------------------------------------- |
+| Use case                                                             | Handler            | Why                                                                    |
+| -------------------------------------------------------------------- | ------------------ | ---------------------------------------------------------------------- |
 | Copy static add-menu template and thumbnails                         | `setup.references` | Catalogs are discovery data — materialize during `jay-stack agent-kit` |
-| Generate data from live services (product catalogs, CMS schemas)     | `setup.references` | Needs services initialized; regenerated on each `agent-kit` run |
-| Validate credentials / API keys                                      | `setup.handler`    | Part of initial project configuration                           |
-| Write AIditor add-menu from project-specific data (DESIGN.md tokens) | `setup.references` | Data comes from project files, not static templates             |
+| Generate data from live services (product catalogs, CMS schemas)     | `setup.references` | Needs services initialized; regenerated on each `agent-kit` run        |
+| Validate credentials / API keys                                      | `setup.handler`    | Part of initial project configuration                                  |
+| Write AIditor add-menu from project-specific data (DESIGN.md tokens) | `setup.references` | Data comes from project files, not static templates                    |
 
 ## AIditor Add-Menu Items
 

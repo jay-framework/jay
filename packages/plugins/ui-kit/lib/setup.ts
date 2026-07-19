@@ -93,7 +93,9 @@ export async function generateUiKitReferences(
         referencesCreated.push(addMenuCreated);
     }
     referencesCreated.push(...writeAiditorSkills(ctx));
-    referencesCreated.push(...copyAiditorAddMenuThumbnails(ctx, resolvePackageAgentKitPath, 'ui-kit'));
+    referencesCreated.push(
+        ...copyAiditorAddMenuThumbnails(ctx, resolvePackageAgentKitPath, 'ui-kit'),
+    );
 
     const message =
         referencesCreated.length > 0

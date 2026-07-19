@@ -112,7 +112,9 @@ async function validateAddMenuCatalogFileAtPath(
     }
 
     const linted = lintAddMenuCatalog(validated.file.items, relPath);
-    result.errors.push(...linted.errors.map((finding) => mapLintFinding(finding, relPath, 'error')));
+    result.errors.push(
+        ...linted.errors.map((finding) => mapLintFinding(finding, relPath, 'error')),
+    );
     result.warnings.push(
         ...linted.warnings.map((finding) => mapLintFinding(finding, relPath, 'warning')),
     );

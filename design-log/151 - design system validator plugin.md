@@ -568,6 +568,7 @@ The `generateDesignSystemReferences` handler (runs during `jay-stack agent-kit`)
 **After:** Each color, typography preset, spacing value, rounded value, breakpoint, animation, and component gets its own add-menu entry. This lets the AIditor present a browsable catalog of tokens.
 
 **Structure:**
+
 - **Category** — derived from DESIGN.md `name` field, or directory-based for page-level files (e.g., "Design System (products)")
 - **Sub-category** — one per token type: Colors, Typography, Spacing, Rounded, Breakpoints, Animations, Components
 - **Items** — one per token. Title includes the value (e.g., "primary (#2563eb)"). Prompt is a targeted instruction for that specific token.
