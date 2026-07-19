@@ -1,7 +1,18 @@
 {
-  "extends": "@jay-framework/dev-environment/examples/tsconfig.json",
   "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "moduleResolution": "node",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "useDefineForClassFields": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
     "outDir": "dist",
+    "types": [],
   },
   "include": ["src"],
 }

@@ -22,21 +22,18 @@ function writeFile(projectDir: string, relativePath: string, content: string): v
 }
 
 function generatePackageJson(name: string, selectedPlugins: PluginEntry[]): string {
-    const deps: Record<string, string> = {};
-    for (const dep of CORE_DEPS) {
-        deps[dep] = 'latest';
-    }
+    const deps: Record<string, string> = { ...CORE_DEPS };
     for (const plugin of selectedPlugins) {
         if (plugin.isDep) deps[plugin.name] = 'latest';
     }
 
-    const devDeps: Record<string, string> = {};
-    for (const dep of CORE_DEV_DEPS) {
-        devDeps[dep] = 'latest';
-    }
+    const devDeps: Record<string, string> = { ...CORE_DEV_DEPS };
     for (const plugin of selectedPlugins) {
         if (!plugin.isDep) devDeps[plugin.name] = 'latest';
     }
+
+    const hasWixDeploy = selectedPlugins.some((p) => p.name === '@jay-framework/wix-deploy');
+    const hasAiditor = selectedPlugins.some((p) => p.name === '@jay-framework/aiditor');
 
     const pkg = {
         name,
@@ -44,13 +41,25 @@ function generatePackageJson(name: string, selectedPlugins: PluginEntry[]): stri
         type: 'module',
         private: true,
         scripts: {
-            dev: 'jay-stack dev',
-            build: 'jay-cli definitions src && jay-stack build',
-            serve: 'jay-stack serve',
-            validate: 'jay-stack validate',
-            'agent-kit': 'jay-stack agent-kit',
-            setup: 'jay-stack setup',
-            clean: 'rimraf dist && rimraf build',
+            setup: 'jay-stack-cli setup',
+            dev: 'jay-stack-cli dev',
+            'agent-kit': 'jay-stack-cli agent-kit',
+            validate: 'jay-stack-cli validate',
+            clean: "rimraf dist && rimraf build && rimraf -g 'src/**/*.d.ts'",
+            definitions: 'jay-cli definitions src',
+            build: 'npm run agent-kit && npm run definitions',
+            'build:production': 'npm run build && jay-stack-cli build',
+            'build:check-types': 'tsc',
+            serve: 'jay-stack-cli serve',
+            ...(hasWixDeploy && {
+                'wix:deploy': 'jay-stack-cli run wix-deploy/deploy --exclude-plugins aiditor',
+                'wix:serve': 'node serve.mjs',
+            }),
+            ...(hasAiditor && {
+                'aiditor:publish': hasWixDeploy
+                    ? 'npm run build:production && npm run wix:deploy'
+                    : "npm run build:production && echo 'add your deploy command here'",
+            }),
         },
         dependencies: sortKeys(deps),
         devDependencies: sortKeys(devDeps),

@@ -431,16 +431,14 @@ export function parseContract(contractYaml: string, fileName: string): WithValid
         let parsedParams: ContractParam[] | undefined;
         if (parsedYaml.params && typeof parsedYaml.params === 'object') {
             if (Array.isArray(parsedYaml.params)) {
-                parsedParams = parsedYaml.params.map(
-                    (p: { name: string; kind?: string }) => ({
-                        name: p.name,
-                        kind: (p.kind === 'optional'
-                            ? 'optional'
-                            : p.kind === 'catch-all'
-                              ? 'catch-all'
-                              : 'required') as ContractParamKind,
-                    }),
-                );
+                parsedParams = parsedYaml.params.map((p: { name: string; kind?: string }) => ({
+                    name: p.name,
+                    kind: (p.kind === 'optional'
+                        ? 'optional'
+                        : p.kind === 'catch-all'
+                          ? 'catch-all'
+                          : 'required') as ContractParamKind,
+                }));
             } else {
                 parsedParams = Object.entries(parsedYaml.params).map(([name, value]) => ({
                     name,

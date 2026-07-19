@@ -27,7 +27,7 @@ export async function runPrompts(): Promise<ProjectConfig> {
 
     const choices = [];
     for (const [group, plugins] of groups) {
-        choices.push({ name: `── ${group} ──`, value: '__separator__', disabled: '' });
+        choices.push({ name: `── ${group} ──`, value: '__separator__', disabled: ' ' });
         for (const plugin of plugins) {
             choices.push({
                 name: `${plugin.label} — ${plugin.description}`,
@@ -40,6 +40,7 @@ export async function runPrompts(): Promise<ProjectConfig> {
     const selected = await checkbox({
         message: 'Select plugins to install:',
         choices,
+        pageSize: process.stdout.rows ? process.stdout.rows - 5 : 20,
     });
 
     const selectedPlugins = PLUGINS.filter((p) => selected.includes(p.name));

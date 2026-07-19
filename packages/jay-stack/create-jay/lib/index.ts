@@ -36,22 +36,22 @@ async function main(): Promise<void> {
 
     console.log(chalk.dim('  Generating agent-kit...'));
     try {
-        run('npx jay-stack agent-kit', projectDir);
+        run('npx jay-stack-cli agent-kit', projectDir);
         console.log(chalk.green('  ✓ Generated agent-kit'));
     } catch {
         console.log(
             chalk.yellow(
-                '  ⚠ Agent-kit generation skipped (can run later with: jay-stack agent-kit)',
+                '  ⚠ Agent-kit generation skipped (can run later with: npm run agent-kit)',
             ),
         );
     }
 
     console.log(chalk.dim('  Running plugin setup...'));
     try {
-        run('npx jay-stack setup', projectDir);
+        run('npx jay-stack-cli setup', projectDir);
         console.log(chalk.green('  ✓ Plugin setup complete'));
     } catch {
-        console.log(chalk.yellow('  ⚠ Setup incomplete (can run later with: jay-stack setup)'));
+        console.log(chalk.yellow('  ⚠ Setup incomplete (can run later with: npm run setup)'));
     }
 
     const runCmd = pm === 'yarn' ? 'yarn dev' : 'npm run dev';
