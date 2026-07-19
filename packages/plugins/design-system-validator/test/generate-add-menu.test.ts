@@ -101,7 +101,9 @@ describe('generateDesignSystemAgentKit', () => {
         await generateDesignSystemAgentKit(ctx);
         const content = readOutput(tempDir);
 
-        const bodyItem = content.items.find((i: any) => i.id === 'design-system:typography-body-md');
+        const bodyItem = content.items.find(
+            (i: any) => i.id === 'design-system:typography-body-md',
+        );
         expect(bodyItem).toBeDefined();
         expect(bodyItem.subCategory).toEqual('Typography');
         expect(bodyItem.prompt).toMatch(/Inter/);
@@ -116,8 +118,12 @@ describe('generateDesignSystemAgentKit', () => {
 
         expect(content.items.find((i: any) => i.id === 'design-system:spacing-sm')).toBeDefined();
         expect(content.items.find((i: any) => i.id === 'design-system:rounded-md')).toBeDefined();
-        expect(content.items.find((i: any) => i.id === 'design-system:breakpoint-mobile')).toBeDefined();
-        expect(content.items.find((i: any) => i.id === 'design-system:animation-fade-in')).toBeDefined();
+        expect(
+            content.items.find((i: any) => i.id === 'design-system:breakpoint-mobile'),
+        ).toBeDefined();
+        expect(
+            content.items.find((i: any) => i.id === 'design-system:animation-fade-in'),
+        ).toBeDefined();
     });
 
     it('generates component items with resolved token values', async () => {

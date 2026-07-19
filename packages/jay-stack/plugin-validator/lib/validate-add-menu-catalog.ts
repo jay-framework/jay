@@ -135,8 +135,12 @@ function extractFunctionBody(source: string, functionName: string): string | nul
         new RegExp(`export\\s+async\\s+function\\s+${functionName}\\b`),
         new RegExp(`export\\s+function\\s+${functionName}\\b`),
         new RegExp(`export\\s+default\\s+async\\s+function\\s+${functionName}\\b`),
-        new RegExp(`export\\s+const\\s+${functionName}\\s*=\\s*async\\s*\\([^)]*\\)\\s*(?::[^{]+)?=>\\s*\\{`),
-        new RegExp(`export\\s+const\\s+${functionName}\\s*=\\s*\\([^)]*\\)\\s*(?::[^{]+)?=>\\s*\\{`),
+        new RegExp(
+            `export\\s+const\\s+${functionName}\\s*=\\s*async\\s*\\([^)]*\\)\\s*(?::[^{]+)?=>\\s*\\{`,
+        ),
+        new RegExp(
+            `export\\s+const\\s+${functionName}\\s*=\\s*\\([^)]*\\)\\s*(?::[^{]+)?=>\\s*\\{`,
+        ),
     ];
 
     for (const pattern of patterns) {

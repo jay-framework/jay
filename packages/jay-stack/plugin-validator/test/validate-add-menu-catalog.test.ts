@@ -202,10 +202,7 @@ describe('validateAddMenuCatalog (validate-plugin step)', () => {
     it('skips when plugin has no catalog yaml', async () => {
         const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jay-add-menu-plugin-'));
         tempDirs.push(dir);
-        fs.writeFileSync(
-            path.join(dir, 'plugin.yaml'),
-            'name: no-catalog-fixture\nsetup: setup\n',
-        );
+        fs.writeFileSync(path.join(dir, 'plugin.yaml'), 'name: no-catalog-fixture\nsetup: setup\n');
 
         const result: ValidationResult = {
             valid: true,

@@ -524,7 +524,13 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
                     'Replace setup.handler with top-level setup: and setup.references with top-level agentkit:',
             });
         } else {
-            validateHandlerRef(manifest.setup, 'Setup handler', 'plugin.yaml setup', context, result);
+            validateHandlerRef(
+                manifest.setup,
+                'Setup handler',
+                'plugin.yaml setup',
+                context,
+                result,
+            );
         }
     }
     if (manifest.agentkit) {
