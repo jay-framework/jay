@@ -10,6 +10,7 @@ import {
 import {
     Contract,
     ContractParam,
+    ContractParamKind,
     ContractProp,
     ContractTag,
     ContractTagType,
@@ -426,21 +427,30 @@ export function parseContract(contractYaml: string, fileName: string): WithValid
         }
 
         // Parse params if present (Design Log #85: URL/load params; always string in generated type)
+        // Supports both object format { slug: string } and array format [{ name: slug, kind: required }]
         let parsedParams: ContractParam[] | undefined;
-        if (
-            parsedYaml.params &&
-            typeof parsedYaml.params === 'object' &&
-            !Array.isArray(parsedYaml.params)
-        ) {
-            parsedParams = Object.entries(parsedYaml.params).map(([name, value]) => ({
-                name,
-                kind:
-                    typeof value === 'string' && value.endsWith('?')
+        if (parsedYaml.params && typeof parsedYaml.params === 'object') {
+            if (Array.isArray(parsedYaml.params)) {
+                parsedParams = parsedYaml.params.map(
+                    (p: { name: string; kind?: string }) => ({
+                        name: p.name,
+                        kind: (p.kind === 'optional'
+                            ? 'optional'
+                            : p.kind === 'catch-all'
+                              ? 'catch-all'
+                              : 'required') as ContractParamKind,
+                    }),
+                );
+            } else {
+                parsedParams = Object.entries(parsedYaml.params).map(([name, value]) => ({
+                    name,
+                    kind: (typeof value === 'string' && value.endsWith('?')
                         ? 'optional'
                         : typeof value === 'string' && value.endsWith('[]')
                           ? 'catch-all'
-                          : 'required',
-            }));
+                          : 'required') as ContractParamKind,
+                }));
+            }
             if (parsedParams.length === 0) parsedParams = undefined;
         }
 

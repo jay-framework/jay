@@ -4,6 +4,7 @@ description: Renders markdown with fast+interactive updates
 props:
   - name: markdown
     kind: required
+    phase: fast+interactive
     description: Markdown string to render
 
 tags:
