@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "jay-stack-cli dev",
     "build": "jay-stack-cli build",
+    "validate": "jay-stack-cli validate",
     "build:check-types": "tsc",
     "clean": "rimraf dist && rimraf build && rimraf -g 'src/**/*.d.ts'",
     "serve": "jay-stack-cli serve --port 4000",

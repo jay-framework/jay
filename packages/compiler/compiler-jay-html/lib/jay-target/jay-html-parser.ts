@@ -20,6 +20,7 @@ import {
 import { ResolveTsConfigOptions } from '@jay-framework/compiler-analyze-exported-types';
 import path from 'path';
 import fs from 'fs/promises';
+import fsSync from 'fs';
 import {
     JayArrayType,
     JayEnumType,
@@ -1425,6 +1426,24 @@ interface ExtractCssResult {
     linkedCssFiles: string[];
 }
 
+function resolveNestedCssImports(css: string, cssDir: string, visited?: Set<string>): string {
+    if (!css.includes('@import')) return css;
+    const seen = visited ?? new Set<string>();
+
+    return css.replace(/@import\s+(?:url\(\s*)?['"]([^'"]+)['"]\s*\)?;?/g, (match, importPath) => {
+        if (importPath.startsWith('http') || importPath.startsWith('//')) return match;
+        const resolved = path.resolve(cssDir, importPath);
+        if (seen.has(resolved)) return `/* circular import: ${importPath} */`;
+        seen.add(resolved);
+        try {
+            const imported = fsSync.readFileSync(resolved, 'utf-8');
+            return `/* @import ${importPath} */\n${resolveNestedCssImports(imported, path.dirname(resolved), seen)}`;
+        } catch {
+            return `/* @import not found: ${importPath} */`;
+        }
+    });
+}
+
 async function extractCss(
     root: HTMLElement,
     filePath: string,
@@ -1457,9 +1476,12 @@ async function extractCss(
 
                 try {
                     const cssContent = await fs.readFile(cssFilePath, 'utf-8');
-                    cssParts.push(`/* External CSS: ${href} */\n${cssContent}`);
+                    const resolvedCss = resolveNestedCssImports(
+                        cssContent,
+                        path.dirname(cssFilePath),
+                    );
+                    cssParts.push(`/* External CSS: ${href} */\n${resolvedCss}`);
                 } catch (error) {
-                    // If the file doesn't exist or can't be read, add validation error
                     validations.push(`CSS file not found or unreadable: ${href}`);
                 }
             } else {
