@@ -109,4 +109,15 @@ export function scaffoldProject(
     if (hasDesignValidator) {
         writeFile(projectDir, 'DESIGN.md', readTemplate('DESIGN.md'));
     }
+
+    const hasWixMembers = selectedPlugins.some(
+        (p) => p.name === '@jay-framework/wix-members',
+    );
+    if (hasWixMembers) {
+        writeFile(
+            projectDir,
+            'src/pages/auth/callback/page.jay-html',
+            readTemplate('auth-callback.jay-html'),
+        );
+    }
 }

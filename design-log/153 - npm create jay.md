@@ -273,3 +273,52 @@ Minimal dependencies — the create package should install fast.
 5. Banner displays with correct next steps
 6. `yarn jay-stack setup` runs after manual step
 7. `yarn dev` starts the dev server and the page renders
+
+---
+
+## Implementation Results
+
+### Dependency changes
+
+- **Removed `@jay-framework/dev-environment`** from core devDeps — was an internal monorepo package. `tsconfig.json` is now self-contained with all compiler options inlined.
+- **Removed `@jay-framework/runtime`, `@jay-framework/stack-client-runtime`, `@jay-framework/stack-server-runtime`, `@jay-framework/compiler-jay-stack`** from core — not needed as direct project dependencies.
+- **Core dependencies** reduced to: `fullstack-component` + `jay-stack-cli`
+- **Core devDependencies**: `aiditor`, `jay-cli`, `@types/node`, `rimraf`, `typescript`, `vite` — with pinned versions instead of `latest`
+- **AIditor** moved from selectable plugin to always-installed devDependency
+
+### Scripts updated
+
+All scripts use `jay-stack-cli` (not `jay-stack`). Added `definitions`, `build:production`, `build:check-types`. Conditional `wix:deploy`, `wix:serve` (when wix-deploy selected), `aiditor:publish` (always, content varies by wix-deploy presence).
+
+### CLAUDE.md generated
+
+Every scaffolded project gets a `CLAUDE.md` pointing at the `/jay` skill and the agent-kit.
+
+### Welcome page redesign
+
+The default `page.jay-html` now features:
+- Animated hero title using `@jay-framework/ui-kit` letter-split with CSS wave animation
+- CTA button linking to `/aiditor`
+- Three step cards (AIditor, coding agent, direct editing) with staggered fade-in
+
+### Wix setup flow
+
+When any `@jay-framework/wix-*` plugin is selected:
+1. **API key prompt** — shown before `npm install`, with link to Wix API key management
+2. **`npm create @wix/new@latest init`** — creates `wix.config.json` with `appId` and `siteId`
+3. **`config/.wix.yaml` creation** — fills `apiKey` (from prompt), `siteId` (from wix.config.json), `clientId` (from `appId`)
+4. **`.gitignore` update** — ensures credentials file is not committed
+5. Agent-kit and setup run after Wix credentials are in place
+
+### Plugin selector improvements
+
+- `pageSize` uses terminal height so all plugins are visible without scrolling
+- Group separator headings are disabled (can't be selected)
+
+### Contract params parser fix
+
+The contract parser now supports both object format (`params: { slug: string }`) and array format (`params: [{ name: slug, kind: required }]`). Array format is consistent with `props` and supports `kind` (required/optional/catch-all).
+
+### Auth callback page for wix-members
+
+When `@jay-framework/wix-members` is selected, the scaffolder generates `src/pages/auth/callback/page.jay-html` — a minimal auth callback page using the `auth-callback` headless contract. Shows "Signing you in..." during processing and an error message with homepage link on failure. Uses the project's `theme.css` custom properties.
