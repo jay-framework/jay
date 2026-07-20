@@ -33,7 +33,7 @@ function generatePackageJson(name: string, selectedPlugins: PluginEntry[]): stri
     }
 
     const hasWixDeploy = selectedPlugins.some((p) => p.name === '@jay-framework/wix-deploy');
-    const hasAiditor = selectedPlugins.some((p) => p.name === '@jay-framework/aiditor');
+    const hasAiditor = true;
 
     const pkg = {
         name,

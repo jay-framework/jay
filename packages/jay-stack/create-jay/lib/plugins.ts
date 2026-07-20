@@ -96,14 +96,6 @@ export const PLUGINS: PluginEntry[] = [
         checked: false,
         isDep: true,
     },
-    {
-        name: '@jay-framework/aiditor',
-        label: 'AIditor',
-        description: 'Visual AI editor: point-and-shoot editing with Claude',
-        group: 'AIditor',
-        checked: true,
-        isDep: true,
-    },
 ];
 
 export const CORE_DEPS: Record<string, string> = {
