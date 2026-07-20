@@ -101,7 +101,7 @@ export const PLUGINS: PluginEntry[] = [
         label: 'AIditor',
         description: 'Visual AI editor: point-and-shoot editing with Claude',
         group: 'AIditor',
-        checked: false,
+        checked: true,
         isDep: true,
     },
 ];
