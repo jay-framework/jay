@@ -95,16 +95,23 @@ oauthStrategy:
         'utf-8',
     );
 
-    // Ensure .gitignore excludes the credentials file
+    // Ensure .gitignore excludes credentials and generated config
     const gitignorePath = path.join(projectDir, '.gitignore');
-    const gitignoreEntry = 'config/.wix.yaml';
+    const gitignoreEntries = ['config/.wix.yaml', 'wix.config.json'];
     if (fs.existsSync(gitignorePath)) {
-        const content = fs.readFileSync(gitignorePath, 'utf-8');
-        if (!content.includes(gitignoreEntry)) {
-            fs.appendFileSync(gitignorePath, `\n${gitignoreEntry}\n`);
+        let content = fs.readFileSync(gitignorePath, 'utf-8');
+        for (const entry of gitignoreEntries) {
+            if (!content.includes(entry)) {
+                content += `\n${entry}`;
+            }
         }
+        fs.writeFileSync(gitignorePath, content.trimEnd() + '\n', 'utf-8');
     } else {
-        fs.writeFileSync(gitignorePath, `node_modules\ndist\nbuild\n${gitignoreEntry}\n`, 'utf-8');
+        fs.writeFileSync(
+            gitignorePath,
+            `node_modules\ndist\nbuild\n${gitignoreEntries.join('\n')}\n`,
+            'utf-8',
+        );
     }
 
     console.log(chalk.green('  ✓ Wix credentials configured'));
