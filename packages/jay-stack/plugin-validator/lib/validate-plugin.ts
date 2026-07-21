@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import YAML from 'yaml';
-import { loadPluginManifest } from '@jay-framework/compiler-shared';
+import { loadPluginManifest, type PluginManifest } from '@jay-framework/compiler-shared';
 import { parseContract } from '@jay-framework/compiler-jay-html';
 import { ts } from '@jay-framework/typescript-bridge';
 import type { ValidatePluginOptions, ValidationResult, PluginContext } from './types';
@@ -470,6 +470,31 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
                 if (route.css) {
                     validateDocFile(route.css, `route "${route.path}" css`, context, result);
                 }
+            });
+        }
+    }
+
+    const aiditorSettings = (
+        manifest as PluginManifest & {
+            aiditor?: { settings?: { route?: string; label?: string } };
+        }
+    ).aiditor?.settings;
+    if (aiditorSettings?.route) {
+        const routePaths = new Set((manifest.routes ?? []).map((route) => route.path));
+        if (!routePaths.has(aiditorSettings.route)) {
+            result.warnings.push({
+                type: 'schema',
+                message: `aiditor.settings.route "${aiditorSettings.route}" is not declared in plugin.yaml routes[]`,
+                location: 'plugin.yaml aiditor.settings',
+                suggestion:
+                    'Add a matching routes[] entry for the settings page or fix aiditor.settings.route',
+            });
+        }
+        if (!aiditorSettings.label?.trim()) {
+            result.warnings.push({
+                type: 'schema',
+                message: 'aiditor.settings.label is missing — Project settings tabs use label text in v1',
+                location: 'plugin.yaml aiditor.settings',
             });
         }
     }
