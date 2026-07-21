@@ -493,7 +493,8 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
         if (!aiditorSettings.label?.trim()) {
             result.warnings.push({
                 type: 'schema',
-                message: 'aiditor.settings.label is missing — Project settings tabs use label text in v1',
+                message:
+                    'aiditor.settings.label is missing — Project settings tabs use label text in v1',
                 location: 'plugin.yaml aiditor.settings',
             });
         }
