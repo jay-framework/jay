@@ -24,11 +24,7 @@ async function promptWixApiKey(): Promise<string> {
     console.log('');
     console.log(chalk.bold('  Wix Setup'));
     console.log('');
-    console.log(
-        chalk.dim(
-            '  Wix plugins require API credentials. Create an API key at:',
-        ),
-    );
+    console.log(chalk.dim('  Wix plugins require API credentials. Create an API key at:'));
     console.log(chalk.cyan('  https://manage.wix.com/account/api-keys'));
     console.log('');
 
@@ -39,6 +35,23 @@ async function promptWixApiKey(): Promise<string> {
 }
 
 async function setupWix(projectDir: string, apiKey: string): Promise<void> {
+    // Check if user is logged in to Wix CLI
+    let loggedIn = false;
+    try {
+        execSync('npx @wix/cli whoami', { cwd: projectDir, stdio: 'pipe' });
+        loggedIn = true;
+    } catch {}
+
+    if (!loggedIn) {
+        console.log(chalk.dim('  You need to log in to Wix to connect your site.'));
+        try {
+            run('npx @wix/cli login', projectDir);
+        } catch {
+            console.log(chalk.yellow('  ⚠ Wix login failed — run `npx @wix/cli login` manually'));
+            return;
+        }
+    }
+
     console.log(chalk.dim('  Connecting to your Wix site...'));
     try {
         run('npm create @wix/new@latest init', projectDir);

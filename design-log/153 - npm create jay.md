@@ -297,6 +297,7 @@ Every scaffolded project gets a `CLAUDE.md` pointing at the `/jay` skill and the
 ### Welcome page redesign
 
 The default `page.jay-html` now features:
+
 - Animated hero title using `@jay-framework/ui-kit` letter-split with CSS wave animation
 - CTA button linking to `/aiditor`
 - Three step cards (AIditor, coding agent, direct editing) with staggered fade-in
@@ -304,6 +305,7 @@ The default `page.jay-html` now features:
 ### Wix setup flow
 
 When any `@jay-framework/wix-*` plugin is selected:
+
 1. **API key prompt** — shown before `npm install`, with link to Wix API key management
 2. **`npm create @wix/new@latest init`** — creates `wix.config.json` with `appId` and `siteId`
 3. **`config/.wix.yaml` creation** — fills `apiKey` (from prompt), `siteId` (from wix.config.json), `clientId` (from `appId`)

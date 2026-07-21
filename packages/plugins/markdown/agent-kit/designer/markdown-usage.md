@@ -101,24 +101,24 @@ const hello = 'world';
 
 ### CSS classes
 
-| Class | Element | Purpose |
-|---|---|---|
-| `.md-code` | `<pre>` | Code block container |
+| Class              | Element  | Purpose                                            |
+| ------------------ | -------- | -------------------------------------------------- |
+| `.md-code`         | `<pre>`  | Code block container                               |
 | `.language-{lang}` | `<code>` | Language identifier (e.g., `.language-typescript`) |
 
 ### Token classes (inside `<code>`)
 
-| Class | Colors in default theme | Used for |
-|---|---|---|
-| `.token.keyword` | `#8b5cf6` (purple) | `const`, `function`, `if`, `return`, `import`, `def`, `class` |
-| `.token.string` | `#059669` (green) | `'hello'`, `"world"`, `` `template` `` |
-| `.token.comment` | `#94a3b8` (gray, italic) | `// comment`, `/* block */`, `# comment` |
-| `.token.number` | `#d97706` (amber) | `42`, `3.14`, `16px` |
-| `.token.function` | `#2563eb` (blue) | `greet(`, `console.log(` |
-| `.token.operator` | `#64748b` (slate) | `=`, `+`, `=>`, `&&` |
-| `.token.punctuation` | `#94a3b8` (gray) | `{}`, `()`, `;`, `,` |
-| `.token.tag` | `#dc2626` (red) | HTML tags: `<div`, `</span` |
-| `.token.attribute` | `#d97706` (amber) | HTML attributes: `class=`, `href=` |
+| Class                | Colors in default theme  | Used for                                                      |
+| -------------------- | ------------------------ | ------------------------------------------------------------- |
+| `.token.keyword`     | `#8b5cf6` (purple)       | `const`, `function`, `if`, `return`, `import`, `def`, `class` |
+| `.token.string`      | `#059669` (green)        | `'hello'`, `"world"`, `` `template` ``                        |
+| `.token.comment`     | `#94a3b8` (gray, italic) | `// comment`, `/* block */`, `# comment`                      |
+| `.token.number`      | `#d97706` (amber)        | `42`, `3.14`, `16px`                                          |
+| `.token.function`    | `#2563eb` (blue)         | `greet(`, `console.log(`                                      |
+| `.token.operator`    | `#64748b` (slate)        | `=`, `+`, `=>`, `&&`                                          |
+| `.token.punctuation` | `#94a3b8` (gray)         | `{}`, `()`, `;`, `,`                                          |
+| `.token.tag`         | `#dc2626` (red)          | HTML tags: `<div`, `</span`                                   |
+| `.token.attribute`   | `#d97706` (amber)        | HTML attributes: `class=`, `href=`                            |
 
 ## Mermaid Diagrams
 
@@ -134,6 +134,7 @@ graph LR
 ### Output structure
 
 **Server (markdown-pages, markdown-content):**
+
 ```html
 <div class="md-mermaid">
   <svg>...</svg>
@@ -141,21 +142,24 @@ graph LR
 ```
 
 **Client fallback (markdown-live):**
+
 ```html
 <div class="md-mermaid">
-  <pre class="md-mermaid-source">graph LR
-  A[Start] --> B[End]</pre>
+  <pre class="md-mermaid-source">
+graph LR
+  A[Start] --> B[End]</pre
+  >
 </div>
 ```
 
 ### CSS classes
 
-| Class | Element | Purpose |
-|---|---|---|
-| `.md-mermaid` | `<div>` | Mermaid diagram container (centered, with margin) |
-| `.md-mermaid svg` | `<svg>` | The rendered SVG diagram (max-width: 100%) |
-| `.md-mermaid-source` | `<pre>` | Raw mermaid source (client fallback only) |
-| `.md-mermaid-error` | `<pre>` | Error message when rendering fails |
+| Class                | Element | Purpose                                           |
+| -------------------- | ------- | ------------------------------------------------- |
+| `.md-mermaid`        | `<div>` | Mermaid diagram container (centered, with margin) |
+| `.md-mermaid svg`    | `<svg>` | The rendered SVG diagram (max-width: 100%)        |
+| `.md-mermaid-source` | `<pre>` | Raw mermaid source (client fallback only)         |
+| `.md-mermaid-error`  | `<pre>` | Error message when rendering fails                |
 
 ## Theme CSS
 

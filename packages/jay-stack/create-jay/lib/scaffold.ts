@@ -114,9 +114,7 @@ export function scaffoldProject(
         writeFile(projectDir, 'DESIGN.md', readTemplate('DESIGN.md'));
     }
 
-    const hasWixMembers = selectedPlugins.some(
-        (p) => p.name === '@jay-framework/wix-members',
-    );
+    const hasWixMembers = selectedPlugins.some((p) => p.name === '@jay-framework/wix-members');
     if (hasWixMembers) {
         writeFile(
             projectDir,

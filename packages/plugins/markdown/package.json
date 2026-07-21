@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/markdown",
-  "version": "0.21.0",
+  "version": "0.22.0",
   "type": "module",
   "description": "Markdown rendering plugin for Jay Framework — pages from directories, inline content, code highlighting, mermaid diagrams",
   "license": "Apache-2.0",
