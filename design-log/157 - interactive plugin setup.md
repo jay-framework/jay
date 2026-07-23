@@ -251,18 +251,23 @@ jay-stack-cli setup --no-interactive    # Same as default (explicit)
 `create-jay` supports both humans and agents:
 
 **Human (default — no flags):**
+
 ```bash
 npm create jay
 ```
+
 Interactive prompts for project name and plugin selection, then runs `jay-stack-cli setup --interactive`.
 
 **Agent (with flags):**
+
 ```bash
 npm create jay -- --name my-project --plugins wix-stores,wix-cart,ui-kit
 ```
+
 Skips prompts, scaffolds with provided values, runs `jay-stack-cli setup` (non-interactive — agent handles setup answers separately).
 
 **Flags:**
+
 - `--name <name>` — project name (skips name prompt)
 - `--plugins <list>` — comma-separated plugin names (skips plugin selection)
 - When both flags are provided, no interactive prompts are shown
