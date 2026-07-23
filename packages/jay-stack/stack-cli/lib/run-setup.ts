@@ -9,7 +9,9 @@
  * See Design Log #87.
  */
 
+import fs from 'node:fs';
 import chalk from 'chalk';
+import YAML from 'yaml';
 import { createViteForCli } from '@jay-framework/dev-server';
 import { getLogger } from '@jay-framework/logger';
 import { SetupNeedsAnswerError } from '@jay-framework/stack-server-runtime';
@@ -92,8 +94,6 @@ export async function runSetup(
         const interactive = options.interactive === true;
         let answersMap: Record<string, string> | undefined;
         if (options.answers) {
-            const fs = await import('node:fs');
-            const YAML = await import('yaml');
             answersMap = YAML.parse(fs.readFileSync(options.answers, 'utf-8')) || {};
         }
 
@@ -181,12 +181,13 @@ export async function runSetup(
                         }
                     }
                     logger.important('');
-                    logger.important(
-                        chalk.gray(
-                            `Provide the answer: jay-stack-cli setup --answers answers.yaml`,
-                        ),
-                    );
-                    logger.important(chalk.gray(`answers.yaml format:\n  ${error.key}: "your-answer"`));
+                    logger.important(chalk.gray('Provide the answer via file:'));
+                    logger.important(chalk.gray(`  jay-stack-cli setup --answers answers.yaml`));
+                    logger.important(chalk.gray(`  answers.yaml format:`));
+                    logger.important(chalk.gray(`    ${error.key}: "your-answer"`));
+                    logger.important('');
+                    logger.important(chalk.gray('Or run interactively:'));
+                    logger.important(chalk.gray(`  jay-stack-cli setup --interactive`));
                 } else {
                     errors++;
                     logger.important(chalk.red(`   ❌ Setup failed: ${error.message}`));

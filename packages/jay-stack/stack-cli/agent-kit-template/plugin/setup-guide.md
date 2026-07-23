@@ -115,16 +115,53 @@ export async function setupMyPlugin(ctx: PluginSetupContext): Promise<PluginSetu
 }
 ```
 
-### Interactive vs non-interactive mode
+### Setup modes
 
-Setup runs in two modes:
+Setup runs in three modes:
 
 | Mode | Command | `ctx.interactive` | `ctx.prompt` behavior |
 |---|---|---|---|
-| **Interactive** (default) | `jay-stack-cli setup` | `true` | Prompts the user for real input |
-| **Non-interactive** (CI/scripts) | `jay-stack-cli setup --no-interactive` | `false` | Returns empty string / defaults without prompting |
+| **Default** (agents, CI) | `jay-stack-cli setup` | `false` | Throws `SetupNeedsAnswerError` with structured output |
+| **Interactive** (humans) | `jay-stack-cli setup --interactive` | `true` | Prompts via terminal |
+| **Answers file** (automation) | `jay-stack-cli setup --answers file.yaml` | `false` | Reads from file, throws if missing |
 
-**Best practice:** Always check `ctx.interactive` before prompting. In non-interactive mode, create config templates with placeholders and return `needs-config` so the user knows to fill them in.
+In default mode, when a prompt has no answer, the CLI exits with structured YAML telling the caller what's needed. Agents can then provide the answer via `--answers` and re-run.
+
+### Idempotency requirement
+
+Setup handlers **must be idempotent** — re-running with the same answers must produce the same result without side effects. This is critical because:
+
+- Agents re-run setup iteratively as they provide answers one at a time
+- Users re-run setup after fixing credentials
+- CI pipelines may run setup on every deploy
+
+**Rules:**
+1. Check if config already exists before creating it — skip if present (unless `ctx.force`)
+2. Check if credentials are already valid before prompting — skip if configured
+3. Never append to files — write the complete content each time
+4. Use `ctx.force` to allow explicit re-creation when the user asks for it
+
+```typescript
+export async function setupMyPlugin(ctx: PluginSetupContext): Promise<PluginSetupResult> {
+  const configPath = path.join(ctx.configDir, '.my-plugin.yaml');
+
+  // Idempotent: skip if already configured (unless --force)
+  if (fs.existsSync(configPath) && !ctx.force) {
+    // Optionally validate the existing config
+    return { status: 'configured', message: 'Already configured' };
+  }
+
+  // Prompt only when needed
+  const apiKey = await ctx.prompt.input({
+    key: 'api-key',
+    message: 'Enter your API key:',
+  });
+
+  // Write complete config (not append)
+  fs.writeFileSync(configPath, `apiKey: "${apiKey}"\n`);
+  return { status: 'configured', configCreated: ['config/.my-plugin.yaml'] };
+}
+```
 
 ### PluginSetupContext
 
