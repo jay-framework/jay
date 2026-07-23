@@ -246,9 +246,26 @@ jay-stack-cli setup --answers file.yaml # Reads answers from file
 jay-stack-cli setup --no-interactive    # Same as default (explicit)
 ```
 
-### create-jay uses --interactive
+### create-jay: interactive and non-interactive
 
-`create-jay` runs `npx jay-stack-cli setup --interactive` after install — this is the human flow where terminal prompts work.
+`create-jay` supports both humans and agents:
+
+**Human (default — no flags):**
+```bash
+npm create jay
+```
+Interactive prompts for project name and plugin selection, then runs `jay-stack-cli setup --interactive`.
+
+**Agent (with flags):**
+```bash
+npm create jay -- --name my-project --plugins wix-stores,wix-cart,ui-kit
+```
+Skips prompts, scaffolds with provided values, runs `jay-stack-cli setup` (non-interactive — agent handles setup answers separately).
+
+**Flags:**
+- `--name <name>` — project name (skips name prompt)
+- `--plugins <list>` — comma-separated plugin names (skips plugin selection)
+- When both flags are provided, no interactive prompts are shown
 
 ## Verification Criteria
 
@@ -257,8 +274,9 @@ jay-stack-cli setup --no-interactive    # Same as default (explicit)
 3. `jay-stack-cli setup --answers file.yaml` reads answers and configures plugins
 4. Iterative flow: agent provides one answer at a time, re-runs until all configured
 5. Handlers are idempotent — re-running with same answers is a no-op
-6. `create-jay` uses `--interactive` flag for human flow
-7. Existing handlers without prompts continue to work unchanged
+6. `create-jay` with no flags prompts interactively, runs `setup --interactive`
+7. `create-jay --name x --plugins y` scaffolds without prompts, runs `setup` (non-interactive)
+8. Existing handlers without prompts continue to work unchanged
 
 ---
 

@@ -3,6 +3,7 @@ import { execSync } from 'node:child_process';
 import chalk from 'chalk';
 import { runPrompts } from './prompts.js';
 import { scaffoldProject } from './scaffold.js';
+import { PLUGINS } from './plugins.js';
 
 function detectPackageManager(): 'yarn' | 'npm' {
     const agent = process.env.npm_config_user_agent || '';
@@ -14,20 +15,51 @@ function run(cmd: string, cwd: string): void {
     execSync(cmd, { cwd, stdio: 'inherit' });
 }
 
+function parseArgs(): { name?: string; plugins?: string } {
+    const args = process.argv.slice(2);
+    const result: { name?: string; plugins?: string } = {};
+    for (let i = 0; i < args.length; i++) {
+        if (args[i] === '--name' && args[i + 1]) {
+            result.name = args[++i];
+        } else if (args[i] === '--plugins' && args[i + 1]) {
+            result.plugins = args[++i];
+        }
+    }
+    return result;
+}
+
 async function main(): Promise<void> {
     const pm = detectPackageManager();
+    const cliArgs = parseArgs();
+    const isNonInteractive = !!(cliArgs.name && cliArgs.plugins !== undefined);
 
     console.log('');
     console.log(chalk.bold('  Create Jay Stack Project'));
     console.log('');
 
-    const config = await runPrompts();
-    const projectDir = path.resolve(process.cwd(), config.name);
+    let name: string;
+    let selectedPlugins: typeof PLUGINS;
+
+    if (isNonInteractive) {
+        name = cliArgs.name!;
+        const requested = cliArgs.plugins
+            ? cliArgs.plugins.split(',').map((s) => s.trim())
+            : [];
+        selectedPlugins = PLUGINS.filter(
+            (p) => requested.includes(p.name) || requested.includes(p.label.toLowerCase()),
+        );
+    } else {
+        const config = await runPrompts();
+        name = config.name;
+        selectedPlugins = config.selectedPlugins;
+    }
+
+    const projectDir = path.resolve(process.cwd(), name);
 
     console.log('');
-    console.log(`Creating project in ${chalk.cyan(`./${config.name}`)}...`);
+    console.log(`Creating project in ${chalk.cyan(`./${name}`)}...`);
 
-    scaffoldProject(projectDir, config.name, config.selectedPlugins);
+    scaffoldProject(projectDir, name, selectedPlugins);
     console.log(chalk.green('  ✓ Created project structure'));
 
     console.log(chalk.dim('  Installing dependencies...'));
@@ -46,9 +78,10 @@ async function main(): Promise<void> {
         );
     }
 
+    const setupFlag = isNonInteractive ? '' : ' --interactive';
     console.log(chalk.dim('  Running plugin setup...'));
     try {
-        run('npx jay-stack-cli setup --interactive', projectDir);
+        run(`npx jay-stack-cli setup${setupFlag}`, projectDir);
         console.log(chalk.green('  ✓ Plugin setup complete'));
     } catch {
         console.log(chalk.yellow('  ⚠ Setup incomplete (can run later with: npm run setup)'));
@@ -59,7 +92,7 @@ async function main(): Promise<void> {
     console.log('');
     console.log(chalk.bold('  Ready!'));
     console.log('');
-    console.log(`  ${chalk.cyan(`cd ${config.name}`)}`);
+    console.log(`  ${chalk.cyan(`cd ${name}`)}`);
     console.log(`  ${chalk.cyan(runCmd)}`);
     console.log('');
 }
