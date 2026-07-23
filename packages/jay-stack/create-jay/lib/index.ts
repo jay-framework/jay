@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { execSync } from 'node:child_process';
 import chalk from 'chalk';
-import { runPrompts } from './prompts.js';
+import { runPrompts, validateProjectName } from './prompts.js';
 import { scaffoldProject } from './scaffold.js';
 import { PLUGINS } from './plugins.js';
 
@@ -42,9 +42,12 @@ async function main(): Promise<void> {
 
     if (isNonInteractive) {
         name = cliArgs.name!;
-        const requested = cliArgs.plugins
-            ? cliArgs.plugins.split(',').map((s) => s.trim())
-            : [];
+        const nameError = validateProjectName(name);
+        if (nameError !== true) {
+            console.error(chalk.red(`  Error: ${nameError}`));
+            process.exit(1);
+        }
+        const requested = cliArgs.plugins ? cliArgs.plugins.split(',').map((s) => s.trim()) : [];
         selectedPlugins = PLUGINS.filter(
             (p) => requested.includes(p.name) || requested.includes(p.label.toLowerCase()),
         );
@@ -78,13 +81,26 @@ async function main(): Promise<void> {
         );
     }
 
-    const setupFlag = isNonInteractive ? '' : ' --interactive';
     console.log(chalk.dim('  Running plugin setup...'));
     try {
-        run(`npx jay-stack-cli setup${setupFlag}`, projectDir);
+        const setupCmd = isNonInteractive
+            ? 'npx jay-stack-cli setup'
+            : 'npx jay-stack-cli setup --interactive';
+        run(setupCmd, projectDir);
         console.log(chalk.green('  ✓ Plugin setup complete'));
     } catch {
-        console.log(chalk.yellow('  ⚠ Setup incomplete (can run later with: npm run setup)'));
+        if (!isNonInteractive) {
+            try {
+                run('npx jay-stack-cli setup', projectDir);
+                console.log(chalk.green('  ✓ Plugin setup complete'));
+            } catch {
+                console.log(
+                    chalk.yellow('  ⚠ Setup incomplete (can run later with: npm run setup)'),
+                );
+            }
+        } else {
+            console.log(chalk.yellow('  ⚠ Setup incomplete (can run later with: npm run setup)'));
+        }
     }
 
     const runCmd = pm === 'yarn' ? 'yarn dev' : 'npm run dev';

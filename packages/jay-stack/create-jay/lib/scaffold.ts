@@ -23,13 +23,13 @@ function writeFile(projectDir: string, relativePath: string, content: string): v
 
 function generatePackageJson(name: string, selectedPlugins: PluginEntry[]): string {
     const deps: Record<string, string> = { ...CORE_DEPS };
-    const hasWixPlugins = selectedPlugins.some((p) => p.name.startsWith('@jay-framework/wix-'));
     for (const plugin of selectedPlugins) {
         if (plugin.isDep) deps[plugin.name] = 'latest';
     }
-    if (hasWixPlugins && !deps['@jay-framework/wix-server-client']) {
-        deps['@jay-framework/wix-server-client'] = 'latest';
-    }
+    const hasWixPlugins = selectedPlugins.some((p) => p.name.startsWith('@jay-framework/wix-'));
+    const hasWixStores = selectedPlugins.some((p) => p.name === '@jay-framework/wix-stores');
+    if (hasWixPlugins) deps['@jay-framework/wix-server-client'] = 'latest';
+    if (hasWixStores) deps['@jay-framework/wix-cart'] = 'latest';
 
     const devDeps: Record<string, string> = { ...CORE_DEV_DEPS };
     for (const plugin of selectedPlugins) {
