@@ -158,6 +158,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 146  | css performance fixes                  | CSS minification in production build, preload hints for route CSS                            |
 | 150  | build content hash                     | SHA-256 content hash of build output for deployment client/server sync                       |
 | 153  | npm create jay                         | Interactive project scaffolding: name, plugin selection, agent-kit, setup banner             |
+| 158  | staged npm publish                     | Two-phase publish: stage all packages without OTP, then bulk-approve with single OTP         |
 | 147  | jay-html validation rules catalog      | Complete catalog of all validation rules across wix-media, SEO, and a11y                     |
 
 ---
