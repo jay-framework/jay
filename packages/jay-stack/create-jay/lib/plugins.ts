@@ -83,13 +83,13 @@ export const PLUGINS: PluginEntry[] = [
 ];
 
 export const CORE_DEPS: Record<string, string> = {
-    '@jay-framework/fullstack-component': '^0.21.0',
-    '@jay-framework/jay-stack-cli': '^0.21.0',
+    '@jay-framework/fullstack-component': 'latest',
+    '@jay-framework/jay-stack-cli': 'latest',
 };
 
 export const CORE_DEV_DEPS: Record<string, string> = {
-    '@jay-framework/aiditor': '^0.21.0',
-    '@jay-framework/jay-cli': '^0.21.0',
+    '@jay-framework/aiditor': 'latest',
+    '@jay-framework/jay-cli': 'latest',
     '@types/node': '^22.10.0',
     rimraf: '^6.0.0',
     typescript: '~5.7.2',

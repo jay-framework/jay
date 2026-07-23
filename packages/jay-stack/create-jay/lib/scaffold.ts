@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execFile } from 'node:child_process';
 import { CORE_DEPS, CORE_DEV_DEPS, type PluginEntry } from './plugins.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -21,7 +22,7 @@ function writeFile(projectDir: string, relativePath: string, content: string): v
     fs.writeFileSync(fullPath, content, 'utf-8');
 }
 
-function generatePackageJson(name: string, selectedPlugins: PluginEntry[]): string {
+async function generatePackageJson(name: string, selectedPlugins: PluginEntry[]): Promise<string> {
     const deps: Record<string, string> = { ...CORE_DEPS };
     for (const plugin of selectedPlugins) {
         if (plugin.isDep) deps[plugin.name] = 'latest';
@@ -35,6 +36,11 @@ function generatePackageJson(name: string, selectedPlugins: PluginEntry[]): stri
     for (const plugin of selectedPlugins) {
         if (!plugin.isDep) devDeps[plugin.name] = 'latest';
     }
+
+    const [resolvedDeps, resolvedDevDeps] = await Promise.all([
+        resolveLatestVersions(deps),
+        resolveLatestVersions(devDeps),
+    ]);
 
     const hasWixDeploy = selectedPlugins.some((p) => p.name === '@jay-framework/wix-deploy');
     const hasAiditor = true;
@@ -65,8 +71,8 @@ function generatePackageJson(name: string, selectedPlugins: PluginEntry[]): stri
                     : "npm run build:production && echo 'add your deploy command here'",
             }),
         },
-        dependencies: sortKeys(deps),
-        devDependencies: sortKeys(devDeps),
+        dependencies: sortKeys(resolvedDeps),
+        devDependencies: sortKeys(resolvedDevDeps),
     };
 
     return JSON.stringify(pkg, null, 2) + '\n';
@@ -80,14 +86,39 @@ function sortKeys(obj: Record<string, string>): Record<string, string> {
     return sorted;
 }
 
-export function scaffoldProject(
+function resolveLatestVersion(pkg: string): Promise<string> {
+    return new Promise((resolve) => {
+        execFile('npm', ['view', pkg, 'version'], { encoding: 'utf-8' }, (err, stdout) => {
+            if (err || !stdout.trim()) {
+                resolve('latest');
+            } else {
+                resolve(`^${stdout.trim()}`);
+            }
+        });
+    });
+}
+
+async function resolveLatestVersions(deps: Record<string, string>): Promise<Record<string, string>> {
+    const entries = Object.entries(deps);
+    const resolved = await Promise.all(
+        entries.map(async ([name, version]) => {
+            if (version === 'latest') {
+                return [name, await resolveLatestVersion(name)] as const;
+            }
+            return [name, version] as const;
+        }),
+    );
+    return Object.fromEntries(resolved);
+}
+
+export async function scaffoldProject(
     projectDir: string,
     name: string,
     selectedPlugins: PluginEntry[],
-): void {
+): Promise<void> {
     fs.mkdirSync(projectDir, { recursive: true });
 
-    writeFile(projectDir, 'package.json', generatePackageJson(name, selectedPlugins));
+    writeFile(projectDir, 'package.json', await generatePackageJson(name, selectedPlugins));
     writeFile(
         projectDir,
         'src/pages/page.jay-html',
