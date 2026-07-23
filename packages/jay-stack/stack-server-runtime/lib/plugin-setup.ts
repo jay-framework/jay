@@ -28,6 +28,19 @@ import { getLogger } from '@jay-framework/logger';
 // ============================================================================
 
 /**
+ * Prompt functions available to setup handlers in interactive mode.
+ * In non-interactive mode, these return defaults without prompting.
+ */
+export interface PluginSetupPrompt {
+    input(options: { message: string; validate?: (v: string) => boolean | string }): Promise<string>;
+    confirm(options: { message: string; default?: boolean }): Promise<boolean>;
+    select(options: {
+        message: string;
+        choices: Array<{ name: string; value: string }>;
+    }): Promise<string>;
+}
+
+/**
  * Context passed to a plugin's setup handler.
  * Setup handles config creation and service validation only.
  */
@@ -44,6 +57,10 @@ export interface PluginSetupContext {
     initError?: Error;
     /** Whether --force flag was passed */
     force: boolean;
+    /** Whether running in interactive mode (can prompt user) */
+    interactive: boolean;
+    /** Prompt functions for interactive user input */
+    prompt: PluginSetupPrompt;
 }
 
 /**
@@ -261,12 +278,14 @@ export async function executePluginSetup(
         projectRoot: string;
         configDir: string;
         force: boolean;
+        interactive: boolean;
+        prompt: PluginSetupPrompt;
         initError?: Error;
         viteServer?: ViteSSRLoader;
         verbose?: boolean;
     },
 ): Promise<PluginSetupResult> {
-    const { projectRoot, configDir, force, initError, viteServer } = options;
+    const { projectRoot, configDir, force, interactive, prompt, initError, viteServer } = options;
 
     const context: PluginSetupContext = {
         pluginName: plugin.name,
@@ -275,6 +294,8 @@ export async function executePluginSetup(
         services: getServiceRegistry(),
         initError,
         force,
+        interactive,
+        prompt,
     };
 
     // Load the setup handler module

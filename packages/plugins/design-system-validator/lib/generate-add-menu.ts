@@ -22,7 +22,7 @@ interface AddMenuItem {
     category: string;
     subCategory: string;
     prompt: string;
-    html?: string;
+    presentation?: { type: 'html-fragment'; html: string };
 }
 
 function categoryName(designMdPath: string, projectRoot: string, tokens: DesignTokens): string {
@@ -48,13 +48,13 @@ function buildColorItems(tokens: DesignTokens, category: string): AddMenuItem[] 
         category,
         subCategory: 'Colors',
         prompt: `Use color token "${name}" with value ${value} from DESIGN.md.`,
-        html: `<div style="display:flex;align-items:center;gap:10px;font-family:sans-serif;">
+        presentation: { type: 'html-fragment', html: `<div style="display:flex;align-items:center;gap:10px;font-family:sans-serif;">
   <div style="width:40px;height:40px;border-radius:6px;background:${esc(value)};border:1px solid rgba(0,0,0,0.1);flex-shrink:0;"></div>
   <div>
     <div style="font-size:13px;font-weight:600;">${esc(name)}</div>
     <div style="font-size:11px;color:#888;font-family:monospace;">${esc(value)}</div>
   </div>
-</div>`,
+</div>` },
     }));
 }
 
@@ -81,10 +81,10 @@ function buildTypographyItems(tokens: DesignTokens, category: string): AddMenuIt
             category,
             subCategory: 'Typography',
             prompt: `Apply typography preset "${name}" from DESIGN.md: ${desc}.`,
-            html: `<div style="font-family:sans-serif;">
+            presentation: { type: 'html-fragment', html: `<div style="font-family:sans-serif;">
   <div style="${styles.join(';')};margin:0;">The quick brown fox</div>
   <div style="font-size:10px;color:#888;margin-top:6px;font-family:monospace;">${esc(name)}: ${esc(desc)}</div>
-</div>`,
+</div>` },
         };
     });
 }
@@ -96,7 +96,7 @@ function buildSpacingItems(tokens: DesignTokens, category: string): AddMenuItem[
         category,
         subCategory: 'Spacing',
         prompt: `Use spacing token "${name}" with value ${value} from DESIGN.md for padding, margin, or gap.`,
-        html: `<div style="display:flex;align-items:center;gap:8px;font-family:sans-serif;">
+        presentation: { type: 'html-fragment', html: `<div style="display:flex;align-items:center;gap:8px;font-family:sans-serif;">
   <div style="display:flex;align-items:center;gap:0;">
     <div style="width:16px;height:24px;background:#cbd5e1;border-radius:2px 0 0 2px;"></div>
     <div style="width:${esc(value)};height:24px;background:repeating-linear-gradient(45deg,#e0f2fe,#e0f2fe 2px,#bae6fd 2px,#bae6fd 4px);"></div>
@@ -106,7 +106,7 @@ function buildSpacingItems(tokens: DesignTokens, category: string): AddMenuItem[
     <span style="font-size:12px;font-weight:600;">${esc(name)}</span>
     <span style="font-size:11px;color:#888;font-family:monospace;margin-left:4px;">${esc(value)}</span>
   </div>
-</div>`,
+</div>` },
     }));
 }
 
@@ -117,13 +117,13 @@ function buildRoundedItems(tokens: DesignTokens, category: string): AddMenuItem[
         category,
         subCategory: 'Rounded',
         prompt: `Use border-radius token "${name}" with value ${value} from DESIGN.md.`,
-        html: `<div style="display:flex;align-items:center;gap:10px;font-family:sans-serif;">
+        presentation: { type: 'html-fragment', html: `<div style="display:flex;align-items:center;gap:10px;font-family:sans-serif;">
   <div style="width:40px;height:40px;border-radius:${esc(value)};background:#e2e8f0;border:1.5px solid #94a3b8;flex-shrink:0;"></div>
   <div>
     <div style="font-size:12px;font-weight:600;">${esc(name)}</div>
     <div style="font-size:11px;color:#888;font-family:monospace;">${esc(value)}</div>
   </div>
-</div>`,
+</div>` },
     }));
 }
 
@@ -153,7 +153,7 @@ function buildAnimationItems(tokens: DesignTokens, category: string): AddMenuIte
             category,
             subCategory: 'Animations',
             prompt: `Use animation preset "${name}" from DESIGN.md: ${desc}. Apply to transition-duration and transition-timing-function.`,
-            html: `<div style="font-family:sans-serif;">
+            presentation: { type: 'html-fragment', html: `<div style="font-family:sans-serif;">
   <style>
     @scope {
       .anim-preview { width:40px;height:40px;border-radius:6px;background:#8b5cf6;transition:transform ${esc(dur)} ${esc(ease)};cursor:pointer; }
@@ -168,7 +168,7 @@ function buildAnimationItems(tokens: DesignTokens, category: string): AddMenuIte
       <div style="font-size:10px;color:#aaa;">hover to preview</div>
     </div>
   </div>
-</div>`,
+</div>` },
         };
     });
 }
@@ -205,10 +205,10 @@ function buildComponentItems(tokens: DesignTokens, category: string): AddMenuIte
             category,
             subCategory: 'Components',
             prompt: `Apply the "${name}" component spec from DESIGN.md. Required styles: ${props}. The design-system validator will flag mismatches.`,
-            html: `<div style="font-family:sans-serif;">
+            presentation: { type: 'html-fragment', html: `<div style="font-family:sans-serif;">
   <div style="${previewStyles.join(';')};display:inline-block;font-size:13px;min-width:80px;text-align:center;">${esc(name)}</div>
   <div style="font-size:10px;color:#888;margin-top:6px;font-family:monospace;">${esc(props)}</div>
-</div>`,
+</div>` },
         };
     });
 }

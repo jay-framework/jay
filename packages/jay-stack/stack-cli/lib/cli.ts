@@ -158,6 +158,7 @@ program
     .command('setup [plugin]')
     .description('Run plugin setup: config templates, credential validation, reference data')
     .option('--force', 'Force re-run (overwrite config templates and regenerate references)')
+    .option('--no-interactive', 'Skip interactive prompts (for CI/scripts)')
     .option('-v, --verbose', 'Show detailed output')
     .action(async (plugin: string | undefined, options) => {
         await runSetup(plugin, options, process.cwd(), initializeServicesForCli);

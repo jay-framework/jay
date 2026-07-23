@@ -24,6 +24,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@inquirer/prompts": "^8.5.2",
     "@jay-framework/compiler-jay-html": "workspace:^",
     "@jay-framework/compiler-shared": "workspace:^",
     "@jay-framework/dev-server": "workspace:^",

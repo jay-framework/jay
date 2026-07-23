@@ -13,10 +13,12 @@ import chalk from 'chalk';
 import { createViteForCli } from '@jay-framework/dev-server';
 import { getLogger } from '@jay-framework/logger';
 import { loadConfig } from './config';
+import { createInteractivePrompt, createNonInteractivePrompt } from './setup-prompts';
 import type { InitializeServicesForCli } from './cli-services';
 
 export interface RunSetupOptions {
     force?: boolean;
+    interactive?: boolean;
     verbose?: boolean;
 }
 
@@ -81,6 +83,8 @@ export async function runSetup(
         }
 
         // Run setup for each target plugin
+        const interactive = options.interactive !== false;
+        const prompt = interactive ? createInteractivePrompt() : createNonInteractivePrompt();
         let configured = 0;
         let needsConfig = 0;
         let errors = 0;
@@ -97,6 +101,8 @@ export async function runSetup(
                     projectRoot,
                     configDir,
                     force: options.force ?? false,
+                    interactive,
+                    prompt,
                     initError: initErrors.get(plugin.name),
                     viteServer,
                     verbose: options.verbose,

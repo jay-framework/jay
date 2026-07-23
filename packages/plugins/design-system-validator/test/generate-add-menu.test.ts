@@ -89,8 +89,8 @@ describe('generateDesignSystemAgentKit', () => {
         expect(primaryItem.title).toEqual('primary (#2563eb)');
         expect(primaryItem.category).toEqual('Test Design');
         expect(primaryItem.subCategory).toEqual('Colors');
-        expect(primaryItem.html).toMatch(/background:#2563eb/);
-        expect(primaryItem.html).toMatch(/primary/);
+        expect(primaryItem.presentation.html).toMatch(/background:#2563eb/);
+        expect(primaryItem.presentation.html).toMatch(/primary/);
 
         const bgItem = content.items.find((i: any) => i.id === 'design-system:color-background');
         expect(bgItem).toBeDefined();
@@ -107,8 +107,8 @@ describe('generateDesignSystemAgentKit', () => {
         expect(bodyItem).toBeDefined();
         expect(bodyItem.subCategory).toEqual('Typography');
         expect(bodyItem.prompt).toMatch(/Inter/);
-        expect(bodyItem.html).toMatch(/font-family:Inter/);
-        expect(bodyItem.html).toMatch(/The quick brown fox/);
+        expect(bodyItem.presentation.html).toMatch(/font-family:Inter/);
+        expect(bodyItem.presentation.html).toMatch(/The quick brown fox/);
     });
 
     it('generates items for spacing, rounded, breakpoints, and animations', async () => {
