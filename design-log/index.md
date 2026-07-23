@@ -107,6 +107,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 155 | markdown plugin                                   | Markdown rendering: directory-to-pages, inline content, code + mermaid         |
 | 156 | keyed headless component props                    | YAML body props for keyed headless components; consolidation with jay-params   |
 | 157 | interactive plugin setup                          | Interactive prompts in plugin setup handlers; move Wix logic out of create-jay |
+| 159 | setup pipeline re-initialization                 | Re-init services after each plugin setup; suppress init noise; cascade deps    |
 
 ---
 
