@@ -88,13 +88,41 @@ function askOtp() {
   });
 }
 
-function approveAll(entries, otp) {
-  for (const entry of entries) {
+async function approveAll(entries) {
+  let otp = await askOtp();
+  if (!otp) {
+    console.error('No OTP provided. Packages remain staged — re-run to approve.');
+    process.exit(1);
+  }
+  console.log('');
+
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
     const id = entry.children.ID;
     const name = entry.value.locator;
-    process.stdout.write(`  Approving ${name}...`);
-    run(`yarn npm stage approve ${id} --otp ${otp}`, { stdio: 'pipe' });
-    console.log(' done');
+    const progress = `[${i + 1}/${entries.length}]`;
+
+    let approved = false;
+    while (!approved) {
+      process.stdout.write(`  ${progress} Approving ${name}...`);
+      try {
+        run(`yarn npm stage approve ${id} --otp ${otp}`, { stdio: 'pipe' });
+        console.log(' done');
+        approved = true;
+      } catch (err) {
+        const msg = err.stdout || err.stderr || err.message;
+        if (msg.includes('Invalid OTP')) {
+          console.log(' OTP expired');
+          otp = await askOtp();
+          if (!otp) {
+            console.error('No OTP provided. Remaining packages still staged — re-run to approve.');
+            process.exit(1);
+          }
+        } else {
+          throw err;
+        }
+      }
+    }
   }
 }
 
@@ -120,14 +148,7 @@ async function main() {
     console.log(`Staged ${entries.length} package(s)\n`);
   }
 
-  const otp = await askOtp();
-  if (!otp) {
-    console.error('No OTP provided. Packages remain staged — re-run to approve.');
-    process.exit(1);
-  }
-
-  console.log('');
-  approveAll(entries, otp);
+  await approveAll(entries);
   console.log('\nAll packages published!\n');
 }
 
