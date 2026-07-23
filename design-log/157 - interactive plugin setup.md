@@ -152,12 +152,106 @@ The setup handler receives `ctx.interactive` and decides at runtime whether to p
 | Hardcoded in create-jay (current) | Works now, simple | Doesn't scale, couples scaffolder to plugins |
 | Separate setup CLI per plugin | No framework change | Users run multiple commands |
 
+## Agent-driven setup (non-interactive with answers file)
+
+### Problem
+
+AI coding agents (Claude Code, Cursor, etc.) run CLI commands but can't type into interactive prompts. They need a way to provide answers programmatically.
+
+### Design: Iterative answer flow
+
+Non-interactive mode is the **default**. When a prompt has no answer, the CLI exits with structured output telling the agent what's needed. The agent provides the answer and re-runs.
+
+**Flow:**
+
+1. Agent runs `jay-stack-cli setup`
+2. Plugin handler calls `ctx.prompt.input({ key: 'api-key', message: 'Enter your API key' })`
+3. No answer available → throws `SetupNeedsAnswerError`
+4. CLI catches the error, prints structured YAML, exits with code 2:
+
+```yaml
+setup-needs-answer:
+  plugin: wix-server-client
+  key: api-key
+  type: input
+  message: "Enter your API key (create at https://manage.wix.com/account/api-keys)"
+
+Provide the answer:
+  jay-stack-cli setup --answers answers.yaml
+
+answers.yaml format:
+  api-key: "your-answer-here"
+```
+
+5. Agent creates `answers.yaml` with the value and re-runs:
+   ```
+   jay-stack-cli setup --answers /tmp/answers.yaml
+   ```
+6. Plugin gets the answer, proceeds. If it asks another question → repeat.
+7. When all plugins return `configured` → done.
+
+### Prompt API changes
+
+Add required `key` to all prompt methods:
+
+```typescript
+interface PluginSetupPrompt {
+    input(options: { key: string; message: string; validate?: ... }): Promise<string>;
+    confirm(options: { key: string; message: string; default?: boolean }): Promise<boolean>;
+    select(options: { key: string; message: string; choices: Array<{ name: string; value: string }> }): Promise<string>;
+}
+```
+
+### Three prompt implementations
+
+| Implementation | When used | Behavior on missing answer |
+|---|---|---|
+| **Interactive** | `jay-stack-cli setup --interactive` or `create-jay` | Prompts user via terminal |
+| **Answers file** | `jay-stack-cli setup --answers file.yaml` | Reads from file, throws if missing |
+| **Default (no flag)** | `jay-stack-cli setup` | Throws with structured output |
+
+### SetupNeedsAnswerError
+
+```typescript
+class SetupNeedsAnswerError extends Error {
+    plugin: string;
+    key: string;
+    type: 'input' | 'confirm' | 'select';
+    promptMessage: string;
+    choices?: Array<{ name: string; value: string }>;
+}
+```
+
+The CLI catches this specific error type and formats the structured output. Other errors are reported normally.
+
+### Handler requirements
+
+1. **Idempotent** — re-running with the same answers produces the same result. If config already exists and is valid, skip prompts.
+2. **Stable keys** — prompt keys don't change between runs. Use descriptive kebab-case: `api-key`, `region`, `site-id`.
+3. **Check before prompt** — if the value is already in the config file, don't prompt for it again.
+
+### CLI flags (updated)
+
+```bash
+jay-stack-cli setup                     # Default: non-interactive, exits on missing answer
+jay-stack-cli setup --interactive       # Terminal prompts (for humans, create-jay uses this)
+jay-stack-cli setup --answers file.yaml # Reads answers from file
+jay-stack-cli setup --no-interactive    # Same as default (explicit)
+```
+
+### create-jay uses --interactive
+
+`create-jay` runs `npx jay-stack-cli setup --interactive` after install — this is the human flow where terminal prompts work.
+
 ## Verification Criteria
 
-1. `jay-stack-cli setup` prompts for Wix credentials when wix-server-client is installed
-2. `jay-stack-cli setup --no-interactive` creates config templates without prompting
-3. `create-jay` has no plugin-specific logic — just scaffold + install + setup
-4. Existing non-interactive setup handlers continue to work unchanged
+1. `jay-stack-cli setup` (default) exits with structured YAML when a plugin needs input
+2. `jay-stack-cli setup --interactive` prompts for credentials via terminal
+3. `jay-stack-cli setup --answers file.yaml` reads answers and configures plugins
+4. Iterative flow: agent provides one answer at a time, re-runs until all configured
+5. Handlers are idempotent — re-running with same answers is a no-op
+6. `create-jay` uses `--interactive` flag for human flow
+7. Existing handlers without prompts continue to work unchanged
 
 ---
 

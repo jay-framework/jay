@@ -48,7 +48,7 @@ async function main(): Promise<void> {
 
     console.log(chalk.dim('  Running plugin setup...'));
     try {
-        run('npx jay-stack-cli setup', projectDir);
+        run('npx jay-stack-cli setup --interactive', projectDir);
         console.log(chalk.green('  ✓ Plugin setup complete'));
     } catch {
         console.log(chalk.yellow('  ⚠ Setup incomplete (can run later with: npm run setup)'));

@@ -1,19 +1,14 @@
 import type { PluginSetupPrompt } from '@jay-framework/stack-server-runtime';
+import { SetupNeedsAnswerError } from '@jay-framework/stack-server-runtime';
 import { input, confirm, select } from '@inquirer/prompts';
 
 export function createInteractivePrompt(): PluginSetupPrompt {
     return {
         async input(options) {
-            return input({
-                message: options.message,
-                validate: options.validate,
-            });
+            return input({ message: options.message, validate: options.validate });
         },
         async confirm(options) {
-            return confirm({
-                message: options.message,
-                default: options.default,
-            });
+            return confirm({ message: options.message, default: options.default });
         },
         async select(options) {
             return select({
@@ -24,16 +19,51 @@ export function createInteractivePrompt(): PluginSetupPrompt {
     };
 }
 
-export function createNonInteractivePrompt(): PluginSetupPrompt {
+export function createAnswersFilePrompt(
+    answers: Record<string, string>,
+    pluginName: string,
+): PluginSetupPrompt {
     return {
-        async input() {
-            return '';
+        async input(options) {
+            const value = answers[options.key];
+            if (value !== undefined) return value;
+            throw new SetupNeedsAnswerError(pluginName, options.key, 'input', options.message);
         },
         async confirm(options) {
-            return options.default ?? false;
+            const value = answers[options.key];
+            if (value !== undefined) return value === 'true' || value === 'yes';
+            throw new SetupNeedsAnswerError(pluginName, options.key, 'confirm', options.message);
         },
         async select(options) {
-            return options.choices[0]?.value ?? '';
+            const value = answers[options.key];
+            if (value !== undefined) return value;
+            throw new SetupNeedsAnswerError(
+                pluginName,
+                options.key,
+                'select',
+                options.message,
+                options.choices,
+            );
+        },
+    };
+}
+
+export function createDefaultPrompt(pluginName: string): PluginSetupPrompt {
+    return {
+        async input(options) {
+            throw new SetupNeedsAnswerError(pluginName, options.key, 'input', options.message);
+        },
+        async confirm(options) {
+            throw new SetupNeedsAnswerError(pluginName, options.key, 'confirm', options.message);
+        },
+        async select(options) {
+            throw new SetupNeedsAnswerError(
+                pluginName,
+                options.key,
+                'select',
+                options.message,
+                options.choices,
+            );
         },
     };
 }

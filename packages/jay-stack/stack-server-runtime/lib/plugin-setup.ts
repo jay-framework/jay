@@ -28,13 +28,35 @@ import { getLogger } from '@jay-framework/logger';
 // ============================================================================
 
 /**
- * Prompt functions available to setup handlers in interactive mode.
- * In non-interactive mode, these return defaults without prompting.
+ * Thrown by non-interactive prompt when an answer is missing.
+ * The CLI catches this and prints structured output for agents.
+ */
+export class SetupNeedsAnswerError extends Error {
+    constructor(
+        public readonly plugin: string,
+        public readonly key: string,
+        public readonly type: 'input' | 'confirm' | 'select',
+        public readonly promptMessage: string,
+        public readonly choices?: Array<{ name: string; value: string }>,
+    ) {
+        super(`Setup needs answer for "${key}": ${promptMessage}`);
+        this.name = 'SetupNeedsAnswerError';
+    }
+}
+
+/**
+ * Prompt functions available to setup handlers.
+ * Each prompt requires a stable `key` for answer matching across re-runs.
  */
 export interface PluginSetupPrompt {
-    input(options: { message: string; validate?: (v: string) => boolean | string }): Promise<string>;
-    confirm(options: { message: string; default?: boolean }): Promise<boolean>;
+    input(options: {
+        key: string;
+        message: string;
+        validate?: (v: string) => boolean | string;
+    }): Promise<string>;
+    confirm(options: { key: string; message: string; default?: boolean }): Promise<boolean>;
     select(options: {
+        key: string;
         message: string;
         choices: Array<{ name: string; value: string }>;
     }): Promise<string>;

@@ -12,13 +12,19 @@
 import chalk from 'chalk';
 import { createViteForCli } from '@jay-framework/dev-server';
 import { getLogger } from '@jay-framework/logger';
+import { SetupNeedsAnswerError } from '@jay-framework/stack-server-runtime';
 import { loadConfig } from './config';
-import { createInteractivePrompt, createNonInteractivePrompt } from './setup-prompts';
+import {
+    createInteractivePrompt,
+    createAnswersFilePrompt,
+    createDefaultPrompt,
+} from './setup-prompts';
 import type { InitializeServicesForCli } from './cli-services';
 
 export interface RunSetupOptions {
     force?: boolean;
     interactive?: boolean;
+    answers?: string;
     verbose?: boolean;
 }
 
@@ -82,9 +88,15 @@ export async function runSetup(
             }
         }
 
-        // Run setup for each target plugin
-        const interactive = options.interactive !== false;
-        const prompt = interactive ? createInteractivePrompt() : createNonInteractivePrompt();
+        // Determine prompt mode
+        const interactive = options.interactive === true;
+        let answersMap: Record<string, string> | undefined;
+        if (options.answers) {
+            const fs = await import('node:fs');
+            const YAML = await import('yaml');
+            answersMap = YAML.parse(fs.readFileSync(options.answers, 'utf-8')) || {};
+        }
+
         let configured = 0;
         let needsConfig = 0;
         let errors = 0;
@@ -95,6 +107,12 @@ export async function runSetup(
             if (plugin.setupDescription && options.verbose) {
                 logger.important(chalk.gray(`   ${plugin.setupDescription}`));
             }
+
+            const prompt = interactive
+                ? createInteractivePrompt()
+                : answersMap
+                  ? createAnswersFilePrompt(answersMap, plugin.name)
+                  : createDefaultPrompt(plugin.name);
 
             try {
                 const result = await executePluginSetup(plugin, {
@@ -148,10 +166,33 @@ export async function runSetup(
                         break;
                 }
             } catch (error: any) {
-                errors++;
-                logger.important(chalk.red(`   ❌ Setup failed: ${error.message}`));
-                if (options.verbose) {
-                    logger.error(error.stack);
+                if (error instanceof SetupNeedsAnswerError) {
+                    needsConfig++;
+                    logger.important('');
+                    logger.important(chalk.yellow('setup-needs-answer:'));
+                    logger.important(chalk.yellow(`  plugin: ${error.plugin}`));
+                    logger.important(chalk.yellow(`  key: ${error.key}`));
+                    logger.important(chalk.yellow(`  type: ${error.type}`));
+                    logger.important(chalk.yellow(`  message: "${error.promptMessage}"`));
+                    if (error.choices) {
+                        logger.important(chalk.yellow('  choices:'));
+                        for (const c of error.choices) {
+                            logger.important(chalk.yellow(`    - ${c.value}: ${c.name}`));
+                        }
+                    }
+                    logger.important('');
+                    logger.important(
+                        chalk.gray(
+                            `Provide the answer: jay-stack-cli setup --answers answers.yaml`,
+                        ),
+                    );
+                    logger.important(chalk.gray(`answers.yaml format:\n  ${error.key}: "your-answer"`));
+                } else {
+                    errors++;
+                    logger.important(chalk.red(`   ❌ Setup failed: ${error.message}`));
+                    if (options.verbose) {
+                        logger.error(error.stack);
+                    }
                 }
             }
 
