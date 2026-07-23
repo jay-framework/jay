@@ -240,6 +240,9 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
         }
     });
 
+    // --- Rule: adjacent elements with duplicate text content ---
+    checkDuplicateAdjacentText(ctx.body, findings);
+
     // --- Head metadata checks ---
     if (ctx.head) {
         const viewport = ctx.head.meta.find((m) => m.name?.toLowerCase() === 'viewport');
@@ -316,4 +319,43 @@ function collectLabelForIds(el: any, ids: Set<string>): void {
     for (const child of el.childNodes ?? []) {
         if (child.nodeType === 1) collectLabelForIds(child, ids);
     }
+}
+
+function getVisibleText(el: any): string {
+    if (el.getAttribute?.('aria-hidden') === 'true') return '';
+    return (el.textContent ?? '').trim().replace(/\s+/g, ' ');
+}
+
+function checkDuplicateAdjacentText(root: any, findings: JayHtmlValidationFinding[]): void {
+    function walk(el: any): void {
+        const children = (el.childNodes ?? []).filter((n: any) => n.nodeType === 1);
+        for (let i = 0; i < children.length - 1; i++) {
+            const current = children[i];
+            const next = children[i + 1];
+            const currentText = getVisibleText(current);
+            const nextText = getVisibleText(next);
+
+            if (
+                currentText &&
+                nextText &&
+                currentText === nextText &&
+                current.getAttribute?.('aria-hidden') !== 'true' &&
+                next.getAttribute?.('aria-hidden') !== 'true'
+            ) {
+                const tag = next.rawTagName?.toLowerCase() || 'element';
+                findings.push({
+                    severity: 'warning',
+                    message: `Adjacent <${current.rawTagName?.toLowerCase()}> and <${tag}> have identical text "${currentText.slice(0, 40)}${currentText.length > 40 ? '...' : ''}" — screen readers will announce it twice`,
+                    suggestion:
+                        'Add aria-hidden="true" to the decorative duplicate. ' +
+                        'If both are meaningful, differentiate their text content.',
+                    element: `<${tag}>`,
+                });
+            }
+        }
+        for (const child of children) {
+            walk(child);
+        }
+    }
+    walk(root);
 }

@@ -356,4 +356,58 @@ describe('a11y-validator', () => {
             expect(findings).toEqual([]);
         });
     });
+
+    describe('duplicate adjacent text', () => {
+        it('flags adjacent elements with identical text', async () => {
+            const ctx = makeContext(`
+                <div>
+                    <h1>Welcome</h1>
+                    <h1>Welcome</h1>
+                </div>
+            `);
+            const findings = await validate(ctx);
+            const dup = findings.find((f) => f.message.includes('identical text'));
+            expect(dup).toBeDefined();
+            expect(dup!.severity).toEqual('warning');
+            expect(dup!.suggestion).toMatch(/aria-hidden/);
+        });
+
+        it('passes when one duplicate has aria-hidden', async () => {
+            const ctx = makeContext(`
+                <div>
+                    <h1>Welcome</h1>
+                    <h1 aria-hidden="true">Welcome</h1>
+                </div>
+            `);
+            const findings = await validate(ctx);
+            const dup = findings.find((f) => f.message.includes('identical text'));
+            expect(dup).toBeUndefined();
+        });
+
+        it('passes when adjacent elements have different text', async () => {
+            const ctx = makeContext(`
+                <div>
+                    <h1>Hello</h1>
+                    <p>World</p>
+                </div>
+            `);
+            const findings = await validate(ctx);
+            const dup = findings.find((f) => f.message.includes('identical text'));
+            expect(dup).toBeUndefined();
+        });
+
+        it('flags duplicate text in nested containers', async () => {
+            const ctx = makeContext(`
+                <section>
+                    <div>
+                        <span>Click here</span>
+                        <span>Click here</span>
+                    </div>
+                </section>
+            `);
+            const findings = await validate(ctx);
+            const dup = findings.find((f) => f.message.includes('identical text'));
+            expect(dup).toBeDefined();
+        });
+    });
 });

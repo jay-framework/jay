@@ -30,9 +30,11 @@ description: Validate credentials and install config # optional, top-level
 
 ## Writing a Setup Handler
 
-The setup handler creates config files and validates services. It receives a `PluginSetupContext` and returns a `PluginSetupResult`.
+The setup handler creates config files, validates services, and can prompt the user for credentials. It receives a `PluginSetupContext` and returns a `PluginSetupResult`.
 
 **Do not** write add-menu catalogs in setup — use the agent-kit handler.
+
+### Basic setup (non-interactive)
 
 ```typescript
 import type { PluginSetupContext, PluginSetupResult } from '@jay-framework/stack-server-runtime';
@@ -49,7 +51,7 @@ export async function setupMyPlugin(ctx: PluginSetupContext): Promise<PluginSetu
 
   if (!fs.existsSync(configPath) || ctx.force) {
     fs.mkdirSync(ctx.configDir, { recursive: true });
-    fs.writeFileSync(configPath, '# My Plugin config\n', 'utf-8');
+    fs.writeFileSync(configPath, '# My Plugin config\napiKey: "<your-api-key>"\n', 'utf-8');
     configCreated.push('config/.my-plugin.yaml');
   }
 
@@ -64,16 +66,86 @@ export async function setupMyPlugin(ctx: PluginSetupContext): Promise<PluginSetu
 }
 ```
 
+### Interactive setup (with prompts)
+
+When the setup handler needs user input (API keys, credentials, configuration choices), use `ctx.prompt`:
+
+```typescript
+export async function setupMyPlugin(ctx: PluginSetupContext): Promise<PluginSetupResult> {
+  const configPath = path.join(ctx.configDir, '.my-plugin.yaml');
+
+  // Already configured — skip unless --force
+  if (fs.existsSync(configPath) && !ctx.force) {
+    return { status: 'configured', message: 'Already configured' };
+  }
+
+  // In non-interactive mode, create a template and ask the user to fill it in later
+  if (!ctx.interactive) {
+    fs.mkdirSync(ctx.configDir, { recursive: true });
+    fs.writeFileSync(configPath, 'apiKey: "<your-api-key>"\n', 'utf-8');
+    return {
+      status: 'needs-config',
+      configCreated: ['config/.my-plugin.yaml'],
+      message: 'Run `jay-stack-cli setup` interactively to enter your API key',
+    };
+  }
+
+  // Interactive mode — prompt the user
+  const apiKey = await ctx.prompt.input({
+    message: 'Enter your API key (create one at https://example.com/api-keys):',
+    validate: (v) => (v.trim() ? true : 'API key is required'),
+  });
+
+  const region = await ctx.prompt.select({
+    message: 'Select your region:',
+    choices: [
+      { name: 'US East', value: 'us-east' },
+      { name: 'EU West', value: 'eu-west' },
+    ],
+  });
+
+  fs.mkdirSync(ctx.configDir, { recursive: true });
+  fs.writeFileSync(configPath, `apiKey: "${apiKey.trim()}"\nregion: ${region}\n`, 'utf-8');
+
+  return {
+    status: 'configured',
+    configCreated: ['config/.my-plugin.yaml'],
+    message: 'Credentials configured successfully',
+  };
+}
+```
+
+### Interactive vs non-interactive mode
+
+Setup runs in two modes:
+
+| Mode | Command | `ctx.interactive` | `ctx.prompt` behavior |
+|---|---|---|---|
+| **Interactive** (default) | `jay-stack-cli setup` | `true` | Prompts the user for real input |
+| **Non-interactive** (CI/scripts) | `jay-stack-cli setup --no-interactive` | `false` | Returns empty string / defaults without prompting |
+
+**Best practice:** Always check `ctx.interactive` before prompting. In non-interactive mode, create config templates with placeholders and return `needs-config` so the user knows to fill them in.
+
 ### PluginSetupContext
 
-| Field         | Type      | Description                                                       |
-| ------------- | --------- | ----------------------------------------------------------------- |
-| `pluginName`  | `string`  | Plugin name from plugin.yaml                                      |
-| `projectRoot` | `string`  | Absolute project root path                                        |
-| `configDir`   | `string`  | Config directory (from `.jay` configBase, defaults to `./config`) |
-| `services`    | `Map`     | Registered services (may be empty if init failed)                 |
-| `initError`   | `Error?`  | Present if plugin init failed — check this before using services  |
-| `force`       | `boolean` | Whether `--force` flag was passed                                 |
+| Field         | Type                 | Description                                                       |
+| ------------- | -------------------- | ----------------------------------------------------------------- |
+| `pluginName`  | `string`             | Plugin name from plugin.yaml                                      |
+| `projectRoot` | `string`             | Absolute project root path                                        |
+| `configDir`   | `string`             | Config directory (from `.jay` configBase, defaults to `./config`) |
+| `services`    | `Map`                | Registered services (may be empty if init failed)                 |
+| `initError`   | `Error?`             | Present if plugin init failed — check this before using services  |
+| `force`       | `boolean`            | Whether `--force` flag was passed                                 |
+| `interactive` | `boolean`            | Whether running in interactive mode (can prompt user)             |
+| `prompt`      | `PluginSetupPrompt`  | Prompt functions for user input (see below)                       |
+
+### PluginSetupPrompt
+
+| Method | Signature | Description |
+|---|---|---|
+| `input` | `(opts: { message, validate? }) → Promise<string>` | Text input. Non-interactive: returns `""` |
+| `confirm` | `(opts: { message, default? }) → Promise<boolean>` | Yes/no. Non-interactive: returns `default` or `false` |
+| `select` | `(opts: { message, choices }) → Promise<string>` | Single choice. Non-interactive: returns first choice value |
 
 ### PluginSetupResult
 
