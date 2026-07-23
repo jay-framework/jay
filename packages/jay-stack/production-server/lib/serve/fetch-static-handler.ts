@@ -24,11 +24,7 @@ export async function fetchStaticFile(
 ): Promise<Response | null> {
     const normalizedBase = path.resolve(frontendDir);
 
-    // Try direct path first (shared/, pages/), then public/ (root-level assets)
-    for (const candidate of [
-        path.join(frontendDir, pathname),
-        path.join(frontendDir, 'public', pathname),
-    ]) {
+    for (const candidate of [path.join(frontendDir, pathname)]) {
         const normalizedFile = path.resolve(candidate);
         if (!normalizedFile.startsWith(normalizedBase)) continue;
 

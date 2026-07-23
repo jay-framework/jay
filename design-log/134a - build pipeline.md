@@ -710,3 +710,11 @@ Two issues in the production HTML `<head>`:
 1. **Missing client bundle modulepreload** — The route's client entry JS (`route.client-*.js`) was imported in the body `<script>` but not included in `<link rel="modulepreload">` hints. The browser only discovered it after parsing the body, causing a waterfall. Fix: include `clientBundleUrl` in the preload list alongside shared chunks.
 
 2. **Google Fonts preload pattern** — External CSS `@import` URLs (e.g. Google Fonts) were emitted as `<link rel="preload" as="style">`, which requires a matching `<link rel="stylesheet">` to actually apply. Fix: detect `fonts.googleapis.com` URLs and emit the recommended pattern: `preconnect` to both `fonts.googleapis.com` and `fonts.gstatic.com`, plus `<link rel="stylesheet">` for the font CSS URL.
+
+### Bug fix: public/ folder not flattened into frontend root
+
+The build copied `public/` into `frontend/public/` — preserving the subdirectory. This meant images at `public/logo.png` ended up at `/public/logo.png` instead of `/logo.png`, breaking root-relative paths like `<img src="/logo.png">`.
+
+**Fix in `build-pipeline.ts`:** Changed `fs.cp(publicFolder, path.join(frontendDir, 'public'))` to `fs.cp(publicFolder, frontendDir)`. Contents of `public/` are now copied directly into `frontend/`, matching how Vite dev server serves them.
+
+**Cleanup in `fetch-static-handler.ts`:** Removed the `public/` fallback path from static file candidates — no longer needed since files are at the root level.

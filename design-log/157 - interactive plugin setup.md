@@ -32,6 +32,7 @@ A2: `create-jay` should only scaffold files and install dependencies. After inst
 **Q3: What about the Wix CLI login flow?**
 
 A3: The `wix-server-client` plugin's setup handler would:
+
 1. Check `npx @wix/cli whoami` — if not logged in, prompt to login
 2. Run `npm create @wix/new@latest init` — connects to a Wix site
 3. Read `wix.config.json` — extract `siteId` and `appId`
@@ -53,21 +54,28 @@ Extend `PluginSetupContext` with prompt functions:
 
 ```typescript
 interface PluginSetupContext {
-    projectRoot: string;
-    configDir: string;
-    interactive: boolean;
-    prompt: {
-        input(options: { message: string; validate?: (v: string) => boolean | string }): Promise<string>;
-        confirm(options: { message: string; default?: boolean }): Promise<boolean>;
-        select(options: { message: string; choices: Array<{ label: string; value: string }> }): Promise<string>;
-    };
-    run(cmd: string): void;
-    log(message: string): void;
-    warn(message: string): void;
+  projectRoot: string;
+  configDir: string;
+  interactive: boolean;
+  prompt: {
+    input(options: {
+      message: string;
+      validate?: (v: string) => boolean | string;
+    }): Promise<string>;
+    confirm(options: { message: string; default?: boolean }): Promise<boolean>;
+    select(options: {
+      message: string;
+      choices: Array<{ label: string; value: string }>;
+    }): Promise<string>;
+  };
+  run(cmd: string): void;
+  log(message: string): void;
+  warn(message: string): void;
 }
 ```
 
 When `interactive` is false, prompt functions:
+
 - `input` → returns empty string (handler should check and skip)
 - `confirm` → returns the default value
 - `select` → returns the first choice
@@ -76,20 +84,20 @@ When `interactive` is false, prompt functions:
 
 ```typescript
 export async function setupMyPlugin(ctx: PluginSetupContext): Promise<PluginSetupResult> {
-    // Check if already configured
-    if (fs.existsSync(path.join(ctx.configDir, '.wix.yaml'))) {
-        ctx.log('Wix credentials already configured');
-        return { status: 'ok' };
-    }
+  // Check if already configured
+  if (fs.existsSync(path.join(ctx.configDir, '.wix.yaml'))) {
+    ctx.log('Wix credentials already configured');
+    return { status: 'ok' };
+  }
 
-    if (!ctx.interactive) {
-        ctx.warn('Run `jay-stack setup` interactively to configure Wix credentials');
-        return { status: 'needs-config' };
-    }
+  if (!ctx.interactive) {
+    ctx.warn('Run `jay-stack setup` interactively to configure Wix credentials');
+    return { status: 'needs-config' };
+  }
 
-    // Interactive flow
-    const apiKey = await ctx.prompt.input({ message: 'Wix API Key:' });
-    // ... rest of setup
+  // Interactive flow
+  const apiKey = await ctx.prompt.input({ message: 'Wix API Key:' });
+  // ... rest of setup
 }
 ```
 
@@ -107,15 +115,15 @@ After scaffolding and installing:
 ```typescript
 // Before: hardcoded Wix logic
 if (hasWixPlugins) {
-    await promptWixApiKey();
-    await setupWix(projectDir, apiKey);
+  await promptWixApiKey();
+  await setupWix(projectDir, apiKey);
 }
 run('npx jay-stack-cli agent-kit', projectDir);
 run('npx jay-stack-cli setup', projectDir);
 
 // After: just run setup interactively
 run('npx jay-stack-cli agent-kit', projectDir);
-run('npx jay-stack-cli setup', projectDir);  // interactive by default
+run('npx jay-stack-cli setup', projectDir); // interactive by default
 ```
 
 All plugin-specific logic moves to plugin setup handlers.
@@ -146,11 +154,11 @@ The setup handler receives `ctx.interactive` and decides at runtime whether to p
 
 ## Trade-offs
 
-| Approach | Pro | Con |
-|---|---|---|
-| Interactive setup in plugins (chosen) | Scales to any plugin, no scaffolder coupling | Requires framework change to setup context |
-| Hardcoded in create-jay (current) | Works now, simple | Doesn't scale, couples scaffolder to plugins |
-| Separate setup CLI per plugin | No framework change | Users run multiple commands |
+| Approach                              | Pro                                          | Con                                          |
+| ------------------------------------- | -------------------------------------------- | -------------------------------------------- |
+| Interactive setup in plugins (chosen) | Scales to any plugin, no scaffolder coupling | Requires framework change to setup context   |
+| Hardcoded in create-jay (current)     | Works now, simple                            | Doesn't scale, couples scaffolder to plugins |
+| Separate setup CLI per plugin         | No framework change                          | Users run multiple commands                  |
 
 ## Agent-driven setup (non-interactive with answers file)
 
@@ -174,13 +182,12 @@ setup-needs-answer:
   plugin: wix-server-client
   key: api-key
   type: input
-  message: "Enter your API key (create at https://manage.wix.com/account/api-keys)"
+  message: 'Enter your API key (create at https://manage.wix.com/account/api-keys)'
 
-Provide the answer:
-  jay-stack-cli setup --answers answers.yaml
+Provide the answer: jay-stack-cli setup --answers answers.yaml
 
 answers.yaml format:
-  api-key: "your-answer-here"
+  api-key: 'your-answer-here'
 ```
 
 5. Agent creates `answers.yaml` with the value and re-runs:
@@ -204,21 +211,21 @@ interface PluginSetupPrompt {
 
 ### Three prompt implementations
 
-| Implementation | When used | Behavior on missing answer |
-|---|---|---|
-| **Interactive** | `jay-stack-cli setup --interactive` or `create-jay` | Prompts user via terminal |
-| **Answers file** | `jay-stack-cli setup --answers file.yaml` | Reads from file, throws if missing |
-| **Default (no flag)** | `jay-stack-cli setup` | Throws with structured output |
+| Implementation        | When used                                           | Behavior on missing answer         |
+| --------------------- | --------------------------------------------------- | ---------------------------------- |
+| **Interactive**       | `jay-stack-cli setup --interactive` or `create-jay` | Prompts user via terminal          |
+| **Answers file**      | `jay-stack-cli setup --answers file.yaml`           | Reads from file, throws if missing |
+| **Default (no flag)** | `jay-stack-cli setup`                               | Throws with structured output      |
 
 ### SetupNeedsAnswerError
 
 ```typescript
 class SetupNeedsAnswerError extends Error {
-    plugin: string;
-    key: string;
-    type: 'input' | 'confirm' | 'select';
-    promptMessage: string;
-    choices?: Array<{ name: string; value: string }>;
+  plugin: string;
+  key: string;
+  type: 'input' | 'confirm' | 'select';
+  promptMessage: string;
+  choices?: Array<{ name: string; value: string }>;
 }
 ```
 
@@ -260,18 +267,22 @@ jay-stack-cli setup --no-interactive    # Same as default (explicit)
 ### Phase 1: Framework changes (implemented)
 
 **`stack-server-runtime/lib/plugin-setup.ts`:**
+
 - Added `PluginSetupPrompt` interface with `input()`, `confirm()`, `select()` methods
 - Added `interactive: boolean` and `prompt: PluginSetupPrompt` to `PluginSetupContext`
 - Updated `executePluginSetup()` to accept and pass `interactive` and `prompt` in options
 
 **`stack-cli/lib/setup-prompts.ts`** (new):
+
 - `createInteractivePrompt()` — wraps `@inquirer/prompts` for real user input
 - `createNonInteractivePrompt()` — returns empty string / defaults without prompting
 
 **`stack-cli/lib/cli.ts`:**
+
 - Added `--no-interactive` flag to `setup` command
 
 **`stack-cli/lib/run-setup.ts`:**
+
 - Reads `interactive` option (defaults to true)
 - Creates appropriate prompt implementation
 - Passes both to `executePluginSetup`
@@ -279,12 +290,14 @@ jay-stack-cli setup --no-interactive    # Same as default (explicit)
 ### Phase 3: create-jay simplified (implemented)
 
 Removed all Wix-specific logic from create-jay:
+
 - Removed `promptWixApiKey()`, `setupWix()`, `hasWixPlugins()` check
 - Removed `@inquirer/prompts` and `fs` imports (no longer needed)
 - Flow is now: scaffold → install → agent-kit → setup (interactive by default)
 - File size reduced from 13.55KB to 9.96KB
 
 Scaffolding concerns kept (these are project structure, not credentials):
+
 - Auto-including `wix-server-client` dependency when Wix plugins selected
 - Wix-specific npm scripts (`wix:deploy`, `wix:serve`)
 - Auth callback page template for wix-members

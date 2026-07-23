@@ -570,8 +570,8 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
     const publicFolder = path.join(options.projectRoot, 'public');
     try {
         await fs.access(publicFolder);
-        await fs.cp(publicFolder, path.join(frontendDir, 'public'), { recursive: true });
-        logger.info('[Build] Copied public/ to frontend/public/');
+        await fs.cp(publicFolder, frontendDir, { recursive: true });
+        logger.info('[Build] Copied public/ contents to frontend/');
     } catch {
         // No public folder — skip
     }

@@ -119,11 +119,11 @@ export async function setupMyPlugin(ctx: PluginSetupContext): Promise<PluginSetu
 
 Setup runs in three modes:
 
-| Mode | Command | `ctx.interactive` | `ctx.prompt` behavior |
-|---|---|---|---|
-| **Default** (agents, CI) | `jay-stack-cli setup` | `false` | Throws `SetupNeedsAnswerError` with structured output |
-| **Interactive** (humans) | `jay-stack-cli setup --interactive` | `true` | Prompts via terminal |
-| **Answers file** (automation) | `jay-stack-cli setup --answers file.yaml` | `false` | Reads from file, throws if missing |
+| Mode                          | Command                                   | `ctx.interactive` | `ctx.prompt` behavior                                 |
+| ----------------------------- | ----------------------------------------- | ----------------- | ----------------------------------------------------- |
+| **Default** (agents, CI)      | `jay-stack-cli setup`                     | `false`           | Throws `SetupNeedsAnswerError` with structured output |
+| **Interactive** (humans)      | `jay-stack-cli setup --interactive`       | `true`            | Prompts via terminal                                  |
+| **Answers file** (automation) | `jay-stack-cli setup --answers file.yaml` | `false`           | Reads from file, throws if missing                    |
 
 In default mode, when a prompt has no answer, the CLI exits with structured YAML telling the caller what's needed. Agents can then provide the answer via `--answers` and re-run.
 
@@ -136,6 +136,7 @@ Setup handlers **must be idempotent** — re-running with the same answers must 
 - CI pipelines may run setup on every deploy
 
 **Rules:**
+
 1. Check if config already exists before creating it — skip if present (unless `ctx.force`)
 2. Check if credentials are already valid before prompting — skip if configured
 3. Never append to files — write the complete content each time
@@ -165,24 +166,24 @@ export async function setupMyPlugin(ctx: PluginSetupContext): Promise<PluginSetu
 
 ### PluginSetupContext
 
-| Field         | Type                 | Description                                                       |
-| ------------- | -------------------- | ----------------------------------------------------------------- |
-| `pluginName`  | `string`             | Plugin name from plugin.yaml                                      |
-| `projectRoot` | `string`             | Absolute project root path                                        |
-| `configDir`   | `string`             | Config directory (from `.jay` configBase, defaults to `./config`) |
-| `services`    | `Map`                | Registered services (may be empty if init failed)                 |
-| `initError`   | `Error?`             | Present if plugin init failed — check this before using services  |
-| `force`       | `boolean`            | Whether `--force` flag was passed                                 |
-| `interactive` | `boolean`            | Whether running in interactive mode (can prompt user)             |
-| `prompt`      | `PluginSetupPrompt`  | Prompt functions for user input (see below)                       |
+| Field         | Type                | Description                                                       |
+| ------------- | ------------------- | ----------------------------------------------------------------- |
+| `pluginName`  | `string`            | Plugin name from plugin.yaml                                      |
+| `projectRoot` | `string`            | Absolute project root path                                        |
+| `configDir`   | `string`            | Config directory (from `.jay` configBase, defaults to `./config`) |
+| `services`    | `Map`               | Registered services (may be empty if init failed)                 |
+| `initError`   | `Error?`            | Present if plugin init failed — check this before using services  |
+| `force`       | `boolean`           | Whether `--force` flag was passed                                 |
+| `interactive` | `boolean`           | Whether running in interactive mode (can prompt user)             |
+| `prompt`      | `PluginSetupPrompt` | Prompt functions for user input (see below)                       |
 
 ### PluginSetupPrompt
 
-| Method | Signature | Description |
-|---|---|---|
-| `input` | `(opts: { message, validate? }) → Promise<string>` | Text input. Non-interactive: returns `""` |
-| `confirm` | `(opts: { message, default? }) → Promise<boolean>` | Yes/no. Non-interactive: returns `default` or `false` |
-| `select` | `(opts: { message, choices }) → Promise<string>` | Single choice. Non-interactive: returns first choice value |
+| Method    | Signature                                          | Description                                                |
+| --------- | -------------------------------------------------- | ---------------------------------------------------------- |
+| `input`   | `(opts: { message, validate? }) → Promise<string>` | Text input. Non-interactive: returns `""`                  |
+| `confirm` | `(opts: { message, default? }) → Promise<boolean>` | Yes/no. Non-interactive: returns `default` or `false`      |
+| `select`  | `(opts: { message, choices }) → Promise<string>`   | Single choice. Non-interactive: returns first choice value |
 
 ### PluginSetupResult
 

@@ -38,14 +38,14 @@ setup-needs-answer:
   plugin: wix-server-client
   key: api-key
   type: input
-  message: "Enter your API key"
+  message: 'Enter your API key'
 ```
 
 To provide the answer, create a YAML file and re-run:
 
 ```yaml
 # answers.yaml
-api-key: "IST.abc123..."
+api-key: 'IST.abc123...'
 ```
 
 ```bash

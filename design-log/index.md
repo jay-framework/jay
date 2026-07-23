@@ -88,24 +88,24 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ## Plugin System
 
-| #   | Title                                             | Description                                                                  |
-| --- | ------------------------------------------------- | ---------------------------------------------------------------------------- |
-| 39  | Plugin package                                    | Plugin package requirements and structure                                    |
-| 43  | Jay Package                                       | Jay package format                                                           |
-| 60  | plugin system refinement and dynamic contracts    | Plugin.yaml, contract resolution, dynamic contract generation                |
-| 66  | transitive plugin dependency resolution           | Plugin dependency resolution                                                 |
-| 80  | exposing dynamic contracts for agentic generation | CLI and dev server contract generation for AI agents                         |
-| 87  | jay-stack setup command                           | Plugin config templating, credential validation, references                  |
-| 88  | PR 158 review guide                               | Review guide for export_import branch (Figma vendor + plugin resolution)     |
-| 89  | PR 158 merge concerns                             | Merge conflicts, duplicate work, and decisions for PR #158 into main         |
-| 130 | plugin routes and templates                       | Plugins provide pages (jay-html + page.ts) as routes; project overrides      |
-| 142 | plugin CLI commands                               | `jay-stack run <plugin>/<command>` for admin/batch operations                |
-| 145 | pluggable jay-html validation                     | Plugin-provided validation rules for jay-html with agent-friendly feedback   |
-| 147 | jay-html validation rules catalog                 | Complete catalog of all validation rules across wix-media, SEO, and a11y     |
-| 151 | design system validator plugin                    | Static CSS analysis against DESIGN.md tokens; replaces Happy DOM approach    |
-| 154 | plugin package shipping validation                | Validate agent-kit directory is listed in package.json files                 |
-| 155 | markdown plugin                                   | Markdown rendering: directory-to-pages, inline content, code + mermaid       |
-| 156 | keyed headless component props                    | YAML body props for keyed headless components; consolidation with jay-params |
+| #   | Title                                             | Description                                                                    |
+| --- | ------------------------------------------------- | ------------------------------------------------------------------------------ |
+| 39  | Plugin package                                    | Plugin package requirements and structure                                      |
+| 43  | Jay Package                                       | Jay package format                                                             |
+| 60  | plugin system refinement and dynamic contracts    | Plugin.yaml, contract resolution, dynamic contract generation                  |
+| 66  | transitive plugin dependency resolution           | Plugin dependency resolution                                                   |
+| 80  | exposing dynamic contracts for agentic generation | CLI and dev server contract generation for AI agents                           |
+| 87  | jay-stack setup command                           | Plugin config templating, credential validation, references                    |
+| 88  | PR 158 review guide                               | Review guide for export_import branch (Figma vendor + plugin resolution)       |
+| 89  | PR 158 merge concerns                             | Merge conflicts, duplicate work, and decisions for PR #158 into main           |
+| 130 | plugin routes and templates                       | Plugins provide pages (jay-html + page.ts) as routes; project overrides        |
+| 142 | plugin CLI commands                               | `jay-stack run <plugin>/<command>` for admin/batch operations                  |
+| 145 | pluggable jay-html validation                     | Plugin-provided validation rules for jay-html with agent-friendly feedback     |
+| 147 | jay-html validation rules catalog                 | Complete catalog of all validation rules across wix-media, SEO, and a11y       |
+| 151 | design system validator plugin                    | Static CSS analysis against DESIGN.md tokens; replaces Happy DOM approach      |
+| 154 | plugin package shipping validation                | Validate agent-kit directory is listed in package.json files                   |
+| 155 | markdown plugin                                   | Markdown rendering: directory-to-pages, inline content, code + mermaid         |
+| 156 | keyed headless component props                    | YAML body props for keyed headless components; consolidation with jay-params   |
 | 157 | interactive plugin setup                          | Interactive prompts in plugin setup handlers; move Wix logic out of create-jay |
 
 ---
