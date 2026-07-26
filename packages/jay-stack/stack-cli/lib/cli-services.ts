@@ -28,6 +28,7 @@ export type InitializeServicesForCli = typeof initializeServicesForCli;
 export async function initializeServicesForCli(
     projectRoot: string,
     viteServer?: Awaited<ReturnType<typeof createViteForCli>>,
+    quiet: boolean = false,
 ): Promise<InitServicesResult> {
     const path = await import('node:path');
     const fs = await import('node:fs');
@@ -52,7 +53,7 @@ export async function initializeServicesForCli(
 
         // Execute plugin server inits with Vite for TypeScript support
         try {
-            initErrors = await executePluginServerInits(pluginsWithInit, viteServer, false);
+            initErrors = await executePluginServerInits(pluginsWithInit, viteServer, false, quiet);
         } catch (error: any) {
             getLogger().warn(chalk.yellow(`⚠️  Plugin initialization skipped: ${error.message}`));
         }

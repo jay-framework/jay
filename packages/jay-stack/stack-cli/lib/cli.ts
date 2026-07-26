@@ -162,7 +162,7 @@ program
     .option('--answers <file>', 'Read answers from YAML file (for agents)')
     .option('-v, --verbose', 'Show detailed output')
     .action(async (plugin: string | undefined, options) => {
-        await runSetup(plugin, options, process.cwd(), initializeServicesForCli);
+        await runSetup(plugin, options, process.cwd());
     });
 
 program

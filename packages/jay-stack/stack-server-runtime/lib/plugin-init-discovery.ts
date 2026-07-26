@@ -213,11 +213,13 @@ export function sortPluginsByDependencies(plugins: PluginWithInit[]): PluginWith
  * @param plugins - Sorted list of plugins with init
  * @param viteServer - Vite server for SSR module loading (optional)
  * @param verbose - Whether to log progress
+ * @param quiet - Whether to suppress error logging (errors still captured in returned Map)
  */
 export async function executePluginServerInits(
     plugins: PluginWithInit[],
     viteServer?: ViteSSRLoader,
     verbose: boolean = false,
+    quiet: boolean = false,
 ): Promise<Map<string, Error>> {
     const initErrors = new Map<string, Error>();
 
@@ -279,9 +281,11 @@ export async function executePluginServerInits(
         } catch (error) {
             const err = error instanceof Error ? error : new Error(String(error));
             initErrors.set(plugin.name, err);
-            getLogger().error(
-                `[PluginInit] Failed to execute server init for "${plugin.name}": ${error}`,
-            );
+            if (!quiet) {
+                getLogger().error(
+                    `[PluginInit] Failed to execute server init for "${plugin.name}": ${error}`,
+                );
+            }
         }
     }
 

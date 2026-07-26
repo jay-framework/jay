@@ -81,3 +81,27 @@ to:
 | Per-plugin setup+init | Simple, no reset/re-init, natural accumulation | `run-setup.ts` takes over init responsibility from `cli-services.ts` |
 | Quiet init errors | Clean output during setup | Debugging harder if init fails for unexpected reasons; mitigated by `--verbose` |
 | `--interactive` in scaffolded script | Users get prompted by default | Agents calling `npm run setup` get interactive mode; they should call `jay-stack-cli setup` directly |
+
+## Implementation Results
+
+### Changes made
+
+1. **`stack-server-runtime/lib/plugin-init-discovery.ts`** — added `quiet: boolean = false` param to `executePluginServerInits()`. When quiet, init errors are captured in the Map but not logged.
+
+2. **`stack-cli/lib/cli-services.ts`** — added `quiet: boolean = false` param to `initializeServicesForCli()`, threaded to `executePluginServerInits`.
+
+3. **`stack-cli/lib/run-setup.ts`** — rewrote to per-plugin setup+init flow:
+   - Removed bulk `initializeServices()` call
+   - No longer depends on `cli-services.ts` for init — does it inline per plugin
+   - After each plugin returns `configured`, runs its init quietly via `executePluginServerInits` with a single-element array
+   - Project init (`src/init.ts`) runs once after all plugins
+   - Signature simplified: removed `initializeServicesForCli` param
+
+4. **`stack-cli/lib/cli.ts`** — updated `runSetup` call to match new signature (3 args instead of 4).
+
+5. **`create-jay/lib/scaffold.ts`** — setup script changed to `jay-stack-cli setup --interactive`.
+
+### Tests
+
+- stack-cli: 113/113 passing
+- stack-server-runtime: 152/152 passing

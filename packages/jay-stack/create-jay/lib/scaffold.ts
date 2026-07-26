@@ -51,7 +51,7 @@ async function generatePackageJson(name: string, selectedPlugins: PluginEntry[])
         type: 'module',
         private: true,
         scripts: {
-            setup: 'jay-stack-cli setup',
+            setup: 'jay-stack-cli setup --interactive',
             dev: 'jay-stack-cli dev',
             'agent-kit': 'jay-stack-cli agent-kit',
             validate: 'jay-stack-cli validate',
