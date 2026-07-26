@@ -501,4 +501,142 @@ describe('seo-validator', () => {
             fs.rmSync(tmpDir, { recursive: true, force: true });
         });
     });
+
+    describe('external stylesheet preconnect', () => {
+        it('flags external stylesheet without preconnect', async () => {
+            const ctx = makeContext('<div><h1>Title</h1></div>', {
+                head: {
+                    title: s('Page'),
+                    meta: [{ name: 'description', content: s('Desc') }],
+                    links: [
+                        {
+                            rel: 'stylesheet',
+                            href: s('https://fonts.googleapis.com/css2?family=Inter&display=swap'),
+                        },
+                    ],
+                },
+            });
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    severity: 'warning',
+                    message: expect.stringContaining('preconnect'),
+                }),
+            ]);
+        });
+
+        it('passes when preconnect exists for external stylesheet', async () => {
+            const ctx = makeContext('<div><h1>Title</h1></div>', {
+                head: {
+                    title: s('Page'),
+                    meta: [{ name: 'description', content: s('Desc') }],
+                    links: [
+                        { rel: 'preconnect', href: s('https://fonts.googleapis.com') },
+                        {
+                            rel: 'stylesheet',
+                            href: s('https://fonts.googleapis.com/css2?family=Inter&display=swap'),
+                        },
+                    ],
+                },
+            });
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+
+        it('does not flag local stylesheets', async () => {
+            const ctx = makeContext('<div><h1>Title</h1></div>', {
+                head: {
+                    title: s('Page'),
+                    meta: [{ name: 'description', content: s('Desc') }],
+                    links: [{ rel: 'stylesheet', href: s('/styles/theme.css') }],
+                },
+            });
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+    });
+
+    describe('font display=swap', () => {
+        it('flags Google Fonts URL without display=swap', async () => {
+            const ctx = makeContext('<div><h1>Title</h1></div>', {
+                head: {
+                    title: s('Page'),
+                    meta: [{ name: 'description', content: s('Desc') }],
+                    links: [
+                        { rel: 'preconnect', href: s('https://fonts.googleapis.com') },
+                        {
+                            rel: 'stylesheet',
+                            href: s('https://fonts.googleapis.com/css2?family=Inter'),
+                        },
+                    ],
+                },
+            });
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    severity: 'warning',
+                    message: expect.stringContaining('display=swap'),
+                }),
+            ]);
+        });
+
+        it('passes Google Fonts URL with display=swap', async () => {
+            const ctx = makeContext('<div><h1>Title</h1></div>', {
+                head: {
+                    title: s('Page'),
+                    meta: [{ name: 'description', content: s('Desc') }],
+                    links: [
+                        { rel: 'preconnect', href: s('https://fonts.googleapis.com') },
+                        {
+                            rel: 'stylesheet',
+                            href: s('https://fonts.googleapis.com/css2?family=Inter&display=swap'),
+                        },
+                    ],
+                },
+            });
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+
+        it('flags Typekit URL without display=swap', async () => {
+            const ctx = makeContext('<div><h1>Title</h1></div>', {
+                head: {
+                    title: s('Page'),
+                    meta: [{ name: 'description', content: s('Desc') }],
+                    links: [
+                        { rel: 'preconnect', href: s('https://use.typekit.net') },
+                        {
+                            rel: 'stylesheet',
+                            href: s('https://use.typekit.net/abc123.css'),
+                        },
+                    ],
+                },
+            });
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    severity: 'warning',
+                    message: expect.stringContaining('display=swap'),
+                }),
+            ]);
+        });
+
+        it('does not flag non-font external stylesheets for display=swap', async () => {
+            const ctx = makeContext('<div><h1>Title</h1></div>', {
+                head: {
+                    title: s('Page'),
+                    meta: [{ name: 'description', content: s('Desc') }],
+                    links: [
+                        { rel: 'preconnect', href: s('https://cdn.example.com') },
+                        {
+                            rel: 'stylesheet',
+                            href: s('https://cdn.example.com/styles.css'),
+                        },
+                    ],
+                },
+            });
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+    });
 });

@@ -271,6 +271,65 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
                 attribute: 'content',
             });
         }
+
+        // --- Rule: external stylesheets should have preconnect ---
+        const preconnectOrigins = new Set(
+            ctx.head.links
+                .filter((l) => l.rel === 'preconnect')
+                .map((l) => {
+                    try {
+                        return new URL(l.href.map((p) => p.value).join('')).origin;
+                    } catch {
+                        return '';
+                    }
+                })
+                .filter(Boolean),
+        );
+
+        const FONT_SERVICE_DOMAINS = ['fonts.googleapis.com', 'use.typekit.net'];
+
+        for (const link of ctx.head.links) {
+            if (link.rel !== 'stylesheet') continue;
+            const href = link.href.map((p) => p.value).join('');
+            if (!href.startsWith('http://') && !href.startsWith('https://')) continue;
+
+            let origin: string;
+            let hostname: string;
+            try {
+                const parsed = new URL(href);
+                origin = parsed.origin;
+                hostname = parsed.hostname;
+            } catch {
+                continue;
+            }
+
+            if (!preconnectOrigins.has(origin)) {
+                findings.push({
+                    severity: 'warning',
+                    message: `External stylesheet from ${hostname} without <link rel="preconnect"> — delays resource discovery`,
+                    suggestion:
+                        `Add <link rel="preconnect" href="${origin}"> before the stylesheet in <head>. ` +
+                        'Preconnect establishes the connection early, reducing load time.',
+                    element: '<link>',
+                    attribute: 'href',
+                });
+            }
+
+            // --- Rule: font service URLs should include display=swap ---
+            if (FONT_SERVICE_DOMAINS.some((d) => hostname === d || hostname.endsWith('.' + d))) {
+                if (!href.includes('display=swap')) {
+                    findings.push({
+                        severity: 'warning',
+                        message: `Font stylesheet from ${hostname} missing display=swap — blocks text rendering`,
+                        suggestion:
+                            'Add &display=swap to the font URL to avoid invisible text while fonts load. ' +
+                            'Example: https://fonts.googleapis.com/css2?family=Inter&display=swap',
+                        element: '<link>',
+                        attribute: 'href',
+                    });
+                }
+            }
+        }
     }
 
     return findings;
