@@ -273,6 +273,13 @@ describe('generate jay-html element', () => {
                 expect(elementFile.validations[0]).toMatch(/cannot be used as an inline element/);
             });
 
+            it('keyed headless used as <jay:keyName> (key as tag) produces validation error', async () => {
+                const folder = 'contracts/page-with-keyed-headless-as-tag';
+                const elementFile = await readFileAndGenerateElementFile(folder, { importerMode });
+                expect(elementFile.validations.length).toBeGreaterThan(0);
+                expect(elementFile.validations[0]).toMatch(/cannot be used as an inline element/);
+            });
+
             it('dynamic nesting components in other components', async () => {
                 const folder = 'components/dynamic-component-in-component';
                 const elementFile = await readFileAndGenerateElementFile(folder, { importerMode });

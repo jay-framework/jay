@@ -39,6 +39,8 @@ Access data and refs with the key prefix:
 
 Key-based imports are only available in **pages** (not in headfull FS components).
 
+**Important:** Do NOT use `<jay:keyName>` for key-based imports. The key is for ViewState access (`{key.field}`), not for inline elements. `<jay:>` tags use the **contract name**, not the key.
+
 ### Pattern 2: Instance-Based (jay: prefix)
 
 Multiple instances with props and inline templates. Use when you need **multiple instances** or need to pass **props**.
@@ -98,6 +100,16 @@ Use `{path}` syntax to bind props to values from the page's ViewState. The bindi
 ```
 
 Inside `<jay:...>`, bindings resolve to **that instance's** contract tags (not the parent).
+
+### Choosing between patterns
+
+| Need | Pattern | Key? | Tag? |
+| --- | --- | --- | --- |
+| One component per page, data across the whole template | Key-based | `key="product"` | No `<jay:>` — use `{product.field}` bindings |
+| Multiple instances, each with own props and template | Instance-based | No key | `<jay:contract-name prop="...">` |
+| One instance but with custom inline template | Instance-based | No key | `<jay:contract-name>` |
+
+**Never combine both:** a component imported with `key` cannot also be used as `<jay:>`. These are mutually exclusive patterns.
 
 ### Prop binding summary
 

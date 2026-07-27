@@ -565,6 +565,25 @@ export function renderNode(node: Node, context: RenderContext): RenderFragment {
                 }
                 return renderHeadlessInstance(htmlElement, newContext, componentMatch.name);
             }
+
+            // Check if the tag name matches a keyed headless import's key (agent mistake: using key as tag)
+            const keyedByName = newContext.headlessImports.find(
+                (h) => h.key && h.key === componentMatch!.name,
+            );
+            if (keyedByName) {
+                return new RenderFragment('', Imports.none(), [
+                    `<jay:${componentMatch.name}> cannot be used as an inline element because it was imported with key="${keyedByName.key}". ` +
+                        `Keyed headless components merge their ViewState into the page — use {${keyedByName.key}.fieldName} bindings instead. ` +
+                        `For inline usage, remove the key and use <jay:${keyedByName.contractName}>.`,
+                ]);
+            }
+
+            if (componentMatch.kind === 'unknown') {
+                return new RenderFragment('', Imports.none(), [
+                    `<jay:${componentMatch.name}> does not match any imported headless contract or headful component.`,
+                ]);
+            }
+
             return renderNestedComponent(htmlElement, newContext, componentMatch.name);
         }
 
