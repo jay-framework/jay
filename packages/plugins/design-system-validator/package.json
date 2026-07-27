@@ -27,6 +27,7 @@
   "dependencies": {
     "@csstools/selector-specificity": "^5.0.0",
     "@jay-framework/compiler-shared": "workspace:^",
+    "@jay-framework/plugin-validator": "workspace:^",
     "@jay-framework/stack-server-runtime": "workspace:^",
     "js-yaml": "^4.1.0",
     "postcss": "^8.5.6",
