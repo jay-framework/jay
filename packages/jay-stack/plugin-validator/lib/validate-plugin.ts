@@ -7,6 +7,7 @@ import { ts } from '@jay-framework/typescript-bridge';
 import type { ValidatePluginOptions, ValidationResult, PluginContext } from './types';
 import { checkComponentPropsAndParams } from './check-component-contract';
 import { validateAddMenuCatalog } from './validate-add-menu-catalog';
+import { validateAiditorSettings } from './validate-aiditor-settings';
 
 /**
  * Validates a Jay Stack plugin package or local plugin directory.
@@ -105,6 +106,9 @@ async function validatePluginPackage(
 
     // 7. Add Menu catalog lint (Design Log #30b)
     await validateAddMenuCatalog(context, result);
+
+    // 8. AIditor settings template (materialized via agent-kit — not in core PluginManifest)
+    await validateAiditorSettings(context, result);
 
     // Final result
     result.valid = result.errors.length === 0;
@@ -470,32 +474,13 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
                 if (route.css) {
                     validateDocFile(route.css, `route "${route.path}" css`, context, result);
                 }
-            });
-        }
-    }
-
-    const aiditorSettings = (
-        manifest as PluginManifest & {
-            aiditor?: { settings?: { route?: string; label?: string } };
-        }
-    ).aiditor?.settings;
-    if (aiditorSettings?.route) {
-        const routePaths = new Set((manifest.routes ?? []).map((route) => route.path));
-        if (!routePaths.has(aiditorSettings.route)) {
-            result.warnings.push({
-                type: 'schema',
-                message: `aiditor.settings.route "${aiditorSettings.route}" is not declared in plugin.yaml routes[]`,
-                location: 'plugin.yaml aiditor.settings',
-                suggestion:
-                    'Add a matching routes[] entry for the settings page or fix aiditor.settings.route',
-            });
-        }
-        if (!aiditorSettings.label?.trim()) {
-            result.warnings.push({
-                type: 'schema',
-                message:
-                    'aiditor.settings.label is missing — Project settings tabs use label text in v1',
-                location: 'plugin.yaml aiditor.settings',
+                if (route.devOnly !== undefined && typeof route.devOnly !== 'boolean') {
+                    result.errors.push({
+                        type: 'schema',
+                        message: `Route "${route.path}" devOnly must be a boolean`,
+                        location: 'plugin.yaml',
+                    });
+                }
             });
         }
     }
