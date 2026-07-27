@@ -103,11 +103,11 @@ Inside `<jay:...>`, bindings resolve to **that instance's** contract tags (not t
 
 ### Choosing between patterns
 
-| Need | Pattern | Key? | Tag? |
-| --- | --- | --- | --- |
-| One component per page, data across the whole template | Key-based | `key="product"` | No `<jay:>` — use `{product.field}` bindings |
-| Multiple instances, each with own props and template | Instance-based | No key | `<jay:contract-name prop="...">` |
-| One instance but with custom inline template | Instance-based | No key | `<jay:contract-name>` |
+| Need                                                   | Pattern        | Key?            | Tag?                                         |
+| ------------------------------------------------------ | -------------- | --------------- | -------------------------------------------- |
+| One component per page, data across the whole template | Key-based      | `key="product"` | No `<jay:>` — use `{product.field}` bindings |
+| Multiple instances, each with own props and template   | Instance-based | No key          | `<jay:contract-name prop="...">`             |
+| One instance but with custom inline template           | Instance-based | No key          | `<jay:contract-name>`                        |
 
 **Never combine both:** a component imported with `key` cannot also be used as `<jay:>`. These are mutually exclusive patterns.
 
