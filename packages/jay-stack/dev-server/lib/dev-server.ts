@@ -126,9 +126,15 @@ async function scanPluginRoutes(projectRoot: string, projectRoutes: JayRoutes): 
             // For NPM plugins, route.component is the export name (e.g., 'aiditorPage')
             const componentExport = isLocalComponent ? undefined : route.component;
 
-            pluginRoutes.push(createRoute(route.path, jayHtmlPath, compPath, componentExport));
+            pluginRoutes.push(
+                createRoute(route.path, jayHtmlPath, compPath, componentExport, {
+                    devOnly: route.devOnly === true,
+                }),
+            );
 
-            getLogger().info(`[Routes] Plugin "${plugin.name}" provides route ${route.path}`);
+            getLogger().info(
+                `[Routes] Plugin "${plugin.name}" provides route ${route.path}${route.devOnly ? ' (dev-only)' : ''}`,
+            );
         }
     }
 

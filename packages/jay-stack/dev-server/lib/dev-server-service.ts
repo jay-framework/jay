@@ -24,6 +24,8 @@ export interface RouteInfo {
     path: string;
     jayHtmlPath: string;
     compPath: string;
+    /** Dev-server tooling route — consumers like AIditor may filter from page pickers. */
+    devOnly?: boolean;
 }
 
 export type DevServerRouteRegistrar = (routes: DevServerRoute[]) => void;
@@ -68,12 +70,13 @@ export class DevServerService {
         return this.listRoutes();
     }
 
-    /** List all page routes in the project. */
+    /** List all page routes in the project (includes dev-only plugin routes). */
     listRoutes(): RouteInfo[] {
         return this.routes.map((r) => ({
             path: r.path,
             jayHtmlPath: r.fsRoute.jayHtmlPath,
             compPath: r.fsRoute.compPath,
+            ...(r.fsRoute.devOnly && { devOnly: true }),
         }));
     }
 
