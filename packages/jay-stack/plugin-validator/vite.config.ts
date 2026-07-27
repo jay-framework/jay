@@ -14,7 +14,6 @@ export default defineConfig({
             external: [
                 '@jay-framework/compiler-jay-html',
                 '@jay-framework/compiler-shared',
-                '@jay-framework/editor-protocol',
                 '@jay-framework/typescript-bridge',
                 'chalk',
                 'yaml',

@@ -1,9 +1,0 @@
-{
-  "extends": "@jay-framework/dev-environment/library-dom/tsconfig.json",
-  "compilerOptions": {
-    "outDir": "dist",
-    "paths": {
-      "@jay-framework/editor-protocol": ["../editor-protocol/lib"],
-    },
-  },
-}
