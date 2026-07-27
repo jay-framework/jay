@@ -3,6 +3,7 @@
 ## Background
 
 Three packages exist from the original editor integration (DL#42):
+
 - `@jay-framework/editor-client` — client-side editor communication
 - `@jay-framework/editor-protocol` — shared types for editor ↔ server messages
 - `@jay-framework/editor-server` — WebSocket server for editor connections
@@ -11,11 +12,11 @@ These were designed for the Figma design tool integration. The AIditor has since
 
 ## Current Usage
 
-| Package | Dependents | Actual code usage |
-| --- | --- | --- |
-| editor-client | none | none |
+| Package         | Dependents                  | Actual code usage                                                                                                                                    |
+| --------------- | --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| editor-client   | none                        | none                                                                                                                                                 |
 | editor-protocol | stack-cli, plugin-validator | stack-cli: Figma vendor types (`FigmaVendorDocument`, `ProjectPage`, `Plugin`, `ContractTag`). plugin-validator: vite external only, no code imports |
-| editor-server | stack-cli | `stack-cli/lib/server.ts`: `createEditorServer()` |
+| editor-server   | stack-cli                   | `stack-cli/lib/server.ts`: `createEditorServer()`                                                                                                    |
 
 All usage is in stack-cli's Figma vendor integration (`lib/vendors/figma/`, `lib/editor-handlers.ts`, `lib/server.ts`). The dev-server has no editor dependencies.
 
