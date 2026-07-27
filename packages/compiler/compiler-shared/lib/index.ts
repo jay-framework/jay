@@ -16,4 +16,5 @@ export * from './plugin-resolution';
 export * from './plugin-validators';
 export * from './validator-utils';
 export * from './coordinates';
+export * from './case-utils';
 export * from '@jay-framework/typescript-bridge';

@@ -641,6 +641,14 @@ async function parseHeadlessImports(
         const contractAttr = element.getAttribute('contract');
         const key = element.getAttribute('key');
 
+        if (key && !/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key)) {
+            validations.push(
+                `Headless component key="${key}" is not a valid identifier. ` +
+                    `Use camelCase (e.g., key="${key.replace(/-([a-z])/g, (_, l) => l.toUpperCase())}").`,
+            );
+            continue;
+        }
+
         // Validate required attributes
         if (!pluginAttr) {
             validations.push('headless import must specify plugin attribute');

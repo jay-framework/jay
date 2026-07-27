@@ -98,7 +98,9 @@ function resolveLatestVersion(pkg: string): Promise<string> {
     });
 }
 
-async function resolveLatestVersions(deps: Record<string, string>): Promise<Record<string, string>> {
+async function resolveLatestVersions(
+    deps: Record<string, string>,
+): Promise<Record<string, string>> {
     const entries = Object.entries(deps);
     const resolved = await Promise.all(
         entries.map(async ([name, version]) => {

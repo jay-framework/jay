@@ -51,10 +51,13 @@ Add a `quiet` parameter to `executePluginServerInits()`. When `true`, init error
 ### Fix scaffolded setup script
 
 Change the generated `package.json` setup script from:
+
 ```
 "setup": "jay-stack-cli setup"
 ```
+
 to:
+
 ```
 "setup": "jay-stack-cli setup --interactive"
 ```
@@ -76,11 +79,11 @@ to:
 
 ## Trade-offs
 
-| Choice | Pro | Con |
-| --- | --- | --- |
-| Per-plugin setup+init | Simple, no reset/re-init, natural accumulation | `run-setup.ts` takes over init responsibility from `cli-services.ts` |
-| Quiet init errors | Clean output during setup | Debugging harder if init fails for unexpected reasons; mitigated by `--verbose` |
-| `--interactive` in scaffolded script | Users get prompted by default | Agents calling `npm run setup` get interactive mode; they should call `jay-stack-cli setup` directly |
+| Choice                               | Pro                                            | Con                                                                                                  |
+| ------------------------------------ | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Per-plugin setup+init                | Simple, no reset/re-init, natural accumulation | `run-setup.ts` takes over init responsibility from `cli-services.ts`                                 |
+| Quiet init errors                    | Clean output during setup                      | Debugging harder if init fails for unexpected reasons; mitigated by `--verbose`                      |
+| `--interactive` in scaffolded script | Users get prompted by default                  | Agents calling `npm run setup` get interactive mode; they should call `jay-stack-cli setup` directly |
 
 ## Implementation Results
 
@@ -91,6 +94,7 @@ to:
 2. **`stack-cli/lib/cli-services.ts`** — added `quiet: boolean = false` param to `initializeServicesForCli()`, threaded to `executePluginServerInits`.
 
 3. **`stack-cli/lib/run-setup.ts`** — rewrote to per-plugin setup+init flow:
+
    - Removed bulk `initializeServices()` call
    - No longer depends on `cli-services.ts` for init — does it inline per plugin
    - After each plugin returns `configured`, runs its init quietly via `executePluginServerInits` with a single-element array

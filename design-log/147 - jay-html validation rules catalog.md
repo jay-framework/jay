@@ -44,8 +44,8 @@ Package: `@jay-framework/seo-validator` (monorepo, dev dependency)
 | Missing canonical        | warning  | `<link>`      | No `<link rel="canonical">` in `<head>`                                                |
 | Noindex robots           | warning  | `<meta>`      | `<meta name="robots">` contains `noindex`                                              |
 
-| Missing preconnect        | warning  | `<link>`      | External stylesheet `<link>` without a preceding `<link rel="preconnect">` for that domain |
-| Font missing display=swap | warning  | `<link>`      | Google Fonts / Typekit stylesheet URL missing `display=swap` parameter                      |
+| Missing preconnect | warning | `<link>` | External stylesheet `<link>` without a preceding `<link rel="preconnect">` for that domain |
+| Font missing display=swap | warning | `<link>` | Google Fonts / Typekit stylesheet URL missing `display=swap` parameter |
 
 The dimensions rule accepts three forms of sizing: `width`/`height` attributes, inline `style` with `width:` and `height:`, or `srcset` (responsive images).
 

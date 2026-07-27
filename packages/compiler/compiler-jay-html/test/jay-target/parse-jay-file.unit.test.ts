@@ -1967,6 +1967,27 @@ describe('compiler', () => {
                 true,
             );
         });
+
+        it('should reject kebab-case key and suggest camelCase', async () => {
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                    |   title: string
+                    |`,
+                    '<body></body>',
+                    `<script type="application/jay-headless" plugin="test-counter" contract="counter" key="my-counter"></script>`,
+                ),
+                'Page',
+                '',
+                {},
+                propsResolver,
+                '',
+            );
+
+            expect(jayFile.validations).toEqual([
+                'Headless component key="my-counter" is not a valid identifier. Use camelCase (e.g., key="myCounter").',
+            ]);
+        });
     });
 
     describe('headfull full-stack imports', () => {
