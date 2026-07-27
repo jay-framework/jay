@@ -84,9 +84,21 @@ export interface MarkdownImageOptions {
 
 function createImageRenderer(options: MarkdownImageOptions) {
     return {
-        image({ href, title, text }: { href: string; title?: string | null; text: string }): string {
+        image({
+            href,
+            title,
+            text,
+        }: {
+            href: string;
+            title?: string | null;
+            text: string;
+        }): string {
             const alt = text || '';
-            const isRelative = href && !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('/');
+            const isRelative =
+                href &&
+                !href.startsWith('http://') &&
+                !href.startsWith('https://') &&
+                !href.startsWith('/');
             const filename = isRelative ? decodeURIComponent(href) : '';
 
             if (options.mediaMap && filename && options.mediaMap[filename]) {
@@ -139,18 +151,27 @@ export function parseMarkdownBody(markdown: string, imageOptions?: MarkdownImage
     return marked.parse(markdown) as string;
 }
 
-export async function parseMarkdownBodyWithMermaid(markdown: string, imageOptions?: MarkdownImageOptions): Promise<string> {
+export async function parseMarkdownBodyWithMermaid(
+    markdown: string,
+    imageOptions?: MarkdownImageOptions,
+): Promise<string> {
     const processed = await preprocessMermaid(markdown, true);
     return parseMarkdownBody(processed, imageOptions);
 }
 
-export function parseMarkdown(content: string, imageOptions?: MarkdownImageOptions): ParsedMarkdown {
+export function parseMarkdown(
+    content: string,
+    imageOptions?: MarkdownImageOptions,
+): ParsedMarkdown {
     const { frontmatter, body } = extractFrontmatter(content);
     const html = parseMarkdownBody(body, imageOptions);
     return { frontmatter, html };
 }
 
-export async function parseMarkdownWithMermaid(content: string, imageOptions?: MarkdownImageOptions): Promise<ParsedMarkdown> {
+export async function parseMarkdownWithMermaid(
+    content: string,
+    imageOptions?: MarkdownImageOptions,
+): Promise<ParsedMarkdown> {
     const { frontmatter, body } = extractFrontmatter(content);
     const html = await parseMarkdownBodyWithMermaid(body, imageOptions);
     return { frontmatter, html };

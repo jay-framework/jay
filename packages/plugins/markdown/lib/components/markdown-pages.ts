@@ -25,8 +25,19 @@ function readPublicFolder(): string {
 }
 
 const MEDIA_EXTENSIONS = new Set([
-    '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.avif', '.ico',
-    '.mp4', '.webm', '.ogg', '.mp3', '.wav',
+    '.png',
+    '.jpg',
+    '.jpeg',
+    '.gif',
+    '.svg',
+    '.webp',
+    '.avif',
+    '.ico',
+    '.mp4',
+    '.webm',
+    '.ogg',
+    '.mp3',
+    '.wav',
     '.pdf',
 ]);
 

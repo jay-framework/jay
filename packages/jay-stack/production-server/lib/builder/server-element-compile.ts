@@ -1,4 +1,5 @@
 import { build as viteBuild } from 'vite';
+import { createHash } from 'node:crypto';
 import { jayRuntime, type JayRollupConfig } from '@jay-framework/vite-plugin';
 import { jayStackCompiler } from '@jay-framework/compiler-jay-stack';
 import {
@@ -88,14 +89,13 @@ export async function compileServerElement(
     if (css) {
         cssImports = extractCssImportUrls(css);
 
-        const cssFilename = path.basename(outputPath, '.server-element.js') + '.css';
-        const cssPath = path.join(outputDir, cssFilename);
-        if (minifyCss) {
-            const minified = await esbuildTransform(css, { loader: 'css', minify: true });
-            await fs.writeFile(cssPath, minified.code, 'utf-8');
-        } else {
-            await fs.writeFile(cssPath, css, 'utf-8');
-        }
+        const cssContent = minifyCss
+            ? (await esbuildTransform(css, { loader: 'css', minify: true })).code
+            : css;
+        const hash = createHash('sha256').update(cssContent).digest('hex').slice(0, 8);
+        const baseName = path.basename(outputPath, '.server-element.js');
+        const cssFilename = `${baseName}-${hash}.css`;
+        await fs.writeFile(path.join(outputDir, cssFilename), cssContent, 'utf-8');
         cssFile = cssFilename;
     }
 
