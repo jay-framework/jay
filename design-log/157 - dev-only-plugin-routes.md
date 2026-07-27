@@ -74,7 +74,7 @@ Deleted in implementation:
 - HTTP 404 gating on `_jay_embed` in dev-server and production `fetch-page-handler`
 - `listRoutes()` filter that hid embed-only routes
 
-`isJayEmbedRequest` remains in stack-server-runtime for DL#128 iframe client behavior — not route access control.
+DL#128 `_jay_embed` iframe client behavior (cookie, postMessage freeze) lives in `generate-client-script.ts` only — no server-side helper.
 
 ### Plugin developer guidance (agent-kit)
 
