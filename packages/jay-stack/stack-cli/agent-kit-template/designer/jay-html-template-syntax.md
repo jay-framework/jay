@@ -149,6 +149,33 @@ Use parentheses for complex expressions:
 - Logical: `if="a && b"`, `if="a || b"`, `if="(a || b) && c"`
 - Negation: `!` prefix on booleans
 
+### Expression limits (important)
+
+Jay-html expressions resolve **contract or page tag names only**. They are **not** JavaScript — even when the syntax looks similar (`===`, `&&`, `> 0`).
+
+❌ **Invalid** — property access, indexing, or method calls:
+
+```html
+<p if="items.length===0">No items</p>
+<!-- looks for a tag named "items.length" -->
+<span>{user.name.split(' ')[0]}</span>
+<!-- no method calls or bracket indexing -->
+```
+
+✅ **Valid** — expose derived state in the contract or in `page.ts` ViewState:
+
+```html
+<p if="!hasItems">No items</p>
+<span if="itemCount > 0">You have {itemCount} items</span>
+```
+
+| Need | Contract / ViewState tag | Jay-HTML |
+| ---- | ------------------------ | -------- |
+| Empty list hint | `hasItems: boolean` variant | `if="!hasItems"` |
+| Count-based UI | `itemCount: number` data tag | `if="itemCount===0"` |
+
+See [contracts/examples/category-list.md](../contracts/examples/category-list.md) (`hasCategories`).
+
 ## Loops (forEach / trackBy)
 
 Iterate over repeated sub-contracts:

@@ -6,6 +6,8 @@ Jay-HTML is standard HTML with data bindings. There is no custom component frame
 
 The design tool can freely read and rewrite jay-html files as long as contract bindings stay intact. Bindings (`{expression}`, `if`, `forEach`, `ref`) are the only extension to HTML. Everything else — CSS, structure, semantics, accessibility — is native.
 
+**Common mistake:** expressions are not JavaScript — `if="items.length===0"` fails because jay-html resolves tag names, not property access. Use a boolean tag like `hasItems` or a number tag like `itemCount` instead. See [jay-html-template-syntax.md](jay-html-template-syntax.md#expression-limits-important).
+
 ## Component Types
 
 ### Page

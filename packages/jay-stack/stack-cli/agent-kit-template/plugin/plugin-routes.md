@@ -45,6 +45,8 @@ A plugin route is a **headless component + jay-html template + route path**. It 
 </html>
 ```
 
+**Jay-html expression rules** — plugin route templates use the same binding syntax as project pages. `if` and `{…}` resolve **tag names only**; no `.length`, method calls, or bracket indexing. For empty lists, expose `hasItems: boolean` or `itemCount: number` in ViewState / the inline `application/jay-data` block. See [jay-html-template-syntax.md](../designer/jay-html-template-syntax.md#expression-limits-important).
+
 ### 2. Create the page component
 
 ```typescript
