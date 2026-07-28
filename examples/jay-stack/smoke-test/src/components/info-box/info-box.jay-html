@@ -1,0 +1,10 @@
+<html>
+<head>
+  <script type="application/jay-data" contract="./info-box.jay-contract"></script>
+</head>
+<body>
+  <div class="info-box">
+    <strong>Structural Component Works</strong>
+  </div>
+</body>
+</html>

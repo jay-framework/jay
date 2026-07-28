@@ -21,6 +21,7 @@ export interface JayHeadlessImports {
     contractPath?: string; // Absolute path to the contract file (for resolving linked sub-contracts)
     metadata?: Record<string, unknown>; // Optional metadata from dynamic contract generator
     headlessProps?: Record<string, string>; // Static props from YAML body in the script tag
+    structural?: boolean; // True when no .ts code file exists — passthrough component (DL#162)
 }
 
 export interface JayHtmlHeadLink {

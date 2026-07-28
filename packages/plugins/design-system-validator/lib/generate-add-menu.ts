@@ -361,7 +361,11 @@ export async function generateDesignSystemAgentKit(
 
     const outputPath = path.join(ctx.projectRoot, ADD_MENU_OUTPUT_REL);
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-    fs.writeFileSync(outputPath, yaml.dump({ items: allItems }, { lineWidth: 120, noRefs: true }), 'utf-8');
+    fs.writeFileSync(
+        outputPath,
+        yaml.dump({ items: allItems }, { lineWidth: 120, noRefs: true }),
+        'utf-8',
+    );
 
     return {
         agentKitCreated: [ADD_MENU_OUTPUT_REL],

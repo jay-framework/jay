@@ -8,15 +8,15 @@ The agent-kit handler writes to `agent-kit/aiditor/add-menu/<plugin-name>.yaml`.
 
 ```yaml
 items:
-  - id: my-plugin:feature-name        # required — unique, stable
-    title: Feature Name                # required — shown in the add menu
-    category: My Plugin                # required — top-level nav label
-    prompt: |                          # required — injected verbatim into agent task
+  - id: my-plugin:feature-name # required — unique, stable
+    title: Feature Name # required — shown in the add menu
+    category: My Plugin # required — top-level nav label
+    prompt: | # required — injected verbatim into agent task
       Use headless component @my-org/my-plugin / contract feature-name.
       Read agent-kit/designer/feature-name.md for usage guide.
-    pluginName: my-plugin              # required — plugin attribution
-    packageName: '@my-org/my-plugin'   # required — visibility filter
-    subCategory: Components            # optional — second nav level
+    pluginName: my-plugin # required — plugin attribution
+    packageName: '@my-org/my-plugin' # required — visibility filter
+    subCategory: Components # optional — second nav level
 ```
 
 `pluginName` and `packageName` must always be set and must match the plugin's `plugin.yaml` name and npm package name respectively. AIditor uses them to filter items — only items whose `packageName` or `pluginName` matches an installed plugin are visible.
@@ -26,15 +26,15 @@ items:
 Every item should declare how the user attaches it:
 
 ```yaml
-    interaction:
-      mode: reference              # default — attach as context or @mention
+interaction:
+  mode: reference # default — attach as context or @mention
 ```
 
 ```yaml
-    interaction:
-      mode: stage-place            # click/drag onto live preview
-      stagePromptTemplate: |       # placed at the marker location
-        Add a product card at this location using wix-stores/product-widget.
+interaction:
+  mode: stage-place # click/drag onto live preview
+  stagePromptTemplate: | # placed at the marker location
+    Add a product card at this location using wix-stores/product-widget.
 ```
 
 Use `reference` for data sources (contracts, categories). Use `stage-place` for visual elements the user places on the page (components, design tokens, effects).
@@ -71,6 +71,7 @@ Optional visual preview in the browse grid:
 ```
 
 Html-fragment rules:
+
 - Single root `<div>`
 - `<style>` with `@scope { }` (even if CSS is inline-only)
 - No `<script>`, no `on*` handlers
@@ -84,15 +85,15 @@ Import `AddMenuItem` from `@jay-framework/plugin-validator` for type-safe item c
 import type { AddMenuItem } from '@jay-framework/plugin-validator';
 
 const items: AddMenuItem[] = [
-    {
-        id: 'my-plugin:feature',
-        title: 'Feature',
-        category: 'My Plugin',
-        pluginName: 'my-plugin',
-        packageName: '@my-org/my-plugin',
-        interaction: { mode: 'stage-place', stagePromptTemplate: 'Add feature here.' },
-        prompt: 'Use headless @my-org/my-plugin / contract feature.',
-    },
+  {
+    id: 'my-plugin:feature',
+    title: 'Feature',
+    category: 'My Plugin',
+    pluginName: 'my-plugin',
+    packageName: '@my-org/my-plugin',
+    interaction: { mode: 'stage-place', stagePromptTemplate: 'Add feature here.' },
+    prompt: 'Use headless @my-org/my-plugin / contract feature.',
+  },
 ];
 ```
 

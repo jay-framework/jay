@@ -195,8 +195,8 @@ import { makeJayStackComponent, phaseOutput } from '@jay-framework/fullstack-com
 import type { SiteHeaderContract, SiteHeaderProps } from './site-header.jay-html';
 
 export const siteHeader = makeJayStackComponent<SiteHeaderContract>()
-    .withProps<SiteHeaderProps>()
-    .withFastRender(async (props) => phaseOutput({ logoUrl: props.logoUrl }, {}));
+  .withProps<SiteHeaderProps>()
+  .withFastRender(async (props) => phaseOutput({ logoUrl: props.logoUrl }, {}));
 ```
 
 For a structural component with only props and no data logic, `.withFastRender` passes props through as ViewState.

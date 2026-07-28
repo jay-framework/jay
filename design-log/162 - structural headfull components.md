@@ -118,3 +118,49 @@ No `.ts` file needed. The `src` attribute in the import still points to `../comp
 | Auto-generate from contract   | Designer-independent, zero boilerplate | Less explicit, "magic" behavior    |
 | Keep requiring `.ts`          | Explicit, no special cases             | Role boundary problem, boilerplate |
 | Generate `.ts` on `agent-kit` | File exists for inspection             | Generated code to maintain         |
+
+## Implementation Results
+
+### Key insight: structural = template fragment, not component
+
+The original design proposed a synthetic passthrough component (props → ViewState). This was wrong. A structural component has **no props, no tags, no ViewState**. It's a reusable template fragment — the `<jay:>` tag is unwrapped and its content becomes plain HTML in the parent.
+
+Data inside a structural component comes from **headless imports declared in its own `<head>`**, not from the parent via props.
+
+### What changed (simplified from original plan)
+
+1. **Parser** (`jay-html-parser.ts`):
+
+   - Check if `.ts` file exists after resolving `src`
+   - If missing: inject the component's jay-html template into the parent body, then **unwrap** the `<jay:>` tag (replace with its innerHTML)
+   - `continue` — no `headlessImport` entry is created, no contract types are built
+
+2. **Compiler** (`jay-html-compiler.ts`):
+
+   - Structural components are excluded from `headlessContractNames` — the compiler never sees them as component tags (they were unwrapped to plain HTML by the parser)
+   - The inline passthrough code from the original plan was removed — not needed
+
+3. **Runtime** (`load-page-parts.ts`, `load-production-parts.ts`):
+   - `structural` flag on `JayHeadlessImports` is kept defensively but never set (structural components `continue` before pushing)
+   - No synthetic component code — not needed
+
+### What was removed from original plan
+
+- Synthetic passthrough component (`phaseOutput(props, {})`)
+- Props → ViewState mapping
+- Inline component generation in compiler
+- `structural` entries in page-parts.json
+
+### Contract for structural components
+
+Minimal — just a name:
+
+```yaml
+name: InfoBox
+```
+
+No props, no tags. The contract exists only to name the component for the import.
+
+### Smoke test
+
+`examples/jay-stack/smoke-test/src/components/info-box/` — two files only (`.jay-html` + `.jay-contract`), used via `<jay:infoBox>` in the headfull page. Verified in both dev and production modes.
