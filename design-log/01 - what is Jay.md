@@ -11,7 +11,15 @@ In a nutshell, the Jay Project is a Rendering Toolset that takes a Jay file, fro
 3. a Testing driver
 4. "run in secure context" modules
 
-![Overview](./01%20-%20what%20is%20Jay%20-%20overview.png 'Overview')
+```mermaid
+flowchart TB
+    A[Jay File]
+
+    A --> B["Jay Component (Runtime)"]
+    A --> C["Run in Secure Context (Secure Runtime)"]
+    A --> D["Definition File (Coding)"]
+    A --> E["Test Driver (Testing)"]
+```
 
 # Motivations
 
