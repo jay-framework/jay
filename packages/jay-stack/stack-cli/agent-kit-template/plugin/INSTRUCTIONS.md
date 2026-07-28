@@ -52,7 +52,8 @@ The plugin participates in four CLI commands, each running different hooks:
 | [seo-guide.md](seo-guide.md)                      | SEO head tags: title, meta, OG, canonical via phaseOutput               |
 | [commands-guide.md](commands-guide.md)            | makeCliCommand, .jay-command files, CONSOLE_CONTEXT, jay-stack run      |
 | [validation.md](validation.md)                    | jay-stack validate-plugin, writing custom jay-html validators           |
-| [setup-guide.md](setup-guide.md)                  | Setup handlers, references handlers, add-menu generation                |
+| [setup-guide.md](setup-guide.md)                  | Setup handlers, agent-kit handlers, references generation               |
+| [add-menu-guide.md](add-menu-guide.md)            | AIditor add-menu items: schema, interaction, browse, presentation       |
 | [dev-server-service.md](dev-server-service.md)    | Dev server service API: routes, params, freeze management               |
 | `../references/<plugin>/`                         | Plugin reference data                                                   |
 
