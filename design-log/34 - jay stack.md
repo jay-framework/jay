@@ -74,7 +74,30 @@ Next we will explore different APIs to package those ideas.**
 The slowly changing data rendering is used to load param values for pages with url parameters, as well as loading
 system parameter values (languages). The rendering continues by loading data for each set of params and pre-rendering the page.
 
-![34 - jay stack - rendering flow - slowly changing.mmd](34%20-%20jay%20stack%20-%20rendering%20flow%20-%20slowly%20changing.svg)
+```mermaid
+sequenceDiagram
+    participant page as page jay-html
+    participant comp as page component
+    participant child as child components
+    Note left of page: slowly changing<br>data
+    page->>comp: link (import page comp.) +<br> app settings
+    activate comp
+    Note right of comp: url loading
+    comp->>page: (params, system params)[]
+    deactivate comp
+    page->>comp: params, system params + <br>app settings
+    activate comp
+    Note right of comp: load slowly<br>changing data
+    comp->>page: server vs + server props
+    deactivate comp
+    Note left of page: map server vs to <br>child component props
+    page->>child: props + app settings
+    activate child
+    Note right of child: load slowly<br>changing data
+    child->>page: server vs + server props
+    deactivate child
+    Note left of page: rendering all <br>components slowly<br>changing data<br>using vs<br>to jay-html
+```
 
 1. Given a route to a `jay-html` file, the file is loaded.
 2. Call the url loading API to load all dynamic `param` values - set of `params` and `system params`.
@@ -107,7 +130,28 @@ The fast changing data rendering starts with a `pre-rendered jay-html`, or the o
 Given the application `server props`, it loads the `view state` to render the final `html` to be sent to the browser,
 as well as `client props` to be sent to the client component as part of the `html` content.
 
-![34 - jay stack - rendering flow - fast changing.svg](34%20-%20jay%20stack%20-%20rendering%20flow%20-%20fast%20changing.svg)
+```mermaid
+sequenceDiagram
+    participant page as page <br>slowly rendered <br>jay-html
+    participant comp as page component
+    participant child as child components
+    page->>comp: server props + <br>app settings
+    activate comp
+    Note right of comp: load fast<br>changing data
+    comp->>page: vs + client props
+    deactivate comp
+    activate page
+    Note left of page: map vs to child <br>components props
+    page->>child: props + app settings
+    deactivate page
+    activate child
+    Note right of child: load fast<br>changing data
+    child->>page: vs + client props
+    deactivate child
+    activate page
+    Note left of page: rendering html<br>send to client
+    deactivate page
+```
 
 1. Given a route to `jay-html` file and extracting `parameters` from the `HTTP Request`, load the `pre-rendered jay-html`
    or, if not present, the original `jay-html`.
@@ -144,7 +188,17 @@ declare type RouteResult =
 
 The client rendering starts with a loaded `HTML` file importing the client library of the application.
 
-![34 - jay stack - rendering flow - client rendering.svg](34%20-%20jay%20stack%20-%20rendering%20flow%20-%20client%20rendering.svg)
+```mermaid
+sequenceDiagram
+    participant page as page html <br>inc client props
+    participant comp as page component
+    page->>comp: client props
+    activate comp
+    Note right of comp: create interactive<br>jay component
+    comp->>page: vs
+    deactivate comp
+    Note left of page: interactive app<br>connect to the DOM
+```
 
 1. Links in the `HTML` page header load the applications components of the page.
    1. Alternatively, we can delay the application components loading to an actual interaction.
@@ -171,7 +225,36 @@ declare interface AppSettings {
 
 This section describes how different sources of data flow to the different stages of page rendering.
 
-![34 - jay stack - page data flow.svg](34%20-%20jay%20stack%20-%20page%20data%20flow.svg)
+```mermaid
+stateDiagram-v2
+    sysParams: System params
+    params
+    pageProps: Page Props
+    pageSettings: Page Settings
+    appSettings: App Settings
+    slowly: Slowly Changing Data Loader
+    fast: fast Changing Data Loader
+    client: client rendering
+    vs: ViewState
+
+    sysParams --> pageProps
+    params --> pageProps
+    pageSettings --> slowly
+    appSettings --> slowly
+    pageProps --> slowly
+
+    slowly --> fast : server carry forward
+    slowly --> vs : partial render
+    pageSettings --> fast
+    appSettings --> fast
+    pageProps --> fast
+
+    fast --> client: client carry forward
+    fast --> vs : complete HTML render
+    pageProps --> client
+
+    client --> vs : interactive render<br>(hydration)
+```
 
 The inputs are:
 
