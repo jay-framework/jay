@@ -382,15 +382,16 @@ export function parseContract(contractYaml: string, fileName: string): WithValid
         if (!parsedYaml.name) {
             validations.push('Contract must have a name');
         }
-        if (!parsedYaml.tags && !Array.isArray(parsedYaml.tags)) {
-            validations.push('Contract must have tags as an array of the contract tags');
+        if (parsedYaml.tags !== undefined && !Array.isArray(parsedYaml.tags)) {
+            validations.push('Contract tags must be an array (use tags: [] for no tags)');
         }
 
         if (validations.length > 0) {
             return new WithValidations(undefined, validations);
         }
 
-        const tagResults = parsedYaml.tags.map((tag) => parseTag(tag));
+        const tags = parsedYaml.tags ?? [];
+        const tagResults = tags.map((tag) => parseTag(tag));
         const tagValidations = tagResults.flatMap((tr) => tr.validations);
         const parsedTags = tagResults
             .map((tr) => tr.val)
