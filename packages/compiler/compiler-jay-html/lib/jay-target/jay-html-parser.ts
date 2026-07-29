@@ -1172,20 +1172,22 @@ async function parseHeadfullFSImports(
             jayTag.set_content(jayHtmlBody.innerHTML);
         }
 
-        // Check if .ts code file exists (DL#162 structural headfull)
-        let resolvedModulePath: string;
+        // Check if .ts code file exists (DL#162 structural headfull).
+        let resolvedSrcPath: string;
         try {
-            resolvedModulePath = importResolver.resolveLink(moduleResolveDir, src);
+            resolvedSrcPath = importResolver.resolveLink(moduleResolveDir, src);
         } catch {
-            resolvedModulePath = path.resolve(moduleResolveDir, src);
+            resolvedSrcPath = path.resolve(moduleResolveDir, src);
         }
-        const tsFileExists =
-            fsSync.existsSync(resolvedModulePath + '.ts') ||
-            fsSync.existsSync(resolvedModulePath + '.js');
+        const hasCodeFile =
+            fsSync.existsSync(resolvedSrcPath + '.ts') ||
+            fsSync.existsSync(resolvedSrcPath + '.js') ||
+            fsSync.existsSync(path.join(resolvedSrcPath, 'index.ts')) ||
+            fsSync.existsSync(path.join(resolvedSrcPath, 'index.js'));
 
         // For structural components (no .ts), unwrap the <jay:> tag —
         // replace it with its children so the compiler treats the content as plain HTML.
-        if (!tsFileExists) {
+        if (!hasCodeFile) {
             for (const jayTag of jayTags) {
                 jayTag.replaceWith(jayTag.innerHTML);
             }
@@ -1270,6 +1272,12 @@ async function parseHeadfullFSImports(
 
                 // Module path for code link — resolve from the same directory that
                 // found the jay-html file (filePath for source, projectRoot for pre-rendered)
+                let resolvedModulePath: string;
+                try {
+                    resolvedModulePath = importResolver.resolveLink(moduleResolveDir, src);
+                } catch {
+                    resolvedModulePath = path.resolve(moduleResolveDir, src);
+                }
                 let relativeModule = path.relative(filePath, resolvedModulePath);
                 if (!relativeModule.startsWith('.')) {
                     relativeModule = './' + relativeModule;
