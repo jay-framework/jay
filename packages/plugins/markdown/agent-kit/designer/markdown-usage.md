@@ -195,6 +195,41 @@ graph LR
 | `.md-mermaid-source` | `<pre>` | Raw mermaid source (client fallback only)         |
 | `.md-mermaid-error`  | `<pre>` | Error message when rendering fails                |
 
+### Theming mermaid diagrams
+
+SVG diagrams use CSS custom properties for all colors. Set `--bg` and `--fg` on `.md-mermaid svg` to control the color scheme:
+
+```css
+.md-mermaid svg {
+  --bg: var(--color-surface);
+  --fg: var(--color-text);
+  font-family: inherit;
+}
+```
+
+The SVG internally derives all colors from `--bg` and `--fg`:
+
+| Variable | Derived from | Controls |
+| --- | --- | --- |
+| `--_text` | `--fg` | Node labels, actor names |
+| `--_line` | `--fg` 50% + `--bg` | Edges, lifelines |
+| `--_arrow` | `--fg` 85% + `--bg` | Arrow heads |
+| `--_node-fill` | `--fg` 3% + `--bg` | Node backgrounds |
+| `--_node-stroke` | `--fg` 20% + `--bg` | Node borders |
+| `--_group-fill` | `--bg` | Subgraph backgrounds |
+
+Override individual variables for fine control:
+
+```css
+.md-mermaid svg {
+  --bg: #0a0a0a;
+  --fg: #e4e4e7;
+  --accent: #8b5cf6;   /* arrow color */
+  --surface: #1a1a2e;  /* node fill */
+  --border: #333;      /* node stroke */
+}
+```
+
 ## Theme CSS
 
 Import a theme in your project CSS:
