@@ -169,10 +169,10 @@ Jay-html expressions resolve **contract or page tag names only**. They are **not
 <span if="itemCount > 0">You have {itemCount} items</span>
 ```
 
-| Need | Contract / ViewState tag | Jay-HTML |
-| ---- | ------------------------ | -------- |
-| Empty list hint | `hasItems: boolean` variant | `if="!hasItems"` |
-| Count-based UI | `itemCount: number` data tag | `if="itemCount===0"` |
+| Need            | Contract / ViewState tag     | Jay-HTML             |
+| --------------- | ---------------------------- | -------------------- |
+| Empty list hint | `hasItems: boolean` variant  | `if="!hasItems"`     |
+| Count-based UI  | `itemCount: number` data tag | `if="itemCount===0"` |
 
 See [contracts/examples/category-list.md](../contracts/examples/category-list.md) (`hasCategories`).
 
