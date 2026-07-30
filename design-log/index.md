@@ -100,6 +100,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 89  | PR 158 merge concerns                             | Merge conflicts, duplicate work, and decisions for PR #158 into main         |
 | 130 | plugin routes and templates                       | Plugins provide pages (jay-html + page.ts) as routes; project overrides      |
 | 157 | dev-only plugin routes                            | `devOnly` flag on plugin routes — dev-server tooling metadata on RouteInfo   |
+| 158 | plugin-framework-version-compatibility            | Registry-based plugin↔framework compat; `plugins compat`, install preflight, doctor |
 | 142 | plugin CLI commands                               | `jay-stack run <plugin>/<command>` for admin/batch operations                |
 | 145 | pluggable jay-html validation                     | Plugin-provided validation rules for jay-html with agent-friendly feedback   |
 | 147 | jay-html validation rules catalog                 | Complete catalog of all validation rules across wix-media, SEO, and a11y     |
