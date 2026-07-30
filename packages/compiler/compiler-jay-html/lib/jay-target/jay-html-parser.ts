@@ -1167,11 +1167,31 @@ async function parseHeadfullFSImports(
         for (const jayTag of jayTags) {
             const existingContent = jayTag.innerHTML.trim();
             if (existingContent) {
-                // Tag already has content — either pre-rendered injection or user content.
-                // Skip injection; the existing content is used as-is.
                 continue;
             }
             jayTag.set_content(jayHtmlBody.innerHTML);
+        }
+
+        // Check if .ts code file exists (DL#162 structural headfull).
+        let resolvedSrcPath: string;
+        try {
+            resolvedSrcPath = importResolver.resolveLink(moduleResolveDir, src);
+        } catch {
+            resolvedSrcPath = path.resolve(moduleResolveDir, src);
+        }
+        const hasCodeFile =
+            fsSync.existsSync(resolvedSrcPath + '.ts') ||
+            fsSync.existsSync(resolvedSrcPath + '.js') ||
+            fsSync.existsSync(path.join(resolvedSrcPath, 'index.ts')) ||
+            fsSync.existsSync(path.join(resolvedSrcPath, 'index.js'));
+
+        // For structural components (no .ts), unwrap the <jay:> tag —
+        // replace it with its children so the compiler treats the content as plain HTML.
+        if (!hasCodeFile) {
+            for (const jayTag of jayTags) {
+                jayTag.replaceWith(jayTag.innerHTML);
+            }
+            continue;
         }
 
         // Build JayHeadlessImports entry
@@ -1252,10 +1272,13 @@ async function parseHeadfullFSImports(
 
                 // Module path for code link — resolve from the same directory that
                 // found the jay-html file (filePath for source, projectRoot for pre-rendered)
-                let relativeModule = path.relative(
-                    filePath,
-                    importResolver.resolveLink(moduleResolveDir, src),
-                );
+                let resolvedModulePath: string;
+                try {
+                    resolvedModulePath = importResolver.resolveLink(moduleResolveDir, src);
+                } catch {
+                    resolvedModulePath = path.resolve(moduleResolveDir, src);
+                }
+                let relativeModule = path.relative(filePath, resolvedModulePath);
                 if (!relativeModule.startsWith('.')) {
                     relativeModule = './' + relativeModule;
                 }
@@ -1667,7 +1690,7 @@ export async function parseJayFile(
         ...headfullImports,
         ...allHeadlessImports.flatMap((_) => [
             ..._.contractLinks,
-            ...(usedAsInstance.has(_.contractName) ? [_.codeLink] : []),
+            ...(usedAsInstance.has(_.contractName) && !_.structural ? [_.codeLink] : []),
         ]),
     ];
 

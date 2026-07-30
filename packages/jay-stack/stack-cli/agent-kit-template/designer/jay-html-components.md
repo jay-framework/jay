@@ -174,16 +174,40 @@ Each headfull component lives in its own subdirectory under `src/components/` wi
 
 ### Component Structure
 
-A headfull component has its own `.jay-html` file with the same structure as a page:
+Each headfull component needs three files in its subdirectory under `src/components/`:
+
+**`.jay-contract`** — declares props. Tags are optional (use `tags: []` or omit for structural components):
+
+```yaml
+# components/site-header/site-header.jay-contract
+name: SiteHeader
+props:
+  - name: logoUrl
+    type: string
+    required: true
+```
+
+**`.ts`** — component code. Must use `makeJayStackComponent` with `.withProps()` matching the contract props:
+
+```typescript
+// components/site-header/site-header.ts
+import { makeJayStackComponent, phaseOutput } from '@jay-framework/fullstack-component';
+import type { SiteHeaderContract, SiteHeaderProps } from './site-header.jay-html';
+
+export const siteHeader = makeJayStackComponent<SiteHeaderContract>()
+  .withProps<SiteHeaderProps>()
+  .withFastRender(async (props) => phaseOutput({ logoUrl: props.logoUrl }, {}));
+```
+
+For a structural component with only props and no data logic, `.withFastRender` passes props through as ViewState.
+
+**`.jay-html`** — the template:
 
 ```html
-<!-- components/header/header.jay-html -->
+<!-- components/site-header/site-header.jay-html -->
 <html>
   <head>
-    <script type="application/jay-data">
-      data:
-          logoUrl: string
-    </script>
+    <script type="application/jay-data" contract="./site-header.jay-contract"></script>
   </head>
   <body>
     <header>

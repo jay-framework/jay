@@ -4,7 +4,11 @@ description: Renders a directory of markdown files as routable pages
 props:
   - name: contentDir
     kind: required
-    description: Path to markdown directory (relative to page)
+    description: Path to markdown directory (relative to project root)
+
+  - name: mediaMap
+    kind: optional
+    description: Path to YAML file mapping image filenames to CDN URLs with srcset
 
 params:
   - name: slug

@@ -257,24 +257,7 @@ export async function generateMyAgentKit(
 
 ## AIditor Add-Menu Items
 
-The agent-kit handler writes to `agent-kit/aiditor/add-menu/<plugin-name>.yaml`. The AIditor discovers and loads all YAML files in this directory.
-
-Each item:
-
-```yaml
-items:
-  - id: my-plugin:feature-name # unique ID
-    title: Feature Name # shown in the add menu
-    category: My Plugin # grouping
-    subCategory: Components # sub-grouping
-    pluginName: my-plugin # optional: plugin attribution
-    packageName: '@my-org/my-plugin' # optional: npm package name
-    prompt: | # instructions for the AI agent
-      Use headless component @my-org/my-plugin / contract feature-name.
-      Read agent-kit/designer/feature-name.md for usage guide.
-```
-
-See `agent-kit/plugin/aiditor-add-menu.md` (installed by `jay-stack setup aiditor`) for the full contributor guide.
+See [add-menu-guide.md](add-menu-guide.md) for the complete add-menu item schema, interaction modes, browse sizes, presentation formats, and TypeScript types.
 
 ## Exporting Handlers
 

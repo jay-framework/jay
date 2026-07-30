@@ -144,20 +144,27 @@ export async function loadPageParts(
             const module = headlessImport.codeLink.module;
             const name = headlessImport.codeLink.names[0].name;
             const isLocalModule = module[0] === '.' || module[0] === '/';
-            const modulePath = isLocalModule
-                ? path.resolve(dirName, module)
-                : require.resolve(module, { paths: require.resolve.paths(dirName) });
 
-            // Load component - SSR mode automatically triggers server transformation
-            // (client code is stripped because ssrLoadModule sets ssr: true)
-            const compDefinition = (await vite.ssrLoadModule(modulePath))[name];
+            let compDefinition: any;
+            let clientModuleImport: string;
+            let isNpmPackage: boolean;
 
-            // Generate client import path
-            const moduleImport = isLocalModule ? path.resolve(dirName, module) : module;
-            const isNpmPackage = !isLocalModule;
-            const clientModuleImport = isNpmPackage
-                ? `${moduleImport}/client` // npm packages: use /client export
-                : `${moduleImport}`; // local files: use ?jay-client query
+            if (headlessImport.structural) {
+                // Structural component (DL#162): no .ts file, template-only.
+                // Data comes from headless imports inside the component's own jay-html.
+                // Template was already injected at parse time — skip module loading.
+                continue;
+            } else {
+                const modulePath = isLocalModule
+                    ? path.resolve(dirName, module)
+                    : require.resolve(module, { paths: require.resolve.paths(dirName) });
+
+                compDefinition = (await vite.ssrLoadModule(modulePath))[name];
+
+                const moduleImport = isLocalModule ? path.resolve(dirName, module) : module;
+                isNpmPackage = !isLocalModule;
+                clientModuleImport = isNpmPackage ? `${moduleImport}/client` : `${moduleImport}`;
+            }
 
             // Track NPM packages used on this page (for plugin init filtering)
             if (isNpmPackage) {

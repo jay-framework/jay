@@ -363,12 +363,13 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Widget alpha/);
         });
 
-        it('/headfull — headfull component with banner', async () => {
+        it('/headfull — headfull component with banner and structural info-box', async () => {
             const { status, body } = await fetchPage(server.url, '/headfull/');
             expect(status).toBe(200);
             expectPage(body);
             expect(body).toMatch(/Headfull Test/);
             expect(body).toMatch(/Hello from banner/);
+            expect(body).toMatch(/Structural Component Works/);
         });
 
         it('/actions — page with server actions', async () => {
@@ -546,11 +547,12 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Widget alpha/);
         });
 
-        it('/headfull — headfull component with banner', async () => {
+        it('/headfull — headfull component with banner and structural info-box', async () => {
             const { status, body } = await fetchPage(server.url, '/headfull/');
             expect(status).toBe(200);
             expect(body).toMatch(/Headfull Test/);
             expect(body).toMatch(/Hello from banner/);
+            expect(body).toMatch(/Structural Component Works/);
         });
 
         it('/actions — page renders', async () => {
