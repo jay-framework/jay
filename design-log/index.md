@@ -109,6 +109,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 157 | interactive plugin setup                          | Interactive prompts in plugin setup handlers; move Wix logic out of create-jay |
 | 159 | setup pipeline re-initialization                  | Re-init services after each plugin setup; suppress init noise; cascade deps    |
 | 160 | deprecate editor packages                         | Move editor-client/protocol/server to _deprecated; remove from stack-cli       |
+| 161 | a11y form and label validation rules              | checkbox/radio labels, empty/broken ARIA names, duplicate ids, multi-control labels |
 
 ---
 
@@ -162,6 +163,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 153  | npm create jay                         | Interactive project scaffolding: name, plugin selection, agent-kit, setup banner             |
 | 158  | staged npm publish                     | Two-phase publish: stage all packages without OTP, then bulk-approve with single OTP         |
 | 147  | jay-html validation rules catalog      | Complete catalog of all validation rules across wix-media, SEO, and a11y                     |
+| 161  | a11y form and label validation rules   | Extend a11y-validator: checkbox/radio, ARIA name integrity, duplicate ids, label hygiene    |
 
 ---
 

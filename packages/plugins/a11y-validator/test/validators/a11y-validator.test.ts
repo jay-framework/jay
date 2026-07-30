@@ -114,6 +114,166 @@ describe('a11y-validator', () => {
                 }),
             ]);
         });
+
+        it('flags checkbox without label', async () => {
+            const ctx = makeContext('<input type="checkbox" id="agree" />');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    severity: 'error',
+                    element: '<input>',
+                    message: expect.stringContaining('WCAG 1.3.1'),
+                }),
+            ]);
+        });
+
+        it('passes checkbox wrapped in label', async () => {
+            const ctx = makeContext('<label><input type="checkbox" /> Agree</label>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+
+        it('flags radio without label', async () => {
+            const ctx = makeContext('<input type="radio" name="opt" id="a" />');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    severity: 'error',
+                    element: '<input>',
+                    message: expect.stringContaining('WCAG 1.3.1'),
+                }),
+            ]);
+        });
+
+        it('passes radio with label[for]', async () => {
+            const ctx = makeContext(
+                '<label for="a">Option A</label><input type="radio" name="opt" id="a" />',
+            );
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+
+        it('flags empty aria-label on input', async () => {
+            const ctx = makeContext('<input type="text" aria-label="" />');
+            const findings = await validate(ctx);
+            expect(findings).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        severity: 'error',
+                        attribute: 'aria-label',
+                        message: expect.stringContaining('empty aria-label'),
+                    }),
+                ]),
+            );
+        });
+
+        it('flags aria-labelledby pointing to missing id', async () => {
+            const ctx = makeContext('<input type="text" aria-labelledby="missing-id" />');
+            const findings = await validate(ctx);
+            expect(findings).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        severity: 'error',
+                        attribute: 'aria-labelledby',
+                        message: expect.stringContaining('aria-labelledby'),
+                    }),
+                ]),
+            );
+        });
+
+        it('passes aria-labelledby when target id exists', async () => {
+            const ctx = makeContext(
+                '<span id="search-label">Search</span><input type="text" aria-labelledby="search-label" />',
+            );
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+
+        it('flags empty aria-labelledby', async () => {
+            const ctx = makeContext('<input type="text" aria-labelledby="" />');
+            const findings = await validate(ctx);
+            expect(findings).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        severity: 'error',
+                        attribute: 'aria-labelledby',
+                    }),
+                ]),
+            );
+        });
+    });
+
+    describe('multiple controls in label', () => {
+        it('flags label with two inputs', async () => {
+            const ctx = makeContext(
+                '<label>From <input type="date" /> To <input type="date" /></label>',
+            );
+            const findings = await validate(ctx);
+            expect(findings).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        severity: 'warning',
+                        element: '<label>',
+                        message: expect.stringContaining('form controls'),
+                    }),
+                ]),
+            );
+        });
+
+        it('passes label with a single input', async () => {
+            const ctx = makeContext('<label>Name <input type="text" /></label>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+    });
+
+    describe('duplicate ids', () => {
+        it('flags duplicate id attributes', async () => {
+            const ctx = makeContext('<div id="x"></div><span id="x"></span>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        severity: 'error',
+                        attribute: 'id',
+                        message: expect.stringContaining('Duplicate id="x"'),
+                    }),
+                ]),
+            );
+        });
+
+        it('passes unique ids', async () => {
+            const ctx = makeContext(
+                '<label for="a">A</label><input id="a" type="text" /><input id="b" type="text" aria-label="B" />',
+            );
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+    });
+
+    describe('orphan label for', () => {
+        it('flags label for without matching id', async () => {
+            const ctx = makeContext('<label for="missing">Name</label>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        severity: 'warning',
+                        element: '<label>',
+                        attribute: 'for',
+                        message: expect.stringContaining('for="missing"'),
+                    }),
+                ]),
+            );
+        });
+
+        it('passes label for with matching id', async () => {
+            const ctx = makeContext(
+                '<label for="name">Name</label><input type="text" id="name" />',
+            );
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
     });
 
     describe('button accessible name', () => {

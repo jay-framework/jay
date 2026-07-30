@@ -108,13 +108,33 @@ const LABELABLE_INPUTS = new Set([
     'color',
     'file',
     'range',
+    'checkbox',
+    'radio',
 ]);
+
+const IGNORED_INPUT_TYPES = new Set(['hidden', 'submit', 'button', 'reset']);
 
 export const validate: JayHtmlValidatorFn = (ctx) => {
     const findings: JayHtmlValidationFinding[] = [];
     const labelForIds = new Set<string>();
+    const allIds = new Set<string>();
+    const idCounts = new Map<string, number>();
 
-    collectLabelForIds(ctx.body, labelForIds);
+    collectDomIndex(ctx.body, labelForIds, allIds, idCounts);
+
+    for (const [id, count] of idCounts) {
+        if (count > 1) {
+            findings.push({
+                severity: 'error',
+                message: `Duplicate id="${id}" used ${count} times (WCAG 4.1.1)`,
+                suggestion:
+                    'Give each element a unique id. Duplicate ids break label associations and ARIA references.',
+                attribute: 'id',
+            });
+        }
+    }
+
+    checkLabelsStructure(ctx.body, allIds, findings);
 
     walkElements(ctx.body, ctx, (el) => {
         const tag: string | undefined = el.rawTagName?.toLowerCase();
@@ -139,14 +159,14 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
         // --- Rule: input/select/textarea must have label ---
         if (tag === 'input') {
             const type = (el.getAttribute?.('type') || 'text').toLowerCase();
-            if (type === 'hidden' || type === 'submit' || type === 'button' || type === 'reset') {
+            if (IGNORED_INPUT_TYPES.has(type)) {
                 return;
             }
             if (!LABELABLE_INPUTS.has(type)) return;
-            checkLabel(el, tag, findings, labelForIds);
+            checkLabel(el, tag, findings, labelForIds, allIds);
         }
         if (tag === 'select' || tag === 'textarea') {
-            checkLabel(el, tag, findings, labelForIds);
+            checkLabel(el, tag, findings, labelForIds, allIds);
         }
 
         // --- Rule: button must have accessible name ---
@@ -285,12 +305,64 @@ function checkLabel(
     tag: string,
     findings: JayHtmlValidationFinding[],
     labelForIds: Set<string>,
+    allIds: Set<string>,
 ): void {
     const id = el.getAttribute?.('id');
     const ariaLabel = el.getAttribute?.('aria-label');
     const ariaLabelledBy = el.getAttribute?.('aria-labelledby');
 
-    if (ariaLabel || ariaLabelledBy) return;
+    let hasAccessibleName = false;
+
+    if (ariaLabel !== undefined && ariaLabel !== null) {
+        if (!String(ariaLabel).trim()) {
+            findings.push({
+                severity: 'error',
+                message: `<${tag}> has empty aria-label (WCAG 4.1.2)`,
+                suggestion:
+                    'Provide a non-empty aria-label, use aria-labelledby with an existing id, ' +
+                    'or associate a <label>.',
+                element: `<${tag}>`,
+                attribute: 'aria-label',
+            });
+        } else {
+            hasAccessibleName = true;
+        }
+    }
+
+    if (ariaLabelledBy !== undefined && ariaLabelledBy !== null) {
+        const tokens = String(ariaLabelledBy)
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean);
+        if (tokens.length === 0) {
+            findings.push({
+                severity: 'error',
+                message: `<${tag}> has empty aria-labelledby (WCAG 4.1.2)`,
+                suggestion:
+                    'Set aria-labelledby to one or more element ids that exist in this file, ' +
+                    'or use a non-empty aria-label / <label>.',
+                element: `<${tag}>`,
+                attribute: 'aria-labelledby',
+            });
+        } else {
+            const missing = tokens.filter((token) => !allIds.has(token));
+            if (missing.length > 0) {
+                findings.push({
+                    severity: 'error',
+                    message: `<${tag}> aria-labelledby references missing id(s): ${missing.join(', ')} (WCAG 1.3.1)`,
+                    suggestion:
+                        `Add element(s) with id="${missing[0]}" (or fix the aria-labelledby tokens), ` +
+                        'or use a <label for="..."> / non-empty aria-label instead.',
+                    element: `<${tag}>`,
+                    attribute: 'aria-labelledby',
+                });
+            } else {
+                hasAccessibleName = true;
+            }
+        }
+    }
+
+    if (hasAccessibleName) return;
     if (id && labelForIds.has(id)) return;
 
     // Check if wrapped in a <label>
@@ -311,14 +383,84 @@ function checkLabel(
     });
 }
 
-function collectLabelForIds(el: any, ids: Set<string>): void {
+function collectDomIndex(
+    el: any,
+    labelForIds: Set<string>,
+    allIds: Set<string>,
+    idCounts: Map<string, number>,
+): void {
+    const id = el.getAttribute?.('id');
+    if (id) {
+        allIds.add(id);
+        idCounts.set(id, (idCounts.get(id) ?? 0) + 1);
+    }
+
     if (el.rawTagName?.toLowerCase() === 'label') {
         const forId = el.getAttribute?.('for');
-        if (forId) ids.add(forId);
+        if (forId) labelForIds.add(forId);
     }
+
     for (const child of el.childNodes ?? []) {
-        if (child.nodeType === 1) collectLabelForIds(child, ids);
+        if (child.nodeType === 1) collectDomIndex(child, labelForIds, allIds, idCounts);
     }
+}
+
+function isLabelableControl(el: any): boolean {
+    const tag = el.rawTagName?.toLowerCase();
+    if (tag === 'select' || tag === 'textarea') return true;
+    if (tag !== 'input') return false;
+    const type = (el.getAttribute?.('type') || 'text').toLowerCase();
+    if (IGNORED_INPUT_TYPES.has(type)) return false;
+    return LABELABLE_INPUTS.has(type);
+}
+
+function countLabelableDescendants(el: any): number {
+    let count = 0;
+    for (const child of el.childNodes ?? []) {
+        if (child.nodeType !== 1) continue;
+        if (isLabelableControl(child)) count += 1;
+        count += countLabelableDescendants(child);
+    }
+    return count;
+}
+
+function checkLabelsStructure(
+    root: any,
+    allIds: Set<string>,
+    findings: JayHtmlValidationFinding[],
+): void {
+    function walk(el: any): void {
+        if (el.rawTagName?.toLowerCase() === 'label') {
+            const forId = el.getAttribute?.('for');
+            if (forId && !allIds.has(forId)) {
+                findings.push({
+                    severity: 'warning',
+                    message: `<label for="${forId}"> has no matching id in this file (WCAG 1.3.1)`,
+                    suggestion:
+                        `Add id="${forId}" to the related form control, or fix the for attribute.`,
+                    element: '<label>',
+                    attribute: 'for',
+                });
+            }
+
+            const controlCount = countLabelableDescendants(el);
+            if (controlCount > 1) {
+                findings.push({
+                    severity: 'warning',
+                    message: `<label> contains ${controlCount} form controls — screen readers only associate the first (WCAG 1.3.1)`,
+                    suggestion:
+                        'Use a separate <label for="id"> for each input (or one wrapping label per control). ' +
+                        'multiple form controls inside one label is not reliable.',
+                    element: '<label>',
+                });
+            }
+        }
+
+        for (const child of el.childNodes ?? []) {
+            if (child.nodeType === 1) walk(child);
+        }
+    }
+    walk(root);
 }
 
 function getVisibleText(el: any): string {
