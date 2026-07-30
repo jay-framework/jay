@@ -77,12 +77,15 @@ export function buildScriptFragments(
     const { enableAutomation = true, slowViewState } = options;
     const hasSlowViewState = slowViewState && Object.keys(slowViewState).length > 0;
 
+    const clientParts = parts.filter((part) => part.clientPart);
     const partImports =
-        parts.length > 0 ? parts.map((part) => part.clientImport).join('\n') + '\n' : '';
+        clientParts.length > 0
+            ? clientParts.map((part) => part.clientImport).join('\n') + '\n'
+            : '';
     const compositeParts =
-        parts.length > 0
+        clientParts.length > 0
             ? `[
-${parts.map((part) => '        ' + part.clientPart).join(',\n')}
+${clientParts.map((part) => '        ' + part.clientPart).join(',\n')}
         ]`
             : '[]';
 

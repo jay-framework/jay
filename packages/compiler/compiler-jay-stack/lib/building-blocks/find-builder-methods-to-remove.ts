@@ -7,9 +7,15 @@ import {
     isImportModuleVariableRoot,
 } from '@jay-framework/compiler';
 import type { BuildEnvironment } from '../transform-jay-stack-builder';
-import { shouldRemoveMethod } from './check-method-should-remove';
+import { shouldRemoveMethod, getReplacementMethod } from './check-method-should-remove';
 
 const { isCallExpression, isPropertyAccessExpression, isIdentifier, isStringLiteral } = tsBridge;
+
+export interface MethodReplacement {
+    start: number;
+    end: number;
+    replacement: string;
+}
 
 /**
  * Analysis result for methods to remove
@@ -19,6 +25,8 @@ export interface BuilderMethodsToRemove {
     callsToRemove: Array<FlattenedAccessChain>;
     /** Variables used in removed methods */
     removedVariables: Set<ReturnType<SourceFileBindingResolver['explain']>>;
+    /** Methods to replace with a different name (DL#72a) */
+    methodReplacements: MethodReplacement[];
 }
 
 /**
@@ -33,6 +41,7 @@ export function findBuilderMethodsToRemove(
 ): BuilderMethodsToRemove {
     const callsToRemove: Array<FlattenedAccessChain> = [];
     const removedVariables = new Set<ReturnType<SourceFileBindingResolver['explain']>>();
+    const methodReplacements: MethodReplacement[] = [];
 
     const visit = (node: ts.Node) => {
         if (
@@ -42,11 +51,19 @@ export function findBuilderMethodsToRemove(
         ) {
             const methodName = node.expression.name.text;
 
-            if (shouldRemoveMethod(methodName, environment)) {
+            const replacementName = getReplacementMethod(methodName, environment);
+            if (replacementName) {
+                const nameNode = node.expression.name;
+                methodReplacements.push({
+                    start: nameNode.getStart(),
+                    end: nameNode.getEnd(),
+                    replacement: replacementName,
+                });
+                collectVariablesFromArguments(node.arguments, bindingResolver, removedVariables);
+            } else if (shouldRemoveMethod(methodName, environment)) {
                 const variable = bindingResolver.explain(node.expression);
                 const flattened = flattenVariable(variable);
                 callsToRemove.push(flattened);
-                // Collect variables from arguments
                 collectVariablesFromArguments(node.arguments, bindingResolver, removedVariables);
             }
         }
@@ -55,7 +72,7 @@ export function findBuilderMethodsToRemove(
     };
 
     sourceFile.forEachChild(visit);
-    return { callsToRemove, removedVariables };
+    return { callsToRemove, removedVariables, methodReplacements };
 }
 
 /**

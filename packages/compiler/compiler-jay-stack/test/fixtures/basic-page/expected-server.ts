@@ -10,4 +10,5 @@ export const page = makeJayStackComponent()
     .withServices(DATABASE)
     .withLoadParams(loadParams)
     .withSlowlyRender(renderSlowly)
-    .withFastRender(renderFast);
+    .withFastRender(renderFast)
+    .withInteractiveMark();

@@ -318,3 +318,36 @@ When a component has no interactive phase:
 - On client, `part.comp` is `undefined`
 - `makeCompositeJayComponent` filters out parts with undefined `comp`
 - No component constructors are called, avoiding the crash
+
+## DL#72a — Skip client import for server-only components
+
+### Problem (discovered 2026-07)
+
+The DL#72 fix handles the runtime crash but the client script still generates an `import` for server-only components. When a plugin's `/client` entry point doesn't export the component (because it has no client code), the import fails:
+
+```
+The requested module '@jay-framework/markdown/client' does not provide
+an export named 'markdownPages'
+```
+
+`markdownPages` only has `.withSlowlyRender()` — no fast or interactive phase. The `/client` entry correctly only exports `markdownLive` (which has fast+interactive).
+
+### Root cause
+
+The SSR code stripping (compiler-jay-stack) removes `.withInteractive()` from the builder chain in server builds. After stripping, the server-side component definition has `comp` set (the builder always creates it) but there's no way to distinguish "had interactive, stripped" from "never had interactive".
+
+The check `!!compDefinition?.comp` is always true. Using `!!compDefinition?.fastRender` is wrong too — a component may have only fast render (no interactive) and still need client import, or have only interactive (which requires fast).
+
+### Design
+
+Add a `hasInteractive` marker to the component definition. The SSR code stripping plugin should replace `.withInteractive(fn)` with a no-op marker that sets `hasInteractive: true` on the definition, instead of removing it entirely.
+
+### Changes
+
+1. **`fullstack-component`** — add `hasInteractive?: boolean` to `JayStackComponentDefinition`. Add `.withInteractiveMark()` builder method that sets `hasInteractive: true` without adding a `comp`.
+
+2. **`compiler-jay-stack`** — when stripping `.withInteractive()` for server build, replace with `.withInteractiveMark()` instead of removing.
+
+3. **`load-page-parts.ts`** — use `hasInteractive` (or `fastRender`) to decide whether to generate client import. A component needs client import when it has `fastRender` OR `hasInteractive`.
+
+4. **`generate-client-script.ts`** — filter parts by `clientPart` being non-empty (already done).

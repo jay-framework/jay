@@ -179,11 +179,17 @@ export async function loadPageParts(
             // Instance-only imports (no key) are handled by the compiled template
             if (headlessImport.key) {
                 const key = headlessImport.key;
+                const hasClientComp =
+                    !!compDefinition?.fastRender || !!compDefinition?.hasInteractive;
                 const part: DevServerPagePart = {
                     key,
                     compDefinition,
-                    clientImport: `import {${name}} from '${clientModuleImport}'`,
-                    clientPart: `{comp: ${name}.comp, contextMarkers: ${name}.contexts || [], key: '${key}'}`,
+                    clientImport: hasClientComp
+                        ? `import {${name}} from '${clientModuleImport}'`
+                        : '',
+                    clientPart: hasClientComp
+                        ? `{comp: ${name}.comp, contextMarkers: ${name}.contexts || [], key: '${key}'}`
+                        : '',
                     contractInfo: headlessImport.contract
                         ? {
                               contractName: headlessImport.contract.name,
