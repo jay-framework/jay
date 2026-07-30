@@ -954,15 +954,21 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
     const scanDir = options.path
         ? path.resolve(options.path)
         : path.resolve(resolvedConfig.devServer.pagesBase);
+    const componentsDir = path.resolve(resolvedConfig.devServer.componentsBase);
 
     const errors: ValidationError[] = [];
     const warnings: ValidationWarning[] = [];
     const coverage: FileCoverage[] = [];
     const parsedFiles: Array<{ relativePath: string; parsed: JayHtmlSourceFile }> = [];
 
-    // Find all jay files
-    const jayHtmlFiles = await findJayFiles(scanDir);
-    const contractFiles = await findContractFiles(scanDir);
+    // Find all jay files (pages + components)
+    const pageJayHtmlFiles = await findJayFiles(scanDir);
+    const componentJayHtmlFiles = await findJayFiles(componentsDir).catch(() => [] as string[]);
+    const jayHtmlFiles = [...pageJayHtmlFiles, ...componentJayHtmlFiles];
+    const contractFiles = [
+        ...(await findContractFiles(scanDir)),
+        ...(await findContractFiles(componentsDir).catch(() => [] as string[])),
+    ];
 
     if (options.verbose) {
         getLogger().info(chalk.gray(`Scanning directory: ${scanDir}`));

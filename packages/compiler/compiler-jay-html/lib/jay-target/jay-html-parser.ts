@@ -533,9 +533,11 @@ function parseYaml(root: HTMLElement): WithValidations<JayYamlStructure> {
     let jayYamlElements = root.querySelectorAll('[type="application/jay-data"]');
     if (jayYamlElements.length !== 1) {
         validations.push(
-            `jay file should have exactly one jay-data script, found ${
-                jayYamlElements.length === 0 ? 'none' : jayYamlElements.length
-            }`,
+            jayYamlElements.length === 0
+                ? `Missing <script type="application/jay-data">. ` +
+                  `Add either inline data or a contract reference: ` +
+                  `<script type="application/jay-data" contract="./component.jay-contract"></script>`
+                : `Expected exactly one <script type="application/jay-data">, found ${jayYamlElements.length}`,
         );
         return new WithValidations(undefined, validations);
     }
