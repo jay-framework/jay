@@ -39,7 +39,9 @@ describe('validateJayFiles', () => {
 
         expect(result.valid).toBe(false);
         expect(result.errors).toHaveLength(1);
-        expect(result.errors[0].message).toContain('exactly one <script type="application/jay-data">');
+        expect(result.errors[0].message).toContain(
+            'exactly one <script type="application/jay-data">',
+        );
     });
 
     it('should validate jay-contract files', async () => {

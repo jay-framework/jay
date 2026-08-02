@@ -535,8 +535,8 @@ function parseYaml(root: HTMLElement): WithValidations<JayYamlStructure> {
         validations.push(
             jayYamlElements.length === 0
                 ? `Missing <script type="application/jay-data">. ` +
-                  `Add either inline data or a contract reference: ` +
-                  `<script type="application/jay-data" contract="./component.jay-contract"></script>`
+                      `Add either inline data or a contract reference: ` +
+                      `<script type="application/jay-data" contract="./component.jay-contract"></script>`
                 : `Expected exactly one <script type="application/jay-data">, found ${jayYamlElements.length}`,
         );
         return new WithValidations(undefined, validations);
