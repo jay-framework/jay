@@ -195,7 +195,7 @@ jay-stack params wix-stores/product-page
 # Output: [{"slug": "blue-shirt"}, {"slug": "red-hat"}, ...]
 ```
 
-Params are always strings (URL params).
+Params are always strings (URL params). Routes are **case-sensitive** — a slug of `My-Page` produces the URL `/my-page` only if the param value is exactly `my-page`. Use lowercase for all param values and filenames that become URL segments.
 
 ## Query Parameters
 
