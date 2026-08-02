@@ -67,7 +67,15 @@ function stripMdExtension(href: string): string {
 
 function createLinkRenderer() {
     return {
-        link({ href, title, tokens }: { href: string; title?: string | null; tokens: any[] }): string {
+        link({
+            href,
+            title,
+            tokens,
+        }: {
+            href: string;
+            title?: string | null;
+            tokens: any[];
+        }): string {
             const resolved = stripMdExtension(href);
             const titleAttr = title ? ` title="${title}"` : '';
             const text = this.parser.parseInline(tokens);

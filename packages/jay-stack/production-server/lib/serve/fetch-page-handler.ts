@@ -53,8 +53,7 @@ export async function fetchPageRequest(
     let tCache = 0,
         tParts = 0;
     const [cached, pageParts] = await Promise.all([
-        artifacts.readCacheData(
-            instance.cachePath).then((r) => {
+        artifacts.readCacheData(instance.cachePath).then((r) => {
             tCache = Date.now() - t0;
             return r;
         }),
