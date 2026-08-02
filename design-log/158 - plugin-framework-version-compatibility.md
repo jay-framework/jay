@@ -43,13 +43,13 @@ A: Unchanged; compat applies to registry installs only.
 // packages/jay-stack/stack-cli/lib/plugins/framework-snapshot.ts
 
 type FrameworkPackageRef = {
-  packageName: string;       // @jay-framework/stack-server-runtime
-  declaredRange: string;     // ^0.20.0
-  resolvedVersion?: string;  // from yarn.lock / package-lock when available
+  packageName: string; // @jay-framework/stack-server-runtime
+  declaredRange: string; // ^0.20.0
+  resolvedVersion?: string; // from yarn.lock / package-lock when available
 };
 
 type ProjectFrameworkSnapshot = {
-  dominantLine: string | null;  // e.g. "0.20" — mode of major.minor
+  dominantLine: string | null; // e.g. "0.20" — mode of major.minor
   packages: FrameworkPackageRef[];
   packageManager: 'yarn' | 'npm' | 'pnpm';
 };
@@ -69,11 +69,11 @@ type PluginFrameworkRequirements = {
 
 Fetch from npm packument. Merge requirements from:
 
-| Source | Priority |
-| --- | --- |
-| `peerDependencies` (`@jay-framework/*`) | Preferred |
-| `dependencies` (`@jay-framework/*`) | **Required in v1** (current publish shape) |
-| `engines.jay` (optional future) | Single semver range string |
+| Source                                  | Priority                                   |
+| --------------------------------------- | ------------------------------------------ |
+| `peerDependencies` (`@jay-framework/*`) | Preferred                                  |
+| `dependencies` (`@jay-framework/*`)     | **Required in v1** (current publish shape) |
+| `engines.jay` (optional future)         | Single semver range string                 |
 
 ### 3. Compatibility report
 
@@ -120,11 +120,11 @@ interface PluginCompatibilityReport {
 
 Extend `PluginIssueCode` (install report schema):
 
-| Code | When |
-| --- | --- |
-| `FRAMEWORK_VERSION_MISMATCH` | Latest plugin needs newer framework |
-| `DUAL_FRAMEWORK_TREE` | Doctor: two resolved versions of same `@jay-framework/*` |
-| `NO_COMPATIBLE_PLUGIN_VERSION` | No publish fits project |
+| Code                           | When                                                     |
+| ------------------------------ | -------------------------------------------------------- |
+| `FRAMEWORK_VERSION_MISMATCH`   | Latest plugin needs newer framework                      |
+| `DUAL_FRAMEWORK_TREE`          | Doctor: two resolved versions of same `@jay-framework/*` |
+| `NO_COMPATIBLE_PLUGIN_VERSION` | No publish fits project                                  |
 
 ### 4. Resolution algorithm
 
