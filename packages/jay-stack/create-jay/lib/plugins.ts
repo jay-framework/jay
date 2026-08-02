@@ -49,14 +49,6 @@ export const PLUGINS: PluginEntry[] = [
         isDep: true,
     },
     {
-        name: '@jay-framework/wix-cart',
-        label: 'Wix Cart',
-        description: 'Shopping cart: add/remove items, checkout, order summary',
-        group: 'Wix',
-        checked: false,
-        isDep: true,
-    },
-    {
         name: '@jay-framework/wix-members',
         label: 'Wix Members',
         description: 'Authentication: login, register, member profiles, auth callback',
@@ -88,36 +80,18 @@ export const PLUGINS: PluginEntry[] = [
         checked: false,
         isDep: true,
     },
-    {
-        name: '@jay-framework/wix-server-client',
-        label: 'Wix Server Client',
-        description: 'Server-side Wix API client: authentication, API access',
-        group: 'Wix',
-        checked: false,
-        isDep: true,
-    },
-    {
-        name: '@jay-framework/aiditor',
-        label: 'AIditor',
-        description: 'Visual AI editor: point-and-shoot editing with Claude',
-        group: 'AIditor',
-        checked: false,
-        isDep: true,
-    },
 ];
 
-export const CORE_DEPS = [
-    '@jay-framework/fullstack-component',
-    '@jay-framework/runtime',
-    '@jay-framework/stack-client-runtime',
-    '@jay-framework/stack-server-runtime',
-];
+export const CORE_DEPS: Record<string, string> = {
+    '@jay-framework/fullstack-component': 'latest',
+    '@jay-framework/jay-stack-cli': 'latest',
+};
 
-export const CORE_DEV_DEPS = [
-    '@jay-framework/jay-stack-cli',
-    '@jay-framework/compiler-jay-stack',
-    '@jay-framework/dev-environment',
-    '@jay-framework/jay-cli',
-    'typescript',
-    'vite',
-];
+export const CORE_DEV_DEPS: Record<string, string> = {
+    '@jay-framework/aiditor': 'latest',
+    '@jay-framework/jay-cli': 'latest',
+    '@types/node': '^22.10.0',
+    rimraf: '^6.0.0',
+    typescript: '~5.7.2',
+    vite: '^6.0.1',
+};

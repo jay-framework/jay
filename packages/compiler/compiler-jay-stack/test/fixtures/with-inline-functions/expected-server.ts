@@ -7,4 +7,5 @@ export const page = makeJayStackComponent()
     .withSlowlyRender(async (props, database: DATABASE) => {
         const data = await database.query('SELECT * FROM users');
         return partialRender({ users: data }, {});
-    });
+    })
+    .withInteractiveMark();

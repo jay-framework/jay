@@ -1,4 +1,7 @@
 name: Page
+params:
+  - name: slug
+    kind: required
 tags:
   - tag: itemName
     type: data

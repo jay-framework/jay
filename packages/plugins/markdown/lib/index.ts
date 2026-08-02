@@ -3,9 +3,10 @@ export { markdownContent } from './components/markdown-content.js';
 export { markdownLive } from './components/markdown-live.js';
 export {
     parseMarkdown,
+    parseMarkdownWithMermaid,
     parseMarkdownBody,
+    parseMarkdownBodyWithMermaid,
     extractFrontmatter,
-    createMarkedParser,
 } from './parse-markdown.js';
 export { highlightCode } from './code-highlighter.js';
 export { frontmatterToHeadTags } from './head-tags.js';

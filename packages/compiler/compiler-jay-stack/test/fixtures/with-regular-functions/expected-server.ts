@@ -8,7 +8,8 @@ async function renderSlowly(props, database) {
 export const page = makeJayStackComponent()
     .withProps()
     .withServices(DATABASE)
-    .withSlowlyRender(renderSlowly);
+    .withSlowlyRender(renderSlowly)
+    .withInteractiveMark();
 export const otherPage = makeJayStackComponent()
     .withProps()
     .withServices(DATABASE)

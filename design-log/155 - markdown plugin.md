@@ -688,10 +688,31 @@ The `createMarkedParser(mermaidRenderer?)` factory enables this split: server co
 
 **Debugging note:** Required rebuilding `route-scanner` and `production-server` dist — the stack-cli imports from pre-built dist, not source. Source changes without rebuild are invisible to the build pipeline.
 
+### Mermaid: replaced mermaid-cli with beautiful-mermaid
+
+The initial implementation used `@mermaid-js/mermaid-cli` which shells out to `mmdc` via Puppeteer/Chromium (~150MB). This imposed an unacceptable dependency on every consumer of the markdown plugin.
+
+**Replaced with [`beautiful-mermaid`](https://www.npmjs.com/package/beautiful-mermaid)** (~2MB) — a pure JS mermaid renderer with zero DOM dependencies. Uses `elkjs` for layout.
+
+- Regular dependency (not devDep) — consumers get it automatically, no browser installation needed
+- Async API: `renderMermaidSVGAsync(code)` → SVG string
+- Mermaid fences are pre-processed before `marked` parsing (since marked's code renderer is sync)
+- Sync path (`parseMarkdown`) still produces fallback `<pre class="md-mermaid-source">` for client-side rendering
+- Async path (`parseMarkdownWithMermaid`) renders actual SVG via `beautiful-mermaid` — used by server components
+
+### CSS @import resolution in compiler
+
+Linked CSS files with `@import` statements (e.g., `markdown-blog.css` importing `markdown-default.css`) failed because the compiler inlined the CSS content without resolving nested imports.
+
+**Fix in `jay-html-parser.ts`:** Added `resolveNestedCssImports()` — after reading a linked CSS file, scans for `@import` statements, resolves them relative to the CSS file's directory, and inlines them recursively. Handles circular imports and missing files.
+
+**Additional fix:** The initial implementation used `require('node:fs')` inside the function, which fails in ESM context. Replaced with a module-level `import fsSync from 'fs'`.
+
 ### Deviations from design
 
-- **Mermaid rendering is split** between server (Puppeteer SVG) and client (source fallback), rather than a single build-time-only approach. The design assumed build-time-only, but the `markdown-live` client component can't use Puppeteer.
+- **Mermaid rendering is split** between server (`beautiful-mermaid` SVG) and client (source fallback). The design assumed a single build-time approach, but the client component can't use the server renderer.
 - **`loadParams` required a framework change** — `LoadParams` type updated to accept optional props parameter. Not anticipated in the original DL#155 design (was expected to be covered by DL#156 alone, but `loadParams` is a separate code path from render).
-- **`@mermaid-js/mermaid-cli` requires Puppeteer** as a peer dependency, which downloads Chromium (~150MB). This is heavier than the "~50MB" estimate in the trade-offs table. Acceptable for build-time tooling but worth noting.
+- **Mermaid dependency changed** from `@mermaid-js/mermaid-cli` (Puppeteer, ~150MB) to `beautiful-mermaid` (pure JS, ~2MB). The design assumed build-time-only rendering via headless browser; the pure JS approach is simpler and lighter.
 - **`markdown-pages` contract `tags` sub-contract** needed `trackBy: name` — the original contract design omitted this, caught by the validate command.
 - **Route scanner needed to distinguish component props from route params** — headless YAML body values serve two purposes (component configuration and route param declaration). The scanner now filters by route type to avoid production build failures.
+- **Compiler CSS `@import` resolution** was not in the original design but was needed for theme CSS files that use `@import` for composition.

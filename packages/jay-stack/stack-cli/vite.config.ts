@@ -29,7 +29,6 @@ export default defineConfig({
                 '@jay-framework/rollup-plugin',
                 '@jay-framework/vite-plugin',
                 '@jay-framework/dev-server',
-                '@jay-framework/editor-server',
                 '@jay-framework/compiler-shared',
                 '@jay-framework/compiler',
                 '@jay-framework/compiler-jay-html',

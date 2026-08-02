@@ -21,6 +21,9 @@ import {
 import { stripMargin } from '../test-utils/strip-margin';
 import { ResolveTsConfigOptions } from '@jay-framework/compiler-analyze-exported-types';
 import { JayType } from '@jay-framework/compiler-shared';
+import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
 
 describe('compiler', () => {
     const defaultImportResolver: JayImportResolver = {
@@ -822,7 +825,7 @@ describe('compiler', () => {
                 '',
             );
             expect(jayFile.validations).toEqual([
-                'jay file should have exactly one jay-data script, found 2',
+                'Expected exactly one <script type="application/jay-data">, found 2',
             ]);
         });
 
@@ -842,7 +845,9 @@ describe('compiler', () => {
                 '',
             );
             expect(jayFile.validations).toEqual([
-                'jay file should have exactly one jay-data script, found none',
+                'Missing <script type="application/jay-data">. ' +
+                    'Add either inline data or a contract reference: ' +
+                    '<script type="application/jay-data" contract="./component.jay-contract"></script>',
             ]);
         });
 
@@ -856,7 +861,9 @@ describe('compiler', () => {
                 '',
             );
             expect(jayFile.validations).toEqual([
-                'jay file should have exactly one jay-data script, found none',
+                'Missing <script type="application/jay-data">. ' +
+                    'Add either inline data or a contract reference: ' +
+                    '<script type="application/jay-data" contract="./component.jay-contract"></script>',
             ]);
         });
 
@@ -1967,9 +1974,53 @@ describe('compiler', () => {
                 true,
             );
         });
+
+        it('should reject kebab-case key and suggest camelCase', async () => {
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                    |   title: string
+                    |`,
+                    '<body></body>',
+                    `<script type="application/jay-headless" plugin="test-counter" contract="counter" key="my-counter"></script>`,
+                ),
+                'Page',
+                '',
+                {},
+                propsResolver,
+                '',
+            );
+
+            expect(jayFile.validations).toEqual([
+                'Headless component key="my-counter" is not a valid identifier. Use camelCase (e.g., key="myCounter").',
+            ]);
+        });
     });
 
     describe('headfull full-stack imports', () => {
+        let tempDir: string;
+
+        beforeAll(() => {
+            tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jay-headfull-test-'));
+            // Create project-like structure with .ts stubs at all paths used by tests
+            for (const sub of [
+                'header/header',
+                'components/biz-header',
+                'components/header/header',
+                'src/components/header/header',
+            ]) {
+                const dir = path.dirname(path.join(tempDir, sub));
+                fs.mkdirSync(dir, { recursive: true });
+                fs.writeFileSync(path.join(tempDir, sub + '.ts'), '// stub', 'utf-8');
+            }
+            // Create pages directory for tests that use relative paths
+            fs.mkdirSync(path.join(tempDir, 'src/pages/products'), { recursive: true });
+        });
+
+        afterAll(() => {
+            fs.rmSync(tempDir, { recursive: true, force: true });
+        });
+
         const headerContract: Contract = {
             name: 'Header',
             tags: [
@@ -2013,6 +2064,7 @@ describe('compiler', () => {
         function makeHeadfullFSResolver(
             overrides: Partial<JayImportResolver> = {},
         ): JayImportResolver {
+            const headerDir = path.join(tempDir, 'header');
             return {
                 ...defaultImportResolver,
                 loadContract(fullPath: string): WithValidations<Contract> {
@@ -2022,15 +2074,15 @@ describe('compiler', () => {
                     throw new Error(`Unexpected contract path: ${fullPath}`);
                 },
                 resolveLink(importingModule: string, link: string): string {
-                    if (link.includes('header')) return '/components/header/header';
+                    if (link.includes('header')) return path.join(headerDir, 'header');
                     return '/resolved/' + link;
                 },
                 readJayHtml(importingModuleDir: string, src: string) {
                     if (src.includes('header'))
                         return {
                             content: headerJayHtml,
-                            componentDir: '/components/header',
-                            filePath: '/components/header/header.jay-html',
+                            componentDir: headerDir,
+                            filePath: path.join(headerDir, 'header.jay-html'),
                         };
                     return null;
                 },
@@ -2057,7 +2109,7 @@ describe('compiler', () => {
                         | ></script>`,
                 ),
                 'Page',
-                '/pages',
+                tempDir,
                 {},
                 resolver,
                 '',
@@ -2091,7 +2143,7 @@ describe('compiler', () => {
                         | ></script>`,
                 ),
                 'Page',
-                '/pages',
+                tempDir,
                 {},
                 resolver,
                 '',
@@ -2134,7 +2186,7 @@ describe('compiler', () => {
                         | ></script>`,
                 ),
                 'Page',
-                '/pages',
+                tempDir,
                 {},
                 resolver,
                 '',
@@ -2175,7 +2227,7 @@ describe('compiler', () => {
                         | ></script>`,
                 ),
                 'Page',
-                '/pages',
+                tempDir,
                 {},
                 resolver,
                 '',
@@ -2206,7 +2258,7 @@ describe('compiler', () => {
                         | ></script>`,
                 ),
                 'Page',
-                '/pages',
+                tempDir,
                 {},
                 resolver,
                 '',
@@ -2236,7 +2288,7 @@ describe('compiler', () => {
                         | ></script>`,
                 ),
                 'Page',
-                '/pages',
+                tempDir,
                 {},
                 resolver,
                 '',
@@ -2288,7 +2340,7 @@ describe('compiler', () => {
                         | ></script>`,
                 ),
                 'Page',
-                '/pages',
+                tempDir,
                 {},
                 resolver,
                 '',
@@ -2316,7 +2368,7 @@ describe('compiler', () => {
                         | ></script>`,
                 ),
                 'Page',
-                '/pages',
+                tempDir,
                 {},
                 resolver,
                 '',
@@ -2356,7 +2408,8 @@ describe('compiler', () => {
                     throw new Error(`Unexpected contract path: ${fullPath}`);
                 },
                 resolveLink(importingModule: string, link: string): string {
-                    if (link.includes('header')) return '/components/header/header';
+                    if (link.includes('header'))
+                        return path.join(tempDir, 'components/header/header');
                     if (link.includes('counter')) return '/path/to/counter';
                     return '/resolved/' + link;
                 },
@@ -2416,7 +2469,7 @@ describe('compiler', () => {
                         | ></script>`,
                 ),
                 'Page',
-                '/pages',
+                tempDir,
                 {},
                 resolver,
                 '',
@@ -2462,7 +2515,7 @@ describe('compiler', () => {
                     return new WithValidations(headerContract, []);
                 },
                 resolveLink(importingModule: string, link: string) {
-                    return '/project/src/components/biz-header';
+                    return path.join(tempDir, 'components/biz-header');
                 },
             });
 
@@ -2524,7 +2577,7 @@ describe('compiler', () => {
                     return new WithValidations(headerContract, []);
                 },
                 resolveLink(importingModule: string, link: string) {
-                    return '/project/src/components/biz-header';
+                    return path.join(tempDir, 'components/biz-header');
                 },
             });
 
@@ -2600,10 +2653,10 @@ describe('compiler', () => {
                         | ></script>`,
                 ),
                 'Page',
-                '/project/src/pages/products',
+                path.join(tempDir, 'src/pages/products'),
                 {},
                 resolver,
-                '/project',
+                tempDir,
             );
 
             expect(jayFile.validations).toEqual([]);

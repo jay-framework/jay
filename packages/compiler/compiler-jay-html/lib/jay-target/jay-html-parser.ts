@@ -20,6 +20,7 @@ import {
 import { ResolveTsConfigOptions } from '@jay-framework/compiler-analyze-exported-types';
 import path from 'path';
 import fs from 'fs/promises';
+import fsSync from 'fs';
 import {
     JayArrayType,
     JayEnumType,
@@ -532,9 +533,11 @@ function parseYaml(root: HTMLElement): WithValidations<JayYamlStructure> {
     let jayYamlElements = root.querySelectorAll('[type="application/jay-data"]');
     if (jayYamlElements.length !== 1) {
         validations.push(
-            `jay file should have exactly one jay-data script, found ${
-                jayYamlElements.length === 0 ? 'none' : jayYamlElements.length
-            }`,
+            jayYamlElements.length === 0
+                ? `Missing <script type="application/jay-data">. ` +
+                      `Add either inline data or a contract reference: ` +
+                      `<script type="application/jay-data" contract="./component.jay-contract"></script>`
+                : `Expected exactly one <script type="application/jay-data">, found ${jayYamlElements.length}`,
         );
         return new WithValidations(undefined, validations);
     }
@@ -639,6 +642,14 @@ async function parseHeadlessImports(
         const pluginAttr = element.getAttribute('plugin');
         const contractAttr = element.getAttribute('contract');
         const key = element.getAttribute('key');
+
+        if (key && !/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(key)) {
+            validations.push(
+                `Headless component key="${key}" is not a valid identifier. ` +
+                    `Use camelCase (e.g., key="${key.replace(/-([a-z])/g, (_, l) => l.toUpperCase())}").`,
+            );
+            continue;
+        }
 
         // Validate required attributes
         if (!pluginAttr) {
@@ -1158,11 +1169,31 @@ async function parseHeadfullFSImports(
         for (const jayTag of jayTags) {
             const existingContent = jayTag.innerHTML.trim();
             if (existingContent) {
-                // Tag already has content — either pre-rendered injection or user content.
-                // Skip injection; the existing content is used as-is.
                 continue;
             }
             jayTag.set_content(jayHtmlBody.innerHTML);
+        }
+
+        // Check if .ts code file exists (DL#162 structural headfull).
+        let resolvedSrcPath: string;
+        try {
+            resolvedSrcPath = importResolver.resolveLink(moduleResolveDir, src);
+        } catch {
+            resolvedSrcPath = path.resolve(moduleResolveDir, src);
+        }
+        const hasCodeFile =
+            fsSync.existsSync(resolvedSrcPath + '.ts') ||
+            fsSync.existsSync(resolvedSrcPath + '.js') ||
+            fsSync.existsSync(path.join(resolvedSrcPath, 'index.ts')) ||
+            fsSync.existsSync(path.join(resolvedSrcPath, 'index.js'));
+
+        // For structural components (no .ts), unwrap the <jay:> tag —
+        // replace it with its children so the compiler treats the content as plain HTML.
+        if (!hasCodeFile) {
+            for (const jayTag of jayTags) {
+                jayTag.replaceWith(jayTag.innerHTML);
+            }
+            continue;
         }
 
         // Build JayHeadlessImports entry
@@ -1243,10 +1274,13 @@ async function parseHeadfullFSImports(
 
                 // Module path for code link — resolve from the same directory that
                 // found the jay-html file (filePath for source, projectRoot for pre-rendered)
-                let relativeModule = path.relative(
-                    filePath,
-                    importResolver.resolveLink(moduleResolveDir, src),
-                );
+                let resolvedModulePath: string;
+                try {
+                    resolvedModulePath = importResolver.resolveLink(moduleResolveDir, src);
+                } catch {
+                    resolvedModulePath = path.resolve(moduleResolveDir, src);
+                }
+                let relativeModule = path.relative(filePath, resolvedModulePath);
                 if (!relativeModule.startsWith('.')) {
                     relativeModule = './' + relativeModule;
                 }
@@ -1425,6 +1459,24 @@ interface ExtractCssResult {
     linkedCssFiles: string[];
 }
 
+function resolveNestedCssImports(css: string, cssDir: string, visited?: Set<string>): string {
+    if (!css.includes('@import')) return css;
+    const seen = visited ?? new Set<string>();
+
+    return css.replace(/@import\s+(?:url\(\s*)?['"]([^'"]+)['"]\s*\)?;?/g, (match, importPath) => {
+        if (importPath.startsWith('http') || importPath.startsWith('//')) return match;
+        const resolved = path.resolve(cssDir, importPath);
+        if (seen.has(resolved)) return `/* circular import: ${importPath} */`;
+        seen.add(resolved);
+        try {
+            const imported = fsSync.readFileSync(resolved, 'utf-8');
+            return `/* @import ${importPath} */\n${resolveNestedCssImports(imported, path.dirname(resolved), seen)}`;
+        } catch {
+            return `/* @import not found: ${importPath} */`;
+        }
+    });
+}
+
 async function extractCss(
     root: HTMLElement,
     filePath: string,
@@ -1457,9 +1509,12 @@ async function extractCss(
 
                 try {
                     const cssContent = await fs.readFile(cssFilePath, 'utf-8');
-                    cssParts.push(`/* External CSS: ${href} */\n${cssContent}`);
+                    const resolvedCss = resolveNestedCssImports(
+                        cssContent,
+                        path.dirname(cssFilePath),
+                    );
+                    cssParts.push(`/* External CSS: ${href} */\n${resolvedCss}`);
                 } catch (error) {
-                    // If the file doesn't exist or can't be read, add validation error
                     validations.push(`CSS file not found or unreadable: ${href}`);
                 }
             } else {
@@ -1637,7 +1692,7 @@ export async function parseJayFile(
         ...headfullImports,
         ...allHeadlessImports.flatMap((_) => [
             ..._.contractLinks,
-            ...(usedAsInstance.has(_.contractName) ? [_.codeLink] : []),
+            ...(usedAsInstance.has(_.contractName) && !_.structural ? [_.codeLink] : []),
         ]),
     ];
 

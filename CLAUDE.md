@@ -194,6 +194,7 @@ Each role directory contains detailed guides on specific topics (routing, contra
 
 ### CODING STANDARD
 
+IMPORTANT - Do not use `require()` in ESM modules. Use static `import` at the top of the file. The codebase is ESM (`"type": "module"`) — `require` is not defined and will fail at runtime.
 IMPORTANT - YOU ARE NOT ALLOWED TO USE toContain ON CODE FILES.
 IMPORTANT - YOU ARE NOT ALLOWED TO USE toContain ON CODE FILES.
 IMPORTANT - YOU ARE NOT ALLOWED TO USE toContain ON CODE FILES.

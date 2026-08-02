@@ -64,7 +64,7 @@ function validateSettingsTemplateAtPath(
             location: 'plugin.yaml routes',
             code: 'settings-route-dev-only',
             suggestion:
-                'Add devOnly: true when the settings page is dev-server tooling (see Design Log #157)',
+                'Add devOnly: true when the settings page is dev-server tooling (see Design Log #163)',
         });
     }
 }

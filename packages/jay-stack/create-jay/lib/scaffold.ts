@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execFile } from 'node:child_process';
 import { CORE_DEPS, CORE_DEV_DEPS, type PluginEntry } from './plugins.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -21,22 +22,28 @@ function writeFile(projectDir: string, relativePath: string, content: string): v
     fs.writeFileSync(fullPath, content, 'utf-8');
 }
 
-function generatePackageJson(name: string, selectedPlugins: PluginEntry[]): string {
-    const deps: Record<string, string> = {};
-    for (const dep of CORE_DEPS) {
-        deps[dep] = 'latest';
-    }
+async function generatePackageJson(name: string, selectedPlugins: PluginEntry[]): Promise<string> {
+    const deps: Record<string, string> = { ...CORE_DEPS };
     for (const plugin of selectedPlugins) {
         if (plugin.isDep) deps[plugin.name] = 'latest';
     }
+    const hasWixPlugins = selectedPlugins.some((p) => p.name.startsWith('@jay-framework/wix-'));
+    const hasWixStores = selectedPlugins.some((p) => p.name === '@jay-framework/wix-stores');
+    if (hasWixPlugins) deps['@jay-framework/wix-server-client'] = 'latest';
+    if (hasWixStores) deps['@jay-framework/wix-cart'] = 'latest';
 
-    const devDeps: Record<string, string> = {};
-    for (const dep of CORE_DEV_DEPS) {
-        devDeps[dep] = 'latest';
-    }
+    const devDeps: Record<string, string> = { ...CORE_DEV_DEPS };
     for (const plugin of selectedPlugins) {
         if (!plugin.isDep) devDeps[plugin.name] = 'latest';
     }
+
+    const [resolvedDeps, resolvedDevDeps] = await Promise.all([
+        resolveLatestVersions(deps),
+        resolveLatestVersions(devDeps),
+    ]);
+
+    const hasWixDeploy = selectedPlugins.some((p) => p.name === '@jay-framework/wix-deploy');
+    const hasAiditor = true;
 
     const pkg = {
         name,
@@ -44,16 +51,28 @@ function generatePackageJson(name: string, selectedPlugins: PluginEntry[]): stri
         type: 'module',
         private: true,
         scripts: {
-            dev: 'jay-stack dev',
-            build: 'jay-cli definitions src && jay-stack build',
-            serve: 'jay-stack serve',
-            validate: 'jay-stack validate',
-            'agent-kit': 'jay-stack agent-kit',
-            setup: 'jay-stack setup',
-            clean: 'rimraf dist && rimraf build',
+            setup: 'jay-stack-cli setup --interactive',
+            dev: 'jay-stack-cli dev',
+            'agent-kit': 'jay-stack-cli agent-kit',
+            validate: 'jay-stack-cli validate',
+            clean: "rimraf dist && rimraf build && rimraf -g 'src/**/*.d.ts'",
+            definitions: 'jay-cli definitions src',
+            build: 'npm run agent-kit && npm run definitions',
+            'build:production': 'npm run build && jay-stack-cli build',
+            'build:check-types': 'tsc',
+            serve: 'jay-stack-cli serve',
+            ...(hasWixDeploy && {
+                'wix:deploy': 'jay-stack-cli run wix-deploy/deploy --exclude-plugins aiditor',
+                'wix:serve': 'node serve.mjs',
+            }),
+            ...(hasAiditor && {
+                'aiditor:publish': hasWixDeploy
+                    ? 'npm run build:production && npm run wix:deploy'
+                    : "npm run build:production && echo 'add your deploy command here'",
+            }),
         },
-        dependencies: sortKeys(deps),
-        devDependencies: sortKeys(devDeps),
+        dependencies: sortKeys(resolvedDeps),
+        devDependencies: sortKeys(resolvedDevDeps),
     };
 
     return JSON.stringify(pkg, null, 2) + '\n';
@@ -67,14 +86,41 @@ function sortKeys(obj: Record<string, string>): Record<string, string> {
     return sorted;
 }
 
-export function scaffoldProject(
+function resolveLatestVersion(pkg: string): Promise<string> {
+    return new Promise((resolve) => {
+        execFile('npm', ['view', pkg, 'version'], { encoding: 'utf-8' }, (err, stdout) => {
+            if (err || !stdout.trim()) {
+                resolve('latest');
+            } else {
+                resolve(`^${stdout.trim()}`);
+            }
+        });
+    });
+}
+
+async function resolveLatestVersions(
+    deps: Record<string, string>,
+): Promise<Record<string, string>> {
+    const entries = Object.entries(deps);
+    const resolved = await Promise.all(
+        entries.map(async ([name, version]) => {
+            if (version === 'latest') {
+                return [name, await resolveLatestVersion(name)] as const;
+            }
+            return [name, version] as const;
+        }),
+    );
+    return Object.fromEntries(resolved);
+}
+
+export async function scaffoldProject(
     projectDir: string,
     name: string,
     selectedPlugins: PluginEntry[],
-): void {
+): Promise<void> {
     fs.mkdirSync(projectDir, { recursive: true });
 
-    writeFile(projectDir, 'package.json', generatePackageJson(name, selectedPlugins));
+    writeFile(projectDir, 'package.json', await generatePackageJson(name, selectedPlugins));
     writeFile(
         projectDir,
         'src/pages/page.jay-html',
@@ -99,5 +145,14 @@ export function scaffoldProject(
     );
     if (hasDesignValidator) {
         writeFile(projectDir, 'DESIGN.md', readTemplate('DESIGN.md'));
+    }
+
+    const hasWixMembers = selectedPlugins.some((p) => p.name === '@jay-framework/wix-members');
+    if (hasWixMembers) {
+        writeFile(
+            projectDir,
+            'src/pages/auth/callback/page.jay-html',
+            readTemplate('auth-callback.jay-html'),
+        );
     }
 }

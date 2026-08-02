@@ -38,6 +38,7 @@ export interface HeadlessModuleInfo {
     propNames?: string[];
     contractInfo?: { contractName: string; metadata?: Record<string, unknown> };
     headlessProps?: Record<string, string>;
+    structural?: boolean;
 }
 
 export interface ProductionPageParts {
@@ -118,11 +119,20 @@ export async function loadProductionPageParts(
             modulePath = module;
         }
 
-        const resolvedModulePath = isLocalModule
-            ? modulePath
-            : require.resolve(module, { paths: [dirName] });
-        const headlessModule = await import(resolvedModulePath);
-        const headlessCompDef = headlessModule[name];
+        let headlessCompDef: any;
+
+        if (headlessImport.structural) {
+            // Structural component (DL#162): template-only, no code file.
+            // Data comes from headless imports inside the component's own jay-html.
+            // Template was already injected at parse time — skip module loading.
+            continue;
+        } else {
+            const resolvedModulePath = isLocalModule
+                ? modulePath
+                : require.resolve(module, { paths: [dirName] });
+            const headlessModule = await import(resolvedModulePath);
+            headlessCompDef = headlessModule[name];
+        }
 
         if (headlessImport.key) {
             const clientModulePath = isLocalModule
@@ -139,11 +149,13 @@ export async function loadProductionPageParts(
                 contractInfo: ci,
                 headlessProps: headlessImport.headlessProps,
             });
-            keyedPartModules.push({
-                key: headlessImport.key,
-                modulePath: clientModulePath,
-                exportName: name,
-            });
+            if (!headlessImport.structural) {
+                keyedPartModules.push({
+                    key: headlessImport.key,
+                    modulePath: clientModulePath,
+                    exportName: name,
+                });
+            }
             headlessModuleInfos.push({
                 modulePath,
                 exportName: name,
@@ -151,6 +163,7 @@ export async function loadProductionPageParts(
                 key: headlessImport.key,
                 contractInfo: ci,
                 headlessProps: headlessImport.headlessProps,
+                structural: headlessImport.structural,
             });
         }
 
@@ -166,6 +179,7 @@ export async function loadProductionPageParts(
                 isLocal: isLocalModule,
                 contractName: headlessImport.contractName,
                 propNames: headlessImport.contract.props?.map((p: any) => p.name) ?? [],
+                structural: headlessImport.structural,
             });
         }
     }
@@ -215,6 +229,7 @@ interface PagePartsConfigEntry {
     modulePath: string;
     exportName: string;
     source: 'npm' | 'local';
+    structural?: boolean;
 }
 
 export interface PagePartsConfig {
@@ -276,13 +291,16 @@ export function buildPagePartsConfig(
     for (const info of pageParts.headlessModuleInfos) {
         if (info.contractName) {
             instanceComponents.push({
-                modulePath: info.isLocal
-                    ? path.relative(buildDir, info.modulePath)
-                    : info.modulePath,
+                modulePath: info.structural
+                    ? ''
+                    : info.isLocal
+                      ? path.relative(buildDir, info.modulePath)
+                      : info.modulePath,
                 exportName: info.exportName,
                 source: info.isLocal ? 'local' : 'npm',
                 contractName: info.contractName,
                 propNames: info.propNames ?? [],
+                ...(info.structural ? { structural: true } : {}),
             });
         }
     }
@@ -334,10 +352,11 @@ export async function loadPagePartsFromConfig(
 
     const headlessInstanceComponents: HeadlessInstanceComponent[] = [];
     for (const entry of config.instanceComponents) {
-        const mod = await importModule(entry);
         const serveTimeContract: ServeTimeContract = {
             props: entry.propNames.map((name) => ({ name })),
         };
+        if (entry.structural) continue;
+        const mod = await importModule(entry);
         headlessInstanceComponents.push({
             contractName: entry.contractName,
             compDefinition: mod[entry.exportName] ?? mod.default,

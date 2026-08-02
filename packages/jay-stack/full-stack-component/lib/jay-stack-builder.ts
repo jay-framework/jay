@@ -736,6 +736,11 @@ class BuilderImplementation<
         >;
     }
 
+    withInteractiveMark() {
+        (this as any).hasInteractive = true;
+        return this;
+    }
+
     withInteractive(
         comp: ComponentConstructor<PropsT & CarryForward, Refs, InteractiveVS, Contexts, CompCore>,
     ): Builder<
@@ -751,6 +756,7 @@ class BuilderImplementation<
         CompCore
     > {
         this.comp = comp;
+        (this as any).hasInteractive = true;
         return this as unknown as Builder<
             'Done',
             Refs,

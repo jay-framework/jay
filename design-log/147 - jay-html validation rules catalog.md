@@ -44,9 +44,18 @@ Package: `@jay-framework/seo-validator` (monorepo, dev dependency)
 | Missing canonical        | warning  | `<link>`      | No `<link rel="canonical">` in `<head>`                                                |
 | Noindex robots           | warning  | `<meta>`      | `<meta name="robots">` contains `noindex`                                              |
 
+| Missing preconnect | warning | `<link>` | External stylesheet `<link>` without a preceding `<link rel="preconnect">` for that domain |
+| Font missing display=swap | warning | `<link>` | Google Fonts / Typekit stylesheet URL missing `display=swap` parameter |
+
 The dimensions rule accepts three forms of sizing: `width`/`height` attributes, inline `style` with `width:` and `height:`, or `srcset` (responsive images).
 
 The head metadata rules use `ctx.head` — a parsed representation of the `<head>` section added to the validation context.
+
+### Render-blocking resource rules (added DL#147a)
+
+**Missing preconnect:** For each `<link rel="stylesheet" href="https://...">` in `ctx.head`, extract the origin (scheme + host). If no `<link rel="preconnect" href="https://that-host">` exists earlier in `ctx.head.links`, flag it. Only applies to external origins (different from the page's own domain). Suggestion: `Add <link rel="preconnect" href="https://fonts.googleapis.com"> before the stylesheet`.
+
+**Font missing display=swap:** Match stylesheet `href` against known font service domains (`fonts.googleapis.com`, `use.typekit.net`). If the URL doesn't contain `display=swap` (Google) or equivalent, flag it. Suggestion: `Add &display=swap to the Google Fonts URL to avoid render-blocking text`.
 
 ### a11y-validator / accessibility
 

@@ -119,7 +119,15 @@ export async function fetchPageRequest(
     const headTags = headTagSources.length > 0 ? mergeHeadTags(headTagSources) : [];
     const hasCustomTitle = headTags.some((t) => t.tag?.toLowerCase() === 'title');
     const titleTag = hasCustomTitle ? '' : '    <title>Vite + TS</title>\n';
-    const headTagsHtml = headTags.length > 0 ? serializeHeadTags(headTags) + '\n' : '';
+    const preconnectTags = headTags.filter(
+        (t) => t.tag === 'link' && t.attrs?.rel === 'preconnect',
+    );
+    const otherHeadTags = headTags.filter(
+        (t) => !(t.tag === 'link' && t.attrs?.rel === 'preconnect'),
+    );
+    const preconnectHtml =
+        preconnectTags.length > 0 ? serializeHeadTags(preconnectTags) + '\n' : '';
+    const headTagsHtml = otherHeadTags.length > 0 ? serializeHeadTags(otherHeadTags) + '\n' : '';
 
     const serverElementPath = route.serverElementPath || instance.serverElementPath;
     const tLoadStart = Date.now();
@@ -157,7 +165,7 @@ export async function fetchPageRequest(
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-${titleTag}${[cssPreload, cssImportPreloads]
+${titleTag}${[preconnectHtml, cssPreload, cssImportPreloads]
                 .filter(Boolean)
                 .map((l) => l + '\n')
                 .join(

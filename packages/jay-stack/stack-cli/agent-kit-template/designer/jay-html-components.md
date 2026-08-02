@@ -39,6 +39,8 @@ Access data and refs with the key prefix:
 
 Key-based imports are only available in **pages** (not in headfull FS components).
 
+**Important:** Do NOT use `<jay:keyName>` for key-based imports. The key is for ViewState access (`{key.field}`), not for inline elements. `<jay:>` tags use the **contract name**, not the key.
+
 ### Pattern 2: Instance-Based (jay: prefix)
 
 Multiple instances with props and inline templates. Use when you need **multiple instances** or need to pass **props**.
@@ -98,6 +100,16 @@ Use `{path}` syntax to bind props to values from the page's ViewState. The bindi
 ```
 
 Inside `<jay:...>`, bindings resolve to **that instance's** contract tags (not the parent).
+
+### Choosing between patterns
+
+| Need                                                   | Pattern        | Key?            | Tag?                                         |
+| ------------------------------------------------------ | -------------- | --------------- | -------------------------------------------- |
+| One component per page, data across the whole template | Key-based      | `key="product"` | No `<jay:>` — use `{product.field}` bindings |
+| Multiple instances, each with own props and template   | Instance-based | No key          | `<jay:contract-name prop="...">`             |
+| One instance but with custom inline template           | Instance-based | No key          | `<jay:contract-name>`                        |
+
+**Never combine both:** a component imported with `key` cannot also be used as `<jay:>`. These are mutually exclusive patterns.
 
 ### Prop binding summary
 
@@ -162,16 +174,40 @@ Each headfull component lives in its own subdirectory under `src/components/` wi
 
 ### Component Structure
 
-A headfull component has its own `.jay-html` file with the same structure as a page:
+Each headfull component needs three files in its subdirectory under `src/components/`:
+
+**`.jay-contract`** — declares props. Tags are optional (use `tags: []` or omit for structural components):
+
+```yaml
+# components/site-header/site-header.jay-contract
+name: SiteHeader
+props:
+  - name: logoUrl
+    type: string
+    required: true
+```
+
+**`.ts`** — component code. Must use `makeJayStackComponent` with `.withProps()` matching the contract props:
+
+```typescript
+// components/site-header/site-header.ts
+import { makeJayStackComponent, phaseOutput } from '@jay-framework/fullstack-component';
+import type { SiteHeaderContract, SiteHeaderProps } from './site-header.jay-html';
+
+export const siteHeader = makeJayStackComponent<SiteHeaderContract>()
+  .withProps<SiteHeaderProps>()
+  .withFastRender(async (props) => phaseOutput({ logoUrl: props.logoUrl }, {}));
+```
+
+For a structural component with only props and no data logic, `.withFastRender` passes props through as ViewState.
+
+**`.jay-html`** — the template:
 
 ```html
-<!-- components/header/header.jay-html -->
+<!-- components/site-header/site-header.jay-html -->
 <html>
   <head>
-    <script type="application/jay-data">
-      data:
-          logoUrl: string
-    </script>
+    <script type="application/jay-data" contract="./site-header.jay-contract"></script>
   </head>
   <body>
     <header>

@@ -29,11 +29,33 @@ different states, the parsing creates two different objects - it does not create
 
 The expected behaviour is
 
-![Diagram](22%20-%20serialized%20mutable%20expected%20diagram.svg)
+```mermaid
+sequenceDiagram
+    participant A as First Context
+    participant B as Second Context
+    A ->> A: Create mutable object O (rev 1)
+    A ->> B: Serialize and send O (rev 1)
+    B ->> B: Deserialize O (rev 1)
+    A ->> A: Update mutable object O (rev 2)
+    A ->> B: Serialize and send O (rev 2)
+    B ->> B: Deserialize into existing O (rev 1), <br/>updating it to O (rev 2)
+    Note right of B: the second context one copy O:<br/>O (rev 2)
+```
 
 But the actual behaviour is
 
-![Diagram](22%20-%20serialized%20mutable%20actual%20diagram.svg)
+```mermaid
+sequenceDiagram
+    participant A as First Context
+    participant B as Second Context
+    A ->> A: Create mutable object O (rev 1)
+    A ->> B: Serialize and send O (rev 1)
+    B ->> B: Deserialize O (rev 1)
+    A ->> A: Update mutable object O (rev 2)
+    A ->> B: Serialize and send O (rev 2)
+    B ->> B: Deserialize into new O (rev 2)
+    Note right of B: the second context now has two copies of O:<br/>O (rev 1) and O (rev 2)
+```
 
 ## How do we solve this challenge?
 
@@ -171,7 +193,10 @@ Not Working!
 So now, we are looking for alternatives that are more effective serialization.
 We keep in mind the process we have -
 
-![Diagram](22%20-%20serialized%20mutable%20flow.svg)
+```mermaid
+flowchart LR
+    a[Array]-->B[serialized]-->C[revived array]-->D[diff against previous DOM]
+```
 
 We need to make all the process performant
 
@@ -301,7 +326,13 @@ with a different algorithm. We will make both immer and mutable (on the sandbox 
 
 On the main side, we will use mutable in any case as it is the most optimized
 
-![Diagram](22%20-%20serialized%20mutable%20flow%202.svg)
+```mermaid
+flowchart LR
+    B[serialized as json diff]-->C[mutable object]-->D[diff against previous DOM]
+    A[immutable object]-->A2[compute json patch]-->B
+    E[immer]-->E2[get json patch]-->B
+    F[mutable]-->F2[get json patch]-->B
+```
 
 Sandbox:
 
@@ -394,7 +425,18 @@ Time for a new plan.
 Given `Mutable` cannot create JSON Patch, and given `Immer` JSON patch generation is sub-optimal, we consolidate to the following
 pattern
 
-![Diagram](22%20-%20serialized%20mutable%20flow%203.svg)
+```mermaid
+graph TB
+    A[immutable object]-->A2["immutable object
+    updated copy"]-->B
+    E[immutable object]-->E2[mutate using immer]-->E3[immutable copy]-->B
+    F[mutable]-->F2[immutable copy]-->B
+    B[compute json patch]-->B2[send json patch]
+    B2-->C["apply patch on
+    mutable object"]-->D[diff against previous DOM]
+    B2-->C2["apply patch on
+    immutable object"]-->D[diff against previous DOM]
+```
 
 the new plan is to materialize a mutable object into an immutable frozen object, which is then diffed with the
 previous version and serialized as a JSON Patch.

@@ -5,7 +5,7 @@ export const page = makeJayStackComponent<PageContract>().withSlowlyRender(async
     return phaseOutput(
         {
             title: 'Welcome to Jay',
-            description: 'Your project is ready. Edit src/pages/page.jay-html to get started.',
+            description: 'Your project is ready — here are three ways to start building.',
         },
         {},
     );

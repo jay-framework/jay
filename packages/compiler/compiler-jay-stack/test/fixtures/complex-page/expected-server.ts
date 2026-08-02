@@ -366,4 +366,5 @@ export const productPage = makeJayStackComponent<ProductPageContract>()
     .withServices(WIX_STORES_SERVICE_MARKER)
     .withLoadParams(loadProductParams)
     .withSlowlyRender(renderSlowlyChanging)
-    .withFastRender(renderFastChanging);
+    .withFastRender(renderFastChanging)
+    .withInteractiveMark();

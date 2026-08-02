@@ -15,7 +15,7 @@ Jay Stack is a full-stack framework. Plugins provide headless components (data +
 yarn jay-stack-cli setup
 ```
 
-This configures plugins — creates config templates, validates credentials, connects to external services. Run this once when starting a new project or after adding a plugin.
+This configures plugins interactively — prompts for API keys and credentials, creates config files, validates services. Run this once when starting a new project or after adding a plugin. Use `--no-interactive` in CI/scripts to create config templates without prompting.
 
 ### Step 2: Generate the agent kit
 

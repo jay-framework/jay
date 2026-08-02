@@ -11,12 +11,12 @@ plugins:
       - name: markdown-pages
         description: Renders a directory of markdown files as routable pages
         type: static
-        path: ./../../../packages/plugins/markdown/dist/markdown-pages.jay-contract
+        path: ./../../../packages/plugins/markdown/dist/contracts/markdown-pages.jay-contract
       - name: markdown-content
         description: Renders a markdown string to HTML at build time (slow phase)
         type: static
-        path: ./../../../packages/plugins/markdown/dist/markdown-content.jay-contract
+        path: ./../../../packages/plugins/markdown/dist/contracts/markdown-content.jay-contract
       - name: markdown-live
         description: Renders markdown with fast+interactive updates
         type: static
-        path: ./../../../packages/plugins/markdown/dist/markdown-live.jay-contract
+        path: ./../../../packages/plugins/markdown/dist/contracts/markdown-live.jay-contract

@@ -149,7 +149,7 @@ There is no enforced convention — just pick a prefix that's unique and descrip
 
 ## Dev-only routes
 
-Some plugin pages are **dev-server tooling** — internal dashboards, QA fixtures, builder settings UIs. Mark them with `devOnly: true` so consumers of `listRoutes()` can distinguish them from public site pages. Production exclusion is deferred (see Design Log #157).
+Some plugin pages are **dev-server tooling** — internal dashboards, QA fixtures, builder settings UIs. Mark them with `devOnly: true` so consumers of `listRoutes()` can distinguish them from public site pages. Production exclusion is deferred (see Design Log #163).
 
 ```yaml
 routes:

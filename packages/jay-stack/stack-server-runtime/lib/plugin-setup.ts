@@ -28,6 +28,41 @@ import { getLogger } from '@jay-framework/logger';
 // ============================================================================
 
 /**
+ * Thrown by non-interactive prompt when an answer is missing.
+ * The CLI catches this and prints structured output for agents.
+ */
+export class SetupNeedsAnswerError extends Error {
+    constructor(
+        public readonly plugin: string,
+        public readonly key: string,
+        public readonly type: 'input' | 'confirm' | 'select',
+        public readonly promptMessage: string,
+        public readonly choices?: Array<{ name: string; value: string }>,
+    ) {
+        super(`Setup needs answer for "${key}": ${promptMessage}`);
+        this.name = 'SetupNeedsAnswerError';
+    }
+}
+
+/**
+ * Prompt functions available to setup handlers.
+ * Each prompt requires a stable `key` for answer matching across re-runs.
+ */
+export interface PluginSetupPrompt {
+    input(options: {
+        key: string;
+        message: string;
+        validate?: (v: string) => boolean | string;
+    }): Promise<string>;
+    confirm(options: { key: string; message: string; default?: boolean }): Promise<boolean>;
+    select(options: {
+        key: string;
+        message: string;
+        choices: Array<{ name: string; value: string }>;
+    }): Promise<string>;
+}
+
+/**
  * Context passed to a plugin's setup handler.
  * Setup handles config creation and service validation only.
  */
@@ -44,6 +79,10 @@ export interface PluginSetupContext {
     initError?: Error;
     /** Whether --force flag was passed */
     force: boolean;
+    /** Whether running in interactive mode (can prompt user) */
+    interactive: boolean;
+    /** Prompt functions for interactive user input */
+    prompt: PluginSetupPrompt;
 }
 
 /**
@@ -261,12 +300,14 @@ export async function executePluginSetup(
         projectRoot: string;
         configDir: string;
         force: boolean;
+        interactive: boolean;
+        prompt: PluginSetupPrompt;
         initError?: Error;
         viteServer?: ViteSSRLoader;
         verbose?: boolean;
     },
 ): Promise<PluginSetupResult> {
-    const { projectRoot, configDir, force, initError, viteServer } = options;
+    const { projectRoot, configDir, force, interactive, prompt, initError, viteServer } = options;
 
     const context: PluginSetupContext = {
         pluginName: plugin.name,
@@ -275,6 +316,8 @@ export async function executePluginSetup(
         services: getServiceRegistry(),
         initError,
         force,
+        interactive,
+        prompt,
     };
 
     // Load the setup handler module

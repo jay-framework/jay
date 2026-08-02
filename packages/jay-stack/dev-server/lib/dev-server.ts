@@ -982,6 +982,14 @@ async function sendResponse(
         await fs.writeFile(path.join(clientScriptDir, `${pageName}.html`), pageHtml, 'utf-8');
     }
 
+    // Invalidate cached html-proxy modules so Vite re-extracts inline scripts.
+    // Without this, Vite serves stale script content after SSR/client mode changes.
+    for (const [id, mod] of vite.moduleGraph.idToModuleMap) {
+        if (id.includes('html-proxy')) {
+            vite.moduleGraph.invalidateModule(mod);
+        }
+    }
+
     const viteStart = Date.now();
     const compiledPageHtml = await vite.transformIndexHtml(!!url ? url : '/', pageHtml);
     timing?.recordViteClient(Date.now() - viteStart);

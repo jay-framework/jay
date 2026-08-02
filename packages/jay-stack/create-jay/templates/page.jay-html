@@ -1,35 +1,183 @@
 <html lang="en">
   <head>
-    <title>{{name}}</title>
-    <meta name="description" content="A Jay Stack project">
+    <title>Welcome to {{name}}</title>
+    <meta name="description" content="Your Jay Stack project is ready — edit pages with the AIditor, a coding agent, or by hand.">
     <script type="application/jay-data" contract="./page.jay-contract"></script>
+    <script
+      type="application/jay-headless"
+      plugin="@jay-framework/ui-kit"
+      contract="letter-split"
+    ></script>
     <link rel="stylesheet" href="../styles/theme.css" />
     <style>
+      /* ── Hero ── */
       .hero {
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        min-height: 80vh;
+        min-height: 50vh;
         text-align: center;
-        padding: 2rem;
+        padding: 3rem 2rem 2rem;
       }
-      .hero h1 {
-        font-size: 2.5rem;
+
+      .hero-title {
+        font-size: clamp(2.2rem, 5vw, 3.5rem);
+        font-weight: 800;
+        margin-bottom: 1.5rem;
+        line-height: 1.15;
+        white-space: pre;
+      }
+
+      /* Letter-split wave animation */
+      .letter {
+        display: inline-block;
+        animation: wave 2.2s ease-in-out infinite;
+        animation-delay: calc(var(--i) * 0.07s);
+      }
+      @keyframes wave {
+        0%, 100% { transform: translateY(0); }
+        30%      { transform: translateY(-0.25em); }
+        50%      { transform: translateY(0); }
+      }
+
+      .hero-subtitle {
+        font-size: 1.2rem;
+        color: var(--color-text-muted);
+        max-width: 520px;
+        margin-bottom: 2rem;
+      }
+
+      /* ── CTA button ── */
+      .cta-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.85rem 2rem;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #fff;
+        background: var(--color-primary);
+        border: none;
+        border-radius: 0.6rem;
+        text-decoration: none;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      .cta-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(37, 99, 235, 0.35);
+        text-decoration: none;
+      }
+      .cta-btn:active {
+        transform: translateY(0);
+      }
+
+      /* ── Steps section ── */
+      .steps {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+        max-width: 640px;
+        margin: 0 auto;
+        padding: 2rem 2rem 4rem;
+      }
+
+      .step {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1.25rem 1.5rem;
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: 0.75rem;
+        opacity: 0;
+        transform: translateY(12px);
+        animation: fadeUp 0.5s ease forwards;
+      }
+      .step:nth-child(1) { animation-delay: 0.2s; }
+      .step:nth-child(2) { animation-delay: 0.4s; }
+      .step:nth-child(3) { animation-delay: 0.6s; }
+
+      @keyframes fadeUp {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .step-number {
+        flex-shrink: 0;
+        width: 2rem;
+        height: 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         font-weight: 700;
-        margin-bottom: 1rem;
+        font-size: 0.95rem;
+        color: var(--color-primary);
+        background: rgba(37, 99, 235, 0.1);
+        border-radius: 50%;
       }
-      .hero p {
-        font-size: 1.25rem;
-        color: #64748b;
-        max-width: 600px;
+
+      .step-body h2 {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.2rem;
+      }
+      .step-body p {
+        font-size: 0.9rem;
+        color: var(--color-text-muted);
+        line-height: 1.5;
+      }
+
+      .step-body code {
+        font-size: 0.85rem;
+        background: var(--color-border);
+        padding: 0.1em 0.4em;
+        border-radius: 0.3rem;
       }
     </style>
   </head>
   <body>
-    <main class="hero">
-      <h1>{title}</h1>
-      <p>{description}</p>
+    <main>
+      <section class="hero">
+        <jay:letter-split text="{title}">
+          <h1 class="hero-title" aria-label="Welcome to {{name}}">
+            <span forEach="letters" trackBy="index" class="letter" aria-hidden="true" style="--i: {index}">{text}</span>
+          </h1>
+        </jay:letter-split>
+
+        <p class="hero-subtitle">{description}</p>
+
+        <a class="cta-btn" href="/aiditor">Open the AIditor &#10132;</a>
+      </section>
+
+      <section class="steps">
+        <div class="step">
+          <span class="step-number">1</span>
+          <div class="step-body">
+            <h2>Use the AIditor</h2>
+            <p>Open the visual editor at <a href="/aiditor">/aiditor</a> to design and tweak pages with AI assistance.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="step-number">2</span>
+          <div class="step-body">
+            <h2>Use any coding agent</h2>
+            <p>Work with your favorite AI coding tool — Cursor, Claude Code, or any agent that can edit files.</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <span class="step-number">3</span>
+          <div class="step-body">
+            <h2>Edit the source directly</h2>
+            <p>Pages live in <code>src/pages/</code> — open the jay-html files in any editor and start building.</p>
+          </div>
+        </div>
+      </section>
     </main>
   </body>
 </html>

@@ -111,8 +111,8 @@ export interface HeadlessInstanceDefinition {
     renderFnName: string;
     /** The compiled render function body as a string */
     renderFnCode: string;
-    /** The plugin component import name (e.g., "productCard") */
-    pluginComponentName: string;
+    /** The plugin component import name (e.g., "productCard"). Undefined for structural components (DL#162). */
+    pluginComponentName?: string;
     /** Additional imports needed for the inline template */
     imports: Imports;
 }
@@ -565,6 +565,25 @@ export function renderNode(node: Node, context: RenderContext): RenderFragment {
                 }
                 return renderHeadlessInstance(htmlElement, newContext, componentMatch.name);
             }
+
+            // Check if the tag name matches a keyed headless import's key (agent mistake: using key as tag)
+            const keyedByName = newContext.headlessImports.find(
+                (h) => h.key && h.key === componentMatch!.name,
+            );
+            if (keyedByName) {
+                return new RenderFragment('', Imports.none(), [
+                    `<jay:${componentMatch.name}> cannot be used as an inline element because it was imported with key="${keyedByName.key}". ` +
+                        `Keyed headless components merge their ViewState into the page — use {${keyedByName.key}.fieldName} bindings instead. ` +
+                        `For inline usage, remove the key and use <jay:${keyedByName.contractName}>.`,
+                ]);
+            }
+
+            if (componentMatch.kind === 'unknown') {
+                return new RenderFragment('', Imports.none(), [
+                    `<jay:${componentMatch.name}> does not match any imported headless contract or headful component.`,
+                ]);
+            }
+
             return renderNestedComponent(htmlElement, newContext, componentMatch.name);
         }
 
@@ -905,7 +924,7 @@ ${inlineBody.rendered}
 
 const ${componentSymbol} = makeHeadlessInstanceComponent(
     ${renderFnName},
-    ${pluginComponentName},
+    ${headlessImport.structural ? `{ comp: (_props, _refs) => ({ render: () => _props }) }` : pluginComponentName},
     ${isInsideForEach ? `(dataIds) => [...dataIds, '${coordinateSuffix}'].toString()` : `'${coordinateKey}'`},
 );`;
 
@@ -914,7 +933,7 @@ const ${componentSymbol} = makeHeadlessInstanceComponent(
             componentSymbol,
             renderFnName,
             renderFnCode,
-            pluginComponentName,
+            pluginComponentName: headlessImport.structural ? undefined : pluginComponentName,
             imports: inlineBody.imports.plus(refsManagerImport),
         });
 
@@ -1289,7 +1308,9 @@ function renderFunctionImplementation(
         processImportedComponents(importStatements);
     const importedRefNameToRef = processImportedHeadless(headlessImports);
     // Build set of headless contract names for detecting <jay:contract-name> instances
-    const headlessContractNames = new Set(headlessImports.map((h) => h.contractName));
+    const headlessContractNames = new Set(
+        headlessImports.filter((h) => !h.structural).map((h) => h.contractName),
+    );
 
     // Pre-process: assign scoped coordinates (DL#126) so headless instance keys
     // match the server/hydrate targets. Must run before element rendering.
@@ -1677,7 +1698,7 @@ export function generateElementHydrateFile(
 
     // Pre-assign coordinates and refs before element compilation so the element
     // compiler reads the same refs that the hydrate and server-element compilers use.
-    const headlessImports = jayFile.headlessImports?.filter((h) => !h.key) ?? [];
+    const headlessImports = jayFile.headlessImports?.filter((h) => !h.key && !h.structural) ?? [];
     const headlessContractNames = new Set(headlessImports.map((h) => h.contractName));
     assignCoordinates(jayFile.body, { headlessContractNames });
 

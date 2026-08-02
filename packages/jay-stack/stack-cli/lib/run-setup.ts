@@ -1,22 +1,40 @@
 /**
  * CLI handler for `jay-stack setup [plugin]`.
  *
- * Discovers plugins with setup handlers, initializes services, and runs
- * each plugin's setup function. Setup handles config creation and
- * credential/service validation only. Reference data generation is
- * handled by `jay-stack agent-kit` (see cli.ts agent-kit command).
+ * Runs setup and init per plugin in dependency order:
+ *   1. Run setup handler (creates config, prompts for credentials)
+ *   2. If configured, run init (registers services)
+ *   3. Next plugin — can now use services registered by earlier plugins
  *
- * See Design Log #87.
+ * See Design Log #87, #157, #159.
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
 import chalk from 'chalk';
+import YAML from 'yaml';
 import { createViteForCli } from '@jay-framework/dev-server';
 import { getLogger } from '@jay-framework/logger';
+import {
+    SetupNeedsAnswerError,
+    discoverPluginsWithSetup,
+    executePluginSetup,
+    discoverPluginsWithInit,
+    sortPluginsByDependencies,
+    executePluginServerInits,
+    runInitCallbacks,
+} from '@jay-framework/stack-server-runtime';
 import { loadConfig } from './config';
-import type { InitializeServicesForCli } from './cli-services';
+import {
+    createInteractivePrompt,
+    createAnswersFilePrompt,
+    createDefaultPrompt,
+} from './setup-prompts';
 
 export interface RunSetupOptions {
     force?: boolean;
+    interactive?: boolean;
+    answers?: string;
     verbose?: boolean;
 }
 
@@ -24,15 +42,12 @@ export async function runSetup(
     pluginFilter: string | undefined,
     options: RunSetupOptions,
     projectRoot: string,
-    initializeServices: InitializeServicesForCli,
 ): Promise<void> {
     let viteServer: Awaited<ReturnType<typeof createViteForCli>> | undefined;
 
     try {
         const logger = getLogger();
-        const path = await import('node:path');
 
-        // Load project config to get configBase
         const jayConfig = loadConfig();
         const configDir = path.resolve(projectRoot, jayConfig.devServer?.configBase || './config');
 
@@ -42,11 +57,6 @@ export async function runSetup(
             logger.info('Starting Vite for TypeScript support...');
         }
         viteServer = await createViteForCli({ projectRoot });
-
-        // Discover plugins with setup handlers
-        const { discoverPluginsWithSetup, executePluginSetup } = await import(
-            '@jay-framework/stack-server-runtime'
-        );
 
         const pluginsWithSetup = await discoverPluginsWithSetup({
             projectRoot,
@@ -71,16 +81,18 @@ export async function runSetup(
             );
         }
 
-        // Initialize services (for all plugins, dependency-ordered)
-        // Capture per-plugin init errors — setup handlers need to know
-        const { initErrors } = await initializeServices(projectRoot, viteServer);
-        if (initErrors.size > 0 && options.verbose) {
-            for (const [name, err] of initErrors) {
-                logger.info(chalk.yellow(`⚠️  ${name} init error: ${err.message}`));
-            }
+        // Discover plugins with init (for per-plugin init after setup)
+        const allPluginsWithInit = sortPluginsByDependencies(
+            await discoverPluginsWithInit({ projectRoot, verbose: options.verbose }),
+        );
+
+        // Determine prompt mode
+        const interactive = options.interactive === true;
+        let answersMap: Record<string, string> | undefined;
+        if (options.answers) {
+            answersMap = YAML.parse(fs.readFileSync(options.answers, 'utf-8')) || {};
         }
 
-        // Run setup for each target plugin
         let configured = 0;
         let needsConfig = 0;
         let errors = 0;
@@ -92,12 +104,20 @@ export async function runSetup(
                 logger.important(chalk.gray(`   ${plugin.setupDescription}`));
             }
 
+            const prompt = interactive
+                ? createInteractivePrompt()
+                : answersMap
+                  ? createAnswersFilePrompt(answersMap, plugin.name)
+                  : createDefaultPrompt(plugin.name);
+
             try {
                 const result = await executePluginSetup(plugin, {
                     projectRoot,
                     configDir,
                     force: options.force ?? false,
-                    initError: initErrors.get(plugin.name),
+                    interactive,
+                    prompt,
+                    initError: undefined,
                     viteServer,
                     verbose: options.verbose,
                 });
@@ -105,7 +125,6 @@ export async function runSetup(
                 switch (result.status) {
                     case 'configured':
                         configured++;
-                        logger.important(chalk.green('   ✅ Services verified'));
                         if (result.configCreated?.length) {
                             for (const cfg of result.configCreated) {
                                 logger.important(chalk.green(`   ✅ Created ${cfg}`));
@@ -114,6 +133,9 @@ export async function runSetup(
                         if (result.message) {
                             logger.important(chalk.gray(`   ${result.message}`));
                         }
+
+                        // Init this plugin now — config files are in place
+                        await initPlugin(plugin.name, allPluginsWithInit, viteServer, logger);
                         break;
 
                     case 'needs-config':
@@ -142,15 +164,42 @@ export async function runSetup(
                         break;
                 }
             } catch (error: any) {
-                errors++;
-                logger.important(chalk.red(`   ❌ Setup failed: ${error.message}`));
-                if (options.verbose) {
-                    logger.error(error.stack);
+                if (error instanceof SetupNeedsAnswerError) {
+                    needsConfig++;
+                    logger.important('');
+                    logger.important(chalk.yellow('setup-needs-answer:'));
+                    logger.important(chalk.yellow(`  plugin: ${error.plugin}`));
+                    logger.important(chalk.yellow(`  key: ${error.key}`));
+                    logger.important(chalk.yellow(`  type: ${error.type}`));
+                    logger.important(chalk.yellow(`  message: "${error.promptMessage}"`));
+                    if (error.choices) {
+                        logger.important(chalk.yellow('  choices:'));
+                        for (const c of error.choices) {
+                            logger.important(chalk.yellow(`    - ${c.value}: ${c.name}`));
+                        }
+                    }
+                    logger.important('');
+                    logger.important(chalk.gray('Provide the answer via file:'));
+                    logger.important(chalk.gray(`  jay-stack-cli setup --answers answers.yaml`));
+                    logger.important(chalk.gray(`  answers.yaml format:`));
+                    logger.important(chalk.gray(`    ${error.key}: "your-answer"`));
+                    logger.important('');
+                    logger.important(chalk.gray('Or run interactively:'));
+                    logger.important(chalk.gray(`  jay-stack-cli setup --interactive`));
+                } else {
+                    errors++;
+                    logger.important(chalk.red(`   ❌ Setup failed: ${error.message}`));
+                    if (options.verbose) {
+                        logger.error(error.stack);
+                    }
                 }
             }
 
-            logger.important(''); // blank line between plugins
+            logger.important('');
         }
+
+        // Run project init.ts and lifecycle callbacks after all plugins
+        await runProjectInit(projectRoot, viteServer);
 
         // Summary
         const parts: string[] = [];
@@ -173,5 +222,56 @@ export async function runSetup(
         if (viteServer) {
             await viteServer.close();
         }
+    }
+}
+
+/**
+ * Init a single plugin after its setup succeeds.
+ * Finds the matching entry in the init discovery list and runs it quietly.
+ */
+async function initPlugin(
+    pluginName: string,
+    allPluginsWithInit: Awaited<ReturnType<typeof discoverPluginsWithInit>>,
+    viteServer: Awaited<ReturnType<typeof createViteForCli>> | undefined,
+    logger: ReturnType<typeof getLogger>,
+): Promise<void> {
+    const pluginInit = allPluginsWithInit.filter((p) => p.name === pluginName);
+    if (pluginInit.length === 0) return;
+
+    const initErrors = await executePluginServerInits(pluginInit, viteServer, false, true);
+    if (initErrors.size > 0) {
+        for (const [, err] of initErrors) {
+            logger.important(chalk.yellow(`   ⚠️  Init after setup: ${err.message}`));
+        }
+    } else {
+        logger.important(chalk.green(`   ✅ Services initialized`));
+    }
+}
+
+/**
+ * Load and run project init.ts + lifecycle callbacks.
+ */
+async function runProjectInit(
+    projectRoot: string,
+    viteServer: Awaited<ReturnType<typeof createViteForCli>> | undefined,
+): Promise<void> {
+    try {
+        const initPathTs = path.join(projectRoot, 'src', 'init.ts');
+        const initPathJs = path.join(projectRoot, 'src', 'init.js');
+
+        let initModule: any;
+        if (fs.existsSync(initPathTs) && viteServer) {
+            initModule = await viteServer.ssrLoadModule(initPathTs);
+        } else if (fs.existsSync(initPathJs)) {
+            initModule = await import(initPathJs);
+        }
+
+        if (initModule?.init?._serverInit) {
+            await initModule.init._serverInit();
+        }
+
+        await runInitCallbacks();
+    } catch {
+        // Project init is optional during setup
     }
 }
