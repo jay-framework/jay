@@ -825,7 +825,7 @@ describe('compiler', () => {
                 '',
             );
             expect(jayFile.validations).toEqual([
-                'jay file should have exactly one jay-data script, found 2',
+                'Expected exactly one <script type="application/jay-data">, found 2',
             ]);
         });
 
@@ -845,7 +845,9 @@ describe('compiler', () => {
                 '',
             );
             expect(jayFile.validations).toEqual([
-                'jay file should have exactly one jay-data script, found none',
+                'Missing <script type="application/jay-data">. ' +
+                    'Add either inline data or a contract reference: ' +
+                    '<script type="application/jay-data" contract="./component.jay-contract"></script>',
             ]);
         });
 
@@ -859,7 +861,9 @@ describe('compiler', () => {
                 '',
             );
             expect(jayFile.validations).toEqual([
-                'jay file should have exactly one jay-data script, found none',
+                'Missing <script type="application/jay-data">. ' +
+                    'Add either inline data or a contract reference: ' +
+                    '<script type="application/jay-data" contract="./component.jay-contract"></script>',
             ]);
         });
 
