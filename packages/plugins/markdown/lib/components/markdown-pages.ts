@@ -1,4 +1,4 @@
-import { makeJayStackComponent, phaseOutput } from '@jay-framework/fullstack-component';
+import { makeJayStackComponent, notFound, phaseOutput } from '@jay-framework/fullstack-component';
 import { parseMarkdownWithMermaid } from '../parse-markdown.js';
 import type { MarkdownImageOptions, MediaMapEntry } from '../parse-markdown.js';
 import { frontmatterToHeadTags } from '../head-tags.js';
@@ -93,7 +93,13 @@ export const markdownPages = makeJayStackComponent()
     })
     .withSlowlyRender(async (props: MarkdownPagesProps) => {
         const filePath = path.join(props.contentDir, `${props.slug}.md`);
-        const content = await fs.readFile(filePath, 'utf-8');
+        let content: string;
+        try {
+            content = await fs.readFile(filePath, 'utf-8');
+        } catch (err: any) {
+            if (err?.code === 'ENOENT') return notFound();
+            throw err;
+        }
 
         let imageOptions: MarkdownImageOptions = {};
 
