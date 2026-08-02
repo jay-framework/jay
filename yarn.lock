@@ -4943,6 +4943,7 @@ __metadata:
     "@jay-framework/compiler-shared": "workspace:^"
     "@jay-framework/dev-environment": "workspace:^"
     "@jay-framework/jay-stack-cli": "workspace:^"
+    "@jay-framework/plugin-validator": "workspace:^"
     "@jay-framework/stack-server-runtime": "workspace:^"
     "@types/js-yaml": "npm:^4.0.9"
     "@types/node": "npm:^22.15.21"
