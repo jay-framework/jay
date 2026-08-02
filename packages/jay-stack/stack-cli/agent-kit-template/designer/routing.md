@@ -144,6 +144,48 @@ src/pages/products/[slug]/page.jay-html
 
 Multiple components on the same page can each declare params. The route directory must provide all required params across all components. For example, if the page contract requires `lang` and a headless component requires `slug`, the page should live at `src/pages/[lang]/products/[slug]/page.jay-html`.
 
+### Passing Route Params to Nested Components
+
+Route params flow automatically to keyed headless components that declare them as `params` in their contract. Instance-based headless components and headfull components do not receive route params directly — they receive props from the template.
+
+To pass a route param to a nested component, the page contract or a keyed headless component must expose it as ViewState, then the template binds it as a prop:
+
+**1. Page contract exposes the param as ViewState:**
+
+```yaml
+# page.jay-contract
+name: Page
+params:
+  slug: string
+tags:
+  - tag: activePage
+    type: data
+    dataType: string
+    phase: slow
+```
+
+**2. `page.ts` passes the param into ViewState:**
+
+```typescript
+.withSlowlyRender(async (props) =>
+  phaseOutput({ activePage: props.slug }, {})
+)
+```
+
+**3. Template binds ViewState to the nested component prop:**
+
+```html
+<!-- headfull component -->
+<jay:SideNav activePage="{activePage}" />
+
+<!-- instance-based headless component -->
+<jay:related-items slug="{activePage}">
+  <div>{title}</div>
+</jay:related-items>
+```
+
+The same pattern works with keyed headless data — if a keyed component already provides the value, bind directly: `<jay:SideNav activePage="{product.slug}" />`.
+
 ### Discovering Param Values
 
 For SSG with dynamic routes, the plugin component provides a `loadParams` generator that yields all valid param combinations. Use it to discover what routes will be generated:
