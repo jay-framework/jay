@@ -1,5 +1,5 @@
 import { makeJayStackComponent, notFound, phaseOutput } from '@jay-framework/fullstack-component';
-import { parseMarkdownWithMermaid } from '../parse-markdown.js';
+import { extractFrontmatter, parseMarkdownBodyWithMermaid } from '../parse-markdown.js';
 import type { MarkdownImageOptions, MediaMapEntry } from '../parse-markdown.js';
 import { frontmatterToHeadTags } from '../head-tags.js';
 import fs from 'node:fs/promises';
@@ -114,7 +114,12 @@ export const markdownPages = makeJayStackComponent()
             imageOptions = { imageBaseUrl };
         }
 
-        const { frontmatter, html } = await parseMarkdownWithMermaid(content, imageOptions);
+        const { frontmatter, body } = extractFrontmatter(content);
+
+        const title =
+            frontmatter.title ?? body.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? '';
+
+        const html = await parseMarkdownBodyWithMermaid(body, imageOptions);
 
         const tags = Array.isArray(frontmatter.tags)
             ? frontmatter.tags.map((name: string) => ({ name: String(name) }))
@@ -122,7 +127,7 @@ export const markdownPages = makeJayStackComponent()
 
         return phaseOutput(
             {
-                title: frontmatter.title ?? '',
+                title,
                 content: html,
                 description: frontmatter.description ?? '',
                 date: frontmatter.date ? new Date(frontmatter.date).toISOString() : '',
