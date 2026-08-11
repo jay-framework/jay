@@ -55,7 +55,7 @@ components:
 `;
 
 function readOutput(dir: string): any {
-    const outputPath = path.join(dir, 'agent-kit/aiditor/add-menu/design-system.yaml');
+    const outputPath = path.join(dir, 'agent-kit/aiditor/add-menu/design-system.generated.yaml');
     return yaml.load(fs.readFileSync(outputPath, 'utf-8')) as any;
 }
 
@@ -74,7 +74,10 @@ describe('generateDesignSystemAgentKit', () => {
         const ctx = makeContext(tempDir);
         const result = await generateDesignSystemAgentKit(ctx);
 
-        expect(result.agentKitCreated).toEqual(['agent-kit/aiditor/add-menu/design-system.yaml']);
+        expect(result.agentKitCreated).toEqual([
+            'agent-kit/aiditor/add-menu/design-system.generated.yaml',
+            'agent-kit/aiditor/settings/design-system-validator.yaml',
+        ]);
         const content = readOutput(tempDir);
         expect(content.items.length).toEqual(10);
     });
@@ -171,12 +174,14 @@ describe('generateDesignSystemAgentKit', () => {
         expect(accentItem.category).toEqual('Design System (products)');
     });
 
-    it('returns empty when no DESIGN.md exists', async () => {
+    it('materializes settings only when no DESIGN.md exists', async () => {
         const emptyDir = makeTempProject();
         const ctx = makeContext(emptyDir);
         const result = await generateDesignSystemAgentKit(ctx);
 
-        expect(result.agentKitCreated).toEqual([]);
+        expect(result.agentKitCreated).toEqual([
+            'agent-kit/aiditor/settings/design-system-validator.yaml',
+        ]);
         fs.rmSync(emptyDir, { recursive: true, force: true });
     });
 });

@@ -3,6 +3,20 @@ name: design-system-validator
 agentkit: generateDesignSystemAgentKit
 description: Generate AIditor add-menu entries from DESIGN.md tokens
 
+actions:
+  - getDesignSystemSettingsStatus
+  - runDesignSystemAnalysis
+  - loadDesignSystemAddMenuCatalog
+  - saveDesignSystemAddMenuCatalog
+  - regenerateDesignSystemAddMenu
+
+routes:
+  - path: /design-system/settings
+    jayHtml: ./dist/pages/settings/page.jay-html
+    component: designSystemSettingsPage
+    description: Design system project settings — token overview, analysis report, add-menu regeneration
+    devOnly: true
+
 validators:
   - name: design-tokens
     handler: validateTokens

@@ -12,13 +12,18 @@
   ],
   "exports": {
     ".": "./dist/index.js",
-    "./plugin.yaml": "./plugin.yaml"
+    "./client": "./dist/index.client.js",
+    "./plugin.yaml": "./plugin.yaml",
+    "./dist/pages/settings/page.jay-html": "./dist/pages/settings/page.jay-html"
   },
   "scripts": {
-    "build": "npm run clean && npm run build:server && npm run build:types && npm run validate",
+    "build": "npm run clean && npm run definitions && npm run build:copy-assets && npm run build:client && npm run build:server && npm run build:types && npm run validate",
+    "definitions": "jay-cli definitions lib/pages/settings",
+    "build:copy-assets": "mkdir -p dist/pages/settings && cp lib/pages/settings/page.jay-html dist/pages/settings/ && cp lib/pages/settings/page.jay-html.d.ts dist/pages/settings/ 2>/dev/null || true",
+    "build:client": "vite build",
     "validate": "jay-stack-cli validate-plugin",
     "build:server": "vite build --ssr",
-    "build:types": "tsup lib/index.ts --dts-only --format esm",
+    "build:types": "tsup lib/index.ts lib/index.client.ts --dts-only --format esm",
     "build:check-types": "tsc",
     "clean": "rimraf dist",
     "confirm": "npm run clean && npm run build && npm run test",
@@ -26,7 +31,10 @@
   },
   "dependencies": {
     "@csstools/selector-specificity": "^5.0.0",
+    "@jay-framework/compiler-jay-html": "workspace:^",
     "@jay-framework/compiler-shared": "workspace:^",
+    "@jay-framework/component": "workspace:^",
+    "@jay-framework/fullstack-component": "workspace:^",
     "@jay-framework/plugin-validator": "workspace:^",
     "@jay-framework/stack-server-runtime": "workspace:^",
     "js-yaml": "^4.1.0",
@@ -34,7 +42,9 @@
     "postcss-selector-parser": "^7.1.0"
   },
   "devDependencies": {
+    "@jay-framework/compiler-jay-stack": "workspace:^",
     "@jay-framework/dev-environment": "workspace:^",
+    "@jay-framework/jay-cli": "workspace:^",
     "@jay-framework/jay-stack-cli": "workspace:^",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.15.21",
