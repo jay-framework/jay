@@ -113,6 +113,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 162 | [structural headfull components](162%20-%20structural%20headfull%20components)                                                 | Allow headfull components without .ts code file; passthrough from contract           |
 | 163 | [dev-only plugin routes](163%20-%20dev-only-plugin-routes)                                                                     | `devOnly` flag on plugin routes — dev-server tooling metadata on RouteInfo           |
 | 164 | [plugin-framework-version-compatibility](164%20-%20plugin-framework-version-compatibility)                                     | Registry-based plugin↔framework compat; `plugins compat`, install preflight, doctor |
+| 165 | [aiditor-settings-plugin-contributions](165%20-%20aiditor-settings-plugin-contributions)                                       | Project settings tabs: template path, materialization, walk-up resolver, devOnly   |
 
 ---
 

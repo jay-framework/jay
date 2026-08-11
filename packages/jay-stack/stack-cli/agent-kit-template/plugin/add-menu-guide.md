@@ -105,6 +105,10 @@ When writing YAML with `js-yaml`, use `noRefs: true` to prevent anchor/alias syn
 fs.writeFileSync(outputPath, yaml.dump({ items }, { lineWidth: 120, noRefs: true }), 'utf-8');
 ```
 
+## Project settings (separate surface)
+
+Add Menu and **Project settings** are both materialized by the `agentkit` handler but use different paths and schemas. For a settings tab in AIditor, follow [aiditor-settings-guide.md](aiditor-settings-guide.md) — do not fold settings discovery into add-menu YAML.
+
 ## Full reference
 
-See `agent-kit/plugin/aiditor-add-menu.md` (installed by `jay-stack setup aiditor`) for the full contributor guide including validation rules, browse packing, and surface-specific behavior.
+See `agent-kit/plugin/aiditor-add-menu.md` (installed by `jay-stack setup aiditor`) for the full Add Menu contributor guide including validation rules, browse packing, and surface-specific behavior.

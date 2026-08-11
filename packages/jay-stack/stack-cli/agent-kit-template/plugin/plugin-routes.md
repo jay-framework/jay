@@ -149,7 +149,7 @@ There is no enforced convention — just pick a prefix that's unique and descrip
 
 ## Dev-only routes
 
-Some plugin pages are **dev-server tooling** — internal dashboards, QA fixtures, builder settings UIs. Mark them with `devOnly: true` so consumers of `listRoutes()` can distinguish them from public site pages. Production exclusion is deferred (see Design Log #163).
+Some plugin pages are **dev-server tooling** — internal dashboards, QA fixtures, builder settings UIs. Mark them with `devOnly: true` so consumers of `listRoutes()` can distinguish them from public site pages. Production builds do not yet exclude `devOnly` routes — that is planned for a future framework release.
 
 ```yaml
 routes:
@@ -181,3 +181,15 @@ Plugin authors decide how to handle visitors who open the URL outside an embeddi
 - **Hybrid** — embed in tool + "open in new tab" for power users
 
 Example: detect iframe context (`?_jay_embed=true` or `window.parent !== window`) and adjust messaging.
+
+### AIditor Project settings routes
+
+Settings tabs embed a plugin route by URL. The usual pattern:
+
+1. Ship `agent-kit/aiditor/settings.template.yaml` with `route` matching `routes[].path`
+2. Materialize to `agent-kit/aiditor/settings/<plugin>.yaml` in the **project** via the `agentkit` handler
+3. Set **`devOnly: true`** on that route entry
+
+AIditor filters `devOnly` routes from the **Pages** dropdown but loads the settings iframe by explicit path — HTTP must remain available on the dev server.
+
+Full contributor steps: [aiditor-settings-guide.md](aiditor-settings-guide.md). Runtime iframe protocol: `agent-kit/plugin/aiditor-add-menu.md` (after `jay-stack setup aiditor`).

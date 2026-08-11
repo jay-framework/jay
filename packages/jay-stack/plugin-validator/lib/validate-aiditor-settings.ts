@@ -91,7 +91,7 @@ export async function validateAiditorSettings(
             location: 'plugin.yaml',
             code: 'settings-missing-agentkit-handler',
             suggestion:
-                'Declare agentkit in plugin.yaml and materialize to agent-kit/aiditor/settings/<plugin>.yaml on jay-stack agent-kit — see agent-kit/plugin/aiditor-add-menu.md',
+                'Declare agentkit in plugin.yaml and materialize to agent-kit/aiditor/settings/<plugin>.yaml on jay-stack agent-kit — see agent-kit/plugin/aiditor-settings-guide.md',
         });
     }
 }

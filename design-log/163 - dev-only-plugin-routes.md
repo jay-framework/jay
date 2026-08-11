@@ -162,4 +162,4 @@ if (route.devOnly) return res.status(404).end();
 
 ## Consumer notes
 
-AIditor-specific behavior (Pages dropdown filter, Project settings iframe, materialized settings discovery) is documented in the **AIditor** design log for Project settings tabs — not in this log.
+AIditor-specific behavior (Pages dropdown filter, Project settings iframe host) lives in the AIditor contributor guide (`aiditor-add-menu.md`). **Plugin author** conventions for materializing settings discovery files and pairing them with `devOnly` routes are in Design Log **#165** and agent-kit `plugin/aiditor-settings-guide.md`.
