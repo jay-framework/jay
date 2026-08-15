@@ -11,7 +11,8 @@ const COMPONENT_SERVER_METHODS = new Set([
     'withFastRender',
 ]);
 
-const COMPONENT_CLIENT_METHODS = new Set(['withInteractive', 'withContexts']);
+const COMPONENT_CLIENT_METHODS = new Set(['withContexts']);
+const COMPONENT_CLIENT_REPLACE_METHODS = new Map([['withInteractive', 'withInteractiveMark']]);
 
 // ============================================================================
 // makeJayInit methods
@@ -34,4 +35,12 @@ export function shouldRemoveMethod(methodName: string, environment: BuildEnviron
     if (environment === 'server' && INIT_CLIENT_METHODS.has(methodName)) return true;
 
     return false;
+}
+
+export function getReplacementMethod(
+    methodName: string,
+    environment: BuildEnvironment,
+): string | undefined {
+    if (environment === 'server') return COMPONENT_CLIENT_REPLACE_METHODS.get(methodName);
+    return undefined;
 }

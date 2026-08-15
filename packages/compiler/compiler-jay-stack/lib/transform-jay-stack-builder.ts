@@ -95,14 +95,15 @@ function mkJayStackCodeSplitTransformer({
         }
     }
 
-    // Step 2: Find all builder methods that should be removed
-    const { callsToRemove } = findBuilderMethodsToRemove(
+    // Step 2: Find all builder methods that should be removed or replaced
+    const { callsToRemove, methodReplacements } = findBuilderMethodsToRemove(
         workingSourceFile,
         bindingResolver,
         environment,
     );
+    const replacementPositions = new Map(methodReplacements.map((r) => [r.start, r]));
 
-    // Step 3: Transform the AST - remove identified method calls
+    // Step 3: Transform the AST - remove or replace identified method calls
     // We compare flattened access chains to identify calls that should be removed
     const transformVisitor = (node: ts.Node): ts.Node => {
         // Check if THIS node (BEFORE transformation) is a call that should be removed
@@ -115,6 +116,19 @@ function mkJayStackCodeSplitTransformer({
                 // Return the TRANSFORMED receiver (left side of the dot) to handle nested removals
                 const receiver = node.expression.expression;
                 return transformVisitor(receiver);
+            }
+
+            // Check for method replacements (DL#72a: .withInteractive → .withInteractiveMark)
+            const nameNode = node.expression.name;
+            const repl = replacementPositions.get(nameNode.getStart());
+            if (repl) {
+                const newName = factory.createIdentifier(repl.replacement);
+                const newAccess = factory.updatePropertyAccessExpression(
+                    node.expression,
+                    visitEachChild(node.expression.expression, transformVisitor, context),
+                    newName,
+                );
+                return factory.updateCallExpression(node, newAccess, node.typeArguments, []);
             }
         }
 

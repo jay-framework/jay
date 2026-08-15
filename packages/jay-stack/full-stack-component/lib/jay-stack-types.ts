@@ -227,6 +227,10 @@ export interface JayStackComponentDefinition<
      *  component is used inside forEach with client-side item creation. Not needed
      *  for components outside forEach — use withFastRender for SSR initial state. */
     clientDefaults?: (props: PropsT) => { viewState: FastVS; carryForward?: any };
+    /** True when .withInteractive() was declared. Set by SSR stripping (DL#72a)
+     *  so the server knows the component has client-side code even after
+     *  .withInteractive() is removed from the server build. */
+    hasInteractive?: boolean;
 }
 
 export type AnyJayStackComponentDefinition = JayStackComponentDefinition<

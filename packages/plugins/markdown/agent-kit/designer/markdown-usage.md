@@ -209,14 +209,14 @@ SVG diagrams use CSS custom properties for all colors. Set `--bg` and `--fg` on 
 
 The SVG internally derives all colors from `--bg` and `--fg`:
 
-| Variable | Derived from | Controls |
-| --- | --- | --- |
-| `--_text` | `--fg` | Node labels, actor names |
-| `--_line` | `--fg` 50% + `--bg` | Edges, lifelines |
-| `--_arrow` | `--fg` 85% + `--bg` | Arrow heads |
-| `--_node-fill` | `--fg` 3% + `--bg` | Node backgrounds |
-| `--_node-stroke` | `--fg` 20% + `--bg` | Node borders |
-| `--_group-fill` | `--bg` | Subgraph backgrounds |
+| Variable         | Derived from        | Controls                 |
+| ---------------- | ------------------- | ------------------------ |
+| `--_text`        | `--fg`              | Node labels, actor names |
+| `--_line`        | `--fg` 50% + `--bg` | Edges, lifelines         |
+| `--_arrow`       | `--fg` 85% + `--bg` | Arrow heads              |
+| `--_node-fill`   | `--fg` 3% + `--bg`  | Node backgrounds         |
+| `--_node-stroke` | `--fg` 20% + `--bg` | Node borders             |
+| `--_group-fill`  | `--bg`              | Subgraph backgrounds     |
 
 Override individual variables for fine control:
 
@@ -224,9 +224,9 @@ Override individual variables for fine control:
 .md-mermaid svg {
   --bg: #0a0a0a;
   --fg: #e4e4e7;
-  --accent: #8b5cf6;   /* arrow color */
-  --surface: #1a1a2e;  /* node fill */
-  --border: #333;      /* node stroke */
+  --accent: #8b5cf6; /* arrow color */
+  --surface: #1a1a2e; /* node fill */
+  --border: #333; /* node stroke */
 }
 ```
 
