@@ -1,6 +1,7 @@
 import { DevServerOptions, mkDevServer } from '../lib';
 import { JayRollupConfig } from '@jay-framework/vite-plugin';
 import path from 'path';
+import fs from 'node:fs';
 import http from 'node:http';
 import { Request, Response } from 'express';
 import { runHydrateScriptInJsdom } from './run-script-in-jsdom';
@@ -10,6 +11,12 @@ import { runHydrateScriptInJsdom } from './run-script-in-jsdom';
 // @vitest-environment node
 
 describe('dev server', () => {
+    afterAll(() => {
+        for (const dir of ['simple-page', 'page-with-code', '6a-page-with-keyed-headless']) {
+            fs.rmSync(path.resolve(__dirname, dir, 'build'), { recursive: true, force: true });
+        }
+    });
+
     const baseOptions = {
         serverBase: '/',
         pagesBase: path.resolve(__dirname, './'),
@@ -66,7 +73,7 @@ import { registerGlobalContext } from "@jay-framework/runtime";
 
 import { hydrate } from "/page.jay-html?import&jay-hydrate.ts";
 
-const viewState = {};
+const viewState = {"__jay":{"params":{},"url":{"path":"/"}}};
 const fastCarryForward = {};
 const trackByMap = {};
 
@@ -153,7 +160,7 @@ import { deepMergeViewStates } from "@jay-framework/view-state-merge";
 import { render } from "/page.jay-html.ts";
 import {page} from "/page.ts"
 const slowViewState = {"title":"Page with Code","content":"This page has both a jay-html file and a code file"};
-const viewState = {"title":"Page with Code","content":"This page has both a jay-html file and a code file"};
+const viewState = {"title":"Page with Code","content":"This page has both a jay-html file and a code file","__jay":{"params":{},"url":{"path":"/"}}};
 
 const fastCarryForward = {};
 const trackByMap = {};

@@ -404,3 +404,46 @@ Example with accessor (built-in guard):
   <recurse ref="node" accessor="child" />
 </div>
 ```
+
+## Conditional Parsing: Type-Aware Comparison (DL#163)
+
+The `===`/`!==` operators in conditionals behave differently based on the left side's resolved type:
+
+### Enum types
+
+Right side is a **variant literal** (existing behavior):
+
+```
+if="status === active"  →  vs.status === Status.active
+```
+
+The compiler resolves the type name and validates the variant exists.
+
+### String types
+
+Right side is a **field reference** by default. Use quotes for string literals:
+
+```
+if="url === currentPath"  →  vs.url === vs.currentPath
+if="url === '/about'"     →  vs.url === '/about'
+```
+
+### `^=` startsWith operator
+
+String-only operator. Generates `.startsWith()`:
+
+```
+if="path ^= prefix"      →  vs.path.startsWith(vs.prefix)
+if="path ^= '/docs'"     →  vs.path.startsWith('/docs')
+```
+
+### `jay.` built-in bindings
+
+Accessors starting with `jay.` are mapped to `vs.__jay?.` in compiled output:
+
+```
+jay.params.slug   →  vs.__jay?.params?.slug
+jay.url.path      →  vs.__jay?.url?.path
+```
+
+The runtime injects `__jay: { params, url: { path } }` into ViewState before rendering. In slow render, `jay.*` bindings always produce runtime code (never resolved at build time).

@@ -7,6 +7,7 @@ import {
     JayArrayType,
     JayImportedType,
     JayImportName,
+    JayString,
     JayType,
     JayUnknown,
     JayValidations,
@@ -64,6 +65,10 @@ export class Variables {
     }
 
     resolveAccessor(accessor: Array<string>): Accessor {
+        if (accessor[0] === 'jay') {
+            const jayPath = ['__jay', ...accessor.slice(1)];
+            return new Accessor(this.currentVar, jayPath, [], JayString);
+        }
         let curr: JayType = this.currentType;
         let validations = [];
         accessor.forEach((member) => {

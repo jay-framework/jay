@@ -148,7 +148,26 @@ Multiple components on the same page can each declare params. The route director
 
 Route params flow automatically to keyed headless components that declare them as `params` in their contract. Instance-based headless components and headfull components do not receive route params directly — they receive props from the template.
 
-To pass a route param to a nested component, the page contract or a keyed headless component must expose it as ViewState, then the template binds it as a prop:
+#### Direct binding with `jay.params` (no page.ts needed)
+
+Use `jay.params.X` to bind route params directly to nested component props:
+
+```html
+<!-- src/pages/docs/[role]/[slug]/page.jay-html -->
+<jay:DocsSidebar activeRole="{jay.params.role}" activePage="{jay.params.slug}" />
+```
+
+No `page.ts`, no page contract needed for param passing. `jay.params` is available at all render phases. Use `jay.url.path` for the full URL pathname:
+
+```html
+<jay:Sidebar currentPath="{jay.url.path}" />
+```
+
+See [jay-html-template-syntax.md](jay-html-template-syntax.md) for the full list of `jay.` bindings and [navigation-patterns.md](navigation-patterns.md) for active menu patterns.
+
+#### Passing via page.ts (when you need data transformation)
+
+When route params need processing before reaching the component (e.g., fetching data, computing derived values), use the `page.ts` passthrough pattern:
 
 **1. Page contract exposes the param as ViewState:**
 
@@ -175,13 +194,7 @@ tags:
 **3. Template binds ViewState to the nested component prop:**
 
 ```html
-<!-- headfull component -->
 <jay:SideNav activePage="{activePage}" />
-
-<!-- instance-based headless component -->
-<jay:related-items slug="{activePage}">
-  <div>{title}</div>
-</jay:related-items>
 ```
 
 The same pattern works with keyed headless data — if a keyed component already provides the value, bind directly: `<jay:SideNav activePage="{product.slug}" />`.

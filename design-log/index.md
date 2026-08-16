@@ -88,29 +88,31 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ## Plugin System
 
-| #   | Title                                                                                                                          | Description                                                                    |
-| --- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| 39  | [Plugin package](39%20-%20Plugin%20package)                                                                                    | Plugin package requirements and structure                                      |
-| 43  | [Jay Package](43%20-%20Jay%20Package)                                                                                          | Jay package format                                                             |
-| 60  | [plugin system refinement and dynamic contracts](60%20-%20plugin%20system%20refinement%20and%20dynamic%20contracts)            | Plugin.yaml, contract resolution, dynamic contract generation                  |
-| 66  | [transitive plugin dependency resolution](66%20-%20transitive%20plugin%20dependency%20resolution)                              | Plugin dependency resolution                                                   |
-| 80  | [exposing dynamic contracts for agentic generation](80%20-%20materializing%20dynamic%20contracts%20for%20agentic%20generation) | CLI and dev server contract generation for AI agents                           |
-| 87  | [jay-stack setup command](87%20-%20jay-stack%20setup%20command)                                                                | Plugin config templating, credential validation, references                    |
-| 88  | [PR 158 review guide](88%20-%20PR%20158%20review%20guide)                                                                      | Review guide for export_import branch (Figma vendor + plugin resolution)       |
-| 89  | [PR 158 merge concerns](89%20-%20PR%20158%20merge%20concerns)                                                                  | Merge conflicts, duplicate work, and decisions for PR #158 into main           |
-| 130 | [plugin routes and templates](130%20-%20plugin%20routes%20and%20templates)                                                     | Plugins provide pages (jay-html + page.ts) as routes; project overrides        |
-| 142 | [plugin CLI commands](142%20-%20ui-kit-add-menu-contribution)                                                                  | `jay-stack run <plugin>/<command>` for admin/batch operations                  |
-| 145 | [pluggable jay-html validation](145%20-%20pluggable%20jay-html%20validation)                                                   | Plugin-provided validation rules for jay-html with agent-friendly feedback     |
-| 147 | [jay-html validation rules catalog](147%20-%20jay-html%20validation%20rules%20catalog)                                         | Complete catalog of all validation rules across wix-media, SEO, and a11y       |
-| 151 | [design system validator plugin](151%20-%20design%20system%20validator%20plugin)                                               | Static CSS analysis against DESIGN.md tokens; replaces Happy DOM approach      |
-| 154 | [plugin package shipping validation](154%20-%20plugin%20package%20shipping%20validation)                                       | Validate agent-kit directory is listed in package.json files                   |
-| 155 | [markdown plugin](155%20-%20markdown%20plugin)                                                                                 | Markdown rendering: directory-to-pages, inline content, code + mermaid         |
-| 156 | [keyed headless component props](156%20-%20keyed%20headless%20component%20props)                                               | YAML body props for keyed headless components; consolidation with jay-params   |
-| 157 | [interactive plugin setup](157%20-%20interactive%20plugin%20setup)                                                             | Interactive prompts in plugin setup handlers; move Wix logic out of create-jay |
-| 159 | [setup pipeline re-initialization](159%20-%20setup%20pipeline%20re-initialization)                                             | Re-init services after each plugin setup; suppress init noise; cascade deps    |
-| 160 | [deprecate editor packages](160%20-%20deprecate%20editor%20packages)                                                           | Move editor-client/protocol/server to \_deprecated; remove from stack-cli      |
-| 161 | [markdown image url resolution](161%20-%20markdown%20image%20url%20resolution)                                                 | Rewrite relative image URLs in markdown; copy media to public; CDN mapping     |
-| 162 | [structural headfull components](162%20-%20structural%20headfull%20components)                                                 | Allow headfull components without .ts code file; passthrough from contract     |
+| #   | Title                                                                                                                          | Description                                                                                 |
+| --- | ------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| 39  | [Plugin package](39%20-%20Plugin%20package)                                                                                    | Plugin package requirements and structure                                                   |
+| 43  | [Jay Package](43%20-%20Jay%20Package)                                                                                          | Jay package format                                                                          |
+| 60  | [plugin system refinement and dynamic contracts](60%20-%20plugin%20system%20refinement%20and%20dynamic%20contracts)            | Plugin.yaml, contract resolution, dynamic contract generation                               |
+| 66  | [transitive plugin dependency resolution](66%20-%20transitive%20plugin%20dependency%20resolution)                              | Plugin dependency resolution                                                                |
+| 80  | [exposing dynamic contracts for agentic generation](80%20-%20materializing%20dynamic%20contracts%20for%20agentic%20generation) | CLI and dev server contract generation for AI agents                                        |
+| 87  | [jay-stack setup command](87%20-%20jay-stack%20setup%20command)                                                                | Plugin config templating, credential validation, references                                 |
+| 88  | [PR 158 review guide](88%20-%20PR%20158%20review%20guide)                                                                      | Review guide for export_import branch (Figma vendor + plugin resolution)                    |
+| 89  | [PR 158 merge concerns](89%20-%20PR%20158%20merge%20concerns)                                                                  | Merge conflicts, duplicate work, and decisions for PR #158 into main                        |
+| 130 | [plugin routes and templates](130%20-%20plugin%20routes%20and%20templates)                                                     | Plugins provide pages (jay-html + page.ts) as routes; project overrides                     |
+| 142 | [plugin CLI commands](142%20-%20ui-kit-add-menu-contribution)                                                                  | `jay-stack run <plugin>/<command>` for admin/batch operations                               |
+| 145 | [pluggable jay-html validation](145%20-%20pluggable%20jay-html%20validation)                                                   | Plugin-provided validation rules for jay-html with agent-friendly feedback                  |
+| 147 | [jay-html validation rules catalog](147%20-%20jay-html%20validation%20rules%20catalog)                                         | Complete catalog of all validation rules across wix-media, SEO, and a11y                    |
+| 151 | [design system validator plugin](151%20-%20design%20system%20validator%20plugin)                                               | Static CSS analysis against DESIGN.md tokens; replaces Happy DOM approach                   |
+| 154 | [plugin package shipping validation](154%20-%20plugin%20package%20shipping%20validation)                                       | Validate agent-kit directory is listed in package.json files                                |
+| 155 | [markdown plugin](155%20-%20markdown%20plugin)                                                                                 | Markdown rendering: directory-to-pages, inline content, code + mermaid                      |
+| 156 | [keyed headless component props](156%20-%20keyed%20headless%20component%20props)                                               | YAML body props for keyed headless components; consolidation with jay-params                |
+| 157 | [interactive plugin setup](157%20-%20interactive%20plugin%20setup)                                                             | Interactive prompts in plugin setup handlers; move Wix logic out of create-jay              |
+| 159 | [setup pipeline re-initialization](159%20-%20setup%20pipeline%20re-initialization)                                             | Re-init services after each plugin setup; suppress init noise; cascade deps                 |
+| 160 | [deprecate editor packages](160%20-%20deprecate%20editor%20packages)                                                           | Move editor-client/protocol/server to \_deprecated; remove from stack-cli                   |
+| 161 | [markdown image url resolution](161%20-%20markdown%20image%20url%20resolution)                                                 | Rewrite relative image URLs in markdown; copy media to public; CDN mapping                  |
+| 162 | [structural headfull components](162%20-%20structural%20headfull%20components)                                                 | Allow headfull components without .ts code file; passthrough from contract                  |
+| 163 | [built-in bindings and field comparison](163%20-%20params%20binding%20in%20templates)                                          | `jay.params`, `jay.url.path` bindings; field-to-field `===` comparison; active menu pattern |
+| 164 | [inline style in body](164%20-%20inline%20style%20in%20body)                                                                   | Body `<style>` tags crash the template parser; skip, warn, or hoist to head                 |
 
 ---
 

@@ -274,6 +274,60 @@ describe('expression-compiler', () => {
                 'the data field [notAMember] not found in Jay data',
             ]);
         });
+
+        it('startsWith with field right side', () => {
+            const actual = parseCondition('member ^= member2', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.member.startsWith(vs.member2)');
+        });
+
+        it('startsWith with quoted literal', () => {
+            const actual = parseCondition("member ^= '/docs'", defaultVars);
+            expect(actual.rendered).toEqual("vs => vs.member.startsWith('/docs')");
+        });
+
+        it('startsWith combined with AND', () => {
+            const actual = parseCondition("member ^= '/docs' && member2", defaultVars);
+            expect(actual.rendered).toEqual(
+                "vs => (vs.member.startsWith('/docs')) && (vs.member2)",
+            );
+        });
+
+        it('negated startsWith via logical NOT', () => {
+            const actual = parseCondition("!member || member ^= '/docs'", defaultVars);
+            expect(actual.rendered).toEqual(
+                "vs => (!vs.member) || (vs.member.startsWith('/docs'))",
+            );
+        });
+
+        it('string field comparison with single identifier', () => {
+            const actual = parseCondition('member === member2', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.member === vs.member2');
+        });
+
+        it('enum comparison unchanged with single identifier', () => {
+            const actual = parseCondition('anEnum === one', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.anEnum === AnEnum.one');
+        });
+
+        it('string comparison with quoted literal', () => {
+            const actual = parseCondition("member === '/about'", defaultVars);
+            expect(actual.rendered).toEqual("vs => vs.member === '/about'");
+        });
+
+        it('string inequality with field', () => {
+            const actual = parseCondition('member !== member2', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.member !== vs.member2');
+        });
+
+        it('jay.url.path accessor', () => {
+            const actual = parseCondition("jay.url.path ^= '/docs'", defaultVars);
+            expect(actual.rendered).toEqual("vs => vs.__jay?.url?.path.startsWith('/docs')");
+        });
+
+        it('jay.params accessor', () => {
+            const actual = parseCondition('jay.params.slug === member', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.__jay?.params?.slug === vs.member');
+        });
     });
 
     describe('parseClass', () => {

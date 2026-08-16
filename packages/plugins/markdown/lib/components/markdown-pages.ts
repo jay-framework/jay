@@ -116,8 +116,7 @@ export const markdownPages = makeJayStackComponent()
 
         const { frontmatter, body } = extractFrontmatter(content);
 
-        const title =
-            frontmatter.title ?? body.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? '';
+        const title = frontmatter.title ?? body.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? '';
 
         const html = await parseMarkdownBodyWithMermaid(body, imageOptions);
 
