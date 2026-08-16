@@ -113,6 +113,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 162 | [structural headfull components](162%20-%20structural%20headfull%20components)                                                 | Allow headfull components without .ts code file; passthrough from contract                  |
 | 163 | [built-in bindings and field comparison](163%20-%20params%20binding%20in%20templates)                                          | `jay.params`, `jay.url.path` bindings; field-to-field `===` comparison; active menu pattern |
 | 164 | [inline style in body](164%20-%20inline%20style%20in%20body)                                                                   | Body `<style>` tags crash the template parser; skip, warn, or hoist to head                 |
+| 165 | [graceful expression parse errors](165%20-%20graceful%20expression%20parse%20errors)                                           | Convert expression parse errors to validation messages instead of crashing the page         |
 
 ---
 
