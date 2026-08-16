@@ -330,6 +330,53 @@ describe('expression-compiler', () => {
         });
     });
 
+    describe('graceful parse error handling', () => {
+        let defaultVars = new Variables(
+            new JayObjectType('data', {
+                member: JayString,
+                anEnum: new JayEnumType('AnEnum', ['one', 'two', 'three']),
+            }),
+        );
+
+        it('parseCondition with malformed expression returns fallback with validation', () => {
+            const actual = parseCondition('member @@@ invalid', defaultVars);
+            expect(actual.rendered).toEqual('vs => false');
+            expect(actual.validations.length).toBeGreaterThan(0);
+            expect(actual.validations[0]).toMatch(/Failed to parse expression/);
+        });
+
+        it('parseTextExpression with malformed expression returns visible error', () => {
+            const actual = parseTextExpression('{{{bad}}}', defaultVars);
+            expect(actual.rendered).toMatch(/INVALID/);
+            expect(actual.validations.length).toBeGreaterThan(0);
+        });
+
+        it('parseClassExpression with malformed expression returns empty string', () => {
+            const actual = parseClassExpression('{@@@ ? active}', defaultVars);
+            expect(actual.rendered).toEqual("''");
+            expect(actual.validations.length).toBeGreaterThan(0);
+        });
+
+        it('parseAccessor with malformed expression returns null accessor', () => {
+            const actual = parseAccessor('123invalid', defaultVars);
+            expect(actual.resolvedType).toBe(JayUnknown);
+            expect(actual.validations.length).toBeGreaterThan(0);
+        });
+
+        it('parseBooleanAttributeExpression with malformed expression returns false', () => {
+            const actual = parseBooleanAttributeExpression('member @@@ bad', defaultVars);
+            expect(actual.rendered).toMatch(/ba\(vs => false\)/);
+            expect(actual.validations.length).toBeGreaterThan(0);
+        });
+
+        it('validation message includes guide reference', () => {
+            const actual = parseCondition('member @@@ invalid', defaultVars);
+            expect(actual.validations[0]).toMatch(
+                /agent-kit\/designer\/jay-html-template-syntax\.md/,
+            );
+        });
+    });
+
     describe('parseClass', () => {
         let defaultVars = new Variables(
             new JayObjectType('data', {
@@ -769,10 +816,11 @@ describe('expression-compiler', () => {
             expect(actual.rendered).toEqual("' '");
         });
 
-        it('fail and report broken expression', () => {
-            expect(() => {
-                parseTextExpression('some broken { expression', defaultVars);
-            }).toThrow(/Failed to parse expression \[some broken \{ expression\]/);
+        it('report broken expression as validation error', () => {
+            const actual = parseTextExpression('some broken { expression', defaultVars);
+            expect(actual.validations.length).toBeGreaterThan(0);
+            expect(actual.validations[0]).toMatch(/Failed to parse expression/);
+            expect(actual.rendered).toMatch(/INVALID/);
         });
     });
 
@@ -876,10 +924,10 @@ describe('expression-compiler', () => {
             expect(actual.rendered).toEqual(' ');
         });
 
-        it('fail and report broken expression', () => {
-            expect(() => {
-                parseReactTextExpression('some broken { expression', defaultVars);
-            }).toThrow(/Failed to parse expression \[some broken \{ expression\]/);
+        it('report broken expression as validation error', () => {
+            const actual = parseReactTextExpression('some broken { expression', defaultVars);
+            expect(actual.validations.length).toBeGreaterThan(0);
+            expect(actual.validations[0]).toMatch(/Failed to parse expression/);
         });
     });
 

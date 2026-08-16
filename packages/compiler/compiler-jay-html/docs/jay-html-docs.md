@@ -447,3 +447,26 @@ jay.url.path      →  vs.__jay?.url?.path
 ```
 
 The runtime injects `__jay: { params, url: { path } }` into ViewState before rendering. In slow render, `jay.*` bindings always produce runtime code (never resolved at build time).
+
+## Graceful Parse Error Handling (DL#165)
+
+`doParse()` catches PEG parser errors and returns a `RenderFragment` with validation messages and a type-appropriate fallback value instead of throwing. This prevents page crashes from invalid expressions.
+
+### Fallback values by start rule
+
+| startRule              | Fallback                               | Effect               |
+| ---------------------- | -------------------------------------- | -------------------- |
+| `conditionFunc`        | `vs => false`                          | Conditional hidden   |
+| `condition`            | `false`                                | Condition false      |
+| `dynamicText`          | `dt(vs => '[INVALID: expr]')`          | Visible error marker |
+| `dynamicAttribute`     | `da(vs => '[INVALID: expr]')`          | Visible error marker |
+| `classExpression`      | `''`                                   | No classes           |
+| `booleanAttribute`     | `ba(vs => false)`                      | Attribute absent     |
+| `dynamicComponentProp` | `vs => undefined`                      | Prop undefined       |
+| `accessor`             | Null `Accessor` with `JayUnknown` type | No data              |
+
+Structural parsing (`parseImportNames`, `parseEnumValues`) still throws — contract-level errors can't be rendered as fallbacks.
+
+### Multiple root elements
+
+`ensureSingleChildElement` auto-wraps multiple body children in `<div style="display: contents">` instead of returning a validation error. The wrapper is layout-transparent.

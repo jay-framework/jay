@@ -1568,6 +1568,16 @@ The `^=` operator checks if a string starts with a prefix:
 
 For enum-typed fields, the right side of `===` remains a variant literal (no quotes needed).
 
+## Error Handling
+
+Invalid template expressions produce graceful fallbacks instead of crashing the page:
+
+- **String expressions** render a visible `[INVALID: expression]` marker so the designer can spot them
+- **Boolean conditions** evaluate to `false` (conditional element hidden)
+- **Class expressions** produce no classes
+
+Validation messages include the parse error and a pointer to the relevant agent-kit guide. The page renders and remains usable — broken parts are visible but non-fatal.
+
 ## Next Steps
 
 Now that you understand Jay-HTML:

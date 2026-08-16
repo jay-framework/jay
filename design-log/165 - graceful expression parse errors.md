@@ -76,17 +76,17 @@ The rendered output uses a type-appropriate fallback so the compiled code doesn'
 
 String expressions render a **visible error marker** so the designer can spot the problem in the page. Boolean expressions return `false` silently.
 
-| Expression type | Fallback rendered value | Effect |
-|----------------|------------------------|--------|
-| `conditionFunc` | `vs => false` | Conditional element hidden |
-| `condition` | `false` | Condition evaluates to false |
-| `dynamicText` | `dt(vs => '[INVALID: expression]')` | Visible error in page |
-| `dynamicAttribute` | `da(vs => '[INVALID: expression]')` | Visible error in attribute |
-| `classExpression` | `''` | No classes added |
-| `booleanAttribute` | `ba(vs => false)` | Attribute not present |
-| `dynamicComponentProp` | `vs => '[INVALID: expression]'` | Visible error in prop value |
-| `accessor` | Null accessor with validation error | No data, error collected |
-| `styleDeclarations` | Empty style object | No inline styles |
+| Expression type        | Fallback rendered value             | Effect                       |
+| ---------------------- | ----------------------------------- | ---------------------------- |
+| `conditionFunc`        | `vs => false`                       | Conditional element hidden   |
+| `condition`            | `false`                             | Condition evaluates to false |
+| `dynamicText`          | `dt(vs => '[INVALID: expression]')` | Visible error in page        |
+| `dynamicAttribute`     | `da(vs => '[INVALID: expression]')` | Visible error in attribute   |
+| `classExpression`      | `''`                                | No classes added             |
+| `booleanAttribute`     | `ba(vs => false)`                   | Attribute not present        |
+| `dynamicComponentProp` | `vs => '[INVALID: expression]'`     | Visible error in prop value  |
+| `accessor`             | Null accessor with validation error | No data, error collected     |
+| `styleDeclarations`    | Empty style object                  | No inline styles             |
 
 ### What the designer sees
 
@@ -131,6 +131,7 @@ Design tools (and manual editing) can easily produce multiple root elements:
 `display: contents` makes the wrapper invisible to CSS layout — the children behave as if they're direct children of `<body>`. The wrapper exists only to satisfy the single-root constraint for coordinate assignment and hydration.
 
 This is preferred over a validation error because:
+
 - Multiple root elements are a common, natural HTML pattern
 - The designer shouldn't need to know about the single-root constraint
 - The `display: contents` wrapper has no visual or layout side effects
@@ -217,10 +218,50 @@ For expressions using unsupported syntax:
 
 ## Trade-offs
 
-| Choice | Pro | Con |
-|--------|-----|-----|
-| Validation errors (proposed) | Page renders, designer can work, errors collected | Bad expression silently produces wrong output |
-| Throw (current) | Fails fast, error is obvious | Page crashes, blocks designer workflow |
-| Render visible error marker | Designer spots issues easily | Clutters the design, may confuse non-technical users |
-| Auto-wrap multiple roots | Transparent, matches HTML convention | Adds a DOM node (but `display: contents` hides it) |
-| Reject multiple roots (current) | Enforces clean structure | Crashes on common HTML pattern, blocks designer |
+| Choice                          | Pro                                               | Con                                                  |
+| ------------------------------- | ------------------------------------------------- | ---------------------------------------------------- |
+| Validation errors (proposed)    | Page renders, designer can work, errors collected | Bad expression silently produces wrong output        |
+| Throw (current)                 | Fails fast, error is obvious                      | Page crashes, blocks designer workflow               |
+| Render visible error marker     | Designer spots issues easily                      | Clutters the design, may confuse non-technical users |
+| Auto-wrap multiple roots        | Transparent, matches HTML convention              | Adds a DOM node (but `display: contents` hides it)   |
+| Reject multiple roots (current) | Enforces clean structure                          | Crashes on common HTML pattern, blocks designer      |
+
+## Implementation Results
+
+### What was implemented
+
+All phases from the plan, no deviations from the design.
+
+**`expression-compiler.ts`:**
+- `getFallbackForRule` function returns type-appropriate fallback per `startRule` (string expressions → `[INVALID: expr]`, booleans → `false`, etc.)
+- `doParse` catches parse errors and returns fallback with validation messages + console warning
+- `throwOnError` parameter for structural parsing (`parseImportNames`, `parseEnumValues`) that must still throw
+- `parseAccessor` returns null `Accessor` with `JayUnknown` type on parse error
+- `getExpressionHelp` updated with `^=` and string comparison examples
+- All validation messages include `See: agent-kit/designer/jay-html-template-syntax.md` pointer
+
+**`jay-html-helpers.ts`:**
+- `ensureSingleChildElement` auto-wraps multiple body children in `<div style="display: contents">`
+- Zero elements still returns validation error
+
+**`jay-html-compiler-server.ts`:**
+- Fixed validation propagation for `parseServerCondition` at conditional and headless instance sites
+
+**Documentation:**
+- Agent-kit `jay-html-template-syntax.md`: "Common Errors" table
+- `docs/core/jay-html.md`: Error Handling section
+- `compiler-jay-html/docs/jay-html-docs.md`: Fallback strategy table and multi-root wrapping
+
+### Tests
+
+6 new tests in `expression-compiler.unit.test.ts`:
+- Malformed condition → `vs => false` with validation
+- Malformed text expression → `[INVALID: ...]` with validation
+- Malformed class expression → empty string with validation
+- Malformed accessor → `JayUnknown` accessor with validation
+- Malformed boolean attribute → `ba(vs => false)` with validation
+- Validation message includes guide reference
+
+2 existing tests updated from `toThrow` to check validations (text expression, react text expression).
+
+All 692 compiler tests pass. `yarn confirm` passes clean.

@@ -138,7 +138,7 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
         return new RenderFragment(
             `${indent.firstLine}if (${renderedCondition.rendered}) {\n${body.rendered}\n${indent.firstLine}}`,
             body.imports,
-            body.validations,
+            [...renderedCondition.validations, ...body.validations],
         );
     }
 
@@ -305,8 +305,10 @@ function renderServerHeadlessInstance(
 
     // If there's an `if` condition, wrap in the page-level condition first
     let result: string;
+    let conditionValidations: string[] = [];
     if (ifCondition) {
         const renderedCondition = parseServerCondition(ifCondition, context.variables);
+        conditionValidations = renderedCondition.validations;
         result = [
             `${indent.firstLine}if (${renderedCondition.rendered}) {`,
             guardedBlock,
@@ -316,7 +318,10 @@ function renderServerHeadlessInstance(
         result = guardedBlock;
     }
 
-    return new RenderFragment(result, renderedChildren.imports, renderedChildren.validations);
+    return new RenderFragment(result, renderedChildren.imports, [
+        ...conditionValidations,
+        ...renderedChildren.validations,
+    ]);
 }
 
 /** Merge multiple server fragments, filtering out empty ones. */
