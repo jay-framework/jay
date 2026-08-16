@@ -61,18 +61,17 @@ Parse error: Expected "." or identifier but "\n" found.
 
 ## Design
 
-### Two kinds of body styles
+### Three concerns
 
-Body `<style>` tags serve two distinct purposes:
-
-1. **Global styles in the wrong place** — animations, utility classes that belong in `<head>`. These should be hoisted automatically.
-2. **Scoped styles** — CSS that is intentionally co-located with the HTML it styles. This is a legitimate pattern, especially for headfull components and design tool output where styles and markup belong together.
+1. **Body `<style>` crashes the parser** — CSS curly braces are parsed as template bindings
+2. **Body `<style>` for inline co-located styles** — design tool output, animations
+3. **Headfull component CSS scoping** — component styles from `<head>` leak into the global scope
 
 ### Priority 1: Don't crash
 
 The parser must skip `<style>` tags in `<body>` during template expression scanning. CSS content should never be parsed as template bindings. This is a bug regardless of any design decision.
 
-### Priority 2: Support inline scoped styles
+### Priority 2: Support inline body styles
 
 Inline `<style>` in `<body>` is emitted as-is in the rendered output. The CSS is not hoisted, not extracted, not deduplicated — it stays exactly where the designer placed it.
 
@@ -81,43 +80,80 @@ Inline `<style>` in `<body>` is emitted as-is in the rendered output. The CSS is
   <section class="hero">
     <style>
       @keyframes fall {
-        0% {
-          transform: translateY(-6px);
-          opacity: 0.4;
-        }
-        100% {
-          transform: translateY(0);
-          opacity: 1;
-        }
+        0% { transform: translateY(-6px); opacity: 0.4; }
+        100% { transform: translateY(0); opacity: 1; }
       }
-      .hero-particle {
-        animation: fall 2s ease-in-out infinite;
-      }
+      .hero-particle { animation: fall 2s ease-in-out infinite; }
     </style>
     <div class="hero-particle">...</div>
   </section>
 </body>
 ```
 
-This keeps styles co-located with the component they belong to. The designer controls placement.
+All three compiler targets treat `<style>` in body as an opaque node:
 
-#### Why not require `@scope`
+- **Server element**: emit as raw HTML string
+- **Element target**: emit as static element (no reactivity)
+- **Hydrate target**: skip (static content, no coordinates needed)
 
-`@scope` CSS is the future for scoping, but it adds syntactic overhead and the scoping boundary needs a selector. For simple cases (animations, component-specific rules), plain `<style>` in body is sufficient and matches standard HTML behavior. The browser already supports `<style>` anywhere in the document.
+### Priority 3: Headfull component CSS scoping with `@scope`
 
-A validation rule can recommend `@scope` when body styles use selectors that could leak (e.g., bare element selectors like `div`, `p`), but it shouldn't be required.
+Headfull component styles (extracted from the component's `<head>`) currently merge into the page's global CSS unscoped. This causes class name collisions — a SiteHeader's `.nav-link` leaks into the page.
 
-#### How it works in the compiler
+**Auto-scope with `@scope`:** when extracting headfull component CSS during template injection, wrap it in `@scope` targeting the component's root element:
 
-All three compiler targets (element, hydrate, server) treat `<style>` in body as an opaque node:
+```css
+/* Before (current — global, leaks) */
+.header-brand { font-size: 32px; }
+.nav-link { color: var(--text-muted); }
 
-- **Server element**: emit the `<style>` tag and its content as a raw HTML string
-- **Element target**: emit as a static element (no reactivity)
-- **Hydrate target**: skip adoption — the `<style>` tag is static, no coordinates needed
+/* After (auto-scoped by the compiler) */
+@scope ([jay-component="site-header"]) {
+  .header-brand { font-size: 32px; }
+  .nav-link { color: var(--text-muted); }
+}
+```
 
-No CSS extraction, no minification, no Vite processing. The styles are inlined in the HTML output as-is. This is intentional — scoped styles are small, and deduplication/caching is the job of head styles.
+The compiler adds a `jay-component="site-header"` attribute to the component's root element in the injected template. The scoped CSS is merged into the page's extracted CSS — it goes through the same extraction, minification, and caching pipeline as all head styles.
 
-### Priority 3: Validation guidance
+#### Why `@scope`
+
+- Proper CSS encapsulation as the spec intended
+- No synthetic class names or compiler-generated selectors
+- Lower specificity than class-based scoping
+- `@scope` boundary matches the component's DOM root naturally
+- `to` boundary available for limiting scope depth if needed
+- Well supported: Chrome 118+, Firefox 128+, Safari 17.4+
+
+#### What gets scoped
+
+- **Headfull component `<head>` styles** — auto-wrapped in `@scope` during CSS extraction
+- **Body `<style>` tags** — emitted as-is (designer controls scoping manually)
+- **Page-level `<head>` styles** — NOT scoped (global by intent)
+
+#### `@keyframes` and `:root`
+
+`@keyframes` defined inside `@scope` are still global (CSS spec). `:root` and `body` selectors inside `@scope` are ignored by the browser — component CSS shouldn't use them.
+
+Since `@keyframes` can't be scoped, two components defining the same animation name (e.g., `@keyframes fade`) would silently collide — one overrides the other. The framework should detect this:
+
+**Validation:** during CSS extraction, collect all `@keyframes` names across the page's own CSS and all headfull component CSS. If duplicates are found, emit a warning:
+
+```
+Warning: @keyframes "fade" is defined in both site-header and hero-section.
+Animation names are global — rename one to avoid collisions (e.g., "site-header-fade").
+```
+
+**`@font-face`** has the same issue — two components declaring `font-family: "Icons"` with different `src` would silently collide:
+
+```
+Warning: @font-face "Icons" is defined in both site-header and product-card.
+Font family names are global — rename one to avoid collisions.
+```
+
+Both are validation-only checks — no auto-prefixing. The designer renames the collision.
+
+### Priority 4: Validation guidance
 
 **Warn** (not error) when body `<style>` uses broad selectors that could leak:
 
@@ -125,28 +161,24 @@ No CSS extraction, no minification, no Vite processing. The styles are inlined i
 - `*` selector — almost certainly wrong in body styles
 - No warning for class selectors, ID selectors, `@keyframes`, `@scope` — these are intentional
 
-**Recommend** `@scope` when appropriate:
-
-```
-Warning: Body <style> uses bare element selector "div" which affects the entire page.
-Consider using @scope or class selectors to limit the scope.
-```
-
-### Priority 4: Agent-kit guide
+### Priority 5: Agent-kit guide
 
 Document in `designer/jay-html-styling.md`:
 
-- **Head `<style>`** — global styles, design tokens, page-level layout. Extracted, minified, cached by the framework.
-- **Body `<style>`** — co-located component styles, animations, scoped rules. Emitted inline as-is. Use class selectors or `@scope` to avoid leaking.
-- When to use which: head for shared styles, body for component-specific styles that travel with the markup.
+- **Page `<head>` styles** — global styles, design tokens, page-level layout. Extracted, minified, cached.
+- **Component `<head>` styles** — auto-scoped by the framework using `@scope`. No manual scoping needed.
+- **Body `<style>`** — co-located inline styles for animations, component-specific rules. Emitted as-is.
+- When to use which: page head for shared styles, component head for component styles (auto-scoped), body for inline co-located styles.
 
 ## Questions
 
-1. Should body styles participate in CSS extraction at all? Keeping them inline is simpler and matches the co-location intent. But it means they can't be cached separately.
+1. ~~Should body styles participate in CSS extraction?~~ No — they stay inline, matching the co-location intent.
 
-2. Should headfull component `<style>` in their jay-html body also work this way? Currently headfull component styles are extracted from `<head>`. If a headfull component has `<style>` in its body, the same inline treatment should apply after template injection.
+2. ~~Should headfull component styles be scoped?~~ Yes — auto-wrapped in `@scope` during extraction.
 
-3. Should the production build minify inline body styles? Since they pass through as raw HTML, esbuild/Vite won't touch them. Could add a post-processing minification step, but it adds complexity for marginal gain.
+3. ~~Should the `jay-component` attribute use the contract name or a generated hash?~~ Contract name — readable and deterministic.
+
+4. ~~Should body `<style>` inside headfull component templates also be auto-scoped?~~ No — body styles are designer-controlled.
 
 ## Implementation Plan
 
@@ -166,27 +198,39 @@ In each compiler target, when encountering a `<style>` element in body:
 - **Element target**: `e('style', {}, [t(styleContent)])`
 - **Hydrate target**: skip (static content, no adoption needed)
 
-### Phase 3: Validation
+### Phase 3: Auto-scope headfull component CSS
+
+**`compiler-jay-html/lib/jay-target/jay-html-parser.ts`** — in `parseHeadfullFSImports`:
+
+- When extracting CSS from a headfull component's `<head>`, wrap it in `@scope ([jay-component="contractName"]) { ... }`
+- Add `jay-component="contractName"` attribute to the component's root element in the injected template body
+- The scoped CSS merges into the page's `cssParts` as before — extraction, minification, and caching all work
+
+### Phase 4: Validation
 
 **`compiler-jay-html`** validation or **`stack-cli/lib/validate.ts`**:
 
-- Parse the CSS content of body `<style>` tags (lightweight — just scan for selectors)
-- Warn on bare element selectors or `*` selectors
+- Warn on body `<style>` with bare element selectors or `*` selectors
 - Suggest `@scope` or class selectors
 
-### Phase 4: Agent-kit guide
+### Phase 5: Agent-kit guide
 
 **`designer/jay-html-styling.md`**:
 
-- Add "Inline Scoped Styles" section explaining head vs body `<style>` usage
-- Show examples of co-located animations and component styles
-- Document the validation warnings and how to resolve them
+- Add "Component CSS Scoping" section explaining auto-`@scope` for headfull components
+- Add "Inline Body Styles" section for co-located styles
+- Document when to use each approach
+
+### Phase 6: Verify
+
+- `yarn confirm` from monorepo root
 
 ## Trade-offs
 
-| Choice                     | Pro                                               | Con                                                |
-| -------------------------- | ------------------------------------------------- | -------------------------------------------------- |
-| Emit body styles as-is     | Simple, matches HTML spec, design tool compatible | No minification, no caching, potential style leaks |
-| Hoist all to head          | CSS extraction + caching for everything           | Breaks co-location intent, implicit behavior       |
-| Require @scope             | Prevents leaks by design                          | Syntactic overhead, limits adoption                |
+| Choice | Pro | Con |
+|--------|-----|-----|
+| Auto `@scope` for components | Proper encapsulation, stays in CSS pipeline | Adds `jay-component` attribute to DOM |
+| Body styles as-is | Simple, matches HTML spec | No extraction/caching for inline styles |
+| Class-based scoping | No `@scope` needed | Synthetic classes, higher specificity |
+| No scoping (current) | Simple | Style leaks between components |
 | Reject body styles (error) | Clean contract                                    | Breaks design tool output, overly restrictive      |
