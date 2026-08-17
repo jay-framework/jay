@@ -26,14 +26,14 @@ Static validation under-reports WCAG 1.3.1 / 4.1.2 form naming issues. Agents se
 
 **A:**
 
-| Finding | Severity |
-| ------- | -------- |
-| Missing label (incl. checkbox/radio) | error |
-| Empty `aria-label` | error |
-| `aria-labelledby` with missing/empty id refs | error |
-| Duplicate `id` | error |
-| Multiple labelable controls in one `<label>` | warning |
-| Orphan `label[for]` (no matching `id`) | warning |
+| Finding                                      | Severity |
+| -------------------------------------------- | -------- |
+| Missing label (incl. checkbox/radio)         | error    |
+| Empty `aria-label`                           | error    |
+| `aria-labelledby` with missing/empty id refs | error    |
+| Duplicate `id`                               | error    |
+| Multiple labelable controls in one `<label>` | warning  |
+| Orphan `label[for]` (no matching `id`)       | warning  |
 
 ### Q3: Does wrapping `<label>` still count for checkbox/radio?
 
@@ -131,11 +131,11 @@ Then existing `walkElements` + tightened `checkLabel`.
 
 ## Trade-offs
 
-| Decision | Benefit | Cost |
-| -------- | ------- | ---- |
-| Per-file id uniqueness only | Matches jay-html validation model | Won't catch cross-file collisions |
-| No fieldset/legend rule yet | Keeps PR focused | Radio groups still weak without legend |
-| Warning for multi-control label | Avoids hard break on legacy templates | Agents may ignore warnings |
+| Decision                        | Benefit                               | Cost                                   |
+| ------------------------------- | ------------------------------------- | -------------------------------------- |
+| Per-file id uniqueness only     | Matches jay-html validation model     | Won't catch cross-file collisions      |
+| No fieldset/legend rule yet     | Keeps PR focused                      | Radio groups still weak without legend |
+| Warning for multi-control label | Avoids hard break on legacy templates | Agents may ignore warnings             |
 
 ## Out of Scope
 

@@ -330,10 +330,7 @@ function checkLabel(
     }
 
     if (ariaLabelledBy !== undefined && ariaLabelledBy !== null) {
-        const tokens = String(ariaLabelledBy)
-            .trim()
-            .split(/\s+/)
-            .filter(Boolean);
+        const tokens = String(ariaLabelledBy).trim().split(/\s+/).filter(Boolean);
         if (tokens.length === 0) {
             findings.push({
                 severity: 'error',
@@ -436,8 +433,7 @@ function checkLabelsStructure(
                 findings.push({
                     severity: 'warning',
                     message: `<label for="${forId}"> has no matching id in this file (WCAG 1.3.1)`,
-                    suggestion:
-                        `Add id="${forId}" to the related form control, or fix the for attribute.`,
+                    suggestion: `Add id="${forId}" to the related form control, or fix the for attribute.`,
                     element: '<label>',
                     attribute: 'for',
                 });

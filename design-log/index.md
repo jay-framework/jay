@@ -114,7 +114,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 163 | [built-in bindings and field comparison](163%20-%20params%20binding%20in%20templates)                                          | `jay.params`, `jay.url.path` bindings; field-to-field `===` comparison; active menu pattern |
 | 164 | [inline style in body](164%20-%20inline%20style%20in%20body)                                                                   | Body `<style>` tags crash the template parser; skip, warn, or hoist to head                 |
 | 165 | [graceful expression parse errors](165%20-%20graceful%20expression%20parse%20errors)                                           | Convert expression parse errors to validation messages instead of crashing the page         |
-| 166 | [a11y form and label validation rules](166%20-%20a11y%20form%20and%20label%20validation%20rules)                               | Extend a11y-validator: checkbox/radio, ARIA name integrity, duplicate ids, label hygiene     |
+| 166 | [a11y form and label validation rules](166%20-%20a11y%20form%20and%20label%20validation%20rules)                               | Extend a11y-validator: checkbox/radio, ARIA name integrity, duplicate ids, label hygiene    |
 
 ---
 
@@ -168,7 +168,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 153  | [npm create jay](153%20-%20npm%20create%20jay)                                                        | Interactive project scaffolding: name, plugin selection, agent-kit, setup banner             |
 | 158  | [staged npm publish](158%20-%20staged%20npm%20publish)                                                | Two-phase publish: stage all packages without OTP, then bulk-approve with single OTP         |
 | 147  | [jay-html validation rules catalog](147%20-%20jay-html%20validation%20rules%20catalog)                | Complete catalog of all validation rules across wix-media, SEO, and a11y                     |
-| 163  | [a11y form and label validation rules](163%20-%20a11y%20form%20and%20label%20validation%20rules)      | Extend a11y-validator: checkbox/radio, ARIA name integrity, duplicate ids, label hygiene    |
+| 163  | [a11y form and label validation rules](163%20-%20a11y%20form%20and%20label%20validation%20rules)      | Extend a11y-validator: checkbox/radio, ARIA name integrity, duplicate ids, label hygiene     |
 
 ---
 
