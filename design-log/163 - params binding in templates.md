@@ -339,8 +339,9 @@ All five phases from the implementation plan, with no deviations from the design
 
 **Runtime**:
 
-- `dev-server.ts`: `__jay: { params, url: { path } }` injected at both cached and non-cached handler paths
+- `dev-server.ts`: `__jay: { params, url: { path } }` injected via `injectJayBindings()` at both cached and non-cached handler paths
 - `fetch-page-handler.ts`: same injection for production serve
+- `resolve-instance-props.ts`: `buildInstanceBindingScope` includes `jay: { params, url: { path } }` so `{jay.url.path}` and `{jay.params.slug}` resolve correctly in component prop bindings (e.g., `<jay:Sidebar currentPath="{jay.url.path}" />`). Without this, `jay.*` bindings worked in compiled template code (text, conditionals) but not in runtime prop resolution for headfull/instance components.
 
 **Documentation**:
 

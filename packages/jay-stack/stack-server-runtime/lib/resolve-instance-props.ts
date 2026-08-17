@@ -39,10 +39,21 @@ export function resolvePropBinding(value: string, scope: object): string {
 /**
  * Merge page props, route params, and slow ViewState into one binding lookup scope.
  * ViewState wins on key conflicts so keyed headless data (e.g. `p`) is authoritative.
+ * Includes `jay.*` built-in bindings (DL#163) for resolving `{jay.url.path}` etc.
  */
 export function buildInstanceBindingScope(context: InstanceBindingContext = {}): object {
-    const { pageProps = {}, pageParams = {}, pageViewState = {} } = context;
-    return { ...pageProps, ...pageParams, ...pageViewState };
+    const { pageProps, pageParams = {}, pageViewState = {} } = context;
+    const url = pageProps?.url || '';
+    const urlPath = url.split('?')[0];
+    return {
+        ...pageProps,
+        ...pageParams,
+        ...pageViewState,
+        jay: {
+            params: pageParams || {},
+            url: { path: urlPath.startsWith('/') ? urlPath : '/' + urlPath },
+        },
+    };
 }
 
 /**
