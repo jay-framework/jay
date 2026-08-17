@@ -92,6 +92,25 @@ const VALID_ARIA_ROLES = new Set([
     'treeitem',
 ]);
 
+/** Roles that make an element behave as a link or button container */
+const INTERACTIVE_CONTAINER_ROLES = new Set(['button', 'link']);
+
+/** Roles that make an element a focusable widget */
+const WIDGET_ROLES = new Set([
+    'button',
+    'link',
+    'checkbox',
+    'radio',
+    'switch',
+    'tab',
+    'menuitem',
+    'option',
+    'textbox',
+]);
+
+/** Elements that are focusable by default */
+const FOCUSABLE_ELEMENTS = new Set(['button', 'select', 'textarea', 'summary']);
+
 const LABELABLE_INPUTS = new Set([
     'text',
     'password',
@@ -243,6 +262,9 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
     // --- Rule: adjacent elements with duplicate text content ---
     checkDuplicateAdjacentText(ctx.body, findings);
 
+    // --- Rule: interactive elements must not be nested ---
+    checkNestedInteractive(ctx.body, findings);
+
     // --- Head metadata checks ---
     if (ctx.head) {
         const viewport = ctx.head.meta.find((m) => m.name?.toLowerCase() === 'viewport');
@@ -319,6 +341,63 @@ function collectLabelForIds(el: any, ids: Set<string>): void {
     for (const child of el.childNodes ?? []) {
         if (child.nodeType === 1) collectLabelForIds(child, ids);
     }
+}
+
+function hasHref(el: any): boolean {
+    const href = el.getAttribute?.('href');
+    return href !== undefined && href !== null;
+}
+
+/** Elements that wrap their content in a single activation target */
+function isInteractiveContainer(el: any): boolean {
+    const role = el.getAttribute?.('role')?.toLowerCase();
+    if (role) return INTERACTIVE_CONTAINER_ROLES.has(role);
+
+    const tag = el.rawTagName?.toLowerCase();
+    if (tag === 'button') return true;
+    if (tag === 'a') return hasHref(el);
+    return false;
+}
+
+function isFocusable(el: any): boolean {
+    const role = el.getAttribute?.('role')?.toLowerCase();
+    if (role && WIDGET_ROLES.has(role)) return true;
+
+    const tag = el.rawTagName?.toLowerCase();
+    if (tag === 'a') return hasHref(el);
+    if (tag === 'input') return (el.getAttribute?.('type') || 'text').toLowerCase() !== 'hidden';
+    if (tag && FOCUSABLE_ELEMENTS.has(tag)) return true;
+
+    const tabindex = el.getAttribute?.('tabindex');
+    if (tabindex !== undefined && tabindex !== null) {
+        const val = parseInt(tabindex, 10);
+        if (!isNaN(val) && val >= 0) return true;
+    }
+    return false;
+}
+
+function checkNestedInteractive(root: any, findings: JayHtmlValidationFinding[]): void {
+    function walk(el: any, ancestorTag: string | undefined): void {
+        const tag: string | undefined = el.rawTagName?.toLowerCase();
+
+        if (tag && ancestorTag && isFocusable(el)) {
+            findings.push({
+                severity: 'error',
+                message: `Interactive <${tag}> is nested inside <${ancestorTag}> (WCAG 4.1.2)`,
+                suggestion:
+                    `Interactive elements cannot be nested — browsers restructure the DOM and ` +
+                    `screen readers announce an ambiguous control. Move the <${tag}> outside the ` +
+                    `<${ancestorTag}>, or make the outer element a non-interactive container such as <div>.`,
+                element: `<${tag}>`,
+            });
+        }
+
+        const childAncestor = isInteractiveContainer(el) ? tag ?? ancestorTag : ancestorTag;
+        for (const child of el.childNodes ?? []) {
+            if (child.nodeType === 1) walk(child, childAncestor);
+        }
+    }
+    walk(root, undefined);
 }
 
 function getVisibleText(el: any): string {

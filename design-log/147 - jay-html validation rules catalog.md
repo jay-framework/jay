@@ -69,10 +69,13 @@ Package: `@jay-framework/a11y-validator` (monorepo, dev dependency)
 | Media autoplay without muted   | error    | `<video>`, `<audio>`                | 1.4.2 | `autoplay` attribute present without `muted`                                          |
 | Invalid ARIA role              | error    | any                                 | 4.1.2 | `role` attribute value not in WAI-ARIA role list                                      |
 | Viewport disables zoom         | error    | `<meta>`                            | 1.4.4 | `user-scalable=no` or `maximum-scale` < 2 in viewport meta (via `ctx.head`)           |
+| Nested interactive elements    | error    | `<a href>`, `<button>`, `[role]`    | 4.1.2 | A focusable element inside a link/button container (DL#163)                           |
 | Positive tabindex              | warning  | interactive + `[role]`              | 2.4.3 | `tabindex` > 0 disrupts natural tab order                                             |
 | Focusable without role         | warning  | non-interactive                     | 4.1.2 | `<div tabindex="0">` or similar without `role` — screen readers don't know what it is |
 
 The form label rule skips `type="hidden"`, `type="submit"`, `type="button"`, and `type="reset"` inputs.
+
+The nested interactive rule (DL#163) treats `<a href>`, `<button>`, `[role="button"]`, and `[role="link"]` as containers, and reports one error per focusable descendant — `<a href>`, `<button>`, non-hidden `<input>`, `<select>`, `<textarea>`, `<summary>`, `tabindex >= 0`, or a widget role.
 
 ## Rule Overlap
 

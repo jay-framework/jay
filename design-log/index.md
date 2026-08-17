@@ -111,6 +111,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 160 | [deprecate editor packages](160%20-%20deprecate%20editor%20packages)                                                           | Move editor-client/protocol/server to \_deprecated; remove from stack-cli      |
 | 161 | [markdown image url resolution](161%20-%20markdown%20image%20url%20resolution)                                                 | Rewrite relative image URLs in markdown; copy media to public; CDN mapping     |
 | 162 | [structural headfull components](162%20-%20structural%20headfull%20components)                                                 | Allow headfull components without .ts code file; passthrough from contract     |
+| 163 | [a11y nested interactive elements](163%20-%20a11y%20nested%20interactive%20elements)                                           | a11y rule: focusable elements nested inside links/buttons (WCAG 4.1.2)         |
 
 ---
 

@@ -357,6 +357,132 @@ describe('a11y-validator', () => {
         });
     });
 
+    describe('nested interactive elements', () => {
+        it('flags anchor nested inside anchor', async () => {
+            const ctx = makeContext(
+                '<a href="/product">Product <a href="/reviews">Reviews</a></a>',
+            );
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    severity: 'error',
+                    element: '<a>',
+                    message: 'Interactive <a> is nested inside <a> (WCAG 4.1.2)',
+                }),
+            ]);
+        });
+
+        it('flags button nested inside anchor', async () => {
+            const ctx = makeContext('<a href="/product"><button>Add to cart</button></a>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    severity: 'error',
+                    element: '<button>',
+                    message: 'Interactive <button> is nested inside <a> (WCAG 4.1.2)',
+                }),
+            ]);
+        });
+
+        it('flags anchor nested inside button', async () => {
+            const ctx = makeContext('<button><a href="/help">Help</a></button>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    severity: 'error',
+                    element: '<a>',
+                    message: 'Interactive <a> is nested inside <button> (WCAG 4.1.2)',
+                }),
+            ]);
+        });
+
+        it('flags input nested inside anchor', async () => {
+            const ctx = makeContext(
+                '<a href="/search"><input type="text" aria-label="Query" /></a>',
+            );
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    severity: 'error',
+                    element: '<input>',
+                }),
+            ]);
+        });
+
+        it('flags element with tabindex="0" nested inside anchor', async () => {
+            const ctx = makeContext('<a href="/x"><span tabindex="0" role="button">Go</span></a>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    severity: 'error',
+                    element: '<span>',
+                    message: 'Interactive <span> is nested inside <a> (WCAG 4.1.2)',
+                }),
+            ]);
+        });
+
+        it('flags focusable nested inside role="button" container', async () => {
+            const ctx = makeContext('<div role="button"><a href="/x">Link</a></div>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    severity: 'error',
+                    element: '<a>',
+                    message: 'Interactive <a> is nested inside <div> (WCAG 4.1.2)',
+                }),
+            ]);
+        });
+
+        it('reports one finding per nested element', async () => {
+            const ctx = makeContext('<a href="/a"><a href="/b"><button>Deep</button></a></a>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    element: '<a>',
+                    message: 'Interactive <a> is nested inside <a> (WCAG 4.1.2)',
+                }),
+                expect.objectContaining({
+                    element: '<button>',
+                    message: 'Interactive <button> is nested inside <a> (WCAG 4.1.2)',
+                }),
+            ]);
+        });
+
+        it('passes anchor without href wrapping a button', async () => {
+            const ctx = makeContext('<a><button>Add to cart</button></a>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+
+        it('passes anchor containing only non-interactive content', async () => {
+            const ctx = makeContext(
+                '<a href="/product"><img src="thumb.jpg" alt="Product" /><span>Name</span></a>',
+            );
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+
+        it('passes interactive siblings in a non-interactive container', async () => {
+            const ctx = makeContext(
+                '<div><a href="/product">Product</a><button>Add to cart</button></div>',
+            );
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+
+        it('passes button containing an image', async () => {
+            const ctx = makeContext('<button><img src="icon.svg" alt="Close" /></button>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+
+        it('passes hidden input inside an anchor', async () => {
+            const ctx = makeContext('<a href="/x">Go<input type="hidden" name="csrf" /></a>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+    });
+
     describe('duplicate adjacent text', () => {
         it('flags adjacent elements with identical text', async () => {
             const ctx = makeContext(`
