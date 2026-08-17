@@ -996,6 +996,14 @@ const ${componentSymbol} = makeHeadlessInstanceComponent(
         );
     }
 
+    if (node.nodeType === NodeType.ELEMENT_NODE && (node as HTMLElement).tagName === 'STYLE') {
+        const css = textEscape((node as HTMLElement).text);
+        return new RenderFragment(
+            `${indent.firstLine}e('style', {}, ['${css}'])`,
+            Imports.for(Import.element),
+        );
+    }
+
     switch (node.nodeType) {
         case NodeType.TEXT_NODE:
             let text = node.innerText;

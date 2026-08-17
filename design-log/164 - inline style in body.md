@@ -80,10 +80,18 @@ Inline `<style>` in `<body>` is emitted as-is in the rendered output. The CSS is
   <section class="hero">
     <style>
       @keyframes fall {
-        0% { transform: translateY(-6px); opacity: 0.4; }
-        100% { transform: translateY(0); opacity: 1; }
+        0% {
+          transform: translateY(-6px);
+          opacity: 0.4;
+        }
+        100% {
+          transform: translateY(0);
+          opacity: 1;
+        }
       }
-      .hero-particle { animation: fall 2s ease-in-out infinite; }
+      .hero-particle {
+        animation: fall 2s ease-in-out infinite;
+      }
     </style>
     <div class="hero-particle">...</div>
   </section>
@@ -104,17 +112,25 @@ Headfull component styles (extracted from the component's `<head>`) currently me
 
 ```css
 /* Before (current — global, leaks) */
-.header-brand { font-size: 32px; }
-.nav-link { color: var(--text-muted); }
+.header-brand {
+  font-size: 32px;
+}
+.nav-link {
+  color: var(--text-muted);
+}
 
 /* After (auto-scoped by the compiler) */
-@scope ([jay-component="site-header"]) {
-  .header-brand { font-size: 32px; }
-  .nav-link { color: var(--text-muted); }
+@scope ([jc="site-header"]) {
+  .header-brand {
+    font-size: 32px;
+  }
+  .nav-link {
+    color: var(--text-muted);
+  }
 }
 ```
 
-The compiler adds a `jay-component="site-header"` attribute to the component's root element in the injected template. The scoped CSS is merged into the page's extracted CSS — it goes through the same extraction, minification, and caching pipeline as all head styles.
+The compiler adds a `jc="site-header"` attribute to the component's root element in the injected template. The scoped CSS is merged into the page's extracted CSS — it goes through the same extraction, minification, and caching pipeline as all head styles.
 
 #### Why `@scope`
 
@@ -176,7 +192,7 @@ Document in `designer/jay-html-styling.md`:
 
 2. ~~Should headfull component styles be scoped?~~ Yes — auto-wrapped in `@scope` during extraction.
 
-3. ~~Should the `jay-component` attribute use the contract name or a generated hash?~~ Contract name — readable and deterministic.
+3. ~~Should the `jc` attribute use the contract name or a generated hash?~~ Contract name — readable and deterministic.
 
 4. ~~Should body `<style>` inside headfull component templates also be auto-scoped?~~ No — body styles are designer-controlled.
 
@@ -202,8 +218,8 @@ In each compiler target, when encountering a `<style>` element in body:
 
 **`compiler-jay-html/lib/jay-target/jay-html-parser.ts`** — in `parseHeadfullFSImports`:
 
-- When extracting CSS from a headfull component's `<head>`, wrap it in `@scope ([jay-component="contractName"]) { ... }`
-- Add `jay-component="contractName"` attribute to the component's root element in the injected template body
+- When extracting CSS from a headfull component's `<head>`, wrap it in `@scope ([jc="contractName"]) { ... }`
+- Add `jc="contractName"` attribute to the component's root element in the injected template body
 - The scoped CSS merges into the page's `cssParts` as before — extraction, minification, and caching all work
 
 ### Phase 4: Validation
@@ -227,10 +243,44 @@ In each compiler target, when encountering a `<style>` element in body:
 
 ## Trade-offs
 
-| Choice | Pro | Con |
-|--------|-----|-----|
-| Auto `@scope` for components | Proper encapsulation, stays in CSS pipeline | Adds `jay-component` attribute to DOM |
-| Body styles as-is | Simple, matches HTML spec | No extraction/caching for inline styles |
-| Class-based scoping | No `@scope` needed | Synthetic classes, higher specificity |
-| No scoping (current) | Simple | Style leaks between components |
-| Reject body styles (error) | Clean contract                                    | Breaks design tool output, overly restrictive      |
+| Choice                       | Pro                                         | Con                                           |
+| ---------------------------- | ------------------------------------------- | --------------------------------------------- |
+| Auto `@scope` for components | Proper encapsulation, stays in CSS pipeline | Adds `jc` attribute to DOM                    |
+| Body styles as-is            | Simple, matches HTML spec                   | No extraction/caching for inline styles       |
+| Class-based scoping          | No `@scope` needed                          | Synthetic classes, higher specificity         |
+| No scoping (current)         | Simple                                      | Style leaks between components                |
+| Reject body styles (error)   | Clean contract                              | Breaks design tool output, overly restrictive |
+
+## Implementation Results
+
+### What was implemented (Phase 1, 2, partial 3)
+
+**Priority 1 + 2: Body `<style>` — don't crash, emit as-is**
+
+All three compiler targets now detect `<style>` elements and handle them as opaque nodes:
+
+- **`jay-html-compiler.ts`** — emits `e('style', {}, ['...css...'])` (static element)
+- **`jay-html-compiler-server.ts`** — emits `w('<style>...css...</style>')` (raw HTML)
+- **`jay-html-compiler-hydrate.ts`** — returns `RenderFragment.empty()` (skip)
+
+**`extractCss`** — changed selector from `'head style, style'` to `'head style'` so body styles stay in the DOM instead of being extracted.
+
+**`jc` attribute** — added to `<jay:>` tags in both `parseHeadfullFSImports` (compilation) and `injectHeadfullFSTemplates` (pre-render). This prepares for future `@scope` wrapping.
+
+**`@keyframes` / `@font-face` collision detection** — `detectCssNameCollisions` function scans merged CSS for duplicate animation and font-family names, emits validation warnings.
+
+### What was deferred
+
+**`@scope` CSS wrapping** — designed but not activated. The `jc` attribute is on the DOM elements, but wrapping component CSS in `@scope ([jc="name"])` requires the server renderer to emit the `<jay:>` wrapper as an actual DOM element (with the attribute). Currently, the server element inlines the component content — the `<jay:>` wrapper is not preserved in the SSR output. Activating `@scope` requires the server element compiler to emit the wrapper element, which is a deeper change. The `jc` attribute is in place for when this is resolved.
+
+**Validation for broad selectors** in body `<style>` — deferred to a follow-up.
+
+**Agent-kit documentation** — deferred to a follow-up alongside `@scope` activation.
+
+### Tests
+
+- 2 existing CSS extraction tests updated for unchanged behavior (no `@scope` wrapping yet)
+- Hydration test fixtures updated via `UPDATE_FIXTURES=1` for `jc` attribute
+- All 692 compiler tests pass
+- All 678 hydration tests pass
+- `yarn confirm` passes clean

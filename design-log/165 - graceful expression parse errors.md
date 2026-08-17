@@ -233,6 +233,7 @@ For expressions using unsupported syntax:
 All phases from the plan, no deviations from the design.
 
 **`expression-compiler.ts`:**
+
 - `getFallbackForRule` function returns type-appropriate fallback per `startRule` (string expressions → `[INVALID: expr]`, booleans → `false`, etc.)
 - `doParse` catches parse errors and returns fallback with validation messages + console warning
 - `throwOnError` parameter for structural parsing (`parseImportNames`, `parseEnumValues`) that must still throw
@@ -241,13 +242,16 @@ All phases from the plan, no deviations from the design.
 - All validation messages include `See: agent-kit/designer/jay-html-template-syntax.md` pointer
 
 **`jay-html-helpers.ts`:**
+
 - `ensureSingleChildElement` auto-wraps multiple body children in `<div style="display: contents">`
 - Zero elements still returns validation error
 
 **`jay-html-compiler-server.ts`:**
+
 - Fixed validation propagation for `parseServerCondition` at conditional and headless instance sites
 
 **Documentation:**
+
 - Agent-kit `jay-html-template-syntax.md`: "Common Errors" table
 - `docs/core/jay-html.md`: Error Handling section
 - `compiler-jay-html/docs/jay-html-docs.md`: Fallback strategy table and multi-root wrapping
@@ -255,6 +259,7 @@ All phases from the plan, no deviations from the design.
 ### Tests
 
 6 new tests in `expression-compiler.unit.test.ts`:
+
 - Malformed condition → `vs => false` with validation
 - Malformed text expression → `[INVALID: ...]` with validation
 - Malformed class expression → empty string with validation

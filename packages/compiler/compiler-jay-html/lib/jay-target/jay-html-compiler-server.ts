@@ -77,6 +77,10 @@ function w(indent: Indent, code: string, imports: Imports = Imports.none()): Ren
 }
 
 function renderServerNode(node: Node, context: ServerContext): RenderFragment {
+    if (node.nodeType === NodeType.ELEMENT_NODE && (node as HTMLElement).tagName === 'STYLE') {
+        const css = textEscape((node as HTMLElement).text);
+        return w(context.indent, `'<style>${css}</style>'`);
+    }
     if (node.nodeType === NodeType.TEXT_NODE) {
         const text = node.innerText;
         if (text.trim() === '') return RenderFragment.empty();
