@@ -45,6 +45,7 @@ There is no standalone "interactive" phase. Any tag with `type: interactive` (re
 | [jay-html-components.md](jay-html-components.md)           | Component imports: headless (key/instance), headfull FS, nesting patterns                       |
 | [jay-html-styling.md](jay-html-styling.md)                 | Styling: inline, external, dynamic style bindings, class bindings                               |
 | [routing.md](routing.md)                                   | Directory-based routing: page structure, dynamic routes, route priority                         |
+| [navigation-patterns.md](navigation-patterns.md)           | Active menu/sidebar patterns using `jay.url.path`, `===`, and `^=` operators                    |
 | [contracts-and-plugins.md](contracts-and-plugins.md)       | Reading contracts, plugin.yaml, .jay-action files, and the materialized indexes                 |
 | [Contract Authoring Guide](../contracts/GUIDE.md)          | Writing contracts: syntax, page/component/linked contracts, examples                            |
 | [script-tags.md](script-tags.md)                           | Script tag policy: use page.ts for behavior, jay-script="allow" for third-party scripts         |

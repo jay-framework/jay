@@ -153,7 +153,18 @@ jay-stack params wix-stores/product-page
 # Output: [{"slug": "blue-shirt"}, {"slug": "red-hat"}, ...]
 ```
 
-Params are always strings (URL params).
+Params are always strings (URL params). Routes are **case-sensitive** — use lowercase for all param values and filenames that become URL segments.
+
+### When page.ts is not needed for params
+
+The designer can bind route params directly to nested component props using `jay.params` in the template — no `page.ts` or page contract needed:
+
+```html
+<jay:DocsSidebar activeRole="{jay.params.role}" activePage="{jay.params.slug}" />
+<jay:Sidebar currentPath="{jay.url.path}" />
+```
+
+Only create a `page.ts` for params when you need to **transform** them (fetch data, compute derived values, combine with service calls). If the page just passes params through to components, `jay.params` is sufficient.
 
 ## Query Parameters
 

@@ -103,8 +103,9 @@ class AutomationAgent implements AutomationAPI {
             viewState = this.component.viewState;
         }
 
+        const { __jay, ...publicViewState } = viewState as any;
         return {
-            viewState,
+            viewState: publicViewState,
             interactions: this.getGrouped(),
             customEvents: this.getCustomEvents(),
         };

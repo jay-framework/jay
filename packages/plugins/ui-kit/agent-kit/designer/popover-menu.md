@@ -97,3 +97,28 @@ Note: this component opens on hover only. Keyboard users can activate the popove
   <a href="/products/shoes" role="menuitem">Shoes</a>
 </div>
 ```
+
+## Active State
+
+Highlight the active page within a dropdown menu using conditional class bindings. Pass `jay.url.path` from the page template to the component that contains the menu:
+
+```html
+<!-- page template -->
+<jay:NavBar currentPath="{jay.url.path}" />
+```
+
+Inside the menu, use `===` for exact page match or `^=` for section match:
+
+```html
+<jay:popover-menu>
+  <div class="nav-item">
+    <a ref="trigger" class="nav-link {currentPath ^= '/products' ? active}">Products &#x25BE;</a>
+    <div popover ref="popover" class="dropdown-menu">
+      <a href="/products/shoes" class="{currentPath === '/products/shoes' ? active}">Shoes</a>
+      <a href="/products/bags" class="{currentPath === '/products/bags' ? active}">Bags</a>
+    </div>
+  </div>
+</jay:popover-menu>
+```
+
+See the framework's [navigation-patterns.md](../../designer/navigation-patterns.md) guide for more patterns.

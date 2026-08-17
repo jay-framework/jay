@@ -135,6 +135,10 @@ The project follows a rigorous design log methodology for all significant featur
 1. **Check design logs first** — Before searching the codebase or guessing at how things work, read `./design-log/index.md` to find relevant design logs. The design logs explain the architecture, patterns, and rationale. Use them as your starting point for understanding any feature area, not blind code searching.
 2. **For new features**: Create design log first, get approval, then implement
 3. **Read related design logs** to understand context and constraints
+4. **Prioritize prevention over features** — For any new task, bug, or feature, evaluate solutions in this order:
+   - **Validation first** (`jay-stack validate` via stack-cli) — Can the problem be caught at build/validation time? Add a validation rule that detects and reports the issue with a clear error message. Most bugs become non-issues if they're caught early.
+   - **Agent-kit guide second** — Can the problem be prevented by better documentation? Update or create an agent-kit guide so AI agents (and humans) avoid the pattern that causes the issue.
+   - **Framework feature last** — Only add framework code (compiler, runtime, new syntax) when validation and documentation cannot solve the problem. Framework features have the highest maintenance cost.
 
 ### When Creating Design Logs
 

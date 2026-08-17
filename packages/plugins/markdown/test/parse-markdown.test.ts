@@ -111,4 +111,29 @@ describe('parseMarkdownBody', () => {
         expect(html).toMatch(/<strong>bold<\/strong>/);
         expect(html).toMatch(/<em>italic<\/em>/);
     });
+
+    it('strips .md extension from relative links', () => {
+        const html = parseMarkdownBody('[Guide](getting-started.md)');
+        expect(html).toMatch(/href="getting-started"/);
+    });
+
+    it('strips .md extension preserving anchor', () => {
+        const html = parseMarkdownBody('[Section](guide.md#installation)');
+        expect(html).toMatch(/href="guide#installation"/);
+    });
+
+    it('strips .md extension from path-relative links', () => {
+        const html = parseMarkdownBody('[Other](../designer/syntax.md)');
+        expect(html).toMatch(/href="\.\.\/designer\/syntax"/);
+    });
+
+    it('preserves .md extension on external URLs', () => {
+        const html = parseMarkdownBody('[Ext](https://example.com/readme.md)');
+        expect(html).toMatch(/href="https:\/\/example\.com\/readme\.md"/);
+    });
+
+    it('leaves non-.md relative links unchanged', () => {
+        const html = parseMarkdownBody('[Page](about)');
+        expect(html).toMatch(/href="about"/);
+    });
 });

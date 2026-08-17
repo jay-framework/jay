@@ -60,12 +60,36 @@ function createCodeRenderer() {
     };
 }
 
+function stripMdExtension(href: string): string {
+    if (href.startsWith('http://') || href.startsWith('https://')) return href;
+    return href.replace(/\.md(#|$)/, '$1');
+}
+
+function createLinkRenderer() {
+    return {
+        link({
+            href,
+            title,
+            tokens,
+        }: {
+            href: string;
+            title?: string | null;
+            tokens: any[];
+        }): string {
+            const resolved = stripMdExtension(href);
+            const titleAttr = title ? ` title="${title}"` : '';
+            const text = this.parser.parseInline(tokens);
+            return `<a href="${resolved}"${titleAttr}>${text}</a>`;
+        },
+    };
+}
+
 let sharedMarked: Marked | undefined;
 
 function getMarked(): Marked {
     if (!sharedMarked) {
         sharedMarked = new Marked();
-        sharedMarked.use({ renderer: createCodeRenderer() });
+        sharedMarked.use({ renderer: { ...createCodeRenderer(), ...createLinkRenderer() } });
     }
     return sharedMarked;
 }
@@ -144,7 +168,7 @@ export function parseMarkdownBody(markdown: string, imageOptions?: MarkdownImage
     const marked = getMarked();
     if (imageOptions?.imageBaseUrl || imageOptions?.mediaMap) {
         const perParse = new Marked();
-        perParse.use({ renderer: createCodeRenderer() });
+        perParse.use({ renderer: { ...createCodeRenderer(), ...createLinkRenderer() } });
         perParse.use({ renderer: createImageRenderer(imageOptions) });
         return perParse.parse(markdown) as string;
     }

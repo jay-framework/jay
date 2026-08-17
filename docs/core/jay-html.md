@@ -1531,6 +1531,53 @@ export interface TodoElementRefs {
 }
 ```
 
+## Built-in Bindings (`jay.`)
+
+Page templates have access to framework-provided values under the `jay.` prefix:
+
+| Binding        | Value                                                 | Phase                   |
+| -------------- | ----------------------------------------------------- | ----------------------- |
+| `jay.params.X` | Route param value from `[X]` directory segment        | slow, fast, interactive |
+| `jay.url.path` | Current URL pathname (e.g., `/docs/designer/routing`) | slow, fast, interactive |
+
+Use in text bindings, prop bindings, and conditionals:
+
+```html
+<h1>Page: {jay.params.slug}</h1>
+<jay:Sidebar currentPath="{jay.url.path}" />
+<a if="jay.url.path ^= '/docs'" class="docs-active">Docs</a>
+```
+
+`jay.` bindings are available in page templates only. Headfull components receive this data via props.
+
+### String Comparison Operators
+
+For string-typed fields, the right side of `===`/`!==` resolves as a field reference. Use quotes for string literals:
+
+```html
+<a if="url === currentPath" class="active">Match two fields</a>
+<div if="status === 'pending'">Literal match</div>
+```
+
+The `^=` operator checks if a string starts with a prefix:
+
+```html
+<a if="jay.url.path ^= '/docs'" class="section-active">Docs</a>
+<a if="currentPath ^= sectionUrl" class="active">{label}</a>
+```
+
+For enum-typed fields, the right side of `===` remains a variant literal (no quotes needed).
+
+## Error Handling
+
+Invalid template expressions produce graceful fallbacks instead of crashing the page:
+
+- **String expressions** render a visible `[INVALID: expression]` marker so the designer can spot them
+- **Boolean conditions** evaluate to `false` (conditional element hidden)
+- **Class expressions** produce no classes
+
+Validation messages include the parse error and a pointer to the relevant agent-kit guide. The page renders and remains usable — broken parts are visible but non-fatal.
+
 ## Next Steps
 
 Now that you understand Jay-HTML:

@@ -108,6 +108,10 @@ export async function fetchPageRequest(
         fastViewState,
         route.trackByMap || {},
     );
+    (fullViewState as any).__jay = {
+        params: match.params,
+        url: { path: requestUrl.pathname },
+    };
 
     // Merge head tags: component tags (defaults) then jay-html <head> (template wins, DL#148)
     const headTagSources: HeadTag[][] = [];

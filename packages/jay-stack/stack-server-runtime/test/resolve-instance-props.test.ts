@@ -48,6 +48,10 @@ describe('resolve-instance-props', () => {
                 category: 'bedroom',
                 slug: '8167945',
                 p: { categorySlug: 'bedroom' },
+                jay: {
+                    params: { category: 'bedroom', slug: '8167945' },
+                    url: { path: '/kitan/products/bedroom/8167945' },
+                },
             });
         });
     });

@@ -607,4 +607,26 @@ After fix: all plugin inits succeed — `[product-rating] Initializing ratings s
 
 The core DL#137 goal is achieved: **the serve-time code path no longer parses jay-html or reads source files**. All component discovery, contract resolution, and module path mapping happens at build time and is serialized to `page-parts.json`. The production server loads this config and imports the listed modules — no compiler, no import resolver, no source files needed.
 
+### Post-implementation fixes (2026-08-02)
+
+Three bugs found during jay-website production build/serve:
+
+**1. Stale `page-parts.json` on incremental rebuilds** (`instance-pipeline.ts`)
+
+`page-parts.json` was guarded by `fs.access` — only written if the file didn't exist. On incremental rebuilds, changes to headfull FS imports were silently lost because the stale file was reused. Headfull FS components (SiteHeader, SiteFooter) were missing from `instanceComponents`, causing `__headlessInstances` hydration errors in production serve.
+
+**Fix:** Always overwrite `page-parts.json` during build.
+
+**2. Server-only components in `keyedPartModules`** (`load-production-parts.ts`)
+
+`loadProductionPageParts` unconditionally pushed keyed components to `keyedPartModules`, generating client-side `import {markdownPages} from '@jay-framework/markdown/client'`. Server-only components (no `fastRender` or `hasInteractive`) don't have client exports, causing `SyntaxError: does not provide an export named` at runtime.
+
+**Fix:** Added `hasClientComp` guard matching the dev server's `loadPageParts` logic.
+
+**3. `loadParams` cache keyed by function reference** (`build-pipeline.ts`)
+
+The `loadParamsCache` used the `loadParams` function reference as cache key. When multiple routes share the same plugin component (e.g., `markdownPages`) with different `headlessProps` (different `contentDir`), only the first route's params were used. Routes like `/design-log/jay/[slug]` and `/docs/designer/[slug]` both use `markdownPages` but scan different directories — the shared cache caused slug cross-contamination.
+
+**Fix:** Changed cache key to `key:propsJSON` so routes with different `headlessProps` get separate `loadParams` results.
+
 All 7 tested routes return 200 in fake-shop. All plugin inits succeed. 74 unit tests pass.

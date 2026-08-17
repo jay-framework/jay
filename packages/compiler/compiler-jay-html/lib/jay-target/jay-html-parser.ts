@@ -922,6 +922,7 @@ function injectHeadfullFSTemplatesRecursive(
             if (!jayTag.innerHTML.trim()) {
                 jayTag.set_content(jayHtmlBody.innerHTML);
                 jayTag.setAttribute('style', 'display: contents');
+                jayTag.setAttribute('jc', contractName);
             }
         }
     }
@@ -1172,6 +1173,7 @@ async function parseHeadfullFSImports(
                 continue;
             }
             jayTag.set_content(jayHtmlBody.innerHTML);
+            jayTag.setAttribute('jc', contractName);
         }
 
         // Check if .ts code file exists (DL#162 structural headfull).
@@ -1524,8 +1526,8 @@ async function extractCss(
         }
     }
 
-    // Extract CSS from <style> tags
-    const styleTags = root.querySelectorAll('head style, style');
+    // Extract CSS from <style> tags in <head> only (body styles stay inline)
+    const styleTags = root.querySelectorAll('head style');
     for (const style of styleTags) {
         const cssContent = style.text.trim();
         if (cssContent) {
@@ -1546,6 +1548,29 @@ async function extractCss(
  * Arrays with phase 'fast+interactive' are dynamic and can be completely replaced
  * by interactive updates, so they don't need identity-based merging on the client.
  */
+function detectCssNameCollisions(css: string, validations: string[]): void {
+    const keyframeNames = new Set<string>();
+    for (const match of css.matchAll(/@keyframes\s+(\S+)/g)) {
+        const name = match[1];
+        if (keyframeNames.has(name)) {
+            validations.push(
+                `@keyframes "${name}" is defined multiple times. Animation names are global — rename to avoid collisions.`,
+            );
+        }
+        keyframeNames.add(name);
+    }
+    const fontFaceNames = new Set<string>();
+    for (const match of css.matchAll(/@font-face\s*\{[^}]*font-family\s*:\s*['"]?([^;'"}\n]+)/g)) {
+        const name = match[1].trim();
+        if (fontFaceNames.has(name)) {
+            validations.push(
+                `@font-face "${name}" is defined multiple times. Font family names are global — rename to avoid collisions.`,
+            );
+        }
+        fontFaceNames.add(name);
+    }
+}
+
 function extractTrackByMaps(
     pageContract: Contract | undefined,
     headlessImports: JayHeadlessImports[],
@@ -1712,6 +1737,9 @@ export async function parseJayFile(
     let css = cssResult.val?.css;
     if (headfullFSResult.css) {
         css = css ? css + '\n\n' + headfullFSResult.css : headfullFSResult.css;
+    }
+    if (css) {
+        detectCssNameCollisions(css, validations);
     }
     let allLinkedCssFiles = cssResult.val?.linkedCssFiles || [];
     if (headfullFSResult.linkedCssFiles.length > 0) {

@@ -141,6 +141,20 @@
             expr: `${leftExpr} ${jsOp} ${rightExpr}`
         };
     }
+
+    function applyStartsWith(left, right) {
+        if (left.type === 'resolved' && right.type === 'resolved') {
+            return { type: 'resolved', value: String(left.value).startsWith(String(right.value)) };
+        }
+        const leftCode = left.type === 'resolved' ? JSON.stringify(left.value) : left.fragment.rendered;
+        const rightCode = right.type === 'resolved' ? JSON.stringify(right.value) : right.fragment.rendered;
+        const baseFragment = left.type === 'code' ? left.fragment : (right.type === 'code' ? right.fragment : new RenderFragment('', none));
+        return {
+            type: 'code',
+            fragment: new RenderFragment(`${leftCode}.startsWith(${rightCode})`, baseFragment.imports),
+            expr: `${leftCode}.startsWith(${rightCode})`
+        };
+    }
 }
 
 styleDeclarations
@@ -435,7 +449,10 @@ slowLogicalAnd
   }
 
 slowComparison
-  = left:slowUnary _ op:ComparisonOperator _ right:slowUnary {
+  = left:slowUnary _ "^=" _ right:slowUnary {
+    return applyStartsWith(left, right);
+  }
+  / left:slowUnary _ op:ComparisonOperator _ right:slowUnary {
     // Check if this might be an enum comparison where left is a SLOW property
     // Only resolve enum values when the left side was resolved to a slow value
     // This ensures fast enum comparisons are preserved as runtime code
@@ -459,9 +476,15 @@ slowUnary
 
 slowPrimary
   = "(" _ cond:slowLogicalOr _ ")" { return cond; }
+  / slowQuotedStringLiteral
   / slowNumericLiteral
   / slowBooleanLiteral
   / slowPropertyAccess
+
+slowQuotedStringLiteral
+  = "'" chars:[^']* "'" {
+    return { type: 'resolved', value: chars.join('') };
+  }
 
 slowNumericLiteral
   = val:("-"? [0-9]+ ("." [0-9]+)?) {
@@ -476,14 +499,28 @@ slowPropertyAccess
   = head:Identifier tail:(_ "." _ Identifier)* {
     const path = [head, ...tail.map(t => t[3])].join('.');
     const isSimple = tail.length === 0; // Single identifier (no dots)
-    
+
+    // jay.* built-in bindings are always runtime (request-time)
+    if (head === 'jay') {
+      const jayTerms = ['__jay', ...tail.map(t => t[3])];
+      if (vars) {
+        const accessor = vars.resolveAccessor(['jay', ...tail.map(t => t[3])]);
+        const fragment = accessor.render();
+        return { type: 'code', fragment: fragment, expr: path, propertyPath: path, isSimpleIdentifier: false };
+      } else {
+        const code = `vs.${jayTerms.join('?.')}`;
+        const fragment = new RenderFragment(code, none);
+        return { type: 'code', fragment: fragment, expr: path, propertyPath: path, isSimpleIdentifier: false };
+      }
+    }
+
     // Check if this property is slow-phase
     if (isSlowPhase(path)) {
       const value = getSlowValue(path);
       // Include propertyPath so we can look up enum info in comparisons
       return { type: 'resolved', value: value, propertyPath: path };
     }
-    
+
     // Fast/interactive phase - generate runtime code
     if (vars) {
       const accessor = vars.resolveAccessor(path.split('.'));
@@ -534,6 +571,7 @@ logicalAndCondition
 
 primaryCondition
   = "(" _ cond:condition _ ")" { return cond; }
+  / startsWithCondition
   / orderingCondition
   / equalityComparisonCondition
   / enumCondition
@@ -556,7 +594,20 @@ orderingValue
   = numericValue
   / acc:accessor { return acc.render().rendered; }
 
-// Equality comparisons with numbers or dotted paths (single identifiers go to enumCondition)
+// startsWith comparison: field ^= field or field ^= 'literal'
+startsWithCondition
+  = head:accessor _ "^=" _ val:startsWithValue {
+    return head.render().map(_ => `${_}.startsWith(${val})`)
+  }
+
+startsWithValue
+  = quotedStringLiteral
+  / acc:accessor { return acc.render().rendered; }
+
+quotedStringLiteral
+  = "'" chars:[^']* "'" { return "'" + chars.join('') + "'"; }
+
+// Equality comparisons with numbers, dotted paths, or quoted strings (single identifiers go to enumCondition)
 equalityComparisonCondition
   = head:accessor _ oper:EqualityOperator _ val:equalityComparisonValue {
     // Normalize == to === and != to !== for JavaScript output
@@ -567,6 +618,7 @@ equalityComparisonCondition
 
 equalityComparisonValue
   = numericValue
+  / quotedStringLiteral
   / acc:dottedAccessor { return acc.render().rendered; }
 
 // Accessor with at least one dot - distinguishes field paths from enum values
@@ -579,15 +631,27 @@ dottedAccessor
 numericValue
   = "-"? [0-9]+ ("." [0-9]+)? { return text(); }
 
+// Enum or string comparison with a single identifier on the right side.
+// For enum types (has .values): right side is a variant literal.
+// For string/other types: right side is a field reference.
 enumCondition
   = head:accessor _ oper:EqualityOperator _ val:Identifier {
     if (oper.length === 2)
         oper = oper + "=";
-    const enumName = head.resolvedType.alias || head.resolvedType.name;
-    const fragment = head.render().map(_ => `${_} ${oper} ${enumName}.${val}`);
-    if (head.resolvedType.values && !head.resolvedType.values.includes(val)) {
-        fragment.validations = [...fragment.validations, `Unknown enum value "${val}" for type ${head.resolvedType.name}. Valid values: ${head.resolvedType.values.join(', ')}`];
+    // Enum type: right side is a variant literal
+    if (head.resolvedType.values) {
+        const enumName = head.resolvedType.alias || head.resolvedType.name;
+        const fragment = head.render().map(_ => `${_} ${oper} ${enumName}.${val}`);
+        if (!head.resolvedType.values.includes(val)) {
+            fragment.validations = [...fragment.validations, `Unknown enum value "${val}" for type ${head.resolvedType.name}. Valid values: ${head.resolvedType.values.join(', ')}`];
+        }
+        return fragment;
     }
+    // String/other type: right side is a field reference
+    const rightAccessor = vars.resolveAccessor([val]);
+    const rightCode = rightAccessor.render();
+    const fragment = head.render().map(_ => `${_} ${oper} ${rightCode.rendered}`);
+    fragment.validations = [...fragment.validations, ...rightCode.validations];
     return fragment;
 }
 
