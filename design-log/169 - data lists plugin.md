@@ -58,11 +58,13 @@ tags:
     dataType: string
   - tag: bio
     type: data
-    dataType: string
+    dataType: html-string   # rendered HTML content — use {bio} binding (not escaped)
   - tag: manager
     type: sub-contract
-    link: ./team.jay-contract   # cross-reference via standard contract link
+    link: ./team.jay-contract   # self-referencing link — a manager is another team member
 ```
+
+Self-referencing schemas (a contract linking to itself) are valid — they express relationships within the same collection. Circular data (A.manager=B, B.manager=A) is detected and rejected at render time.
 
 **Why contract format:** it's already understood by the compiler, agents, and the agent-kit. The `meta` field on `ContractTag` (already in the type system — `meta?: Record<string, string>`) carries plugin-specific annotations without extending the contract spec. Cross-references use the standard `link` field.
 
@@ -136,7 +138,7 @@ Each row becomes a page. Used with `[slug]` dynamic routes.
 <head>
   <script type="application/jay-headless"
     plugin="@jay-framework/data-files"
-    contract="data-pages"
+    contract="team-data-pages"
     key="member">
     contentDir: content/team
     file: data.csv
@@ -166,7 +168,7 @@ The slug field is read from the schema contract (the tag with `meta.slug: "true"
 <head>
   <script type="application/jay-headless"
     plugin="@jay-framework/data-files"
-    contract="data-list"
+    contract="team-data-list"
     key="team">
     contentDir: content/team
     file: data.csv
@@ -186,12 +188,12 @@ The slug field is read from the schema contract (the tag with `meta.slug: "true"
 #### 3. `data-item` — single item by slug (instance headless)
 
 ```html
-<jay:data-item slug="jane" contentDir="content/team" file="data.csv">
+<jay:team-data-item slug="jane" contentDir="content/team" file="data.csv">
   <div class="card">
     <h3>{name}</h3>
     <p>{role}</p>
   </div>
-</jay:data-item>
+</jay:team-data-item>
 ```
 
 ### Cross-references via contract links
@@ -349,20 +351,54 @@ This is a fundamental tradeoff:
 
 This tradeoff must be documented in the agent-kit guide so agents choose the right plugin for the use case.
 
-### Type inference
+### Type inference (for `generate-schema` action only)
 
-| Source | Type rules |
-|--------|-----------|
-| CSV | All fields are `string`; nested JSON in a cell parsed as sub-contract |
+The schema contract is always required and is the source of truth for types. Type inference is only used by the `generate-schema` action when auto-generating a base schema from a data file:
+
+| Source | Inferred types |
+|--------|---------------|
+| CSV | All fields → `string`; nested JSON in a cell → sub-contract |
 | YAML/JSON | `string`, `number`, `boolean` inferred; nested objects → sub-contract; arrays → repeated sub-contract |
-| Schema contract | Overrides inference — the contract is the source of truth |
+| HTML content | Detected by `<` prefix → `html-string` dataType |
+
+After generation, the agent refines the schema — adding descriptions, marking the slug field, converting fields to `html-string` where appropriate, and defining cross-reference links.
+
+### Contract naming convention
+
+Each schema generates three materialized component contracts. The names are derived from the schema's `name` field:
+
+| Schema name | Component | Materialized contract name |
+|-------------|-----------|---------------------------|
+| `team` | data-pages | `team-data-pages` |
+| `team` | data-list | `team-data-list` |
+| `team` | data-item | `team-data-item` |
+
+The designer uses these names in jay-html: `contract="team-data-pages"`.
+
+### Multiple data files
+
+Each data file needs its own schema contract. A directory can contain multiple data files with separate schemas:
+
+```
+content/people/
+├── members.csv
+├── members.jay-contract    # name: members
+├── alumni.csv
+└── alumni.jay-contract     # name: alumni
+```
+
+The schema and data file are associated by convention: the schema `name` field matches the data file name (without extension). The `file` prop in jay-html selects which data file to use.
+
+### Dev mode file watching
+
+The data files plugin registers content files for dev server watching (same pattern as the markdown plugin). When a CSV/YAML/JSON file changes, affected pages re-render automatically.
 
 ### Dynamic contracts
 
 At `jay-stack agent-kit` time, the plugin:
 
 1. Scans project for directories with data files + schema contracts
-2. Generates materialized contracts for `data-pages`, `data-list`, `data-item` per data source
+2. Generates three materialized contracts per schema (`{name}-data-pages`, `{name}-data-list`, `{name}-data-item`)
 3. Attaches `metadata: { contentDir, file }` for the component to use
 
 ## Questions
@@ -400,8 +436,8 @@ At `jay-stack agent-kit` time, the plugin:
 
 - `lib/load-schema.ts` — reads the `.jay-contract` schema file from the content directory
 - Extracts slug field from `meta.slug`
-- Extracts cross-references from `meta.ref` / `meta.refMarkdown`
-- Validation: error if no schema file exists
+- Identifies cross-references from linked sub-contracts (`link:` field)
+- Validation: error if no schema file exists, error if slug field not marked
 
 ### Phase 4: Components
 
@@ -430,9 +466,35 @@ At `jay-stack agent-kit` time, the plugin:
 
 ### Phase 8: Tests and verification
 
-- Unit tests for data parsing (all four formats)
-- Schema loading and validation tests
-- Cross-reference resolution tests
+Fixture-based tests — all data is files, making tests self-contained:
+
+```
+test/fixtures/
+├── team/                    # basic CSV
+│   ├── data.csv
+│   └── team.jay-contract
+├── faq/                     # YAML with nested objects
+│   ├── data.yaml
+│   └── faq.jay-contract
+├── recipes/                 # cross-references
+│   ├── data.yaml
+│   ├── recipes.jay-contract # links to ../team/team.jay-contract
+│   └── ...
+├── no-schema/               # missing schema → validation error
+│   └── data.csv
+├── circular/                # circular data → validation error
+│   ├── data.yaml
+│   └── circular.jay-contract
+└── large/                   # >10K rows → size warning
+    ├── data.csv
+    └── large.jay-contract
+```
+
+- **Data parsing**: all four formats (CSV, YAML, JSON, JSONL), nested objects, type detection
+- **Schema loading**: slug extraction, linked sub-contracts, missing schema error
+- **Components**: `data-pages` loadParams + slowRender, `data-list` slowRender, `data-item` slug lookup
+- **Cross-references**: string→resolve, object→inline, self-referencing schema, circular data detection
+- **Validation**: missing schema, missing slug field, size limit warning, schema-vs-component-contract misuse
 - `yarn confirm`
 
 ## Trade-offs
