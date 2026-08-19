@@ -1,5 +1,5 @@
 import Node from 'node-html-parser/dist/nodes/node';
-import { HTMLElement, NodeType } from 'node-html-parser';
+import { HTMLElement, NodeType, parse as parseHtml } from 'node-html-parser';
 import { Import, ImportName, WithValidations } from '@jay-framework/compiler-shared';
 
 /** Convert kebab-case to camelCase: scroll-carousel → scrollCarousel */
@@ -79,10 +79,20 @@ export function ensureSingleChildElement(node: Node): WithValidations<HTMLElemen
     const elements = node.childNodes.filter((child) => child.nodeType === NodeType.ELEMENT_NODE);
     if (elements.length === 1) {
         return new WithValidations(elements[0] as HTMLElement);
-    } else
+    }
+    if (elements.length === 0) {
         return new WithValidations(undefined, [
-            `Jay HTML Body must have a single child element, yet ${elements.length} found.`,
+            `Jay HTML Body must have at least one child element.`,
         ]);
+    }
+    const wrapper = parseHtml('<div style="display: contents"></div>').firstChild as HTMLElement;
+    const parentEl = node as HTMLElement;
+    for (const child of [...parentEl.childNodes]) {
+        child.remove();
+        wrapper.appendChild(child);
+    }
+    parentEl.appendChild(wrapper);
+    return new WithValidations(wrapper);
 }
 
 // ============================================================

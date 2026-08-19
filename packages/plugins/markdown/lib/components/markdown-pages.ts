@@ -1,5 +1,5 @@
-import { makeJayStackComponent, phaseOutput } from '@jay-framework/fullstack-component';
-import { parseMarkdownWithMermaid } from '../parse-markdown.js';
+import { makeJayStackComponent, notFound, phaseOutput } from '@jay-framework/fullstack-component';
+import { extractFrontmatter, parseMarkdownBodyWithMermaid } from '../parse-markdown.js';
 import type { MarkdownImageOptions, MediaMapEntry } from '../parse-markdown.js';
 import { frontmatterToHeadTags } from '../head-tags.js';
 import fs from 'node:fs/promises';
@@ -93,7 +93,13 @@ export const markdownPages = makeJayStackComponent()
     })
     .withSlowlyRender(async (props: MarkdownPagesProps) => {
         const filePath = path.join(props.contentDir, `${props.slug}.md`);
-        const content = await fs.readFile(filePath, 'utf-8');
+        let content: string;
+        try {
+            content = await fs.readFile(filePath, 'utf-8');
+        } catch (err: any) {
+            if (err?.code === 'ENOENT') return notFound();
+            throw err;
+        }
 
         let imageOptions: MarkdownImageOptions = {};
 
@@ -108,7 +114,11 @@ export const markdownPages = makeJayStackComponent()
             imageOptions = { imageBaseUrl };
         }
 
-        const { frontmatter, html } = await parseMarkdownWithMermaid(content, imageOptions);
+        const { frontmatter, body } = extractFrontmatter(content);
+
+        const title = frontmatter.title ?? body.match(/^#\s+(.+)$/m)?.[1]?.trim() ?? '';
+
+        const html = await parseMarkdownBodyWithMermaid(body, imageOptions);
 
         const tags = Array.isArray(frontmatter.tags)
             ? frontmatter.tags.map((name: string) => ({ name: String(name) }))
@@ -116,7 +126,7 @@ export const markdownPages = makeJayStackComponent()
 
         return phaseOutput(
             {
-                title: frontmatter.title ?? '',
+                title,
                 content: html,
                 description: frontmatter.description ?? '',
                 date: frontmatter.date ? new Date(frontmatter.date).toISOString() : '',
