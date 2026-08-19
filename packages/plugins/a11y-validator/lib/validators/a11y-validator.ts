@@ -1,6 +1,18 @@
 import type { JayHtmlValidatorFn, JayHtmlValidationFinding } from '@jay-framework/compiler-shared';
 import { walkElements } from '@jay-framework/compiler-shared';
 
+const A11Y_GUIDE = '\nSee: agent-kit/designer/a11y-patterns.md';
+
+function pushFinding(
+    findings: JayHtmlValidationFinding[],
+    finding: JayHtmlValidationFinding,
+): void {
+    if (finding.suggestion) {
+        finding.suggestion += A11Y_GUIDE;
+    }
+    findings.push(finding);
+}
+
 const INTERACTIVE_ELEMENTS = new Set(['a', 'button', 'input', 'select', 'textarea']);
 
 const NON_INTERACTIVE_ELEMENTS = new Set([
@@ -143,7 +155,7 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
 
     for (const [id, count] of idCounts) {
         if (count > 1) {
-            findings.push({
+            pushFinding(findings, {
                 severity: 'error',
                 message: `Duplicate id="${id}" used ${count} times (WCAG 4.1.1)`,
                 suggestion:
@@ -163,7 +175,7 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
         if (tag === 'img') {
             const alt = el.getAttribute?.('alt');
             if (alt === undefined || alt === null) {
-                findings.push({
+                pushFinding(findings, {
                     severity: 'error',
                     message: 'Image missing alt attribute (WCAG 1.1.1)',
                     suggestion:
@@ -195,7 +207,7 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
             const ariaLabelledBy = el.getAttribute?.('aria-labelledby');
             const hasImg = el.querySelector?.('img[alt]');
             if (!text && !ariaLabel && !ariaLabelledBy && !hasImg) {
-                findings.push({
+                pushFinding(findings, {
                     severity: 'error',
                     message: 'Button has no accessible name (WCAG 4.1.2)',
                     suggestion:
@@ -211,7 +223,7 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
             if (tabindex !== undefined && tabindex !== null) {
                 const val = parseInt(tabindex, 10);
                 if (!isNaN(val) && val > 0) {
-                    findings.push({
+                    pushFinding(findings, {
                         severity: 'warning',
                         message: `Positive tabindex="${tabindex}" disrupts natural tab order (WCAG 2.4.3)`,
                         suggestion:
@@ -230,7 +242,7 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
             if (autoplay !== undefined && autoplay !== null) {
                 const muted = el.getAttribute?.('muted');
                 if (muted === undefined || muted === null) {
-                    findings.push({
+                    pushFinding(findings, {
                         severity: 'error',
                         message: `<${tag}> has autoplay without muted (WCAG 1.4.2)`,
                         suggestion:
@@ -247,7 +259,7 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
         const role = el.getAttribute?.('role');
         if (role !== undefined && role !== null) {
             if (!VALID_ARIA_ROLES.has(role)) {
-                findings.push({
+                pushFinding(findings, {
                     severity: 'error',
                     message: `Invalid ARIA role="${role}" (WCAG 4.1.2)`,
                     suggestion:
@@ -265,7 +277,7 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
             if (tabindex !== undefined && tabindex !== null) {
                 const val = parseInt(tabindex, 10);
                 if (!isNaN(val) && val >= 0 && !role) {
-                    findings.push({
+                    pushFinding(findings, {
                         severity: 'warning',
                         message: `<${tag}> is focusable via tabindex but has no role (WCAG 4.1.2)`,
                         suggestion:
@@ -294,7 +306,7 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
                 .join('')
                 .toLowerCase();
             if (/user-scalable\s*=\s*no/.test(content)) {
-                findings.push({
+                pushFinding(findings, {
                     severity: 'error',
                     message: 'Viewport meta disables user scaling (WCAG 1.4.4)',
                     suggestion:
@@ -306,7 +318,7 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
             }
             const maxScaleMatch = content.match(/maximum-scale\s*=\s*([\d.]+)/);
             if (maxScaleMatch && parseFloat(maxScaleMatch[1]) < 2) {
-                findings.push({
+                pushFinding(findings, {
                     severity: 'error',
                     message: `Viewport meta restricts zoom to ${maxScaleMatch[1]}x (WCAG 1.4.4)`,
                     suggestion:
@@ -337,7 +349,7 @@ function checkLabel(
 
     if (ariaLabel !== undefined && ariaLabel !== null) {
         if (!String(ariaLabel).trim()) {
-            findings.push({
+            pushFinding(findings, {
                 severity: 'error',
                 message: `<${tag}> has empty aria-label (WCAG 4.1.2)`,
                 suggestion:
@@ -354,7 +366,7 @@ function checkLabel(
     if (ariaLabelledBy !== undefined && ariaLabelledBy !== null) {
         const tokens = String(ariaLabelledBy).trim().split(/\s+/).filter(Boolean);
         if (tokens.length === 0) {
-            findings.push({
+            pushFinding(findings, {
                 severity: 'error',
                 message: `<${tag}> has empty aria-labelledby (WCAG 4.1.2)`,
                 suggestion:
@@ -366,7 +378,7 @@ function checkLabel(
         } else {
             const missing = tokens.filter((token) => !allIds.has(token));
             if (missing.length > 0) {
-                findings.push({
+                pushFinding(findings, {
                     severity: 'error',
                     message: `<${tag}> aria-labelledby references missing id(s): ${missing.join(', ')} (WCAG 1.3.1)`,
                     suggestion:
@@ -391,7 +403,7 @@ function checkLabel(
         parent = parent.parentNode;
     }
 
-    findings.push({
+    pushFinding(findings, {
         severity: 'error',
         message: `<${tag}> has no associated label (WCAG 1.3.1)`,
         suggestion:
@@ -452,7 +464,7 @@ function checkLabelsStructure(
         if (el.rawTagName?.toLowerCase() === 'label') {
             const forId = el.getAttribute?.('for');
             if (forId && !allIds.has(forId)) {
-                findings.push({
+                pushFinding(findings, {
                     severity: 'warning',
                     message: `<label for="${forId}"> has no matching id in this file (WCAG 1.3.1)`,
                     suggestion: `Add id="${forId}" to the related form control, or fix the for attribute.`,
@@ -463,7 +475,7 @@ function checkLabelsStructure(
 
             const controlCount = countLabelableDescendants(el);
             if (controlCount > 1) {
-                findings.push({
+                pushFinding(findings, {
                     severity: 'warning',
                     message: `<label> contains ${controlCount} form controls — screen readers only associate the first (WCAG 1.3.1)`,
                     suggestion:
@@ -519,7 +531,7 @@ function checkNestedInteractive(root: any, findings: JayHtmlValidationFinding[])
         const tag: string | undefined = el.rawTagName?.toLowerCase();
 
         if (tag && ancestorTag && isFocusable(el)) {
-            findings.push({
+            pushFinding(findings, {
                 severity: 'error',
                 message: `Interactive <${tag}> is nested inside <${ancestorTag}> (WCAG 4.1.2)`,
                 suggestion:
@@ -560,7 +572,7 @@ function checkDuplicateAdjacentText(root: any, findings: JayHtmlValidationFindin
                 next.getAttribute?.('aria-hidden') !== 'true'
             ) {
                 const tag = next.rawTagName?.toLowerCase() || 'element';
-                findings.push({
+                pushFinding(findings, {
                     severity: 'warning',
                     message: `Adjacent <${current.rawTagName?.toLowerCase()}> and <${tag}> have identical text "${currentText.slice(0, 40)}${currentText.length > 40 ? '...' : ''}" — screen readers will announce it twice`,
                     suggestion:
