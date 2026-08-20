@@ -131,7 +131,12 @@ export async function resolveJayContract(
 
     // Parse the resolved id as well (it shouldn't have query params, but be safe)
     const resolvedParsed = parseJayModuleSpecifier(resolved.id);
-    const originId = resolvedParsed.basePath;
+    let originId = resolvedParsed.basePath;
+
+    // Strip .ts if the resolved path already has it (e.g., from a cached resolution)
+    if (originId.endsWith(TS_EXTENSION)) {
+        originId = originId.slice(0, -TS_EXTENSION.length);
+    }
 
     // Build the id: basePath + query params (if any) + .ts
     // This maintains backwards compatibility - .ts at the end

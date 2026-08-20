@@ -64,15 +64,24 @@ Package: `@jay-framework/a11y-validator` (monorepo, dev dependency)
 | Rule                           | Severity | Element                             | WCAG  | What it checks                                                                        |
 | ------------------------------ | -------- | ----------------------------------- | ----- | ------------------------------------------------------------------------------------- |
 | Image missing alt              | error    | `<img>`                             | 1.1.1 | No `alt` attribute                                                                    |
-| Form input without label       | error    | `<input>`, `<select>`, `<textarea>` | 1.3.1 | No `<label for>`, no wrapping `<label>`, no `aria-label`/`aria-labelledby`            |
+| Form input without label       | error    | `<input>`, `<select>`, `<textarea>` | 1.3.1 | No `<label for>`, no wrapping `<label>`, no usable `aria-label`/`aria-labelledby`     |
+| Empty `aria-label`             | error    | labelable controls                  | 4.1.2 | `aria-label` present but empty/whitespace (DL#166)                                    |
+| Broken `aria-labelledby`       | error    | labelable controls                  | 1.3.1 | Empty `aria-labelledby` or id token(s) missing in file (DL#166)                       |
+| Duplicate `id`                 | error    | any                                 | 4.1.1 | Same `id` value used more than once in the file (DL#166)                              |
 | Button without accessible name | error    | `<button>`                          | 4.1.2 | No text, no `aria-label`, no `aria-labelledby`, no child `<img alt>`                  |
 | Media autoplay without muted   | error    | `<video>`, `<audio>`                | 1.4.2 | `autoplay` attribute present without `muted`                                          |
 | Invalid ARIA role              | error    | any                                 | 4.1.2 | `role` attribute value not in WAI-ARIA role list                                      |
 | Viewport disables zoom         | error    | `<meta>`                            | 1.4.4 | `user-scalable=no` or `maximum-scale` < 2 in viewport meta (via `ctx.head`)           |
+| Nested interactive elements    | error    | `<a href>`, `<button>`, `[role]`    | 4.1.2 | A focusable element inside a link/button container (DL#167)                           |
 | Positive tabindex              | warning  | interactive + `[role]`              | 2.4.3 | `tabindex` > 0 disrupts natural tab order                                             |
 | Focusable without role         | warning  | non-interactive                     | 4.1.2 | `<div tabindex="0">` or similar without `role` — screen readers don't know what it is |
+| Multiple controls in `<label>` | warning  | `<label>`                           | 1.3.1 | More than one labelable control nested in one label (DL#166)                          |
+| Orphan `label[for]`            | warning  | `<label>`                           | 1.3.1 | `for` points to an `id` that does not exist in the file (DL#166)                      |
+| Adjacent duplicate text        | warning  | any                                 | —     | Adjacent siblings with identical visible text (screen readers announce twice)         |
 
-The form label rule skips `type="hidden"`, `type="submit"`, `type="button"`, and `type="reset"` inputs.
+The form label rule skips `type="hidden"`, `type="submit"`, `type="button"`, and `type="reset"` inputs. Labelable inputs include `checkbox` and `radio` (DL#166). Empty `aria-label` / unresolved `aria-labelledby` do not count as an accessible name.
+
+The nested interactive rule (DL#167) treats `<a href>`, `<button>`, `[role="button"]`, and `[role="link"]` as containers, and reports one error per focusable descendant — `<a href>`, `<button>`, non-hidden `<input>`, `<select>`, `<textarea>`, `<summary>`, `tabindex >= 0`, or a widget role.
 
 ## Rule Overlap
 

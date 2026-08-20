@@ -149,7 +149,9 @@ export async function loadProductionPageParts(
                 contractInfo: ci,
                 headlessProps: headlessImport.headlessProps,
             });
-            if (!headlessImport.structural) {
+            const hasClientComp =
+                !!headlessCompDef?.fastRender || !!headlessCompDef?.hasInteractive;
+            if (!headlessImport.structural && hasClientComp) {
                 keyedPartModules.push({
                     key: headlessImport.key,
                     modulePath: clientModulePath,

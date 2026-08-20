@@ -1,4 +1,4 @@
-# Design Log #163 — Dev-Only Plugin Routes
+# Design Log #168 — Dev-Only Plugin Routes
 
 ## Background
 
@@ -162,4 +162,4 @@ if (route.devOnly) return res.status(404).end();
 
 ## Consumer notes
 
-AIditor-specific behavior (Pages dropdown filter, Project settings iframe host) lives in the AIditor contributor guide (`aiditor-add-menu.md`). **Plugin author** conventions for materializing settings discovery files and pairing them with `devOnly` routes are in Design Log **#165** and agent-kit `plugin/aiditor-settings-guide.md`.
+AIditor-specific behavior (Pages dropdown filter, Project settings iframe host) lives in the AIditor contributor guide (`aiditor-add-menu.md`). **Plugin author** conventions for materializing settings discovery files and pairing them with `devOnly` routes are in Design Log **#170** and agent-kit `plugin/aiditor-settings-guide.md`.

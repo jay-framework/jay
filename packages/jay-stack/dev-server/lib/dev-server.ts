@@ -576,6 +576,7 @@ async function handleCachedRequest(
         fastViewState,
         clientTrackByMap || {},
     );
+    injectJayBindings(fullViewState, pageParams, url);
     await sendResponse(
         vite,
         res,
@@ -859,6 +860,7 @@ async function handleClientOnlyRequest(
         renderedFast.rendered,
         serverTrackByMap || {},
     );
+    injectJayBindings(viewState, pageParams, url);
     const fastCF = renderedFast.carryForward;
 
     // Generate client-only HTML (element target, no SSR/hydration)
@@ -1519,6 +1521,14 @@ function setupFreezeEndpoint(vite: ViteDevServer, freezeStore: FreezeStore): voi
  * Strips dynamic segments ([param], [[param]]) to get the static prefix.
  * Example: src/pages/products/kitan/[[category]]/page.jay-html → /products/kitan
  */
+function injectJayBindings(viewState: object, params: Record<string, string>, url: string): void {
+    const urlPath = url.split('?')[0];
+    (viewState as any).__jay = {
+        params,
+        url: { path: urlPath.startsWith('/') ? urlPath : '/' + urlPath },
+    };
+}
+
 function getRouteDir(route: JayRoute): string {
     return route.rawRoute.replace(/^\//, '') || 'index';
 }

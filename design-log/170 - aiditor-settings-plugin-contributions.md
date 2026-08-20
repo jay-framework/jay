@@ -1,16 +1,16 @@
-# Design Log #165 — AIditor Settings Plugin Contributions
+# Design Log #170 — AIditor Settings Plugin Contributions
 
 ## Background
 
 AIditor **Project settings** tabs are discovered from materialized YAML under `agent-kit/aiditor/settings/*.yaml` after `jay-stack agent-kit`. Plugins opt in by shipping a template in the npm package and copying (or generating) project-local discovery files from the `agentkit` handler.
 
-Related: Design Log **#130** (plugin routes), **#163** (`devOnly` on routes), **#154** (shipping `agent-kit/` in package `files`), plugin-validator `validateAiditorSettings`.
+Related: Design Log **#130** (plugin routes), **#168** (`devOnly` on routes), **#154** (shipping `agent-kit/` in package `files`), plugin-validator `validateAiditorSettings`.
 
 A production bug in `design-system-validator` showed that **fixed parent-directory hops** from `import.meta.url` fail when handler code is bundled to `dist/index.js` — the template was never materialized and the tab never appeared.
 
 ## Problem
 
-1. No **canonical agent-kit guide** for plugin authors — settings steps were scattered in aiditor-add-menu.md and DL#163 consumer notes.
+1. No **canonical agent-kit guide** for plugin authors — settings steps were scattered in aiditor-add-menu.md and DL#168 consumer notes.
 2. **Inconsistent path resolution** — `wix-media` used one `..`; `design-system-validator` used two `..` (broken when bundled).
 3. AI agents and humans need a **checklist** (template path, `files`, agentkit, route + `devOnly`, resolver pattern) to ship tabs consistently.
 
@@ -26,7 +26,7 @@ A: **`agent-kit/aiditor/settings.template.yaml`** in the plugin package (validat
 A: **`<projectRoot>/agent-kit/aiditor/settings/<plugin>.yaml`** — project-owned discovery, not inside `node_modules`.
 
 **Q: Must the route be `devOnly`?**  
-A: **Yes** for settings UIs — `plugin-validator` warns otherwise (Design Log #163). Dev server still serves the URL; AIditor loads by explicit path.
+A: **Yes** for settings UIs — `plugin-validator` warns otherwise (Design Log #168). Dev server still serves the URL; AIditor loads by explicit path.
 
 **Q: Shared npm utility for `resolvePackagedAgentKitPath`?**  
 A: **Deferred.** Copy the ~15-line walk-up helper into each plugin until a third consumer needs changes (design-system-validator, wix-media today). No new package.
@@ -110,6 +110,6 @@ path.join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'agent-kit', ...)
 
 - [ ] `aiditor-settings-guide.md` in agent-kit-template with checklist and resolver
 - [ ] Plugin INSTRUCTIONS workflow mentions settings surface
-- [ ] DL#163 consumer notes reference DL#165
+- [ ] DL#168 consumer notes reference DL#170
 - [ ] `validate-plugin` suggestions reference `aiditor-settings-guide.md`
 - [ ] design-system-validator materializes settings after `yarn agent-kit` in a consumer project

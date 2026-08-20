@@ -112,6 +112,7 @@ function mergeHydrateFragments(fragments: RenderFragment[], combinator: string):
 
 function renderHydrateNode(node: Node, context: HydrateContext): RenderFragment {
     if (node.nodeType === NodeType.ELEMENT_NODE) {
+        if ((node as HTMLElement).tagName === 'STYLE') return RenderFragment.empty();
         return renderHydrateElement(node as HTMLElement, context);
     }
     // Text nodes are handled by their parent element

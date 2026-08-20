@@ -1,4 +1,4 @@
-# Design Log #164 — Plugin ↔ Framework Version Compatibility (CLI)
+# Design Log #169 — Plugin ↔ Framework Version Compatibility (CLI)
 
 ## Background
 

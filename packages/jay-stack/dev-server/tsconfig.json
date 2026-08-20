@@ -7,4 +7,5 @@
       "@jay-framework/reactive": ["../reactive/lib"],
     },
   },
+  "exclude": ["test/**/build"],
 }
