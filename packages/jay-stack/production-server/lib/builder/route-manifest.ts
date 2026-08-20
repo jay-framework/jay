@@ -33,6 +33,7 @@ export function buildRouteEntry(route: JayRoute, serverModulePath: string): Rout
         serverModule: serverModulePath,
         componentExport: route.componentExport,
         instances: [],
+        ...(route.devOnly && { devOnly: true }),
     };
 }
 

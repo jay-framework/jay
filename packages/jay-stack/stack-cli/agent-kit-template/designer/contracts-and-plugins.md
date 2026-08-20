@@ -279,3 +279,23 @@ Schemas use a compact type notation:
 | `{tag: sel, type: interactive, elementType: HTMLSelectElement}`  | `<select ref="sel">...</select>`              |
 | `{tag: items, type: sub-contract, repeated: true, trackBy: id}`  | `<div forEach="items" trackBy="id">...</div>` |
 | `{tag: detail, type: sub-contract}`                              | `{detail.fieldName}`                          |
+
+### Empty list / empty state
+
+For repeated lists, add a **boolean variant** (e.g. `hasItems`, `hasCategories`) for empty-state UI. Do **not** use JavaScript property access in jay-html — `if="items.length===0"` fails at runtime because jay-html looks for a tag named `items.length`, not the array's length.
+
+```yaml
+# ✅ In the contract
+- tag: hasCategories
+  type: variant
+  dataType: boolean
+  description: Whether there are any categories
+```
+
+```html
+<!-- ✅ In jay-html -->
+<p if="!hasCategories">No categories yet.</p>
+<div if="hasCategories" forEach="categories" trackBy="_id">...</div>
+```
+
+Alternatively, expose a **number** data tag (`itemCount`) and use numeric comparison: `if="itemCount===0"`. See [jay-html-template-syntax.md](jay-html-template-syntax.md#expression-limits-important) and [contracts/examples/category-list.md](../contracts/examples/category-list.md).

@@ -135,3 +135,5 @@ The parent constructs the frozen page URL:
 route + '?_jay_freeze=' + id                        // full page
 route + '?_jay_freeze=' + id + '&format=fragment'   // shadow DOM fragment
 ```
+
+See also **Dev-only routes** in `plugin-routes.md` — settings pages loaded in AIditor Project settings use `_jay_embed` but are not blocked from direct URL access.

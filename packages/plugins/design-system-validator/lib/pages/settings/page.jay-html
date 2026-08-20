@@ -1,0 +1,415 @@
+<html>
+  <head>
+    <script type="application/jay-data">
+data:
+    statusMessage: string
+    statusTone: string
+    showStatusMessage: boolean
+    catalogLoading: boolean
+    showNoCatalog: boolean
+    addMenuListRows:
+      - rowKey: string
+        itemId: string
+        title: string
+        subCategory: string
+        rowClass: string
+    showAddMenuEditor: boolean
+    editorTitle: string
+    editorSubCategory: string
+    editorTokenValue: string
+    editorFontSize: string
+    editorFontWeight: string
+    editorFontFamily: string
+    showTypographyFields: boolean
+    showTokenValueField: boolean
+    editorReadOnly: boolean
+    editorReadOnlyReason: string
+    unsavedChangeCount: number
+    saveButtonLabel: string
+    saveDisabled: boolean
+    discardDisabled: boolean
+    showAnalysisSection: boolean
+    showReport: boolean
+    reportSummary: string
+    reportBody: string
+    </script>
+    <style>
+      .ds-settings {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        max-height: 100vh;
+        margin: 0;
+        padding: 16px 20px;
+        box-sizing: border-box;
+        font-family: system-ui, sans-serif;
+        color: #162d3d;
+        background: #fff;
+      }
+      .ds-settings h1 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+      }
+      .ds-settings h2 {
+        margin: 0 0 8px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      .ds-settings .header {
+        flex-shrink: 0;
+      }
+      .ds-settings .header p {
+        margin: 4px 0 0;
+        font-size: 12px;
+        color: #5a6f82;
+        line-height: 1.45;
+      }
+      .ds-settings code {
+        font-size: 11px;
+        background: #f4f7f9;
+        padding: 1px 4px;
+        border-radius: 4px;
+      }
+      .ds-settings .toolbar {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 12px;
+        align-items: center;
+      }
+      .ds-settings button {
+        padding: 7px 12px;
+        border: 1px solid #c5d0d8;
+        border-radius: 6px;
+        background: #fff;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .ds-settings button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      .ds-settings button.primary {
+        background: #116dff;
+        border-color: #116dff;
+        color: #fff;
+      }
+      .ds-settings .operation-status {
+        flex-shrink: 0;
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid #d8e0e6;
+        font-size: 13px;
+        white-space: pre-wrap;
+      }
+      .ds-settings .operation-status.success {
+        background: #edf8f0;
+        border-color: #b9dfc4;
+      }
+      .ds-settings .operation-status.warning {
+        background: #fff8e8;
+        border-color: #efd9a2;
+      }
+      .ds-settings .operation-status.error {
+        background: #fff1f0;
+        border-color: #f5b5b0;
+      }
+      .ds-settings .operation-status.info {
+        background: #f4f7f9;
+        border-color: #d8e0e6;
+      }
+      .ds-settings .workspace {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+        gap: 16px;
+        margin-top: 14px;
+      }
+      .ds-settings .catalog-panel,
+      .ds-settings .editor-panel {
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #d8e0e6;
+        border-radius: 10px;
+        background: #fafbfc;
+      }
+      .ds-settings .panel-head {
+        flex-shrink: 0;
+        padding: 10px 12px;
+        border-bottom: 1px solid #e8edf1;
+        font-size: 13px;
+        font-weight: 600;
+        color: #3d4f5f;
+      }
+      .ds-settings .catalog-list {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        padding: 6px;
+      }
+      .ds-settings .catalog-item {
+        display: block;
+        width: 100%;
+        text-align: left;
+        padding: 8px 10px;
+        margin: 0 0 4px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        background: transparent;
+        cursor: pointer;
+      }
+      .ds-settings .catalog-item:hover {
+        background: #eef3f8;
+      }
+      .ds-settings .catalog-item--selected {
+        background: #e8f1ff;
+        border-color: #b8d4ff;
+      }
+      .ds-settings .catalog-item-title {
+        display: block;
+        font-size: 13px;
+        font-weight: 500;
+        color: #162d3d;
+      }
+      .ds-settings .catalog-item-meta {
+        display: block;
+        margin-top: 2px;
+        font-size: 11px;
+        color: #6b7f92;
+      }
+      .ds-settings .editor-body {
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .ds-settings .field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .ds-settings .field label {
+        font-size: 12px;
+        font-weight: 500;
+        color: #3d4f5f;
+      }
+      .ds-settings .field input {
+        padding: 7px 9px;
+        border: 1px solid #c5d0d8;
+        border-radius: 6px;
+        font-size: 13px;
+        font-family: inherit;
+      }
+      .ds-settings .field input:disabled {
+        background: #f0f3f6;
+        color: #6b7f92;
+      }
+      .ds-settings .read-only-note {
+        padding: 8px 10px;
+        border-radius: 6px;
+        background: #fff8e8;
+        border: 1px solid #efd9a2;
+        font-size: 12px;
+        color: #6b5a2e;
+        line-height: 1.45;
+      }
+      .ds-settings .preview-panel {
+        flex-shrink: 0;
+        border-top: 1px solid #e8edf1;
+        padding: 12px;
+        background: #fff;
+      }
+      .ds-settings .preview-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: #3d4f5f;
+        margin-bottom: 8px;
+      }
+      .ds-settings .preview-host {
+        min-height: 72px;
+        padding: 12px;
+        border: 1px dashed #c5d0d8;
+        border-radius: 8px;
+        background: #f8fafc;
+      }
+      .ds-settings .empty-card {
+        padding: 16px;
+        font-size: 13px;
+        color: #5a6f82;
+        line-height: 1.5;
+      }
+      .ds-settings .analysis-section {
+        flex-shrink: 0;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #e8edf1;
+      }
+      .ds-settings .report-panel {
+        margin-top: 10px;
+        padding: 10px 12px;
+        border: 1px solid #d8e0e6;
+        border-radius: 8px;
+        background: #fafbfc;
+        font-size: 11px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        white-space: pre-wrap;
+        max-height: 200px;
+        overflow: auto;
+      }
+      .ds-settings .report-summary {
+        font-size: 12px;
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: #3d4f5f;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="ds-settings">
+      <div class="header">
+        <h1>Design themes</h1>
+        <p>
+          Edit add-menu items below. Changes preview live — click <strong>Save and sync</strong> to
+          write <code>agent-kit/aiditor/add-menu/design-system.generated.yaml</code> and refresh the
+          Add Menu. Regenerating from <code>DESIGN.md</code> overwrites manual edits.
+        </p>
+        <div class="toolbar">
+          <button
+            type="button"
+            class="primary"
+            ref="saveCatalogBtn"
+            disabled="saveDisabled"
+          >
+            {saveButtonLabel}
+          </button>
+          <button type="button" ref="discardCatalogBtn" disabled="discardDisabled">
+            Discard changes
+          </button>
+          <button type="button" ref="regenerateCatalogBtn">Regenerate from DESIGN.md</button>
+          <button type="button" ref="toggleAnalysisBtn">Validation tools</button>
+        </div>
+      </div>
+
+      <div class="operation-status {statusTone}" if="showStatusMessage">{statusMessage}</div>
+
+      <div class="workspace" if="!catalogLoading">
+        <div class="catalog-panel">
+          <div class="panel-head">Add Menu items</div>
+          <div class="empty-card" if="showNoCatalog">
+            No add-menu catalog found. Run <strong>Regenerate from DESIGN.md</strong> or
+            <code>yarn agent-kit</code> after adding <code>DESIGN.md</code>.
+          </div>
+          <div class="catalog-list" ref="catalogList" if="!showNoCatalog">
+            <button
+              type="button"
+              class="{rowClass}"
+              forEach="addMenuListRows"
+              trackBy="rowKey"
+              data-catalog-item="{itemId}"
+            >
+              <span class="catalog-item-title">{title}</span>
+              <span class="catalog-item-meta">{subCategory}</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="editor-panel">
+          <div class="panel-head">Editor</div>
+          <div class="empty-card" if="!showAddMenuEditor">
+            Select an add-menu item to edit and preview.
+          </div>
+          <div class="editor-body" if="showAddMenuEditor">
+            <div class="read-only-note" if="editorReadOnly">{editorReadOnlyReason}</div>
+
+            <div class="field">
+              <label for="editor-title">Title</label>
+              <input
+                id="editor-title"
+                type="text"
+                ref="editorTitleInput"
+                value="{editorTitle}"
+                disabled="editorReadOnly"
+              />
+            </div>
+
+            <div class="field">
+              <label>Category</label>
+              <input type="text" value="{editorSubCategory}" disabled />
+            </div>
+
+            <div class="field" if="showTokenValueField">
+              <label for="editor-token-value">Value</label>
+              <input
+                id="editor-token-value"
+                type="text"
+                ref="editorTokenValueInput"
+                value="{editorTokenValue}"
+                disabled="editorReadOnly"
+              />
+            </div>
+
+            <div class="field" if="showTypographyFields">
+              <label for="editor-font-family">Font family</label>
+              <input
+                id="editor-font-family"
+                type="text"
+                ref="editorFontFamilyInput"
+                value="{editorFontFamily}"
+                disabled="editorReadOnly"
+              />
+            </div>
+            <div class="field" if="showTypographyFields">
+              <label for="editor-font-size">Font size</label>
+              <input
+                id="editor-font-size"
+                type="text"
+                ref="editorFontSizeInput"
+                value="{editorFontSize}"
+                disabled="editorReadOnly"
+              />
+            </div>
+            <div class="field" if="showTypographyFields">
+              <label for="editor-font-weight">Font weight</label>
+              <input
+                id="editor-font-weight"
+                type="text"
+                ref="editorFontWeightInput"
+                value="{editorFontWeight}"
+                disabled="editorReadOnly"
+              />
+            </div>
+
+            <div class="preview-panel">
+              <div class="preview-label">Preview</div>
+              <div class="preview-host" ref="previewHost"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-card" if="catalogLoading">Loading add-menu catalog…</div>
+
+      <div class="analysis-section" if="showAnalysisSection">
+        <h2>Validation</h2>
+        <p style="font-size: 12px; color: #5a6f82; margin: 0 0 8px;">
+          Runs design-tokens, design-components, design-structure, and design-contrast validators.
+        </p>
+        <div class="toolbar" style="margin-top: 0;">
+          <button type="button" class="primary" ref="runAnalysisBtn">Run analysis</button>
+          <button type="button" ref="sendToAgentBtn">Send to agent</button>
+        </div>
+        <div if="showReport">
+          <div class="report-summary">{reportSummary}</div>
+          <div class="report-panel">{reportBody}</div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

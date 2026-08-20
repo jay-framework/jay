@@ -6,6 +6,12 @@ export {
     validateAddMenuItem,
     ADD_MENU_VALIDATION_SUGGESTIONS,
 } from './add-menu-catalog-lint';
+export {
+    validateAiditorSettingsFile,
+    type AiditorSettingsFile,
+    type AiditorSettingsRequire,
+    type AiditorSettingsValidationError,
+} from './aiditor-settings-lint';
 export type {
     AddMenuBrowseSize,
     AddMenuCatalogFile,

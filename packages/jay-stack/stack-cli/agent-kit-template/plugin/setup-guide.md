@@ -254,10 +254,15 @@ export async function generateMyAgentKit(
 | Generate data from live services (product catalogs, CMS schemas)     | `agentkit` | Needs services initialized; refreshed on each agent-kit run |
 | Validate credentials / API keys                                      | `setup`    | Part of initial project configuration                       |
 | Write AIditor add-menu from project-specific data (DESIGN.md tokens) | `agentkit` | Data comes from project files at agent-kit time             |
+| Materialize AIditor Project settings tab discovery                   | `agentkit` | Copy/generate `agent-kit/aiditor/settings/<plugin>.yaml`    |
 
 ## AIditor Add-Menu Items
 
 See [add-menu-guide.md](add-menu-guide.md) for the complete add-menu item schema, interaction modes, browse sizes, presentation formats, and TypeScript types.
+
+## AIditor Project Settings
+
+See [aiditor-settings-guide.md](aiditor-settings-guide.md) for the full checklist: `settings.template.yaml` in the package, walk-up path resolution from bundled `dist/`, `devOnly` route in `plugin.yaml`, and settings page responsibilities (actions, postMessage, no secrets in forms).
 
 ## Exporting Handlers
 
