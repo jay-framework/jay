@@ -104,9 +104,7 @@ function formatReportBody(result: DesignAnalysisResult): string {
 }
 
 function listRowClass(itemId: string, selectedId: string | null): string {
-    return itemId === selectedId
-        ? 'catalog-item catalog-item--selected'
-        : 'catalog-item';
+    return itemId === selectedId ? 'catalog-item catalog-item--selected' : 'catalog-item';
 }
 
 async function renderFast() {

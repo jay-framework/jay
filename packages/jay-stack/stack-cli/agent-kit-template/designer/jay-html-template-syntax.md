@@ -246,12 +246,12 @@ See [contracts/examples/category-list.md](../contracts/examples/category-list.md
 
 Invalid expressions produce a visible `[INVALID: expression]` marker in the page instead of crashing. The validation message includes the parse error and a pointer to this guide.
 
-| Error                          | Cause                                                                | Fix                                          |
-| ------------------------------ | -------------------------------------------------------------------- | -------------------------------------------- |
+| Error                          | Cause                                                                | Fix                                                      |
+| ------------------------------ | -------------------------------------------------------------------- | -------------------------------------------------------- |
 | `Expected "." or identifier`   | Curly braces in non-expression context (e.g., CSS in body `<style>`) | Move `<style>` to `<head>` or use body styles per DL#164 |
-| `unexpected operator "^="`     | Using `^=` with an older framework version                           | Update framework or use `===` instead        |
-| `Unknown enum value "X"`       | Comparing against a value not in the enum                            | Check the contract for valid enum values     |
-| `the data field [X] not found` | Referencing a field not in the contract                              | Check the contract tags for available fields |
+| `unexpected operator "^="`     | Using `^=` with an older framework version                           | Update framework or use `===` instead                    |
+| `Unknown enum value "X"`       | Comparing against a value not in the enum                            | Check the contract for valid enum values                 |
+| `the data field [X] not found` | Referencing a field not in the contract                              | Check the contract tags for available fields             |
 
 ## Loops (forEach / trackBy)
 

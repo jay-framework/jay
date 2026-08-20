@@ -20,10 +20,6 @@ export function readAddMenuCatalog(projectRoot: string): AddMenuItem[] {
 export function writeAddMenuCatalog(projectRoot: string, items: AddMenuItem[]): string {
     const outputPath = path.join(projectRoot, ADD_MENU_GENERATED_REL);
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-    fs.writeFileSync(
-        outputPath,
-        dumpYaml({ items }, { lineWidth: 120, noRefs: true }),
-        'utf-8',
-    );
+    fs.writeFileSync(outputPath, dumpYaml({ items }, { lineWidth: 120, noRefs: true }), 'utf-8');
     return ADD_MENU_GENERATED_REL;
 }

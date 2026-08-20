@@ -58,12 +58,12 @@ Documented in agent-kit: `plugin/aiditor-settings-guide.md`.
 
 Types in `@jay-framework/plugin-validator`: `AiditorSettingsFile`, `validateAiditorSettingsFile`.
 
-| Field | Required | Notes |
-| ----- | -------- | ----- |
-| `label` | yes | Tab title |
-| `route` | yes | Must match `plugin.yaml` `routes[].path` |
-| `pluginName` | no | Defaults from output filename |
-| `requires` | no | `{ plugin, status: "configured" }[]` |
+| Field        | Required | Notes                                    |
+| ------------ | -------- | ---------------------------------------- |
+| `label`      | yes      | Tab title                                |
+| `route`      | yes      | Must match `plugin.yaml` `routes[].path` |
+| `pluginName` | no       | Defaults from output filename            |
+| `requires`   | no       | `{ plugin, status: "configured" }[]`     |
 
 ### Settings page boundaries
 

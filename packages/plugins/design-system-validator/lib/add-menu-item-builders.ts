@@ -182,7 +182,9 @@ export function buildTypographyItem(
 }
 
 export function buildColorItems(tokens: DesignTokens, category: string): AddMenuItem[] {
-    return Object.entries(tokens.colors).map(([name, value]) => buildColorItem(name, value, category));
+    return Object.entries(tokens.colors).map(([name, value]) =>
+        buildColorItem(name, value, category),
+    );
 }
 
 export function buildTypographyItems(tokens: DesignTokens, category: string): AddMenuItem[] {

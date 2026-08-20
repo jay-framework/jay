@@ -30,7 +30,11 @@ import { parseDesignMd } from './parse-design-md.js';
 
 export { ADD_MENU_GENERATED_REL } from './add-menu-catalog-io.js';
 
-function categoryName(designMdPath: string, projectRoot: string, tokens: { name?: string }): string {
+function categoryName(
+    designMdPath: string,
+    projectRoot: string,
+    tokens: { name?: string },
+): string {
     if (tokens.name) return tokens.name;
     const rel = path.relative(projectRoot, designMdPath);
     if (rel === 'DESIGN.md') return 'Design System';

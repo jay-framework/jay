@@ -47,9 +47,7 @@ describe('patch-add-menu-item', () => {
             fontFamily: 'Georgia',
         });
 
-        expect(patched.prompt).toEqual(
-            expect.stringMatching(/Georgia.*1\.25rem.*weight 600/),
-        );
+        expect(patched.prompt).toEqual(expect.stringMatching(/Georgia.*1\.25rem.*weight 600/));
     });
 
     it('marks breakpoint items as read-only', () => {
@@ -62,8 +60,6 @@ describe('patch-add-menu-item', () => {
         const fields = extractAddMenuItemEditorFields(breakpointItem);
 
         expect(fields.editable).toBe(false);
-        expect(fields.readOnlyReason).toEqual(
-            expect.stringMatching(/read-only/i),
-        );
+        expect(fields.readOnlyReason).toEqual(expect.stringMatching(/read-only/i));
     });
 });

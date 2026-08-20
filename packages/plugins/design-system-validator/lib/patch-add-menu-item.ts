@@ -24,7 +24,9 @@ export type ParsedAddMenuItemId = {
 };
 
 export function parseAddMenuItemId(id: string): ParsedAddMenuItemId {
-    const match = id.match(/^design-system:(color|spacing|rounded|typography|breakpoint|animation|component)-(.+)$/);
+    const match = id.match(
+        /^design-system:(color|spacing|rounded|typography|breakpoint|animation|component)-(.+)$/,
+    );
     if (!match) {
         return { kind: 'unknown', tokenName: id };
     }
@@ -32,7 +34,10 @@ export function parseAddMenuItemId(id: string): ParsedAddMenuItemId {
 }
 
 function extractQuotedValue(prompt: string, label: string): string | undefined {
-    const pattern = new RegExp(`${label}\\s+"([^"]+)"\\s+with value\\s+(.+?)\\s+from DESIGN\\.md`, 'i');
+    const pattern = new RegExp(
+        `${label}\\s+"([^"]+)"\\s+with value\\s+(.+?)\\s+from DESIGN\\.md`,
+        'i',
+    );
     const match = prompt.match(pattern);
     if (!match) return undefined;
     return match[2]!.trim().replace(/\.$/, '');
@@ -40,7 +45,12 @@ function extractQuotedValue(prompt: string, label: string): string | undefined {
 
 function extractTypographyFromPrompt(prompt: string): TypographyToken {
     const nameMatch = prompt.match(/typography preset "([^"]+)"/i);
-    const afterColon = prompt.split(':').slice(1).join(':').replace(/\.\s*$/, '').trim();
+    const afterColon = prompt
+        .split(':')
+        .slice(1)
+        .join(':')
+        .replace(/\.\s*$/, '')
+        .trim();
     const edit: TypographyToken = {};
 
     const fontFamilyMatch = afterColon.match(/([^,]+),\s*[\d.]+(?:px|rem|em)/);
@@ -130,8 +140,7 @@ export function extractAddMenuItemEditorFields(item: AddMenuItem): AddMenuItemEd
                 editable: true,
                 fontFamily: typography.fontFamily ?? '',
                 fontSize: typography.fontSize ?? '',
-                fontWeight:
-                    typography.fontWeight != null ? String(typography.fontWeight) : '',
+                fontWeight: typography.fontWeight != null ? String(typography.fontWeight) : '',
             };
         }
         case 'breakpoint':
@@ -177,7 +186,8 @@ export function patchAddMenuItem(item: AddMenuItem, patch: AddMenuItemEditorPatc
             return { ...rebuilt, title };
         }
         case 'spacing': {
-            const value = patch.tokenValue ?? extractQuotedValue(item.prompt, 'spacing token') ?? '';
+            const value =
+                patch.tokenValue ?? extractQuotedValue(item.prompt, 'spacing token') ?? '';
             const rebuilt = buildSpacingItem(tokenName, value, category);
             return { ...rebuilt, title };
         }

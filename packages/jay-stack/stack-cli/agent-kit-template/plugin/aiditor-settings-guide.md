@@ -12,11 +12,11 @@ AIditor **Project settings** shows one tab per **installed** plugin that has a m
 
 This is separate from:
 
-| Surface | Purpose | Plugin output |
-| ------- | ------- | ------------- |
-| **Add Menu** | Attach agent context to a change request | `agent-kit/aiditor/add-menu/*.yaml` |
+| Surface              | Purpose                                          | Plugin output                                        |
+| -------------------- | ------------------------------------------------ | ---------------------------------------------------- |
+| **Add Menu**         | Attach agent context to a change request         | `agent-kit/aiditor/add-menu/*.yaml`                  |
 | **Project settings** | Configure the project; run backend ops from a UI | `agent-kit/aiditor/settings/*.yaml` + dev-only route |
-| **Headless on page** | Site runtime | contracts + components |
+| **Headless on page** | Site runtime                                     | contracts + components                               |
 
 ---
 
@@ -108,10 +108,15 @@ See [plugin-routes.md](plugin-routes.md) for route authoring, project override p
 **Do not** write settings YAML in the `setup` handler. Settings discovery is regenerated on **`jay-stack agent-kit`**, same as Add Menu catalogs.
 
 ```typescript
-import type { PluginAgentKitContext, PluginAgentKitResult } from '@jay-framework/stack-server-runtime';
+import type {
+  PluginAgentKitContext,
+  PluginAgentKitResult,
+} from '@jay-framework/stack-server-runtime';
 import { materializeMyPluginAiditorSettings } from './aiditor/write-settings-contribution.js';
 
-export async function generateMyAgentKit(ctx: PluginAgentKitContext): Promise<PluginAgentKitResult> {
+export async function generateMyAgentKit(
+  ctx: PluginAgentKitContext,
+): Promise<PluginAgentKitResult> {
   const created: string[] = [];
 
   const settingsPath = materializeMyPluginAiditorSettings(ctx.projectRoot, ctx.force);
@@ -119,16 +124,19 @@ export async function generateMyAgentKit(ctx: PluginAgentKitContext): Promise<Pl
 
   // ... add-menu, references, etc.
 
-  return { agentKitCreated: created, message: created.length ? `Wrote ${created.join(', ')}` : 'Up to date' };
+  return {
+    agentKitCreated: created,
+    message: created.length ? `Wrote ${created.join(', ')}` : 'Up to date',
+  };
 }
 ```
 
 ### Static copy vs generated YAML
 
-| Case | Pattern |
-| ---- | ------- |
-| Fixed label + route | Copy `settings.template.yaml` → `settings/<plugin>.yaml` |
-| Label/route depends on live data | Build YAML object in handler; write with `yaml.stringify` |
+| Case                              | Pattern                                                                                                |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Fixed label + route               | Copy `settings.template.yaml` → `settings/<plugin>.yaml`                                               |
+| Label/route depends on live data  | Build YAML object in handler; write with `yaml.stringify`                                              |
 | Add Menu rebuild from settings UI | Write `add-menu/<plugin>.generated.yaml` only — never overwrite hand-authored `add-menu/<plugin>.yaml` |
 
 ---
@@ -182,7 +190,10 @@ export function writeAiditorSettingsContribution(
   return AIDITOR_SETTINGS_OUTPUT_REL;
 }
 
-export function materializeMyPluginAiditorSettings(projectRoot: string, force = false): string | null {
+export function materializeMyPluginAiditorSettings(
+  projectRoot: string,
+  force = false,
+): string | null {
   const templatePath = resolvePackagedAgentKitPath(SETTINGS_TEMPLATE_REL);
   if (!templatePath) {
     return null;
@@ -193,15 +204,15 @@ export function materializeMyPluginAiditorSettings(projectRoot: string, force = 
 
 ### Common mistakes
 
-| Mistake | Symptom |
-| ------- | ------- |
-| `path.join(dirname(import.meta.url), '..', '..')` from bundled code | Walks to `node_modules/@jay-framework/` — template not found, **no settings YAML** |
+| Mistake                                                                 | Symptom                                                                                                 |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `path.join(dirname(import.meta.url), '..', '..')` from bundled code     | Walks to `node_modules/@jay-framework/` — template not found, **no settings YAML**                      |
 | **No client bundle** (`index.client.ts` + `vite build` without `--ssr`) | Settings iframe SSR works; Vite errors on hydrate — `Failed to resolve import .../dist/index.client.js` |
-| Writing YAML inside the package instead of `ctx.projectRoot` | Tab missing in consumer project |
-| Route in template ≠ `plugin.yaml` `routes[].path` | `validate-plugin` warning `settings-route-missing`; iframe 404 |
-| Missing `devOnly: true` | `settings-route-dev-only` warning; route may appear in page pickers |
-| Template present but no `agentkit` handler | `settings-missing-agentkit-handler` warning |
-| `agent-kit/` not in `package.json` `files` | Template missing after `yarn add` |
+| Writing YAML inside the package instead of `ctx.projectRoot`            | Tab missing in consumer project                                                                         |
+| Route in template ≠ `plugin.yaml` `routes[].path`                       | `validate-plugin` warning `settings-route-missing`; iframe 404                                          |
+| Missing `devOnly: true`                                                 | `settings-route-dev-only` warning; route may appear in page pickers                                     |
+| Template present but no `agentkit` handler                              | `settings-missing-agentkit-handler` warning                                                             |
+| `agent-kit/` not in `package.json` `files`                              | Template missing after `yarn add`                                                                       |
 
 **Reference implementations:**
 
