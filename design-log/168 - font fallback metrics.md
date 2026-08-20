@@ -106,7 +106,7 @@ Document in `designer/font-fallback-patterns.md` (design-system-validator agent-
 
 5. Should the validation also check DESIGN.md? If a design system file defines font families, the metric-matched fallbacks should be declared there as the source of truth. The validation checks both DESIGN.md (if present) and the page CSS.
 
-6. Should the tool be a jay-stack CLI command or a plugin action? → Plugin action via `jay-stack run design-system/font-fallback`. This keeps the tool in the design-system-validator plugin (where font concerns belong) and uses the existing plugin action infrastructure instead of extending stack-cli directly.
+6. Should the tool be a jay-stack CLI command or a plugin action? → Plugin action via `npx jay-stack-cli action design-system-validator/fontFallback`. This keeps the tool in the design-system-validator plugin (where font concerns belong) and uses the existing plugin action infrastructure instead of extending stack-cli directly.
 
 ## Implementation Plan
 
@@ -130,14 +130,14 @@ Document in `designer/font-fallback-patterns.md` (design-system-validator agent-
 - Uses `@capsizecss/core`'s `createFontStack()` to calculate overrides automatically
 - Falls back to `@capsizecss/unpack` only for custom `.woff2`/`.ttf` files not in the metrics database
 - Outputs: the fallback `@font-face` CSS block ready to paste into DESIGN.md or page styles
-- Run via: `jay-stack run design-system/font-fallback --primary "Inter" --fallback "Arial"`
+- Run via: `npx jay-stack-cli action design-system-validator/fontFallback --primary "Inter" --fallback "Arial"`
 
 ### Phase 3: Agent-kit guide
 
 **`packages/plugins/design-system-validator/agent-kit/designer/font-fallback-patterns.md`**:
 
 - Why metric-matched fallbacks matter (CLS, FOUT)
-- How to use the action: `jay-stack run design-system/font-fallback`
+- How to use the action: `npx jay-stack-cli action design-system-validator/fontFallback`
 - Manual pattern for custom fonts
 - Where to place the fallback CSS (DESIGN.md or page `<head>` styles)
 - Example with common font pairs (Inter/Arial, Playfair Display/Georgia)

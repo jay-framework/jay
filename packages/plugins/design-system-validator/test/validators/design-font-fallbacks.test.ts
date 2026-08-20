@@ -51,7 +51,7 @@ describe('design-font-fallbacks validator', () => {
                 message:
                     'font-family "Inter" loads from a URL but has no metric-matched fallback. This causes layout shift (CLS) when the font loads.',
                 suggestion:
-                    'Run `jay-stack run design-system/font-fallback --primary "Inter" --fallback "Arial"` to generate a fallback @font-face.',
+                    `Generate a fallback with: npx jay-stack-cli action design-system-validator/fontFallback --input '{"primary":"Inter","fallback":"Arial"}'`,
             },
         ]);
     });
@@ -135,7 +135,7 @@ describe('design-font-fallbacks validator', () => {
                 message:
                     'font-family "Playfair Display" loads from a URL but has no metric-matched fallback. This causes layout shift (CLS) when the font loads.',
                 suggestion:
-                    'Run `jay-stack run design-system/font-fallback --primary "Playfair Display" --fallback "Arial"` to generate a fallback @font-face.',
+                    `Generate a fallback with: npx jay-stack-cli action design-system-validator/fontFallback --input '{"primary":"Playfair Display","fallback":"Arial"}'`,
             },
         ]);
     });
@@ -217,7 +217,7 @@ describe('design-font-fallbacks validator', () => {
                 message:
                     'font-family "Roboto" loads from a URL but has no metric-matched fallback. This causes layout shift (CLS) when the font loads.',
                 suggestion:
-                    'Run `jay-stack run design-system/font-fallback --primary "Roboto" --fallback "Arial"` to generate a fallback @font-face.',
+                    `Generate a fallback with: npx jay-stack-cli action design-system-validator/fontFallback --input '{"primary":"Roboto","fallback":"Arial"}'`,
             },
         ]);
     });
@@ -271,7 +271,7 @@ describe('design-font-fallbacks validator', () => {
                 message:
                     'font-family "Inter" loads from a URL but has no metric-matched fallback. This causes layout shift (CLS) when the font loads.',
                 suggestion:
-                    'Run `jay-stack run design-system/font-fallback --primary "Inter" --fallback "Arial"` to generate a fallback @font-face.',
+                    `Generate a fallback with: npx jay-stack-cli action design-system-validator/fontFallback --input '{"primary":"Inter","fallback":"Arial"}'`,
             },
         ]);
     });
@@ -317,6 +317,35 @@ describe('design-font-fallbacks validator', () => {
         expect(findings).toEqual([]);
     });
 
+    it('flags fonts from @import even when font-family uses CSS variables', async () => {
+        const ctx = makeContext(`<html><body>
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+                :root {
+                    --font-display: 'Sora', system-ui, sans-serif;
+                    --font-body: 'Inter', system-ui, sans-serif;
+                    --font-mono: 'JetBrains Mono', monospace;
+                }
+                body { font-family: var(--font-body); }
+                .headline-lg { font-family: var(--font-display); }
+                .code-md { font-family: var(--font-mono); }
+            </style>
+            <p class="headline-lg">Title</p>
+            <p>Body</p>
+            <code class="code-md">code</code>
+        </body></html>`);
+        const findings = withoutGuide(await validateFontFallbacks(ctx));
+        expect(findings.length).toBe(3);
+        const messages = findings.map((f: any) => f.message);
+        expect(messages).toEqual(
+            expect.arrayContaining([
+                'font-family "Sora" loads from a URL but has no metric-matched fallback. This causes layout shift (CLS) when the font loads.',
+                'font-family "Inter" loads from a URL but has no metric-matched fallback. This causes layout shift (CLS) when the font loads.',
+                'font-family "JetBrains Mono" loads from a URL but has no metric-matched fallback. This causes layout shift (CLS) when the font loads.',
+            ]),
+        );
+    });
+
     it('detects web font from DESIGN.md typography tokens', async () => {
         const ctx = makeContext(`<html><body>
             <style>
@@ -334,7 +363,7 @@ describe('design-font-fallbacks validator', () => {
                 message:
                     'font-family "Inter" loads from a URL but has no metric-matched fallback. This causes layout shift (CLS) when the font loads.',
                 suggestion:
-                    'Run `jay-stack run design-system/font-fallback --primary "Inter" --fallback "Arial"` to generate a fallback @font-face.',
+                    `Generate a fallback with: npx jay-stack-cli action design-system-validator/fontFallback --input '{"primary":"Inter","fallback":"Arial"}'`,
             },
         ]);
     });

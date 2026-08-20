@@ -11,7 +11,7 @@ A metric-matched fallback `@font-face` overrides the system font's metrics to ma
 Generate a fallback `@font-face` for any known Google Font or system font:
 
 ```bash
-jay-stack run design-system/font-fallback --primary "Inter" --fallback "Arial"
+npx jay-stack-cli action design-system-validator/fontFallback --input '{"primary":"Inter","fallback":"Arial"}'
 ```
 
 This outputs the CSS you need:
