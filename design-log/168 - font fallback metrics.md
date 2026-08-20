@@ -149,9 +149,69 @@ Document in `designer/font-fallback-patterns.md` (design-system-validator agent-
 
 ## Trade-offs
 
-| Choice | Pro | Con |
-|--------|-----|-----|
+| Choice                     | Pro                                                          | Con                                                          |
+| -------------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | Validation + plugin action | Catches the problem, provides the fix, stays in plugin scope | Adds `@capsizecss/metrics` + `@capsizecss/core` dependencies |
-| Extend stack-cli directly | Single entry point | Wrong scope — font concerns belong in design-system plugin |
-| Auto-inject at build time | Zero-config | Opaque, designer loses control over fallback chain |
-| Manual only (guide) | Simple, no tooling changes | Relies on developer knowing the pattern |
+| Extend stack-cli directly  | Single entry point                                           | Wrong scope — font concerns belong in design-system plugin   |
+| Auto-inject at build time  | Zero-config                                                  | Opaque, designer loses control over fallback chain           |
+| Manual only (guide)        | Simple, no tooling changes                                   | Relies on developer knowing the pattern                      |
+
+## Implementation Results
+
+### Phase 1: Validation rule — `validateFontFallbacks`
+
+**File:** `lib/validators/design-font-fallbacks.ts`
+
+Registered in `plugin.yaml` as `font-fallbacks` validator, exported from `lib/index.ts`.
+
+**Font detection sources** (all covered):
+
+| Pattern | Example | How detected |
+|---------|---------|-------------|
+| `@font-face` with `url()` src | `src: url('inter.woff2')` | `parseFontFaces()` via postcss |
+| CSS `@import` (quoted/bare) | `@import"https://fonts.googleapis.com/css2?..."` | `parseFontImports()` via postcss |
+| CSS `@import url()` | `@import url('https://...')` | Same |
+| Google Fonts v2 | `?family=Inter:wght@400;500` | `parseFontServiceUrl()` |
+| Google Fonts v1 (pipe-separated) | `?family=Open+Sans:400\|Roboto:300` | Same, splits on `\|` |
+| `<link rel="stylesheet">` in head | `<link href="https://fonts.googleapis.com/..." rel="stylesheet">` | `parseFontLinks()` via `ctx.head.links` |
+| DESIGN.md typography tokens | `fontFamily: Inter` | `findDesignMd()` + token scan |
+| Dynamic `<link>` href (bindings) | `href="{fontUrl}"` | Skipped — can't resolve at validate-time |
+
+**Fallback detection:** A web font is considered covered if there exists another `@font-face` with `src: local(...)`, at least one metric override property (`size-adjust`, `ascent-override`, `descent-override`, `line-gap-override`), and a family name that starts with the web font's family name (e.g., `"Inter Fallback"` covers `"Inter"`).
+
+**Font service hosts:** `fonts.googleapis.com`, `fonts.bunny.net`, `fonts.cdnfonts.com`, `use.typekit.net`.
+
+**Deviation from design:** The design described a single `checkFontFallbacks` function. Implementation uses the standard `JayHtmlValidatorFn` pattern (`validateFontFallbacks`) consistent with all other validators in the plugin.
+
+### Phase 2: Plugin action — `fontFallback`
+
+**Files:**
+- `lib/actions/font-fallback.ts` — Action handler
+- `lib/actions/font-fallback.jay-action` — AI agent metadata
+
+Uses `@capsizecss/metrics` for font metric lookup (via dynamic `import()` with `fontFamilyToCamelCase`) and `@capsizecss/core`'s `createFontStack()` for calculation. No manual metric math needed.
+
+**Dependencies added:**
+- `@capsizecss/core`: `^4.1.3`
+- `@capsizecss/metrics`: `^4.2.0`
+- `@capsizecss/unpack`: `^4.0.1`
+- `@jay-framework/fullstack-component`: `workspace:^`
+
+**Build changes:**
+- Added `build:copy-actions` script to copy `.jay-action` files to `dist/`
+- Added `@capsizecss/*` and `@jay-framework/fullstack-component` to vite externals
+- Added `./font-fallback.jay-action` export to `package.json`
+
+**Deviation from design:** `@capsizecss/unpack` is listed as a dependency but not yet used in the action — the current implementation only supports fonts in the `@capsizecss/metrics` database (all Google Fonts + system fonts). Custom font file unpacking can be added later.
+
+### Phase 3: Agent-kit guide
+
+**File:** `agent-kit/designer/font-fallback-patterns.md`
+
+Covers: why fallbacks matter, action usage, where to place CSS, common font pairs table, manual pattern, validation behavior.
+
+### Phase 4: Verify
+
+- 15 new tests (12 validator + 3 action), all passing
+- 116/116 total tests in design-system-validator
+- `yarn confirm` passes across the full monorepo (78 packages)

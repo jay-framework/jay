@@ -131,7 +131,7 @@ Makes the entire card clickable via CSS while the button stays independent:
 }
 
 .stretched-link::after {
-  content: "";
+  content: '';
   position: absolute;
   inset: 0;
   z-index: 1;

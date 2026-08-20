@@ -19,3 +19,11 @@ validators:
   - name: design-contrast
     handler: validateContrast
     description: Checks WCAG AA color contrast compliance on statically determinable color pairs
+
+  - name: font-fallbacks
+    handler: validateFontFallbacks
+    description: Detects web fonts loaded via @font-face URL without a metric-matched local fallback (causes CLS)
+
+actions:
+  - name: fontFallback
+    action: font-fallback.jay-action

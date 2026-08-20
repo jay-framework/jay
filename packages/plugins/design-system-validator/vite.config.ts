@@ -14,7 +14,12 @@ export default defineConfig({
         rollupOptions: {
             external: [
                 '@jay-framework/compiler-shared',
+                '@jay-framework/fullstack-component',
                 '@jay-framework/stack-server-runtime',
+                '@capsizecss/core',
+                '@capsizecss/metrics',
+                /^@capsizecss\/metrics\//,
+                '@capsizecss/unpack',
                 'postcss',
                 'postcss-selector-parser',
                 '@csstools/selector-specificity',
