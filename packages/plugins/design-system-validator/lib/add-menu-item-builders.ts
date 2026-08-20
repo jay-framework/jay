@@ -1,6 +1,6 @@
 import type { AddMenuItem } from '@jay-framework/plugin-validator';
 
-import type { DesignTokens } from './parse-design-md.js';
+import type { DesignTokens, TypographyToken } from './parse-design-md.js';
 
 export const PLUGIN_ATTRS = {
     pluginName: 'design-system-validator',
@@ -125,32 +125,36 @@ export function buildRoundedItem(name: string, value: string, category: string):
     };
 }
 
-export type TypographyEdit = {
-    fontFamily?: string;
-    fontSize?: string;
-    fontWeight?: string;
-    lineHeight?: string;
-    letterSpacing?: string;
-};
+function formatTypographyCssValue(value: string | number): string {
+    return String(value);
+}
 
 export function buildTypographyItem(
     name: string,
-    typography: TypographyEdit,
+    typography: TypographyToken,
     category: string,
 ): AddMenuItem {
     const parts: string[] = [];
     if (typography.fontFamily) parts.push(typography.fontFamily);
     if (typography.fontSize) parts.push(typography.fontSize);
-    if (typography.fontWeight) parts.push(`weight ${typography.fontWeight}`);
-    if (typography.lineHeight) parts.push(`line-height ${typography.lineHeight}`);
+    if (typography.fontWeight != null) {
+        parts.push(`weight ${formatTypographyCssValue(typography.fontWeight)}`);
+    }
+    if (typography.lineHeight != null) {
+        parts.push(`line-height ${formatTypographyCssValue(typography.lineHeight)}`);
+    }
     if (typography.letterSpacing) parts.push(`letter-spacing ${typography.letterSpacing}`);
     const desc = parts.join(', ');
 
     const styles: string[] = [];
     if (typography.fontFamily) styles.push(`font-family:${typography.fontFamily},sans-serif`);
     if (typography.fontSize) styles.push(`font-size:${typography.fontSize}`);
-    if (typography.fontWeight) styles.push(`font-weight:${typography.fontWeight}`);
-    if (typography.lineHeight) styles.push(`line-height:${typography.lineHeight}`);
+    if (typography.fontWeight != null) {
+        styles.push(`font-weight:${formatTypographyCssValue(typography.fontWeight)}`);
+    }
+    if (typography.lineHeight != null) {
+        styles.push(`line-height:${formatTypographyCssValue(typography.lineHeight)}`);
+    }
     if (typography.letterSpacing) styles.push(`letter-spacing:${typography.letterSpacing}`);
 
     const isLargeFont = isLargeFontSize(typography.fontSize);

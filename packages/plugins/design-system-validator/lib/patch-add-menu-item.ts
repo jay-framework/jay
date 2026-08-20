@@ -5,8 +5,8 @@ import {
     buildRoundedItem,
     buildSpacingItem,
     buildTypographyItem,
-    type TypographyEdit,
 } from './add-menu-item-builders.js';
+import type { TypographyToken } from './parse-design-md.js';
 
 export type AddMenuItemKind =
     | 'color'
@@ -38,10 +38,10 @@ function extractQuotedValue(prompt: string, label: string): string | undefined {
     return match[2]!.trim().replace(/\.$/, '');
 }
 
-function extractTypographyFromPrompt(prompt: string): TypographyEdit {
+function extractTypographyFromPrompt(prompt: string): TypographyToken {
     const nameMatch = prompt.match(/typography preset "([^"]+)"/i);
     const afterColon = prompt.split(':').slice(1).join(':').replace(/\.\s*$/, '').trim();
-    const edit: TypographyEdit = {};
+    const edit: TypographyToken = {};
 
     const fontFamilyMatch = afterColon.match(/([^,]+),\s*[\d.]+(?:px|rem|em)/);
     if (fontFamilyMatch) {
@@ -130,7 +130,8 @@ export function extractAddMenuItemEditorFields(item: AddMenuItem): AddMenuItemEd
                 editable: true,
                 fontFamily: typography.fontFamily ?? '',
                 fontSize: typography.fontSize ?? '',
-                fontWeight: typography.fontWeight ?? '',
+                fontWeight:
+                    typography.fontWeight != null ? String(typography.fontWeight) : '',
             };
         }
         case 'breakpoint':
