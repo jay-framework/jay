@@ -516,27 +516,32 @@ test/fixtures/
 ### What was implemented
 
 **Plugin scaffold** (`packages/plugins/data-files/`):
+
 - `package.json`, `plugin.yaml`, `vite.config.ts`, `tsconfig.json`
 - No external CSV parser — built-in CSV parsing (split-based, handles simple CSVs)
 - Dependencies: `js-yaml` only (already in the monorepo)
 
 **Data parsing** (`lib/parse-data.ts`):
+
 - Four formats: CSV, YAML, JSON, JSONL
 - Extension validation before file read
 - `buildSlugIndex` for O(1) lookups
 
 **Schema loading** (`lib/load-schema.ts`):
+
 - Reads `.jay-contract` schema from content directory
 - Extracts slug field from `meta.slug: "true"`
 - Validation errors for missing schema and missing slug field
 - Row count validation (10K threshold)
 
 **Three components** (`lib/components/`):
+
 - `data-pages`: `withLoadParams` yields slugs, `withSlowlyRender` finds row by slug
 - `data-list`: `withSlowlyRender` returns all rows as `items` array
 - `data-item`: `withSlowlyRender` finds one row by slug prop
 
 **Cross-reference resolution** (`lib/resolve-references.ts`):
+
 - Linked sub-contracts: string value → slug reference (resolved from linked data file), object value → inline data
 - Inline sub-contracts: always inline nested data
 - Circular reference detection via visited `Set<string>`
@@ -544,12 +549,14 @@ test/fixtures/
 - File cache (`Map`) for indexed lookups within a build
 
 **Dynamic contract generation** (`lib/contract-generator.ts`):
+
 - Three async generators: `generateDataPagesContract`, `generateDataListContract`, `generateDataItemContract`
 - Scans `content/` for directories with schema contracts
 - Generates materialized contracts with actual field tags from schema
 - Listed in `plugin.yaml` under `dynamic_contracts`
 
 **generate-schema command** (`lib/generate-schema.ts`):
+
 - Reads data file, infers types (string, number, boolean, html-string, sub-contract)
 - Picks slug field from common candidates (`slug`, `id`, `key`, `name`)
 - Handles nested objects → sub-contract, arrays → repeated sub-contract
@@ -557,6 +564,7 @@ test/fixtures/
 - Listed in `plugin.yaml` under `commands`
 
 **Agent-kit guide** (`agent-kit/designer/data-files-usage.md`):
+
 - End-to-end workflow, data formats, schema contract syntax
 - Three components with examples
 - Contract naming convention
@@ -564,6 +572,7 @@ test/fixtures/
 - Pre-build script pattern for external data
 
 **Contracts** (`lib/contracts/`):
+
 - Base contracts for `data-pages`, `data-list`, `data-item`
 
 ### What was deferred
@@ -575,6 +584,7 @@ test/fixtures/
 ### Tests
 
 23 tests, all passing:
+
 - Data parsing: CSV, YAML (flat + nested), JSON, JSONL, unsupported format
 - Slug index: building, empty slug handling
 - Schema loading: valid schema, missing schema, slug detection, linked sub-contracts

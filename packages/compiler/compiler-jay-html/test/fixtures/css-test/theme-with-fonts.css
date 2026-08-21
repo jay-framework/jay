@@ -6,4 +6,6 @@
   --font-mono: 'JetBrains Mono', monospace;
 }
 
-body { font-family: var(--font-body); }
+body {
+  font-family: var(--font-body);
+}

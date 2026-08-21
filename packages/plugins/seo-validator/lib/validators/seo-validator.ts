@@ -3,14 +3,20 @@ import { walkElements } from '@jay-framework/compiler-shared';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
+function isComponent(filePath: string): boolean {
+    const normalized = filePath.replace(/\\/g, '/');
+    return normalized.includes('/components/');
+}
+
 export const validate: JayHtmlValidatorFn = (ctx) => {
     const findings: JayHtmlValidationFinding[] = [];
+    const isComp = isComponent(ctx.filePath);
 
     let hasH1 = false;
     let h1Count = 0;
     let lastHeadingLevel = 0;
     let hasMain = false;
-    let hasImage = false;
+    let hasStaticImage = false;
     let hasFetchPriorityHigh = false;
 
     walkElements(ctx.body, ctx, (el) => {
@@ -19,7 +25,7 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
 
         // --- Rule: img must have alt ---
         if (tag === 'img') {
-            hasImage = true;
+            hasStaticImage = true;
             if (el.getAttribute?.('fetchpriority') === 'high') {
                 hasFetchPriorityHigh = true;
             }
@@ -125,47 +131,50 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
         }
     });
 
-    if (!hasH1) {
-        findings.push({
-            severity: 'warning',
-            message: 'Page has no <h1> element — the primary heading is important for SEO',
-            suggestion:
-                'Add an <h1> element with the main page title or topic. ' +
-                'Each page should have exactly one <h1>.',
-            element: '<h1>',
-        });
-    } else if (h1Count > 1) {
-        findings.push({
-            severity: 'warning',
-            message: `Page has ${h1Count} <h1> elements — should have exactly one`,
-            suggestion:
-                'Keep only one <h1> for the primary page heading. ' +
-                'Use <h2> or lower for secondary headings.',
-            element: '<h1>',
-        });
-    }
+    if (!isComp) {
+        if (!hasH1) {
+            findings.push({
+                severity: 'warning',
+                message: 'Page has no <h1> element — the primary heading is important for SEO',
+                suggestion:
+                    'Add an <h1> element with the main page title or topic. ' +
+                    'Each page should have exactly one <h1>.',
+                element: '<h1>',
+            });
+        } else if (h1Count > 1) {
+            findings.push({
+                severity: 'warning',
+                message: `Page has ${h1Count} <h1> elements — should have exactly one`,
+                suggestion:
+                    'Keep only one <h1> for the primary page heading. ' +
+                    'Use <h2> or lower for secondary headings.',
+                element: '<h1>',
+            });
+        }
 
-    if (!hasMain) {
-        findings.push({
-            severity: 'warning',
-            message: 'Page has no <main> landmark — helps search engines identify primary content',
-            suggestion:
-                'Wrap the primary page content in a <main> element. ' +
-                'Each page should have one <main> landmark.',
-            element: '<main>',
-        });
-    }
+        if (!hasMain) {
+            findings.push({
+                severity: 'warning',
+                message:
+                    'Page has no <main> landmark — helps search engines identify primary content',
+                suggestion:
+                    'Wrap the primary page content in a <main> element. ' +
+                    'Each page should have one <main> landmark.',
+                element: '<main>',
+            });
+        }
 
-    if (hasImage && !hasFetchPriorityHigh) {
-        findings.push({
-            severity: 'warning',
-            message: 'No image has fetchpriority="high" — the LCP image should be prioritized',
-            suggestion:
-                'Add fetchpriority="high" to the largest above-the-fold image (the LCP candidate). ' +
-                'This tells the browser to download it first, improving Largest Contentful Paint.',
-            element: '<img>',
-            attribute: 'fetchpriority',
-        });
+        if (hasStaticImage && !hasFetchPriorityHigh) {
+            findings.push({
+                severity: 'warning',
+                message: 'No image has fetchpriority="high" — the LCP image should be prioritized',
+                suggestion:
+                    'Add fetchpriority="high" to the largest above-the-fold image (the LCP candidate). ' +
+                    'This tells the browser to download it first, improving Largest Contentful Paint.',
+                element: '<img>',
+                attribute: 'fetchpriority',
+            });
+        }
     }
 
     // --- Rule: no @import of external URLs in CSS ---
@@ -210,7 +219,9 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
         }
     }
 
-    // --- Head metadata checks ---
+    // --- Head metadata checks (pages only) ---
+    if (isComp) return findings;
+
     const componentHeadTags = new Set(
         ctx.headlessImports.flatMap((imp) => imp.providedHeadTags ?? []),
     );

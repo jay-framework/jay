@@ -22,17 +22,25 @@ const completeHead: JayHtmlHeadMeta = {
 
 function makeContext(
     html: string,
-    options: { wrapInMain?: boolean; head?: JayHtmlHeadMeta } = {},
+    options: { wrapInMain?: boolean; head?: JayHtmlHeadMeta; filePath?: string } = {},
 ): JayHtmlValidationContext {
-    const { wrapInMain = true, head = completeHead } = options;
+    const { wrapInMain = true, head = completeHead, filePath = 'test/page.jay-html' } = options;
     const wrapped = wrapInMain ? `<main>${html}</main>` : html;
     return {
         body: parse(wrapped),
-        filePath: 'test/page.jay-html',
+        filePath,
         projectRoot: '/test',
         headlessImports: [],
         head,
     };
+}
+
+function makeComponentContext(html: string): JayHtmlValidationContext {
+    return makeContext(html, {
+        wrapInMain: false,
+        filePath: 'src/components/site-header/site-header.jay-html',
+        head: undefined,
+    });
 }
 
 describe('seo-validator', () => {
@@ -637,6 +645,66 @@ describe('seo-validator', () => {
             });
             const findings = await validate(ctx);
             expect(findings).toEqual([]);
+        });
+    });
+
+    describe('component detection (DL#170)', () => {
+        it('skips h1 check for components', async () => {
+            const ctx = makeComponentContext('<div><h3>Section</h3></div>');
+            const findings = await validate(ctx);
+            expect(findings.find((f) => f.message.includes('<h1>'))).toBeUndefined();
+        });
+
+        it('skips main landmark check for components', async () => {
+            const ctx = makeComponentContext('<div><h1>Header</h1></div>');
+            const findings = await validate(ctx);
+            expect(findings.find((f) => f.message.includes('<main>'))).toBeUndefined();
+        });
+
+        it('skips title check for components', async () => {
+            const ctx = makeComponentContext('<div>Content</div>');
+            const findings = await validate(ctx);
+            expect(findings.find((f) => f.message.includes('<title>'))).toBeUndefined();
+        });
+
+        it('skips meta description check for components', async () => {
+            const ctx = makeComponentContext('<div>Content</div>');
+            const findings = await validate(ctx);
+            expect(
+                findings.find((f) => f.message.includes('meta name="description"')),
+            ).toBeUndefined();
+        });
+
+        it('skips fetchpriority check for components', async () => {
+            const ctx = makeComponentContext(
+                '<div><img src="icon.png" alt="icon" width="20" height="20" loading="lazy" /></div>',
+            );
+            const findings = await validate(ctx);
+            expect(findings.find((f) => f.message.includes('fetchpriority'))).toBeUndefined();
+        });
+
+        it('still checks img alt for components', async () => {
+            const ctx = makeComponentContext(
+                '<div><img src="photo.jpg" width="100" height="100" loading="lazy" /></div>',
+            );
+            const findings = await validate(ctx);
+            expect(findings.find((f) => f.message.includes('alt'))).toBeDefined();
+        });
+    });
+
+    describe('fetchpriority with no static images (DL#170)', () => {
+        it('does not warn when page has no static images', async () => {
+            const ctx = makeContext('<div><h1>Text Only Page</h1><p>Content</p></div>');
+            const findings = await validate(ctx);
+            expect(findings.find((f) => f.message.includes('fetchpriority'))).toBeUndefined();
+        });
+
+        it('does not warn when page has only video', async () => {
+            const ctx = makeContext(
+                '<div><h1>Video Page</h1><video autoplay muted><source src="hero.mp4" /></video></div>',
+            );
+            const findings = await validate(ctx);
+            expect(findings.find((f) => f.message.includes('fetchpriority'))).toBeUndefined();
         });
     });
 });

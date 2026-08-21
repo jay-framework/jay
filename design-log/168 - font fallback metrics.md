@@ -166,16 +166,16 @@ Registered in `plugin.yaml` as `font-fallbacks` validator, exported from `lib/in
 
 **Font detection sources** (all covered):
 
-| Pattern | Example | How detected |
-|---------|---------|-------------|
-| `@font-face` with `url()` src | `src: url('inter.woff2')` | `parseFontFaces()` via postcss |
-| CSS `@import` (quoted/bare) | `@import"https://fonts.googleapis.com/css2?..."` | `parseFontImports()` via postcss |
-| CSS `@import url()` | `@import url('https://...')` | Same |
-| Google Fonts v2 | `?family=Inter:wght@400;500` | `parseFontServiceUrl()` |
-| Google Fonts v1 (pipe-separated) | `?family=Open+Sans:400\|Roboto:300` | Same, splits on `\|` |
-| `<link rel="stylesheet">` in head | `<link href="https://fonts.googleapis.com/..." rel="stylesheet">` | `parseFontLinks()` via `ctx.head.links` |
-| DESIGN.md typography tokens | `fontFamily: Inter` | `findDesignMd()` + token scan |
-| Dynamic `<link>` href (bindings) | `href="{fontUrl}"` | Skipped — can't resolve at validate-time |
+| Pattern                           | Example                                                           | How detected                             |
+| --------------------------------- | ----------------------------------------------------------------- | ---------------------------------------- |
+| `@font-face` with `url()` src     | `src: url('inter.woff2')`                                         | `parseFontFaces()` via postcss           |
+| CSS `@import` (quoted/bare)       | `@import"https://fonts.googleapis.com/css2?..."`                  | `parseFontImports()` via postcss         |
+| CSS `@import url()`               | `@import url('https://...')`                                      | Same                                     |
+| Google Fonts v2                   | `?family=Inter:wght@400;500`                                      | `parseFontServiceUrl()`                  |
+| Google Fonts v1 (pipe-separated)  | `?family=Open+Sans:400\|Roboto:300`                               | Same, splits on `\|`                     |
+| `<link rel="stylesheet">` in head | `<link href="https://fonts.googleapis.com/..." rel="stylesheet">` | `parseFontLinks()` via `ctx.head.links`  |
+| DESIGN.md typography tokens       | `fontFamily: Inter`                                               | `findDesignMd()` + token scan            |
+| Dynamic `<link>` href (bindings)  | `href="{fontUrl}"`                                                | Skipped — can't resolve at validate-time |
 
 **Fallback detection:** A web font is considered covered if there exists another `@font-face` with `src: local(...)`, at least one metric override property (`size-adjust`, `ascent-override`, `descent-override`, `line-gap-override`), and a family name that starts with the web font's family name (e.g., `"Inter Fallback"` covers `"Inter"`).
 
@@ -186,18 +186,21 @@ Registered in `plugin.yaml` as `font-fallbacks` validator, exported from `lib/in
 ### Phase 2: Plugin action — `fontFallback`
 
 **Files:**
+
 - `lib/actions/font-fallback.ts` — Action handler
 - `lib/actions/font-fallback.jay-action` — AI agent metadata
 
 Uses `@capsizecss/metrics` for font metric lookup (via dynamic `import()` with `fontFamilyToCamelCase`) and `@capsizecss/core`'s `createFontStack()` for calculation. No manual metric math needed.
 
 **Dependencies added:**
+
 - `@capsizecss/core`: `^4.1.3`
 - `@capsizecss/metrics`: `^4.2.0`
 - `@capsizecss/unpack`: `^4.0.1`
 - `@jay-framework/fullstack-component`: `workspace:^`
 
 **Build changes:**
+
 - Added `build:copy-actions` script to copy `.jay-action` files to `dist/`
 - Added `@capsizecss/*` and `@jay-framework/fullstack-component` to vite externals
 - Added `./font-fallback.jay-action` export to `package.json`

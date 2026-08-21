@@ -50,8 +50,7 @@ describe('design-font-fallbacks validator', () => {
                 severity: 'warning',
                 message:
                     'font-family "Inter" loads from a URL but has no metric-matched fallback. This causes layout shift (CLS) when the font loads.',
-                suggestion:
-                    `Generate a fallback with: npx jay-stack-cli action design-system-validator/fontFallback --input '{"primary":"Inter","fallback":"Arial"}'`,
+                suggestion: `Generate a fallback with: npx jay-stack-cli action design-system-validator/fontFallback --input '{"primary":"Inter","fallback":"Arial"}'`,
             },
         ]);
     });
@@ -134,8 +133,7 @@ describe('design-font-fallbacks validator', () => {
                 severity: 'warning',
                 message:
                     'font-family "Playfair Display" loads from a URL but has no metric-matched fallback. This causes layout shift (CLS) when the font loads.',
-                suggestion:
-                    `Generate a fallback with: npx jay-stack-cli action design-system-validator/fontFallback --input '{"primary":"Playfair Display","fallback":"Arial"}'`,
+                suggestion: `Generate a fallback with: npx jay-stack-cli action design-system-validator/fontFallback --input '{"primary":"Playfair Display","fallback":"Arial"}'`,
             },
         ]);
     });
@@ -216,8 +214,7 @@ describe('design-font-fallbacks validator', () => {
                 severity: 'warning',
                 message:
                     'font-family "Roboto" loads from a URL but has no metric-matched fallback. This causes layout shift (CLS) when the font loads.',
-                suggestion:
-                    `Generate a fallback with: npx jay-stack-cli action design-system-validator/fontFallback --input '{"primary":"Roboto","fallback":"Arial"}'`,
+                suggestion: `Generate a fallback with: npx jay-stack-cli action design-system-validator/fontFallback --input '{"primary":"Roboto","fallback":"Arial"}'`,
             },
         ]);
     });
@@ -270,8 +267,7 @@ describe('design-font-fallbacks validator', () => {
                 severity: 'warning',
                 message:
                     'font-family "Inter" loads from a URL but has no metric-matched fallback. This causes layout shift (CLS) when the font loads.',
-                suggestion:
-                    `Generate a fallback with: npx jay-stack-cli action design-system-validator/fontFallback --input '{"primary":"Inter","fallback":"Arial"}'`,
+                suggestion: `Generate a fallback with: npx jay-stack-cli action design-system-validator/fontFallback --input '{"primary":"Inter","fallback":"Arial"}'`,
             },
         ]);
     });
@@ -362,8 +358,7 @@ describe('design-font-fallbacks validator', () => {
                 severity: 'warning',
                 message:
                     'font-family "Inter" loads from a URL but has no metric-matched fallback. This causes layout shift (CLS) when the font loads.',
-                suggestion:
-                    `Generate a fallback with: npx jay-stack-cli action design-system-validator/fontFallback --input '{"primary":"Inter","fallback":"Arial"}'`,
+                suggestion: `Generate a fallback with: npx jay-stack-cli action design-system-validator/fontFallback --input '{"primary":"Inter","fallback":"Arial"}'`,
             },
         ]);
     });
