@@ -1268,8 +1268,7 @@ export function printJayValidationResult(result: ValidationResult, options: Vali
         logger.important(chalk.red(`Validation failed — ${result.errors.length} error(s).`));
     }
 
-    const totalIssues =
-        result.errors.length + result.warnings.length + result.coverage.length;
+    const totalIssues = result.errors.length + result.warnings.length + result.coverage.length;
     if (totalIssues > 0) {
         logger.important(
             chalk.gray(
