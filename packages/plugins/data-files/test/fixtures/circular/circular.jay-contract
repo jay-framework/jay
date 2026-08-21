@@ -1,0 +1,13 @@
+name: circular
+tags:
+  - tag: slug
+    type: data
+    dataType: string
+    meta:
+      slug: "true"
+  - tag: name
+    type: data
+    dataType: string
+  - tag: related
+    type: sub-contract
+    link: ./circular.jay-contract

@@ -1,0 +1,17 @@
+name: faq
+description: Frequently asked questions
+tags:
+  - tag: slug
+    type: data
+    dataType: string
+    meta:
+      slug: "true"
+  - tag: question
+    type: data
+    dataType: string
+  - tag: answer
+    type: data
+    dataType: string
+  - tag: priority
+    type: data
+    dataType: number

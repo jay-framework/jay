@@ -1,0 +1,20 @@
+name: data-files
+description: CSV, YAML, JSON, JSONL data sources — list views, item views, and per-item pages
+
+dynamic_contracts:
+  - prefix: data-pages
+    component: dataPages
+    generator: generateDataPagesContract
+
+  - prefix: data-list
+    component: dataList
+    generator: generateDataListContract
+
+  - prefix: data-item
+    component: dataItem
+    generator: generateDataItemContract
+
+commands:
+  - name: generate-schema
+    handler: generateSchema
+    description: Auto-generate a .jay-contract schema file from a data file (CSV/YAML/JSON/JSONL)

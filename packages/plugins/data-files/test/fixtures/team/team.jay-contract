@@ -1,0 +1,17 @@
+name: team
+description: Team members
+tags:
+  - tag: slug
+    type: data
+    dataType: string
+    meta:
+      slug: "true"
+  - tag: name
+    type: data
+    dataType: string
+  - tag: role
+    type: data
+    dataType: string
+  - tag: photo
+    type: data
+    dataType: string

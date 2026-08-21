@@ -26,12 +26,12 @@ The markdown plugin solved this for content-heavy pages (one file = one page). D
 
 Auto-detected by file extension:
 
-| Extension | Format | Notes |
-|-----------|--------|-------|
-| `.csv` | CSV with header row | All values are strings; nested JSON in cells supported |
-| `.yaml` / `.yml` | YAML array of objects | Types inferred (string, number, boolean); nested objects supported |
-| `.json` | JSON array of objects | Types inferred; nested objects supported |
-| `.jsonl` | JSON Lines (one object per line) | Types inferred |
+| Extension        | Format                           | Notes                                                              |
+| ---------------- | -------------------------------- | ------------------------------------------------------------------ |
+| `.csv`           | CSV with header row              | All values are strings; nested JSON in cells supported             |
+| `.yaml` / `.yml` | YAML array of objects            | Types inferred (string, number, boolean); nested objects supported |
+| `.json`          | JSON array of objects            | Types inferred; nested objects supported                           |
+| `.jsonl`         | JSON Lines (one object per line) | Types inferred                                                     |
 
 ### Schema-as-contract
 
@@ -46,7 +46,7 @@ tags:
     type: data
     dataType: string
     meta:
-      slug: "true"           # marks this field as the slug/identifier
+      slug: 'true' # marks this field as the slug/identifier
   - tag: name
     type: data
     dataType: string
@@ -58,10 +58,10 @@ tags:
     dataType: string
   - tag: bio
     type: data
-    dataType: html-string   # rendered HTML content — use {bio} binding (not escaped)
+    dataType: html-string # rendered HTML content — use {bio} binding (not escaped)
   - tag: manager
     type: sub-contract
-    link: ./team.jay-contract   # self-referencing link — a manager is another team member
+    link: ./team.jay-contract # self-referencing link — a manager is another team member
 ```
 
 Self-referencing schemas (a contract linking to itself) are valid — they express relationships within the same collection. Circular data (A.manager=B, B.manager=A) is detected and rejected at render time.
@@ -70,9 +70,9 @@ Self-referencing schemas (a contract linking to itself) are valid — they expre
 
 **`meta` fields:**
 
-| `meta` key | Value | Meaning |
-|-----------|-------|---------|
-| `slug` | `"true"` | This field is the item identifier for routing and lookup |
+| `meta` key | Value    | Meaning                                                  |
+| ---------- | -------- | -------------------------------------------------------- |
+| `slug`     | `"true"` | This field is the item identifier for routing and lookup |
 
 ### Schema requirement
 
@@ -136,10 +136,12 @@ Each row becomes a page. Used with `[slug]` dynamic routes.
 
 ```html
 <head>
-  <script type="application/jay-headless"
+  <script
+    type="application/jay-headless"
     plugin="@jay-framework/data-files"
     contract="team-data-pages"
-    key="member">
+    key="member"
+  >
     contentDir: content/team
     file: data.csv
   </script>
@@ -166,10 +168,12 @@ The slug field is read from the schema contract (the tag with `meta.slug: "true"
 
 ```html
 <head>
-  <script type="application/jay-headless"
+  <script
+    type="application/jay-headless"
     plugin="@jay-framework/data-files"
     contract="team-data-list"
-    key="team">
+    key="team"
+  >
     contentDir: content/team
     file: data.csv
   </script>
@@ -260,15 +264,15 @@ tags:
     type: data
     dataType: string
     meta:
-      slug: "true"
+      slug: 'true'
   - tag: title
     type: data
     dataType: string
   - tag: author
     type: sub-contract
-    link: ../team/team.jay-contract       # linked → string=reference, object=inline
+    link: ../team/team.jay-contract # linked → string=reference, object=inline
   - tag: nutrition
-    type: sub-contract                    # inline → always expects nested object
+    type: sub-contract # inline → always expects nested object
     tags:
       - tag: calories
         type: data
@@ -282,9 +286,9 @@ tags:
 # content/recipes/data.yaml
 - slug: carbonara
   title: Pasta Carbonara
-  author: jane              # string → resolved from team data file
+  author: jane # string → resolved from team data file
   nutrition:
-    calories: 450           # inline object → used directly
+    calories: 450 # inline object → used directly
   relatedGuide: pasta-basics # string → resolved from markdown content
 ```
 
@@ -341,13 +345,13 @@ Circular references are not supported in data files. Remove one of the reference
 
 This is a fundamental tradeoff:
 
-| Concern | Data Files | CMS Plugin |
-|---------|-----------|------------|
-| Data source | Local files (CSV/YAML/JSON) | External API |
-| Update granularity | Full rebuild per collection | Single item invalidation |
-| Credentials | None | API keys required |
-| Setup complexity | Zero | Plugin setup + credentials |
-| Best for | Small/medium static datasets | Large, frequently updated catalogs |
+| Concern            | Data Files                   | CMS Plugin                         |
+| ------------------ | ---------------------------- | ---------------------------------- |
+| Data source        | Local files (CSV/YAML/JSON)  | External API                       |
+| Update granularity | Full rebuild per collection  | Single item invalidation           |
+| Credentials        | None                         | API keys required                  |
+| Setup complexity   | Zero                         | Plugin setup + credentials         |
+| Best for           | Small/medium static datasets | Large, frequently updated catalogs |
 
 This tradeoff must be documented in the agent-kit guide so agents choose the right plugin for the use case.
 
@@ -355,11 +359,11 @@ This tradeoff must be documented in the agent-kit guide so agents choose the rig
 
 The schema contract is always required and is the source of truth for types. Type inference is only used by the `generate-schema` action when auto-generating a base schema from a data file:
 
-| Source | Inferred types |
-|--------|---------------|
-| CSV | All fields → `string`; nested JSON in a cell → sub-contract |
-| YAML/JSON | `string`, `number`, `boolean` inferred; nested objects → sub-contract; arrays → repeated sub-contract |
-| HTML content | Detected by `<` prefix → `html-string` dataType |
+| Source       | Inferred types                                                                                        |
+| ------------ | ----------------------------------------------------------------------------------------------------- |
+| CSV          | All fields → `string`; nested JSON in a cell → sub-contract                                           |
+| YAML/JSON    | `string`, `number`, `boolean` inferred; nested objects → sub-contract; arrays → repeated sub-contract |
+| HTML content | Detected by `<` prefix → `html-string` dataType                                                       |
 
 After generation, the agent refines the schema — adding descriptions, marking the slug field, converting fields to `html-string` where appropriate, and defining cross-reference links.
 
@@ -367,11 +371,11 @@ After generation, the agent refines the schema — adding descriptions, marking 
 
 Each schema generates three materialized component contracts. The names are derived from the schema's `name` field:
 
-| Schema name | Component | Materialized contract name |
-|-------------|-----------|---------------------------|
-| `team` | data-pages | `team-data-pages` |
-| `team` | data-list | `team-data-list` |
-| `team` | data-item | `team-data-item` |
+| Schema name | Component  | Materialized contract name |
+| ----------- | ---------- | -------------------------- |
+| `team`      | data-pages | `team-data-pages`          |
+| `team`      | data-list  | `team-data-list`           |
+| `team`      | data-item  | `team-data-item`           |
 
 The designer uses these names in jay-html: `contract="team-data-pages"`.
 
@@ -499,10 +503,80 @@ test/fixtures/
 
 ## Trade-offs
 
-| Choice | Pro | Con |
-|--------|-----|-----|
-| Schema always required | Discoverable, type-safe, agent-friendly | One extra file per data source |
-| `meta` on contract tags | Uses existing contract spec, no extensions | Less visible than a dedicated config |
-| File-based data | Zero infrastructure, designer-friendly | Not suitable for large/dynamic datasets |
-| Eager reference resolution | Simple for designer | Larger ViewState, needs cycle detection |
-| Four formats (CSV/YAML/JSON/JSONL) | Covers all common sources | More parsing code |
+| Choice                             | Pro                                        | Con                                     |
+| ---------------------------------- | ------------------------------------------ | --------------------------------------- |
+| Schema always required             | Discoverable, type-safe, agent-friendly    | One extra file per data source          |
+| `meta` on contract tags            | Uses existing contract spec, no extensions | Less visible than a dedicated config    |
+| File-based data                    | Zero infrastructure, designer-friendly     | Not suitable for large/dynamic datasets |
+| Eager reference resolution         | Simple for designer                        | Larger ViewState, needs cycle detection |
+| Four formats (CSV/YAML/JSON/JSONL) | Covers all common sources                  | More parsing code                       |
+
+## Implementation Results
+
+### What was implemented
+
+**Plugin scaffold** (`packages/plugins/data-files/`):
+- `package.json`, `plugin.yaml`, `vite.config.ts`, `tsconfig.json`
+- No external CSV parser — built-in CSV parsing (split-based, handles simple CSVs)
+- Dependencies: `js-yaml` only (already in the monorepo)
+
+**Data parsing** (`lib/parse-data.ts`):
+- Four formats: CSV, YAML, JSON, JSONL
+- Extension validation before file read
+- `buildSlugIndex` for O(1) lookups
+
+**Schema loading** (`lib/load-schema.ts`):
+- Reads `.jay-contract` schema from content directory
+- Extracts slug field from `meta.slug: "true"`
+- Validation errors for missing schema and missing slug field
+- Row count validation (10K threshold)
+
+**Three components** (`lib/components/`):
+- `data-pages`: `withLoadParams` yields slugs, `withSlowlyRender` finds row by slug
+- `data-list`: `withSlowlyRender` returns all rows as `items` array
+- `data-item`: `withSlowlyRender` finds one row by slug prop
+
+**Cross-reference resolution** (`lib/resolve-references.ts`):
+- Linked sub-contracts: string value → slug reference (resolved from linked data file), object value → inline data
+- Inline sub-contracts: always inline nested data
+- Circular reference detection via visited `Set<string>`
+- Depth cap (10 levels)
+- File cache (`Map`) for indexed lookups within a build
+
+**Dynamic contract generation** (`lib/contract-generator.ts`):
+- Three async generators: `generateDataPagesContract`, `generateDataListContract`, `generateDataItemContract`
+- Scans `content/` for directories with schema contracts
+- Generates materialized contracts with actual field tags from schema
+- Listed in `plugin.yaml` under `dynamic_contracts`
+
+**generate-schema command** (`lib/generate-schema.ts`):
+- Reads data file, infers types (string, number, boolean, html-string, sub-contract)
+- Picks slug field from common candidates (`slug`, `id`, `key`, `name`)
+- Handles nested objects → sub-contract, arrays → repeated sub-contract
+- Outputs `.jay-contract` YAML ready for agent refinement
+- Listed in `plugin.yaml` under `commands`
+
+**Agent-kit guide** (`agent-kit/designer/data-files-usage.md`):
+- End-to-end workflow, data formats, schema contract syntax
+- Three components with examples
+- Contract naming convention
+- Cross-references, nested objects, limitations
+- Pre-build script pattern for external data
+
+**Contracts** (`lib/contracts/`):
+- Base contracts for `data-pages`, `data-list`, `data-item`
+
+### What was deferred
+
+- **Markdown file reference resolution** — `refMarkdown` links to markdown content not yet implemented. Would reuse `@jay-framework/markdown` parsing.
+- **Dev mode file watching** — data file changes don't trigger automatic re-render yet
+- **Schema-vs-component-contract validation** — detecting when an agent imports the schema contract directly instead of the materialized component contract
+
+### Tests
+
+23 tests, all passing:
+- Data parsing: CSV, YAML (flat + nested), JSON, JSONL, unsupported format
+- Slug index: building, empty slug handling
+- Schema loading: valid schema, missing schema, slug detection, linked sub-contracts
+- Cross-references: passthrough fields, inline nested, linked reference resolution, unresolved reference, circular detection
+- generate-schema: CSV inference, YAML type inference, nested objects, JSON, slug field picking
