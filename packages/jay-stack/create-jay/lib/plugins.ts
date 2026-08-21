@@ -41,6 +41,22 @@ export const PLUGINS: PluginEntry[] = [
         isDep: false,
     },
     {
+        name: '@jay-framework/markdown',
+        label: 'Markdown',
+        description: 'Render markdown files as pages — documentation, blogs, changelogs',
+        group: 'Jay Framework',
+        checked: false,
+        isDep: true,
+    },
+    {
+        name: '@jay-framework/data-files',
+        label: 'Data Files',
+        description: 'CSV/YAML/JSON data sources — team pages, FAQ, feature lists, changelogs',
+        group: 'Jay Framework',
+        checked: false,
+        isDep: true,
+    },
+    {
         name: '@jay-framework/wix-stores',
         label: 'Wix Stores',
         description: 'E-commerce: products, categories, search, product pages',
