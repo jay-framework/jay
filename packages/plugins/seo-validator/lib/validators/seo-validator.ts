@@ -38,10 +38,12 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
             }
 
             const alt = el.getAttribute?.('alt');
+            const imgTag = el.outerHTML?.split('>')[0] + '>' || '<img>';
+
             if (alt === undefined || alt === null) {
                 findings.push({
                     severity: 'warning',
-                    message: 'Image missing alt attribute — hurts SEO and accessibility',
+                    message: `Image missing alt attribute: ${imgTag}`,
                     suggestion:
                         'Add an alt attribute with descriptive text. ' +
                         'For decorative images use alt="".',
@@ -61,7 +63,7 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
                 if ((!hasInlineWidth || !hasInlineHeight) && !srcset) {
                     findings.push({
                         severity: 'warning',
-                        message: 'Image missing explicit dimensions — causes layout shift (CLS)',
+                        message: `Image missing explicit dimensions — causes layout shift (CLS): ${imgTag}`,
                         suggestion:
                             'Add width and height attributes to prevent Cumulative Layout Shift. ' +
                             'Example: <img width="800" height="600" ... />. ' +
@@ -79,11 +81,10 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
             if (!loading) {
                 findings.push({
                     severity: 'warning',
-                    message:
-                        'Image without loading attribute — consider lazy loading for performance',
+                    message: `Image without loading attribute: ${imgTag}`,
                     suggestion:
-                        'Add loading="lazy" to defer off-screen images. ' +
-                        'Use loading="eager" only for above-the-fold images.',
+                        'Add loading="lazy" for off-screen images, or loading="eager" for above-the-fold images. ' +
+                        'Either value suppresses this warning.',
                     element: '<img>',
                     attribute: 'loading',
                 });
