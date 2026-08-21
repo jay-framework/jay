@@ -16,7 +16,8 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
     let h1Count = 0;
     let lastHeadingLevel = 0;
     let hasMain = false;
-    let hasStaticImage = false;
+    const LARGE_IMAGE_THRESHOLD = 200;
+    let hasLargeImage = false;
     let hasFetchPriorityHigh = false;
 
     walkElements(ctx.body, ctx, (el) => {
@@ -25,7 +26,13 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
 
         // --- Rule: img must have alt ---
         if (tag === 'img') {
-            hasStaticImage = true;
+            const w = parseInt(el.getAttribute?.('width') || '', 10);
+            const h = parseInt(el.getAttribute?.('height') || '', 10);
+            const hasExplicitSize = !isNaN(w) && !isNaN(h);
+            const isLarge =
+                !hasExplicitSize || w >= LARGE_IMAGE_THRESHOLD || h >= LARGE_IMAGE_THRESHOLD;
+            if (isLarge) hasLargeImage = true;
+
             if (el.getAttribute?.('fetchpriority') === 'high') {
                 hasFetchPriorityHigh = true;
             }
@@ -58,6 +65,7 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
                         suggestion:
                             'Add width and height attributes to prevent Cumulative Layout Shift. ' +
                             'Example: <img width="800" height="600" ... />. ' +
+                            'For small icons, add the actual size (e.g., width="20" height="20"). ' +
                             'For responsive images, use srcset with sizes. ' +
                             'CLS is a Core Web Vital that affects search ranking.',
                         element: '<img>',
@@ -164,7 +172,7 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
             });
         }
 
-        if (hasStaticImage && !hasFetchPriorityHigh) {
+        if (hasLargeImage && !hasFetchPriorityHigh) {
             findings.push({
                 severity: 'warning',
                 message: 'No image has fetchpriority="high" — the LCP image should be prioritized',

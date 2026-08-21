@@ -227,9 +227,9 @@ describe('seo-validator', () => {
     });
 
     describe('fetchpriority', () => {
-        it('flags page with images but no fetchpriority="high"', async () => {
+        it('flags page with large images but no fetchpriority="high"', async () => {
             const ctx = makeContext(
-                '<div><h1>Title</h1><img src="photo.jpg" alt="photo" width="100" height="100" loading="lazy" /></div>',
+                '<div><h1>Title</h1><img src="photo.jpg" alt="photo" width="800" height="600" loading="lazy" /></div>',
             );
             const findings = await validate(ctx);
             expect(findings).toEqual([
@@ -692,8 +692,8 @@ describe('seo-validator', () => {
         });
     });
 
-    describe('fetchpriority with no static images (DL#170)', () => {
-        it('does not warn when page has no static images', async () => {
+    describe('fetchpriority with no large images (DL#170)', () => {
+        it('does not warn when page has no images', async () => {
             const ctx = makeContext('<div><h1>Text Only Page</h1><p>Content</p></div>');
             const findings = await validate(ctx);
             expect(findings.find((f) => f.message.includes('fetchpriority'))).toBeUndefined();
@@ -705,6 +705,30 @@ describe('seo-validator', () => {
             );
             const findings = await validate(ctx);
             expect(findings.find((f) => f.message.includes('fetchpriority'))).toBeUndefined();
+        });
+
+        it('does not warn when page has only small images', async () => {
+            const ctx = makeContext(
+                '<div><h1>Page</h1><img src="icon.png" alt="icon" width="20" height="20" loading="lazy" /></div>',
+            );
+            const findings = await validate(ctx);
+            expect(findings.find((f) => f.message.includes('fetchpriority'))).toBeUndefined();
+        });
+
+        it('warns when page has large image without fetchpriority', async () => {
+            const ctx = makeContext(
+                '<div><h1>Page</h1><img src="hero.jpg" alt="hero" width="800" height="600" loading="lazy" /></div>',
+            );
+            const findings = await validate(ctx);
+            expect(findings.find((f) => f.message.includes('fetchpriority'))).toBeDefined();
+        });
+
+        it('warns when image has no dimensions (assumed large)', async () => {
+            const ctx = makeContext(
+                '<div><h1>Page</h1><img src="photo.jpg" alt="photo" loading="lazy" /></div>',
+            );
+            const findings = await validate(ctx);
+            expect(findings.find((f) => f.message.includes('fetchpriority'))).toBeDefined();
         });
     });
 });
