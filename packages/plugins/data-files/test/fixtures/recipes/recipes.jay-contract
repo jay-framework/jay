@@ -1,0 +1,23 @@
+name: recipes
+description: Recipe collection with cross-references
+tags:
+  - tag: slug
+    type: data
+    dataType: string
+    meta:
+      slug: "true"
+  - tag: title
+    type: data
+    dataType: string
+  - tag: author
+    type: sub-contract
+    link: ../team/team.jay-contract
+  - tag: nutrition
+    type: sub-contract
+    tags:
+      - tag: calories
+        type: data
+        dataType: number
+      - tag: protein
+        type: data
+        dataType: number

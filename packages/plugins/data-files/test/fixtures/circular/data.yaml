@@ -1,0 +1,7 @@
+- slug: a
+  name: Item A
+  related: b
+
+- slug: b
+  name: Item B
+  related: a

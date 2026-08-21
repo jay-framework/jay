@@ -4960,6 +4960,31 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@jay-framework/data-files@workspace:packages/plugins/data-files":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/data-files@workspace:packages/plugins/data-files"
+  dependencies:
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/fullstack-component": "workspace:^"
+    "@jay-framework/jay-stack-cli": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/stack-client-runtime": "workspace:^"
+    "@jay-framework/stack-server-runtime": "workspace:^"
+    "@types/js-yaml": "npm:^4.0.9"
+    "@types/node": "npm:^22.15.21"
+    "@types/papaparse": "npm:^5.3.14"
+    js-yaml: "npm:^4.1.0"
+    papaparse: "npm:^5.4.1"
+    rimraf: "npm:^5.0.5"
+    tsup: "npm:^8.0.1"
+    typescript: "npm:^5.3.3"
+    vite: "npm:^5.0.11"
+    vitest: "npm:^1.2.1"
+  languageName: unknown
+  linkType: soft
+
 "@jay-framework/design-system-validator@workspace:packages/plugins/design-system-validator":
   version: 0.0.0-use.local
   resolution: "@jay-framework/design-system-validator@workspace:packages/plugins/design-system-validator"
@@ -7444,6 +7469,15 @@ __metadata:
   version: 2.4.4
   resolution: "@types/normalize-package-data@npm:2.4.4"
   checksum: 10/65dff72b543997b7be8b0265eca7ace0e34b75c3e5fee31de11179d08fa7124a7a5587265d53d0409532ecb7f7fba662c2012807963e1f9b059653ec2c83ee05
+  languageName: node
+  linkType: hard
+
+"@types/papaparse@npm:^5.3.14":
+  version: 5.5.2
+  resolution: "@types/papaparse@npm:5.5.2::__archiveUrl=https%3A%2F%2Fnpm.dev.wixpress.com%2Fapi%2Fnpm%2Fnpm-repos%2F%40types%2Fpapaparse%2F-%2Fpapaparse-5.5.2.tgz"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10/35c38d8c789a0512465665fa6472e8eda7a20413227aafc25b55955a0ced8a061dfbeb0c75658393ebe61670cb95064cc3753ce1a0bac93a12c53ff569d15170
   languageName: node
   linkType: hard
 
@@ -17757,6 +17791,13 @@ __metadata:
   version: 1.0.1
   resolution: "package-json-from-dist@npm:1.0.1"
   checksum: 10/58ee9538f2f762988433da00e26acc788036914d57c71c246bf0be1b60cdbd77dd60b6a3e1a30465f0b248aeb80079e0b34cb6050b1dfa18c06953bb1cbc7602
+  languageName: node
+  linkType: hard
+
+"papaparse@npm:^5.4.1":
+  version: 5.5.4
+  resolution: "papaparse@npm:5.5.4::__archiveUrl=https%3A%2F%2Fnpm.dev.wixpress.com%2Fapi%2Fnpm%2Fnpm-repos%2Fpapaparse%2F-%2Fpapaparse-5.5.4.tgz"
+  checksum: 10/929466b2acb464b2ac4ad5542d58097967a5c0ef0ca8d9e05e0e8effadbb4077692f19c7601bb32dc56bd982941b38a8e83d7db9e5025483ca859abf7e9a5031
   languageName: node
   linkType: hard
 

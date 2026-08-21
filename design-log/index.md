@@ -117,6 +117,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 166 | [a11y form and label validation rules](166%20-%20a11y%20form%20and%20label%20validation%20rules)                               | Extend a11y-validator: checkbox/radio, ARIA name integrity, duplicate ids, label hygiene    |
 | 167 | [a11y nested interactive elements](167%20-%20a11y%20nested%20interactive%20elements)                                           | a11y rule: focusable elements nested inside links/buttons (WCAG 4.1.2)                      |
 | 168 | [font fallback metrics](168%20-%20font%20fallback%20metrics)                                                                   | Metric-matched fallback @font-face to prevent CLS on font load; validation + CLI tool       |
+| 169 | [data files plugin](169%20-%20data%20lists%20plugin)                                                                           | CSV/YAML/JSON/JSONL data source plugin: list view, item view, per-item pages, cross-references |
 
 ---
 

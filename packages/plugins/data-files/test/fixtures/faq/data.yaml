@@ -1,0 +1,14 @@
+- slug: what-is-jay
+  question: What is Jay?
+  answer: Jay is an experimental framework solving the design-to-code problem.
+  priority: 1
+
+- slug: how-to-start
+  question: How do I get started?
+  answer: Run npm create jay@latest to create a new project.
+  priority: 2
+
+- slug: pricing
+  question: Is Jay free?
+  answer: Yes, Jay is open source under the Apache 2.0 license.
+  priority: 3

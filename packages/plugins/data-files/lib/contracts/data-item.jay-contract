@@ -1,0 +1,17 @@
+name: data-item
+description: Provides a single row from a data file by slug
+
+props:
+  - name: contentDir
+    kind: required
+    description: Path to data directory (relative to project root)
+
+  - name: file
+    kind: required
+    description: Data filename (e.g., data.csv, data.yaml)
+
+  - name: slug
+    kind: required
+    description: Slug value to look up
+
+tags: []
