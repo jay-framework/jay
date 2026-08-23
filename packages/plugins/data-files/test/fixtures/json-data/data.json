@@ -1,0 +1,10 @@
+[
+  { "slug": "feature-1", "title": "Fast Builds", "description": "Build in seconds", "priority": 1 },
+  { "slug": "feature-2", "title": "Hot Reload", "description": "Instant updates", "priority": 2 },
+  {
+    "slug": "feature-3",
+    "title": "Type Safe",
+    "description": "Full TypeScript support",
+    "priority": 3
+  }
+]

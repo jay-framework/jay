@@ -1,0 +1,17 @@
+name: data-pages
+description: Renders each row in a data file as a routable page
+
+props:
+  - name: contentDir
+    kind: required
+    description: Path to data directory (relative to project root)
+
+  - name: file
+    kind: required
+    description: Data filename (e.g., data.csv, data.yaml)
+
+params:
+  - name: slug
+    kind: required
+
+tags: []

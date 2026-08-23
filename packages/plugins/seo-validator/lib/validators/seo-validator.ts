@@ -3,14 +3,21 @@ import { walkElements } from '@jay-framework/compiler-shared';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
+function isComponent(filePath: string): boolean {
+    const normalized = filePath.replace(/\\/g, '/');
+    return normalized.includes('/components/');
+}
+
 export const validate: JayHtmlValidatorFn = (ctx) => {
     const findings: JayHtmlValidationFinding[] = [];
+    const isComp = isComponent(ctx.filePath);
 
     let hasH1 = false;
     let h1Count = 0;
     let lastHeadingLevel = 0;
     let hasMain = false;
-    let hasImage = false;
+    const LARGE_IMAGE_THRESHOLD = 200;
+    let hasLargeImage = false;
     let hasFetchPriorityHigh = false;
 
     walkElements(ctx.body, ctx, (el) => {
@@ -19,16 +26,24 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
 
         // --- Rule: img must have alt ---
         if (tag === 'img') {
-            hasImage = true;
+            const w = parseInt(el.getAttribute?.('width') || '', 10);
+            const h = parseInt(el.getAttribute?.('height') || '', 10);
+            const hasExplicitSize = !isNaN(w) && !isNaN(h);
+            const isLarge =
+                !hasExplicitSize || w >= LARGE_IMAGE_THRESHOLD || h >= LARGE_IMAGE_THRESHOLD;
+            if (isLarge) hasLargeImage = true;
+
             if (el.getAttribute?.('fetchpriority') === 'high') {
                 hasFetchPriorityHigh = true;
             }
 
             const alt = el.getAttribute?.('alt');
+            const imgTag = el.outerHTML?.split('>')[0] + '>' || '<img>';
+
             if (alt === undefined || alt === null) {
                 findings.push({
                     severity: 'warning',
-                    message: 'Image missing alt attribute — hurts SEO and accessibility',
+                    message: `Image missing alt attribute: ${imgTag}`,
                     suggestion:
                         'Add an alt attribute with descriptive text. ' +
                         'For decorative images use alt="".',
@@ -48,10 +63,11 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
                 if ((!hasInlineWidth || !hasInlineHeight) && !srcset) {
                     findings.push({
                         severity: 'warning',
-                        message: 'Image missing explicit dimensions — causes layout shift (CLS)',
+                        message: `Image missing explicit dimensions — causes layout shift (CLS): ${imgTag}`,
                         suggestion:
                             'Add width and height attributes to prevent Cumulative Layout Shift. ' +
                             'Example: <img width="800" height="600" ... />. ' +
+                            'For small icons, add the actual size (e.g., width="20" height="20"). ' +
                             'For responsive images, use srcset with sizes. ' +
                             'CLS is a Core Web Vital that affects search ranking.',
                         element: '<img>',
@@ -65,11 +81,10 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
             if (!loading) {
                 findings.push({
                     severity: 'warning',
-                    message:
-                        'Image without loading attribute — consider lazy loading for performance',
+                    message: `Image without loading attribute: ${imgTag}`,
                     suggestion:
-                        'Add loading="lazy" to defer off-screen images. ' +
-                        'Use loading="eager" only for above-the-fold images.',
+                        'Add loading="lazy" for off-screen images, or loading="eager" for above-the-fold images. ' +
+                        'Either value suppresses this warning.',
                     element: '<img>',
                     attribute: 'loading',
                 });
@@ -125,47 +140,50 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
         }
     });
 
-    if (!hasH1) {
-        findings.push({
-            severity: 'warning',
-            message: 'Page has no <h1> element — the primary heading is important for SEO',
-            suggestion:
-                'Add an <h1> element with the main page title or topic. ' +
-                'Each page should have exactly one <h1>.',
-            element: '<h1>',
-        });
-    } else if (h1Count > 1) {
-        findings.push({
-            severity: 'warning',
-            message: `Page has ${h1Count} <h1> elements — should have exactly one`,
-            suggestion:
-                'Keep only one <h1> for the primary page heading. ' +
-                'Use <h2> or lower for secondary headings.',
-            element: '<h1>',
-        });
-    }
+    if (!isComp) {
+        if (!hasH1) {
+            findings.push({
+                severity: 'warning',
+                message: 'Page has no <h1> element — the primary heading is important for SEO',
+                suggestion:
+                    'Add an <h1> element with the main page title or topic. ' +
+                    'Each page should have exactly one <h1>.',
+                element: '<h1>',
+            });
+        } else if (h1Count > 1) {
+            findings.push({
+                severity: 'warning',
+                message: `Page has ${h1Count} <h1> elements — should have exactly one`,
+                suggestion:
+                    'Keep only one <h1> for the primary page heading. ' +
+                    'Use <h2> or lower for secondary headings.',
+                element: '<h1>',
+            });
+        }
 
-    if (!hasMain) {
-        findings.push({
-            severity: 'warning',
-            message: 'Page has no <main> landmark — helps search engines identify primary content',
-            suggestion:
-                'Wrap the primary page content in a <main> element. ' +
-                'Each page should have one <main> landmark.',
-            element: '<main>',
-        });
-    }
+        if (!hasMain) {
+            findings.push({
+                severity: 'warning',
+                message:
+                    'Page has no <main> landmark — helps search engines identify primary content',
+                suggestion:
+                    'Wrap the primary page content in a <main> element. ' +
+                    'Each page should have one <main> landmark.',
+                element: '<main>',
+            });
+        }
 
-    if (hasImage && !hasFetchPriorityHigh) {
-        findings.push({
-            severity: 'warning',
-            message: 'No image has fetchpriority="high" — the LCP image should be prioritized',
-            suggestion:
-                'Add fetchpriority="high" to the largest above-the-fold image (the LCP candidate). ' +
-                'This tells the browser to download it first, improving Largest Contentful Paint.',
-            element: '<img>',
-            attribute: 'fetchpriority',
-        });
+        if (hasLargeImage && !hasFetchPriorityHigh) {
+            findings.push({
+                severity: 'warning',
+                message: 'No image has fetchpriority="high" — the LCP image should be prioritized',
+                suggestion:
+                    'Add fetchpriority="high" to the largest above-the-fold image (the LCP candidate). ' +
+                    'This tells the browser to download it first, improving Largest Contentful Paint.',
+                element: '<img>',
+                attribute: 'fetchpriority',
+            });
+        }
     }
 
     // --- Rule: no @import of external URLs in CSS ---
@@ -210,7 +228,9 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
         }
     }
 
-    // --- Head metadata checks ---
+    // --- Head metadata checks (pages only) ---
+    if (isComp) return findings;
+
     const componentHeadTags = new Set(
         ctx.headlessImports.flatMap((imp) => imp.providedHeadTags ?? []),
     );

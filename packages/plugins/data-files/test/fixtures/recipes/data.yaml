@@ -1,0 +1,13 @@
+- slug: carbonara
+  title: Pasta Carbonara
+  author: jane
+  nutrition:
+    calories: 450
+    protein: 25
+
+- slug: risotto
+  title: Mushroom Risotto
+  author: bob
+  nutrition:
+    calories: 380
+    protein: 12

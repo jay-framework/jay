@@ -1,0 +1,12 @@
+name: fontFallback
+description: >
+  Generate a metric-matched fallback @font-face for a web font to prevent layout shift (CLS).
+  Uses pre-computed metrics from @capsizecss/metrics for known Google and system fonts.
+
+inputSchema:
+  primary: string
+  fallback: string
+
+outputSchema:
+  fontFamily: string
+  fontFaces: string

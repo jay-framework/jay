@@ -109,6 +109,28 @@ describe('CSS extraction', () => {
         expect(jayFile.val.css).toContain('.custom { font-weight: bold; }');
     });
 
+    it('should preserve external @import URLs when inlining linked CSS', async () => {
+        const jayFile = await parseJayFile(
+            jayFileWith(
+                TEST_YAML,
+                TEST_BODY,
+                `<link rel="stylesheet" href="fixtures/css-test/theme-with-fonts.css">`,
+            ),
+            'FontImportTest',
+            './test',
+            {},
+            JAY_IMPORT_RESOLVER,
+            '',
+        );
+
+        expect(jayFile.validations).toEqual([]);
+        expect(jayFile.val.css).toBeDefined();
+        expect(jayFile.val.css).toMatch(
+            /@import url\('https:\/\/fonts\.googleapis\.com\/css2\?family=Sora/,
+        );
+        expect(jayFile.val.css).toMatch(/--font-body:\s*'Inter'/);
+    });
+
     it('should return undefined when no CSS is present', async () => {
         const jayFile = await parseJayFile(
             jayFileWith(TEST_YAML, TEST_BODY),

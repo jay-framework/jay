@@ -1267,4 +1267,13 @@ export function printJayValidationResult(result: ValidationResult, options: Vali
     } else {
         logger.important(chalk.red(`Validation failed — ${result.errors.length} error(s).`));
     }
+
+    const totalIssues = result.errors.length + result.warnings.length + result.coverage.length;
+    if (totalIssues > 0) {
+        logger.important(
+            chalk.gray(
+                '\nSee: agent-kit/designer/validation-guide.md for how to interpret and suppress warnings.',
+            ),
+        );
+    }
 }

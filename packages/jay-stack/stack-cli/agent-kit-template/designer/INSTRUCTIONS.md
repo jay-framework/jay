@@ -50,6 +50,7 @@ There is no standalone "interactive" phase. Any tag with `type: interactive` (re
 | [Contract Authoring Guide](../contracts/GUIDE.md)          | Writing contracts: syntax, page/component/linked contracts, examples                            |
 | [script-tags.md](script-tags.md)                           | Script tag policy: use page.ts for behavior, jay-script="allow" for third-party scripts         |
 | [cli-commands.md](cli-commands.md)                         | CLI commands: setup, validate, params, action, dev server                                       |
+| [validation-guide.md](validation-guide.md)                 | Understanding validation output: static analysis, component warnings, how to act on findings    |
 | `../references/<plugin>/`                                  | Pre-generated discovery data: product catalogs, collection schemas (from `jay-stack agent-kit`) |
 
 ## When to Use Headfull Components

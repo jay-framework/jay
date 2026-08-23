@@ -14,12 +14,14 @@
     ".": "./dist/index.js",
     "./client": "./dist/index.client.js",
     "./plugin.yaml": "./plugin.yaml",
-    "./dist/pages/settings/page.jay-html": "./dist/pages/settings/page.jay-html"
+    "./dist/pages/settings/page.jay-html": "./dist/pages/settings/page.jay-html",
+    "./font-fallback.jay-action": "./dist/actions/font-fallback.jay-action"
   },
   "scripts": {
-    "build": "npm run clean && npm run definitions && npm run build:copy-assets && npm run build:client && npm run build:server && npm run build:types && npm run validate",
+    "build": "npm run clean && npm run definitions && npm run build:copy-assets && npm run build:copy-actions && npm run build:client && npm run build:server && npm run build:types && npm run validate",
     "definitions": "jay-cli definitions lib/pages/settings",
     "build:copy-assets": "mkdir -p dist/pages/settings && cp lib/pages/settings/page.jay-html dist/pages/settings/ && cp lib/pages/settings/page.jay-html.d.ts dist/pages/settings/ 2>/dev/null || true",
+    "build:copy-actions": "mkdir -p dist/actions && cp lib/actions/*.jay-action dist/actions/",
     "build:client": "vite build",
     "validate": "jay-stack-cli validate-plugin",
     "build:server": "vite build --ssr",
@@ -30,6 +32,9 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@capsizecss/core": "^4.1.3",
+    "@capsizecss/metrics": "^4.2.0",
+    "@capsizecss/unpack": "^4.0.1",
     "@csstools/selector-specificity": "^5.0.0",
     "@jay-framework/compiler-jay-html": "workspace:^",
     "@jay-framework/compiler-shared": "workspace:^",
