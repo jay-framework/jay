@@ -116,12 +116,12 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 162 | [structural headfull components](162%20-%20structural%20headfull%20components)                                                 | Allow headfull components without .ts code file; passthrough from contract                     |
 | 166 | [a11y form and label validation rules](166%20-%20a11y%20form%20and%20label%20validation%20rules)                               | Extend a11y-validator: checkbox/radio, ARIA name integrity, duplicate ids, label hygiene       |
 | 167 | [a11y nested interactive elements](167%20-%20a11y%20nested%20interactive%20elements)                                           | a11y rule: focusable elements nested inside links/buttons (WCAG 4.1.2)                         |
-| 168 | [dev-only plugin routes](168%20-%20dev-only-plugin-routes)                                                                     | `devOnly` flag on plugin routes — dev-server tooling metadata on RouteInfo                     |
 | 168 | [font fallback metrics](168%20-%20font%20fallback%20metrics)                                                                   | Metric-matched fallback @font-face to prevent CLS on font load; validation + CLI tool          |
-| 169 | [plugin-framework-version-compatibility](169%20-%20plugin-framework-version-compatibility)                                     | Registry-based plugin↔framework compat; `plugins compat`, install preflight, doctor           |
 | 169 | [data files plugin](169%20-%20data%20lists%20plugin)                                                                           | CSV/YAML/JSON/JSONL data source plugin: list view, item view, per-item pages, cross-references |
-| 170 | [aiditor-settings-plugin-contributions](170%20-%20aiditor-settings-plugin-contributions)                                       | Project settings tabs: template path, materialization, walk-up resolver, devOnly               |
 | 170 | [seo validator false positives](170%20-%20seo%20validator%20false%20positives)                                                 | Fix false positives: component vs page detection, html-string awareness, fetchpriority         |
+| 171 | [dev-only plugin routes](171%20-%20dev-only-plugin-routes)                                                                     | `devOnly` flag on plugin routes — dev-server tooling metadata on RouteInfo                     |
+| 172 | [plugin-framework-version-compatibility](172%20-%20plugin-framework-version-compatibility)                                     | Registry-based plugin↔framework compat; `plugins compat`, install preflight, doctor           |
+| 173 | [aiditor-settings-plugin-contributions](173%20-%20aiditor-settings-plugin-contributions)                                       | Project settings tabs: template path, materialization, walk-up resolver, devOnly               |
 
 ---
 

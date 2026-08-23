@@ -98,7 +98,7 @@ export interface PluginManifest {
         description?: string;
         /** When true, route is dev-server tooling only (e.g. plugin settings UI).
          *  Exposed in RouteInfo for consumers like AIditor to filter from page pickers.
-         *  Future: excluded from production builds. See Design Log #168. */
+         *  Future: excluded from production builds. See Design Log #171. */
         devOnly?: boolean;
     }>;
     /** CLI commands exposed by this plugin (Design Log #142).
