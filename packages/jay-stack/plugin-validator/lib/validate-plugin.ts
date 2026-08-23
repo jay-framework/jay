@@ -1,12 +1,13 @@
 import fs from 'fs';
 import path from 'path';
 import YAML from 'yaml';
-import { loadPluginManifest } from '@jay-framework/compiler-shared';
+import { loadPluginManifest, type PluginManifest } from '@jay-framework/compiler-shared';
 import { parseContract } from '@jay-framework/compiler-jay-html';
 import { ts } from '@jay-framework/typescript-bridge';
 import type { ValidatePluginOptions, ValidationResult, PluginContext } from './types';
 import { checkComponentPropsAndParams } from './check-component-contract';
 import { validateAddMenuCatalog } from './validate-add-menu-catalog';
+import { validateAiditorSettings } from './validate-aiditor-settings';
 
 /**
  * Validates a Jay Stack plugin package or local plugin directory.
@@ -105,6 +106,9 @@ async function validatePluginPackage(
 
     // 7. Add Menu catalog lint (Design Log #30b)
     await validateAddMenuCatalog(context, result);
+
+    // 8. AIditor settings template (materialized via agent-kit — not in core PluginManifest)
+    await validateAiditorSettings(context, result);
 
     // Final result
     result.valid = result.errors.length === 0;
@@ -469,6 +473,13 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
                 }
                 if (route.css) {
                     validateDocFile(route.css, `route "${route.path}" css`, context, result);
+                }
+                if (route.devOnly !== undefined && typeof route.devOnly !== 'boolean') {
+                    result.errors.push({
+                        type: 'schema',
+                        message: `Route "${route.path}" devOnly must be a boolean`,
+                        location: 'plugin.yaml',
+                    });
                 }
             });
         }

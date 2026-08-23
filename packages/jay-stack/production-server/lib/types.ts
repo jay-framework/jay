@@ -36,6 +36,8 @@ export interface RouteEntry {
     instances: InstanceEntry[];
     isPlugin?: boolean;
     pluginName?: string;
+    /** When true, dev-server tooling route (future: excluded from production builds). */
+    devOnly?: boolean;
 }
 
 export interface InstanceEntry {

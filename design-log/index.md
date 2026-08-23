@@ -20,16 +20,19 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ## Jay HTML & Templates
 
-| #   | Title                                                                                                            | Description                                        |
-| --- | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| 40  | [changing jay-html format](40%20-%20changing%20jay-html%20format)                                                | Jay HTML format evolution                          |
-| 44  | [css support](44%20-%20css%20support)                                                                            | CSS styling support in Jay                         |
-| 46  | [recursive jay-html](46%20-%20recursive%20jay-html)                                                              | Recursive template support                         |
-| 47  | [recursive html context switching](47%20-%20recursive%20html%20context%20switching)                              | Context switching in recursive templates           |
-| 57  | [style binding support in jay-html](57%20-%20style%20binding%20support%20in%20jay-html)                          | Dynamic style bindings                             |
-| 71  | [boolean attribute condition style parsing](71%20-%20boolean%20attribute%20condition%20style%20parsing)          | Conditional style parsing                          |
-| 75  | [slow rendering jay-html to jay-html](75%20-%20slow%20rendering%20jay-html%20to%20jay-html)                      | Slow phase rendering transformations               |
-| 78  | [unified condition parsing](78%20-%20unified%20condition%20parsing%20for%20code%20generation%20and%20evaluation) | Unified parsing for code generation and evaluation |
+| #   | Title                                                                                                            | Description                                                                                 |
+| --- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| 40  | [changing jay-html format](40%20-%20changing%20jay-html%20format)                                                | Jay HTML format evolution                                                                   |
+| 44  | [css support](44%20-%20css%20support)                                                                            | CSS styling support in Jay                                                                  |
+| 46  | [recursive jay-html](46%20-%20recursive%20jay-html)                                                              | Recursive template support                                                                  |
+| 47  | [recursive html context switching](47%20-%20recursive%20html%20context%20switching)                              | Context switching in recursive templates                                                    |
+| 57  | [style binding support in jay-html](57%20-%20style%20binding%20support%20in%20jay-html)                          | Dynamic style bindings                                                                      |
+| 71  | [boolean attribute condition style parsing](71%20-%20boolean%20attribute%20condition%20style%20parsing)          | Conditional style parsing                                                                   |
+| 75  | [slow rendering jay-html to jay-html](75%20-%20slow%20rendering%20jay-html%20to%20jay-html)                      | Slow phase rendering transformations                                                        |
+| 78  | [unified condition parsing](78%20-%20unified%20condition%20parsing%20for%20code%20generation%20and%20evaluation) | Unified parsing for code generation and evaluation                                          |
+| 163 | [built-in bindings and field comparison](163%20-%20params%20binding%20in%20templates)                            | `jay.params`, `jay.url.path` bindings; field-to-field `===` comparison; active menu pattern |
+| 164 | [inline style in body](164%20-%20inline%20style%20in%20body)                                                     | Body `<style>` tags crash the template parser; skip, warn, or hoist to head                 |
+| 165 | [graceful expression parse errors](165%20-%20graceful%20expression%20parse%20errors)                             | Convert expression parse errors to validation messages instead of crashing the page         |
 
 ---
 
@@ -111,14 +114,14 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 160 | [deprecate editor packages](160%20-%20deprecate%20editor%20packages)                                                           | Move editor-client/protocol/server to \_deprecated; remove from stack-cli                      |
 | 161 | [markdown image url resolution](161%20-%20markdown%20image%20url%20resolution)                                                 | Rewrite relative image URLs in markdown; copy media to public; CDN mapping                     |
 | 162 | [structural headfull components](162%20-%20structural%20headfull%20components)                                                 | Allow headfull components without .ts code file; passthrough from contract                     |
-| 163 | [built-in bindings and field comparison](163%20-%20params%20binding%20in%20templates)                                          | `jay.params`, `jay.url.path` bindings; field-to-field `===` comparison; active menu pattern    |
-| 164 | [inline style in body](164%20-%20inline%20style%20in%20body)                                                                   | Body `<style>` tags crash the template parser; skip, warn, or hoist to head                    |
-| 165 | [graceful expression parse errors](165%20-%20graceful%20expression%20parse%20errors)                                           | Convert expression parse errors to validation messages instead of crashing the page            |
 | 166 | [a11y form and label validation rules](166%20-%20a11y%20form%20and%20label%20validation%20rules)                               | Extend a11y-validator: checkbox/radio, ARIA name integrity, duplicate ids, label hygiene       |
 | 167 | [a11y nested interactive elements](167%20-%20a11y%20nested%20interactive%20elements)                                           | a11y rule: focusable elements nested inside links/buttons (WCAG 4.1.2)                         |
 | 168 | [font fallback metrics](168%20-%20font%20fallback%20metrics)                                                                   | Metric-matched fallback @font-face to prevent CLS on font load; validation + CLI tool          |
 | 169 | [data files plugin](169%20-%20data%20lists%20plugin)                                                                           | CSV/YAML/JSON/JSONL data source plugin: list view, item view, per-item pages, cross-references |
 | 170 | [seo validator false positives](170%20-%20seo%20validator%20false%20positives)                                                 | Fix false positives: component vs page detection, html-string awareness, fetchpriority         |
+| 171 | [dev-only plugin routes](171%20-%20dev-only-plugin-routes)                                                                     | `devOnly` flag on plugin routes — dev-server tooling metadata on RouteInfo                     |
+| 172 | [plugin-framework-version-compatibility](172%20-%20plugin-framework-version-compatibility)                                     | Registry-based plugin↔framework compat; `plugins compat`, install preflight, doctor           |
+| 173 | [aiditor-settings-plugin-contributions](173%20-%20aiditor-settings-plugin-contributions)                                       | Project settings tabs: template path, materialization, walk-up resolver, devOnly               |
 
 ---
 
@@ -141,6 +144,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 70  | [static route param inference](70%20-%20static%20route%20param%20inference)                                                         | Static route parameter inference (superseded by #113)                |
 | 113 | [explicit route params for static overrides](113%20-%20explicit%20route%20params%20for%20static%20overrides)                        | Replace auto-inference with `<script type="application/jay-params">` |
 | 117 | [fast phase query parameters](117%20-%20fast%20phase%20query%20parameters)                                                          | Type-safe query string access in fast phase only (`props.query`)     |
+| 163 | [built-in bindings and field comparison](163%20-%20params%20binding%20in%20templates)                                               | `jay.params`, `jay.url.path` bindings in page templates              |
 
 ---
 
@@ -172,7 +176,8 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 153  | [npm create jay](153%20-%20npm%20create%20jay)                                                        | Interactive project scaffolding: name, plugin selection, agent-kit, setup banner             |
 | 158  | [staged npm publish](158%20-%20staged%20npm%20publish)                                                | Two-phase publish: stage all packages without OTP, then bulk-approve with single OTP         |
 | 147  | [jay-html validation rules catalog](147%20-%20jay-html%20validation%20rules%20catalog)                | Complete catalog of all validation rules across wix-media, SEO, and a11y                     |
-| 163  | [a11y form and label validation rules](163%20-%20a11y%20form%20and%20label%20validation%20rules)      | Extend a11y-validator: checkbox/radio, ARIA name integrity, duplicate ids, label hygiene     |
+| 165  | [graceful expression parse errors](165%20-%20graceful%20expression%20parse%20errors)                  | Convert expression parse errors to validation messages instead of crashing the page          |
+| 166  | [a11y form and label validation rules](166%20-%20a11y%20form%20and%20label%20validation%20rules)      | Extend a11y-validator: checkbox/radio, ARIA name integrity, duplicate ids, label hygiene     |
 
 ---
 

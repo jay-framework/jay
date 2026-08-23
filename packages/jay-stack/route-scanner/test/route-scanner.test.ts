@@ -240,6 +240,17 @@ describe('createRoute', () => {
         expect(route.rawRoute).toBe('/aiditor');
         expect(route.componentExport).toBe('aiditorPage');
     });
+
+    it('should create a dev-only plugin route', () => {
+        const route = createRoute(
+            '/plugin/settings',
+            '/plugin/settings/page.jay-html',
+            '/plugin/index.js',
+            'settingsPage',
+            { devOnly: true },
+        );
+        expect(route.devOnly).toBe(true);
+    });
 });
 
 function resolveFixture(relativePath: string): string {

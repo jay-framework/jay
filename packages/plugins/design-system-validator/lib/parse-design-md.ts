@@ -5,7 +5,7 @@ import path from 'node:path';
 export interface TypographyToken {
     fontFamily?: string;
     fontSize?: string;
-    fontWeight?: number;
+    fontWeight?: string | number;
     lineHeight?: string | number;
     letterSpacing?: string;
 }

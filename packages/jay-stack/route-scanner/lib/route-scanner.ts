@@ -29,6 +29,8 @@ export type JayRoute = {
      * e.g., /products/ceramic-flower-vase declares { slug: 'ceramic-flower-vase' }.
      */
     inferredParams?: Record<string, string>;
+    /** When true, dev-server tooling route — consumers may filter from page navigation. */
+    devOnly?: boolean;
 };
 export type JayRoutes = JayRoute[];
 
@@ -298,6 +300,7 @@ export function createRoute(
     jayHtmlPath: string,
     compPath: string,
     componentExport?: string,
+    options?: { devOnly?: boolean },
 ): JayRoute {
     return {
         segments: parseRouteSegments(routePath),
@@ -305,6 +308,7 @@ export function createRoute(
         jayHtmlPath,
         compPath,
         ...(componentExport && { componentExport }),
+        ...(options?.devOnly && { devOnly: true }),
     };
 }
 
