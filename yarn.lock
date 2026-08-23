@@ -3253,26 +3253,23 @@ __metadata:
 
 "@capsizecss/core@npm:^4.1.3":
   version: 4.1.3
-  resolution: "@capsizecss/core@npm:4.1.3::__archiveUrl=https%3A%2F%2Fnpm.dev.wixpress.com%2Fapi%2Fnpm%2Fnpm-repos%2F%40capsizecss%2Fcore%2F-%2Fcore-4.1.3.tgz"
+  resolution: "@capsizecss/core@npm:4.1.3"
   dependencies:
     csstype: "npm:^3.1.1"
-  checksum: 10/e156311dd474c262587474f7c1499a9cffcd5192168496ad88d45bdcf988304b9958a19dc30653f32d26e1facba981aada11faf2e722111bd36a91bd93016e12
   languageName: node
   linkType: hard
 
 "@capsizecss/metrics@npm:^4.2.0":
   version: 4.2.0
-  resolution: "@capsizecss/metrics@npm:4.2.0::__archiveUrl=https%3A%2F%2Fnpm.dev.wixpress.com%2Fapi%2Fnpm%2Fnpm-repos%2F%40capsizecss%2Fmetrics%2F-%2Fmetrics-4.2.0.tgz"
-  checksum: 10/a3b33e524a362f9aa5ec21058a0ce31184fa91c8ad0c0ffe22ddaa70c8f31d7b489372f08f334e5430b7c77309b80601ce1077ceddf86c1068b6b65f54590bce
+  resolution: "@capsizecss/metrics@npm:4.2.0"
   languageName: node
   linkType: hard
 
 "@capsizecss/unpack@npm:^4.0.1":
   version: 4.0.1
-  resolution: "@capsizecss/unpack@npm:4.0.1::__archiveUrl=https%3A%2F%2Fnpm.dev.wixpress.com%2Fapi%2Fnpm%2Fnpm-repos%2F%40capsizecss%2Funpack%2F-%2Funpack-4.0.1.tgz"
+  resolution: "@capsizecss/unpack@npm:4.0.1"
   dependencies:
     fontkitten: "npm:^1.0.3"
-  checksum: 10/28d9381fda14eb0664ae91c9d9b2ba6cd385ea824924f03f79833103294444276c9a87aeb77e8f32fb018659e5c2fca8cb08f73688e41d0185d537640571b2fa
   languageName: node
   linkType: hard
 
@@ -7478,10 +7475,9 @@ __metadata:
 
 "@types/papaparse@npm:^5.3.14":
   version: 5.5.2
-  resolution: "@types/papaparse@npm:5.5.2::__archiveUrl=https%3A%2F%2Fnpm.dev.wixpress.com%2Fapi%2Fnpm%2Fnpm-repos%2F%40types%2Fpapaparse%2F-%2Fpapaparse-5.5.2.tgz"
+  resolution: "@types/papaparse@npm:5.5.2"
   dependencies:
     "@types/node": "npm:*"
-  checksum: 10/35c38d8c789a0512465665fa6472e8eda7a20413227aafc25b55955a0ced8a061dfbeb0c75658393ebe61670cb95064cc3753ce1a0bac93a12c53ff569d15170
   languageName: node
   linkType: hard
 
@@ -10548,8 +10544,7 @@ __metadata:
 
 "csstype@npm:^3.1.1":
   version: 3.2.3
-  resolution: "csstype@npm:3.2.3::__archiveUrl=https%3A%2F%2Fnpm.dev.wixpress.com%2Fapi%2Fnpm%2Fnpm-repos%2Fcsstype%2F-%2Fcsstype-3.2.3.tgz"
-  checksum: 10/ad41baf7e2ffac65ab544d79107bf7cd1a4bb9bab9ac3302f59ab4ba655d5e30942a8ae46e10ba160c6f4ecea464cc95b975ca2fefbdeeacd6ac63f12f99fe1f
+  resolution: "csstype@npm:3.2.3"
   languageName: node
   linkType: hard
 
@@ -13504,10 +13499,9 @@ __metadata:
 
 "fontkitten@npm:^1.0.3":
   version: 1.0.3
-  resolution: "fontkitten@npm:1.0.3::__archiveUrl=https%3A%2F%2Fnpm.dev.wixpress.com%2Fapi%2Fnpm%2Fnpm-repos%2Ffontkitten%2F-%2Ffontkitten-1.0.3.tgz"
+  resolution: "fontkitten@npm:1.0.3"
   dependencies:
     tiny-inflate: "npm:^1.0.3"
-  checksum: 10/ec9ca126cb0ac55d1085e6828301f893f204ed9554a8724fbe52ffb9f8489d674366b20dad348fb11a3daaeae50b8fe42b8ac486e20c2cffeb84baf2e924ce16
   languageName: node
   linkType: hard
 
@@ -17800,8 +17794,7 @@ __metadata:
 
 "papaparse@npm:^5.4.1":
   version: 5.5.4
-  resolution: "papaparse@npm:5.5.4::__archiveUrl=https%3A%2F%2Fnpm.dev.wixpress.com%2Fapi%2Fnpm%2Fnpm-repos%2Fpapaparse%2F-%2Fpapaparse-5.5.4.tgz"
-  checksum: 10/929466b2acb464b2ac4ad5542d58097967a5c0ef0ca8d9e05e0e8effadbb4077692f19c7601bb32dc56bd982941b38a8e83d7db9e5025483ca859abf7e9a5031
+  resolution: "papaparse@npm:5.5.4"
   languageName: node
   linkType: hard
 
@@ -21845,8 +21838,7 @@ __metadata:
 
 "tiny-inflate@npm:^1.0.3":
   version: 1.0.3
-  resolution: "tiny-inflate@npm:1.0.3::__archiveUrl=https%3A%2F%2Fnpm.dev.wixpress.com%2Fapi%2Fnpm%2Fnpm-repos%2Ftiny-inflate%2F-%2Ftiny-inflate-1.0.3.tgz"
-  checksum: 10/f620114fb51ea4a16ea7b4c62d6dd753f8faf41808a133c53d431ed4bf2ca377b21443653a0096894f2be22ca11bb327f148e7e5431f9246068917724ec01ffc
+  resolution: "tiny-inflate@npm:1.0.3"
   languageName: node
   linkType: hard
 
