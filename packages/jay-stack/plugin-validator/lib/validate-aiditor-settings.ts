@@ -9,10 +9,8 @@ import {
 import type { PluginManifest } from '@jay-framework/compiler-shared';
 import type { PluginContext, ValidationResult } from './types';
 
-/** Relative paths where plugins may ship AIditor settings templates. */
-export const AIDITOR_SETTINGS_TEMPLATE_REL_PATHS = [
-    'agent-kit/aiditor/settings.template.yaml',
-] as const;
+/** Relative path where plugins ship the AIditor settings template. */
+export const AIDITOR_SETTINGS_TEMPLATE_REL_PATH = 'agent-kit/aiditor/settings.template.yaml';
 
 function mapSchemaError(error: AiditorSettingsValidationError, relPath: string) {
     return {
@@ -74,16 +72,19 @@ export async function validateAiditorSettings(
     context: PluginContext,
     result: ValidationResult,
 ): Promise<void> {
-    let hasTemplate = false;
-
-    for (const relPath of AIDITOR_SETTINGS_TEMPLATE_REL_PATHS) {
-        const templatePath = path.join(context.pluginPath, relPath);
-        if (!fs.existsSync(templatePath)) continue;
-        hasTemplate = true;
-        validateSettingsTemplateAtPath(templatePath, relPath, result, context.manifest);
+    const templatePath = path.join(context.pluginPath, AIDITOR_SETTINGS_TEMPLATE_REL_PATH);
+    if (!fs.existsSync(templatePath)) {
+        return;
     }
 
-    if (hasTemplate && !context.manifest.agentkit) {
+    validateSettingsTemplateAtPath(
+        templatePath,
+        AIDITOR_SETTINGS_TEMPLATE_REL_PATH,
+        result,
+        context.manifest,
+    );
+
+    if (!context.manifest.agentkit) {
         result.warnings.push({
             type: 'schema',
             message:
