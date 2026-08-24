@@ -475,8 +475,7 @@ export type ConditionResult =
  * Intermediate value during parsing - can be a resolved value or runtime code
  */
 export type PartialValue =
-    | { type: 'resolved'; value: unknown }
-    | { type: 'code'; fragment: RenderFragment; expr: string };
+    { type: 'resolved'; value: unknown } | { type: 'code'; fragment: RenderFragment; expr: string };
 
 /**
  * Convert a value to its JavaScript truthiness

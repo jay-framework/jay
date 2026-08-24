@@ -96,8 +96,7 @@ Server-element output (within `renderToStream`):
 ```typescript
 // Headless instance: product-card (coordinate: product-card:0)
 const vs_pc0 = (vs as any).__headlessInstances?.['product-card:0'] as
-  | ProductCardViewState
-  | undefined;
+  ProductCardViewState | undefined;
 if (vs_pc0) {
   w('<article');
   w(' class="hero-card"');
@@ -179,8 +178,7 @@ for (const vs1 of vs.products) {
   w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '">');
   // Headless instance: product-card (coordinate: dynamic)
   const vs_pc0 = (vs as any).__headlessInstances?.[vs1._id + ',product-card:0'] as
-    | ProductCardViewState
-    | undefined;
+    ProductCardViewState | undefined;
   if (vs_pc0) {
     w('<article');
     w(' class="product-tile"');
@@ -234,8 +232,7 @@ Server-element output:
 ```typescript
 // slowForEach item: jayTrackBy="p1"
 const vs_pc0 = (vs as any).__headlessInstances?.['p1/product-card:0'] as
-  | ProductCardViewState
-  | undefined;
+  ProductCardViewState | undefined;
 if (vs_pc0) {
   w('<div');
   w(' jay-coordinate="p1">');
@@ -275,8 +272,7 @@ Server-element output:
 ```typescript
 if (vs.showPromo) {
   const vs_pc1 = (vs as any).__headlessInstances?.['product-card:promo'] as
-    | ProductCardViewState
-    | undefined;
+    ProductCardViewState | undefined;
   if (vs_pc1) {
     w('<div');
     w(' class="promo"');

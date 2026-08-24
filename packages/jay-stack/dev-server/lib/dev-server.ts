@@ -521,8 +521,7 @@ async function handleCachedRequest(
 
     // Run fast phase — includes instance fast render (DL#109)
     const instancePhaseData = (cachedEntry.carryForward as any)?.__instances as
-        | InstancePhaseData
-        | undefined;
+        InstancePhaseData | undefined;
     const forEachInstances = instancePhaseData?.forEachInstances;
     const headlessComps = pagePartsResult.val.headlessInstanceComponents;
 
@@ -816,8 +815,7 @@ async function handleClientOnlyRequest(
 
     // Extract instance phase data from carryForward (set by runSlowlyForPage)
     const instancePhaseData = (renderedSlowly.carryForward as any)?.__instances as
-        | InstancePhaseData
-        | undefined;
+        InstancePhaseData | undefined;
 
     // Run fast phase (includes instance fast render — DL#109)
     const fastStart = Date.now();

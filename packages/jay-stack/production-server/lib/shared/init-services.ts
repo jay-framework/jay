@@ -36,9 +36,8 @@ export async function initializeServices(
     label: string,
 ): Promise<void> {
     const logger = getLogger();
-    const { discoverPluginsWithInit, sortPluginsByDependencies } = await import(
-        '@jay-framework/stack-server-runtime'
-    );
+    const { discoverPluginsWithInit, sortPluginsByDependencies } =
+        await import('@jay-framework/stack-server-runtime');
 
     try {
         const pluginsWithInit = sortPluginsByDependencies(

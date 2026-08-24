@@ -120,7 +120,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 169 | [data files plugin](169%20-%20data%20lists%20plugin)                                                                           | CSV/YAML/JSON/JSONL data source plugin: list view, item view, per-item pages, cross-references |
 | 170 | [seo validator false positives](170%20-%20seo%20validator%20false%20positives)                                                 | Fix false positives: component vs page detection, html-string awareness, fetchpriority         |
 | 171 | [dev-only plugin routes](171%20-%20dev-only-plugin-routes)                                                                     | `devOnly` flag on plugin routes — dev-server tooling metadata on RouteInfo                     |
-| 172 | [plugin-framework-version-compatibility](172%20-%20plugin-framework-version-compatibility)                                     | Registry-based plugin↔framework compat; `plugins compat`, install preflight, doctor           |
+| 172 | [plugin-framework-version-compatibility](172%20-%20plugin-framework-version-compatibility)                                     | Registry-based plugin↔framework compat; `plugins compat`, install preflight, doctor            |
 | 173 | [aiditor-settings-plugin-contributions](173%20-%20aiditor-settings-plugin-contributions)                                       | Project settings tabs: template path, materialization, walk-up resolver, devOnly               |
 
 ---

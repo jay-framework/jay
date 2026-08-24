@@ -68,8 +68,7 @@ export type RegisteredActionEntry = RegisteredAction | RegisteredStreamAction;
  * Result of executing an action.
  */
 export type ActionExecutionResult<T> =
-    | { success: true; data: T }
-    | { success: false; error: ActionErrorResponse };
+    { success: true; data: T } | { success: false; error: ActionErrorResponse };
 
 /**
  * Error response structure for failed actions.

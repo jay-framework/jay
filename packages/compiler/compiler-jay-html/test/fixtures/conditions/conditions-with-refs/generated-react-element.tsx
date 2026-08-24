@@ -13,8 +13,7 @@ export interface ConditionsWithRefsElementRefs {
     text2: HTMLElementProxy<ConditionsWithRefsViewState, HTMLSpanElement>;
 }
 
-export interface ConditionsWithRefsElementProps
-    extends Jay4ReactElementProps<ConditionsWithRefsViewState> {}
+export interface ConditionsWithRefsElementProps extends Jay4ReactElementProps<ConditionsWithRefsViewState> {}
 
 export function reactRender({
     vs,

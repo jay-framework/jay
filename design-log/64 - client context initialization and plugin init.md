@@ -735,8 +735,8 @@ export async function clientInit(serverData: Record<string, any>): Promise<void>
 ```yaml
 # Simple - use defaults
 init:
-  server: true   # export "serverInit" from "./init/server"
-  client: true   # export "clientInit" from "./init/client"
+  server: true # export "serverInit" from "./init/server"
+  client: true # export "clientInit" from "./init/client"
 
 # Override when needed
 init:

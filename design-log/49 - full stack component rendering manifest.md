@@ -161,9 +161,7 @@ interface ObjectSchemaNode<NestedViewState extends object = any> extends BaseSch
  * Union type for all schema node types
  */
 export type SchemaNode<ViewState extends object = any> =
-  | PrimitiveSchemaNode
-  | ObjectSchemaNode<ViewState>
-  | ArraySchemaNode<ViewState>;
+  PrimitiveSchemaNode | ObjectSchemaNode<ViewState> | ArraySchemaNode<ViewState>;
 
 /**
  * The rendering manifest schema maps ViewState property names to their schema nodes
@@ -528,15 +526,17 @@ type NarrowViewStateByPhase<
   Schema extends RenderingManifestSchema<ViewState>,
   Phase extends 'slow' | 'fast' | 'interactive',
 > = {
-  [K in keyof ViewState as K extends keyof Schema
-    ? Schema[K] extends { mode: RenderingMode }
-      ? IsSetInPhase<Schema[K]['mode'], Phase> extends true
-        ? K // Include if mode is set in this phase
-        : never
-      : Schema[K] extends ObjectSchemaNode<any>
-        ? K // Include objects (will filter nested properties in value mapping)
-        : never
-    : never]: ViewState[K] extends Array<infer Item>
+  [
+    K in keyof ViewState as K extends keyof Schema
+      ? Schema[K] extends { mode: RenderingMode }
+        ? IsSetInPhase<Schema[K]['mode'], Phase> extends true
+          ? K // Include if mode is set in this phase
+          : never
+        : Schema[K] extends ObjectSchemaNode<any>
+          ? K // Include objects (will filter nested properties in value mapping)
+          : never
+      : never
+  ]: ViewState[K] extends Array<infer Item>
     ? Item extends object
       ? Schema[K] extends ArraySchemaNode<Item>
         ? Array<NarrowViewStateByPhase<Item, Schema[K]['itemSchema'], Phase>>

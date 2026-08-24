@@ -3,9 +3,10 @@
   "compilerOptions": {
     "outDir": "dist",
     "paths": {
+      "vite": ["../../../node_modules/vite"],
       "@jay-framework/list-compare": ["../list-compare/lib"],
-      "@jay-framework/reactive": ["../reactive/lib"],
-    },
+      "@jay-framework/reactive": ["../reactive/lib"]
+    }
   },
-  "exclude": ["test/**/build"],
+  "exclude": ["test/**/build"]
 }

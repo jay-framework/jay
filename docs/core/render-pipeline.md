@@ -170,12 +170,8 @@ Pipeline
 
 ```typescript
 await Pipeline.ok(data).toPhaseOutput((data) => ({
-  viewState: {
-    /* SlowViewState */
-  },
-  carryForward: {
-    /* CarryForward */
-  },
+  viewState: {/* SlowViewState */},
+  carryForward: {/* CarryForward */},
 }));
 ```
 
@@ -636,12 +632,8 @@ async function renderSlowlyChanging(props, wixStores) {
   return Pipeline.try(() => wixStores.products.getProductBySlug(props.slug))
     .map((response) => response.product || Pipeline.notFound())
     .toPhaseOutput((product) => ({
-      viewState: {
-        /* ... */
-      },
-      carryForward: {
-        /* ... */
-      },
+      viewState: {/* ... */},
+      carryForward: {/* ... */},
     }));
 }
 ```

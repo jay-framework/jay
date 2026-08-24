@@ -6,7 +6,7 @@
       "@jay-framework/component": ["../../packages/component/lib"],
       "@jay-framework/reactive": ["../../packages/reactive/lib"],
       "@jay-framework/runtime": ["../../packages/runtime/lib"],
-      "@jay-framework/secure": ["../../packages/secure/lib"],
-    },
-  },
+      "@jay-framework/secure": ["../../packages/secure/lib"]
+    }
+  }
 }

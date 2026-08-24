@@ -8,7 +8,7 @@
     "declaration": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "types": ["node"],
+    "types": ["node"]
   },
-  "include": ["lib"],
+  "include": ["lib"]
 }

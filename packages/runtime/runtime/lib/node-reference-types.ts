@@ -406,8 +406,7 @@ export interface HTMLElementCollectionProxyTarget<ViewState, ElementType extends
 }
 
 export interface HTMLElementCollectionProxy<ViewState, ElementType extends HTMLElement>
-    extends GlobalJayEvents<ViewState>,
-        HTMLElementCollectionProxyTarget<ViewState, ElementType> {}
+    extends GlobalJayEvents<ViewState>, HTMLElementCollectionProxyTarget<ViewState, ElementType> {}
 
 export interface HTMLNativeExec<ViewState, ElementType extends HTMLElement> {
     exec$<ResultType>(
@@ -415,8 +414,10 @@ export interface HTMLNativeExec<ViewState, ElementType extends HTMLElement> {
     ): Promise<ResultType>;
 }
 
-export interface HTMLElementProxyTarget<ViewState, ElementType extends HTMLElement>
-    extends HTMLNativeExec<ViewState, ElementType> {
+export interface HTMLElementProxyTarget<
+    ViewState,
+    ElementType extends HTMLElement,
+> extends HTMLNativeExec<ViewState, ElementType> {
     addEventListener<E extends Event>(
         type: string,
         handler: JayEventHandler<E, ViewState, any>,
@@ -430,8 +431,7 @@ export interface HTMLElementProxyTarget<ViewState, ElementType extends HTMLEleme
 }
 
 export interface HTMLElementProxy<ViewState, ElementType extends HTMLElement>
-    extends GlobalJayEvents<ViewState>,
-        HTMLElementProxyTarget<ViewState, ElementType> {}
+    extends GlobalJayEvents<ViewState>, HTMLElementProxyTarget<ViewState, ElementType> {}
 
 /** Components references **/
 
@@ -449,9 +449,11 @@ export type MapEventEmitterViewState<ParentViewState, ComponentType> = {
 };
 
 export type OnlyEventEmitters<ComponentType> = {
-    [key in keyof ComponentType as ComponentType[key] extends EventEmitter<any, any>
-        ? key
-        : never]: ComponentType[key];
+    [
+        key in keyof ComponentType as ComponentType[key] extends EventEmitter<any, any>
+            ? key
+            : never
+    ]: ComponentType[key];
 };
 
 export interface ComponentProxy<

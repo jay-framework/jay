@@ -6,7 +6,7 @@
       "@jay-framework/component": ["../component/lib"],
       "@jay-framework/runtime": ["../runtime/lib"],
       "@jay-framework/secure": ["../secure/lib"],
-      "react": ["./node_modules/@types/react"],
-    },
-  },
+      "react": ["./node_modules/@types/react"]
+    }
+  }
 }

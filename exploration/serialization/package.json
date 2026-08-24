@@ -15,8 +15,8 @@
     "@jay-framework/dev-environment": "workspace:^",
     "@rollup/plugin-node-resolve": "^15.2.3",
     "rimraf": "^5.0.5",
-    "rollup": "^4.9.5",
-    "rollup-plugin-typescript2": "^0.36.0",
+    "rollup": "4.9.5",
+    "rollup-plugin-typescript2": "^0.37.0",
     "tslib": "^2.6.2",
     "typescript": "^5.3.3"
   },

@@ -3,8 +3,9 @@
   "compilerOptions": {
     "outDir": "dist",
     "paths": {
+      "vite": ["../../../node_modules/vite"],
       "@jay-framework/compiler": ["../compiler/lib"],
-      "@jay-framework/rollup-plugin": ["../rollup-plugin/lib"],
-    },
-  },
+      "@jay-framework/rollup-plugin": ["../rollup-plugin/lib"]
+    }
+  }
 }

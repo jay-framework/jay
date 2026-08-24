@@ -31,7 +31,7 @@ const rollupConfig = defineConfig([
             }),
             // generating virtual files, static type checker cannot resolve them
             typescript({ check: false }),
-            nodeResolve(),
+            nodeResolve({ extensions: ['.ts', '.tsx', '.js', '.jsx'] }),
             copy({
                 targets: [
                     { src: './lib/**/*.css', dest: './dist' },
@@ -58,7 +58,7 @@ const rollupConfig = defineConfig([
         context: 'window',
         plugins: [
             typescript(),
-            nodeResolve(),
+            nodeResolve({ extensions: ['.ts', '.tsx', '.js', '.jsx'] }),
             copy({
                 targets: [
                     { src: './lib-secure/**/*.css', dest: './dist-secure' },
@@ -83,7 +83,7 @@ const rollupConfig = defineConfig([
             },
         ],
         context: 'window',
-        plugins: [typescript(), nodeResolve()],
+        plugins: [typescript(), nodeResolve({ extensions: ['.ts', '.tsx', '.js', '.jsx'] })],
     },
 ]);
 

@@ -187,9 +187,10 @@ export interface JayActionBuilder<
 // Builder Implementation
 // ============================================================================
 
-class JayActionBuilderImpl<Services extends any[], DefaultMethod extends HttpMethod>
-    implements JayActionBuilder<Services, unknown, unknown, DefaultMethod>
-{
+class JayActionBuilderImpl<
+    Services extends any[],
+    DefaultMethod extends HttpMethod,
+> implements JayActionBuilder<Services, unknown, unknown, DefaultMethod> {
     private _services: ServiceMarkers<Services> = [] as unknown as ServiceMarkers<Services>;
     private _method: HttpMethod;
     private _cacheOptions?: CacheOptions;

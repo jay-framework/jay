@@ -232,7 +232,7 @@ interactive:
 interactive:
   - tag: addButton
     elementType: [button]
-    phase: fast+interactive  # Error!
+    phase: fast+interactive # Error!
 ```
 
 #### Rule 2: Object Phase as Default

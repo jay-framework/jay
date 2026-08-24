@@ -10,8 +10,8 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "outDir": "dist",
-    "rootDir": "lib",
+    "rootDir": "lib"
   },
   "include": ["lib/**/*"],
-  "exclude": ["dist", "node_modules"],
+  "exclude": ["dist", "node_modules"]
 }

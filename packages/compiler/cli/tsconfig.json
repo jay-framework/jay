@@ -4,8 +4,8 @@
     "outDir": "dist",
     "paths": {
       "@jay-framework/compiler": ["../compiler/lib"],
-      "@jay-framework/rollup-plugin": ["../rollup-plugin/lib"],
-    },
+      "@jay-framework/rollup-plugin": ["../rollup-plugin/lib"]
+    }
   },
-  "exclude": ["test/fixtures/**/*.expected.*"],
+  "exclude": ["test/fixtures/**/*.expected.*"]
 }

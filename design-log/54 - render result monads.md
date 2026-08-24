@@ -209,25 +209,16 @@ The current types are:
 
 ```typescript
 type SlowlyRenderResult<VS, CF> =
-  | PartialRender<VS, CF>
-  | ServerError5xx
-  | ClientError4xx
-  | Redirect3xx;
+  PartialRender<VS, CF> | ServerError5xx | ClientError4xx | Redirect3xx;
 type FastRenderResult<VS, CF> =
-  | PartialRender<VS, CF>
-  | ServerError5xx
-  | ClientError4xx
-  | Redirect3xx;
+  PartialRender<VS, CF> | ServerError5xx | ClientError4xx | Redirect3xx;
 ```
 
 After renaming `PartialRender` to `PhaseOutput`:
 
 ```typescript
 type SlowlyRenderResult<VS, CF> =
-  | PhaseOutput<VS, CF>
-  | ServerError5xx
-  | ClientError4xx
-  | Redirect3xx;
+  PhaseOutput<VS, CF> | ServerError5xx | ClientError4xx | Redirect3xx;
 type FastRenderResult<VS, CF> = PhaseOutput<VS, CF> | ServerError5xx | ClientError4xx | Redirect3xx;
 ```
 
@@ -538,10 +529,7 @@ export interface Redirect3xx {
 
 // Union of all possible outcomes
 export type RenderOutcome<VS extends object, CF = {}> =
-  | PhaseOutput<VS, CF>
-  | ServerError5xx
-  | ClientError4xx
-  | Redirect3xx;
+  PhaseOutput<VS, CF> | ServerError5xx | ClientError4xx | Redirect3xx;
 ```
 
 ### RenderPipeline Monad

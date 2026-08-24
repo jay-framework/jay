@@ -44,10 +44,10 @@ Use `reference` for data sources (contracts, categories). Use `stage-place` for 
 Controls card size in the browse grid:
 
 ```yaml
-    browse:
-      size: small    # 4 per row — color swatches, small tokens
-      size: medium   # 2 per row — default
-      size: large    # 1 per row — full-width previews
+browse:
+  size: small # 4 per row — color swatches, small tokens
+  size: medium # 2 per row — default
+  size: large # 1 per row — full-width previews
 ```
 
 ## Presentation (preview)
@@ -55,19 +55,19 @@ Controls card size in the browse grid:
 Optional visual preview in the browse grid:
 
 ```yaml
-    # Static image
-    presentation:
-      type: image
-      src: thumbnails/my-plugin/feature.png
+# Static image
+presentation:
+  type: image
+  src: thumbnails/my-plugin/feature.png
 
-    # HTML fragment — must use @scope for CSS isolation
-    presentation:
-      type: html-fragment
-      html: |
-        <div>
-          <style>@scope { .demo { color: blue; } }</style>
-          <div class="demo">Preview content</div>
-        </div>
+# HTML fragment — must use @scope for CSS isolation
+presentation:
+  type: html-fragment
+  html: |
+    <div>
+      <style>@scope { .demo { color: blue; } }</style>
+      <div class="demo">Preview content</div>
+    </div>
 ```
 
 Html-fragment rules:

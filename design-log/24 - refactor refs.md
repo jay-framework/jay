@@ -137,7 +137,8 @@ interface HTMLElementPrivateRef<ViewState> {
 }
 
 interface HTMLElementRef
-  extends GlobalJayEvents<ViewState>,
+  extends
+    GlobalJayEvents<ViewState>,
     HTMLElementProxyTarget<ViewState, ElementType>,
     HTMLNativeExec<ViewState, ElementType> {}
 ```

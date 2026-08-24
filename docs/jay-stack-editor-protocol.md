@@ -142,9 +142,7 @@ const figmaDoc: FigmaDocument = {
   nodeId: 'abc-123-def',
   name: 'Homepage Design',
   type: 'FRAME',
-  layers: [
-    /* ... */
-  ],
+  layers: [/* ... */],
 };
 
 // Export it

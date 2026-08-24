@@ -243,7 +243,7 @@ function peg$parse(input, options) {
             },
             new RenderFragment(`\`${renderText(a, head)}`, none),
           )
-          .map((exp) => exp + '`');
+          .map((exp) => exp + '\`');
 
         return [reducedFragment, true];
       }
@@ -479,7 +479,7 @@ function peg$parse(input, options) {
             },
             new RenderFragment(`\`${renderText(a, head)}`, none),
           )
-          .map((exp) => exp + '`');
+          .map((exp) => exp + '\`');
 
         return [reducedFragment, true];
       }

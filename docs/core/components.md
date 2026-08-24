@@ -107,9 +107,7 @@ function MyComponentConstructor(props: Props<MyComponentProps>, refs: MyComponen
 
   // 3. Return render function
   return {
-    render: () => ({
-      /* view state */
-    }),
+    render: () => ({/* view state */}),
   };
 }
 ```

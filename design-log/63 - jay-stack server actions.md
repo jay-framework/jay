@@ -73,13 +73,13 @@ function ProductsPageConstructor(
 
 ## Design Options Considered
 
-| Option                           | Description                                                  | Verdict                                                                |
-| -------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------- |
-| **Page-scoped actions**          | Actions defined in `.withActions()` on the component builder | ❌ Not reusable across pages                                           |
+| Option                           | Description                                                  | Verdict                                                              |
+| -------------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------- |
+| **Page-scoped actions**          | Actions defined in `.withActions()` on the component builder | ❌ Not reusable across pages                                         |
 | **Contract-based actions**       | Actions defined in `.jay-contract` files                     | ❌ Contracts are designer↔developer; actions are developer↔developer |
-| **Hybrid (page + standalone)**   | Both page-scoped and standalone modules                      | ❌ Two ways to do same thing creates confusion                         |
-| **`'use server'` directive**     | Next.js-style magic directive                                | ❌ Requires complex compiler magic, less explicit                      |
-| **RPC-style standalone modules** | tRPC-inspired builder pattern                                | ✅ **Chosen**                                                          |
+| **Hybrid (page + standalone)**   | Both page-scoped and standalone modules                      | ❌ Two ways to do same thing creates confusion                       |
+| **`'use server'` directive**     | Next.js-style magic directive                                | ❌ Requires complex compiler magic, less explicit                    |
+| **RPC-style standalone modules** | tRPC-inspired builder pattern                                | ✅ **Chosen**                                                        |
 
 ### Why RPC-Style Standalone Modules
 
@@ -1311,10 +1311,11 @@ Key implementation files:
 3. **SSR detection** - Used IIFE with closure variable to track `isSSRBuild` across plugin lifecycle hooks, since `configResolved` and `resolveId` don't share `this` context.
 
 **Result:**
-| Bundle | File Size | Actions |
-|--------|-----------|---------|
-| Client | 2.23 kB | `createActionCaller()` HTTP calls |
-| Server | 2.65 kB | `makeJayAction().withHandler()` |
+
+| Bundle | File Size | Actions                           |
+| ------ | --------- | --------------------------------- |
+| Client | 2.23 kB   | `createActionCaller()` HTTP calls |
+| Server | 2.65 kB   | `makeJayAction().withHandler()`   |
 
 ---
 

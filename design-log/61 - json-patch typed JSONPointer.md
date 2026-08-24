@@ -28,12 +28,11 @@ type Paths<T, Depth extends number = 7> = Depth extends 0
     ? {
         [K in keyof T]: K extends string | number
           ? T[K] extends any[]
-            ?
-                | [K]
-                | [K, number]
-                | (T[K][number] extends object
-                    ? [K, number, ...Paths<T[K][number], Prev[Depth]>]
-                    : never)
+            ? | [K]
+              | [K, number]
+              | (T[K][number] extends object
+                  ? [K, number, ...Paths<T[K][number], Prev[Depth]>]
+                  : never)
             : T[K] extends object
               ? [K] | [K, ...Paths<T[K], Prev[Depth]>]
               : [K]

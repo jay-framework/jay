@@ -106,9 +106,8 @@ export class ServiceLifecycleManager {
                     // Execute the _serverInit function from makeJayInit
                     if (module.init?._serverInit) {
                         log.info('[DevServer] Running server init: project');
-                        const { setClientInitData } = await import(
-                            '@jay-framework/stack-server-runtime'
-                        );
+                        const { setClientInitData } =
+                            await import('@jay-framework/stack-server-runtime');
                         const clientData = await module.init._serverInit();
                         if (clientData !== undefined && clientData !== null) {
                             setClientInitData('project', clientData);

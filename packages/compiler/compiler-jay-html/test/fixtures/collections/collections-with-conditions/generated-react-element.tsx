@@ -15,8 +15,7 @@ export interface CollectionsWithConditionsViewState {
 
 export interface CollectionsWithConditionsElementRefs {}
 
-export interface CollectionsWithConditionsElementProps
-    extends Jay4ReactElementProps<CollectionsWithConditionsViewState> {}
+export interface CollectionsWithConditionsElementProps extends Jay4ReactElementProps<CollectionsWithConditionsViewState> {}
 
 export function reactRender({
     vs,

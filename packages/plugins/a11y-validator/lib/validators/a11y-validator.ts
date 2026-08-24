@@ -542,7 +542,7 @@ function checkNestedInteractive(root: any, findings: JayHtmlValidationFinding[])
             });
         }
 
-        const childAncestor = isInteractiveContainer(el) ? tag ?? ancestorTag : ancestorTag;
+        const childAncestor = isInteractiveContainer(el) ? (tag ?? ancestorTag) : ancestorTag;
         for (const child of el.childNodes ?? []) {
             if (child.nodeType === 1) walk(child, childAncestor);
         }

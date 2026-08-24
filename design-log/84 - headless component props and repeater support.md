@@ -1314,10 +1314,7 @@ export const page = makeJayStackComponent<PageContract>()
 function catalogItemRender(options?: RenderElementOptions) {
   // Compiled ONCE
   const [refManager, refs] = ReferencesManager.for(options, ['addToCart'], [], [], []);
-  const render = (viewState) =>
-    e('article', {}, [
-      /* ... */
-    ]);
+  const render = (viewState) => e('article', {}, [/* ... */]);
   return [refManager.getPublicAPI(), render] as const;
 }
 
@@ -1373,9 +1370,7 @@ function catalogItemRender_0(options?: RenderElementOptions) {
       e('article', {}, [
         e('h3', {}, [dt((vs) => vs.name)]),
         e('span', { class: 'badge' }, ['NEW']), // Exists for this item
-        e('div', { class: 'variants' }, [
-          /* ... */
-        ]), // Exists for this item
+        e('div', { class: 'variants' }, [/* ... */]), // Exists for this item
         e('button', {}, ['Add to Cart'], refAddToCart()),
       ]),
     );

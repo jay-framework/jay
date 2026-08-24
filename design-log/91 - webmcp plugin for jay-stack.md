@@ -1200,12 +1200,13 @@ Three issues were discovered and fixed when running the webmcp-plugin with the `
 **Fix:** Added `global: true` flag to `plugin.yaml`. Propagated through `PluginManifest` → `PluginWithInit` → `filterPluginsForPage`. Global plugins are always included regardless of page-level usage.
 
 **Files:**
-| File | Change |
-|------|--------|
-| `webmcp-plugin/plugin.yaml` | Added `global: true` |
-| `compiler-shared/lib/plugin-resolution.ts` | Added `global?: boolean` to `PluginManifest` |
+
+| File                                                | Change                                                                |
+| --------------------------------------------------- | --------------------------------------------------------------------- |
+| `webmcp-plugin/plugin.yaml`                         | Added `global: true`                                                  |
+| `compiler-shared/lib/plugin-resolution.ts`          | Added `global?: boolean` to `PluginManifest`                          |
 | `stack-server-runtime/lib/plugin-init-discovery.ts` | Added `global: boolean` to `PluginWithInit`; propagated from manifest |
-| `dev-server/lib/dev-server.ts` | `filterPluginsForPage` seeds expanded packages with global plugins |
+| `dev-server/lib/dev-server.ts`                      | `filterPluginsForPage` seeds expanded packages with global plugins    |
 
 **2. Init timing** — `queueMicrotask` fired too early; `window.__jay.automation` wasn't set yet. Plugin inits are `await`ed in the generated script, and `await undefined` yields to the microtask queue before the rest of the script runs.
 
@@ -1216,10 +1217,11 @@ Three issues were discovered and fixed when running the webmcp-plugin with the `
 **Fix:** Added `jayStackCompiler` to the webmcp-plugin's `vite.config.ts` with dual client/server builds (same pattern as mood-tracker-plugin). The compiler strips `.withClient()` from SSR builds via the `options.ssr` flag.
 
 **Files:**
-| File | Change |
-|------|--------|
-| `webmcp-plugin/vite.config.ts` | Added `jayStackCompiler`, `isSsrBuild` dual entry, `ssr` flag |
-| `webmcp-plugin/package.json` | Added `@jay-framework/compiler-jay-stack` devDep; split build scripts to `build:client` + `build:server` |
+
+| File                           | Change                                                                                                   |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `webmcp-plugin/vite.config.ts` | Added `jayStackCompiler`, `isSsrBuild` dual entry, `ssr` flag                                            |
+| `webmcp-plugin/package.json`   | Added `@jay-framework/compiler-jay-stack` devDep; split build scripts to `build:client` + `build:server` |
 
 **Result:** Server bundle has `const init = makeJayInit();` (client code stripped). Client bundle has the full `.withClient(...)` callback.
 

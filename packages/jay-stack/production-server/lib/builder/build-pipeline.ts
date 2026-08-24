@@ -160,9 +160,8 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
 
     // 0e. Initialize services (needed for slow render)
     // Run plugin inits in dependency order (plugins register services used by other plugins and pages)
-    const { discoverPluginsWithInit, sortPluginsByDependencies } = await import(
-        '@jay-framework/stack-server-runtime'
-    );
+    const { discoverPluginsWithInit, sortPluginsByDependencies } =
+        await import('@jay-framework/stack-server-runtime');
     try {
         const pluginsWithInit = sortPluginsByDependencies(
             await discoverPluginsWithInit({ projectRoot: options.projectRoot }),

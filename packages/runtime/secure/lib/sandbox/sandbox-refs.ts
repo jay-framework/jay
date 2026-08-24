@@ -159,9 +159,10 @@ export class SecureReferencesManager extends BaseReferencesManager {
     }
 }
 
-export abstract class SecurePrivateRefs<ViewState, ElementType extends HTMLElement>
-    implements RefImplementation<ViewState>
-{
+export abstract class SecurePrivateRefs<
+    ViewState,
+    ElementType extends HTMLElement,
+> implements RefImplementation<ViewState> {
     listeners = new Map<string, JayEventHandler<any, any, any>>();
     items = new Map<string, SecureHTMLElementRefImpl<ViewState, ElementType>>();
 

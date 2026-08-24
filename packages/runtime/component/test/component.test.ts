@@ -915,8 +915,10 @@ describe('state management', () => {
                 label: HTMLElementProxy<LabelAndButtonViewState, HTMLElement>;
                 button: HTMLElementProxy<LabelAndButtonViewState, HTMLElement>;
             }
-            interface LabelAndButtonElement
-                extends JayElement<LabelAndButtonViewState, LabelAndButtonRefs> {}
+            interface LabelAndButtonElement extends JayElement<
+                LabelAndButtonViewState,
+                LabelAndButtonRefs
+            > {}
             type LabelAndButtonElementRender = RenderElement<
                 LabelAndButtonViewState,
                 LabelAndButtonRefs,

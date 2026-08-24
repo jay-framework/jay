@@ -111,7 +111,7 @@ function Counter(initialValue: number, step: number) {
   };
 
   sm.jayElement.subtracter.onclick = () => {
-    sm, setState((state) => ({ count: state.count - step }));
+    (sm, setState((state) => ({ count: state.count - step })));
   };
 
   return {
@@ -145,7 +145,7 @@ function Counter(initialValue: number, step: number) {
   };
 
   jayElement.subtracter.onclick = () => {
-    sm, setState((state) => ({ count: state.count - step }));
+    (sm, setState((state) => ({ count: state.count - step })));
   };
 
   return {

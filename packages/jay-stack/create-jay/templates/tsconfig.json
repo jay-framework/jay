@@ -12,7 +12,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "outDir": "dist",
-    "types": [],
+    "types": []
   },
-  "include": ["src"],
+  "include": ["src"]
 }

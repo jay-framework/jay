@@ -154,9 +154,9 @@ function findRootCallIdentifier(node: ts.CallExpression): ts.Identifier | undefi
 function isExportedStatement(statement: ts.Statement) {
     return Boolean(
         (statement as any).modifiers &&
-            ((statement as any).modifiers as ts.NodeArray<ts.Modifier>).find(
-                (_) => _.kind === SyntaxKind.ExportKeyword,
-            ),
+        ((statement as any).modifiers as ts.NodeArray<ts.Modifier>).find(
+            (_) => _.kind === SyntaxKind.ExportKeyword,
+        ),
     );
 }
 

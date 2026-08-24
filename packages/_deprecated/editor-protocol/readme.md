@@ -73,9 +73,7 @@ const editor: EditorProtocol = {
   import: async (params) => ({
     type: 'import',
     success: true,
-    vendorDoc: {
-      /* vendor document */
-    },
+    vendorDoc: {/* vendor document */},
   }),
 };
 
@@ -190,9 +188,7 @@ interface FigmaDocument {
 const figmaDoc: FigmaDocument = {
   nodeId: 'abc123',
   name: 'Homepage',
-  layers: [
-    /* ... */
-  ],
+  layers: [/* ... */],
 };
 
 const exportMessage = createExportMessage<FigmaDocument>(
