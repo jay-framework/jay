@@ -169,7 +169,19 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         );
         for (const pluginInit of pluginsWithInit) {
             try {
-                const pluginModule = await import(pluginInit.packageName);
+                let modulePath: string;
+                if (pluginInit.isLocal) {
+                    const pluginDirName = path.basename(pluginInit.pluginPath);
+                    modulePath = path.join(
+                        serverOutputDir,
+                        'plugins',
+                        pluginDirName,
+                        `${pluginInit.initModule}.js`,
+                    );
+                } else {
+                    modulePath = pluginInit.packageName;
+                }
+                const pluginModule = await import(modulePath);
                 const init = pluginModule.init || pluginModule[pluginInit.initExport || 'init'];
                 if (init?._serverInit) {
                     logger.info(`[Build] Running plugin init: ${pluginInit.name}`);
