@@ -1,4 +1,7 @@
-name: Publish Packages
+name: Publish Packages (OIDC)
+
+# For existing packages — uses OIDC trusted publishing, no secrets needed.
+# All packages must already exist on npm with OIDC configured.
 
 on:
   push:
