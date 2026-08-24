@@ -5,6 +5,40 @@ import { getLogger } from '@jay-framework/logger';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 
+function isCompilableTypeScriptFile(fileName: string): boolean {
+    return fileName.endsWith('.ts') && !fileName.endsWith('.d.ts') && fileName !== 'page.ts';
+}
+
+/**
+ * Recursively collect compilable TypeScript files under a directory.
+ * Entry names mirror paths relative to src/ (e.g. components/site-header, plugins/foo/lib/init).
+ */
+async function collectTypeScriptEntries(
+    rootDir: string,
+    entryPrefix: string,
+    pages: Record<string, string>,
+): Promise<void> {
+    async function walk(currentDir: string, relativePath: string): Promise<void> {
+        const entries = await fs.readdir(currentDir, { withFileTypes: true });
+        for (const entry of entries) {
+            const fullPath = path.join(currentDir, entry.name);
+            if (entry.isDirectory()) {
+                const nextRelative = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+                await walk(fullPath, nextRelative);
+                continue;
+            }
+            if (!isCompilableTypeScriptFile(entry.name)) continue;
+            const stem = entry.name.replace(/\.ts$/, '');
+            const entryName = relativePath
+                ? `${entryPrefix}/${relativePath}/${stem}`
+                : `${entryPrefix}/${stem}`;
+            pages[entryName] = fullPath;
+        }
+    }
+
+    await walk(rootDir, '');
+}
+
 export interface ServerBuildEntries {
     init?: string;
     pages: Record<string, string>;
@@ -51,21 +85,22 @@ export async function discoverServerEntries(
         // No actions directory
     }
 
-    // Discover local plugin and component files (headless/headfull components)
+    // Discover local plugin and component TypeScript (headless/headfull components).
+    // Plugins: recurse into src/plugins/{name}/lib/** (package layout).
+    // Components: flat files in src/components/*.ts and nested subdirs.
     for (const subDir of ['plugins', 'components']) {
         const scanDir = path.join(projectRoot, 'src', subDir);
         try {
-            const dirs = await fs.readdir(scanDir, { withFileTypes: true });
-            for (const dir of dirs) {
-                if (!dir.isDirectory()) continue;
-                const dirPath = path.join(scanDir, dir.name);
-                const files = await fs.readdir(dirPath);
-                for (const file of files) {
-                    if (file.endsWith('.ts') && !file.endsWith('.d.ts') && file !== 'page.ts') {
-                        const entryName = `${subDir}/${dir.name}/${file.replace(/\.ts$/, '')}`;
-                        pages[entryName] = path.join(dirPath, file);
-                    }
+            const entries = await fs.readdir(scanDir, { withFileTypes: true });
+            for (const entry of entries) {
+                const entryPath = path.join(scanDir, entry.name);
+                if (entry.isDirectory()) {
+                    await collectTypeScriptEntries(entryPath, `${subDir}/${entry.name}`, pages);
+                    continue;
                 }
+                if (!isCompilableTypeScriptFile(entry.name)) continue;
+                const stem = entry.name.replace(/\.ts$/, '');
+                pages[`${subDir}/${stem}`] = entryPath;
             }
         } catch {
             // Directory may not exist
