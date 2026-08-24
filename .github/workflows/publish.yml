@@ -4,9 +4,7 @@ name: Publish Packages (OIDC)
 # All packages must already exist on npm with OIDC configured.
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 permissions:
   contents: read
