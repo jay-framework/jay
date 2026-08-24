@@ -1559,15 +1559,25 @@ function detectCssNameCollisions(css: string, validations: string[]): void {
         }
         keyframeNames.add(name);
     }
-    const fontFaceNames = new Set<string>();
-    for (const match of css.matchAll(/@font-face\s*\{[^}]*font-family\s*:\s*['"]?([^;'"}\n]+)/g)) {
-        const name = match[1].trim();
-        if (fontFaceNames.has(name)) {
+    const fontFaceKeys = new Set<string>();
+    for (const match of css.matchAll(/@font-face\s*\{([^}]*)\}/g)) {
+        const block = match[1];
+        const familyMatch = block.match(/font-family\s*:\s*['"]?([^;'"\n}]+)/);
+        if (!familyMatch) {
+            continue;
+        }
+        const family = familyMatch[1].trim();
+        const weightMatch = block.match(/font-weight\s*:\s*([^;\n}]+)/);
+        const styleMatch = block.match(/font-style\s*:\s*([^;\n}]+)/);
+        const weight = weightMatch ? weightMatch[1].trim() : 'normal';
+        const style = styleMatch ? styleMatch[1].trim() : 'normal';
+        const key = `${family}|${weight}|${style}`;
+        if (fontFaceKeys.has(key)) {
             validations.push(
-                `@font-face "${name}" is defined multiple times. Font family names are global — rename to avoid collisions.`,
+                `@font-face "${family}" (${weight}, ${style}) is defined multiple times. Font faces are global — rename to avoid collisions.`,
             );
         }
-        fontFaceNames.add(name);
+        fontFaceKeys.add(key);
     }
 }
 
