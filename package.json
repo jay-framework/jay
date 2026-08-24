@@ -27,7 +27,7 @@
     "version:packages:patch": "wsrun -p '@jay-framework/*' -p 'create-jay' -s -e --report --prefix version patch --deferred && yarn version apply --all",
     "version:packages:minor": "wsrun -p '@jay-framework/*' -p 'create-jay' -s -e --report --prefix version minor --deferred && yarn version apply --all",
     "version:packages:major": "wsrun -p '@jay-framework/*' -p 'create-jay' -s -e --report --prefix version major --deferred && yarn version apply --all",
-    "publish": "node scripts/publish.cjs",
+    "publish": "node scripts/publish.cjs"
   },
   "packageManager": "yarn@4.17.1",
   "workspaces": {
