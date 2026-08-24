@@ -28,7 +28,6 @@
     "version:packages:minor": "wsrun -p '@jay-framework/*' -p 'create-jay' -s -e --report --prefix version minor --deferred && yarn version apply --all",
     "version:packages:major": "wsrun -p '@jay-framework/*' -p 'create-jay' -s -e --report --prefix version major --deferred && yarn version apply --all",
     "publish": "node scripts/publish.cjs",
-    "_install": "NPQ_PKG_MGR=yarn npx npq install"
   },
   "packageManager": "yarn@4.17.1",
   "workspaces": {
