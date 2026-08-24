@@ -845,9 +845,7 @@ describe('compiler', () => {
                 '',
             );
             expect(jayFile.validations).toEqual([
-                'Missing <script type="application/jay-data">. ' +
-                    'Add either inline data or a contract reference: ' +
-                    '<script type="application/jay-data" contract="./component.jay-contract"></script>',
+                'Missing <script type="application/jay-data">. Add either inline data or a contract reference: <script type="application/jay-data" contract="./component.jay-contract"></script>',
             ]);
         });
 
@@ -861,9 +859,7 @@ describe('compiler', () => {
                 '',
             );
             expect(jayFile.validations).toEqual([
-                'Missing <script type="application/jay-data">. ' +
-                    'Add either inline data or a contract reference: ' +
-                    '<script type="application/jay-data" contract="./component.jay-contract"></script>',
+                'Missing <script type="application/jay-data">. Add either inline data or a contract reference: <script type="application/jay-data" contract="./component.jay-contract"></script>',
             ]);
         });
 

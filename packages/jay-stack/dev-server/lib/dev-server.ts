@@ -126,9 +126,15 @@ async function scanPluginRoutes(projectRoot: string, projectRoutes: JayRoutes): 
             // For NPM plugins, route.component is the export name (e.g., 'aiditorPage')
             const componentExport = isLocalComponent ? undefined : route.component;
 
-            pluginRoutes.push(createRoute(route.path, jayHtmlPath, compPath, componentExport));
+            pluginRoutes.push(
+                createRoute(route.path, jayHtmlPath, compPath, componentExport, {
+                    devOnly: route.devOnly === true,
+                }),
+            );
 
-            getLogger().info(`[Routes] Plugin "${plugin.name}" provides route ${route.path}`);
+            getLogger().info(
+                `[Routes] Plugin "${plugin.name}" provides route ${route.path}${route.devOnly ? ' (dev-only)' : ''}`,
+            );
         }
     }
 
@@ -515,8 +521,7 @@ async function handleCachedRequest(
 
     // Run fast phase — includes instance fast render (DL#109)
     const instancePhaseData = (cachedEntry.carryForward as any)?.__instances as
-        | InstancePhaseData
-        | undefined;
+        InstancePhaseData | undefined;
     const forEachInstances = instancePhaseData?.forEachInstances;
     const headlessComps = pagePartsResult.val.headlessInstanceComponents;
 
@@ -570,6 +575,7 @@ async function handleCachedRequest(
         fastViewState,
         clientTrackByMap || {},
     );
+    injectJayBindings(fullViewState, pageParams, url);
     await sendResponse(
         vite,
         res,
@@ -809,8 +815,7 @@ async function handleClientOnlyRequest(
 
     // Extract instance phase data from carryForward (set by runSlowlyForPage)
     const instancePhaseData = (renderedSlowly.carryForward as any)?.__instances as
-        | InstancePhaseData
-        | undefined;
+        InstancePhaseData | undefined;
 
     // Run fast phase (includes instance fast render — DL#109)
     const fastStart = Date.now();
@@ -853,6 +858,7 @@ async function handleClientOnlyRequest(
         renderedFast.rendered,
         serverTrackByMap || {},
     );
+    injectJayBindings(viewState, pageParams, url);
     const fastCF = renderedFast.carryForward;
 
     // Generate client-only HTML (element target, no SSR/hydration)
@@ -1513,6 +1519,14 @@ function setupFreezeEndpoint(vite: ViteDevServer, freezeStore: FreezeStore): voi
  * Strips dynamic segments ([param], [[param]]) to get the static prefix.
  * Example: src/pages/products/kitan/[[category]]/page.jay-html → /products/kitan
  */
+function injectJayBindings(viewState: object, params: Record<string, string>, url: string): void {
+    const urlPath = url.split('?')[0];
+    (viewState as any).__jay = {
+        params,
+        url: { path: urlPath.startsWith('/') ? urlPath : '/' + urlPath },
+    };
+}
+
 function getRouteDir(route: JayRoute): string {
     return route.rawRoute.replace(/^\//, '') || 'index';
 }

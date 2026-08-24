@@ -3,7 +3,10 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "lib",
+    "paths": {
+      "vite": ["../../../node_modules/vite"]
+    }
   },
   "include": ["lib/**/*"],
-  "exclude": ["node_modules", "dist", "test"],
+  "exclude": ["node_modules", "dist", "test"]
 }

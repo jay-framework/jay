@@ -25,12 +25,12 @@ PrivateCollectionRefs
 PrivateRefs
 PrivateRef
 ManagedRef  
- ManagedCollectionRef
+ManagedCollectionRef
 ManagedRef
 
 ComponentRefImpl
 RefImpl  
- PrivateRef
+PrivateRef
 ManagedRef
 
 elements reference - PrivateRef

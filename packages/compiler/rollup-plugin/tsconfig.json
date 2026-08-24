@@ -3,8 +3,9 @@
   "compilerOptions": {
     "outDir": "dist",
     "paths": {
-      "@jay-framework/compiler": ["../compiler/lib"],
-    },
+      "vite": ["../../../node_modules/vite"],
+      "@jay-framework/compiler": ["../compiler/lib"]
+    }
   },
-  "exclude": ["**/source/build/**", "**/source/dist/**", "**/fixtures/**"],
+  "exclude": ["**/source/build/**", "**/source/dist/**", "**/fixtures/**"]
 }

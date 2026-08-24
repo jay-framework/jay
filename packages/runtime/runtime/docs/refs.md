@@ -29,8 +29,10 @@ import { Item } from './item';
 
 export type ItemComponentType<ParentVS> = ReturnType<typeof Item<ParentVS>>;
 
-export interface ItemRefs<ParentVS>
-  extends ComponentCollectionProxy<ParentVS, ItemComponentType<ParentVS>> {
+export interface ItemRefs<ParentVS> extends ComponentCollectionProxy<
+  ParentVS,
+  ItemComponentType<ParentVS>
+> {
   onCompletedToggle: EventEmitter<
     EventTypeFrom<ItemComponentType<ParentVS>['onCompletedToggle']>,
     ParentVS
@@ -77,8 +79,10 @@ The `HTMLElementProxy` is a proxy for a single dom element ref.
 The `HTMLElementProxy` effective type (simplified view) is
 
 ```typescript
-interface HTMLElementProxy<ViewState, ElementType extends HTMLElement>
-  extends GlobalJayEvents<ViewState> {
+interface HTMLElementProxy<
+  ViewState,
+  ElementType extends HTMLElement,
+> extends GlobalJayEvents<ViewState> {
   addEventListener<E extends Event>(
     type: string,
     handler: JayEventHandler<E, ViewState, any>,
@@ -112,8 +116,10 @@ children of one or more `forEach` element creator functions or `jay-html` direct
 The `HTMLElementCollectionProxy` effective type (simplified view) is
 
 ```typescript
-interface HTMLElementCollectionProxy<ViewState, ElementType extends HTMLElement>
-  extends GlobalJayEvents<ViewState> {
+interface HTMLElementCollectionProxy<
+  ViewState,
+  ElementType extends HTMLElement,
+> extends GlobalJayEvents<ViewState> {
   addEventListener<E extends Event>(
     type: string,
     handler: JayEventHandler<E, ViewState, any>,
@@ -171,8 +177,10 @@ For a collection of components, components nested under `forEach`, Jay generates
 The actual refs type is then `ComponentRefs` extending the `ComponentCollectionProxy` type
 
 ```typescript
-interface ComponentRefs<ParentVS>
-  extends ComponentCollectionProxy<ParentVS, ComponentType<ParentVS>> {}
+interface ComponentRefs<ParentVS> extends ComponentCollectionProxy<
+  ParentVS,
+  ComponentType<ParentVS>
+> {}
 
 interface ComponentCollectionProxy<ViewState, ComponentType extends JayComponent<any, any, any>> {
   addEventListener(

@@ -3,6 +3,22 @@ name: design-system-validator
 agentkit: generateDesignSystemAgentKit
 description: Generate AIditor add-menu entries from DESIGN.md tokens
 
+actions:
+  - getDesignSystemSettingsStatus
+  - runDesignSystemAnalysis
+  - loadDesignSystemAddMenuCatalog
+  - saveDesignSystemAddMenuCatalog
+  - regenerateDesignSystemAddMenu
+  - name: fontFallback
+    action: font-fallback.jay-action
+
+routes:
+  - path: /design-system/settings
+    jayHtml: ./dist/pages/settings/page.jay-html
+    component: designSystemSettingsPage
+    description: Design system project settings — token overview, analysis report, add-menu regeneration
+    devOnly: true
+
 validators:
   - name: design-tokens
     handler: validateTokens
@@ -19,3 +35,7 @@ validators:
   - name: design-contrast
     handler: validateContrast
     description: Checks WCAG AA color contrast compliance on statically determinable color pairs
+
+  - name: font-fallbacks
+    handler: validateFontFallbacks
+    description: Detects web fonts loaded via @font-face URL without a metric-matched local fallback (causes CLS)

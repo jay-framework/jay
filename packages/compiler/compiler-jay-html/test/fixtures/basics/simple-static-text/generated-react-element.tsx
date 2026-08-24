@@ -7,8 +7,7 @@ export interface SimpleStaticTextViewState {
 
 export interface SimpleStaticTextElementRefs {}
 
-export interface SimpleStaticTextElementProps
-    extends Jay4ReactElementProps<SimpleStaticTextViewState> {}
+export interface SimpleStaticTextElementProps extends Jay4ReactElementProps<SimpleStaticTextViewState> {}
 
 export function reactRender({
     vs,

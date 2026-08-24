@@ -173,6 +173,21 @@ jay-stack params wix-stores/product-page
 
 See [Jay Stack Components](./jay-stack.md#url-parameter-loading) for more on `loadParams` and parameter loading patterns.
 
+Routes are **case-sensitive** — a slug of `My-Page` produces the URL `/My-Page`, not `/my-page`. Use lowercase for all param values and filenames that become URL segments.
+
+## Accessing Route Data in Templates
+
+Page templates can access route params and URL information via `jay.` built-in bindings:
+
+```html
+<jay:Sidebar activePage="{jay.params.slug}" currentPath="{jay.url.path}" />
+<h1>Viewing: {jay.params.slug}</h1>
+```
+
+This eliminates the need for a `page.ts` that just passes params through to ViewState. `jay.` bindings are available at all render phases and in page templates only — nested components receive the data via props.
+
+See [Jay-HTML](./jay-html.md#built-in-bindings-jay) for the full list of available bindings.
+
 ## Plugin Routes
 
 Plugins can provide their own pages via the `routes` field in `plugin.yaml`. This is designed for backoffice tools, admin dashboards, and editors — pages with a boxed design that doesn't need per-site visual customization.

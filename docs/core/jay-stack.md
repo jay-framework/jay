@@ -358,12 +358,8 @@ Pipeline.badRequest('Invalid input')
 
   // Terminal operation (async)
   .toPhaseOutput((data) => ({
-    viewState: {
-      /* ... */
-    },
-    carryForward: {
-      /* ... */
-    },
+    viewState: {/* ... */},
+    carryForward: {/* ... */},
   }));
 ```
 

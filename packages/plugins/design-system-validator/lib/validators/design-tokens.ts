@@ -47,7 +47,11 @@ function validateElementStyles(
 ): void {
     const hint = elementHint(el);
     const prefix = breakpointLabel ? `[${breakpointLabel}] ` : '';
-    const sug = (s?: string) => s?.replace('DESIGN.md', designMdPath);
+    const sug = (s?: string) =>
+        s
+            ? s.replace('DESIGN.md', designMdPath) +
+              '\nTo suppress intentional exceptions, see: agent-kit/designer/design-system.md'
+            : undefined;
 
     for (const [property, resolved] of Object.entries(styles)) {
         if (resolved.allowed) continue;

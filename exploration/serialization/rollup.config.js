@@ -10,7 +10,7 @@ const rollupConfig = defineConfig({
         format: 'es',
         sourcemap: true,
     },
-    plugins: [typescript(), nodeResolve()],
+    plugins: [typescript(), nodeResolve({ extensions: ['.ts', '.tsx', '.js', '.jsx'] })],
 });
 
 export default rollupConfig;

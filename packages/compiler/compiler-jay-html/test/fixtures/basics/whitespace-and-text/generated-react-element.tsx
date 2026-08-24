@@ -9,8 +9,7 @@ export interface WhitespaceAndTextViewState {
 
 export interface WhitespaceAndTextElementRefs {}
 
-export interface WhitespaceAndTextElementProps
-    extends Jay4ReactElementProps<WhitespaceAndTextViewState> {}
+export interface WhitespaceAndTextElementProps extends Jay4ReactElementProps<WhitespaceAndTextViewState> {}
 
 export function reactRender({
     vs,

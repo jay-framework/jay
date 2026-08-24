@@ -160,9 +160,8 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
 
     // 0e. Initialize services (needed for slow render)
     // Run plugin inits in dependency order (plugins register services used by other plugins and pages)
-    const { discoverPluginsWithInit, sortPluginsByDependencies } = await import(
-        '@jay-framework/stack-server-runtime'
-    );
+    const { discoverPluginsWithInit, sortPluginsByDependencies } =
+        await import('@jay-framework/stack-server-runtime');
     try {
         const pluginsWithInit = sortPluginsByDependencies(
             await discoverPluginsWithInit({ projectRoot: options.projectRoot }),
@@ -324,8 +323,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         };
     });
 
-    type LoadParamsFn = (...args: unknown[]) => AsyncIterable<Record<string, string>[]>;
-    const loadParamsCache = new Map<LoadParamsFn, Record<string, string>[]>();
+    const loadParamsCache = new Map<string, Record<string, string>[]>();
     const loadParamsResults = new Map<BuildRouteInfo, Record<string, string>[]>();
 
     for (const info of routeInfos) {
@@ -353,8 +351,9 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
 
         const paramParts: ParamPart[] = [];
         for (const part of partsWithLoadParams) {
-            const fn = part.compDefinition!.loadParams! as LoadParamsFn;
-            if (!loadParamsCache.has(fn)) {
+            const propsKey = JSON.stringify(part.headlessProps ?? {});
+            const cacheKey = `${part.key ?? ''}:${propsKey}`;
+            if (!loadParamsCache.has(cacheKey)) {
                 logger.important(`[Build] Loading params for ${route.rawRoute}...`);
                 const partParams: Record<string, string>[] = [];
                 let batchIndex = 0;
@@ -365,9 +364,9 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
                         logger.important(`[Build]   ...${partParams.length} params so far`);
                     }
                 }
-                loadParamsCache.set(fn, partParams);
+                loadParamsCache.set(cacheKey, partParams);
             }
-            const cached = loadParamsCache.get(fn)!;
+            const cached = loadParamsCache.get(cacheKey)!;
             const keys = new Set(cached.flatMap((p) => Object.keys(p)));
             paramParts.push({ keys, values: cached });
         }

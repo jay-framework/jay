@@ -18,8 +18,7 @@ export function renderToStream(
     w(escapeHtml(String(vs.pageTitle)));
     w('</h1>');
     const vs_product_card0 = (vs as any).__headlessInstances?.['S0/0/product-card:AR0'] as
-        | ProductCardViewState
-        | undefined;
+        ProductCardViewState | undefined;
     if (vs_product_card0) {
         w('<article');
         w(' class="hero-card"');

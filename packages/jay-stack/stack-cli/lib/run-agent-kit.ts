@@ -297,9 +297,8 @@ async function generatePluginAgentKit(
     initErrors: Map<string, Error>,
     viteServer?: Awaited<ReturnType<typeof createViteForCli>>,
 ): Promise<void> {
-    const { discoverPluginsWithAgentKit, executePluginAgentKit } = await import(
-        '@jay-framework/stack-server-runtime'
-    );
+    const { discoverPluginsWithAgentKit, executePluginAgentKit } =
+        await import('@jay-framework/stack-server-runtime');
 
     const plugins = await discoverPluginsWithAgentKit({
         projectRoot,

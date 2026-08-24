@@ -8,8 +8,11 @@ export interface Node {
     firstChild: Node;
     children: Array<Node>;
 }
-export interface TreeNode
-    extends JayComponent<Node, RecursiveComponents2ViewState, RecursiveComponents2Element> {
+export interface TreeNode extends JayComponent<
+    Node,
+    RecursiveComponents2ViewState,
+    RecursiveComponents2Element
+> {
     update(props: Node);
 }
 

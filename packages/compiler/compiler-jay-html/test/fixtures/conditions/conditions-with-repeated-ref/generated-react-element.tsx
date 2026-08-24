@@ -12,8 +12,7 @@ export interface ConditionsWithRepeatedRefElementRefs {
     text1: HTMLElementProxy<ConditionsWithRepeatedRefViewState, HTMLDivElement>;
 }
 
-export interface ConditionsWithRepeatedRefElementProps
-    extends Jay4ReactElementProps<ConditionsWithRepeatedRefViewState> {}
+export interface ConditionsWithRepeatedRefElementProps extends Jay4ReactElementProps<ConditionsWithRepeatedRefViewState> {}
 
 export function reactRender({
     vs,

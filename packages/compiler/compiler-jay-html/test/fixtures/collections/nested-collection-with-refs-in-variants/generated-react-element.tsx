@@ -34,8 +34,7 @@ export interface NestedCollectionWithRefsInVariantsElementRefs {
     };
 }
 
-export interface NestedCollectionWithRefsInVariantsElementProps
-    extends Jay4ReactElementProps<NestedCollectionWithRefsInVariantsViewState> {}
+export interface NestedCollectionWithRefsInVariantsElementProps extends Jay4ReactElementProps<NestedCollectionWithRefsInVariantsViewState> {}
 
 export function reactRender({
     vs,

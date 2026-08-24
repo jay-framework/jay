@@ -42,8 +42,7 @@ export interface CollectionWithRefsElementRefs {
     };
 }
 
-export interface CollectionWithRefsElementProps
-    extends Jay4ReactElementProps<CollectionWithRefsViewState> {}
+export interface CollectionWithRefsElementProps extends Jay4ReactElementProps<CollectionWithRefsViewState> {}
 
 export function reactRender({
     vs,

@@ -8,8 +8,7 @@ export interface DynamicTextInputTypesViewState {
 
 export interface DynamicTextInputTypesElementRefs {}
 
-export interface DynamicTextInputTypesElementProps
-    extends Jay4ReactElementProps<DynamicTextInputTypesViewState> {}
+export interface DynamicTextInputTypesElementProps extends Jay4ReactElementProps<DynamicTextInputTypesViewState> {}
 
 export function reactRender({
     vs,

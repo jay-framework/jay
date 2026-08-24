@@ -657,12 +657,8 @@ export type JayContract<
 ```typescript
 // .jay-html file (backward compatible)
 const contract: JayContract<DynamicViewState, DynamicRefs> = {
-  viewState: {
-    /* ... */
-  },
-  refs: {
-    /* ... */
-  },
+  viewState: {/* ... */},
+  refs: {/* ... */},
   slowViewState: undefined as never, // Not used
   fastViewState: undefined as never, // Not used
   interactiveViewState: undefined as never, // Not used
@@ -670,21 +666,11 @@ const contract: JayContract<DynamicViewState, DynamicRefs> = {
 
 // .jay-contract file (full type safety)
 const contract: ProductPageContract = {
-  viewState: {
-    /* all properties */
-  },
-  refs: {
-    /* interactive elements */
-  },
-  slowViewState: {
-    /* slow properties */
-  },
-  fastViewState: {
-    /* fast properties */
-  },
-  interactiveViewState: {
-    /* interactive properties */
-  },
+  viewState: {/* all properties */},
+  refs: {/* interactive elements */},
+  slowViewState: {/* slow properties */},
+  fastViewState: {/* fast properties */},
+  interactiveViewState: {/* interactive properties */},
 };
 ```
 

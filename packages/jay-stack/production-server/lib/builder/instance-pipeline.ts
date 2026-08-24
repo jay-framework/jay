@@ -98,37 +98,33 @@ export async function buildInstance(
         ]),
     ];
 
-    // Write page-parts.json (DL#137) — once per route, first instance writes it
+    // Write page-parts.json (DL#137) — always overwrite to pick up import changes
     const pagePartsConfigPath = path.join(backendInstanceDir, 'page-parts.json');
-    try {
-        await fs.access(pagePartsConfigPath);
-    } catch {
-        const exportName = (route as any).componentExport || 'page';
-        let pageServerModule = '';
-        let pageIsPlugin = false;
-        if (route.compPath) {
-            if (route.componentExport) {
-                pageServerModule = route.packageName || route.compPath;
-                pageIsPlugin = true;
-            } else {
-                const relativePath = path.relative(ctx.projectRoot, route.compPath);
-                pageServerModule = relativePath
-                    .replace(/^src\//, 'server/')
-                    .replace(/\.ts$/, '.js')
-                    .replace(/\[/g, '_')
-                    .replace(/\]/g, '_');
-            }
+    const exportName = (route as any).componentExport || 'page';
+    let pageServerModule = '';
+    let pageIsPlugin = false;
+    if (route.compPath) {
+        if (route.componentExport) {
+            pageServerModule = route.packageName || route.compPath;
+            pageIsPlugin = true;
+        } else {
+            const relativePath = path.relative(ctx.projectRoot, route.compPath);
+            pageServerModule = relativePath
+                .replace(/^src\//, 'server/')
+                .replace(/\.ts$/, '.js')
+                .replace(/\[/g, '_')
+                .replace(/\]/g, '_');
         }
-        const config = buildPagePartsConfig(
-            pageParts,
-            pageServerModule,
-            exportName,
-            ctx.backendDir,
-            pageIsPlugin,
-        );
-        await fs.writeFile(pagePartsConfigPath, JSON.stringify(config, null, 2));
-        logger.info(`[Build] Page parts config: ${routeDir}/page-parts.json`);
     }
+    const config = buildPagePartsConfig(
+        pageParts,
+        pageServerModule,
+        exportName,
+        ctx.backendDir,
+        pageIsPlugin,
+    );
+    await fs.writeFile(pagePartsConfigPath, JSON.stringify(config, null, 2));
+    logger.info(`[Build] Page parts config: ${routeDir}/page-parts.json`);
 
     // 1. Slow render (page + keyed headless components)
     const slowPhase = new DevSlowlyChangingPhase();

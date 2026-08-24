@@ -181,8 +181,7 @@ graph LR
 <div class="md-mermaid">
   <pre class="md-mermaid-source">
 graph LR
-  A[Start] --> B[End]</pre
-  >
+  A[Start] --> B[End]</pre>
 </div>
 ```
 

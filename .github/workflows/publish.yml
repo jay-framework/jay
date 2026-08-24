@@ -1,0 +1,39 @@
+name: Publish Packages (OIDC)
+
+# For existing packages — uses OIDC trusted publishing, no secrets needed.
+# All packages must already exist on npm with OIDC configured.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Configure yarn for public npm
+        run: yarn config set npmRegistryServer https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Build packages
+        run: yarn build
+
+      - name: Publish packages
+        run: yarn workspaces foreach -A --no-private npm publish --access public --tolerate-republish

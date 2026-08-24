@@ -16,8 +16,7 @@ export interface ConditionsWithEnumViewState {
 
 export interface ConditionsWithEnumElementRefs {}
 
-export interface ConditionsWithEnumElementProps
-    extends Jay4ReactElementProps<ConditionsWithEnumViewState> {}
+export interface ConditionsWithEnumElementProps extends Jay4ReactElementProps<ConditionsWithEnumViewState> {}
 
 export function reactRender({
     vs,

@@ -674,9 +674,7 @@ Once generated, they're used with the automatic prefix:
        const collections = await cms.getCollections();
        return collections.map((col) => ({
          name: `${toPascalCase(col.name)}List`,
-         tags: [
-           /* ... */
-         ],
+         tags: [/* ... */],
        }));
      });
    ```
@@ -687,13 +685,7 @@ Once generated, they're used with the automatic prefix:
    // src/init.ts
    import { CMS_SERVICE } from '@mycompany/cms-plugin/services';
 
-   export const init = initServer().withService(
-     CMS_SERVICE,
-     () =>
-       new CMSClient({
-         /* ... */
-       }),
-   );
+   export const init = initServer().withService(CMS_SERVICE, () => new CMSClient({/* ... */}));
    ```
 
 5. **Generator runs at build time**, framework loads `init.ts`, injects services, and adds prefix automatically (`cms/blog-posts-list`)

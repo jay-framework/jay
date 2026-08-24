@@ -50,9 +50,12 @@ export async function scanPluginRoutes(
                 compPath,
                 componentExport,
                 packageName: plugin.packageName,
+                ...(route.devOnly === true && { devOnly: true }),
             });
 
-            logger.info(`[Routes] Plugin "${plugin.manifest.name}" provides route ${route.path}`);
+            logger.info(
+                `[Routes] Plugin "${plugin.manifest.name}" provides route ${route.path}${route.devOnly ? ' (dev-only)' : ''}`,
+            );
         }
     }
 

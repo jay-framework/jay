@@ -1,0 +1,19 @@
+name: data-list
+description: Provides all rows from a data file as a list for forEach rendering
+
+props:
+  - name: contentDir
+    kind: required
+    description: Path to data directory (relative to project root)
+
+  - name: file
+    kind: required
+    description: Data filename (e.g., data.csv, data.yaml)
+
+tags:
+  - tag: items
+    type: sub-contract
+    repeated: true
+    trackBy: slug
+    phase: slow
+    tags: []

@@ -7,6 +7,7 @@ import {
     JayArrayType,
     JayImportedType,
     JayImportName,
+    JayString,
     JayType,
     JayUnknown,
     JayValidations,
@@ -64,6 +65,10 @@ export class Variables {
     }
 
     resolveAccessor(accessor: Array<string>): Accessor {
+        if (accessor[0] === 'jay') {
+            const jayPath = ['__jay', ...accessor.slice(1)];
+            return new Accessor(this.currentVar, jayPath, [], JayString);
+        }
         let curr: JayType = this.currentType;
         let validations = [];
         accessor.forEach((member) => {
@@ -162,6 +167,9 @@ function getExpressionHelp(startRule: string): string {
     ✓ if="isVisible"
     ✓ if="!isHidden"
     ✓ if="status == active"         (enum comparison)
+    ✓ if="url === currentPath"      (string field comparison)
+    ✓ if="url === '/about'"         (string literal comparison)
+    ✓ if="path ^= '/docs'"          (starts with)
     ✓ if="count > 0"                (numeric comparison)
     ✓ if="count == 5"               (equality with number)
     ✓ if="page <= 1"                (<=, >=, <, > supported)
@@ -212,7 +220,67 @@ function getExpressionHelp(startRule: string): string {
     }
 }
 
-function doParse(expression: string, startRule: string, vars?: Variables) {
+function getFallbackForRule(
+    startRule: string,
+    expression: string,
+    message: string,
+): RenderFragment | Accessor {
+    const validations = [message];
+    const escaped = expression.replace(/'/g, "\\'");
+    switch (startRule) {
+        case 'conditionFunc':
+            return new RenderFragment('vs => false', Imports.none(), validations);
+        case 'condition':
+            return new RenderFragment('false', Imports.none(), validations);
+        case 'dynamicText':
+        case 'reactDynamicText':
+            return new RenderFragment(
+                `dt(vs => '[INVALID: ${escaped}]')`,
+                Imports.for(Import.dynamicText),
+                validations,
+            );
+        case 'dynamicAttribute':
+            return new RenderFragment(
+                `da(vs => '[INVALID: ${escaped}]')`,
+                Imports.for(Import.dynamicAttribute),
+                validations,
+            );
+        case 'dynamicProperty':
+        case 'reactDynamicProperty':
+            return new RenderFragment(
+                `dp(vs => undefined)`,
+                Imports.for(Import.dynamicProperty),
+                validations,
+            );
+        case 'booleanAttribute':
+            return new RenderFragment(
+                `ba(vs => false)`,
+                Imports.for(Import.booleanAttribute),
+                validations,
+            );
+        case 'classExpression':
+        case 'reactClassExpression':
+            return new RenderFragment(`''`, Imports.none(), validations);
+        case 'dynamicComponentProp':
+            return new RenderFragment('vs => undefined', Imports.none(), validations);
+        case 'styleDeclarations':
+            return new RenderFragment('[]', Imports.none(), validations);
+        case 'accessor':
+            return new Accessor('vs', [expression], validations, JayUnknown);
+        case 'template':
+        case 'templateParts':
+            return new RenderFragment(`'${escaped}'`, Imports.none(), validations);
+        default:
+            return new RenderFragment('undefined', Imports.none(), validations);
+    }
+}
+
+function doParse(
+    expression: string,
+    startRule: string,
+    vars?: Variables,
+    throwOnError: boolean = false,
+) {
     try {
         return parse(expression, {
             vars,
@@ -226,15 +294,19 @@ function doParse(expression: string, startRule: string, vars?: Variables) {
         });
     } catch (e) {
         const help = getExpressionHelp(startRule);
-        const contextInfo = help ? `\n\nExpected format for ${startRule}:${help}` : '';
-        throw new Error(`Failed to parse expression [${expression}].
-
-Parse error: ${e.message}${contextInfo}`);
+        const guideRef = '\nSee: agent-kit/designer/jay-html-template-syntax.md';
+        const message = `Failed to parse expression [${expression}]: ${e.message}${help}${guideRef}`;
+        if (throwOnError) {
+            throw new Error(message);
+        }
+        return getFallbackForRule(startRule, expression, message);
     }
 }
 
 export function parseAccessor(expression: string, vars: Variables): Accessor {
-    return doParse(expression, 'accessor', vars);
+    const result = doParse(expression, 'accessor', vars);
+    if (result instanceof Accessor) return result;
+    return new Accessor(vars.currentVar, [expression], result.validations, JayUnknown);
 }
 
 export function parseCondition(expression: string, vars: Variables): RenderFragment {
@@ -335,18 +407,18 @@ export function parseReactClassExpression(expression: string, vars: Variables): 
 }
 
 export function parseImportNames(expression: string): JayImportName[] {
-    return doParse(expression, 'importNames');
+    return doParse(expression, 'importNames', undefined, true);
 }
 
 export function parseIsEnum(expression: string): boolean {
     try {
-        return doParse(expression, 'is_enum');
+        return doParse(expression, 'is_enum', undefined, true);
     } catch (err) {
         return false;
     }
 }
 export function parseEnumValues(expression: string): string[] {
-    return doParse(expression, 'enum');
+    return doParse(expression, 'enum', undefined, true);
 }
 
 export interface StyleDeclaration {
@@ -403,8 +475,7 @@ export type ConditionResult =
  * Intermediate value during parsing - can be a resolved value or runtime code
  */
 export type PartialValue =
-    | { type: 'resolved'; value: unknown }
-    | { type: 'code'; fragment: RenderFragment; expr: string };
+    { type: 'resolved'; value: unknown } | { type: 'code'; fragment: RenderFragment; expr: string };
 
 /**
  * Convert a value to its JavaScript truthiness

@@ -1,6 +1,7 @@
 import { DevServerOptions, mkDevServer } from '../lib';
 import { JayRollupConfig } from '@jay-framework/vite-plugin';
 import path from 'path';
+import fs from 'node:fs';
 import http from 'node:http';
 import { Request, Response } from 'express';
 import { runHydrateScriptInJsdom } from './run-script-in-jsdom';
@@ -10,6 +11,12 @@ import { runHydrateScriptInJsdom } from './run-script-in-jsdom';
 // @vitest-environment node
 
 describe('dev server', () => {
+    afterAll(() => {
+        for (const dir of ['simple-page', 'page-with-code', '6a-page-with-keyed-headless']) {
+            fs.rmSync(path.resolve(__dirname, dir, 'build'), { recursive: true, force: true });
+        }
+    });
+
     const baseOptions = {
         serverBase: '/',
         pagesBase: path.resolve(__dirname, './'),
@@ -28,6 +35,11 @@ describe('dev server', () => {
         };
     }
 
+    function extractScriptUrl(html: string): string {
+        const match = html.match(/src="([^"]*html-proxy[^"]*)"/);
+        return match?.[1] || '/@id/__x00__/index.html?html-proxy&index=0.js';
+    }
+
     it('should handle a simple jay-html file without code', async () => {
         const httpServer = http.createServer();
         const devServer = await mkDevServer(optionsForDir('./simple-page', httpServer));
@@ -35,10 +47,7 @@ describe('dev server', () => {
         expect(devServer.routes[0].path).toBe('/');
 
         const [html] = await makeRequest(devServer.routes[0].handler, '/');
-        const [script] = await makeRequest(
-            devServer.server,
-            '/@id/__x00__/index.html?html-proxy&index=0.js',
-        );
+        const [script] = await makeRequest(devServer.server, extractScriptUrl(html));
         await devServer.viteServer.close();
 
         expect(html).toEqual(`<!doctype html>
@@ -66,7 +75,7 @@ import { registerGlobalContext } from "@jay-framework/runtime";
 
 import { hydrate } from "/page.jay-html?import&jay-hydrate.ts";
 
-const viewState = {};
+const viewState = {"__jay":{"params":{},"url":{"path":"/"}}};
 const fastCarryForward = {};
 const trackByMap = {};
 
@@ -90,10 +99,7 @@ window.dispatchEvent(new Event('jay:automation-ready'));
         const httpServer = http.createServer();
         const devServer = await mkDevServer(optionsForDir('./simple-page', httpServer));
         const [html] = await makeRequest(devServer.routes[0].handler, '/');
-        const [script] = await makeRequest(
-            devServer.server,
-            '/@id/__x00__/index.html?html-proxy&index=0.js',
-        );
+        const [script] = await makeRequest(devServer.server, extractScriptUrl(html));
 
         const { instance, document } = await runHydrateScriptInJsdom(
             html,
@@ -118,10 +124,7 @@ window.dispatchEvent(new Event('jay:automation-ready'));
         expect(devServer.routes[0].path).toBe('/');
 
         const [html, headers] = await makeRequest(devServer.routes[0].handler, '/');
-        const [script] = await makeRequest(
-            devServer.server,
-            '/@id/__x00__/index.html?html-proxy&index=0.js',
-        );
+        const [script] = await makeRequest(devServer.server, extractScriptUrl(html));
         await devServer.viteServer.close();
 
         // SSR falls back to client-only rendering for pages with {{}} syntax
@@ -153,7 +156,7 @@ import { deepMergeViewStates } from "@jay-framework/view-state-merge";
 import { render } from "/page.jay-html.ts";
 import {page} from "/page.ts"
 const slowViewState = {"title":"Page with Code","content":"This page has both a jay-html file and a code file"};
-const viewState = {"title":"Page with Code","content":"This page has both a jay-html file and a code file"};
+const viewState = {"title":"Page with Code","content":"This page has both a jay-html file and a code file","__jay":{"params":{},"url":{"path":"/"}}};
 
 const fastCarryForward = {};
 const trackByMap = {};
@@ -187,10 +190,7 @@ target.appendChild(wrapped.element.dom);
         expect(devServer.routes[0].path).toBe('/');
 
         const [html, headers] = await makeRequest(devServer.routes[0].handler, '/');
-        const [script] = await makeRequest(
-            devServer.server,
-            '/@id/__x00__/index.html?html-proxy&index=0.js',
-        );
+        const [script] = await makeRequest(devServer.server, extractScriptUrl(html));
         await devServer.viteServer.close();
 
         // SSR renders the page with pre-rendered content
@@ -430,7 +430,9 @@ async function makeRequest(handler: any, path: string): Promise<[string, Record<
             originalUrl: path,
             params: {},
             url: path,
-            headers: {},
+            headers: { host: 'localhost' },
+            socket: { remoteAddress: '127.0.0.1' },
+            connection: { remoteAddress: '127.0.0.1' },
             pipe: () => req,
             on: () => req,
             once: () => req,
@@ -445,20 +447,35 @@ async function makeRequest(handler: any, path: string): Promise<[string, Record<
             pause: () => req,
         } as unknown as Request;
 
-        const resHeaders = {};
+        const resHeaders: Record<string, string> = {};
+        let statusCode = 200;
         const res = {
-            status: (code: number) => res,
+            statusCode,
+            status: (code: number) => {
+                statusCode = code;
+                return res;
+            },
             set: (headers: any) => res,
             send: (data: string) => {
                 resolve([data, resHeaders]);
                 return res;
             },
-            end: (data: string) => {
-                resolve([data, resHeaders]);
+            end: (data?: string) => {
+                resolve([data || '', resHeaders]);
+                return res;
+            },
+            writeHead: (code: number, headers?: any) => {
+                statusCode = code;
+                if (headers) Object.assign(resHeaders, headers);
                 return res;
             },
             setHeader: (key: string, value: string) => {
                 resHeaders[key] = value;
+                return res;
+            },
+            getHeader: (key: string) => resHeaders[key],
+            removeHeader: (key: string) => {
+                delete resHeaders[key];
             },
             pipe: () => res,
             on: () => res,
@@ -468,7 +485,10 @@ async function makeRequest(handler: any, path: string): Promise<[string, Record<
             removeAllListeners: () => res,
             emit: () => true,
             writable: true,
-            write: () => true,
+            write: (data: string) => {
+                resolve([data, resHeaders]);
+                return true;
+            },
             cork: () => {},
             uncork: () => {},
         } as unknown as Response;

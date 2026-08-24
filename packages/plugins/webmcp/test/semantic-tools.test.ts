@@ -8,20 +8,18 @@ function group(refName: string, tag: string, coordOrCoords: string | string[][])
     const coords = typeof coordOrCoords === 'string' ? [[coordOrCoords]] : coordOrCoords;
     return {
         refName,
-        items: coords.map(
-            (c): InteractionInstance => ({
-                coordinate: c,
-                element: document.createElement(tag),
-                events:
-                    tag === 'button' || tag === 'a'
-                        ? ['click']
-                        : tag === 'select'
-                          ? ['change']
-                          : tag === 'input'
-                            ? ['input', 'change']
-                            : ['click'],
-            }),
-        ),
+        items: coords.map((c): InteractionInstance => ({
+            coordinate: c,
+            element: document.createElement(tag),
+            events:
+                tag === 'button' || tag === 'a'
+                    ? ['click']
+                    : tag === 'select'
+                      ? ['change']
+                      : tag === 'input'
+                        ? ['input', 'change']
+                        : ['click'],
+        })),
     };
 }
 

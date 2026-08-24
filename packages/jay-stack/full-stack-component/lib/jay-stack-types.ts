@@ -162,10 +162,7 @@ export type PartialRender<ViewState extends object, CarryForward> = PhaseOutput<
  * Union of all possible render outcomes.
  */
 export type RenderOutcome<ViewState extends object, CarryForward = {}> =
-    | PhaseOutput<ViewState, CarryForward>
-    | ServerError5xx
-    | ClientError4xx
-    | Redirect3xx;
+    PhaseOutput<ViewState, CarryForward> | ServerError5xx | ClientError4xx | Redirect3xx;
 
 export type SlowlyRenderResult<ViewState extends object, CarryForward = {}> = RenderOutcome<
     ViewState,

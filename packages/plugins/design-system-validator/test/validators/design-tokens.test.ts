@@ -49,7 +49,7 @@ describe('design-tokens validator', () => {
             {
                 severity: 'warning',
                 message: `${H.cardText} — Hardcoded color "#ff0000" for color not in design system`,
-                suggestion: 'Use token {colors.error} ("#dc2626")',
+                suggestion: expect.stringContaining('Use token {colors.error} ("#dc2626")'),
                 element: H.cardText,
             },
         ]);
@@ -74,7 +74,7 @@ describe('design-tokens validator', () => {
             {
                 severity: 'warning',
                 message: `${H.boxText} — padding value "13px" not in spacing scale`,
-                suggestion: 'Use a DESIGN.md spacing token',
+                suggestion: expect.stringContaining('Use a DESIGN.md spacing token'),
                 element: H.boxText,
             },
         ]);
@@ -99,7 +99,7 @@ describe('design-tokens validator', () => {
             {
                 severity: 'warning',
                 message: `${H.cardText} — border-radius "10px" not in rounded scale`,
-                suggestion: 'Use a DESIGN.md rounded token',
+                suggestion: expect.stringContaining('Use a DESIGN.md rounded token'),
                 element: H.cardText,
             },
         ]);
@@ -146,7 +146,7 @@ describe('design-tokens validator', () => {
             {
                 severity: 'warning',
                 message: `[tablet] ${H.cardText} — padding value "13px" not in spacing scale`,
-                suggestion: 'Use a DESIGN.md spacing token',
+                suggestion: expect.stringContaining('Use a DESIGN.md spacing token'),
                 element: H.cardText,
             },
         ]);
@@ -196,7 +196,7 @@ describe('design-tokens validator', () => {
             {
                 severity: 'warning',
                 message: `${H.fadeText} — transition-duration "200ms" not in animation presets`,
-                suggestion: 'Use a DESIGN.md animation preset duration',
+                suggestion: expect.stringContaining('Use a DESIGN.md animation preset duration'),
                 element: H.fadeText,
             },
         ]);
@@ -227,13 +227,13 @@ describe('design-tokens validator', () => {
             {
                 severity: 'warning',
                 message: `${H.fadeText} — transition-timing-function "ease" not in animation presets`,
-                suggestion: 'Use a DESIGN.md animation preset easing',
+                suggestion: expect.stringContaining('Use a DESIGN.md animation preset easing'),
                 element: H.fadeText,
             },
             {
                 severity: 'warning',
                 message: `[(prefers-reduced-motion: reduce)] ${H.fadeText} — transition-timing-function "ease" not in animation presets`,
-                suggestion: 'Use a DESIGN.md animation preset easing',
+                suggestion: expect.stringContaining('Use a DESIGN.md animation preset easing'),
                 element: H.fadeText,
             },
         ]);

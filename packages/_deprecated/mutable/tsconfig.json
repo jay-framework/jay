@@ -3,7 +3,7 @@
   "compilerOptions": {
     "outDir": "dist",
     "paths": {
-      "@jay-framework/reactive": ["../reactive/lib"],
-    },
-  },
+      "@jay-framework/reactive": ["../reactive/lib"]
+    }
+  }
 }

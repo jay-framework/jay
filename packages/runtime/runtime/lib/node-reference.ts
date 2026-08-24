@@ -199,9 +199,9 @@ export class ComponentRefsImpl<ViewState, ComponentType extends JayComponent<any
 }
 
 export class ComponentCollectionRefImpl<
-        ViewState,
-        ComponentType extends JayComponent<any, ViewState, any>,
-    >
+    ViewState,
+    ComponentType extends JayComponent<any, ViewState, any>,
+>
     extends PrivateCollectionRefs<
         ViewState,
         ComponentType,
@@ -232,8 +232,7 @@ export abstract class RefImpl<
     ElementType extends ReferenceTarget<ViewState>,
     PublicRefAPI,
     RefType extends PrivateRef<ViewState, PublicRefAPI>,
-> implements PrivateRef<ViewState, PublicRefAPI>
-{
+> implements PrivateRef<ViewState, PublicRefAPI> {
     private listeners = [];
     protected element: ElementType;
 

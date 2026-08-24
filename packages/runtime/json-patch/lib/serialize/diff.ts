@@ -53,7 +53,7 @@ function diffObjectOrArray(
     keys = Object.keys(newValue);
     let oldKeys = Object.keys(oldValue);
     length = keys.length;
-    for (i = length; i-- !== 0; ) {
+    for (i = length; i-- !== 0;) {
         const key = keys[i];
         diffResults.push(
             diff(
@@ -64,7 +64,7 @@ function diffObjectOrArray(
             ),
         );
     }
-    for (i = oldKeys.length; i-- !== 0; ) {
+    for (i = oldKeys.length; i-- !== 0;) {
         const key = oldKeys[i];
         if (!(key in newValue)) diffResults.push([[{ op: REMOVE, path: [...path, key] }], 1, 1]);
     }

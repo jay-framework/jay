@@ -172,6 +172,8 @@ Each headfull component lives in its own subdirectory under `src/components/` wi
 <jay:SharedHeader logoUrl="/logo.png" />
 ```
 
+> **Route params:** Headfull and instance-based headless components do not receive route params directly. To pass a route param, expose it through the page's ViewState and bind it as a prop: `<jay:SideNav activePage="{activePage}" />`. See [routing.md](routing.md) for the full pattern.
+
 ### Component Structure
 
 Each headfull component needs three files in its subdirectory under `src/components/`:

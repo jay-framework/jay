@@ -497,19 +497,17 @@ class BuilderImplementation<
     Params extends UrlParams,
     CarryForward extends object,
     CompCore extends JayComponentCore<PropsT, InteractiveVS>,
-> implements
-        JayStackComponentDefinition<
-            Refs,
-            SlowVS,
-            FastVS,
-            InteractiveVS,
-            Services,
-            Contexts,
-            PropsT,
-            Params,
-            CompCore
-        >
-{
+> implements JayStackComponentDefinition<
+    Refs,
+    SlowVS,
+    FastVS,
+    InteractiveVS,
+    Services,
+    Contexts,
+    PropsT,
+    Params,
+    CompCore
+> {
     services: ServiceMarkers<Services> = [] as ServiceMarkers<Services>;
     contexts: ContextMarkers<Contexts> = [] as ContextMarkers<Contexts>;
     loadParams: LoadParams<Services, Params>;

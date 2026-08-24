@@ -353,18 +353,11 @@ Both `adoptText` and `element` call `currentConstructionContext()`. The context 
 
 ```ts
 // Current (client-side render):
-const instance = pageComp({
-  /* props */
-});
+const instance = pageComp({/* props */});
 target.appendChild(instance.element.dom);
 
 // Hydration mode:
-const instance = pageComp(
-  {
-    /* props */
-  },
-  { hydrate: target },
-);
+const instance = pageComp({/* props */}, { hydrate: target });
 // No appendChild — DOM already exists
 ```
 

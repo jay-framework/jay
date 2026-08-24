@@ -19,16 +19,10 @@ interface ContextType {
 
 const CONTEXT_SYMBOL = createContext<ComponentContext>();
 
-provideContext(
-  CONTEXT_SYMBOL,
-  {
-    /*context members*/
-  },
-  () => {
-    // ... under some deep call stack
-    let theContext = useContext(CONTEXT_SYMBOL);
-  },
-);
+provideContext(CONTEXT_SYMBOL, {/*context members*/}, () => {
+  // ... under some deep call stack
+  let theContext = useContext(CONTEXT_SYMBOL);
+});
 ```
 
 This low level API only solves the first requirement of _dependency injection_, but not the other two.
@@ -106,9 +100,7 @@ function TodoConstructor(
       let val = newValue.trim();
 
       if (val) {
-        newTodo({
-          /*... todo members ... */
-        });
+        newTodo({/*... todo members ... */});
       }
       setNewTodo('');
     }
@@ -616,9 +608,7 @@ We can opt to use
 
 ```typescript
 function SomeComponentConstructor({}: Props<SomeProps>, refs: SomeRefs) {
-  provideContext(TODO_CONTEXT, {
-    /*... some context ...*/
-  });
+  provideContext(TODO_CONTEXT, {/*... some context ...*/});
   return {
     render: () => ({}),
   };
@@ -669,13 +659,7 @@ export function render(viewState: TodoViewState, options?: RenderElementOptions)
       forEach(
         (vs) => vs.items,
         (vs1: Item) => {
-          return childComp(
-            Item,
-            (vs: Item) => ({
-              /* some props */
-            }),
-            refItems(),
-          );
+          return childComp(Item, (vs: Item) => ({/* some props */}), refItems());
         },
         'id',
       ),
@@ -701,13 +685,7 @@ export function makeRender() {
           forEach(
             (vs) => vs.items,
             (vs1: Item) => {
-              return childComp(
-                Item,
-                (vs: Item) => ({
-                  /* some props */
-                }),
-                refItems(),
-              );
+              return childComp(Item, (vs: Item) => ({/* some props */}), refItems());
             },
             'id',
           ),

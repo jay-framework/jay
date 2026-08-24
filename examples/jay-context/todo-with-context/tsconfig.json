@@ -9,7 +9,7 @@
       "@jay-framework/runtime": ["../../packages/runtime/lib"],
       "@jay-framework/secure": ["../../packages/secure/lib"],
       "@jay-framework/serialization": ["../../packages/serialization/lib"],
-      "@jay-framework/rollup-plugin": ["../../packages/rollup-plugin/lib"],
-    },
-  },
+      "@jay-framework/rollup-plugin": ["../../packages/rollup-plugin/lib"]
+    }
+  }
 }

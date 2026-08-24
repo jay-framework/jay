@@ -22,8 +22,7 @@ export interface ComponentInComponentElementRefs {
     counterTwo: CounterRef<ComponentInComponentViewState>;
 }
 
-export interface ComponentInComponentElementProps
-    extends Jay4ReactElementProps<ComponentInComponentViewState> {}
+export interface ComponentInComponentElementProps extends Jay4ReactElementProps<ComponentInComponentViewState> {}
 
 const ReactCounter = jay2React(() => Counter);
 

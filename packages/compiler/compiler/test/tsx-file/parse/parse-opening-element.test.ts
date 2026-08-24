@@ -5,8 +5,7 @@ import { parseOpeningElement } from '../../../lib/tsx-file/parse/parse-opening-e
 describe('parseOpeningElementText', () => {
     function parseText(sourceFile: ts.SourceFile) {
         const element = (sourceFile.statements[0] as ts.ExpressionStatement).expression as
-            | ts.JsxOpeningElement
-            | ts.JsxSelfClosingElement;
+            ts.JsxOpeningElement | ts.JsxSelfClosingElement;
         // @ts-expect-error there's no single accessor for these types
         return parseOpeningElement(element.openingElement || element);
     }

@@ -144,6 +144,61 @@ src/pages/products/[slug]/page.jay-html
 
 Multiple components on the same page can each declare params. The route directory must provide all required params across all components. For example, if the page contract requires `lang` and a headless component requires `slug`, the page should live at `src/pages/[lang]/products/[slug]/page.jay-html`.
 
+### Passing Route Params to Nested Components
+
+Route params flow automatically to keyed headless components that declare them as `params` in their contract. Instance-based headless components and headfull components do not receive route params directly — they receive props from the template.
+
+#### Direct binding with `jay.params` (no page.ts needed)
+
+Use `jay.params.X` to bind route params directly to nested component props:
+
+```html
+<!-- src/pages/docs/[role]/[slug]/page.jay-html -->
+<jay:DocsSidebar activeRole="{jay.params.role}" activePage="{jay.params.slug}" />
+```
+
+No `page.ts`, no page contract needed for param passing. `jay.params` is available at all render phases. Use `jay.url.path` for the full URL pathname:
+
+```html
+<jay:Sidebar currentPath="{jay.url.path}" />
+```
+
+See [jay-html-template-syntax.md](jay-html-template-syntax.md) for the full list of `jay.` bindings and [navigation-patterns.md](navigation-patterns.md) for active menu patterns.
+
+#### Passing via page.ts (when you need data transformation)
+
+When route params need processing before reaching the component (e.g., fetching data, computing derived values), use the `page.ts` passthrough pattern:
+
+**1. Page contract exposes the param as ViewState:**
+
+```yaml
+# page.jay-contract
+name: Page
+params:
+  slug: string
+tags:
+  - tag: activePage
+    type: data
+    dataType: string
+    phase: slow
+```
+
+**2. `page.ts` passes the param into ViewState:**
+
+```typescript
+.withSlowlyRender(async (props) =>
+  phaseOutput({ activePage: props.slug }, {})
+)
+```
+
+**3. Template binds ViewState to the nested component prop:**
+
+```html
+<jay:SideNav activePage="{activePage}" />
+```
+
+The same pattern works with keyed headless data — if a keyed component already provides the value, bind directly: `<jay:SideNav activePage="{product.slug}" />`.
+
 ### Discovering Param Values
 
 For SSG with dynamic routes, the plugin component provides a `loadParams` generator that yields all valid param combinations. Use it to discover what routes will be generated:
@@ -153,7 +208,7 @@ jay-stack params wix-stores/product-page
 # Output: [{"slug": "blue-shirt"}, {"slug": "red-hat"}, ...]
 ```
 
-Params are always strings (URL params).
+Params are always strings (URL params). Routes are **case-sensitive** — a slug of `My-Page` produces the URL `/my-page` only if the param value is exactly `my-page`. Use lowercase for all param values and filenames that become URL segments.
 
 ## Query Parameters
 

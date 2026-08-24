@@ -368,8 +368,7 @@ export interface SlowRenderContext {
 }
 
 export type ConditionResult =
-  | { type: 'resolved'; value: boolean }
-  | { type: 'runtime'; code: RenderFragment };
+  { type: 'resolved'; value: boolean } | { type: 'runtime'; code: RenderFragment };
 ```
 
 ### Phase 2: Add Slow-Aware Parsing Function

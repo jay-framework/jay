@@ -119,7 +119,7 @@ export function makeHeadlessInstanceComponent<
         // (e.g. "0/2/1/product-widget:0"); try suffix when full key not found
         const suffixKey =
             resolvedKey.includes('/') && resolvedKey.includes(':')
-                ? resolvedKey.split('/').find((s) => s.includes(':')) ?? resolvedKey
+                ? (resolvedKey.split('/').find((s) => s.includes(':')) ?? resolvedKey)
                 : resolvedKey;
 
         // Look up this instance's fast ViewState and carryForward by coordinate

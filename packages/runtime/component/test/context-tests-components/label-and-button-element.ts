@@ -16,8 +16,10 @@ export interface LabelAndButtonViewState {
 export interface LabelAndButtonRefs {
     button: HTMLElementProxy<LabelAndButtonViewState, HTMLButtonElement>;
 }
-export interface LabelAndButtonElement
-    extends JayElement<LabelAndButtonViewState, LabelAndButtonRefs> {}
+export interface LabelAndButtonElement extends JayElement<
+    LabelAndButtonViewState,
+    LabelAndButtonRefs
+> {}
 export type LabelAndButtonElementRender = RenderElement<
     LabelAndButtonViewState,
     LabelAndButtonRefs,

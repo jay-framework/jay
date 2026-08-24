@@ -2,5 +2,8 @@
   "extends": "@jay-framework/dev-environment/library-dom/tsconfig.json",
   "compilerOptions": {
     "outDir": "dist",
-  },
+    "paths": {
+      "vite": ["../../../node_modules/vite"]
+    }
+  }
 }

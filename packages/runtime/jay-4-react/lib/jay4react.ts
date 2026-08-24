@@ -27,11 +27,9 @@ function splitPropsEvents(reactProps: object): [object, object] {
 }
 
 type EventEmittersToReactCallbacks<T> = {
-    [Key in keyof T as T[Key] extends EventEmitter<any, any>
-        ? Key
-        : never]?: T[Key] extends EventEmitter<infer EventType, any>
-        ? (event: EventType) => void
-        : T[Key];
+    [
+        Key in keyof T as T[Key] extends EventEmitter<any, any> ? Key : never
+    ]?: T[Key] extends EventEmitter<infer EventType, any> ? (event: EventType) => void : T[Key];
 };
 
 type Jay2React<Comp extends (...args: any) => any> = Parameters<Comp>[0] &

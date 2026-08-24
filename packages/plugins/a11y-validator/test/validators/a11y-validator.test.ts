@@ -114,6 +114,166 @@ describe('a11y-validator', () => {
                 }),
             ]);
         });
+
+        it('flags checkbox without label', async () => {
+            const ctx = makeContext('<input type="checkbox" id="agree" />');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    severity: 'error',
+                    element: '<input>',
+                    message: expect.stringContaining('WCAG 1.3.1'),
+                }),
+            ]);
+        });
+
+        it('passes checkbox wrapped in label', async () => {
+            const ctx = makeContext('<label><input type="checkbox" /> Agree</label>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+
+        it('flags radio without label', async () => {
+            const ctx = makeContext('<input type="radio" name="opt" id="a" />');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    severity: 'error',
+                    element: '<input>',
+                    message: expect.stringContaining('WCAG 1.3.1'),
+                }),
+            ]);
+        });
+
+        it('passes radio with label[for]', async () => {
+            const ctx = makeContext(
+                '<label for="a">Option A</label><input type="radio" name="opt" id="a" />',
+            );
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+
+        it('flags empty aria-label on input', async () => {
+            const ctx = makeContext('<input type="text" aria-label="" />');
+            const findings = await validate(ctx);
+            expect(findings).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        severity: 'error',
+                        attribute: 'aria-label',
+                        message: expect.stringContaining('empty aria-label'),
+                    }),
+                ]),
+            );
+        });
+
+        it('flags aria-labelledby pointing to missing id', async () => {
+            const ctx = makeContext('<input type="text" aria-labelledby="missing-id" />');
+            const findings = await validate(ctx);
+            expect(findings).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        severity: 'error',
+                        attribute: 'aria-labelledby',
+                        message: expect.stringContaining('aria-labelledby'),
+                    }),
+                ]),
+            );
+        });
+
+        it('passes aria-labelledby when target id exists', async () => {
+            const ctx = makeContext(
+                '<span id="search-label">Search</span><input type="text" aria-labelledby="search-label" />',
+            );
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+
+        it('flags empty aria-labelledby', async () => {
+            const ctx = makeContext('<input type="text" aria-labelledby="" />');
+            const findings = await validate(ctx);
+            expect(findings).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        severity: 'error',
+                        attribute: 'aria-labelledby',
+                    }),
+                ]),
+            );
+        });
+    });
+
+    describe('multiple controls in label', () => {
+        it('flags label with two inputs', async () => {
+            const ctx = makeContext(
+                '<label>From <input type="date" /> To <input type="date" /></label>',
+            );
+            const findings = await validate(ctx);
+            expect(findings).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        severity: 'warning',
+                        element: '<label>',
+                        message: expect.stringContaining('form controls'),
+                    }),
+                ]),
+            );
+        });
+
+        it('passes label with a single input', async () => {
+            const ctx = makeContext('<label>Name <input type="text" /></label>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+    });
+
+    describe('duplicate ids', () => {
+        it('flags duplicate id attributes', async () => {
+            const ctx = makeContext('<div id="x"></div><span id="x"></span>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        severity: 'error',
+                        attribute: 'id',
+                        message: expect.stringContaining('Duplicate id="x"'),
+                    }),
+                ]),
+            );
+        });
+
+        it('passes unique ids', async () => {
+            const ctx = makeContext(
+                '<label for="a">A</label><input id="a" type="text" /><input id="b" type="text" aria-label="B" />',
+            );
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+    });
+
+    describe('orphan label for', () => {
+        it('flags label for without matching id', async () => {
+            const ctx = makeContext('<label for="missing">Name</label>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        severity: 'warning',
+                        element: '<label>',
+                        attribute: 'for',
+                        message: expect.stringContaining('for="missing"'),
+                    }),
+                ]),
+            );
+        });
+
+        it('passes label for with matching id', async () => {
+            const ctx = makeContext(
+                '<label for="name">Name</label><input type="text" id="name" />',
+            );
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
     });
 
     describe('button accessible name', () => {
@@ -352,6 +512,132 @@ describe('a11y-validator', () => {
                     <div role="navigation" tabindex="0">Nav</div>
                 </div>`,
             );
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+    });
+
+    describe('nested interactive elements', () => {
+        it('flags anchor nested inside anchor', async () => {
+            const ctx = makeContext(
+                '<a href="/product">Product <a href="/reviews">Reviews</a></a>',
+            );
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    severity: 'error',
+                    element: '<a>',
+                    message: 'Interactive <a> is nested inside <a> (WCAG 4.1.2)',
+                }),
+            ]);
+        });
+
+        it('flags button nested inside anchor', async () => {
+            const ctx = makeContext('<a href="/product"><button>Add to cart</button></a>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    severity: 'error',
+                    element: '<button>',
+                    message: 'Interactive <button> is nested inside <a> (WCAG 4.1.2)',
+                }),
+            ]);
+        });
+
+        it('flags anchor nested inside button', async () => {
+            const ctx = makeContext('<button><a href="/help">Help</a></button>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    severity: 'error',
+                    element: '<a>',
+                    message: 'Interactive <a> is nested inside <button> (WCAG 4.1.2)',
+                }),
+            ]);
+        });
+
+        it('flags input nested inside anchor', async () => {
+            const ctx = makeContext(
+                '<a href="/search"><input type="text" aria-label="Query" /></a>',
+            );
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    severity: 'error',
+                    element: '<input>',
+                }),
+            ]);
+        });
+
+        it('flags element with tabindex="0" nested inside anchor', async () => {
+            const ctx = makeContext('<a href="/x"><span tabindex="0" role="button">Go</span></a>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    severity: 'error',
+                    element: '<span>',
+                    message: 'Interactive <span> is nested inside <a> (WCAG 4.1.2)',
+                }),
+            ]);
+        });
+
+        it('flags focusable nested inside role="button" container', async () => {
+            const ctx = makeContext('<div role="button"><a href="/x">Link</a></div>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    severity: 'error',
+                    element: '<a>',
+                    message: 'Interactive <a> is nested inside <div> (WCAG 4.1.2)',
+                }),
+            ]);
+        });
+
+        it('reports one finding per nested element', async () => {
+            const ctx = makeContext('<a href="/a"><a href="/b"><button>Deep</button></a></a>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([
+                expect.objectContaining({
+                    element: '<a>',
+                    message: 'Interactive <a> is nested inside <a> (WCAG 4.1.2)',
+                }),
+                expect.objectContaining({
+                    element: '<button>',
+                    message: 'Interactive <button> is nested inside <a> (WCAG 4.1.2)',
+                }),
+            ]);
+        });
+
+        it('passes anchor without href wrapping a button', async () => {
+            const ctx = makeContext('<a><button>Add to cart</button></a>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+
+        it('passes anchor containing only non-interactive content', async () => {
+            const ctx = makeContext(
+                '<a href="/product"><img src="thumb.jpg" alt="Product" /><span>Name</span></a>',
+            );
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+
+        it('passes interactive siblings in a non-interactive container', async () => {
+            const ctx = makeContext(
+                '<div><a href="/product">Product</a><button>Add to cart</button></div>',
+            );
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+
+        it('passes button containing an image', async () => {
+            const ctx = makeContext('<button><img src="icon.svg" alt="Close" /></button>');
+            const findings = await validate(ctx);
+            expect(findings).toEqual([]);
+        });
+
+        it('passes hidden input inside an anchor', async () => {
+            const ctx = makeContext('<a href="/x">Go<input type="hidden" name="csrf" /></a>');
             const findings = await validate(ctx);
             expect(findings).toEqual([]);
         });
