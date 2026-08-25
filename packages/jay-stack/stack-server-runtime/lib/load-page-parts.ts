@@ -101,21 +101,29 @@ export async function loadPageParts(
         .catch(() => false);
 
     const parts: DevServerPagePart[] = [];
+    const validations: string[] = [];
     if (exists) {
         // Load page component - SSR mode automatically triggers server transformation
         // (client code is stripped because ssrLoadModule sets ssr: true)
         const exportName = route.componentExport || 'page';
         const pageComponent = (await vite.ssrLoadModule(route.compPath))[exportName];
-        // For NPM plugin routes (componentExport set), use the /client entry for browser imports.
-        // The server entry (compPath) contains server-only code (actions, services).
-        const clientImportPath = route.componentExport
-            ? route.compPath.replace(/index\.js$/, 'index.client.js')
-            : route.compPath;
-        parts.push({
-            compDefinition: pageComponent,
-            clientImport: `import {${exportName}} from '${clientImportPath}'`,
-            clientPart: `{comp: ${exportName}.comp, contextMarkers: ${exportName}.contexts || []}`,
-        });
+        if (!pageComponent) {
+            validations.push(
+                `${route.compPath} does not export "${exportName}". ` +
+                    `The file exists but the expected export is missing — remove the file or add the export.`,
+            );
+        } else {
+            // For NPM plugin routes (componentExport set), use the /client entry for browser imports.
+            // The server entry (compPath) contains server-only code (actions, services).
+            const clientImportPath = route.componentExport
+                ? route.compPath.replace(/index\.js$/, 'index.client.js')
+                : route.compPath;
+            parts.push({
+                compDefinition: pageComponent,
+                clientImport: `import {${exportName}} from '${clientImportPath}'`,
+                clientPart: `{comp: ${exportName}.comp, contextMarkers: ${exportName}.contexts || []}`,
+            });
+        }
     }
 
     // Use pre-loaded content if provided, otherwise read from file
@@ -135,6 +143,8 @@ export async function loadPageParts(
         JAY_IMPORT_RESOLVER,
         projectBase,
     );
+
+    jayHtmlWithValidations.validations.push(...validations);
 
     return jayHtmlWithValidations.mapAsync(async (jayHtml) => {
         const usedPackages = new Set<string>();
