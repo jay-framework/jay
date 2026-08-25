@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import path from 'path';
+import fs from 'fs';
 import { promises as fsp } from 'fs';
 import { glob } from 'glob';
 import {
@@ -472,6 +473,35 @@ export function checkRefElementTypes(jayHtml: JayHtmlSourceFile, file: string): 
 
     walkElement(jayHtml.body, []);
     return warnings;
+}
+
+// --- Page component export check ---
+
+function checkPageComponentExport(jayHtmlPath: string): string | null {
+    const dirname = path.dirname(jayHtmlPath);
+    const compPath = path.join(dirname, 'page.ts');
+    if (!fs.existsSync(compPath)) return null;
+
+    let content: string;
+    try {
+        content = fs.readFileSync(compPath, 'utf-8');
+    } catch {
+        return null;
+    }
+
+    const exportName = 'page';
+    const patterns = [
+        new RegExp(`export\\s*\\{[^}]*\\b${exportName}\\b[^}]*\\}`, 'm'),
+        new RegExp(`export\\s+(?:async\\s+)?function\\s+${exportName}\\b`),
+        new RegExp(`export\\s+(?:const|let|var)\\s+${exportName}\\b`),
+    ];
+
+    if (patterns.some((p) => p.test(content))) return null;
+
+    return (
+        `${path.relative(dirname, compPath)} exists but does not export "${exportName}". ` +
+        `Remove the file or add the export.`
+    );
 }
 
 // Same regex as route-scanner: matches [param], [[optional]], [...catchAll]
@@ -1052,6 +1082,16 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                         '<script type="application/jay-params"> is deprecated. ' +
                         'Move the values into the YAML body of the headless component that uses them. ' +
                         'See agent-kit/developer/routing.md for details.',
+                });
+            }
+
+            // Check page.ts exports the expected component
+            const pageExportError = checkPageComponentExport(jayFile);
+            if (pageExportError) {
+                errors.push({
+                    file: relativePath,
+                    message: pageExportError,
+                    stage: 'generate',
                 });
             }
 

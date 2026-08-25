@@ -501,6 +501,12 @@ async function handleCachedRequest(
         return;
     }
 
+    if (pagePartsResult.validations.length > 0) {
+        for (const v of pagePartsResult.validations) {
+            getLogger().warn(v);
+        }
+    }
+
     const {
         parts: pageParts,
         clientTrackByMap,
@@ -638,6 +644,12 @@ async function handlePreRenderRequest(
         return;
     }
 
+    if (initialPartsResult.validations.length > 0) {
+        for (const v of initialPartsResult.validations) {
+            getLogger().warn(v);
+        }
+    }
+
     // Register linked files for watching
     const { linkedCssFiles: initCss, linkedComponentFiles: initComps } = initialPartsResult.val;
     _watchLinkedFiles([...(initCss || []), ...(initComps || [])], route);
@@ -768,6 +780,12 @@ async function handleClientOnlyRequest(
         res.status(500).end(pagePartsResult.validations.join('\n'));
         timing?.end();
         return;
+    }
+
+    if (pagePartsResult.validations.length > 0) {
+        for (const v of pagePartsResult.validations) {
+            getLogger().warn(v);
+        }
     }
 
     const {
