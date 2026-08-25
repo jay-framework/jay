@@ -178,6 +178,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 147  | [jay-html validation rules catalog](147%20-%20jay-html%20validation%20rules%20catalog)                | Complete catalog of all validation rules across wix-media, SEO, and a11y                     |
 | 165  | [graceful expression parse errors](165%20-%20graceful%20expression%20parse%20errors)                  | Convert expression parse errors to validation messages instead of crashing the page          |
 | 166  | [a11y form and label validation rules](166%20-%20a11y%20form%20and%20label%20validation%20rules)      | Extend a11y-validator: checkbox/radio, ARIA name integrity, duplicate ids, label hygiene     |
+| 174  | [undefined css variable validation](174%20-%20undefined%20css%20variable%20validation)                | Validate that CSS `var(--name)` references have corresponding `:root` definitions            |
 
 ---
 
