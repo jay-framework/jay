@@ -1,12 +1,8 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import yaml from 'js-yaml';
+import { makeContractGenerator } from '@jay-framework/fullstack-component';
 import { loadSchema, type SchemaTag } from './load-schema.js';
-
-interface GeneratedContract {
-    name: string;
-    yaml: string;
-}
 
 function tagsToYaml(tags: SchemaTag[], indent: number = 0): string {
     const pad = '  '.repeat(indent);
@@ -50,87 +46,93 @@ async function findContentDirs(projectRoot: string): Promise<string[]> {
     }
 }
 
-export async function* generateDataPagesContract(): AsyncGenerator<GeneratedContract> {
+export const generateDataPagesContract = makeContractGenerator().generateWith(async () => {
     const projectRoot = process.cwd();
     const dirs = await findContentDirs(projectRoot);
 
-    for (const dir of dirs) {
-        const schema = await loadSchema(dir);
-        const contractYaml = [
-            `name: ${schema.name}-data-pages`,
-            `description: Per-item pages for ${schema.name}`,
-            '',
-            'props:',
-            '  - name: contentDir',
-            '    kind: required',
-            '  - name: file',
-            '    kind: required',
-            '',
-            'params:',
-            '  - name: slug',
-            '    kind: required',
-            '',
-            'tags:',
-            tagsToYaml(schema.tags, 1),
-        ].join('\n');
+    return Promise.all(
+        dirs.map(async (dir) => {
+            const schema = await loadSchema(dir);
+            const yaml = [
+                `name: ${schema.name}-data-pages`,
+                `description: Per-item pages for ${schema.name}`,
+                '',
+                'props:',
+                '  - name: contentDir',
+                '    kind: required',
+                '  - name: file',
+                '    kind: required',
+                '',
+                'params:',
+                '  - name: slug',
+                '    kind: required',
+                '',
+                'tags:',
+                tagsToYaml(schema.tags, 1),
+            ].join('\n');
 
-        yield { name: schema.name, yaml: contractYaml };
-    }
-}
+            return { name: schema.name, yaml };
+        }),
+    );
+});
 
-export async function* generateDataListContract(): AsyncGenerator<GeneratedContract> {
+export const generateDataListContract = makeContractGenerator().generateWith(async () => {
     const projectRoot = process.cwd();
     const dirs = await findContentDirs(projectRoot);
 
-    for (const dir of dirs) {
-        const schema = await loadSchema(dir);
-        const slugField = schema.slugField;
-        const contractYaml = [
-            `name: ${schema.name}-data-list`,
-            `description: List view for ${schema.name}`,
-            '',
-            'props:',
-            '  - name: contentDir',
-            '    kind: required',
-            '  - name: file',
-            '    kind: required',
-            '',
-            'tags:',
-            '  - tag: items',
-            '    type: sub-contract',
-            '    repeated: true',
-            `    trackBy: ${slugField}`,
-            '    phase: slow',
-            '    tags:',
-            tagsToYaml(schema.tags, 3),
-        ].join('\n');
+    return Promise.all(
+        dirs.map(async (dir) => {
+            const schema = await loadSchema(dir);
+            const slugField = schema.slugField;
+            const yaml = [
+                `name: ${schema.name}-data-list`,
+                `description: List view for ${schema.name}`,
+                '',
+                'props:',
+                '  - name: contentDir',
+                '    kind: required',
+                '  - name: file',
+                '    kind: required',
+                '',
+                'tags:',
+                '  - tag: items',
+                '    type: sub-contract',
+                '    repeated: true',
+                `    trackBy: ${slugField}`,
+                '    phase: slow',
+                '    tags:',
+                tagsToYaml(schema.tags, 3),
+            ].join('\n');
 
-        yield { name: schema.name, yaml: contractYaml };
-    }
-}
+            return { name: schema.name, yaml };
+        }),
+    );
+});
 
-export async function* generateDataItemContract(): AsyncGenerator<GeneratedContract> {
+export const generateDataItemContract = makeContractGenerator().generateWith(async () => {
     const projectRoot = process.cwd();
     const dirs = await findContentDirs(projectRoot);
 
-    for (const dir of dirs) {
-        const schema = await loadSchema(dir);
-        const contractYaml = [
-            `name: ${schema.name}-data-item`,
-            `description: Single item view for ${schema.name}`,
-            '',
-            'props:',
-            '  - name: contentDir',
-            '    kind: required',
-            '  - name: file',
-            '    kind: required',
-            '  - name: slug',
-            '    kind: required',
-            '',
-            'tags:',
-            tagsToYaml(schema.tags, 1),
-        ].join('\n');
+    return Promise.all(
+        dirs.map(async (dir) => {
+            const schema = await loadSchema(dir);
+            const yaml = [
+                `name: ${schema.name}-data-item`,
+                `description: Single item view for ${schema.name}`,
+                '',
+                'props:',
+                '  - name: contentDir',
+                '    kind: required',
+                '  - name: file',
+                '    kind: required',
+                '  - name: slug',
+                '    kind: required',
+                '',
+                'tags:',
+                tagsToYaml(schema.tags, 1),
+            ].join('\n');
 
-        yield { name: schema.name, yaml: contractYaml };
-    }
-}
+            return { name: schema.name, yaml };
+        }),
+    );
+});

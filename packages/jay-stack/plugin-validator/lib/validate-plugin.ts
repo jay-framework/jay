@@ -1140,6 +1140,134 @@ async function validatePackageJson(
 }
 
 /**
+ * Check if a generator export is a bare function declaration instead of a
+ * DynamicContractGenerator object (created via makeContractGenerator()).
+ *
+ * Follows the export chain from the entry module to find where the symbol
+ * is declared, then checks if it's a function/function* declaration (wrong)
+ * vs a const/variable (correct).
+ */
+function isBareFunctionExport(exportName: string, context: PluginContext): boolean {
+    const sourcePath = resolveExportSourceFile(exportName, context);
+    if (!sourcePath) return false;
+
+    let sourceCode: string;
+    try {
+        sourceCode = fs.readFileSync(sourcePath, 'utf-8');
+    } catch {
+        return false;
+    }
+
+    const sourceFile = ts.createSourceFile(
+        sourcePath,
+        sourceCode,
+        ts.ScriptTarget.Latest,
+        true,
+        ts.ScriptKind.TS,
+    );
+
+    for (const statement of sourceFile.statements) {
+        if (
+            ts.isFunctionDeclaration(statement) &&
+            hasExportModifier(statement) &&
+            statement.name?.text === exportName
+        ) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Resolve a .js import specifier to a .ts source file (ESM convention).
+ */
+function resolveModulePathWithJsToTs(basePath: string): string | undefined {
+    const result = resolveModulePath(basePath);
+    if (result) return result;
+    if (basePath.endsWith('.js')) {
+        return resolveModulePath(basePath.slice(0, -3) + '.ts');
+    }
+    return undefined;
+}
+
+/**
+ * Follow the export chain from the entry module to find the source file
+ * where `exportName` is declared. Handles re-exports and `export * from`.
+ */
+function resolveExportSourceFile(exportName: string, context: PluginContext): string | undefined {
+    const modulePath = context.manifest.module || 'index';
+    const entryBase = path.join(context.pluginPath, modulePath);
+    const libEntryBase = path.join(context.pluginPath, 'lib', modulePath);
+    const sourceEntry = resolveModulePath(entryBase) || resolveModulePath(libEntryBase);
+    if (!sourceEntry || !sourceEntry.endsWith('.ts')) return undefined;
+
+    return followExportChain(exportName, sourceEntry);
+}
+
+function followExportChain(exportName: string, filePath: string): string | undefined {
+    let sourceCode: string;
+    try {
+        sourceCode = fs.readFileSync(filePath, 'utf-8');
+    } catch {
+        return undefined;
+    }
+
+    const sourceFile = ts.createSourceFile(
+        filePath,
+        sourceCode,
+        ts.ScriptTarget.Latest,
+        true,
+        ts.ScriptKind.TS,
+    );
+
+    const starReexportModules: string[] = [];
+
+    for (const statement of sourceFile.statements) {
+        if (ts.isExportDeclaration(statement) && statement.moduleSpecifier) {
+            if (!ts.isStringLiteral(statement.moduleSpecifier)) continue;
+            const moduleSpec = statement.moduleSpecifier.text;
+
+            if (!statement.exportClause) {
+                starReexportModules.push(moduleSpec);
+                continue;
+            }
+
+            if (ts.isNamedExports(statement.exportClause)) {
+                for (const element of statement.exportClause.elements) {
+                    if (element.name.text === exportName) {
+                        const resolvedBase = path.resolve(path.dirname(filePath), moduleSpec);
+                        return resolveModulePathWithJsToTs(resolvedBase);
+                    }
+                }
+            }
+        }
+
+        // Direct export: export function/const in this file
+        if (ts.isFunctionDeclaration(statement) && hasExportModifier(statement)) {
+            if (statement.name?.text === exportName) return filePath;
+        }
+        if (ts.isVariableStatement(statement) && hasExportModifier(statement)) {
+            for (const decl of statement.declarationList.declarations) {
+                if (ts.isIdentifier(decl.name) && decl.name.text === exportName) return filePath;
+            }
+        }
+    }
+
+    // Check star re-exports
+    for (const moduleSpec of starReexportModules) {
+        if (!moduleSpec.startsWith('.')) continue;
+        const resolvedBase = path.resolve(path.dirname(filePath), moduleSpec);
+        const resolved = resolveModulePathWithJsToTs(resolvedBase);
+        if (!resolved) continue;
+        const found = followExportChain(exportName, resolved);
+        if (found) return found;
+    }
+
+    return undefined;
+}
+
+/**
  * Validates dynamic contracts configuration
  */
 async function validateDynamicContracts(
@@ -1186,8 +1314,14 @@ async function validateDynamicContracts(
                         suggestion: `Create generator file at ${generatorPath}.ts`,
                     });
                 }
+            } else if (isBareFunctionExport(config.generator, context)) {
+                result.errors.push({
+                    type: 'export-mismatch',
+                    message: `Generator "${config.generator}" for ${prefix} is a bare function — it must be a DynamicContractGenerator object`,
+                    location: 'plugin.yaml dynamic_contracts',
+                    suggestion: `Use makeContractGenerator().generateWith(...) from @jay-framework/fullstack-component instead of exporting a plain function`,
+                });
             }
-            // If it's an export name, we can't easily validate it exists
         }
 
         // Check component - can be file path or export name
