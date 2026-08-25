@@ -39,3 +39,7 @@ validators:
   - name: font-fallbacks
     handler: validateFontFallbacks
     description: Detects web fonts loaded via @font-face URL without a metric-matched local fallback (causes CLS)
+
+  - name: undefined-vars
+    handler: validateUndefinedVars
+    description: Flags CSS var(--name) references that are never defined as custom properties

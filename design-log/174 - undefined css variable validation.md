@@ -5,6 +5,7 @@
 The design-system-validator plugin validates CSS values against DESIGN.md tokens. It uses `css-cascade.ts` to resolve styles per element, and `token-matcher.ts` to check values against tokens.
 
 Currently, every `matchColor`, `matchSpacing`, `matchRounded`, etc. function in `token-matcher.ts` has a guard:
+
 ```ts
 if (value.startsWith('var(')) return { matches: true };
 ```
@@ -16,6 +17,7 @@ This means `var(--color-that-doesnt-exist)` passes validation silently.
 ### CSS available to validators
 
 The jay-html parser (`jay-html-parser.ts:extractCss`) already collects CSS from **both** sources into `ctx.css`:
+
 - `<style>` tags in `<head>`
 - `<link rel="stylesheet">` tags pointing to local files (resolved relative to the jay-html file, with `@import` resolution)
 
@@ -74,16 +76,19 @@ The validation is a standalone pass over the raw CSS text — it doesn't need th
 ### Message format
 
 Without fallback:
+
 ```
 CSS variable "--color-surface-tint" is used but never defined
 ```
 
 With fallback:
+
 ```
 CSS variable "--color-surface-tint" is used but never defined (falls back to "red")
 ```
 
 Suggestion (always):
+
 ```
 Define --color-surface-tint in a :root block, or replace with a DESIGN.md token value directly.
 To suppress: add /* design-system: allow */ after the declaration.
