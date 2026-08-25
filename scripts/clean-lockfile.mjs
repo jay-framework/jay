@@ -12,13 +12,13 @@ const LOCKFILE = 'yarn.lock';
 
 const content = readFileSync(LOCKFILE, 'utf-8');
 const cleaned = content
-    .replace(/::__archiveUrl=[^"'\n]*/g, '')
-    .replace(/%3A%3A__archiveUrl=[^#]*/g, '');
+  .replace(/::__archiveUrl=[^"'\n]*/g, '')
+  .replace(/%3A%3A__archiveUrl=[^#]*/g, '');
 
 const removed = (content.match(/__archiveUrl/g) || []).length;
 if (removed > 0) {
-    writeFileSync(LOCKFILE, cleaned);
-    console.log(`Cleaned yarn.lock: removed ${removed} private registry references`);
+  writeFileSync(LOCKFILE, cleaned);
+  console.log(`Cleaned yarn.lock: removed ${removed} private registry references`);
 } else {
-    console.log('yarn.lock: no private registry references found');
+  console.log('yarn.lock: no private registry references found');
 }
