@@ -16,6 +16,8 @@ const MIME_TYPES: Record<string, string> = {
     '.woff': 'font/woff',
     '.ttf': 'font/ttf',
     '.webp': 'image/webp',
+    '.xml': 'application/xml',
+    '.txt': 'text/plain',
 };
 
 export async function fetchStaticFile(
