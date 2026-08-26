@@ -22,6 +22,7 @@ import { scanPlugins, type ScannedPlugin } from './plugin-scanner';
 import { getServiceRegistry } from './services';
 import type { ViteSSRLoader } from './action-discovery';
 import { getLogger } from '@jay-framework/logger';
+import { sortPluginsByDependencies } from './plugin-dependency-sort';
 
 // ============================================================================
 // Setup Types (jay-stack setup)
@@ -226,8 +227,7 @@ export async function discoverPluginsWithSetup(options: {
         }
     }
 
-    // Sort by dependencies (plugins with no deps first)
-    return sortByDependencies(pluginsWithSetup);
+    return sortPluginsByDependencies(pluginsWithSetup);
 }
 
 /**
@@ -270,21 +270,7 @@ export async function discoverPluginsWithAgentKit(options: {
         }
     }
 
-    return sortByDependencies(pluginsWithAgentKit);
-}
-
-/**
- * Simple topological sort by dependencies.
- * Plugins whose dependencies appear earlier in the list run first.
- */
-function sortByDependencies<
-    T extends { name: string; packageName: string; dependencies: string[] },
->(plugins: T[]): T[] {
-    return [...plugins].sort((a, b) => {
-        const aDepsOnB = a.dependencies.some((d) => d === b.name || d === b.packageName) ? 1 : 0;
-        const bDepsOnA = b.dependencies.some((d) => d === a.name || d === a.packageName) ? 1 : 0;
-        return aDepsOnB - bDepsOnA;
-    });
+    return sortPluginsByDependencies(pluginsWithAgentKit);
 }
 
 // ============================================================================
