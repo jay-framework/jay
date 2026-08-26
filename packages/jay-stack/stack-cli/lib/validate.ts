@@ -504,6 +504,58 @@ function checkPageComponentExport(jayHtmlPath: string): string | null {
     );
 }
 
+// --- Direct document access check ---
+
+const DOCUMENT_ACCESS_PATTERNS = [
+    /document\.getElementById\b/,
+    /document\.querySelector\b/,
+    /document\.querySelectorAll\b/,
+    /document\.getElementsBy\w+/,
+    /document\.createElement\b/,
+    /document\.body\.appendChild\b/,
+    /document\.addEventListener\b/,
+];
+
+const DOM_SUPPRESS_COMMENT = 'jay-dom: allow';
+
+function checkDirectDocumentAccess(jayHtmlPath: string): string[] {
+    const dirname = path.dirname(jayHtmlPath);
+    const basename = path.basename(jayHtmlPath, JAY_EXTENSION);
+    const candidates = [
+        path.join(dirname, `${basename}.ts`),
+        path.join(dirname, 'page.ts'),
+    ];
+    const compPath = candidates.find((p) => fs.existsSync(p));
+    if (!compPath) return [];
+    const compName = path.basename(compPath);
+
+    let content: string;
+    try {
+        content = fs.readFileSync(compPath, 'utf-8');
+    } catch {
+        return [];
+    }
+
+    const warnings: string[] = [];
+    const lines = content.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.includes(DOM_SUPPRESS_COMMENT)) continue;
+        for (const pattern of DOCUMENT_ACCESS_PATTERNS) {
+            const match = pattern.exec(line);
+            if (match) {
+                warnings.push(
+                    `${compName}:${i + 1} — Direct DOM access "${match[0]}" — use Jay refs instead. ` +
+                        `Suppress with // ${DOM_SUPPRESS_COMMENT} on the same line. ` +
+                        `See agent-kit/developer/component-refs.md`,
+                );
+                break;
+            }
+        }
+    }
+    return warnings;
+}
+
 // Same regex as route-scanner: matches [param], [[optional]], [...catchAll]
 const PARSE_PARAM = /^\[(\[)?(\.\.\.)?([^\]]+)\]?\]$/;
 
@@ -1093,6 +1145,12 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                     message: pageExportError,
                     stage: 'generate',
                 });
+            }
+
+            // Check page.ts for direct document access
+            const domWarnings = checkDirectDocumentAccess(jayFile);
+            for (const msg of domWarnings) {
+                warnings.push({ file: relativePath, message: msg });
             }
 
             // Check route params match contract params (contract→route)
