@@ -11,6 +11,9 @@ export interface JayConfig {
         publicFolder?: string;
         configBase?: string;
     };
+    site?: {
+        baseUrl?: string;
+    };
 }
 
 const DEFAULT_CONFIG: JayConfig = {
@@ -39,6 +42,7 @@ export function loadConfig(): JayConfig {
                 ...DEFAULT_CONFIG.devServer,
                 ...userConfig.devServer,
             },
+            site: userConfig.site,
         };
     } catch (error) {
         getLogger().warn(`Failed to parse .jay YAML config file, using defaults: ${error}`);
@@ -46,7 +50,9 @@ export function loadConfig(): JayConfig {
     }
 }
 
-export function getConfigWithDefaults(config: JayConfig): Required<JayConfig> {
+export function getConfigWithDefaults(
+    config: JayConfig,
+): Required<Pick<JayConfig, 'devServer'>> & Pick<JayConfig, 'site'> {
     return {
         devServer: {
             portRange: config.devServer?.portRange || DEFAULT_CONFIG.devServer!.portRange!,
@@ -56,6 +62,7 @@ export function getConfigWithDefaults(config: JayConfig): Required<JayConfig> {
             publicFolder: config.devServer?.publicFolder || DEFAULT_CONFIG.devServer!.publicFolder!,
             configBase: config.devServer?.configBase || DEFAULT_CONFIG.devServer!.configBase!,
         },
+        site: config.site,
     };
 }
 
@@ -71,6 +78,10 @@ export function updateConfig(updates: Partial<JayConfig>): void {
             devServer: {
                 ...existingConfig.devServer,
                 ...updates.devServer,
+            },
+            site: {
+                ...existingConfig.site,
+                ...updates.site,
             },
         };
 

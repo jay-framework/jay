@@ -13,6 +13,7 @@ export type {
 } from './types';
 
 export { buildVersion } from './builder/build-pipeline';
+export { generateSitemap } from './builder/generate-sitemap';
 export { startMainServer } from './serve/main-server';
 export { startRendererServer, type RendererServerOptions } from './renderer/renderer-server';
 export {

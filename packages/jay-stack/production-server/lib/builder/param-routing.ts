@@ -69,7 +69,7 @@ export function computeSpecificity(route: RouteInfo): number {
     return 0 - unresolvedCount;
 }
 
-function buildUrl(route: RouteInfo, params: Record<string, string>): string {
+export function buildUrl(route: RouteInfo, params: Record<string, string>): string {
     return (
         route.rawRoute
             .replace(/\[\[(\w+)\]\]/g, (_, name) => {

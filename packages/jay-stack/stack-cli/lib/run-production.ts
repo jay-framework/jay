@@ -10,6 +10,8 @@ export interface ProductionContext {
     buildRoot: string;
     version: string;
     tsConfigFilePath: string;
+    /** Site base URL from .jay config (site.baseUrl), used for sitemap generation. */
+    siteBaseUrl?: string;
 }
 
 export async function resolveProductionContext(
@@ -20,9 +22,11 @@ export async function resolveProductionContext(
 
     const jayConfigPath = path.join(resolvedPath, '.jay');
     let pagesBase = './src/pages';
+    let siteBaseUrl: string | undefined;
     try {
         const jayConfig = YAML.parse(await fs.readFile(jayConfigPath, 'utf-8'));
         pagesBase = jayConfig?.devServer?.pagesBase || pagesBase;
+        siteBaseUrl = jayConfig?.site?.baseUrl;
     } catch {
         // No .jay config, use defaults
     }
@@ -35,6 +39,7 @@ export async function resolveProductionContext(
         buildRoot: path.join(resolvedPath, 'build'),
         version,
         tsConfigFilePath: path.join(resolvedPath, 'tsconfig.json'),
+        siteBaseUrl,
     };
 }
 
@@ -74,6 +79,7 @@ export async function runBuild(
         concurrency: 4,
         tsConfigFilePath: ctx.tsConfigFilePath,
         minify: options.minify,
+        siteBaseUrl: ctx.siteBaseUrl,
     });
 }
 
@@ -102,6 +108,7 @@ export async function runServe(
             projectRoot: ctx.resolvedPath,
             pagesRoot: ctx.pagesRoot,
             tsConfigFilePath: ctx.tsConfigFilePath,
+            siteBaseUrl: ctx.siteBaseUrl,
         });
     } else {
         const { startMainServer } = await import('@jay-framework/production-server');
@@ -158,6 +165,7 @@ export async function runRebuild(
         version: ctx.version,
         target,
         tsConfigFilePath: ctx.tsConfigFilePath,
+        siteBaseUrl: ctx.siteBaseUrl,
     });
 
     if (result.errors.length > 0) {

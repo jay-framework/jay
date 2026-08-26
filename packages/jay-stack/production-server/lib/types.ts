@@ -33,6 +33,8 @@ export interface RouteEntry {
     cssImports?: string[];
     /** Head metadata from jay-html <head> (title, meta tags). */
     headMeta?: JayHtmlHeadMeta;
+    /** True when page has static <meta name="robots" content="noindex"> */
+    noIndex?: boolean;
     instances: InstanceEntry[];
     isPlugin?: boolean;
     pluginName?: string;
@@ -81,6 +83,8 @@ export interface BuildOptions {
     concurrency: number;
     tsConfigFilePath: string;
     minify?: boolean;
+    /** Site base URL for sitemap generation (e.g. "https://example.com"). */
+    siteBaseUrl?: string;
 }
 
 export interface ServerElementModule {

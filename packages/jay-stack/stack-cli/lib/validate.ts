@@ -1175,6 +1175,27 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
         }
     }
 
+    // --- Project-level validations (DL#175) ---
+    const robotsTxtPath = path.resolve(projectRoot, 'public/robots.txt');
+    if (!fs.existsSync(robotsTxtPath)) {
+        warnings.push({
+            file: 'public/robots.txt',
+            message:
+                "public/robots.txt not found — search engines may crawl pages you don't intend to expose.",
+            suggestion:
+                'Create public/robots.txt with: User-agent: *\nAllow: /\nSitemap: https://your-domain.com/sitemap.xml',
+        });
+    }
+
+    if (!config.site?.baseUrl) {
+        warnings.push({
+            file: '.jay',
+            message:
+                'site.baseUrl not configured — sitemap.xml will not be generated in production.',
+            suggestion: 'Add to .jay config: site:\n  baseUrl: https://your-domain.com',
+        });
+    }
+
     // --- Plugin validators (DL#145) ---
     const pluginValidators = await runPluginValidators(projectRoot, parsedFiles, errors, warnings);
 

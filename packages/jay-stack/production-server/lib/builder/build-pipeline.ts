@@ -4,6 +4,7 @@ import { buildSharedChunks } from './shared-chunks-build';
 import { buildInstance, type InstanceBuildContext } from './instance-pipeline';
 import { loadProductionPageParts } from './load-production-parts';
 import { buildRouteEntry, discoverActions, writeRouteManifest } from './route-manifest';
+import { generateSitemap } from './generate-sitemap';
 import { scanPluginRoutes } from './plugin-routes';
 import { compileRouteServerElement, compileRouteHydrateScript } from './server-element-compile';
 import { generateRouteHydrationEntry } from './hydration-entry-gen';
@@ -417,6 +418,15 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
             }
             if (seResult.headMeta) {
                 entry.headMeta = seResult.headMeta;
+                // Check for static noindex (DL#175)
+                const robotsMeta = seResult.headMeta.meta?.find(
+                    (m) =>
+                        m.name === 'robots' &&
+                        m.content?.some((p) => p.kind === 'static' && p.value.includes('noindex')),
+                );
+                if (robotsMeta) {
+                    entry.noIndex = true;
+                }
             }
 
             logger.important(`[Build] Route server element: ${routeDir}`);
@@ -573,6 +583,13 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         logger.info('[Build] Copied public/ contents to frontend/');
     } catch {
         // No public folder — skip
+    }
+
+    // Generate sitemap.xml if baseUrl is configured
+    if (options.siteBaseUrl) {
+        const sitemapPath = path.join(frontendDir, 'sitemap.xml');
+        const urlCount = await generateSitemap(manifest, options.siteBaseUrl, sitemapPath);
+        logger.important(`[Build] Sitemap generated: ${urlCount} URLs`);
     }
 
     const sourceHash = await computeBuildHash(buildDir);

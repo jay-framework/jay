@@ -1,6 +1,7 @@
 import type { RouteManifest, RouteEntry, InstanceEntry, BuildMetadata } from '../types';
 import type { JayRoute } from '@jay-framework/stack-route-scanner';
 import { buildInstance, type InstanceBuildContext } from '../builder/instance-pipeline';
+import { generateSitemap } from '../builder/generate-sitemap';
 import { matchRequest } from '../serve/route-matcher';
 import { initializeServices } from '../shared/init-services';
 import { getLogger } from '@jay-framework/logger';
@@ -20,6 +21,8 @@ export interface RebuildOptions {
     target: RebuildTarget;
     tsConfigFilePath?: string;
     minify?: boolean;
+    /** Site base URL for sitemap regeneration (e.g. "https://example.com"). */
+    siteBaseUrl?: string;
 }
 
 export interface RebuildResult {
@@ -173,6 +176,13 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
 
         logger.important(`[Rebuild] Manifest and metadata updated`);
 
+        // Regenerate sitemap after successful rebuild
+        if (options.siteBaseUrl) {
+            const sitemapPath = path.join(frontendDir, 'sitemap.xml');
+            const urlCount = await generateSitemap(manifest, options.siteBaseUrl, sitemapPath);
+            logger.info(`[Rebuild] Sitemap regenerated: ${urlCount} URLs`);
+        }
+
         // Append orphaned files to cleanup manifest
         if (orphanedFiles.length > 0) {
             await appendCleanupManifest(buildDir, orphanedFiles);
@@ -232,6 +242,7 @@ export async function rebuildContract(options: {
     params?: Record<string, string>;
     tsConfigFilePath?: string;
     minify?: boolean;
+    siteBaseUrl?: string;
 }): Promise<RebuildResult> {
     return rebuild({
         ...options,
