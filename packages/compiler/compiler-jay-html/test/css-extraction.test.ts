@@ -262,4 +262,66 @@ describe('CSS extraction', () => {
             expect(jayFile.val).toBeUndefined();
         });
     });
+
+    it('should allow multiple @font-face rules for the same family with different weights', async () => {
+        const jayFile = await parseJayFile(
+            jayFileWith(
+                TEST_YAML,
+                TEST_BODY,
+                `<style>
+                  |   @font-face {
+                  |     font-family: "Helvetica Neue";
+                  |     src: url("./fonts/HelveticaNeueRoman.otf") format("opentype");
+                  |     font-weight: 400;
+                  |     font-style: normal;
+                  |   }
+                  |   @font-face {
+                  |     font-family: "Helvetica Neue";
+                  |     src: url("./fonts/HelveticaNeueBold.otf") format("opentype");
+                  |     font-weight: 700;
+                  |     font-style: normal;
+                  |   }
+                  | </style>`,
+            ),
+            'MultiWeightFontFaceTest',
+            '',
+            {},
+            JAY_IMPORT_RESOLVER,
+            '',
+        );
+
+        expect(jayFile.validations).toEqual([]);
+    });
+
+    it('should flag duplicate @font-face rules with the same family, weight, and style', async () => {
+        const jayFile = await parseJayFile(
+            jayFileWith(
+                TEST_YAML,
+                TEST_BODY,
+                `<style>
+                  |   @font-face {
+                  |     font-family: "Icons";
+                  |     src: url("./icons-a.woff2") format("woff2");
+                  |     font-weight: 400;
+                  |     font-style: normal;
+                  |   }
+                  |   @font-face {
+                  |     font-family: "Icons";
+                  |     src: url("./icons-b.woff2") format("woff2");
+                  |     font-weight: 400;
+                  |     font-style: normal;
+                  |   }
+                  | </style>`,
+            ),
+            'DuplicateFontFaceTest',
+            '',
+            {},
+            JAY_IMPORT_RESOLVER,
+            '',
+        );
+
+        expect(jayFile.validations).toEqual([
+            '@font-face "Icons" (400, normal) is defined multiple times. Font faces are global — rename to avoid collisions.',
+        ]);
+    });
 });

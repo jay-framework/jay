@@ -40,7 +40,7 @@ export async function fetchStaticFile(
                 ? 'public, max-age=31536000, immutable'
                 : 'public, max-age=3600';
 
-            return new Response(content, {
+            return new Response(new Uint8Array(content), {
                 headers: {
                     'Content-Type': contentType,
                     'Content-Length': String(content.length),

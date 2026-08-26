@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/data-files",
-  "version": "0.23.1",
+  "version": "0.24.0",
   "type": "module",
   "description": "Data files plugin for Jay Framework — CSV, YAML, JSON, JSONL data sources with list views, item views, and per-item pages",
   "license": "Apache-2.0",

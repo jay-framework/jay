@@ -2,6 +2,9 @@
   "extends": "../library/tsconfig.json",
   "compilerOptions": {
     "lib": ["ES2020", "DOM"],
-    "types": ["vitest/globals", "@testing-library/jest-dom/vitest"]
+    "types": ["vitest/globals", "@testing-library/jest-dom/vitest"],
+    "paths": {
+      "vite": ["../../node_modules/vite"]
+    }
   }
 }
