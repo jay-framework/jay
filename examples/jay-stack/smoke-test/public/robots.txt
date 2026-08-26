@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://smoke-test.example.com/sitemap.xml

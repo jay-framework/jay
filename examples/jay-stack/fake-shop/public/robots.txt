@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://fake-shop.example.com/sitemap.xml
