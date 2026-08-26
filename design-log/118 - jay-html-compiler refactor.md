@@ -226,3 +226,9 @@ jay-html-compiler-server.ts   1,235 lines  Server compilation target
 - Zero type errors in lib/ files
 - `yarn confirm` passes (rebuild + type check + test + format)
 - Public API unchanged — `index.ts` exports the same symbols
+
+### Bug fix: SVG attribute case preservation (2026-08-26)
+
+All `renderAttributes` functions (`renderAttributes`, `renderDynamicAttributes`, `renderServerAttributes`, `renderServerAttributesAsString`) lowercased attribute names via `attrCanonical` and used that as the output key. This broke SVG attributes like `viewBox` → `viewbox`, `preserveAspectRatio` → `preserveaspectratio` which are case-sensitive in the SVG namespace.
+
+**Fix:** Use `attrCanonical` (lowercased) only for directive checks (`if`, `forEach`, `trackBy`) and `propertyMapping` lookups. Use the original `attrName` as the output key in generated code. This is correct for both HTML (case-insensitive, so original case is harmless) and SVG (case-sensitive, so original case is required).
