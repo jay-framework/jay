@@ -1,0 +1,14 @@
+name: DataListSimple
+tags:
+  - tag: items
+    type: sub-contract
+    repeated: true
+    trackBy: slug
+    phase: slow
+    tags:
+      - tag: slug
+        type: data
+        dataType: string
+      - tag: title
+        type: data
+        dataType: string

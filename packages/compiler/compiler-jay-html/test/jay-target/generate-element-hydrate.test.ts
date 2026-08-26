@@ -232,5 +232,14 @@ describe('generate jay-html element hydrate', () => {
             const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
             expect(hydrateFile.validations).toEqual([]);
         });
+
+        it('for headless instance inside keyed headless forEach', async () => {
+            const folder = 'contracts/headless-instance-in-keyed-foreach';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
     });
 });

@@ -480,3 +480,13 @@ Testing the golf project (headfull FS header with nested headless plugins in a s
 
 - **SSR disabled mode with PascalCase names** — The standard element target (client-only rendering) has issues with PascalCase headfull FS component names. SSR-enabled modes work correctly. 5 test failures in SSR disabled mode for 8j/8k.
 - **Hydration warnings** — The golf project still has hydration-related issues to investigate separately.
+
+### Scenario D fix: Headless instance inside keyed headless forEach (2026-08-26)
+
+**Problem:** When a keyless headless instance (e.g., `<jay:clipboard-copy>`) is nested inside a `forEach` that iterates over keyed headless import data (e.g., `forEach="plugins.items"` where `plugins` is a keyed data-list import), the hydration code generates `refAr0()` calls for the instance but the ref is never declared in any `ReferencesManager.for(...)`.
+
+**Root cause:** `optimizeRefs` in `jay-html-compile-refs.ts` replaces the template's subtree for each keyed import key with the import contract's refs tree. The import contract has no knowledge of headless instances nested inside the template, so their auto-refs are silently discarded. The render code (`childCompHydrate`/`childComp` calls) is generated before `optimizeRefs` runs, so it references variables that no longer exist in the refs tree.
+
+**Fix:** Added `graftTemplateOnlyRefs()` — after building the import's refs tree, graft back any template refs whose names don't appear anywhere in the import contract's ref tree. This preserves headless instance auto-refs while filtering out stale ref-path artifacts (e.g., template compilation of `ref="filters.filter2.categories.isSelected"` creates nested ref copies at every depth level). The filter uses `collectAllRefNames()` on the full import tree to distinguish contract refs (which exist somewhere in the import tree) from template-only refs (which don't).
+
+**Test:** `contracts/headless-instance-in-keyed-foreach` — keyed data-list import with `forEach="data.items"` containing a `<jay:simple-action>` instance. Verifies the generated hydrate code declares `refAr0` in `itemsRefManager`.

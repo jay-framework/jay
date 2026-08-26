@@ -1,0 +1,25 @@
+<html>
+<head>
+    <script type="application/jay-headless"
+            plugin="test-data-list"
+            contract="data-list-simple"
+            key="data"></script>
+    <script type="application/jay-headless"
+            plugin="test-simple-action"
+            contract="simple-action"></script>
+    <script type="application/jay-data">
+data:
+    pageTitle: string
+    </script>
+</head>
+<body>
+<div>
+    <div forEach="data.items" trackBy="slug">
+        <h2>{title}</h2>
+        <jay:simple-action text="{title}">
+            <button ref="actionBtn">Click</button>
+        </jay:simple-action>
+    </div>
+</div>
+</body>
+</html>
