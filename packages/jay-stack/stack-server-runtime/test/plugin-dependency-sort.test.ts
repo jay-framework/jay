@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { sortPluginsByDependencies } from '../lib/plugin-dependency-sort';
 
-function plugin(
-    name: string,
-    packageName: string,
-    dependencies: string[] = [],
-) {
+function plugin(name: string, packageName: string, dependencies: string[] = []) {
     return { name, packageName, dependencies };
 }
 
@@ -20,7 +16,9 @@ describe('sortPluginsByDependencies', () => {
             plugin('wix-data', '@jay-framework/wix-data', ['@jay-framework/wix-server-client']),
             plugin('wix-deploy', '@jay-framework/wix-deploy', ['@jay-framework/wix-server-client']),
             plugin('wix-forms', '@jay-framework/wix-forms', ['@jay-framework/wix-server-client']),
-            plugin('wix-members', '@jay-framework/wix-members', ['@jay-framework/wix-server-client']),
+            plugin('wix-members', '@jay-framework/wix-members', [
+                '@jay-framework/wix-server-client',
+            ]),
             plugin('wix-media', '@jay-framework/wix-media', ['@jay-framework/wix-server-client']),
         ];
 

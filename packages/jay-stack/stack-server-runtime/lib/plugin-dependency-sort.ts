@@ -10,9 +10,7 @@ export interface PluginWithDependencies {
  * Sorts plugins by package.json dependencies (topological sort).
  * Plugins with no in-graph dependencies come first; dependents follow.
  */
-export function sortPluginsByDependencies<T extends PluginWithDependencies>(
-    plugins: T[],
-): T[] {
+export function sortPluginsByDependencies<T extends PluginWithDependencies>(plugins: T[]): T[] {
     const pluginNames = new Set(plugins.map((plugin) => plugin.packageName));
     const sorted: T[] = [];
     const visited = new Set<string>();
