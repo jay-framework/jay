@@ -15,6 +15,10 @@ import type { ViteSSRLoader } from './action-discovery';
 import { setClientInitData } from './services';
 import { scanPlugins, type ScannedPlugin } from './plugin-scanner';
 import { getLogger } from '@jay-framework/logger';
+import {
+    sortPluginsByDependencies as sortPluginsByPackageDependencies,
+    type PluginWithDependencies,
+} from './plugin-dependency-sort';
 
 /**
  * Information about a discovered plugin with init.
@@ -166,41 +170,10 @@ function resolvePluginInit(
  * Plugins with no dependencies come first, then plugins that depend on them, etc.
  */
 export function sortPluginsByDependencies(plugins: PluginWithInit[]): PluginWithInit[] {
-    const pluginNames = new Set(plugins.map((p) => p.packageName));
-    const sorted: PluginWithInit[] = [];
-    const visited = new Set<string>();
-    const visiting = new Set<string>();
-
-    function visit(plugin: PluginWithInit) {
-        if (visited.has(plugin.packageName)) return;
-        if (visiting.has(plugin.packageName)) {
-            getLogger().warn(`[PluginInit] Circular dependency detected for ${plugin.name}`);
-            return;
-        }
-
-        visiting.add(plugin.packageName);
-
-        // Visit dependencies first (only those that are also plugins with init)
-        for (const dep of plugin.dependencies) {
-            if (pluginNames.has(dep)) {
-                const depPlugin = plugins.find((p) => p.packageName === dep);
-                if (depPlugin) {
-                    visit(depPlugin);
-                }
-            }
-        }
-
-        visiting.delete(plugin.packageName);
-        visited.add(plugin.packageName);
-        sorted.push(plugin);
-    }
-
-    for (const plugin of plugins) {
-        visit(plugin);
-    }
-
-    return sorted;
+    return sortPluginsByPackageDependencies(plugins);
 }
+
+export type { PluginWithDependencies };
 
 /**
  * Executes server init for all plugins in order.
