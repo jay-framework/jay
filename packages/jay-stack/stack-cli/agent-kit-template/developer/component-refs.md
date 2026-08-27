@@ -148,9 +148,7 @@ Wrap the page content in a shell element with a ref. Use capture-phase listeners
 
 ```html
 <!-- jay-html -->
-<div ref="shell" class="page-shell">
-  ... entire page content ...
-</div>
+<div ref="shell" class="page-shell">... entire page content ...</div>
 ```
 
 ```yaml
@@ -180,7 +178,7 @@ Instead of `document.addEventListener('keydown', ...)`:
 
 Events bubble up from children to the shell — a handler on the shell sees all keyboard and mouse events from the entire page.
 
-Use `refs.shell.addEventListener(type, handler, { capture: true })` only when you need to intercept events *before* children handle them (e.g., preventing default on specific keys).
+Use `refs.shell.addEventListener(type, handler, { capture: true })` only when you need to intercept events _before_ children handle them (e.g., preventing default on specific keys).
 
 ### Focus management (scroll into view)
 
@@ -188,11 +186,11 @@ Instead of `document.addEventListener('focusin', ...)`:
 
 ```typescript
 refs.shell.onfocusin(({ event }) => {
-    if (!keyboardNav) return;
-    const el = event.target as HTMLElement;
-    refs.shell.exec$(() => {
-        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    });
+  if (!keyboardNav) return;
+  const el = event.target as HTMLElement;
+  refs.shell.exec$(() => {
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
 });
 ```
 
@@ -202,8 +200,8 @@ Instead of `document.addEventListener('mouseleave', ...)`:
 
 ```typescript
 refs.shell.onpointerleave(({ event }) => {
-    // Pointer left the shell — equivalent to leaving the viewport
-    // if the shell covers the full viewport
+  // Pointer left the shell — equivalent to leaving the viewport
+  // if the shell covers the full viewport
 });
 ```
 
@@ -219,10 +217,12 @@ Instead of `document.querySelector('.site-header')`:
 ```
 
 ```typescript
-refs.siteHeader.onclick(() => { /* ... */ });
+refs.siteHeader.onclick(() => {
+  /* ... */
+});
 
 refs.siteHeader.exec$((el) => {
-    el.classList.add('is-hidden');
+  el.classList.add('is-hidden');
 });
 ```
 
@@ -233,10 +233,10 @@ Instead of creating elements with `document.createElement` in a loop:
 ```html
 <!-- jay-html -->
 <div forEach="cards" trackBy="id" class="card-grid">
-    <div class="card">
-        <img src="{imageUrl}" alt="{title}" />
-        <span>{title}</span>
-    </div>
+  <div class="card">
+    <img src="{imageUrl}" alt="{title}" />
+    <span>{title}</span>
+  </div>
 </div>
 ```
 
@@ -248,14 +248,14 @@ For DOM operations that refs don't wrap (scroll, focus, measurements), use `exec
 
 ```typescript
 refs.myInput.onclick(() => {
-    refs.myInput.exec$((el) => {
-        el.focus();
-        el.select();
-    });
+  refs.myInput.exec$((el) => {
+    el.focus();
+    el.select();
+  });
 });
 
 refs.scrollContainer.exec$((el) => {
-    el.scrollTo({ top: 0, behavior: 'smooth' });
+  el.scrollTo({ top: 0, behavior: 'smooth' });
 });
 ```
 
@@ -263,8 +263,8 @@ refs.scrollContainer.exec$((el) => {
 
 Use only when no ref can exist, with `// jay-dom: allow` to suppress the validation warning:
 
-| Case                   | Example                                                                 |
-| ---------------------- | ----------------------------------------------------------------------- |
-| Offscreen processing   | `document.createElement('canvas') // jay-dom: allow` for image export   |
-| Coordinate hit-testing | `document.elementFromPoint(...) // jay-dom: allow` during drag          |
-| Tests                  | `document.dispatchEvent // jay-dom: allow` in Vitest                    |
+| Case                   | Example                                                               |
+| ---------------------- | --------------------------------------------------------------------- |
+| Offscreen processing   | `document.createElement('canvas') // jay-dom: allow` for image export |
+| Coordinate hit-testing | `document.elementFromPoint(...) // jay-dom: allow` during drag        |
+| Tests                  | `document.dispatchEvent // jay-dom: allow` in Vitest                  |

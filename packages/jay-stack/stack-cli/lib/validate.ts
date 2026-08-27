@@ -521,10 +521,7 @@ const DOM_SUPPRESS_COMMENT = 'jay-dom: allow';
 function checkDirectDocumentAccess(jayHtmlPath: string): string[] {
     const dirname = path.dirname(jayHtmlPath);
     const basename = path.basename(jayHtmlPath, JAY_EXTENSION);
-    const candidates = [
-        path.join(dirname, `${basename}.ts`),
-        path.join(dirname, 'page.ts'),
-    ];
+    const candidates = [path.join(dirname, `${basename}.ts`), path.join(dirname, 'page.ts')];
     const compPath = candidates.find((p) => fs.existsSync(p));
     if (!compPath) return [];
     const compName = path.basename(compPath);
