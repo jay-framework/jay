@@ -190,6 +190,41 @@ describe('design-undefined-vars validator', () => {
         expect(findings[0].message).toEqual('CSS variable "--missing" is used but never defined');
     });
 
+    it('skips standalone component files (not under pages/)', async () => {
+        const root = parse(`<html><head>
+            <style>.header { color: var(--color-missing); }</style>
+        </head><body><div class="header">Text</div></body></html>`);
+        const ctx: JayHtmlValidationContext = {
+            body: root.querySelector('body') || root,
+            css: extractCss(root),
+            filePath: 'src/components/site-header/site-header.jay-html',
+            projectRoot: '/tmp/test-project',
+            headlessImports: [],
+        };
+        const findings = await validateUndefinedVars(ctx);
+        expect(findings).toEqual([]);
+    });
+
+    it('includes component name in message when var comes from a component', async () => {
+        const css =
+            ':root { --color-text: #000; }\n' +
+            '/* Component: site-header */\n' +
+            '.header { color: var(--color-missing); }';
+        const root = parse('<html><body><div>Text</div></body></html>');
+        const ctx: JayHtmlValidationContext = {
+            body: root.querySelector('body') || root,
+            css,
+            filePath: 'src/pages/home/page.jay-html',
+            projectRoot: '/tmp/test-project',
+            headlessImports: [],
+        };
+        const findings = await validateUndefinedVars(ctx);
+        expect(findings.length).toEqual(1);
+        expect(findings[0].message).toEqual(
+            'CSS variable "--color-missing" used by component "site-header" is not defined — add it to the page\'s CSS or a linked stylesheet',
+        );
+    });
+
     it('suggestion mentions suppression and agent-kit guide', async () => {
         const ctx = makeContext(`<html><head>
             <style>.card { color: var(--x); }</style>

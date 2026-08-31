@@ -2343,7 +2343,7 @@ describe('compiler', () => {
             );
 
             expect(jayFile.validations).toEqual([]);
-            expect(jayFile.val.css).toEqual('.header { color: red; }');
+            expect(jayFile.val.css).toEqual('/* Component: header */\n.header { color: red; }');
         });
 
         it('should handle case-insensitive tag matching', async () => {
@@ -2539,7 +2539,7 @@ describe('compiler', () => {
             expect(jayFile.validations).toEqual([]);
             expect(jayFile.val.headlessImports).toHaveLength(1);
             expect(jayFile.val.headlessImports[0].contractName).toEqual('bizheader');
-            expect(jayFile.val.css).toEqual('.header { color: blue; }');
+            expect(jayFile.val.css).toEqual('/* Component: bizheader */\n.header { color: blue; }');
         });
 
         it('should resolve headfull FS files from sourceDir when filePath is pre-rendered cache', async () => {
