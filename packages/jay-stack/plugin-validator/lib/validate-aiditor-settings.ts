@@ -48,7 +48,7 @@ function validateSettingsTemplateAtPath(
 
     const routeEntry = manifest.routes?.find((route) => route.path === validated.file!.route);
     if (!routeEntry) {
-        result.warnings.push({
+        result.errors.push({
             type: 'schema',
             message: `settings route "${validated.file.route}" is not declared in plugin.yaml routes[]`,
             location: relPath,
@@ -56,7 +56,7 @@ function validateSettingsTemplateAtPath(
             suggestion: 'Add a matching routes[] entry or fix the route in settings.template.yaml',
         });
     } else if (routeEntry.devOnly !== true) {
-        result.warnings.push({
+        result.errors.push({
             type: 'schema',
             message: `settings route "${validated.file.route}" should declare devOnly: true on routes[]`,
             location: 'plugin.yaml routes',
@@ -85,7 +85,7 @@ export async function validateAiditorSettings(
     );
 
     if (!context.manifest.agentkit) {
-        result.warnings.push({
+        result.errors.push({
             type: 'schema',
             message:
                 'Plugin ships agent-kit/aiditor/settings.template.yaml but has no agentkit handler',

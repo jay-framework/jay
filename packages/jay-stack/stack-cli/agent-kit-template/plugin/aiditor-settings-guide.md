@@ -30,7 +30,7 @@ Follow these steps in order. Skipping a step is the most common reason a tab nev
 4. **Declare a matching route** in `plugin.yaml` `routes[]` with **`devOnly: true`** (settings UIs are dev-server tooling).
 5. **Implement the settings page** — `lib/pages/settings/page.jay-html` + page component; use plugin **actions** or **jay-commands** for mutations (never arbitrary shell).
 6. **Run `jay-stack agent-kit`** in the consuming project and confirm the YAML file exists.
-7. **Run `jay-stack validate-plugin`** — fix errors; heed warnings for missing `devOnly` or route mismatch.
+7. **Run `jay-stack validate-plugin`** — fix all errors (schema, route mismatch, missing `devOnly`, missing `agentkit` handler).
 
 ---
 
@@ -209,9 +209,9 @@ export function materializeMyPluginAiditorSettings(
 | `path.join(dirname(import.meta.url), '..', '..')` from bundled code     | Walks to `node_modules/@jay-framework/` — template not found, **no settings YAML**                      |
 | **No client bundle** (`index.client.ts` + `vite build` without `--ssr`) | Settings iframe SSR works; Vite errors on hydrate — `Failed to resolve import .../dist/index.client.js` |
 | Writing YAML inside the package instead of `ctx.projectRoot`            | Tab missing in consumer project                                                                         |
-| Route in template ≠ `plugin.yaml` `routes[].path`                       | `validate-plugin` warning `settings-route-missing`; iframe 404                                          |
-| Missing `devOnly: true`                                                 | `settings-route-dev-only` warning; route may appear in page pickers                                     |
-| Template present but no `agentkit` handler                              | `settings-missing-agentkit-handler` warning                                                             |
+| Route in template ≠ `plugin.yaml` `routes[].path`                       | `validate-plugin` error `settings-route-missing`; iframe 404                                            |
+| Missing `devOnly: true`                                                 | `settings-route-dev-only` error; route may appear in page pickers                                      |
+| Template present but no `agentkit` handler                              | `settings-missing-agentkit-handler` error — validation fails                                            |
 | `agent-kit/` not in `package.json` `files`                              | Template missing after `yarn add`                                                                       |
 
 **Reference implementations:**
@@ -259,12 +259,12 @@ Full iframe and discovery behavior: `agent-kit/plugin/aiditor-add-menu.md` (inst
 
 When `agent-kit/aiditor/settings.template.yaml` exists, the validator:
 
-- Parses schema (`label`, `route`, optional `requires`, `pluginName`)
-- Warns if `route` is not in `plugin.yaml` `routes[]`
-- Warns if matching route lacks `devOnly: true`
-- Warns if template exists but `agentkit` is not declared
+- Parses schema (`label`, `route`, optional `requires`, `pluginName`) — schema failures are errors
+- **Errors** if `route` is not in `plugin.yaml` `routes[]` (`settings-route-missing`)
+- **Errors** if matching route lacks `devOnly: true` (`settings-route-dev-only`)
+- **Errors** if template exists but `agentkit` is not declared (`settings-missing-agentkit-handler`)
 
-Fix all **errors** before publish; treat **warnings** as required for AIditor-facing plugins.
+Fix all errors before publish — plugins with a settings template cannot pass `validate-plugin` until route, `devOnly`, and `agentkit` are correct.
 
 ---
 

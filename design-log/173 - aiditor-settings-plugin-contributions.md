@@ -26,7 +26,7 @@ A: **`agent-kit/aiditor/settings.template.yaml`** in the plugin package (validat
 A: **`<projectRoot>/agent-kit/aiditor/settings/<plugin>.yaml`** — project-owned discovery, not inside `node_modules`.
 
 **Q: Must the route be `devOnly`?**  
-A: **Yes** for settings UIs — `plugin-validator` warns otherwise (Design Log #171). Dev server still serves the URL; AIditor loads by explicit path.
+A: **Yes** for settings UIs — `plugin-validator` errors otherwise (Design Log #171). Dev server still serves the URL; AIditor loads by explicit path.
 
 **Q: Shared npm utility for `resolvePackagedAgentKitPath`?**  
 A: **Deferred.** Copy the ~15-line walk-up helper into each plugin until a third consumer needs changes (design-system-validator, wix-media today). No new package.
@@ -103,7 +103,7 @@ path.join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'agent-kit', ...)
 ## Trade-offs
 
 - **Per-plugin copy of resolver** — avoids premature shared package; duplicate ~15 lines acceptable until pattern stabilizes.
-- **Validator warnings not errors** for `devOnly`/route mismatch — allows gradual adoption; AIditor-facing plugins should treat warnings as blocking.
+- **Validator errors** for `devOnly`/route mismatch/`agentkit` — promoted from warnings once first-party consumers were compliant (2026-08-31).
 - **Consumer runtime spec** stays in AIditor docs (`aiditor-add-menu.md`); jay owns plugin author materialization.
 
 ## Verification Criteria
@@ -113,3 +113,21 @@ path.join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'agent-kit', ...)
 - [ ] DL#171 consumer notes reference DL#173
 - [ ] `validate-plugin` suggestions reference `aiditor-settings-guide.md`
 - [ ] design-system-validator materializes settings after `yarn agent-kit` in a consumer project
+
+## Implementation Results
+
+### Severity promotion (2026-08-31)
+
+Promoted three `validateAiditorSettings` integration checks from **warning → error** when `agent-kit/aiditor/settings.template.yaml` exists:
+
+| Code | Description |
+| ---- | ----------- |
+| `settings-route-missing` | Template `route` not in `plugin.yaml` `routes[]` |
+| `settings-route-dev-only` | Matching route lacks `devOnly: true` |
+| `settings-missing-agentkit-handler` | Template shipped but no `agentkit` in manifest |
+
+Schema errors from `validateAiditorSettingsFile` unchanged (already errors). No new CLI flags — `--strict` still promotes unrelated warnings globally.
+
+**Files:** `plugin-validator/lib/validate-aiditor-settings.ts`, `plugin-validator/test/validate-aiditor-settings.test.ts`, `stack-cli/agent-kit-template/plugin/aiditor-settings-guide.md`.
+
+**First-party consumers verified compliant before promotion:** `design-system-validator`, `wix-media`.
