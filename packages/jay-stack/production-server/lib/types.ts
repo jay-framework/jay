@@ -38,6 +38,8 @@ export interface RouteEntry {
     instances: InstanceEntry[];
     isPlugin?: boolean;
     pluginName?: string;
+    /** Shared chunk package names this route's hydrate script imports (DL#177). */
+    sharedDeps?: string[];
     /** When true, dev-server tooling route (future: excluded from production builds). */
     devOnly?: boolean;
 }

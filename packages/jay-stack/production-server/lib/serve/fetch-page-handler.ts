@@ -146,7 +146,10 @@ export async function fetchPageRequest(
     const clientBundleUrl = route.routeClientBundlePath
         ? `${staticBaseUrl}${route.routeClientBundlePath}`
         : `${staticBaseUrl}${instance.clientBundlePath}`;
-    const preloadUrls = [...Object.values(importMap), clientBundleUrl];
+    const sharedPreloads = route.sharedDeps
+        ? route.sharedDeps.map((dep) => importMap[dep]).filter(Boolean)
+        : Object.values(importMap);
+    const preloadUrls = [...sharedPreloads, clientBundleUrl];
     const modulePreloads = preloadUrls
         .map((url) => `    <link rel="modulepreload" href="${url}" />`)
         .join('\n');

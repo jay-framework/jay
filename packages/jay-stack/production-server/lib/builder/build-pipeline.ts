@@ -458,6 +458,24 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
                 frontendDir,
                 path.join(frontendRouteDir, hydrateResult.jsFile),
             );
+
+            // Extract shared chunk dependencies from hydrate script imports (DL#177)
+            try {
+                const hydrateCode = await fs.readFile(
+                    path.join(frontendRouteDir, hydrateResult.jsFile),
+                    'utf-8',
+                );
+                const importMatches = hydrateCode.match(/from\s*"([^"]+)"/g) || [];
+                const deps = importMatches
+                    .map((m) => m.replace(/^from\s*"/, '').replace(/"$/, ''))
+                    .filter((dep) => sharedManifest[dep]);
+                if (deps.length > 0) {
+                    entry.sharedDeps = deps;
+                }
+            } catch {
+                // Could not extract deps — fall back to all shared chunks at serve time
+            }
+
             logger.important(`[Build] Route hydrate script: ${routeDir}`);
         } catch (err: any) {
             logger.error(`[Build] Route hydrate script FAILED ${route.rawRoute}: ${err.message}`);
@@ -516,6 +534,23 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
                 frontendDir,
                 path.join(frontendRouteDir, clientResult.jsFile),
             );
+
+            // Extend sharedDeps with client bundle imports (DL#177)
+            try {
+                const clientCode = await fs.readFile(
+                    path.join(frontendRouteDir, clientResult.jsFile),
+                    'utf-8',
+                );
+                const clientImports = (clientCode.match(/from\s*"([^"]+)"/g) || [])
+                    .map((m) => m.replace(/^from\s*"/, '').replace(/"$/, ''))
+                    .filter((dep) => sharedManifest[dep]);
+                const existing = new Set(entry.sharedDeps || []);
+                for (const dep of clientImports) existing.add(dep);
+                entry.sharedDeps = [...existing];
+            } catch {
+                // Fall back to hydrate-only deps
+            }
+
             logger.important(`[Build] Route client bundle: ${routeDir}`);
         } catch (err: any) {
             logger.error(`[Build] Route client bundle FAILED ${route.rawRoute}: ${err.message}`);
