@@ -2798,6 +2798,78 @@ describe('compiler', () => {
         });
     });
 
+    describe('validation overrides parsing', () => {
+        it('should parse jay-validations script', async () => {
+            const result = await parseJayFile(
+                jayFileWith(
+                    `data:
+                    |   title: string
+                    |`,
+                    `<body><h1>{title}</h1></body>`,
+                    `<script type="application/jay-validations">
+                    seo:
+                      no-lcp-image: true
+                    </script>`,
+                ),
+                'test.jay-html',
+                __dirname,
+                {},
+                JAY_IMPORT_RESOLVER,
+                path.resolve(__dirname, '../fixtures'),
+            );
+            expect(result.validations).toEqual([]);
+            expect(result.val!.validationOverrides).toEqual({
+                seo: { 'no-lcp-image': true },
+            });
+        });
+
+        it('should return undefined when no jay-validations script', async () => {
+            const result = await parseJayFile(
+                jayFileWith(
+                    `data:
+                    |   title: string
+                    |`,
+                    `<body><h1>{title}</h1></body>`,
+                ),
+                'test.jay-html',
+                __dirname,
+                {},
+                JAY_IMPORT_RESOLVER,
+                path.resolve(__dirname, '../fixtures'),
+            );
+            expect(result.validations).toEqual([]);
+            expect(result.val!.validationOverrides).toBeUndefined();
+        });
+
+        it('should handle multiple plugin keys', async () => {
+            const html = `<html><head>
+                <script type="application/jay-validations">
+seo:
+  no-lcp-image: true
+design-system:
+  allow-undefined-vars: true
+                </script>
+                <script type="application/jay-data">
+data:
+  title: string
+                </script>
+            </head><body><h1>{title}</h1></body></html>`;
+            const result = await parseJayFile(
+                html,
+                'test.jay-html',
+                __dirname,
+                {},
+                JAY_IMPORT_RESOLVER,
+                path.resolve(__dirname, '../fixtures'),
+            );
+            expect(result.validations).toEqual([]);
+            expect(result.val!.validationOverrides).toEqual({
+                seo: { 'no-lcp-image': true },
+                'design-system': { 'allow-undefined-vars': true },
+            });
+        });
+    });
+
     describe('script tag validation', () => {
         it('should error on inline script without jay-script', async () => {
             const jayFile = await parseJayFile(

@@ -151,6 +151,7 @@ See agent-kit/designer/design-system.md for usage guide.
 **Problem:** Headfull components (e.g., `site-header`) use CSS variables inherited from the page (`var(--color-primary)`, etc.) but the undefined-vars validator ran per-file, flagging all inherited variables as undefined in standalone component files.
 
 Attempting to fix by linking `theme.css` from the component's `<head>` caused two secondary issues:
+
 1. **Duplicate detection** — the same `@font-face` and `@keyframes` appeared twice (page + component both linking the same file), producing false "defined multiple times" errors
 2. **CSS parsing** — the `@keyframes` name regex (`/@keyframes\s+(\S+)/g`) misattributed `from` inside keyframe bodies as a keyframe name when CSS was duplicated
 
@@ -163,6 +164,7 @@ Attempting to fix by linking `theme.css` from the component's `<head>` caused tw
 **CSS deduplication fix:** `extractCss` now accepts a `skipPaths` parameter. When parsing headfull component CSS, the page's already-resolved linked CSS file paths are passed through — the component skips reading files the page already links, preventing content duplication.
 
 **Changes:**
+
 - `jay-html-parser.ts` — collect page CSS paths before headfull parsing, pass `skipPaths` to `extractCss`, add `/* Component: name */` source comments
 - `design-undefined-vars.ts` — skip non-page files, extract component source from comments, improved message format
 - Tests added for component skipping and source attribution

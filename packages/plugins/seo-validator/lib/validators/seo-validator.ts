@@ -8,6 +8,10 @@ function isComponent(filePath: string): boolean {
     return normalized.includes('/components/');
 }
 
+function isSuppressed(ctx: Parameters<JayHtmlValidatorFn>[0], rule: string): boolean {
+    return ctx.validationOverrides?.seo?.[rule] === true;
+}
+
 export const validate: JayHtmlValidatorFn = (ctx) => {
     const findings: JayHtmlValidationFinding[] = [];
     const isComp = isComponent(ctx.filePath);
@@ -174,15 +178,23 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
         }
 
         if (hasLargeImage && !hasFetchPriorityHigh) {
-            findings.push({
-                severity: 'warning',
-                message: 'No image has fetchpriority="high" — the LCP image should be prioritized',
-                suggestion:
-                    'Add fetchpriority="high" to the largest above-the-fold image (the LCP candidate). ' +
-                    'This tells the browser to download it first, improving Largest Contentful Paint.',
-                element: '<img>',
-                attribute: 'fetchpriority',
-            });
+            const suppressLcp = isSuppressed(ctx, 'no-lcp-image');
+
+            if (!suppressLcp) {
+                findings.push({
+                    severity: 'warning',
+                    message:
+                        'No image has fetchpriority="high" — the LCP image should be prioritized',
+                    suggestion:
+                        'Add fetchpriority="high" to the largest above-the-fold image (the LCP candidate). ' +
+                        'This tells the browser to download it first, improving Largest Contentful Paint. ' +
+                        'If this page has no LCP image (e.g. text-first hero), suppress with ' +
+                        'seo: { no-lcp-image: true } in <script type="application/jay-validations">. ' +
+                        'See agent-kit/designer/validation-guide.md',
+                    element: '<img>',
+                    attribute: 'fetchpriority',
+                });
+            }
         }
     }
 
@@ -216,14 +228,18 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
         while ((importMatch = importRegex.exec(css)) !== null) {
             const url = importMatch[1] || importMatch[2];
             if (url.startsWith('https://') || url.startsWith('http://')) {
-                findings.push({
-                    severity: 'warning',
-                    message: `CSS @import of external URL "${url}" creates a chained blocking request that delays page rendering`,
-                    suggestion:
-                        'Move this to a <link rel="stylesheet" href="..."> tag in the HTML <head> instead. ' +
-                        'This allows the browser preload scanner to discover both resources in parallel.',
-                    element: source === '<style>' ? '<style>' : `<link href="${source}">`,
-                });
+                if (!isSuppressed(ctx, 'allow-css-import')) {
+                    findings.push({
+                        severity: 'warning',
+                        message: `CSS @import of external URL "${url}" creates a chained blocking request that delays page rendering`,
+                        suggestion:
+                            'Move this to a <link rel="stylesheet" href="..."> tag in the HTML <head> instead. ' +
+                            'This allows the browser preload scanner to discover both resources in parallel. ' +
+                            'If intentional, suppress with seo: { allow-css-import: true } in <script type="application/jay-validations">. ' +
+                            'See agent-kit/designer/validation-guide.md',
+                        element: source === '<style>' ? '<style>' : `<link href="${source}">`,
+                    });
+                }
             }
         }
     }
@@ -279,14 +295,19 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
 
         const robotsMeta = ctx.head.meta.find((m) => m.name?.toLowerCase() === 'robots');
         const robotsContent = robotsMeta?.content.map((p) => p.value).join('');
-        if (robotsContent && /noindex/i.test(robotsContent)) {
+        if (
+            robotsContent &&
+            /noindex/i.test(robotsContent) &&
+            !isSuppressed(ctx, 'allow-noindex')
+        ) {
             findings.push({
                 severity: 'warning',
                 message:
                     'Page has <meta name="robots" content="noindex"> — it will not appear in search results',
                 suggestion:
                     'Remove noindex from the robots meta tag if this page should be indexed. ' +
-                    'If intentional (e.g. admin pages), this warning can be ignored.',
+                    'If intentional, suppress with seo: { allow-noindex: true } in <script type="application/jay-validations">. ' +
+                    'See agent-kit/designer/validation-guide.md',
                 element: '<meta>',
                 attribute: 'content',
             });

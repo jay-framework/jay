@@ -263,7 +263,9 @@ describe('design-tokens validator', () => {
                 message:
                     'Page uses transitions/animations but has no @media (prefers-reduced-motion) override',
                 suggestion:
-                    'Add @media (prefers-reduced-motion: reduce) { * { transition-duration: 0s !important; animation-duration: 0s !important; } }',
+                    'Add @media (prefers-reduced-motion: reduce) { * { transition-duration: 0s !important; animation-duration: 0s !important; } }. ' +
+                    'If intentional, suppress with design-system: { allow-no-reduced-motion: true } in <script type="application/jay-validations">. ' +
+                    'See agent-kit/designer/validation-guide.md',
             },
         ]);
     });

@@ -987,6 +987,7 @@ async function runPluginValidators(
                         };
                     }),
                     projectRoot,
+                    validationOverrides: parsed.validationOverrides,
                 };
 
                 try {
@@ -1173,9 +1174,16 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
             }
 
             // Check headless instance props match contract (DL#124 Phase 2)
-            const headlessPropWarnings = checkHeadlessInstanceProps(parsedFile.val!, relativePath);
-            for (const msg of headlessPropWarnings) {
-                warnings.push({ file: relativePath, message: msg });
+            const headlessPropResults = checkHeadlessInstanceProps(parsedFile.val!, relativePath);
+            for (const msg of headlessPropResults) {
+                if (
+                    msg.includes('is missing required prop') ||
+                    msg.includes('source phase must be')
+                ) {
+                    errors.push({ file: relativePath, message: msg, stage: 'generate' });
+                } else {
+                    warnings.push({ file: relativePath, message: msg });
+                }
             }
 
             // Analyze tag coverage for headless imports
@@ -1378,10 +1386,23 @@ export function printJayValidationResult(result: ValidationResult, options: Vali
 
     // --- Summary ---
     logger.important('');
-    if (result.valid) {
+    if (result.valid && result.warnings.length === 0) {
         logger.important(chalk.green('Validation passed.'));
+    } else if (result.valid) {
+        logger.important(
+            chalk.yellow(
+                `Validation passed with ${result.warnings.length} warning(s). Warnings must be fixed or explicitly suppressed — do not ignore them.`,
+            ),
+        );
     } else {
-        logger.important(chalk.red(`Validation failed — ${result.errors.length} error(s).`));
+        logger.important(
+            chalk.red(
+                `Validation failed — ${result.errors.length} error(s)` +
+                    (result.warnings.length > 0
+                        ? `, ${result.warnings.length} warning(s). Errors must be fixed. Warnings must be fixed or explicitly suppressed.`
+                        : '.'),
+            ),
+        );
     }
 
     const totalIssues = result.errors.length + result.warnings.length + result.coverage.length;

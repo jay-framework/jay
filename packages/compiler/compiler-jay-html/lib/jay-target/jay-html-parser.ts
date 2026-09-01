@@ -1460,6 +1460,28 @@ function parseHeadMeta(root: HTMLElement): JayHtmlHeadMeta | undefined {
     return { title, meta, links };
 }
 
+function parseValidationOverrides(
+    root: HTMLElement,
+): Record<string, Record<string, boolean>> | undefined {
+    const el = root.querySelector('script[type="application/jay-validations"]');
+    if (!el) return undefined;
+    const text = el.textContent?.trim();
+    if (!text) return undefined;
+    try {
+        const parsed = yaml.load(text) as Record<string, unknown> | null;
+        if (!parsed || typeof parsed !== 'object') return undefined;
+        const result: Record<string, Record<string, boolean>> = {};
+        for (const [key, value] of Object.entries(parsed)) {
+            if (value && typeof value === 'object') {
+                result[key] = value as Record<string, boolean>;
+            }
+        }
+        return Object.keys(result).length > 0 ? result : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
 interface ExtractCssResult {
     css: string | undefined;
     linkedCssFiles: string[];
@@ -1684,7 +1706,12 @@ export async function parseJayFile(
     const pageLinkedCssPaths = new Set<string>();
     for (const link of root.querySelectorAll('head link[rel="stylesheet"]')) {
         const href = link.getAttribute('href');
-        if (href && !href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('//')) {
+        if (
+            href &&
+            !href.startsWith('http://') &&
+            !href.startsWith('https://') &&
+            !href.startsWith('//')
+        ) {
             pageLinkedCssPaths.add(path.resolve(filePath, href));
         }
     }
@@ -1748,6 +1775,7 @@ export async function parseJayFile(
     const excludeCssLinks = !!filePath;
     const headLinks = parseHeadLinks(root, excludeCssLinks);
     const headMeta = parseHeadMeta(root);
+    const validationOverrides = parseValidationOverrides(root);
     const scripts = validateAndCollectScripts(root, validations);
 
     // Merge CSS validations with existing validations
@@ -1798,6 +1826,7 @@ export async function parseJayFile(
             clientTrackByMap:
                 Object.keys(clientTrackByMap).length > 0 ? clientTrackByMap : undefined,
             headMeta,
+            validationOverrides,
             scripts: scripts.length > 0 ? scripts : undefined,
         } as JayHtmlSourceFile,
         validations,

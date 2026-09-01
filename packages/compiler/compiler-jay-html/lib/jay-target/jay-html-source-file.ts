@@ -71,5 +71,7 @@ export interface JayHtmlSourceFile extends CompilerSourceFile {
      */
     clientTrackByMap?: Record<string, string>;
     headMeta?: JayHtmlHeadMeta;
+    /** Per-page validation overrides from <script type="application/jay-validations">. */
+    validationOverrides?: Record<string, Record<string, boolean>>;
     scripts?: JayHtmlScript[];
 }

@@ -28,6 +28,8 @@ export interface JayHtmlValidationContext {
     projectRoot: string;
     css?: string;
     head?: JayHtmlHeadMeta;
+    /** Per-page validation overrides from <script type="application/jay-validations">. Keyed by plugin name. */
+    validationOverrides?: Record<string, Record<string, boolean>>;
     contract?: {
         name: string;
         tags: Array<{

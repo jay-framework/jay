@@ -180,6 +180,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 166  | [a11y form and label validation rules](166%20-%20a11y%20form%20and%20label%20validation%20rules)       | Extend a11y-validator: checkbox/radio, ARIA name integrity, duplicate ids, label hygiene     |
 | 174  | [undefined css variable validation](174%20-%20undefined%20css%20variable%20validation)                 | Validate that CSS `var(--name)` references have corresponding `:root` definitions            |
 | 175  | [sitemap generation and robots validation](175%20-%20sitemap%20generation%20and%20robots%20validation) | `jay-stack sitemap` command + robots.txt existence validation                                |
+| 176  | [validation warning suppression audit](176%20-%20validation%20warning%20suppression%20audit)           | Every warning must be suppressible; `jay-validations` script; promote some to errors         |
 
 ---
 
