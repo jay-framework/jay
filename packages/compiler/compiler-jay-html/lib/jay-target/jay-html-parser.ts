@@ -1462,7 +1462,7 @@ function parseHeadMeta(root: HTMLElement): JayHtmlHeadMeta | undefined {
 
 function parseValidationOverrides(
     root: HTMLElement,
-): Record<string, Record<string, boolean>> | undefined {
+): Record<string, Record<string, boolean | string[]>> | undefined {
     const el = root.querySelector('script[type="application/jay-validations"]');
     if (!el) return undefined;
     const text = el.textContent?.trim();
@@ -1470,10 +1470,10 @@ function parseValidationOverrides(
     try {
         const parsed = yaml.load(text) as Record<string, unknown> | null;
         if (!parsed || typeof parsed !== 'object') return undefined;
-        const result: Record<string, Record<string, boolean>> = {};
+        const result: Record<string, Record<string, boolean | string[]>> = {};
         for (const [key, value] of Object.entries(parsed)) {
             if (value && typeof value === 'object') {
-                result[key] = value as Record<string, boolean>;
+                result[key] = value as Record<string, boolean | string[]>;
             }
         }
         return Object.keys(result).length > 0 ? result : undefined;

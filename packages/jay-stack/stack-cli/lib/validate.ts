@@ -1026,9 +1026,9 @@ async function runPluginValidators(
 }
 
 export async function validateJayFiles(options: ValidateOptions = {}): Promise<ValidationResult> {
-    const config = loadConfig();
-    const resolvedConfig = getConfigWithDefaults(config);
     const projectRoot = options.projectRoot ?? process.cwd();
+    const config = loadConfig(projectRoot);
+    const resolvedConfig = getConfigWithDefaults(config);
 
     // Use provided path or default to pagesBase from config
     const scanDir = options.path
@@ -1190,6 +1190,27 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
             const fileCoverage = analyzeTagCoverage(parsedFile.val!, relativePath);
             if (fileCoverage) {
                 coverage.push(fileCoverage);
+                const allowedUnused =
+                    parsedFile.val!.validationOverrides?.['jay-stack']?.['allow-unused-tags'];
+                const allowedSet = new Set(
+                    Array.isArray(allowedUnused) ? allowedUnused : [],
+                );
+                for (const contract of fileCoverage.contracts) {
+                    for (const tag of contract.requiredUnusedTags) {
+                        const qualifiedTag = contract.key ? `${contract.key}.${tag}` : tag;
+                        if (allowedSet.has(qualifiedTag) || allowedSet.has(tag)) continue;
+                        const label = contract.key
+                            ? `${contract.key} (${contract.contractName})`
+                            : contract.contractName;
+                        warnings.push({
+                            file: relativePath,
+                            message:
+                                `Required tag "${tag}" from contract "${label}" is not used in the template. ` +
+                                `Suppress with jay-stack: { allow-unused-tags: ["${qualifiedTag}"] } in <script type="application/jay-validations">. ` +
+                                `See agent-kit/designer/validation-guide.md`,
+                        });
+                    }
+                }
             }
 
             // Try to generate the code (without writing to disk)
@@ -1255,7 +1276,7 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
             file: '.jay',
             message:
                 'site.baseUrl not configured — sitemap.xml will not be generated in production.',
-            suggestion: 'Add to .jay config: site:\n  baseUrl: https://your-domain.com',
+            suggestion: 'Add to .jay config:\n  site:\n    baseUrl: https://your-domain.com',
         });
     }
 
@@ -1355,8 +1376,8 @@ export function printJayValidationResult(result: ValidationResult, options: Vali
         }
     }
 
-    // --- Tag coverage section ---
-    if (result.coverage.length > 0) {
+    // --- Tag coverage section (verbose only) ---
+    if (options.verbose && result.coverage.length > 0) {
         logger.important('');
         logger.important(chalk.bold('📦 Tag Coverage'));
         for (const fileCov of result.coverage) {
@@ -1371,13 +1392,6 @@ export function printJayValidationResult(result: ValidationResult, options: Vali
                 if (contract.unusedTags.length > 0) {
                     logger.important(
                         chalk.gray(`       Unused: ${contract.unusedTags.join(', ')}`),
-                    );
-                }
-                if (contract.requiredUnusedTags.length > 0) {
-                    logger.important(
-                        chalk.yellow(
-                            `       ⚠ Required unused: ${contract.requiredUnusedTags.join(', ')}`,
-                        ),
                     );
                 }
             }
@@ -1405,7 +1419,7 @@ export function printJayValidationResult(result: ValidationResult, options: Vali
         );
     }
 
-    const totalIssues = result.errors.length + result.warnings.length + result.coverage.length;
+    const totalIssues = result.errors.length + result.warnings.length;
     if (totalIssues > 0) {
         logger.important(
             chalk.gray(

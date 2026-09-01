@@ -26,8 +26,8 @@ const DEFAULT_CONFIG: JayConfig = {
     },
 };
 
-export function loadConfig(): JayConfig {
-    const configPath = path.resolve('.jay');
+export function loadConfig(projectRoot?: string): JayConfig {
+    const configPath = projectRoot ? path.resolve(projectRoot, '.jay') : path.resolve('.jay');
 
     if (!fs.existsSync(configPath)) {
         return DEFAULT_CONFIG;
