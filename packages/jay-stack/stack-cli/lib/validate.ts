@@ -1192,9 +1192,7 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                 coverage.push(fileCoverage);
                 const allowedUnused =
                     parsedFile.val!.validationOverrides?.['jay-stack']?.['allow-unused-tags'];
-                const allowedSet = new Set(
-                    Array.isArray(allowedUnused) ? allowedUnused : [],
-                );
+                const allowedSet = new Set(Array.isArray(allowedUnused) ? allowedUnused : []);
                 for (const contract of fileCoverage.contracts) {
                     for (const tag of contract.requiredUnusedTags) {
                         const qualifiedTag = contract.key ? `${contract.key}.${tag}` : tag;
