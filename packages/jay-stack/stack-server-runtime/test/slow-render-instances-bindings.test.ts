@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { phaseOutput } from '@jay-framework/fullstack-component';
 import { slowRenderInstances } from '../lib/instance-slow-render';
-import type { HeadlessInstanceComponent } from '@jay-framework/stack-server-build';
+import type { HeadlessInstanceComponent } from '../lib';
 
 describe('slowRenderInstances prop binding resolution', () => {
     it('resolves {key.field} bindings from page ViewState before slowlyRender', async () => {

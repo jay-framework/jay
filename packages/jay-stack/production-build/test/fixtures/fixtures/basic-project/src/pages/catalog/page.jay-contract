@@ -1,0 +1,6 @@
+name: CatalogPage
+tags:
+  - tag: catalogTitle
+    type: data
+    dataType: string
+    phase: slow

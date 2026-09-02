@@ -1,0 +1,14 @@
+name: CartBadge
+props:
+  - name: label
+    type: string
+    required: false
+tags:
+  - tag: badgeLabel
+    type: data
+    dataType: string
+    phase: slow
+  - tag: count
+    type: data
+    dataType: number
+    phase: fast+interactive

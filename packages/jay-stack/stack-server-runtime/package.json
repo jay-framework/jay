@@ -36,7 +36,6 @@
     "@jay-framework/dev-environment": "workspace:^",
     "@jay-framework/jay-cli": "workspace:^",
     "@jay-framework/stack-client-runtime": "workspace:^",
-    "@jay-framework/stack-server-build": "workspace:^",
     "@types/express": "^5.0.2",
     "@types/node": "^22.15.21",
     "nodemon": "^3.0.3",

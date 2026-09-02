@@ -73,6 +73,68 @@ function escapeHtml(value: string): string {
 /** Tags that are self-closing (void elements). */
 const VOID_ELEMENTS = new Set(['meta', 'link', 'base', 'br', 'hr', 'img', 'input']);
 
+// --- headMetaToHeadTags: converts parsed head metadata into HeadTag[] ---
+
+interface TemplatePart {
+    kind: 'static' | 'binding';
+    value: string;
+}
+
+export interface JayHtmlHeadMeta {
+    title?: TemplatePart[];
+    meta: Array<{ name?: string; property?: string; content: TemplatePart[] }>;
+    links: Array<{ rel: string; href: TemplatePart[]; [key: string]: any }>;
+}
+
+function getByPath(obj: any, dotPath: string): unknown {
+    const segments = dotPath.split('.');
+    let current = obj;
+    for (const seg of segments) {
+        if (current == null || typeof current !== 'object') return undefined;
+        current = current[seg];
+    }
+    return current;
+}
+
+function resolveParts(parts: TemplatePart[], viewState?: object): string {
+    return parts
+        .map((p) => {
+            if (p.kind === 'static') return p.value;
+            if (!viewState) return `{${p.value}}`;
+            const resolved = getByPath(viewState, p.value);
+            return resolved !== undefined && resolved !== null ? String(resolved) : `{${p.value}}`;
+        })
+        .join('');
+}
+
+export function headMetaToHeadTags(
+    headMeta: JayHtmlHeadMeta | undefined,
+    viewState?: object,
+): HeadTag[] {
+    if (!headMeta) return [];
+    const tags: HeadTag[] = [];
+    if (headMeta.title) {
+        tags.push({ tag: 'title', children: resolveParts(headMeta.title, viewState) });
+    }
+    for (const m of headMeta.meta) {
+        const attrs: Record<string, string> = {};
+        if (m.name) attrs.name = m.name;
+        if (m.property) attrs.property = m.property;
+        attrs.content = resolveParts(m.content, viewState);
+        tags.push({ tag: 'meta', attrs });
+    }
+    for (const l of headMeta.links) {
+        if (l.rel === 'stylesheet' || l.rel === 'import') continue;
+        const attrs: Record<string, string> = { rel: l.rel };
+        attrs.href = resolveParts(l.href, viewState);
+        for (const [k, v] of Object.entries(l)) {
+            if (k !== 'rel' && k !== 'href' && typeof v === 'string') attrs[k] = v;
+        }
+        tags.push({ tag: 'link', attrs });
+    }
+    return tags;
+}
+
 /**
  * Serialize an array of HeadTag objects into an HTML string.
  */

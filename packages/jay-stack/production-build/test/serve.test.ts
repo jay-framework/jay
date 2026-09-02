@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { buildVersion } from '@jay-framework/production-build';
-import { startMainServer } from '../lib/serve/main-server';
+import { startMainServer } from '@jay-framework/production-server';
 import { setDevLogger, createDevLogger } from '@jay-framework/logger';
 import path from 'node:path';
 import fs from 'node:fs/promises';

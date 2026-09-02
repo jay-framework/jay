@@ -1,4 +1,4 @@
-import { DevServerPagePart } from '@jay-framework/stack-server-build';
+import { DevServerPagePart } from '../../lib';
 import { CompositePart } from '@jay-framework/stack-client-runtime';
 
 export function toCompositePart(parts: DevServerPagePart[]): CompositePart[] {

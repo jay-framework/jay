@@ -4,7 +4,7 @@ import { prettify } from '@jay-framework/compiler-shared';
 import { plugin } from '../simple-plugin/simple-plugin';
 import { PageProps, partialRender } from '@jay-framework/fullstack-component';
 import { makeCompositeJayComponent } from '@jay-framework/stack-client-runtime';
-import { DevServerPagePart } from '@jay-framework/stack-server-build';
+import { DevServerPagePart } from '../../lib';
 import { toCompositePart } from '../utils/to-composite.part';
 
 const PAGE_PROPS: PageProps = {

@@ -1,0 +1,16 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    siteName: string
+    itemCount: number
+    </script>
+    <style>.home { padding: 10px }</style>
+</head>
+<body>
+    <div class="home">
+        <h1>{siteName}</h1>
+        <p>Items: {itemCount}</p>
+    </div>
+</body>
+</html>

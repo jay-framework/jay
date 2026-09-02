@@ -5,7 +5,7 @@ import {
     RequestQuery,
     RequestCookies,
 } from '@jay-framework/fullstack-component';
-import { DevServerPagePart } from '@jay-framework/stack-server-build';
+import { DevServerPagePart } from '../lib';
 import type { AnyJayStackComponentDefinition } from '@jay-framework/fullstack-component';
 
 const PAGE_PROPS: PageProps = {

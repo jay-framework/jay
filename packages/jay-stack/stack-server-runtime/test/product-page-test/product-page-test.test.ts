@@ -6,7 +6,7 @@ import { productPage } from '../stores-plugin/product-page';
 import { getProductBySlug } from '../stores-plugin/products-database';
 import { notFound, PageProps, partialRender } from '@jay-framework/fullstack-component';
 import { makeCompositeJayComponent } from '@jay-framework/stack-client-runtime';
-import { DevServerPagePart } from '@jay-framework/stack-server-build';
+import { DevServerPagePart } from '../../lib';
 import { toCompositePart } from '../utils/to-composite.part';
 
 const PAGE_PROPS: PageProps = {

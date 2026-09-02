@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { buildVersion } from '@jay-framework/production-build';
-import { resolveContractToRoutes } from '../lib';
-import { matchRequest } from '../lib/serve/route-matcher';
+import { resolveContractToRoutes } from '@jay-framework/production-server';
+import { matchRequest } from '@jay-framework/production-server';
 import { setDevLogger, createDevLogger } from '@jay-framework/logger';
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import type { RouteManifest, RouteEntry } from '../lib';
+import type { RouteManifest, RouteEntry } from '@jay-framework/production-server';
 
 const fixtureRoot = path.resolve(__dirname, 'fixtures/basic-project');
 const buildRoot = path.join(fixtureRoot, 'build');
