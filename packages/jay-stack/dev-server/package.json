@@ -31,6 +31,7 @@
     "@jay-framework/runtime": "workspace:^",
     "@jay-framework/stack-client-runtime": "workspace:^",
     "@jay-framework/stack-route-scanner": "workspace:^",
+    "@jay-framework/stack-server-build": "workspace:^",
     "@jay-framework/stack-server-runtime": "workspace:^",
     "@jay-framework/view-state-merge": "workspace:^",
     "busboy": "^1.6.0",

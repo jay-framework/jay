@@ -1,4 +1,4 @@
-import type { JayHtmlHeadMeta } from '@jay-framework/compiler-shared';
+import type { JayHtmlHeadMeta } from '@jay-framework/stack-server-runtime';
 
 export interface RouteManifest {
     version: string;

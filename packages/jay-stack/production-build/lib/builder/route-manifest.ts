@@ -1,4 +1,10 @@
-import type { RouteManifest, RouteEntry, RouteSegment, ActionEntry, PluginEntry } from '@jay-framework/production-server';
+import type {
+    RouteManifest,
+    RouteEntry,
+    RouteSegment,
+    ActionEntry,
+    PluginEntry,
+} from '@jay-framework/production-server';
 import {
     type JayRoute,
     type JayRouteSegment,

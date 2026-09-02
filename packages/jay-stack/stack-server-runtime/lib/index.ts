@@ -1,5 +1,6 @@
 // Runtime modules — used at production serve time. Zero compiler deps.
 export * from './types';
+export * from './plugin-setup-types';
 export * from './slowly-changing-runner';
 export * from './fast-changing-runner';
 export * from './services';

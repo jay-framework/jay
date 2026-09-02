@@ -11,6 +11,11 @@ import chalk from 'chalk';
 import YAML from 'yaml';
 import { createViteForCli } from '@jay-framework/dev-server';
 import { getLogger } from '@jay-framework/logger';
+import { ActionRegistry } from '@jay-framework/stack-server-runtime';
+import {
+    discoverAndRegisterActions,
+    discoverAllPluginActions,
+} from '@jay-framework/stack-server-build';
 import type { InitializeServicesForCli } from './cli-services';
 
 export interface RunActionOptions {
@@ -47,9 +52,6 @@ export async function runAction(
         await initializeServices(projectRoot, viteServer);
 
         // Discover and register actions
-        const { discoverAndRegisterActions, discoverAllPluginActions, ActionRegistry } =
-            await import('@jay-framework/stack-server-runtime');
-
         const registry = new ActionRegistry();
 
         await discoverAndRegisterActions({

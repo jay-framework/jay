@@ -3,7 +3,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
 import { discoverAndRegisterActions, discoverAllPluginActions } from '../lib';
-import { ActionRegistry } from '../lib';
+import { ActionRegistry } from '@jay-framework/stack-server-runtime';
 
 describe('Action Discovery', () => {
     let tempDir: string;

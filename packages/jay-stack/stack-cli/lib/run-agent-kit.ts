@@ -1,11 +1,13 @@
 import chalk from 'chalk';
 import YAML from 'yaml';
+import { scanPlugins } from '@jay-framework/stack-server-runtime';
 import {
     materializeContracts,
     listContracts,
-    scanPlugins,
+    discoverPluginsWithAgentKit,
+    executePluginAgentKit,
     type PluginsIndex,
-} from '@jay-framework/stack-server-runtime';
+} from '@jay-framework/stack-server-build';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import fsSync from 'node:fs';
@@ -297,9 +299,6 @@ async function generatePluginAgentKit(
     initErrors: Map<string, Error>,
     viteServer?: Awaited<ReturnType<typeof createViteForCli>>,
 ): Promise<void> {
-    const { discoverPluginsWithAgentKit, executePluginAgentKit } =
-        await import('@jay-framework/stack-server-runtime');
-
     const plugins = await discoverPluginsWithAgentKit({
         projectRoot,
         verbose: options.verbose,

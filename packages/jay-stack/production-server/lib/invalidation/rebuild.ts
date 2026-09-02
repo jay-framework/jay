@@ -87,12 +87,7 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
             const oldFiles = collectInstanceFiles(instance);
 
             try {
-                const buildResult = await rebuildInstance(
-                    route,
-                    params,
-                    backendDir,
-                    rebuildSuffix,
-                );
+                const buildResult = await rebuildInstance(route, params, backendDir, rebuildSuffix);
                 if (buildResult.status !== 'success') {
                     result.errors.push({
                         route: route.pattern,

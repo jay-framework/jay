@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { generateClientScript, ProjectClientInitInfo } from '../lib';
 import { prettifyHtml } from '@jay-framework/compiler-shared';
 import type { DevServerPagePart } from '../lib';
-import type { PluginClientInitInfo } from '../lib/plugin-init-discovery';
+import type { PluginClientInitInfo } from '@jay-framework/stack-server-runtime';
 
 /**
  * Helper to format HTML for consistent comparison.

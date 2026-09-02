@@ -1,5 +1,5 @@
 import type { PluginSetupPrompt } from '@jay-framework/stack-server-runtime';
-import { SetupNeedsAnswerError } from '@jay-framework/stack-server-runtime';
+import { SetupNeedsAnswerError } from '@jay-framework/stack-server-build';
 import { input, confirm, select } from '@inquirer/prompts';
 
 export function createInteractivePrompt(): PluginSetupPrompt {

@@ -1,10 +1,7 @@
 import type { InstanceEntry, RouteEntry } from '../types';
 import { loadPagePartsFromConfig } from '../builder/load-production-parts';
 import { FilesystemArtifactStore } from '../serve/artifact-store';
-import {
-    DevSlowlyChangingPhase,
-    slowRenderInstances,
-} from '@jay-framework/stack-server-runtime';
+import { DevSlowlyChangingPhase, slowRenderInstances } from '@jay-framework/stack-server-runtime';
 import { getLogger } from '@jay-framework/logger';
 import path from 'node:path';
 import fs from 'node:fs/promises';
@@ -128,11 +125,7 @@ export async function rebuildInstance(
     }
 
     const cachePath = path.join(backendInstanceDir, `${instanceId}.cache.json`);
-    await fs.writeFile(
-        cachePath,
-        JSON.stringify({ slowViewState, carryForward }),
-        'utf-8',
-    );
+    await fs.writeFile(cachePath, JSON.stringify({ slowViewState, carryForward }), 'utf-8');
 
     logger.info(`[Rebuild] Instance data: ${routeDir}/${instanceId}`);
 

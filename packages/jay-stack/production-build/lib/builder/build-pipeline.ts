@@ -1,4 +1,9 @@
-import type { BuildOptions, BuildMetadata, RouteManifest, RouteEntry } from '@jay-framework/production-server';
+import type {
+    BuildOptions,
+    BuildMetadata,
+    RouteManifest,
+    RouteEntry,
+} from '@jay-framework/production-server';
 import { discoverServerEntries, buildServerCode } from './server-code-build';
 import { buildSharedChunks } from './shared-chunks-build';
 import { buildInstance, type InstanceBuildContext } from './instance-pipeline';

@@ -12,7 +12,8 @@ import type { JayRollupConfig } from '@jay-framework/rollup-plugin';
 import type { FreezeStore } from './freeze';
 import type { DevServerRoute } from './dev-server';
 import { getLogger } from '@jay-framework/logger';
-import { loadPageParts, runLoadParams } from '@jay-framework/stack-server-runtime';
+import { runLoadParams } from '@jay-framework/stack-server-runtime';
+import { loadPageParts } from '@jay-framework/stack-server-build';
 
 /**
  * Service marker for DevServerService.

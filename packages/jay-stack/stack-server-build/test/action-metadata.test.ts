@@ -2,11 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import {
-    parseActionMetadata,
-    loadActionMetadata,
-    resolveActionMetadataPath,
-} from '../lib';
+import { parseActionMetadata, loadActionMetadata, resolveActionMetadataPath } from '../lib';
 
 describe('Action Metadata (compact notation)', () => {
     let tempDir: string;

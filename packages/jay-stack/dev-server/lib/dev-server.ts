@@ -14,9 +14,8 @@ import {
     preparePluginClientInits,
     type PluginWithInit,
     type PluginClientInitInfo,
-    SlowRenderCache,
-    type SlowRenderCacheEntry,
 } from '@jay-framework/stack-server-runtime';
+import { SlowRenderCache, type SlowRenderCacheEntry } from '@jay-framework/stack-server-build';
 import type {
     ClientError4xx,
     HeadTag,
@@ -33,14 +32,14 @@ import {
     mergeHeadTags,
     parseCookies,
 } from '@jay-framework/stack-server-runtime';
-import { loadPageParts } from '@jay-framework/stack-server-runtime';
+import { loadPageParts } from '@jay-framework/stack-server-build';
 import {
     generateClientScript,
     generateSSRPageHtml,
     generateFrozenPageHtml,
     clearServerElementCache,
-    ProjectClientInitInfo,
-} from '@jay-framework/stack-server-runtime';
+} from '@jay-framework/stack-server-build';
+import { ProjectClientInitInfo } from '@jay-framework/stack-server-build';
 import { Request, Response } from 'express';
 import { DevServerOptions } from './dev-server-options';
 import { ServiceLifecycleManager } from './service-lifecycle';
@@ -59,15 +58,14 @@ import {
     type JayHtmlScript,
 } from '@jay-framework/compiler-jay-html';
 import {
-    LoadedPageParts,
     getServiceRegistry,
-    materializeContracts,
     slowRenderInstances,
     normalizeAndResolveInstanceProps,
     type HeadlessInstanceComponent,
     type InstancePhaseData,
     type ForEachHeadlessInstance,
 } from '@jay-framework/stack-server-runtime';
+import { LoadedPageParts, materializeContracts } from '@jay-framework/stack-server-build';
 import { scanPlugins } from '@jay-framework/stack-server-runtime';
 import { WithValidations } from '@jay-framework/compiler-shared';
 import { getLogger, getDevLogger, type RequestTiming } from '@jay-framework/logger';

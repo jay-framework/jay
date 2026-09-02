@@ -11,15 +11,17 @@ import {
     clearLifecycleCallbacks,
     clearServiceRegistry,
     clearClientInitData,
-    discoverAndRegisterActions,
-    discoverAllPluginActions,
     actionRegistry,
     discoverPluginsWithInit,
     sortPluginsByDependencies,
     executePluginServerInits,
     type PluginWithInit,
 } from '@jay-framework/stack-server-runtime';
-import type { ProjectClientInitInfo } from '@jay-framework/stack-server-runtime';
+import type { ProjectClientInitInfo } from '@jay-framework/stack-server-build';
+import {
+    discoverAndRegisterActions,
+    discoverAllPluginActions,
+} from '@jay-framework/stack-server-build';
 import * as path from 'node:path';
 import * as fs from 'node:fs';
 import { pathToFileURL } from 'node:url';

@@ -2,7 +2,7 @@
 export * from './server';
 export * from './config';
 
-// Re-export contract materializer from stack-server-runtime for convenience
+// Re-export contract materializer from stack-server-build for convenience
 export {
     materializeContracts,
     listContracts,
@@ -11,7 +11,7 @@ export {
     type PluginContractEntry,
     type MaterializeContractsOptions,
     type MaterializeResult,
-} from '@jay-framework/stack-server-runtime';
+} from '@jay-framework/stack-server-build';
 
 // CLI entry point
 import './cli';
