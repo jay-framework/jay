@@ -1,3 +1,6 @@
+// Production server — serve + rebuild. Zero compiler deps.
+// Build pipeline has moved to @jay-framework/production-build.
+
 export type {
     RouteManifest,
     RouteEntry,
@@ -12,10 +15,11 @@ export type {
     PageModule,
 } from './types';
 
-export { buildVersion } from './builder/build-pipeline';
 export { generateSitemap } from './builder/generate-sitemap';
-export { startMainServer } from './serve/main-server';
+
+export { startMainServer, type MainServerOptions } from './serve/main-server';
 export { startRendererServer, type RendererServerOptions } from './renderer/renderer-server';
+
 export {
     rebuild,
     rebuildContract,
@@ -42,3 +46,5 @@ export {
     initializeServicesFromModules,
     type PreImportedPlugin,
 } from './shared/init-services';
+
+export { loadPagePartsFromConfig } from './builder/load-production-parts';

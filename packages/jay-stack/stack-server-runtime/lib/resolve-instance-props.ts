@@ -1,5 +1,5 @@
 import type { PageProps } from '@jay-framework/fullstack-component';
-import type { ContractProp } from '@jay-framework/compiler-jay-html';
+import type { RuntimeContract } from './types';
 
 /**
  * Scope for resolving static headless instance prop bindings like `{p.categorySlug}`.
@@ -61,7 +61,7 @@ export function buildInstanceBindingScope(context: InstanceBindingContext = {}):
  */
 export function normalizeAndResolveInstanceProps(
     instanceProps: Record<string, string>,
-    contractProps: ContractProp[] | undefined,
+    contractProps: RuntimeContract['props'],
     bindingContext?: InstanceBindingContext,
 ): Record<string, string> {
     const scope = buildInstanceBindingScope(bindingContext);

@@ -5,9 +5,9 @@ import {
     UrlParams,
     phaseOutput,
 } from '@jay-framework/fullstack-component';
-import { DevServerPagePart, HeadlessInstanceComponent } from './load-page-parts';
+import type { DevServerPagePart, HeadlessInstanceComponent } from './types';
 import { resolveServices } from './services';
-import type { DiscoveredHeadlessInstance } from '@jay-framework/compiler-jay-html';
+import type { DiscoveredHeadlessInstance } from './types';
 import type { InstancePhaseData, InstanceSlowRenderResult } from './instance-slow-render';
 import { normalizeAndResolveInstanceProps } from './resolve-instance-props';
 

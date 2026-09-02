@@ -5,7 +5,7 @@ import { plugin } from '../simple-plugin/simple-plugin';
 import { page } from './page';
 import { PageProps, partialRender } from '@jay-framework/fullstack-component';
 import { makeCompositeJayComponent } from '@jay-framework/stack-client-runtime';
-import { DevServerPagePart } from '../../lib/load-page-parts';
+import { DevServerPagePart } from '@jay-framework/stack-server-build';
 import { toCompositePart } from '../utils/to-composite.part';
 
 const PAGE_PROPS: PageProps = {

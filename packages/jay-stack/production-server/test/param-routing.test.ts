@@ -5,7 +5,7 @@ import {
     materializeRouteParams,
     dedupeByUrl,
     type RouteInfo,
-} from '../lib/builder/param-routing';
+} from '@jay-framework/production-build';
 
 describe('crossProductParams', () => {
     it('should pass through single part', () => {

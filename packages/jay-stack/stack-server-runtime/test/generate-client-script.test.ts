@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { generateClientScript, ProjectClientInitInfo } from '../lib/generate-client-script';
+import { generateClientScript, ProjectClientInitInfo } from '@jay-framework/stack-server-build';
 import { prettifyHtml } from '@jay-framework/compiler-shared';
-import type { DevServerPagePart } from '../lib/load-page-parts';
+import type { DevServerPagePart } from '@jay-framework/stack-server-build';
 import type { PluginClientInitInfo } from '../lib/plugin-init-discovery';
 
 /**

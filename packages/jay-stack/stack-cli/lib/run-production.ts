@@ -70,7 +70,7 @@ export async function runBuild(
 
     const ctx = await resolveProductionContext(projectPath, options.version);
 
-    const { buildVersion } = await import('@jay-framework/production-server');
+    const { buildVersion } = await import('@jay-framework/production-build');
     await buildVersion({
         version: ctx.version,
         projectRoot: ctx.resolvedPath,

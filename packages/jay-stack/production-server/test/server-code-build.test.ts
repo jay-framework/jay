@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
-import { discoverServerEntries } from '../lib/builder/server-code-build';
+import { discoverServerEntries } from '@jay-framework/production-build';
 
 describe('discoverServerEntries', () => {
     let projectRoot: string;

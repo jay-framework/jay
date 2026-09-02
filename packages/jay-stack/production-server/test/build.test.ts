@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { buildVersion } from '../lib';
+import { buildVersion } from '@jay-framework/production-build';
 import { resolveContractToRoutes } from '../lib';
 import { matchRequest } from '../lib/serve/route-matcher';
 import { setDevLogger, createDevLogger } from '@jay-framework/logger';

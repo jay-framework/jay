@@ -6,7 +6,7 @@ import {
     parseActionMetadata,
     loadActionMetadata,
     resolveActionMetadataPath,
-} from '../lib/action-metadata';
+} from '@jay-framework/stack-server-build';
 
 describe('Action Metadata (compact notation)', () => {
     let tempDir: string;

@@ -1,6 +1,5 @@
 import type { RouteManifest, RouteEntry, InstanceEntry, BuildMetadata } from '../types';
-import type { JayRoute } from '@jay-framework/stack-route-scanner';
-import { buildInstance, type InstanceBuildContext } from '../builder/instance-pipeline';
+import { rebuildInstance } from './rebuild-instance';
 import { generateSitemap } from '../builder/generate-sitemap';
 import { matchRequest } from '../serve/route-matcher';
 import { initializeServices } from '../shared/init-services';
@@ -68,17 +67,6 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
     await initializeServices(backendDir, options.projectRoot, 'Rebuild');
 
     const rebuildSuffix = Date.now().toString(36);
-    const instanceCtx: InstanceBuildContext = {
-        projectRoot: options.projectRoot,
-        pagesRoot: options.pagesRoot,
-        buildDir,
-        backendDir,
-        frontendDir,
-        jayOptions: { tsConfigFilePath: options.tsConfigFilePath },
-        tsConfigFilePath: options.tsConfigFilePath,
-        minify: options.minify ?? true,
-        rebuildSuffix,
-    };
 
     const result: RebuildResult = { affected: 0, rebuilt: 0, errors: [] };
     const orphanedFiles: string[] = [];
@@ -96,40 +84,30 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
             result.affected++;
             const params = instance.params;
 
-            // Collect old file paths before rebuild replaces the instance
             const oldFiles = collectInstanceFiles(instance);
 
-            let pageModule: Record<string, unknown>;
             try {
-                pageModule = await loadRouteModule(route, buildDir);
-            } catch (err: any) {
-                result.errors.push({
-                    route: route.pattern,
+                const buildResult = await rebuildInstance(
+                    route,
                     params,
-                    error: `Failed to load module: ${err.message}`,
-                });
-                continue;
-            }
-
-            const jayRoute = await resolveJayRouteFromManifest(route, options);
-
-            try {
-                const buildResult = await buildInstance(jayRoute, params, pageModule, instanceCtx);
+                    backendDir,
+                    rebuildSuffix,
+                );
                 if (buildResult.status !== 'success') {
                     result.errors.push({
                         route: route.pattern,
                         params,
-                        error: buildResult.reason,
+                        error: buildResult.reason || 'Unknown error',
                     });
                     continue;
                 }
 
                 const existingIdx = route.instances.findIndex((i) => paramsMatch(i.params, params));
                 if (existingIdx >= 0) {
-                    route.instances[existingIdx] = buildResult.instanceEntry;
+                    route.instances[existingIdx] = buildResult.instanceEntry!;
                     orphanedFiles.push(...oldFiles);
                 } else {
-                    route.instances.push(buildResult.instanceEntry);
+                    route.instances.push(buildResult.instanceEntry!);
                 }
 
                 result.rebuilt++;
@@ -248,47 +226,6 @@ export async function rebuildContract(options: {
         ...options,
         target: { mode: 'contract', contractName: options.contractName, params: options.params },
     });
-}
-
-async function loadRouteModule(
-    route: RouteEntry,
-    buildDir: string,
-): Promise<Record<string, unknown>> {
-    if (!route.serverModule) return {};
-    if (route.isPlugin) return import(route.serverModule);
-    return import(path.join(buildDir, route.serverModule));
-}
-
-async function resolveJayRouteFromManifest(
-    route: RouteEntry,
-    options: RebuildOptions,
-): Promise<JayRoute> {
-    const routeDir = route.pattern.replace(/^\//, '') || 'index';
-    const jayHtmlPath = path.join(options.pagesRoot, routeDir, 'page.jay-html');
-
-    let resolvedJayHtmlPath = jayHtmlPath;
-    if (route.isPlugin && route.serverModule) {
-        try {
-            const pluginModule = await import(route.serverModule);
-            const comp = pluginModule[route.componentExport || 'page'];
-            if (comp?.jayHtmlPath) {
-                resolvedJayHtmlPath = comp.jayHtmlPath;
-            }
-        } catch {
-            // Fall back to default path
-        }
-    }
-
-    return {
-        rawRoute: route.pattern,
-        segments: route.segments.map((s) => {
-            if (s.type === 'static') return s.value;
-            return { name: s.value, type: segmentTypeMap[s.type] };
-        }),
-        jayHtmlPath: resolvedJayHtmlPath,
-        compPath: route.isPlugin ? route.serverModule : undefined,
-        componentExport: route.componentExport,
-    } as JayRoute;
 }
 
 const segmentTypeMap: Record<string, number> = {

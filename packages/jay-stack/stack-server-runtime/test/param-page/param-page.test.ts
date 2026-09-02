@@ -4,7 +4,7 @@ import { render as renderVariantA } from './compiled-slowly/page.slowly-rendered
 import { render as renderVariantB } from './compiled-slowly/page.slowly-rendered.variant-b.jay-html';
 import { PageProps, partialRender } from '@jay-framework/fullstack-component';
 import { makeCompositeJayComponent } from '@jay-framework/stack-client-runtime';
-import { DevServerPagePart } from '../../lib/load-page-parts';
+import { DevServerPagePart } from '@jay-framework/stack-server-build';
 
 import { prettify } from '@jay-framework/compiler-shared';
 import { toCompositePart } from '../utils/to-composite.part';

@@ -11,7 +11,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { JayInit } from '@jay-framework/fullstack-component';
-import type { ViteSSRLoader } from './action-discovery';
+import type { ViteSSRLoader } from './types';
 import { setClientInitData } from './services';
 import { scanPlugins, type ScannedPlugin } from './plugin-scanner';
 import { getLogger } from '@jay-framework/logger';

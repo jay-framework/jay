@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { commandSchemaToFlags, parseInputFromFlags } from '../lib';
+import { commandSchemaToFlags, parseInputFromFlags } from '@jay-framework/stack-server-build';
 
 describe('commandSchemaToFlags', () => {
     it('should convert string fields to value flags', () => {

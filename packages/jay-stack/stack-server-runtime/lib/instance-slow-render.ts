@@ -7,13 +7,13 @@
  */
 
 import type {
+    HeadlessInstanceComponent,
     DiscoveredHeadlessInstance,
     ForEachHeadlessInstance,
-} from '@jay-framework/compiler-jay-html';
-export type { ForEachHeadlessInstance } from '@jay-framework/compiler-jay-html';
-import type { HeadlessInstanceComponent } from './load-page-parts';
-import type { Coordinate } from '@jay-framework/runtime';
-import type { Contract } from '@jay-framework/compiler-jay-html';
+    Coordinate,
+    RuntimeContract,
+} from './types';
+export type { ForEachHeadlessInstance } from './types';
 import { resolveServices } from './services';
 import {
     type InstanceBindingContext,
@@ -48,7 +48,7 @@ export interface InstanceSlowRenderResult {
     /** Resolved data for each instance (for resolveHeadlessInstances pass 2) */
     resolvedData: Array<{
         coordinate: Coordinate;
-        contract: Contract;
+        contract: RuntimeContract;
         slowViewState: Record<string, unknown>;
     }>;
     /** Per-instance slow ViewState keyed by coordinate (for direct mode merge) */

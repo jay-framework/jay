@@ -4,11 +4,11 @@ import {
     PageProps,
     phaseOutput,
 } from '@jay-framework/fullstack-component';
-import { DevServerPagePart, HeadlessInstanceComponent } from './load-page-parts';
+import type { DevServerPagePart, HeadlessInstanceComponent } from './types';
 import { resolveServices } from './services';
 import type { InstancePhaseData } from './instance-slow-render';
-import type { ForEachHeadlessInstance } from '@jay-framework/compiler-jay-html';
-import { computeForEachInstanceKey } from '@jay-framework/compiler-shared';
+import type { ForEachHeadlessInstance } from './types';
+import { computeForEachInstanceKey } from './types';
 import {
     normalizeAndResolveInstanceProps,
     resolvePathValue,

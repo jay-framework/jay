@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
-import { discoverAndRegisterActions, discoverAllPluginActions, ActionRegistry } from '../lib';
+import { discoverAndRegisterActions, discoverAllPluginActions } from '@jay-framework/stack-server-build';
+import { ActionRegistry } from '../lib';
 
 describe('Action Discovery', () => {
     let tempDir: string;

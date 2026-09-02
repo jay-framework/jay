@@ -181,7 +181,8 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 174  | [undefined css variable validation](174%20-%20undefined%20css%20variable%20validation)                 | Validate that CSS `var(--name)` references have corresponding `:root` definitions            |
 | 175  | [sitemap generation and robots validation](175%20-%20sitemap%20generation%20and%20robots%20validation) | `jay-stack sitemap` command + robots.txt existence validation                                |
 | 176  | [validation warning suppression audit](176%20-%20validation%20warning%20suppression%20audit)           | Every warning must be suppressible; `jay-validations` script; promote some to errors         |
-| 177  | [tree-shake unused plugin client bundles](177%20-%20tree-shake%20unused%20plugin%20client%20bundles)   | Only bundle and preload plugin client code for plugins actually used on pages                |
+| 177  | [tree-shake unused plugin client bundles](177%20-%20tree-shake%20unused%20plugin%20client%20bundles)   | Only preload shared chunks each page actually imports; per-route `sharedDeps`                |
+| 178  | [compiler-free production runtime](178%20-%20compiler-free%20production%20runtime)                     | Eliminate compiler deps from serve + rebuild; use `page-parts.json` for rebuild              |
 
 ---
 

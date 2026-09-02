@@ -26,21 +26,17 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@jay-framework/compiler-jay-html": "workspace:^",
-    "@jay-framework/compiler-shared": "workspace:^",
     "@jay-framework/component": "workspace:^",
     "@jay-framework/fullstack-component": "workspace:^",
     "@jay-framework/logger": "workspace:^",
     "@jay-framework/runtime": "workspace:^",
-    "@jay-framework/ssr-runtime": "workspace:^",
-    "@jay-framework/stack-route-scanner": "workspace:^",
-    "@jay-framework/view-state-merge": "workspace:^",
     "yaml": "^2.3.4"
   },
   "devDependencies": {
     "@jay-framework/dev-environment": "workspace:^",
     "@jay-framework/jay-cli": "workspace:^",
     "@jay-framework/stack-client-runtime": "workspace:^",
+    "@jay-framework/stack-server-build": "workspace:^",
     "@types/express": "^5.0.2",
     "@types/node": "^22.15.21",
     "nodemon": "^3.0.3",
