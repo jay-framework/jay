@@ -1,0 +1,10 @@
+{
+  "extends": "@jay-framework/dev-environment/library-dom/tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "types": ["vitest/globals", "@testing-library/jest-dom/vitest", "node"],
+    "paths": {
+      "vite": ["../../../node_modules/vite"]
+    }
+  }
+}
