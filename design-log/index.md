@@ -183,7 +183,8 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 176  | [validation warning suppression audit](176%20-%20validation%20warning%20suppression%20audit)           | Every warning must be suppressible; `jay-validations` script; promote some to errors         |
 | 177  | [tree-shake unused plugin client bundles](177%20-%20tree-shake%20unused%20plugin%20client%20bundles)   | Only preload shared chunks each page actually imports; per-route `sharedDeps`                |
 | 178  | [compiler-free production runtime](178%20-%20compiler-free%20production%20runtime)                     | Eliminate compiler deps from serve + rebuild; use `page-parts.json` for rebuild              |
-| 179  | [compiler-free plugin runtime & capability-aware validation](179%20-%20compiler-free%20plugin%20runtime%20%28validator%20entry%20split%29) | Validator `./validator` entry keeps compiler out of plugin runtime; `validate-plugin` checks per declared capability |
+| 179  | [compiler-free plugin runtime & capability-aware validation](179%20-%20compiler-free%20plugin%20runtime%20%28validator%20entry%20split%29) | Runtime (`.`) vs tools (`./tools`) entry split keeps compiler out of the serve bundle; actions vs commands; `validate-plugin` checks per declared capability |
+| 180  | [dev-only actions & production exclusion of dev-only surfaces](180%20-%20dev-only%20actions%20and%20production%20exclusion%20of%20dev-only%20surfaces) | `devOnly` actions (handlers in `./tools`) power settings pages; finishes DL#171 production exclusion of devOnly routes/actions |
 
 ---
 
