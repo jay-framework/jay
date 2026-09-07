@@ -186,6 +186,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 178  | [compiler-free production runtime](178%20-%20compiler-free%20production%20runtime)                                                                     | Eliminate compiler deps from serve + rebuild; use `page-parts.json` for rebuild                                                                              |
 | 179  | [compiler-free plugin runtime & capability-aware validation](179%20-%20compiler-free%20plugin%20runtime%20%28validator%20entry%20split%29)             | Runtime (`.`) vs tools (`./tools`) entry split keeps compiler out of the serve bundle; actions vs commands; `validate-plugin` checks per declared capability |
 | 180  | [dev-only actions & production exclusion of dev-only surfaces](180%20-%20dev-only%20actions%20and%20production%20exclusion%20of%20dev-only%20surfaces) | `devOnly` actions (handlers in `./tools`) power settings pages; finishes DL#171 production exclusion of devOnly routes/actions                               |
+| 182  | [devOnly route client hydration imports the server bundle](182%20-%20devonly-route-client-hydration-imports-server-bundle)                            | DL#180 regression: devOnly route hydration imports `./tools` (server) not `./client`; browser pulls dev-server→fsevents → `.node` loader error. Fix: explicit `clientCompPath` |
 
 ---
 
