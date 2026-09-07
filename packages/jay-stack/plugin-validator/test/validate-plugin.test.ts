@@ -173,3 +173,330 @@ describe('validatePlugin — dynamic contract generator shape', () => {
         expect(genError).toBeUndefined();
     });
 });
+
+// DL#179 Part 2 — capability-aware validation
+describe('validatePlugin — tools entry (./tools) requirement', () => {
+    it('errors when validators are declared but ./tools export is missing', async () => {
+        const dir = createTempPluginWithSource({
+            pluginYaml: minimalPluginYaml,
+            packageJson: {
+                name: '@jay-framework/test-plugin',
+                exports: { '.': './dist/index.js', './plugin.yaml': './plugin.yaml' },
+            },
+            sourceFiles: { 'dist/index.js': `export {};\n` },
+        });
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        const toolsError = result.errors.find((e) =>
+            e.message.includes('missing "./tools" entry point'),
+        );
+        expect(toolsError).toBeDefined();
+    });
+
+    it('passes when validators are declared and exported from ./tools', async () => {
+        const dir = createTempPluginWithSource({
+            pluginYaml: minimalPluginYaml,
+            packageJson: {
+                name: '@jay-framework/test-plugin',
+                exports: {
+                    '.': './dist/index.js',
+                    './tools': './dist/tools.js',
+                    './plugin.yaml': './plugin.yaml',
+                },
+            },
+            sourceFiles: {
+                'dist/index.js': `export {};\n`,
+                'dist/tools.js': `export { testHandler } from './h.js';\n`,
+            },
+        });
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        expect(result.errors).toEqual([]);
+    });
+
+    it('does not emit the legacy "no contracts" warning for a validator-only plugin', async () => {
+        const dir = createTempPluginWithSource({
+            pluginYaml: minimalPluginYaml,
+            packageJson: {
+                name: '@jay-framework/test-plugin',
+                exports: {
+                    '.': './dist/index.js',
+                    './tools': './dist/tools.js',
+                    './plugin.yaml': './plugin.yaml',
+                },
+            },
+            sourceFiles: {
+                'dist/index.js': `export {};\n`,
+                'dist/tools.js': `export { testHandler } from './h.js';\n`,
+            },
+        });
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        const noContracts = result.warnings.find((w) =>
+            w.message.includes('no contracts or dynamic_contracts'),
+        );
+        expect(noContracts).toBeUndefined();
+    });
+});
+
+describe('validatePlugin — client entry (./client) interactive gating', () => {
+    const contractYaml = [
+        'name: test-plugin',
+        'contracts:',
+        '  - name: widget',
+        '    contract: widget.jay-contract',
+        '    component: widget',
+    ].join('\n');
+
+    function baseExports() {
+        return {
+            '.': './dist/index.js',
+            './plugin.yaml': './plugin.yaml',
+            './widget.jay-contract': './dist/widget.jay-contract',
+        };
+    }
+
+    it('does not require ./client for a server-only component (no interactive mark)', async () => {
+        const dir = createTempPluginWithSource({
+            pluginYaml: contractYaml,
+            packageJson: { name: '@jay-framework/test-plugin', exports: baseExports() },
+            sourceFiles: {
+                'dist/index.js': `export { widget } from './comp.js';\n`,
+                'dist/widget.jay-contract': `name: widget\ntags:\n  - tag: title\n    type: data\n`,
+            },
+        });
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        const clientErr = result.errors.find((e) => e.message.includes('"./client"'));
+        expect(clientErr).toBeUndefined();
+    });
+
+    it('requires ./client when a component has an interactive phase', async () => {
+        const dir = createTempPluginWithSource({
+            pluginYaml: contractYaml,
+            packageJson: { name: '@jay-framework/test-plugin', exports: baseExports() },
+            sourceFiles: {
+                'dist/index.js': `const c = withInteractiveMark(() => {});\nexport { widget } from './comp.js';\n`,
+                'dist/widget.jay-contract': `name: widget\ntags:\n  - tag: title\n    type: data\n`,
+            },
+        });
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        const clientErr = result.errors.find((e) => e.message.includes('"./client"'));
+        expect(clientErr).toBeDefined();
+    });
+
+    it('requires ./client when contexts are declared', async () => {
+        const dir = createTempPluginWithSource({
+            pluginYaml: [
+                'name: test-plugin',
+                'contexts:',
+                '  - name: theme',
+                '    marker: THEME_CONTEXT',
+            ].join('\n'),
+            packageJson: {
+                name: '@jay-framework/test-plugin',
+                exports: { '.': './dist/index.js', './plugin.yaml': './plugin.yaml' },
+            },
+            sourceFiles: { 'dist/index.js': `export const THEME_CONTEXT = {};\n` },
+        });
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        const clientErr = result.errors.find((e) => e.message.includes('"./client"'));
+        expect(clientErr).toBeDefined();
+    });
+});
+
+describe('validatePlugin — at-least-one-capability rule', () => {
+    it('warns when a plugin declares no capabilities', async () => {
+        const dir = createTempPluginWithSource({
+            pluginYaml: `name: test-plugin\n`,
+            packageJson: {
+                name: '@jay-framework/test-plugin',
+                exports: { '.': './dist/index.js', './plugin.yaml': './plugin.yaml' },
+            },
+            sourceFiles: { 'dist/index.js': `export {};\n` },
+        });
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        const warn = result.warnings.find((w) =>
+            w.message.includes('Plugin declares no capabilities'),
+        );
+        expect(warn).toBeDefined();
+        expect(warn!.suggestion).toEqual(
+            'Declare at least one capability. See agent-kit/plugin/plugin-structure.md',
+        );
+    });
+
+    it('does not warn for a global plugin with an init export', async () => {
+        const dir = createTempPluginWithSource({
+            pluginYaml: `name: test-plugin\nglobal: true\n`,
+            packageJson: {
+                name: '@jay-framework/test-plugin',
+                exports: { '.': './dist/index.js', './plugin.yaml': './plugin.yaml' },
+            },
+            sourceFiles: { 'dist/index.js': `export { init } from './init.js';\n` },
+        });
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        const warn = result.warnings.find((w) =>
+            w.message.includes('Plugin declares no capabilities'),
+        );
+        expect(warn).toBeUndefined();
+    });
+
+    it('errors for a global plugin with no init/setup export', async () => {
+        const dir = createTempPluginWithSource({
+            pluginYaml: `name: test-plugin\nglobal: true\n`,
+            packageJson: {
+                name: '@jay-framework/test-plugin',
+                exports: { '.': './dist/index.js', './plugin.yaml': './plugin.yaml' },
+            },
+            sourceFiles: { 'dist/index.js': `export const somethingElse = 1;\n` },
+        });
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        const err = result.errors.find((e) => e.message.includes('global: true'));
+        expect(err).toBeDefined();
+    });
+});
+
+// DL#180 — devOnly actions
+describe('validatePlugin — devOnly actions', () => {
+    it('errors when actions[].devOnly is not a boolean', async () => {
+        const dir = createTempPluginWithSource({
+            pluginYaml: [
+                'name: test-plugin',
+                'actions:',
+                '  - name: runThing',
+                '    devOnly: yes-please',
+            ].join('\n'),
+            packageJson: {
+                name: '@jay-framework/test-plugin',
+                exports: {
+                    '.': './dist/index.js',
+                    './tools': './dist/tools.js',
+                    './plugin.yaml': './plugin.yaml',
+                },
+            },
+            sourceFiles: {
+                'dist/index.js': `export {};\n`,
+                'dist/tools.js': `export { runThing } from './r.js';\n`,
+            },
+        });
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        const err = result.errors.find((e) => e.message.includes('devOnly must be a boolean'));
+        expect(err).toBeDefined();
+    });
+
+    it('requires ./tools when a devOnly action is declared', async () => {
+        const dir = createTempPluginWithSource({
+            pluginYaml: [
+                'name: test-plugin',
+                'actions:',
+                '  - name: runThing',
+                '    devOnly: true',
+            ].join('\n'),
+            packageJson: {
+                name: '@jay-framework/test-plugin',
+                exports: { '.': './dist/index.js', './plugin.yaml': './plugin.yaml' },
+            },
+            sourceFiles: { 'dist/index.js': `export {};\n` },
+        });
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        const toolsErr = result.errors.find((e) =>
+            e.message.includes('missing "./tools" entry point'),
+        );
+        expect(toolsErr).toBeDefined();
+    });
+
+    it('loads a devOnly action handler from ./tools, a regular action from `.`', async () => {
+        const dir = createTempPluginWithSource({
+            pluginYaml: [
+                'name: test-plugin',
+                'actions:',
+                '  - name: fontFallback',
+                '  - name: runThing',
+                '    devOnly: true',
+            ].join('\n'),
+            packageJson: {
+                name: '@jay-framework/test-plugin',
+                exports: {
+                    '.': './dist/index.js',
+                    './tools': './dist/tools.js',
+                    './plugin.yaml': './plugin.yaml',
+                },
+            },
+            sourceFiles: {
+                'dist/index.js': `export { fontFallback } from './f.js';\n`,
+                'dist/tools.js': `export { runThing } from './r.js';\n`,
+            },
+        });
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        expect(result.errors).toEqual([]);
+    });
+});
+
+// DL#179 — compiler leak scan
+describe('validatePlugin — compiler leak scan', () => {
+    it('errors when the serve entry imports a compiler package', async () => {
+        const dir = createTempPluginWithSource({
+            pluginYaml: minimalPluginYaml,
+            packageJson: {
+                name: '@jay-framework/test-plugin',
+                exports: {
+                    '.': './dist/index.js',
+                    './tools': './dist/tools.js',
+                    './plugin.yaml': './plugin.yaml',
+                },
+            },
+            sourceFiles: {
+                'dist/index.js': `import { walkElements } from '@jay-framework/compiler-shared';\nexport { walkElements };\n`,
+                'dist/tools.js': `export { testHandler } from './h.js';\n`,
+            },
+        });
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        const leak = result.errors.find((e) => e.type === 'compiler-leak');
+        expect(leak).toBeDefined();
+    });
+
+    it('passes when the serve entry is compiler-free', async () => {
+        const dir = createTempPluginWithSource({
+            pluginYaml: minimalPluginYaml,
+            packageJson: {
+                name: '@jay-framework/test-plugin',
+                exports: {
+                    '.': './dist/index.js',
+                    './tools': './dist/tools.js',
+                    './plugin.yaml': './plugin.yaml',
+                },
+            },
+            sourceFiles: {
+                'dist/index.js': `export {};\n`,
+                'dist/tools.js': `import { walkElements } from '@jay-framework/compiler-shared';\nexport { testHandler } from './h.js';\n`,
+            },
+        });
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        const leak = result.errors.find((e) => e.type === 'compiler-leak');
+        expect(leak).toBeUndefined();
+    });
+});

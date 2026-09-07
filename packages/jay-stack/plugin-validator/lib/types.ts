@@ -27,7 +27,8 @@ export interface ValidationError {
         | 'contract-invalid'
         | 'component-contract-mismatch'
         | 'type-generation-failed'
-        | 'add-menu-catalog';
+        | 'add-menu-catalog'
+        | 'compiler-leak';
     message: string;
     location?: string;
     suggestion?: string;

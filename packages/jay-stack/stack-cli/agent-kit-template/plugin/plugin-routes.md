@@ -149,7 +149,7 @@ There is no enforced convention — just pick a prefix that's unique and descrip
 
 ## Dev-only routes
 
-Some plugin pages are **dev-server tooling** — internal dashboards, QA fixtures, builder settings UIs. Mark them with `devOnly: true` so consumers of `listRoutes()` can distinguish them from public site pages. Production builds do not yet exclude `devOnly` routes — that is planned for a future framework release.
+Some plugin pages are **dev-server tooling** — internal dashboards, QA fixtures, builder settings UIs. Mark them with `devOnly: true` so they are served by the dev server, distinguishable via `listRoutes()`, and **excluded from production builds** (not compiled, not in the route manifest).
 
 ```yaml
 routes:
@@ -168,7 +168,48 @@ routes:
 | `listRoutes()` / `RouteInfo`   | Includes route with `devOnly: true`                                  |
 | Page navigation UIs            | **Consumer choice** — tools may filter `devOnly` routes from pickers |
 | Routes loaded by explicit path | **Unaffected** — embed/host tools pass a known route URL             |
-| Production build               | **Deferred** — future task excludes dev-only routes                  |
+| Production build               | **Excluded** — the route is not compiled or bundled                  |
+| Component entry (compiler)     | Resolved from **`./tools`** when the page uses the compiler          |
+
+## Settings pages (devOnly route + devOnly actions)
+
+A common pattern: a `devOnly` route whose interactive form calls plugin server handlers to run
+analysis, rebuild a catalog, etc. Because a settings page runs in the browser it invokes handlers via
+the **action RPC** — so these handlers must be **actions**, not CLI commands. When the handler uses the
+compiler (e.g. it parses jay-html), mark the action **`devOnly: true`**: its handler then lives in
+`./tools` (compiler allowed) and is excluded from production alongside the route.
+
+```yaml
+routes:
+  - path: /my-plugin/settings
+    jayHtml: ./dist/pages/settings/page.jay-html
+    component: mySettingsPage
+    devOnly: true
+actions:
+  - name: runAnalysis
+    action: run-analysis.jay-action
+    devOnly: true # handler in ./tools, may use the compiler, excluded from production
+  - name: fontFallback
+    action: font-fallback.jay-action # normal production action — compiler-free, stays on `.`
+```
+
+```typescript
+// lib/tools.ts (./tools) — compiler allowed, never in the production serve bundle
+export { runAnalysis } from './actions/run-analysis.js'; // uses the compiler
+export { mySettingsPage } from './pages/settings/page.js';
+
+// lib/index.ts (.) — compiler-free serve entry
+export { fontFallback } from './actions/font-fallback.js';
+```
+
+- The dev server registers **all** actions (devOnly from `./tools`, regular from `.`) and serves the
+  route end-to-end with the compiler present.
+- Production build **excludes** the `devOnly` route (not compiled) and **skips** `devOnly` actions
+  (not registered/dispatchable). A compiler-using action left **without** `devOnly` would leak the
+  compiler into `dist/index.js` and fail the leak scan — that is the signal to mark it `devOnly` (or
+  reclassify it as a command).
+- `devOnly` is orthogonal to compiler use: a compiler-free admin action can still be `devOnly` purely
+  to keep it out of production.
 
 ### Standalone access
 

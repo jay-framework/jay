@@ -371,7 +371,7 @@ async function registerNpmPluginActions(
     const registeredActions: string[] = [];
 
     try {
-        // Import the package's main module
+        // Import the package's main (serve, compiler-free) module.
         let pluginModule: Record<string, any>;
         if (viteServer) {
             pluginModule = await viteServer.ssrLoadModule(packageName);
@@ -379,10 +379,25 @@ async function registerNpmPluginActions(
             pluginModule = await import(packageName);
         }
 
+        // DL#180: devOnly action handlers live in the plugin's `./tools` entry (compiler-allowed),
+        // not on `.`. Load that module lazily only when a devOnly action is declared, so plugins
+        // without devOnly actions never require a `./tools` export.
+        let toolsModule: Record<string, any> | undefined;
+        const loadToolsModule = async (): Promise<Record<string, any>> => {
+            if (!toolsModule) {
+                const toolsEntry = `${packageName}/tools`;
+                toolsModule = viteServer
+                    ? await viteServer.ssrLoadModule(toolsEntry)
+                    : await import(toolsEntry);
+            }
+            return toolsModule;
+        };
+
         // Register each declared action
         for (const entry of pluginConfig.actions!) {
-            const { name: actionName, action: actionPath } = normalizeActionEntry(entry);
-            const actionExport = pluginModule[actionName];
+            const { name: actionName, action: actionPath, devOnly } = normalizeActionEntry(entry);
+            const sourceModule = devOnly ? await loadToolsModule() : pluginModule;
+            const actionExport = sourceModule[actionName];
 
             if (actionExport && isJayAction(actionExport)) {
                 registry.register(actionExport as any);
@@ -492,6 +507,16 @@ export async function discoverPluginActions(
         }
     }
 
+    // DL#180: devOnly action handlers live in the plugin's tools module (compiler-allowed), not the
+    // serve entry. For local plugins that is a sibling `tools.ts`/`tools.js`.
+    const resolveLocalToolsModulePath = (): string | null => {
+        for (const candidate of ['tools.ts', 'tools.js']) {
+            const candidatePath = path.join(pluginPath, candidate);
+            if (fs.existsSync(candidatePath)) return candidatePath;
+        }
+        return null;
+    };
+
     try {
         // Import the plugin module
         // Use Vite's SSR loader for TypeScript files in dev mode
@@ -503,10 +528,27 @@ export async function discoverPluginActions(
             pluginModule = await import(modulePath);
         }
 
+        let toolsModule: Record<string, any> | undefined;
+        const loadToolsModule = async (): Promise<Record<string, any> | undefined> => {
+            if (toolsModule) return toolsModule;
+            const toolsPath = resolveLocalToolsModulePath();
+            if (!toolsPath) {
+                getLogger().warn(
+                    `[Actions] Plugin "${pluginName}" declares a devOnly action but has no tools.ts/tools.js module`,
+                );
+                return undefined;
+            }
+            toolsModule = viteServer
+                ? await viteServer.ssrLoadModule(toolsPath)
+                : await import(toolsPath);
+            return toolsModule;
+        };
+
         // Register each declared action
         for (const entry of pluginConfig.actions) {
-            const { name: actionName, action: actionPath } = normalizeActionEntry(entry);
-            const actionExport = pluginModule[actionName];
+            const { name: actionName, action: actionPath, devOnly } = normalizeActionEntry(entry);
+            const sourceModule = devOnly ? await loadToolsModule() : pluginModule;
+            const actionExport = sourceModule?.[actionName];
 
             if (actionExport && isJayAction(actionExport)) {
                 registry.register(actionExport as any);

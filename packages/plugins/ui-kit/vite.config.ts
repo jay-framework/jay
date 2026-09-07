@@ -17,7 +17,11 @@ export default defineConfig(({ isSsrBuild }) => ({
         emptyOutDir: false,
         lib: {
             entry: isSsrBuild
-                ? { index: resolve(__dirname, 'lib/index.ts') }
+                ? {
+                      index: resolve(__dirname, 'lib/index.ts'),
+                      // Tools entry (DL#179): agent-kit generator, compiler-allowed, toolchain-only.
+                      tools: resolve(__dirname, 'lib/tools.ts'),
+                  }
                 : { 'index.client': resolve(__dirname, 'lib/index.client.ts') },
             formats: ['es'],
         },
@@ -28,6 +32,8 @@ export default defineConfig(({ isSsrBuild }) => ({
                 '@jay-framework/stack-client-runtime',
                 '@jay-framework/reactive',
                 '@jay-framework/runtime',
+                // Externalize the compiler so any leak into `.` surfaces in dist/index.js (DL#179).
+                /^@jay-framework\/compiler-/,
             ],
         },
     },

@@ -13,6 +13,7 @@
   "exports": {
     ".": "./dist/index.js",
     "./client": "./dist/index.client.js",
+    "./tools": "./dist/tools.js",
     "./plugin.yaml": "./plugin.yaml",
     "./popover-menu.jay-contract": "./dist/popover-menu.jay-contract",
     "./scroll-carousel.jay-contract": "./dist/scroll-carousel.jay-contract",

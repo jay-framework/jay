@@ -9,7 +9,11 @@ export default defineConfig(({ isSsrBuild }) => ({
         emptyOutDir: false,
         lib: {
             entry: isSsrBuild
-                ? { index: resolve(__dirname, 'lib/index.ts') }
+                ? {
+                      index: resolve(__dirname, 'lib/index.ts'),
+                      // Tools entry (DL#179): CLI commands, compiler-allowed, toolchain-only.
+                      tools: resolve(__dirname, 'lib/tools.ts'),
+                  }
                 : { 'index.client': resolve(__dirname, 'lib/index.client.ts') },
             formats: ['es'],
         },

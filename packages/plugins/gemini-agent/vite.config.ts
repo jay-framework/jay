@@ -17,7 +17,11 @@ export default defineConfig(({ isSsrBuild }) => ({
         emptyOutDir: false,
         lib: {
             entry: isSsrBuild
-                ? { index: resolve(__dirname, 'lib/index.ts') }
+                ? {
+                      index: resolve(__dirname, 'lib/index.ts'),
+                      // Tools entry (DL#179): setup handler, compiler-allowed, toolchain-only.
+                      tools: resolve(__dirname, 'lib/tools.ts'),
+                  }
                 : { 'index.client': resolve(__dirname, 'lib/index.client.ts') },
             formats: ['es'],
         },
@@ -30,6 +34,8 @@ export default defineConfig(({ isSsrBuild }) => ({
                 '@jay-framework/stack-server-runtime',
                 '@jay-framework/component',
                 '@google/genai',
+                // Externalize the compiler so any leak into `.` surfaces in dist/index.js (DL#179).
+                /^@jay-framework\/compiler-/,
             ],
         },
     },

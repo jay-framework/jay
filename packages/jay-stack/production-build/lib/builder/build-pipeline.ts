@@ -271,7 +271,18 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
     // 0f. Discover plugin routes
     const pluginRoutes = await scanPluginRoutes(options.projectRoot, routes);
 
-    const allRoutes = [...routes, ...pluginRoutes];
+    // DL#180 (finishing DL#171 Phase 2): dev-only routes are dev-server tooling (e.g. plugin
+    // settings UIs). Exclude them from the production build entirely — never compiled, bundled,
+    // or written to the route manifest — so their (possibly compiler-using) page components never
+    // ship to production.
+    const excludedDevOnly = [...routes, ...pluginRoutes].filter((route) => route.devOnly);
+    if (excludedDevOnly.length > 0) {
+        logger.info(
+            `[Build] Excluding ${excludedDevOnly.length} devOnly route(s) from production: ` +
+                excludedDevOnly.map((r) => r.rawRoute).join(', '),
+        );
+    }
+    const allRoutes = [...routes, ...pluginRoutes].filter((route) => !route.devOnly);
 
     const routeEntries: BuildRouteEntry[] = allRoutes.map((route) => {
         let serverModule: string = '';

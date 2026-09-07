@@ -2,6 +2,16 @@
 
 Actions provide RPC-style server endpoints for client-to-server communication.
 
+> **Actions are compiler-free and live on the `.` entry.** They run in production, so their handlers
+> must not import the compiler (`@jay-framework/compiler-*`). A handler that needs the compiler is
+> either a [CLI command](commands-guide.md) or a **`devOnly` action** (see below) — not a regular
+> action. `validate-plugin`'s leak scan fails a compiler import in `dist/index.js`.
+>
+> **`devOnly` actions** (`actions[].devOnly: true`) — browser-callable handlers for settings/admin
+> pages that may use the compiler and are **excluded from production**. Their handlers live in the
+> `./tools` entry (`lib/tools.ts`), and the dev server registers them normally. See the settings-page
+> pattern in [plugin-routes.md](plugin-routes.md).
+
 ## makeJayAction — Mutations (POST)
 
 ```typescript

@@ -4,6 +4,13 @@ For the full contract syntax, decision tree, and examples, see the shared [Contr
 
 This file covers plugin-specific contract concerns. Contracts (`.jay-contract` files) are the source of truth for a component's data shape. Define the contract before implementing the component.
 
+> **Interactive components need a `./client` export.** If a component built from this contract declares
+> an interactive phase (`.withInteractive(...)`) — or the plugin declares `contexts` — the package
+> must expose a `./client` export (`./dist/index.client.js`) for browser hydration. `validate-plugin`
+> detects interactivity by scanning the built server bundle and errors if `./client` is missing.
+> Server-only (slow/fast) component plugins need no `./client`. See
+> [plugin-structure.md](plugin-structure.md).
+
 ## Basic Structure
 
 ```yaml

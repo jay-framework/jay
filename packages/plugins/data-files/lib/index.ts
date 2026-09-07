@@ -9,4 +9,4 @@ export {
     generateDataListContract,
     generateDataItemContract,
 } from './contract-generator.js';
-export { generateSchema, generateSchemaCommand } from './generate-schema.js';
+// CLI commands (generateSchema / generateSchemaCommand) are tools-time — moved to ./tools (DL#179).

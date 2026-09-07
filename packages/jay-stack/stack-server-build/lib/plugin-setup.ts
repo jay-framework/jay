@@ -313,16 +313,18 @@ async function loadHandler<T extends (...args: any[]) => any>(
                 `Available exports: ${Object.keys(module).join(', ')}`,
         );
     } else {
-        // NPM plugin: handler is an export name from the package main module
+        // NPM plugin: agent-kit / setup are tools handlers — DL#179 loads them only from the
+        // `./tools` entry (compiler-allowed), keeping the serve entry (`.`) compiler-free.
+        const toolsEntry = `${plugin.packageName}/tools`;
         if (viteServer) {
-            module = await viteServer.ssrLoadModule(plugin.packageName);
+            module = await viteServer.ssrLoadModule(toolsEntry);
         } else {
-            module = await import(plugin.packageName);
+            module = await import(toolsEntry);
         }
 
         if (typeof module[handlerName] !== 'function') {
             throw new Error(
-                `Handler "${handlerName}" not found as export in "${plugin.packageName}". ` +
+                `Handler "${handlerName}" not found as export in "${toolsEntry}". ` +
                     `Available exports: ${Object.keys(module).join(', ')}`,
             );
         }

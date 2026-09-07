@@ -23,7 +23,7 @@ agentkit: generateMyAgentKit # export name (NPM) or ./path (local) — optional
 description: Validate credentials and install config # optional, top-level
 ```
 
-**NPM plugins:** `setup` and `agentkit` are export names from the package entry point (`lib/index.ts`).  
+**NPM plugins:** `setup` and `agentkit` are export names from the **`./tools`** entry (`lib/tools.ts`). They are tools-time handlers (may use the compiler) and load only from `./tools` — do not re-export them from `lib/index.ts`, or the compiler can leak into the serve bundle.  
 **Local plugins:** relative paths to handler modules (e.g. `agentkit: ./agentkit` — export `agentkit` or `default` from that module).
 
 `jay-stack validate-plugin` checks that declared handlers exist and are correctly exported.
@@ -266,13 +266,16 @@ See [aiditor-settings-guide.md](aiditor-settings-guide.md) for the full checklis
 
 ## Exporting Handlers
 
-For NPM plugins, export handlers from the package entry point:
+For NPM plugins, export setup/agent-kit handlers from the **`./tools`** entry (they may use the
+compiler and must stay out of the serve bundle):
 
 ```typescript
-// lib/index.ts
+// lib/tools.ts (./tools) — compiler allowed, toolchain-only
 export { setupMyPlugin } from './setup.js';
 export { generateMyAgentKit } from './agentkit.js';
-// ... other exports (components, actions, services)
+
+// lib/index.ts (.) — serve entry, compiler-free
+// ... components, actions, services, init (NOT setup/agentkit)
 ```
 
 For local plugins, use relative paths in `plugin.yaml` and export `agentkit` or `default` from the handler module.

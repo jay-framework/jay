@@ -900,7 +900,9 @@ async function runPluginValidators(
                     const handlerPath = path.resolve(plugin.pluginPath, validatorDef.handler);
                     handlerModule = await import(handlerPath);
                 } else {
-                    handlerModule = await import(plugin.packageName);
+                    // DL#179: tools handlers (validators) load only from the `./tools` entry,
+                    // which may depend on the compiler. The serve entry (`.`) stays compiler-free.
+                    handlerModule = await import(`${plugin.packageName}/tools`);
                 }
 
                 validatorFn = plugin.isLocal

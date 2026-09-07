@@ -1,16 +1,4 @@
-export { validateTokens } from './validators/design-tokens.js';
-export { validateComponents } from './validators/design-components.js';
-export { validateStructure } from './validators/design-structure.js';
-export { validateContrast } from './validators/design-contrast.js';
-export { validateFontFallbacks } from './validators/design-font-fallbacks.js';
-export { validateUndefinedVars } from './validators/design-undefined-vars.js';
+// Serve entry (DL#179): must stay compiler-free. Only the production `fontFallback` action lives
+// here — it uses @capsizecss, not the compiler. All tools-time surfaces (validators, agent-kit,
+// devOnly settings actions, settings page) live in `./tools` (lib/tools.ts).
 export { fontFallback } from './actions/font-fallback.js';
-export { generateDesignSystemAgentKit, ADD_MENU_GENERATED_REL } from './generate-add-menu.js';
-export {
-    getDesignSystemSettingsStatus,
-    runDesignSystemAnalysisAction as runDesignSystemAnalysis,
-    loadDesignSystemAddMenuCatalog,
-    saveDesignSystemAddMenuCatalog,
-    regenerateDesignSystemAddMenu,
-} from './settings-actions.js';
-export { designSystemSettingsPage } from './pages/settings/page.js';

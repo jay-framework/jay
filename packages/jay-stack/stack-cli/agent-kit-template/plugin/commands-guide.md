@@ -75,6 +75,21 @@ commands:
     command: commands/upload-public.jay-command
 ```
 
+### 4. Export from `./tools`
+
+Commands are the **tools** primitive — they load only from the `./tools` entry (`lib/tools.ts`), which
+may use the compiler. Re-export each command handler there, and add the `./tools` export to
+`package.json`:
+
+```typescript
+// lib/tools.ts (./tools) — toolchain-only, compiler allowed
+export { uploadPublic } from './commands/upload-public.js';
+```
+
+Do **not** re-export commands from `lib/index.ts` — the serve entry must stay compiler-free. (An
+operation that must be callable from a browser page is an [action](actions-guide.md), not a command;
+if it also needs the compiler, mark the action `devOnly`.)
+
 ## `CONSOLE_CONTEXT` Service
 
 A framework-provided service with project info and a logger:

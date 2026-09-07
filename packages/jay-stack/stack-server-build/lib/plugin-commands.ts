@@ -207,10 +207,13 @@ async function loadCommandHandler(
             module = await import(modulePath);
         }
     } else {
+        // CLI commands are tools handlers — DL#179 loads them only from the `./tools` entry
+        // (compiler-allowed), keeping the serve entry (`.`) compiler-free.
+        const toolsEntry = `${command.packageName}/tools`;
         if (viteServer) {
-            module = await viteServer.ssrLoadModule(command.packageName);
+            module = await viteServer.ssrLoadModule(toolsEntry);
         } else {
-            module = await import(command.packageName);
+            module = await import(toolsEntry);
         }
     }
 

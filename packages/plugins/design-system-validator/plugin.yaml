@@ -4,11 +4,19 @@ agentkit: generateDesignSystemAgentKit
 description: Generate AIditor add-menu entries from DESIGN.md tokens
 
 actions:
-  - getDesignSystemSettingsStatus
-  - runDesignSystemAnalysis
-  - loadDesignSystemAddMenuCatalog
-  - saveDesignSystemAddMenuCatalog
-  - regenerateDesignSystemAddMenu
+  # DL#180: settings-page actions — browser-callable from the devOnly /design-system/settings route,
+  # use the compiler via run-design-analysis. Handlers live in ./tools; excluded from production.
+  - name: getDesignSystemSettingsStatus
+    devOnly: true
+  - name: runDesignSystemAnalysis
+    devOnly: true
+  - name: loadDesignSystemAddMenuCatalog
+    devOnly: true
+  - name: saveDesignSystemAddMenuCatalog
+    devOnly: true
+  - name: regenerateDesignSystemAddMenu
+    devOnly: true
+  # Production action (compiler-free, @capsizecss only) — stays on the serve entry (`.`).
   - name: fontFallback
     action: font-fallback.jay-action
 

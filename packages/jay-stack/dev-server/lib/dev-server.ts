@@ -120,7 +120,7 @@ async function scanPluginRoutes(projectRoot: string, projectRoutes: JayRoutes): 
             const isLocalComponent = route.component.startsWith('.');
             const compPath = isLocalComponent
                 ? path.resolve(plugin.pluginPath, route.component)
-                : resolvePluginModule(plugin);
+                : resolvePluginModule(plugin, route.devOnly === true ? './tools' : '.');
             // For NPM plugins, route.component is the export name (e.g., 'aiditorPage')
             const componentExport = isLocalComponent ? undefined : route.component;
 
@@ -179,16 +179,21 @@ function resolvePluginExport(pluginPath: string, exportSubpath: string): string 
 }
 
 /** Resolve the main module path for a plugin. */
-function resolvePluginModule(plugin: {
-    pluginPath: string;
-    manifest: { module?: string };
-}): string {
+function resolvePluginModule(
+    plugin: {
+        pluginPath: string;
+        manifest: { module?: string };
+    },
+    // DL#180: dev-only route components may use the compiler, so they live behind the plugin's
+    // `./tools` entry rather than the compiler-free serve entry (`.`).
+    exportKey: '.' | './tools' = '.',
+): string {
     // For NPM packages: read main/exports from package.json
     const pkgJsonPath = path.join(plugin.pluginPath, 'package.json');
     if (fsSync.existsSync(pkgJsonPath)) {
         try {
             const pkg = JSON.parse(fsSync.readFileSync(pkgJsonPath, 'utf-8'));
-            const mainExport = pkg.exports?.['.'];
+            const mainExport = pkg.exports?.[exportKey];
             const mainPath =
                 typeof mainExport === 'string'
                     ? mainExport

@@ -126,22 +126,27 @@ export interface PluginManifest {
 /**
  * Action entry in plugin.yaml.
  * - `string`: export name only, no metadata (not exposed to AI agents)
- * - `{ name, action }`: export name + path to .jay-action metadata file
+ * - `{ name, action, devOnly }`: export name + path to .jay-action metadata file
+ *
+ * `devOnly` (DL#180): the action is a dev/tools-only surface — its handler lives in the plugin's
+ * `./tools` entry (compiler-allowed), it is registered by the dev server, and it is excluded from
+ * production builds/serve. Regular (non-devOnly) actions must be compiler-free on `.` (DL#179).
  */
-export type ActionManifestEntry = string | { name: string; action: string };
+export type ActionManifestEntry = string | { name: string; action?: string; devOnly?: boolean };
 
 /**
- * Normalizes an action manifest entry to { name, action? }.
- * Strings become { name: string, action: undefined }.
+ * Normalizes an action manifest entry to { name, action?, devOnly? }.
+ * Strings become { name: string }.
  */
 export function normalizeActionEntry(entry: ActionManifestEntry): {
     name: string;
     action?: string;
+    devOnly?: boolean;
 } {
     if (typeof entry === 'string') {
         return { name: entry };
     }
-    return { name: entry.name, action: entry.action };
+    return { name: entry.name, action: entry.action, devOnly: entry.devOnly };
 }
 
 /**

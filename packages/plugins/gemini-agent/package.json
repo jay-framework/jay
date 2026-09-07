@@ -9,6 +9,7 @@
   "exports": {
     ".": "./dist/index.js",
     "./client": "./dist/index.client.js",
+    "./tools": "./dist/tools.js",
     "./gemini-chat.jay-contract": "./dist/contracts/gemini-chat.jay-contract",
     "./send-message.jay-action": "./dist/actions/send-message.jay-action",
     "./submit-tool-results.jay-action": "./dist/actions/submit-tool-results.jay-action",
@@ -23,7 +24,7 @@
     "build:client": "vite build",
     "build:server": "vite build --ssr",
     "build:copy-contract": "mkdir -p dist/contracts && cp lib/contracts/*.jay-contract* dist/contracts/ && mkdir -p dist/actions && cp lib/actions/*.jay-action dist/actions/",
-    "build:types": "tsup lib/index.ts --dts-only --format esm",
+    "build:types": "tsup lib/index.ts lib/tools.ts --dts-only --format esm",
     "build:check-types": "tsc",
     "definitions": "jay-cli definitions lib",
     "clean": "rimraf dist",

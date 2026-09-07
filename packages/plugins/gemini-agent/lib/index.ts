@@ -1,8 +1,7 @@
 // Plugin init
 export { init, GEMINI_SERVICE } from './init';
 
-// Setup handler
-export { setupGeminiAgent } from './setup';
+// Setup handler (setupGeminiAgent) is tools-time — moved to ./tools (DL#179).
 
 // Server actions
 export { sendMessage, submitToolResults, getToolDescriptions } from './actions/handlers';

@@ -1,6 +1,6 @@
 import { parse } from 'node-html-parser';
 import { describe, it, expect } from 'vitest';
-import { validateTokens } from '../../lib';
+import { validateTokens } from '../../lib/tools';
 import type { JayHtmlValidationContext } from '@jay-framework/compiler-shared';
 import path from 'node:path';
 

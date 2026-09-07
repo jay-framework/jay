@@ -17,7 +17,7 @@ A plugin package ships code that runs in two very different phases:
   goal: small Wix BaaS deploy bundle).
 - **Tools-time** — validators (DL#145), **CLI commands**, agent-kit generators, `jay-stack setup`
   handlers, and dev-only route components. Run only under the Jay toolchain (`jay-stack
-  validate`/`agent-kit`/`setup`/`run`, dev-server). These legitimately use compiler APIs
+validate`/`agent-kit`/`setup`/`run`, dev-server). These legitimately use compiler APIs
   (`parseTemplateParts`, `walkElements`, `compileContractFile`, …).
 
 The two phases share one npm package but must **not** share one module graph.
@@ -32,8 +32,8 @@ can be triggered from the CLI:
 - **CLI commands** are the **tools** primitive — invoked under the toolchain (`jay-stack run …`).
   They live in `./tools` and **may use the compiler**.
 
-So the rule is simple and non-ambiguous: *if a handler needs the compiler, it is a command, not an
-action.* This replaces the earlier "actions try `./tools` then `.`" fallback with a clean split.
+So the rule is simple and non-ambiguous: _if a handler needs the compiler, it is a command, not an
+action._ This replaces the earlier "actions try `./tools` then `.`" fallback with a clean split.
 
 ## Problem
 
@@ -41,27 +41,27 @@ Every tools-time handler is currently loaded from the plugin's **main entry (`.`
 the same entry the serve path imports. So any tools handler that touches the compiler drags the
 compiler into the serve bundle. This is systemic across three loaders, not specific to validators:
 
-| Capability | Loader | Current entry | Target entry |
-| ---------- | ------ | ------------- | ------------ |
-| `validators` | `stack-cli/lib/validate.ts:903` | `import(plugin.packageName)` — `.` | `./tools` |
-| `commands` | `stack-server-build/lib/plugin-commands.ts:213` (`loadCommandHandler`) | `import(command.packageName)` — `.` | `./tools` |
-| `agentkit` / `setup` | `stack-server-build/lib/plugin-setup.ts:315` (`loadHandler`) | `import(plugin.packageName)` — `.` | `./tools` |
-| `actions` | `stack-server-build/lib/action-discovery.ts` (`registerNpmPluginActions`) | package main module — `.` | **`.` (unchanged; compiler-free)** |
+| Capability           | Loader                                                                    | Current entry                       | Target entry                       |
+| -------------------- | ------------------------------------------------------------------------- | ----------------------------------- | ---------------------------------- |
+| `validators`         | `stack-cli/lib/validate.ts:903`                                           | `import(plugin.packageName)` — `.`  | `./tools`                          |
+| `commands`           | `stack-server-build/lib/plugin-commands.ts:213` (`loadCommandHandler`)    | `import(command.packageName)` — `.` | `./tools`                          |
+| `agentkit` / `setup` | `stack-server-build/lib/plugin-setup.ts:315` (`loadHandler`)              | `import(plugin.packageName)` — `.`  | `./tools`                          |
+| `actions`            | `stack-server-build/lib/action-discovery.ts` (`registerNpmPluginActions`) | package main module — `.`           | **`.` (unchanged; compiler-free)** |
 
 Because these handlers are named exports of the plugin, `index.ts` re-exports them:
 
 ```ts
 // index.ts (main / serve entry) — design-system-validator, abbreviated
-export { validateTokens } from './validators/design-tokens.js';        // compiler-shared
+export { validateTokens } from './validators/design-tokens.js'; // compiler-shared
 export { generateDesignSystemAgentKit } from './generate-add-menu.js'; // agentkit
-export { runDesignSystemAnalysis } from './settings-actions.js';       // → run-design-analysis → compiler-jay-html
-export { designSystemSettingsPage } from './pages/settings/page.js';   // devOnly route → compiler-jay-html
+export { runDesignSystemAnalysis } from './settings-actions.js'; // → run-design-analysis → compiler-jay-html
+export { designSystemSettingsPage } from './pages/settings/page.js'; // devOnly route → compiler-jay-html
 ```
 
 Now `import('@jay-framework/design-system-validator')` (the serve-time entry) transitively loads
 `compiler-jay-html`. The compiler enters the deploy trace and becomes a runtime `dependency`.
 
-**Key correction from the first draft of this log:** the leak is *not* the validator. In the
+**Key correction from the first draft of this log:** the leak is _not_ the validator. In the
 in-repo mixed plugin (`design-system-validator`) the validator only uses `compiler-shared`
 (`walkElements` + erased `import type`s); the real `compiler-jay-html` leak comes through
 `run-design-analysis.ts`, reached via the **actions, agent-kit, and dev-only page** — all exported
@@ -120,16 +120,16 @@ lib/tools.ts         →  dist/tools.js         ("./tools")   tools-time,  compi
 
 ### Capability → entry routing
 
-| Capability (manifest field)    | Phase       | Loaded from            |
-| ------------------------------ | ----------- | ---------------------- |
-| `contracts` / `dynamic_contracts` | serve    | `.` (+ subpaths)       |
-| production `routes` component   | serve       | route `component`/`compPath` (compiler-free) |
-| `contexts`, `init`/global       | serve       | `.` / `./client`       |
-| `actions`                       | serve       | **`.` (compiler-free)** |
-| `validators`                    | tools       | **`./tools`** |
-| `commands`                      | tools       | **`./tools`** |
-| `agentkit`, `setup`             | tools       | **`./tools`** |
-| `devOnly` / setup `routes`      | tools       | route path (excluded from deploy; compiler OK) |
+| Capability (manifest field)       | Phase | Loaded from                                    |
+| --------------------------------- | ----- | ---------------------------------------------- |
+| `contracts` / `dynamic_contracts` | serve | `.` (+ subpaths)                               |
+| production `routes` component     | serve | route `component`/`compPath` (compiler-free)   |
+| `contexts`, `init`/global         | serve | `.` / `./client`                               |
+| `actions`                         | serve | **`.` (compiler-free)**                        |
+| `validators`                      | tools | **`./tools`**                                  |
+| `commands`                        | tools | **`./tools`**                                  |
+| `agentkit`, `setup`               | tools | **`./tools`**                                  |
+| `devOnly` / setup `routes`        | tools | route path (excluded from deploy; compiler OK) |
 
 ### Loader changes
 
@@ -148,8 +148,8 @@ directly from `./tools` (clean cut, no fallback):
 ```ts
 // npm branch
 module = viteServer
-    ? await viteServer.ssrLoadModule(`${packageName}/tools`)
-    : await import(`${packageName}/tools`);
+  ? await viteServer.ssrLoadModule(`${packageName}/tools`)
+  : await import(`${packageName}/tools`);
 ```
 
 `action-discovery.ts` `registerNpmPluginActions` is **unchanged** — actions keep loading from `.` and
@@ -194,7 +194,7 @@ Per CLAUDE.md prevention order, catch the leak at validation time:
 
 - **New lint rule (error):** `dist/index.js` must contain no `@jay-framework/compiler-` import.
   Implemented as a text scan of the built `.` bundle (plugins build with `minify: false`), naming the
-  offending re-export. This is now *achievable* for `design-system-validator` because all its
+  offending re-export. This is now _achievable_ for `design-system-validator` because all its
   compiler-using handlers move to `./tools`.
 - **New lint rule (error):** if `plugin.yaml` declares `validators`, the package must expose a
   `./tools` export (Part 2 rule 2).
@@ -218,6 +218,7 @@ graph TD
 ## Implementation Plan
 
 ### Phase 1 — Loaders
+
 1. `validate.ts`: published validators load from `${packageName}/tools` (hard cut).
 2. `plugin-setup.ts` `loadHandler` (agent-kit/setup) + `plugin-commands.ts` `loadCommandHandler`:
    load npm handlers from `./tools` (clean cut). `action-discovery.ts` unchanged (actions stay `.`).
@@ -230,28 +231,28 @@ to `peerDependencies` (keep a `devDependency`).
 
 **In-repo plugin inventory** (all under `packages/plugins/`):
 
-| Plugin                    | Declared capabilities                | Action for #179 |
-| ------------------------- | ------------------------------------ | --------------- |
-| `a11y-validator`          | `validators`                         | Move validator → `./tools`; `.` becomes empty. Uses `compiler-shared`. |
-| `seo-validator`           | `validators`                         | Same as a11y. |
+| Plugin                    | Declared capabilities                   | Action for #179                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `a11y-validator`          | `validators`                            | Move validator → `./tools`; `.` becomes empty. Uses `compiler-shared`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `seo-validator`           | `validators`                            | Same as a11y.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `design-system-validator` | `agentkit, actions, routes, validators` | **In-repo mixed case.** `fontFallback` stays a genuine (compiler-free) **action** on `.`. The compiler-using analysis handlers (`runDesignSystemAnalysis`, …, via `run-design-analysis.ts` → `parseJayFile`/`JAY_IMPORT_RESOLVER`) become **`devOnly` actions** with handlers in `./tools` (**DL#180**) — kept as actions so the settings page's browser RPC still works — together with validators + `generateDesignSystemAgentKit`. Split `settings-actions.ts` so compiler-free actions stay in `.` (see module-taint note). `index.js` then ends compiler-free. Verify with the leak scan. |
-| `data-files`              | `dynamic_contracts, commands`        | `commands` → `./tools` (clean cut, even if compiler-free). Verify interactive gating. |
-| `markdown`                | `contracts`                          | Verify interactive gating; keeps `./client` iff interactive. |
-| `ui-kit`                  | `contracts, agentkit`                | `agentkit` → `./tools`. Verify interactive gating. |
-| `gemini-agent`            | `contracts, actions, setup`          | `setup` → `./tools`; `actions` stay `.`. Verify interactive gating. |
-| `webmcp`                  | `global: true` (no manifest fields)  | Must **not** false-warn — `global`+`init` export counts (Part 2 rule 1). |
+| `data-files`              | `dynamic_contracts, commands`           | `commands` → `./tools` (clean cut, even if compiler-free). Verify interactive gating.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `markdown`                | `contracts`                             | Verify interactive gating; keeps `./client` iff interactive.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `ui-kit`                  | `contracts, agentkit`                   | `agentkit` → `./tools`. Verify interactive gating.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `gemini-agent`            | `contracts, actions, setup`             | `setup` → `./tools`; `actions` stay `.`. Verify interactive gating.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `webmcp`                  | `global: true` (no manifest fields)     | Must **not** false-warn — `global`+`init` export counts (Part 2 rule 1).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 **External plugin inventory** (scanned 2026-09-03; fixed by their owners, but they set the migration
 scope and confirm the mechanism). Two repos: `../wix/packages/wix-*` and `../aiditor/packages/*`.
 
-| Plugin (repo)                | Leaks compiler into `.`? | Via                                                                 | #179 action |
-| ---------------------------- | ------------------------ | ------------------------------------------------------------------- | ----------- |
-| `wix-media` (wix)            | **Yes**                  | `validate` re-export → `media-validator.ts` value-imports `walkElements`,`resolveBinding` (compiler-shared), `parseTemplateParts` (compiler-jay-html) | validator → `./tools`; commands → `./tools`. Settings actions are compiler-free. |
-| `wix-deploy` (wix)           | **Yes**                  | `validate` re-export → `static-filename-validator.ts` value-imports `walkElements` (compiler-shared), `parseTemplateParts` (compiler-jay-html) | validator → `./tools`; commands → `./tools`. (`build-entry.ts` compiler refs are string stubs, not runtime imports.) |
-| `wix-members` (wix)          | No (`import type` only)   | validator uses type-only compiler imports (erased); runtime uses `node:fs`/`path` | validator → `./tools` for consistency; no dep change needed. |
-| `wix-bookings/stores/stores-v1/data/forms/cart/server-client` (wix) | No | actions/setup/contracts only; no compiler imports | no leak; `compiler-jay-stack` stays devDep. Nothing to move. |
-| `aiditor` (aiditor)          | **Yes**                  | `getContractInspectorTagsAction` (re-exported **and** imported by page) → `resolve-contract-tags-server.ts` value-imports `parseContract`,`ContractTagType` (compiler-jay-html), `checkValidationErrors` (compiler-shared) | Leak is via an **action + page**, not a validator → **DL#180** devOnly action + devOnly route in `./tools`. aiditor assumes a **full dev environment**, so its `/aiditor` route should be marked `devOnly: true` and `getContractInspectorTagsAction` becomes a `devOnly` action (handlers in `./tools`). Squarely in #180's scope — the whole tool is a dev/tools surface, so its compiler use is fine there and never reaches a production serve bundle. |
-| `aiditor-quill` (aiditor)    | No                       | index only re-exports the `agentkit` handler; no compiler imports  | `agentkit` → `./tools`. |
+| Plugin (repo)                                                       | Leaks compiler into `.`? | Via                                                                                                                                                                                                                        | #179 action                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| ------------------------------------------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `wix-media` (wix)                                                   | **Yes**                  | `validate` re-export → `media-validator.ts` value-imports `walkElements`,`resolveBinding` (compiler-shared), `parseTemplateParts` (compiler-jay-html)                                                                      | validator → `./tools`; commands → `./tools`. Settings actions are compiler-free.                                                                                                                                                                                                                                                                                                                                                                           |
+| `wix-deploy` (wix)                                                  | **Yes**                  | `validate` re-export → `static-filename-validator.ts` value-imports `walkElements` (compiler-shared), `parseTemplateParts` (compiler-jay-html)                                                                             | validator → `./tools`; commands → `./tools`. (`build-entry.ts` compiler refs are string stubs, not runtime imports.)                                                                                                                                                                                                                                                                                                                                       |
+| `wix-members` (wix)                                                 | No (`import type` only)  | validator uses type-only compiler imports (erased); runtime uses `node:fs`/`path`                                                                                                                                          | validator → `./tools` for consistency; no dep change needed.                                                                                                                                                                                                                                                                                                                                                                                               |
+| `wix-bookings/stores/stores-v1/data/forms/cart/server-client` (wix) | No                       | actions/setup/contracts only; no compiler imports                                                                                                                                                                          | no leak; `compiler-jay-stack` stays devDep. Nothing to move.                                                                                                                                                                                                                                                                                                                                                                                               |
+| `aiditor` (aiditor)                                                 | **Yes**                  | `getContractInspectorTagsAction` (re-exported **and** imported by page) → `resolve-contract-tags-server.ts` value-imports `parseContract`,`ContractTagType` (compiler-jay-html), `checkValidationErrors` (compiler-shared) | Leak is via an **action + page**, not a validator → **DL#180** devOnly action + devOnly route in `./tools`. aiditor assumes a **full dev environment**, so its `/aiditor` route should be marked `devOnly: true` and `getContractInspectorTagsAction` becomes a `devOnly` action (handlers in `./tools`). Squarely in #180's scope — the whole tool is a dev/tools surface, so its compiler use is fine there and never reaches a production serve bundle. |
+| `aiditor-quill` (aiditor)                                           | No                       | index only re-exports the `agentkit` handler; no compiler imports                                                                                                                                                          | `agentkit` → `./tools`.                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 
 **Two distinct leak shapes, cleanly separated across #179/#180:**
 
@@ -259,18 +260,18 @@ scope and confirm the mechanism). Two repos: `../wix/packages/wix-*` and `../aid
    `design-system` validators) all pull the compiler through a `validate` re-export. **Fully fixed by
    #179's validator → `./tools` split** — no `devOnly` needed.
 2. **Settings-page-with-compiler-action leaks** — the rare case. Only `design-system-validator`
-   (in-repo) and `aiditor` (external) route the compiler through a *browser-callable action / page*.
+   (in-repo) and `aiditor` (external) route the compiler through a _browser-callable action / page_.
    This is what **DL#180** (`devOnly` actions in `./tools`) exists for.
 
 **Key confirmation from the scan:** **no wix or aiditor-quill action imports a compiler package.** The
 entire wix compiler pressure is validators (→ #179). `wix-media`'s settings page (`/wix-media/settings`
-`devOnly:true` + 5 settings actions) is the reference *shape* for #180, but its actions happen to be
+`devOnly:true` + 5 settings actions) is the reference _shape_ for #180, but its actions happen to be
 compiler-free — so #180's `devOnly`-action mechanism is driven solely by `design-system-validator` and
 `aiditor`, validating that the two DLs carve the problem at the right joint. Nobody has a `./tools` or
 `./validator` export yet; `design-system-validator` is our in-repo equivalent for the leak scan.
 
 **Resolved via DL#180 — design-system-validator's dev-only page.** Its `devOnly` settings page invokes
-the analysis via *actions* from the browser. Rather than reclassify those as commands (which would
+the analysis via _actions_ from the browser. Rather than reclassify those as commands (which would
 break the browser RPC), **DL#180** introduces `devOnly` **actions** whose handlers live in `./tools`
 (compiler-OK) and are excluded from production. The settings page keeps calling them as actions in the
 dev server; production build strips both the `devOnly` route and the `devOnly` actions (finishing
@@ -278,14 +279,15 @@ DL#171 Phase 2). Note: `devOnly` routes are **not** excluded from the production
 (`build-pipeline.ts:274` still compiles them; only sitemap skips them) — DL#180 implements that
 exclusion.
 
-**Module-taint note.** A compiler import taints the *whole module*, not just the function that uses
-it: `settings-actions.ts` imports `run-design-analysis.ts` at module top, so *every* handler exported
+**Module-taint note.** A compiler import taints the _whole module_, not just the function that uses
+it: `settings-actions.ts` imports `run-design-analysis.ts` at module top, so _every_ handler exported
 from `settings-actions.ts` drags in the compiler even if it never calls the analysis. Migration must
 therefore **split modules** — keep compiler-free handlers (e.g. `fontFallback`) in modules reachable
 from `index.ts`, and move compiler-using handlers into modules reachable only from `tools.ts`. The
 leak scan (literal `@jay-framework/compiler-` in `dist/index.js`) catches an incomplete split.
 
 ### Phase 3 — Capability-aware validation (Part 2)
+
 3. `validate-plugin`: replace the two unconditional checks (`:330`, `:1055`) with the capability →
    required-export table.
 4. Add the **at-least-one-capability** warning with a `suggestion` link to
@@ -296,11 +298,13 @@ leak scan (literal `@jay-framework/compiler-` in `dist/index.js`) catches an inc
 6. Leak scan: `dist/index.js` text contains no `@jay-framework/compiler-`.
 
 ### Phase 4 — Agent-kit guides (Part 3)
+
 7. Update `validation.md` (validators export from `./tools`, never from `index.ts`),
    `plugin-structure.md` (three-entry model + capability matrix + runtime/tools split),
    `contracts-guide.md` (interactive → `./client`).
 
 ### Phase 5 — Verify
+
 8. `jay-stack validate` runs `a11y`/`seo`/`design-system` validators loaded via `./tools`.
 9. Leak scan on `design-system-validator` `dist/index.js`: zero `@jay-framework/compiler-` imports.
 10. `validate-plugin` on `a11y`/`seo`: no false "no contracts" / "missing ./client" warnings;
@@ -331,39 +335,39 @@ package.json exports missing "./client" entry point        # validate-plugin.ts:
 ```
 
 Neither is a real problem: such plugins correctly have no contracts and no client bundle. The checks
-encode "a plugin must render components," which is only true for *some* plugins.
+encode "a plugin must render components," which is only true for _some_ plugins.
 
 ### Design — validate against declared capabilities
 
 Key off the manifest fields the plugin actually declares. Capability → what it needs:
 
-| Capability (manifest field)   | Needs `./client`?          | Required package.json export(s)          |
-| ----------------------------- | -------------------------- | ---------------------------------------- |
-| `contracts`                   | only if interactive phase  | `.`, `./<contract>` per item; `./client` iff interactive |
-| `dynamic_contracts`           | only if interactive phase  | `.`; `./client` iff interactive          |
-| `routes`                      | only if interactive phase  | `.`, `./<jayHtml>` (+`./<css>`); `./client` iff interactive |
-| `contexts`                    | ✅ always (client by def)  | `.`, `./client`                          |
-| `validators`                  | ❌ no                      | `./tools`  *(Part 1)*                    |
-| `commands`                    | ❌ no                      | `./tools` (tools; compiler OK)           |
-| `agentkit` / `setup`          | ❌ no                      | `./tools`                                |
-| `actions`                     | ❌ no                      | `.` (compiler-free)                      |
-| `services`                    | ❌ no                      | `.`                                      |
-| `init` / global               | ❌ no                      | `.`                                      |
+| Capability (manifest field) | Needs `./client`?         | Required package.json export(s)                             |
+| --------------------------- | ------------------------- | ----------------------------------------------------------- |
+| `contracts`                 | only if interactive phase | `.`, `./<contract>` per item; `./client` iff interactive    |
+| `dynamic_contracts`         | only if interactive phase | `.`; `./client` iff interactive                             |
+| `routes`                    | only if interactive phase | `.`, `./<jayHtml>` (+`./<css>`); `./client` iff interactive |
+| `contexts`                  | ✅ always (client by def) | `.`, `./client`                                             |
+| `validators`                | ❌ no                     | `./tools` _(Part 1)_                                        |
+| `commands`                  | ❌ no                     | `./tools` (tools; compiler OK)                              |
+| `agentkit` / `setup`        | ❌ no                     | `./tools`                                                   |
+| `actions`                   | ❌ no                     | `.` (compiler-free)                                         |
+| `services`                  | ❌ no                     | `.`                                                         |
+| `init` / global             | ❌ no                     | `.`                                                         |
 
 ### Error vs warning principle
 
 Single rule (consistent with DL#176 — every warning must be suppressible):
 
-- **Error** — the plugin *does not work*: a declared capability cannot function. Not suppressible.
+- **Error** — the plugin _does not work_: a declared capability cannot function. Not suppressible.
   (e.g. `validators` declared but no `./tools`; interactive component but no `./client`.)
-- **Warning** — advisory the author *can suppress*: works but likely unintended. (e.g. declares no
+- **Warning** — advisory the author _can suppress_: works but likely unintended. (e.g. declares no
   capabilities.)
 
 Rules:
 
-1. **At-least-one-capability.** A plugin declaring *none* → single warning:
+1. **At-least-one-capability.** A plugin declaring _none_ → single warning:
    `Plugin declares no capabilities (contracts, dynamic_contracts, actions, validators, routes,
-   services, contexts, init, setup, agentkit, commands)`. **Include a `suggestion` linking to**
+services, contexts, init, setup, agentkit, commands)`. **Include a `suggestion` linking to**
    `agent-kit/plugin/plugin-structure.md`. Replaces the contracts-specific warning at line 330.
    - **`global: true` counts.** A global plugin (`webmcp`) runs on every page via its `init`/`setup`
      export even with no contracts/actions — treat `global: true` (paired with a resolvable
@@ -377,18 +381,18 @@ Rules:
    declares `contexts`. Server-only (slow/fast) component plugins need no `./client`. Replaces the
    unconditional check at line 1055.
 
-   - *Detection = static text scan.* `validate-plugin` is a purely static analyzer today
+   - _Detection = static text scan._ `validate-plugin` is a purely static analyzer today
      (`fs.readFileSync` + regex; it does not import plugin code). Keep it that way: scan the built,
      un-minified server `.` bundle for the interactive mark `withInteractiveMark(`. Jay's
      runtime-mode code-deletion transform swaps `withInteractive` → `withInteractiveMark` for the
      server build (verified: `compiler-jay-stack/.../check-method-should-remove.ts`, DL#72a; both set
      `hasInteractive = true`), so the mark is reliably present in the server bundle when — and only
      when — a component declared an interactive phase. No dynamic import, no side effects.
-   - *Precondition:* the plugin must be built (`dist/`) before validate. In-repo `validate` runs as
+   - _Precondition:_ the plugin must be built (`dist/`) before validate. In-repo `validate` runs as
      the last `build` step, so `dist/` exists.
-   - *Caveat:* never infer interactivity from the client bundle — it may be absent (the very thing
+   - _Caveat:_ never infer interactivity from the client bundle — it may be absent (the very thing
      we're checking).
-   - *Degrade:* if interactivity can't be determined, warn, don't error.
+   - _Degrade:_ if interactivity can't be determined, warn, don't error.
 
 4. **Contract/route sub-exports** stay as-is (already conditional on `contracts`/`routes`).
 
@@ -404,11 +408,12 @@ interactive scan), then diff against `package.json.exports`.
 
 ## Part 3 — Agent-Kit Guide Updates (plugin developer)
 
-The guides currently teach the pattern that *causes* this bug and assume a component-shaped plugin.
+The guides currently teach the pattern that _causes_ this bug and assume a component-shaped plugin.
 
 ### `agent-kit-template/plugin/validation.md`
-- **`Plugin Validators` (~line 142):** currently *"The function must be exported from
-  `lib/index.ts`."* — the exact instruction that leaks the compiler. Replace: validators live in
+
+- **`Plugin Validators` (~line 142):** currently _"The function must be exported from
+  `lib/index.ts`."_ — the exact instruction that leaks the compiler. Replace: validators live in
   `lib/tools.ts`, exported via the **`./tools`** subpath; **never re-export a tools handler from
   `index.ts`** (compiler APIs must not enter the serve entry). `handler` = export name within
   `./tools`.
@@ -417,6 +422,7 @@ The guides currently teach the pattern that *causes* this bug and assume a compo
   compiler-using handler) declared; the at-least-one-capability warning.
 
 ### `agent-kit-template/plugin/plugin-structure.md`
+
 - **`Dual Entry Points` → `Entry Points` (~line 266):** add `lib/tools.ts` → `dist/tools.js`
   (`./tools`), compiler-allowed, toolchain-only. Update the entry table (~278).
 - **Build scripts (~292) + vite config (~317):** add the `tools` SSR entry with `compiler-*`
@@ -427,6 +433,7 @@ The guides currently teach the pattern that *causes* this bug and assume a compo
   capability → required-export matrix; a plugin needs ≥1 capability; `./client` is interactive-gated.
 
 ### `agent-kit-template/plugin/contracts-guide.md`
+
 - Note the interactive-phase → `./client` requirement.
 
 Documentation (tier 2) paired with the `validate-plugin` rules (tier 1) so guidance is enforced.
@@ -434,7 +441,7 @@ Documentation (tier 2) paired with the `validate-plugin` rules (tier 1) so guida
 ## Trade-offs
 
 - **+** Reuses the established `./client` split; one runtime/tools boundary for authors.
-- **+** Fixes the *systemic* leak (all tools handlers), not just validators.
+- **+** Fixes the _systemic_ leak (all tools handlers), not just validators.
 - **+** Leak detection is a cheap text scan (compiler externalized), no bundler graph tracing; keeps
   `validate-plugin` fully static.
 - **+** Prevention rule stops regressions instead of relying on discipline.
@@ -458,3 +465,67 @@ Documentation (tier 2) paired with the `validate-plugin` rules (tier 1) so guida
   setup load only from `./tools`; any plugin declaring one must expose `./tools`. Actions stay on `.`.
 - **Detection = static text scan.** Interactivity via `withInteractiveMark(` in the server bundle;
   leak via `@jay-framework/compiler-` in `dist/index.js`. No dynamic import of plugin code.
+
+## Implementation Results
+
+Implemented on branch `dl179-180-compiler-free-runtime` (paired with DL#180). `yarn confirm`
+(rebuild + type-check + test + format) passes clean.
+
+### The `./tools` entry split
+
+Every in-repo plugin with tools-time handlers gained a third entry alongside `.` and `./client`:
+
+| Entry      | File                  | Phase  | Compiler |
+| ---------- | --------------------- | ------ | -------- |
+| `.`        | `lib/index.ts`        | serve  | ❌ free  |
+| `./client` | `lib/index.client.ts` | client | ❌ free  |
+| `./tools`  | `lib/tools.ts`        | tools  | ✅ OK    |
+
+Migrated plugins (each got `lib/tools.ts`, a `./tools` package export, a `tools` SSR entry in
+`vite.config.ts`, `build:types` covering `lib/tools.ts`, and `compiler-*` moved from `dependencies`
+to `peerDependencies` + `devDependencies`): `design-system-validator`, `a11y-validator`,
+`seo-validator`, `data-files`, `gemini-agent`, `ui-kit`. `webmcp` needs no `./tools` (global `init`
+on `.`, compiler-free).
+
+Compiler externals in each `vite.config.ts` switched from string lists to the regex
+`/^@jay-framework\/compiler-/` so the leak scan holds regardless of which compiler subpackage a tools
+handler pulls in.
+
+### Loaders switched to `./tools` (clean cut, no `.` fallback)
+
+- `stack-server-build/lib/plugin-commands.ts` — CLI command handlers load from `<pkg>/tools`.
+- `stack-server-build/lib/plugin-setup.ts` — `setup` / `agentkit` handlers load from `<pkg>/tools`
+  (error messages name the tools entry).
+- `plugin-validator` — validators / setup / agentkit resolve against the `./tools` export.
+
+### Capability-aware `validate-plugin`
+
+`plugin-validator/lib/validate-plugin.ts` now derives required exports from declared capabilities:
+
+- **≥1 capability** rule (a `global: true` plugin counts only if it exports a resolvable
+  `init`/`setup` from `.`).
+- **`./tools` required** iff any tools capability (`validators`, `commands`, `agentkit`, `setup`) or a
+  `devOnly` action is declared (`needsToolsEntry`).
+- **`./client` required** gated on interactive-phase detection (`detectInteractivePhase`, a static
+  scan for `withInteractiveMark(` in the `.` bundle) or a declared `contexts` capability — replaces
+  the old unconditional `./client` warning.
+- **Leak scan** (`validateNoCompilerLeak`, new `compiler-leak` error type): text-scans `dist/index.js`
+  for `@jay-framework/compiler-`.
+
+`checkExportExists` / `validateHandlerRef` gained an `EntryKey` (`.` | `./tools` | `./client`)
+parameter so each capability is checked against the correct entry, with suggestions naming the
+correct source file. 19 tests pass. **stack-cli must be rebuilt after plugin-validator changes** — it
+bundles plugin-validator via `vite build`.
+
+### Verification
+
+- `design-system-validator`: `dist/index.js` = 0.98 kB, **0** compiler references; `dist/tools.js` =
+  69 kB with the externalized compiler imports. `jay-stack-cli validate-plugin` → success.
+- All 8 in-repo plugins validate under the new rules (a11y-validator emits only a pre-existing
+  agent-kit-files warning unrelated to this work).
+
+### Deviations from the original design
+
+None material. The design's "validator entry split" framing was superseded (in-file, before
+implementation) by the broader runtime-vs-tools split covering commands / agent-kit / setup as well;
+implementation follows that resolved design.

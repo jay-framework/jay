@@ -17,14 +17,20 @@ export default defineConfig(({ isSsrBuild }) => ({
         emptyOutDir: false,
         lib: {
             entry: isSsrBuild
-                ? { index: resolve(__dirname, 'lib/index.ts') }
+                ? {
+                      index: resolve(__dirname, 'lib/index.ts'),
+                      // Tools entry (DL#179/#180): validators, agent-kit, devOnly settings
+                      // actions + page. Compiler-allowed, toolchain/dev-only.
+                      tools: resolve(__dirname, 'lib/tools.ts'),
+                  }
                 : { 'index.client': resolve(__dirname, 'lib/index.client.ts') },
             formats: ['es'],
         },
         rollupOptions: {
             external: [
-                '@jay-framework/compiler-shared',
-                '@jay-framework/compiler-jay-html',
+                // Externalize the whole compiler namespace so any leak into `.` surfaces as a
+                // literal import string in dist/index.js (DL#179 leak scan).
+                /^@jay-framework\/compiler-/,
                 '@jay-framework/component',
                 '@jay-framework/fullstack-component',
                 '@jay-framework/plugin-validator',

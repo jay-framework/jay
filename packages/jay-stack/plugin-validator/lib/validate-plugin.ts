@@ -1,7 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import YAML from 'yaml';
-import { loadPluginManifest, type PluginManifest } from '@jay-framework/compiler-shared';
+import {
+    loadPluginManifest,
+    normalizeActionEntry,
+    type PluginManifest,
+} from '@jay-framework/compiler-shared';
 import { parseContract } from '@jay-framework/compiler-jay-html';
 import { ts } from '@jay-framework/typescript-bridge';
 import type { ValidatePluginOptions, ValidationResult, PluginContext } from './types';
@@ -109,6 +113,9 @@ async function validatePluginPackage(
 
     // 8. AIditor settings template (materialized via agent-kit — not in core PluginManifest)
     await validateAiditorSettings(context, result);
+
+    // 9. Leak scan (DL#179): serve entry `.` must be compiler-free
+    validateNoCompilerLeak(context, result);
 
     // Final result
     result.valid = result.errors.length === 0;
@@ -326,14 +333,48 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
         }
     }
 
-    // Warn if neither contracts nor dynamic_contracts are specified
-    if (!manifest.contracts && !manifest.dynamic_contracts) {
-        result.warnings.push({
-            type: 'schema',
-            message: 'Plugin has no contracts or dynamic_contracts defined',
-            location: 'plugin.yaml',
-            suggestion: 'Add either "contracts" or "dynamic_contracts" to expose functionality',
-        });
+    // At-least-one-capability rule (DL#179 Part 2). A plugin declaring none of the capability
+    // fields does nothing. `global: true` counts iff it has a resolvable init/setup export.
+    const hasCapability = Boolean(
+        manifest.contracts ||
+        manifest.dynamic_contracts ||
+        manifest.actions ||
+        manifest.validators ||
+        manifest.routes ||
+        manifest.services ||
+        manifest.contexts ||
+        manifest.init ||
+        manifest.setup ||
+        manifest.agentkit ||
+        manifest.commands,
+    );
+    if (!hasCapability) {
+        if (manifest.global === true) {
+            // A global plugin runs on every page via its init/setup export. Require one to exist.
+            const hasGlobalEntry =
+                !context.isNpmPackage ||
+                checkExportExists('init', context, '.') ||
+                checkExportExists('setup', context, '.');
+            if (!hasGlobalEntry) {
+                result.errors.push({
+                    type: 'export-mismatch',
+                    message:
+                        'Plugin declares "global: true" but exports no init/setup handler to run on each page',
+                    location: 'plugin.yaml',
+                    suggestion:
+                        'Export an "init" (or "setup") handler from the package entry, or declare a capability',
+                });
+            }
+        } else {
+            result.warnings.push({
+                type: 'schema',
+                message:
+                    'Plugin declares no capabilities (contracts, dynamic_contracts, actions, validators, routes, services, contexts, init, setup, agentkit, commands)',
+                location: 'plugin.yaml',
+                suggestion:
+                    'Declare at least one capability. See agent-kit/plugin/plugin-structure.md',
+            });
+        }
     }
 
     // Validate services (DL#125)
@@ -400,10 +441,22 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
         }
     }
 
-    // Validate actions
+    // Validate actions (DL#180: devOnly actions load from ./tools, regular actions from `.`)
     if (manifest.actions) {
         for (const entry of manifest.actions) {
-            const exportName = typeof entry === 'string' ? entry : entry.name;
+            // devOnly must be a boolean when present (mirror the routes[].devOnly check).
+            if (
+                typeof entry === 'object' &&
+                entry.devOnly !== undefined &&
+                typeof entry.devOnly !== 'boolean'
+            ) {
+                result.errors.push({
+                    type: 'schema',
+                    message: `Action "${entry.name}" devOnly must be a boolean`,
+                    location: 'plugin.yaml actions',
+                });
+            }
+            const { name: exportName, devOnly } = normalizeActionEntry(entry);
             if (exportName) {
                 validateHandlerRef(
                     exportName,
@@ -411,6 +464,7 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
                     'plugin.yaml actions',
                     context,
                     result,
+                    devOnly ? './tools' : '.',
                 );
             }
         }
@@ -454,12 +508,14 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
                         suggestion: 'Specify the exported member name for the page component',
                     });
                 } else {
+                    // A devOnly route's page component may use the compiler → lives in ./tools (DL#180).
                     validateHandlerRef(
                         route.component,
                         `Route "${route.path}" component`,
                         `plugin.yaml routes`,
                         context,
                         result,
+                        route.devOnly ? './tools' : '.',
                     );
                 }
                 // Validate exports exist
@@ -511,12 +567,14 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
                     });
                 }
                 if (validator.handler) {
+                    // Validators are a tools capability — handler lives in ./tools (DL#179).
                     validateHandlerRef(
                         validator.handler,
                         `Validator "${validator.name}" handler`,
                         'plugin.yaml validators',
                         context,
                         result,
+                        './tools',
                     );
                 }
             });
@@ -535,43 +593,60 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
                     'Replace setup.handler with top-level setup: and setup.references with top-level agentkit:',
             });
         } else {
+            // Setup is a tools capability — handler lives in ./tools (DL#179).
             validateHandlerRef(
                 manifest.setup,
                 'Setup handler',
                 'plugin.yaml setup',
                 context,
                 result,
+                './tools',
             );
         }
     }
     if (manifest.agentkit) {
+        // Agent-kit is a tools capability — handler lives in ./tools (DL#179).
         validateHandlerRef(
             manifest.agentkit,
             'Agent-kit handler',
             'plugin.yaml agentkit',
             context,
             result,
+            './tools',
         );
     }
 }
 
 /**
- * Check if a named export exists in the plugin's main entry file.
- * Reads the built .js or .d.ts and searches for the export name.
+ * Which package.json export a capability's handler is loaded from (DL#179 runtime/tools split).
+ * `.` = serve entry (compiler-free), `./tools` = tools entry (compiler OK), `./client` = client bundle.
  */
-function checkExportExists(exportName: string, context: PluginContext): boolean {
+type EntryKey = '.' | './tools' | './client';
+
+/**
+ * Check if a named export exists in the given plugin entry file.
+ * Reads the built .js (or falls back to package `main`) for `exportKey` and searches for the export.
+ * Returns true (permissive) when the entry can't be resolved — the missing-export error would be
+ * misleading if we can't even find the file to scan.
+ */
+function checkExportExists(
+    exportName: string,
+    context: PluginContext,
+    exportKey: EntryKey = '.',
+): boolean {
     const packageJsonPath = path.join(context.pluginPath, 'package.json');
     if (!fs.existsSync(packageJsonPath)) return true;
 
     let mainPath: string | undefined;
     try {
         const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
-        if (packageJson.exports?.['.']) {
-            const entry = packageJson.exports['.'];
+        if (packageJson.exports?.[exportKey]) {
+            const entry = packageJson.exports[exportKey];
             const entryPath = typeof entry === 'string' ? entry : entry.default || entry.import;
             if (entryPath) mainPath = path.join(context.pluginPath, entryPath);
         }
-        if (!mainPath && packageJson.main) {
+        // Only the `.` entry has a legacy `main` fallback.
+        if (!mainPath && exportKey === '.' && packageJson.main) {
             mainPath = path.join(context.pluginPath, packageJson.main);
         }
     } catch {
@@ -598,8 +673,101 @@ function isRelativePath(value: string): boolean {
 }
 
 /**
+ * Resolve the built file for a package.json export key (used by the static scans below).
+ */
+function resolveEntryFile(context: PluginContext, exportKey: EntryKey): string | undefined {
+    const packageJsonPath = path.join(context.pluginPath, 'package.json');
+    if (!fs.existsSync(packageJsonPath)) return undefined;
+    try {
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+        const entry = packageJson.exports?.[exportKey];
+        const entryPath =
+            typeof entry === 'string' ? entry : entry?.default || entry?.import || undefined;
+        const resolved =
+            entryPath || (exportKey === '.' ? packageJson.main : undefined)
+                ? path.join(context.pluginPath, entryPath || packageJson.main)
+                : undefined;
+        return resolved && fs.existsSync(resolved) ? resolved : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
+/** True when the plugin declares a capability that can provide a (possibly interactive) component. */
+function hasComponentCapability(context: PluginContext): boolean {
+    const m = context.manifest;
+    return Boolean(m.contracts || m.dynamic_contracts || m.routes);
+}
+
+/**
+ * A plugin needs a `./tools` export iff it declares a tools capability: validators, commands,
+ * agentkit, setup (DL#179) or any devOnly action (DL#180).
+ */
+function needsToolsEntry(manifest: PluginManifest): boolean {
+    if (manifest.validators || manifest.commands || manifest.agentkit || manifest.setup) {
+        return true;
+    }
+    if (manifest.actions) {
+        return manifest.actions.some((entry) => normalizeActionEntry(entry).devOnly === true);
+    }
+    return false;
+}
+
+/**
+ * Detect whether any provided component has an interactive phase (DL#179 Part 2 rule 3).
+ *
+ * Purely static: scan the built, un-minified server `.` bundle for the interactive mark
+ * `withInteractiveMark(`. Jay's runtime-mode code-deletion transform rewrites `withInteractive` →
+ * `withInteractiveMark` for the server build, so the mark is present iff a component declared an
+ * interactive phase. Returns 'unknown' when the bundle can't be read (degrade to a warning).
+ */
+function detectInteractivePhase(context: PluginContext): boolean | 'unknown' {
+    // Local plugins aren't built to a `.` bundle we can scan.
+    if (!context.isNpmPackage) return 'unknown';
+    const entryFile = resolveEntryFile(context, '.');
+    if (!entryFile) return 'unknown';
+    try {
+        const content = fs.readFileSync(entryFile, 'utf-8');
+        return content.includes('withInteractiveMark(');
+    } catch {
+        return 'unknown';
+    }
+}
+
+/**
+ * Leak scan (DL#179): the serve entry `.` (`dist/index.js`) must contain no `@jay-framework/compiler-`
+ * import. Because the plugin build externalizes the compiler namespace, any tools handler that leaks
+ * into `.` surfaces as a literal `import '@jay-framework/compiler-…'` string — a cheap text scan.
+ */
+function validateNoCompilerLeak(context: PluginContext, result: ValidationResult): void {
+    if (!context.isNpmPackage) return;
+    const entryFile = resolveEntryFile(context, '.');
+    if (!entryFile) return; // not built / no `.` entry — nothing to scan
+    let content: string;
+    try {
+        content = fs.readFileSync(entryFile, 'utf-8');
+    } catch {
+        return;
+    }
+    if (content.includes('@jay-framework/compiler-')) {
+        result.errors.push({
+            type: 'compiler-leak',
+            message:
+                'Serve entry "." (dist/index.js) imports "@jay-framework/compiler-…" — the compiler ' +
+                'must not reach the production serve bundle',
+            location: entryFile,
+            suggestion:
+                'Move the compiler-using handler (validator, agentkit, setup, or a devOnly action) ' +
+                'to lib/tools.ts (the "./tools" export) and remove its re-export from lib/index.ts. ' +
+                'A compiler-using action is really a command or a devOnly action (DL#179/#180).',
+        });
+    }
+}
+
+/**
  * Validate that a handler/export reference is correct for the plugin type.
- * For NPM plugins: must be an export name (not a relative path), and must exist in the entry file.
+ * For NPM plugins: must be an export name (not a relative path), and must exist in the entry
+ * indicated by `exportKey` (DL#179: tools handlers load from `./tools`, serve handlers from `.`).
  * For local plugins: if it's a path, the file must exist.
  */
 function validateHandlerRef(
@@ -608,6 +776,7 @@ function validateHandlerRef(
     location: string,
     context: PluginContext,
     result: ValidationResult,
+    exportKey: EntryKey = '.',
 ): void {
     if (context.isNpmPackage) {
         if (isRelativePath(value)) {
@@ -617,12 +786,18 @@ function validateHandlerRef(
                 location,
                 suggestion: `Export the function from the package entry point and use the export name instead of a path`,
             });
-        } else if (!checkExportExists(value, context)) {
+        } else if (!checkExportExists(value, context, exportKey)) {
+            const entryFile =
+                exportKey === './tools'
+                    ? 'lib/tools.ts'
+                    : exportKey === './client'
+                      ? 'lib/index.client.ts'
+                      : 'lib/index.ts';
             result.errors.push({
                 type: 'export-mismatch',
-                message: `${label} "${value}" is not exported from the package`,
+                message: `${label} "${value}" is not exported from the "${exportKey}" entry`,
                 location,
-                suggestion: `Add "export { ${value} } from '...'" to the package entry point`,
+                suggestion: `Add "export { ${value} } from '...'" to ${entryFile} (the "${exportKey}" export)`,
             });
         }
     } else if (isRelativePath(value)) {
@@ -1051,16 +1226,53 @@ async function validatePackageJson(
                 });
             }
 
-            // Check for client entry point (required for browser-side hydration)
+            // Client entry point (DL#179 Part 2 rule 3): required only when a provided component
+            // has an interactive phase, or the plugin declares contexts. Server-only (slow/fast)
+            // component plugins and tools-only plugins need no ./client.
             if (!packageJson.exports['./client']) {
-                result.warnings.push({
+                const interactivity = detectInteractivePhase(context);
+                const needsClient =
+                    context.manifest.contexts !== undefined || interactivity === true;
+                if (needsClient) {
+                    result.errors.push({
+                        type: 'export-mismatch',
+                        message:
+                            'package.json exports missing "./client" entry point, but the plugin ' +
+                            (context.manifest.contexts !== undefined
+                                ? 'declares contexts (client-side by definition)'
+                                : 'provides an interactive component'),
+                        location: packageJsonPath,
+                        suggestion:
+                            'Add "./client": "./dist/index.client.js" to exports. ' +
+                            'The client bundle provides components for hydration and client-side contexts. ' +
+                            'Build with: vite build (client) + vite build --ssr (server)',
+                    });
+                } else if (interactivity === 'unknown' && hasComponentCapability(context)) {
+                    // Degrade to a warning when interactivity can't be determined (DL#179: don't error).
+                    result.warnings.push({
+                        type: 'export-mismatch',
+                        message:
+                            'package.json exports missing "./client" entry point; could not determine ' +
+                            'whether any component is interactive (build the plugin before validating)',
+                        location: packageJsonPath,
+                        suggestion:
+                            'If any component declares an interactive phase, add "./client": "./dist/index.client.js"',
+                    });
+                }
+            }
+
+            // Tools entry point (DL#179 Part 2 rule 2 + DL#180): required iff the plugin declares any
+            // tools capability (validators / commands / agentkit / setup) or a devOnly action. These
+            // handlers load only from ./tools, so a missing export means they can't be loaded.
+            if (!packageJson.exports['./tools'] && needsToolsEntry(context.manifest)) {
+                result.errors.push({
                     type: 'export-mismatch',
-                    message: 'package.json exports missing "./client" entry point',
+                    message:
+                        'package.json exports missing "./tools" entry point, but the plugin declares ' +
+                        'tools capabilities (validators, commands, agentkit, setup, or devOnly actions)',
                     location: packageJsonPath,
                     suggestion:
-                        'Add "./client": "./dist/index.client.js" to exports. ' +
-                        'The client bundle provides components for hydration and client-side contexts. ' +
-                        'Build with: vite build (client) + vite build --ssr (server)',
+                        'Add "./tools": "./dist/tools.js" to exports and re-export those handlers from lib/tools.ts',
                 });
             }
 

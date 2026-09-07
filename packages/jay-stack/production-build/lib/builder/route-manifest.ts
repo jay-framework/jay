@@ -12,6 +12,7 @@ import {
 } from '@jay-framework/stack-route-scanner';
 import { extractActionsFromSource } from '@jay-framework/compiler-jay-stack';
 import { scanPlugins } from '@jay-framework/stack-server-runtime';
+import { normalizeActionEntry } from '@jay-framework/compiler-shared';
 import { getLogger } from '@jay-framework/logger';
 import path from 'node:path';
 import fs from 'node:fs/promises';
@@ -80,16 +81,24 @@ export async function discoverActions(
             plugins.push({ name: plugin.manifest.name, packageName });
             const pluginActions = plugin.manifest.actions;
             if (pluginActions && pluginActions.length > 0) {
-                actions.push({
-                    serverModule: '',
-                    packageName,
-                    isPlugin: true,
-                    actionNames: pluginActions.map((a: any) =>
-                        typeof a === 'string' ? a : a.name,
-                    ),
-                });
+                // DL#180: devOnly actions are dev/tools-only surfaces — their handlers live in the
+                // plugin's `./tools` entry (not on `.`) and must never be dispatchable in production.
+                // Exclude them from the deploy manifest so production never traces or serves them.
+                const productionActions = pluginActions
+                    .map(normalizeActionEntry)
+                    .filter((a) => !a.devOnly);
+                const devOnlyCount = pluginActions.length - productionActions.length;
+                if (productionActions.length > 0) {
+                    actions.push({
+                        serverModule: '',
+                        packageName,
+                        isPlugin: true,
+                        actionNames: productionActions.map((a) => a.name),
+                    });
+                }
                 getLogger().info(
-                    `[Build] Plugin actions from ${packageName}: ${pluginActions.length}`,
+                    `[Build] Plugin actions from ${packageName}: ${productionActions.length}` +
+                        (devOnlyCount > 0 ? ` (excluded ${devOnlyCount} devOnly)` : ''),
                 );
             }
         }
