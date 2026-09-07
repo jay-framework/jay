@@ -171,6 +171,18 @@ describe('route param validation (integration)', () => {
         );
     });
 
+    it('should return an error when a page uses removed jay-params (DL#156)', async () => {
+        const result = await validateJayFiles({
+            path: path.join(baseFixturesDir, 'deprecated-jay-params'),
+        });
+
+        expect(result.valid).toBe(false);
+        const jayParamsErrors = result.errors.filter((e) =>
+            e.message.startsWith('<script type="application/jay-params">'),
+        );
+        expect(jayParamsErrors).toHaveLength(1);
+    });
+
     it('should warn when static override uses deprecated jay-params', async () => {
         const result = await validateJayFiles({
             path: path.join(baseFixturesDir, 'route-params-static-override'),

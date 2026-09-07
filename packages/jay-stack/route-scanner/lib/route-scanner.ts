@@ -236,7 +236,7 @@ async function parseHeadlessProps(
     const paramScripts = (head ?? root).querySelectorAll('script[type="application/jay-params"]');
     if (paramScripts.length > 0) {
         validations.push(
-            '<script type="application/jay-params"> is deprecated. ' +
+            '<script type="application/jay-params"> is no longer supported and is ignored. ' +
                 'Move the values into the YAML body of the headless component that uses them. ' +
                 'See agent-kit/developer/routing.md for details.',
         );

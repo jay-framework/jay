@@ -87,7 +87,7 @@ The script body is YAML. Values are passed to the component as props alongside r
 </script>
 ```
 
-> **Note:** `<script type="application/jay-params">` is deprecated. Move param values into the headless component's script tag body.
+> **Note:** `<script type="application/jay-params">` is no longer supported — it is silently ignored by the route scanner and reported as an error by `jay-stack validate`. Move param values into the headless component's script tag body.
 
 ## Page Files
 

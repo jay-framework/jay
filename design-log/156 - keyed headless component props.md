@@ -328,3 +328,15 @@ Both provide values to reusable headless components — instance props for inlin
 - Client hydration (Phase 3, item 3) was not needed — headless props are static values consumed at slow/fast render time. The interactive phase accesses them through the existing `props` parameter from the builder chain.
 - Contract props validation for keyed headless (Phase 4, items 1-2) deferred — the existing `checkRouteParams` covers param availability. Full props-vs-contract validation for keyed headless can be added incrementally.
 - Phase 6 migration was trivial — no existing pages used `jay-params` in code (only in agent-kit documentation, which was updated).
+
+### Follow-up (2026-09-07): jay-params elevated from warning to error
+
+The deprecation warning was too soft. An un-migrated `<script type="application/jay-params">` is silently ignored by the route scanner (it no longer extracts params like `slug`), so a static override page such as `/products/ceramic-flower-vase` renders with no `slug`, the headless component's `slowlyRender` returns a `ServerError`, and the page fails at request time — far from the actual cause.
+
+Prevention-first fix: `jay-stack validate` now reports jay-params as an **error** (`stage: 'parse'`), not a warning, and both the validator and route-scanner messages were updated to "is no longer supported and is ignored." Agent-kit `routing.md` updated to match.
+
+- `stack-cli/lib/validate.ts` — `warnings.push` → `errors.push`
+- `route-scanner/lib/route-scanner.ts` — message wording updated
+- `stack-cli/test/fixtures/validate/deprecated-jay-params/` — new fixture + test asserting the error
+
+Separately, a related dev-server hang was fixed: `handlePreRenderRequest`/`handleCachedRequest` only sent a response for `ClientError` slow-render outcomes, leaving `ServerError`/`Redirect` with no `res.end()` (browser hung). Both now call `handleOtherResponseCodes` for every non-`PhaseOutput` outcome, matching the fast-render path.

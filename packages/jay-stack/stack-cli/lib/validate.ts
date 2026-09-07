@@ -1126,14 +1126,16 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
 
             parsedFiles.push({ relativePath, parsed: parsedFile.val! });
 
-            // Check for deprecated jay-params (DL#156)
+            // Check for removed jay-params (DL#156) — it is silently ignored by the
+            // route scanner, so treat it as an error rather than a warning.
             if (content.includes('application/jay-params')) {
-                warnings.push({
+                errors.push({
                     file: relativePath,
                     message:
-                        '<script type="application/jay-params"> is deprecated. ' +
+                        '<script type="application/jay-params"> is no longer supported and is ignored. ' +
                         'Move the values into the YAML body of the headless component that uses them. ' +
                         'See agent-kit/developer/routing.md for details.',
+                    stage: 'parse',
                 });
             }
 
