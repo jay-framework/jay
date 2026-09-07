@@ -18,6 +18,7 @@ import type { DevServerPagePart } from './load-page-parts';
 import { mergeHeadTags, serializeHeadTags } from '@jay-framework/stack-server-runtime';
 import type { TrackByMap } from '@jay-framework/view-state-merge';
 import {
+    buildPageReloadHmrScript,
     buildScriptFragments,
     buildAutomationWrap,
     generatePromiseReconstruction,
@@ -264,13 +265,17 @@ ${titleTag}${headExtras ? headExtras + '\n' : ''}  </head>
 }
 
 /**
- * Generate a frozen page — pure SSR HTML with no client scripts (DL#127).
+ * Generate a frozen page — pure SSR HTML (DL#127).
  *
  * Uses the same server element module as generateSSRPageHtml, but:
  * - No hydration script
- * - No Vite client
  * - No component runtime
  * - Just rendered HTML + CSS
+ *
+ * Script policy:
+ * - Production / `format=fragment`: no client scripts
+ * - Dev full-page (`injectDevHmr: true`): minimal reload listener only — no hydration,
+ *   automation, or freeze capture. Caller must run the result through `transformIndexHtml`.
  *
  * @param format - 'page' for full HTML document, 'fragment' for body-only (shadow DOM)
  */
@@ -287,6 +292,7 @@ export async function generateFrozenPageHtml(
     sourceDir?: string,
     format: 'page' | 'fragment' = 'page',
     freezeName?: string,
+    options?: { injectDevHmr?: boolean },
 ): Promise<string> {
     const jayHtmlPath = path.join(jayHtmlDir, jayHtmlFilename);
 
@@ -342,12 +348,16 @@ export async function generateFrozenPageHtml(
         return `${inlineCss}\n${ssrHtml}`;
     }
 
-    // Full page: complete HTML document, no client scripts
+    // Full page: complete HTML document
     const frozenHeadTags = headMetaToHeadTags(cached.headMeta, viewState);
     const frozenHeadTagsHtml = frozenHeadTags.length > 0 ? serializeHeadTags(frozenHeadTags) : '';
     const cssLink = cached.cssHref ? `    <link rel="stylesheet" href="${cached.cssHref}" />` : '';
     const headExtras = [cssLink, frozenHeadTagsHtml].filter((_) => _).join('\n');
     const label = freezeName ? ` — ${freezeName}` : '';
+    const devHmrScript =
+        options?.injectDevHmr === true
+            ? `\n    <script type="module">${buildPageReloadHmrScript()}\n    </script>`
+            : '';
 
     return `<!doctype html>
 <html lang="en">
@@ -372,7 +382,7 @@ ${headExtras ? headExtras + '\n' : ''}    <style>
     </style>
   </head>
   <body>
-    <div id="target">${ssrHtml}</div>
+    <div id="target">${ssrHtml}</div>${devHmrScript}
   </body>
 </html>`;
 }

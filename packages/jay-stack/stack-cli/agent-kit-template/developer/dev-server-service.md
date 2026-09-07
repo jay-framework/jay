@@ -96,15 +96,15 @@ These APIs are also exposed via the editor protocol (Socket.IO) for design board
 // Server emits:   { type: 'routeParamsBatch', route: '...', params: [], hasMore: false }
 ```
 
-### Freeze Changed Event
+### Frozen Page Refresh (Dev)
 
-The `freezeChanged` socket event is emitted when jay-html or CSS files change. Design board applications should listen for this to refresh their frozen views:
+In development, **full-page** frozen views (`?_jay_freeze=<id>` in iframe or tab) self-reload when jay-html or CSS changes — same `jay:page-reload` Hot Module Replacement (HMR) path as live pages. No host application wiring required. Saved ViewState is preserved across reload.
 
-```typescript
-socket.on('freezeChanged', () => {
-  // Re-fetch frozen page fragments
-});
-```
+Fragment format (`format=fragment` for shadow DOM embedders) does **not** auto-reload; those hosts must re-fetch the fragment.
+
+### Freeze Changed Event (Fragment Hosts)
+
+The `freezeChanged` socket event was described for design board fragment refresh but is **not** emitted by the current dev server. Fragment embedders should re-fetch on file changes themselves, or wait for a future fetch-and-swap protocol. Dev full-page frozen views do not need this event.
 
 ## Iframe / Embed Mode
 
