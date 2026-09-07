@@ -291,6 +291,76 @@ describe('validatePlugin — client entry (./client) interactive gating', () => 
         expect(clientErr).toBeDefined();
     });
 
+    it('requires ./client when the plugin provides a route, even with no interactive mark (DL#182)', async () => {
+        const dir = createTempPluginWithSource({
+            pluginYaml: [
+                'name: test-plugin',
+                'routes:',
+                '  - path: /aiditor',
+                '    jayHtml: ./pages/aiditor/page.jay-html',
+                '    component: aiditorPage',
+                '    devOnly: true',
+            ].join('\n'),
+            packageJson: {
+                name: '@jay-framework/test-plugin',
+                exports: {
+                    '.': './dist/index.js',
+                    './tools': './dist/tools.js',
+                    './plugin.yaml': './plugin.yaml',
+                    './pages/aiditor/page.jay-html': './dist/pages/aiditor/page.jay-html',
+                },
+            },
+            sourceFiles: {
+                'dist/index.js': `export const aiditorPage = {};\n`,
+                'dist/tools.js': `export const aiditorPage = {};\n`,
+                'dist/pages/aiditor/page.jay-html': `<html></html>\n`,
+            },
+        });
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        const clientErr = result.errors.find((e) => e.message.includes('"./client"'));
+        expect(clientErr).toBeDefined();
+        expect(clientErr!.message).toEqual(
+            'package.json exports missing "./client" entry point, but the plugin ' +
+                'provides a route (hydrated in the browser)',
+        );
+    });
+
+    it('does not require ./client when a route-providing plugin declares one (DL#182)', async () => {
+        const dir = createTempPluginWithSource({
+            pluginYaml: [
+                'name: test-plugin',
+                'routes:',
+                '  - path: /aiditor',
+                '    jayHtml: ./pages/aiditor/page.jay-html',
+                '    component: aiditorPage',
+                '    devOnly: true',
+            ].join('\n'),
+            packageJson: {
+                name: '@jay-framework/test-plugin',
+                exports: {
+                    '.': './dist/index.js',
+                    './tools': './dist/tools.js',
+                    './client': './dist/index.client.js',
+                    './plugin.yaml': './plugin.yaml',
+                    './pages/aiditor/page.jay-html': './dist/pages/aiditor/page.jay-html',
+                },
+            },
+            sourceFiles: {
+                'dist/index.js': `export const aiditorPage = {};\n`,
+                'dist/tools.js': `export const aiditorPage = {};\n`,
+                'dist/index.client.js': `export const aiditorPage = {};\n`,
+                'dist/pages/aiditor/page.jay-html': `<html></html>\n`,
+            },
+        });
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        const clientErr = result.errors.find((e) => e.message.includes('"./client"'));
+        expect(clientErr).toBeUndefined();
+    });
+
     it('requires ./client when contexts are declared', async () => {
         const dir = createTempPluginWithSource({
             pluginYaml: [

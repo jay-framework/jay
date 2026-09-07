@@ -19,6 +19,12 @@ export type JayRoute = {
     rawRoute: string;
     jayHtmlPath: string;
     compPath: string;
+    /**
+     * Browser-safe (`./client`) bundle path used for the hydration import, distinct from the SSR
+     * `compPath` (which may be `./tools` for devOnly routes or `.` otherwise). Set for NPM plugin
+     * routes so hydration never imports a server bundle. See DL#182.
+     */
+    clientCompPath?: string;
     /** Export name for the page component (default: 'page'). Used by plugin routes where the export name differs. */
     componentExport?: string;
     /** NPM package name for plugin routes. Used by build to generate portable module paths. */
@@ -300,13 +306,14 @@ export function createRoute(
     jayHtmlPath: string,
     compPath: string,
     componentExport?: string,
-    options?: { devOnly?: boolean },
+    options?: { devOnly?: boolean; clientCompPath?: string },
 ): JayRoute {
     return {
         segments: parseRouteSegments(routePath),
         rawRoute: routePath,
         jayHtmlPath,
         compPath,
+        ...(options?.clientCompPath && { clientCompPath: options.clientCompPath }),
         ...(componentExport && { componentExport }),
         ...(options?.devOnly && { devOnly: true }),
     };

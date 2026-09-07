@@ -72,6 +72,22 @@ export interface LoadedPageParts {
     scripts?: JayHtmlScript[];
 }
 
+/**
+ * Resolve the browser hydration import path for a route (DL#182).
+ *
+ * SSR loads `route.compPath` (which is `./tools` for devOnly plugin routes, `.` otherwise); the
+ * browser must never load those server bundles. Prefer the explicit `clientCompPath` resolved from
+ * the plugin's `./client` export. Fall back to the legacy `index.js`→`index.client.js` rewrite only
+ * for NPM plugin routes (`componentExport` set) that carry no `clientCompPath` — note this rewrite
+ * silently no-ops for a devOnly `compPath` ending in `tools.js`, which is the bug DL#182 fixes.
+ * Local (project) components hydrate directly from `compPath`.
+ */
+export function resolveClientImportPath(route: JayRoute): string {
+    if (route.clientCompPath) return route.clientCompPath;
+    if (route.componentExport) return route.compPath.replace(/index\.js$/, 'index.client.js');
+    return route.compPath;
+}
+
 export interface LoadPagePartsOptions {
     /**
      * Path to pre-rendered jay-html file to use instead of the original.
@@ -113,11 +129,8 @@ export async function loadPageParts(
                     `The file exists but the expected export is missing — remove the file or add the export.`,
             );
         } else {
-            // For NPM plugin routes (componentExport set), use the /client entry for browser imports.
-            // The server entry (compPath) contains server-only code (actions, services).
-            const clientImportPath = route.componentExport
-                ? route.compPath.replace(/index\.js$/, 'index.client.js')
-                : route.compPath;
+            // Browser hydration import: never a server bundle (./tools or .) — see DL#182.
+            const clientImportPath = resolveClientImportPath(route);
             parts.push({
                 compDefinition: pageComponent,
                 clientImport: `import {${exportName}} from '${clientImportPath}'`,

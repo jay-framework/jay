@@ -251,6 +251,33 @@ describe('createRoute', () => {
         );
         expect(route.devOnly).toBe(true);
     });
+
+    it('should thread clientCompPath onto the route when provided (DL#182)', () => {
+        const route = createRoute(
+            '/aiditor',
+            '/node_modules/@jay-framework/aiditor/dist/pages/aiditor/page.jay-html',
+            '/node_modules/@jay-framework/aiditor/dist/tools.js',
+            'aiditorPage',
+            {
+                devOnly: true,
+                clientCompPath: '/node_modules/@jay-framework/aiditor/dist/index.client.js',
+            },
+        );
+        expect(route.compPath).toBe('/node_modules/@jay-framework/aiditor/dist/tools.js');
+        expect(route.clientCompPath).toBe(
+            '/node_modules/@jay-framework/aiditor/dist/index.client.js',
+        );
+    });
+
+    it('should omit clientCompPath when not provided (DL#182)', () => {
+        const route = createRoute(
+            '/aiditor',
+            '/plugin/page.jay-html',
+            '/plugin/index.js',
+            'aiditorPage',
+        );
+        expect(route.clientCompPath).toBeUndefined();
+    });
 });
 
 function resolveFixture(relativePath: string): string {

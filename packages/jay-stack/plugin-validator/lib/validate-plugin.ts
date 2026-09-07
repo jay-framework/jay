@@ -1226,13 +1226,19 @@ async function validatePackageJson(
                 });
             }
 
-            // Client entry point (DL#179 Part 2 rule 3): required only when a provided component
-            // has an interactive phase, or the plugin declares contexts. Server-only (slow/fast)
-            // component plugins and tools-only plugins need no ./client.
+            // Client entry point (DL#179 Part 2 rule 3): required when a provided component has an
+            // interactive phase, the plugin declares contexts, or the plugin provides any route
+            // (DL#182 — every route is hydrated in the browser, so its client bundle must exist,
+            // regardless of whether interactivity can be detected at validate time). Server-only
+            // (slow/fast) component plugins and tools-only plugins need no ./client.
             if (!packageJson.exports['./client']) {
                 const interactivity = detectInteractivePhase(context);
+                const providesRoute =
+                    Array.isArray(context.manifest.routes) && context.manifest.routes.length > 0;
                 const needsClient =
-                    context.manifest.contexts !== undefined || interactivity === true;
+                    context.manifest.contexts !== undefined ||
+                    interactivity === true ||
+                    providesRoute;
                 if (needsClient) {
                     result.errors.push({
                         type: 'export-mismatch',
@@ -1240,7 +1246,9 @@ async function validatePackageJson(
                             'package.json exports missing "./client" entry point, but the plugin ' +
                             (context.manifest.contexts !== undefined
                                 ? 'declares contexts (client-side by definition)'
-                                : 'provides an interactive component'),
+                                : providesRoute && interactivity !== true
+                                  ? 'provides a route (hydrated in the browser)'
+                                  : 'provides an interactive component'),
                         location: packageJsonPath,
                         suggestion:
                             'Add "./client": "./dist/index.client.js" to exports. ' +

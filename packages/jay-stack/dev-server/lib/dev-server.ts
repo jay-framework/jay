@@ -124,9 +124,25 @@ async function scanPluginRoutes(projectRoot: string, projectRoutes: JayRoutes): 
             // For NPM plugins, route.component is the export name (e.g., 'aiditorPage')
             const componentExport = isLocalComponent ? undefined : route.component;
 
+            // Client hydration must load the browser-safe bundle, never ./tools (devOnly) or . (DL#182).
+            // resolvePluginExport reads package.json exports ONLY (no index.* fallback), so a plugin
+            // without a "./client" export yields undefined instead of silently resolving the server bundle.
+            const clientCompPath = isLocalComponent
+                ? undefined
+                : resolvePluginExport(plugin.pluginPath, './client');
+
+            if (!isLocalComponent && !clientCompPath) {
+                getLogger().error(
+                    `[Routes] Plugin "${plugin.name}" route ${route.path}: no "./client" export — ` +
+                        `hydration cannot load a browser-safe bundle. Add "./client" to package.json exports.`,
+                );
+                continue; // do not register a route that would import a server bundle into the browser
+            }
+
             pluginRoutes.push(
                 createRoute(route.path, jayHtmlPath, compPath, componentExport, {
                     devOnly: route.devOnly === true,
+                    clientCompPath,
                 }),
             );
 
