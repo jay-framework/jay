@@ -18,7 +18,7 @@ export function hydrate(rootElement, options) {
                     (vs) => vs.items,
                     '_id',
                     'S0/0/1',
-                    () => [adoptText('S1/0', (vs1) => vs1.name)],
+                    (vs1) => [adoptText('S1/0', (vs12) => vs12.name)],
                     (vs1) => {
                         return e('ul', {}, [e('li', {}, [dt((vs12) => vs12.name)])]);
                     },

@@ -22,14 +22,14 @@ export function hydrate(rootElement, options) {
                     (vs) => vs.categories,
                     '_id',
                     'S0/0/1',
-                    () => [
+                    (vs1) => [
                         adoptDynamicElement('S0/0/1', {}, [
                             STATIC,
                             hydrateForEach(
-                                (vs1) => vs1.items,
+                                (vs12) => vs12.items,
                                 '_id',
                                 'S1/1',
-                                () => [adoptText('S2/1', (vs2) => vs2.count)],
+                                (vs2) => [adoptText('S2/1', (vs22) => vs22.count)],
                                 (vs2) => {
                                     return e('div', { class: 'item' }, [
                                         e('span', { class: 'label' }, [dt((vs22) => vs22.label)]),

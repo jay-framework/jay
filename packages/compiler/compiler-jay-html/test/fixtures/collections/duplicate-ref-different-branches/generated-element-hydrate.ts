@@ -97,7 +97,7 @@ export function hydrate(
                         (vs: DuplicateRefDifferentBranchesViewState) => vs.items,
                         'id',
                         'S0/0/1/0',
-                        () => [
+                        (vs1: ItemOfDuplicateRefDifferentBranchesViewState) => [
                             adoptElement(
                                 'S1/0',
                                 {},

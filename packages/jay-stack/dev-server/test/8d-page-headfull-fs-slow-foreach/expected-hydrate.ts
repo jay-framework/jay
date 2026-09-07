@@ -59,11 +59,11 @@ export function hydrate(rootElement, options) {
                     (vs) => vs.items,
                     '_id',
                     'S0/0/1',
-                    () => [
+                    (vs1) => [
                         childCompHydrate(
                             _HeadlessHeader0Adopt,
-                            (vs1) => ({
-                                itemId: vs1._id,
+                            (vs12) => ({
+                                itemId: vs12._id,
                                 style: 'display: contents',
                                 jc: 'header',
                             }),

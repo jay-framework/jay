@@ -139,3 +139,74 @@ Added test `10e-conditional-ref-with-text` — forEach with two conditional butt
 - dev-server hydration: 634 passed
 - compiler-jay-html: 633 passed, 4 skipped
 - 3 existing fixtures updated (basics/refs, conditions-with-refs, duplicate-ref-different-branches)
+
+## Follow-up Fix (2026-09-07): Non-interactive conditional guard uses page ViewState instead of item ViewState
+
+### Problem
+
+Reproduced in `wix/examples/store-light` on `/products/minimalist-tote-bag`:
+
+```
+[jay hydration] adoptBase coordinate "S10/1/4" not found in DOM   (×3)
+```
+
+The error came from the related-products list (a `forEach`) whose items contain a
+**non-interactive** conditional (a `slow`/`fast` `if`, not `fast+interactive`). Because the
+page also had interactive paths, the hydrate compiler wraps such non-interactive conditionals
+in an inline guard so the adopt code only runs when the element was actually rendered at SSR:
+
+```ts
+...(cond ? [adoptElement("S1/0", {}, [])] : [])
+```
+
+The guard expression was compiled with a hardcoded `viewState` variable (the hydrate render
+function parameter). That is correct at the top level, but **inside a `forEach` the adoption
+runs inside the item adopt callback**, whose scope variable is the item (e.g. `vs1`), not
+`viewState`. So a per-item condition (e.g. per-product `quickAddType`) was evaluated against
+the **page** ViewState. The guard then produced the wrong branch, so `adoptElement` targeted a
+coordinate that wasn't in that item's DOM subtree → `adoptBase coordinate ... not found`.
+
+This was a **compiler codegen bug**, not a runtime hydration edge case. No test covered a
+non-interactive conditional nested inside a `forEach` (only top-level non-interactive
+conditionals were covered by `basics/phase-aware-conditionals`).
+
+### Fix
+
+**File:** `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler-hydrate.ts`
+
+1. **Guard variable is scope-aware.** Use the page `viewState` at top level, but the in-scope
+   item variables inside a `forEach`:
+   ```ts
+   const guardVariables = context.insideFastForEach
+     ? context.variables // item scope, e.g. `vs1`
+     : new Variables(context.variables.currentType, undefined, 0, 'viewState');
+   ```
+2. **The item adopt callback now receives the item.** The four `adoptBody` generations changed
+   from `() => [...]` to `(vs1: ItemVS) => [...]` (matching the create callback's param) so the
+   item variable used by the guard is actually in scope at runtime.
+
+**File:** `packages/runtime/runtime/lib/hydrate.ts`
+
+- `hydrateForEach` passes the item into the adopt callback: `adoptItem(item)`.
+- Signature: `adoptItem: (item: Item) => BaseJayElement<NoInfer<Item>>[]` (and same for
+  `createItem`'s return). `NoInfer` on the **returns** keeps `Item` inferred from `accessor`
+  (and the compiler-generated explicit param annotations), so the untyped element helpers
+  inside the callbacks don't collapse `Item` to `unknown`. `NoInfer` was deliberately **not**
+  applied to the params — doing so mis-typed nested `dt(...)` callbacks as `unknown` in the
+  keyed-headless-in-forEach fixture.
+
+### Test
+
+New regression fixture `collections/conditional-in-foreach` — a `forEach` over a repeated
+sub-contract whose item has a non-interactive (`slow`) boolean `in stock` used as `if`, plus a
+`fast+interactive` `price`. Generated hydrate now emits the item-scoped guard
+`...(vs1.inStock ? [adoptElement("S1/0", {}, [])] : [])` and the item-scoped condition
+`c((vs1) => vs1.inStock, ...)` — previously `viewState.name`. Added to
+`generate-element-hydrate.test.ts`.
+
+### Test Results
+
+- compiler-jay-html: 696 passed, 4 skipped (26/26 hydrate codegen)
+- runtime hydration: 70 passed
+- Both packages' `build:check-types` clean
+- 6 existing forEach hydrate fixtures updated (adopt callback now takes the item param)

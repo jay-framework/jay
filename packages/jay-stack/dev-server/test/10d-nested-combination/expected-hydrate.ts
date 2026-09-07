@@ -37,20 +37,20 @@ export function hydrate(rootElement, options) {
                     (vs) => vs.categories,
                     '_id',
                     'S0/0/1',
-                    () => [
+                    (vs1) => [
                         adoptDynamicElement('S0/0/1', {}, [
                             STATIC,
-                            ...(viewState.showDetails ? [adoptElement('S1/1', {}, [])] : []),
+                            ...(vs1.showDetails ? [adoptElement('S1/1', {}, [])] : []),
                             hydrateConditional(
-                                (vs1) => vs1.isActive,
+                                (vs12) => vs12.isActive,
                                 () => adoptElement('S1/2', {}, []),
                                 () => e('span', { class: 'active-badge' }, ['Active']),
                             ),
                             hydrateForEach(
-                                (vs1) => vs1.items,
+                                (vs12) => vs12.items,
                                 '_id',
                                 'S1/3',
-                                () => [adoptText('S2/0', (vs2) => vs2.label)],
+                                (vs2) => [adoptText('S2/0', (vs22) => vs22.label)],
                                 (vs2) => {
                                     return e('ul', {}, [e('li', {}, [dt((vs22) => vs22.label)])]);
                                 },

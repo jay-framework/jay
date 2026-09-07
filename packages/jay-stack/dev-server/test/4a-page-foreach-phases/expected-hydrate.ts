@@ -48,7 +48,7 @@ export function hydrate(rootElement, options) {
                         (vs) => vs.slowItems,
                         '_id',
                         'S0/0/1/1',
-                        () => [adoptText('S1/0', (vs1) => vs1.label)],
+                        (vs1) => [adoptText('S1/0', (vs12) => vs12.label)],
                         (vs1) => {
                             return e('ul', {}, [e('li', {}, [dt((vs12) => vs12.label)])]);
                         },
@@ -60,7 +60,7 @@ export function hydrate(rootElement, options) {
                         (vs) => vs.fastItems,
                         '_id',
                         'S0/0/2/1',
-                        () => [adoptText('S2/0', (vs1) => vs1.label)],
+                        (vs1) => [adoptText('S2/0', (vs12) => vs12.label)],
                         (vs1) => {
                             return e('ul', {}, [e('li', {}, [dt((vs12) => vs12.label)])]);
                         },
@@ -72,9 +72,9 @@ export function hydrate(rootElement, options) {
                         (vs) => vs.fastMixedItems,
                         '_id',
                         'S0/0/3/1',
-                        () => [
-                            adoptText('S3/0', (vs1) => vs1.label),
-                            adoptText('S3/1', (vs1) => vs1.count),
+                        (vs1) => [
+                            adoptText('S3/0', (vs12) => vs12.label),
+                            adoptText('S3/1', (vs12) => vs12.count),
                             adoptElement('S3/2', {}, [], refIncrement()),
                         ],
                         (vs1) => {
@@ -92,9 +92,9 @@ export function hydrate(rootElement, options) {
                         (vs) => vs.interactiveItems,
                         '_id',
                         'S0/0/4/1',
-                        () => [
-                            adoptText('S4/0', (vs1) => vs1.label),
-                            adoptText('S4/1', (vs1) => vs1.count),
+                        (vs1) => [
+                            adoptText('S4/0', (vs12) => vs12.label),
+                            adoptText('S4/1', (vs12) => vs12.count),
                             adoptElement('S4/2', {}, [], refIncrement2()),
                         ],
                         (vs1) => {

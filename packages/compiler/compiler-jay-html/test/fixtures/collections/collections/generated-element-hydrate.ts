@@ -60,7 +60,7 @@ export function hydrate(
                         (vs: CollectionsViewState) => vs.things,
                         'id',
                         'S0/0/1/0',
-                        () => [
+                        (vs1: ThingOfCollectionsViewState) => [
                             adoptText('S1/0', (vs1) => vs1.name),
                             adoptText('S1/1', (vs1) => vs1.completed),
                             adoptText('S1/2', (vs1) => vs1.cost),

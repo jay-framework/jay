@@ -1,0 +1,15 @@
+<html>
+<head>
+    <script type="application/jay-data" contract="./conditional-in-foreach.jay-contract"></script>
+</head>
+<body>
+<div>
+    <h1>{pageTitle}</h1>
+    <span class="cart">{cartCount}</span>
+    <div class="grid" forEach="products" trackBy="id">
+        <span if="inStock" class="name">{name}</span>
+        <span class="price">{price}</span>
+    </div>
+</div>
+</body>
+</html>

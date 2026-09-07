@@ -447,15 +447,22 @@ export function hydrateConditional<ViewState>(
  * @param trackBy - Property name used for item identity (reconciliation key)
  * @param itemCoordinate - Scoped coordinate of each forEach item root element (DL#126).
  *   All items share this coordinate; each resolveCoordinate call consumes the next one.
- * @param adoptItem - Called per existing item during hydration (should use adoptText/adoptElement)
+ * @param adoptItem - Called per existing item during hydration (should use adoptText/adoptElement).
+ *   Receives the item ViewState so per-item guards for non-interactive conditionals can
+ *   evaluate against the item rather than the page ViewState.
  * @param createItem - Called per new item (regular element()/dynamicText() from generated-element.ts)
  */
 export function hydrateForEach<ViewState, Item>(
     accessor: (vs: ViewState) => Item[],
     trackBy: string,
     itemCoordinate: string,
-    adoptItem: () => BaseJayElement<Item>[],
-    createItem: (item: Item, id: string) => BaseJayElement<Item>,
+    // `Item` is inferred only from `accessor` (via NoInfer on the returns) so it flows *down*
+    // into these callbacks. Otherwise the untyped element helpers inside them
+    // (adoptElement/e/dt/...) would infer `Item` as `unknown` and break the item-typed
+    // guards/accessors. The params are left inferable so the compiler-generated explicit
+    // param annotations (`(vs1: ItemVS) => ...`) participate in inference and agree with `accessor`.
+    adoptItem: (item: Item) => BaseJayElement<NoInfer<Item>>[],
+    createItem: (item: Item, id: string) => BaseJayElement<NoInfer<Item>>,
 ): DynamicChild<ViewState> {
     const context = currentConstructionContext();
     const savedContext = saveContext();
@@ -484,7 +491,7 @@ export function hydrateForEach<ViewState, Item>(
             : context.forItem(item, id);
 
         const adopted = withContext(CONSTRUCTION_CONTEXT_MARKER, scopedContext, () => {
-            const elements = adoptItem();
+            const elements = adoptItem(item);
             // Combine array of adopted elements into a single BaseJayElement
             const updates: updateFunc<Item>[] = [];
             const mounts: MountFunc[] = [];

@@ -61,11 +61,11 @@ export function hydrate(rootElement, options) {
                         (vs) => vs.items,
                         '_id',
                         'S0/0/2/1',
-                        () => [
-                            adoptText('S1/0/0', (vs1) => vs1.name),
+                        (vs1) => [
+                            adoptText('S1/0/0', (vs12) => vs12.name),
                             childCompHydrate(
                                 _HeadlessWidget0Adopt,
-                                (vs1) => ({ itemId: vs1._id }),
+                                (vs12) => ({ itemId: vs12._id }),
                                 'S2/0',
                                 refAr0(),
                             ),

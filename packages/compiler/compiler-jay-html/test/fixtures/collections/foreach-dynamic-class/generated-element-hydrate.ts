@@ -80,7 +80,7 @@ export function hydrate(
                     (vs: ForeachDynamicClassViewState) => vs.items,
                     'id',
                     'S0/0/0',
-                    () => [
+                    (vs1: ItemOfForeachDynamicClassViewState) => [
                         adoptElement(
                             'S0/0/0',
                             { class: da((vs1) => `item ${vs1.isActive ? 'active' : ''}`) },

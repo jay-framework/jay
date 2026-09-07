@@ -270,15 +270,18 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
     // may not be in the DOM if the condition was false at SSR time.
     if (isConditional(element) && context.interactivePaths.size > 0) {
         const condition = element.getAttribute('if');
-        // Use viewState variable (the hydrate render function parameter) for the guard,
-        // not vs (the accessor variable used in condition callbacks).
-        const viewStateVars = new Variables(
-            context.variables.currentType,
-            undefined,
-            0,
-            'viewState',
-        );
-        const renderedCondition = parseServerCondition(condition, viewStateVars);
+        // The guard must evaluate against the ViewState that is actually in scope where the
+        // adoption runs. At the top level that is the hydrate render function parameter
+        // (`viewState`), not `vs` (the accessor variable used in condition callbacks).
+        // Inside a forEach item, however, the adoption runs inside the item adopt callback,
+        // whose parameter is the item variable (e.g. `vs1`). Using `viewState` there would
+        // read the page ViewState instead of the item ViewState, so an item-level condition
+        // (e.g. per-product `quickAddType`) would be mis-evaluated and adoptElement would
+        // target a coordinate that isn't in the DOM.
+        const guardVariables = context.insideFastForEach
+            ? context.variables
+            : new Variables(context.variables.currentType, undefined, 0, 'viewState');
+        const renderedCondition = parseServerCondition(condition, guardVariables);
         const coordinate = element.getAttribute(COORD_ATTR) || '0';
         const childContent = renderHydrateElementContent(
             element,
@@ -313,6 +316,11 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         const forEachFragment = forEachAccessor
             .render()
             .map((_) => `(${paramName}: ${paramType}) => ${_}`);
+
+        // The adopt callback receives the item ViewState so that per-item guards for
+        // non-interactive (slow/fast) conditionals evaluate against the item — not the
+        // page ViewState. hydrateForEach passes the item into adoptItem.
+        const adoptItemParam = `${forEachVariables.currentVar}: ${forEachVariables.currentType.name}`;
 
         // Snapshot ref name generator state BEFORE the adopt callback runs.
         // The create callback needs the same starting state so it generates
@@ -415,7 +423,7 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
             const childrenArr = childParts.length
                 ? `[\n${childParts.join(',\n')},\n${indent.firstLine}        ]`
                 : '[]';
-            adoptBody = `() => [\n${indent.firstLine}        adoptDynamicElement("${itemRootCoord2}", ${itemAttrs.rendered}, ${childrenArr}${refSuffix}),\n${indent.firstLine}    ]`;
+            adoptBody = `(${adoptItemParam}) => [\n${indent.firstLine}        adoptDynamicElement("${itemRootCoord2}", ${itemAttrs.rendered}, ${childrenArr}${refSuffix}),\n${indent.firstLine}    ]`;
 
             itemContent = new RenderFragment(
                 '',
@@ -439,11 +447,11 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
                 const childrenArr = itemContent.rendered.trim()
                     ? `[\n${itemContent.rendered},\n${indent.firstLine}        ]`
                     : '[]';
-                adoptBody = `() => [\n${indent.firstLine}        adoptElement("${itemRootCoord}", ${itemAttrs.rendered}, ${childrenArr}${refSuffix}),\n${indent.firstLine}    ]`;
+                adoptBody = `(${adoptItemParam}) => [\n${indent.firstLine}        adoptElement("${itemRootCoord}", ${itemAttrs.rendered}, ${childrenArr}${refSuffix}),\n${indent.firstLine}    ]`;
             } else {
                 adoptBody = itemContent.rendered.trim()
-                    ? `() => [\n${itemContent.rendered},\n${indent.firstLine}    ]`
-                    : '() => []';
+                    ? `(${adoptItemParam}) => [\n${itemContent.rendered},\n${indent.firstLine}    ]`
+                    : `(${adoptItemParam}) => []`;
             }
         }
 

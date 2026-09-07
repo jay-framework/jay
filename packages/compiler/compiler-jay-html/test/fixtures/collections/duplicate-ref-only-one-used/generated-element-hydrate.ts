@@ -94,7 +94,7 @@ export function hydrate(
                     (vs: DuplicateRefOnlyOneUsedViewState) => vs.filters?.filter2?.categories,
                     'id',
                     'S0/0/1',
-                    () => [
+                    (vs1: CategoryOfFilter2OfDuplicateRefHeadlessViewState) => [
                         adoptText('S1/0', (vs1) => vs1.name),
                         adoptElement('S1/1', {}, [], refIsSelected()),
                     ],

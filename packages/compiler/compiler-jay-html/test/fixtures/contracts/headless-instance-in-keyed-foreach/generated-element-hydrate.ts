@@ -153,7 +153,7 @@ export function hydrate(
                     (vs: HeadlessInstanceInKeyedForeachViewState) => vs.data?.items,
                     'slug',
                     'S0/0/0',
-                    () => [
+                    (vs1: ItemOfDataListSimpleViewState) => [
                         // @ts-ignore
                         adoptText('S1/0', (vs1) => vs1.title),
                         childCompHydrate(

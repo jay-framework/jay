@@ -31,16 +31,16 @@ export function hydrate(rootElement, options) {
                     (vs) => vs.items,
                     '_id',
                     'S0/0/1',
-                    () => [
+                    (vs1) => [
                         adoptDynamicElement('S0/0/1', {}, [
-                            adoptText('S1/0', (vs1) => vs1.name),
+                            adoptText('S1/0', (vs12) => vs12.name),
                             hydrateConditional(
-                                (vs1) => vs1.isActive,
+                                (vs12) => vs12.isActive,
                                 () => adoptElement('S1/1', {}, []),
                                 () => e('span', { class: 'badge' }, ['Active']),
                             ),
                             hydrateConditional(
-                                (vs1) => !vs1.isActive,
+                                (vs12) => !vs12.isActive,
                                 () => adoptElement('S1/2', {}, []),
                                 () => e('span', { class: 'badge-off' }, ['Inactive']),
                             ),

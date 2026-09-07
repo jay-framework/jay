@@ -31,39 +31,39 @@ export function hydrate(rootElement, options) {
                     (vs) => vs.items,
                     '_id',
                     'S0/0/1',
-                    () => [
+                    (vs1) => [
                         adoptDynamicElement('S0/0/1', {}, [
                             hydrateConditional(
-                                (vs1) => !vs1.inStock,
+                                (vs12) => !vs12.inStock,
                                 () =>
                                     adoptElement(
                                         'S1/0',
                                         {},
-                                        [adoptText('S1/0', (vs1) => vs1.name)],
+                                        [adoptText('S1/0', (vs12) => vs12.name)],
                                         refChoiceButton(),
                                     ),
                                 () =>
                                     e(
                                         'button',
                                         { class: 'choice out-of-stock' },
-                                        [dt((vs1) => vs1.name)],
+                                        [dt((vs12) => vs12.name)],
                                         refChoiceButton(),
                                     ),
                             ),
                             hydrateConditional(
-                                (vs1) => vs1.inStock,
+                                (vs12) => vs12.inStock,
                                 () =>
                                     adoptElement(
                                         'S1/1',
                                         {},
-                                        [adoptText('S1/1', (vs1) => vs1.name)],
+                                        [adoptText('S1/1', (vs12) => vs12.name)],
                                         refChoiceButton(),
                                     ),
                                 () =>
                                     e(
                                         'button',
                                         { class: 'choice' },
-                                        [dt((vs1) => vs1.name)],
+                                        [dt((vs12) => vs12.name)],
                                         refChoiceButton(),
                                     ),
                             ),

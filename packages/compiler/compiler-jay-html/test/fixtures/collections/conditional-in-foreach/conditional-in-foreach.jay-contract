@@ -1,0 +1,32 @@
+name: ConditionalInForeach
+tags:
+  - tag: page title
+    type: data
+    dataType: string
+    phase: slow
+
+  - tag: cart count
+    type: data
+    dataType: number
+    phase: fast+interactive
+
+  - tag: products
+    type: sub-contract
+    repeated: true
+    trackBy: id
+    tags:
+      - tag: id
+        type: data
+        dataType: string
+      - tag: in stock
+        type: data
+        dataType: boolean
+        phase: slow
+      - tag: name
+        type: data
+        dataType: string
+        phase: slow
+      - tag: price
+        type: data
+        dataType: number
+        phase: fast+interactive

@@ -149,7 +149,7 @@ export function hydrate(
                     (vs: PageWithHeadlessInForeachViewState) => vs.products,
                     '_id',
                     'S0/0/1',
-                    () => [
+                    (vs1: ProductOfPageWithHeadlessInForeachViewState) => [
                         childCompHydrate(
                             _HeadlessProductCard0Adopt,
                             (vs1: ProductOfPageWithHeadlessInForeachViewState) => ({

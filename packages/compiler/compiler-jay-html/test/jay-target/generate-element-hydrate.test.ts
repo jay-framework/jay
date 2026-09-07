@@ -135,6 +135,20 @@ describe('generate jay-html element hydrate', () => {
                 await readFixtureElementHydrateFile(folder),
             );
         });
+
+        // Regression: a non-interactive (slow/fast) conditional inside a forEach item must
+        // guard against the item ViewState (vs1), not the page ViewState (viewState). The
+        // adopt callback receives the item so `...(vs1.name ? [...] : [])` is emitted —
+        // previously it wrongly emitted `...(viewState.name ? ...)`, so adoptElement targeted
+        // a coordinate that wasn't in the DOM and hydration warned "coordinate not found".
+        it('for non-interactive conditional inside forEach', async () => {
+            const folder = 'collections/conditional-in-foreach';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
     });
 
     describe('duplicate refs', () => {
