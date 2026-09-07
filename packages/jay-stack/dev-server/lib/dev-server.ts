@@ -671,9 +671,7 @@ async function handlePreRenderRequest(
 
     if (renderedSlowly.kind !== 'PhaseOutput') {
         timing?.recordSlowRender(Date.now() - slowStart);
-        if (renderedSlowly.kind === 'ClientError') {
-            handleOtherResponseCodes(res, renderedSlowly);
-        }
+        handleOtherResponseCodes(res, renderedSlowly);
         timing?.end();
         return;
     }
@@ -826,9 +824,7 @@ async function handleClientOnlyRequest(
 
     if (renderedSlowly.kind !== 'PhaseOutput') {
         timing?.recordSlowRender(Date.now() - slowStart);
-        if (renderedSlowly.kind === 'ClientError') {
-            handleOtherResponseCodes(res, renderedSlowly);
-        }
+        handleOtherResponseCodes(res, renderedSlowly);
         timing?.end();
         return;
     }
