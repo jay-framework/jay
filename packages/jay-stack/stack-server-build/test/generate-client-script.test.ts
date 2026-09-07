@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { generateClientScript, ProjectClientInitInfo } from '../lib';
+import { generateClientScript, ProjectClientInitInfo, buildPageReloadHmrScript } from '../lib';
 import { prettifyHtml } from '@jay-framework/compiler-shared';
 import type { DevServerPagePart } from '../lib';
 import type { PluginClientInitInfo } from '@jay-framework/stack-server-runtime';
@@ -33,6 +33,15 @@ function createPluginInitInfo(
 ): PluginClientInitInfo {
     return { name, importPath, initExport };
 }
+
+describe('buildPageReloadHmrScript', () => {
+    it('should emit the jay:page-reload listener', () => {
+        const script = buildPageReloadHmrScript();
+        expect(script).toContain("import.meta.hot.on('jay:page-reload'");
+        expect(script).toContain('window.location.reload()');
+        expect(script).toContain("pathname.startsWith(prefix + '/')");
+    });
+});
 
 describe('generateClientScript', () => {
     const baseJayHtmlPath = '/src/pages/index.jay-html';
