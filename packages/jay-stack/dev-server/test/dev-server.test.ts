@@ -1,4 +1,5 @@
 import { DevServerOptions, mkDevServer } from '../lib';
+import { generateFrozenPageHtml } from '@jay-framework/stack-server-build';
 import { JayRollupConfig } from '@jay-framework/vite-plugin';
 import path from 'path';
 import fs from 'node:fs';
@@ -215,6 +216,72 @@ target.appendChild(wrapped.element.dom);
         // Should have automation setup
         expect(script).toMatch(/automation/);
     }, 5000000);
+
+    it('should inject dev HMR listener in frozen full-page HTML (pre-transform)', async () => {
+        const httpServer = http.createServer();
+        const devServer = await mkDevServer(optionsForDir('./simple-page', httpServer));
+        const fixtureDir = path.resolve(__dirname, 'simple-page');
+        const jayHtmlContent = await fs.promises.readFile(
+            path.join(fixtureDir, 'page.jay-html'),
+            'utf-8',
+        );
+
+        const rawHtml = await generateFrozenPageHtml(
+            devServer.viteServer,
+            jayHtmlContent,
+            'page.jay-html',
+            fixtureDir,
+            {},
+            path.join(fixtureDir, 'build/dev'),
+            fixtureDir,
+            'index',
+            path.resolve(__dirname, '../../../tsconfig.json'),
+            fixtureDir,
+            'page',
+            undefined,
+            { injectDevHmr: true },
+        );
+
+        expect(rawHtml).toContain('<script type="module">');
+        expect(rawHtml).toContain("import.meta.hot.on('jay:page-reload'");
+        expect(rawHtml).not.toContain('/@vite/client');
+        expect(rawHtml).toContain('Hello World');
+
+        await devServer.viteServer.close();
+    });
+
+    it('should serve frozen full-page through transformIndexHtml with Vite client', async () => {
+        const httpServer = http.createServer();
+        const devServer = await mkDevServer(optionsForDir('./simple-page', httpServer));
+        const entry = await devServer.freezeStore!.save('/', {});
+
+        const [html] = await makeRequest(devServer.routes[0].handler, `/?_jay_freeze=${entry.id}`);
+        const [proxyScript] = await makeRequest(devServer.server, extractScriptUrl(html));
+        await devServer.viteServer.close();
+
+        expect(html).toContain('/@vite/client');
+        expect(html).toMatch(/html-proxy/);
+        expect(html).toContain('Hello World');
+        expect(html).not.toContain('makeCompositeJayComponent');
+        expect(html).not.toContain('wrapWithAutomation');
+        expect(proxyScript).toContain("import.meta.hot.on('jay:page-reload'");
+    });
+
+    it('should not inject dev HMR in frozen fragment responses', async () => {
+        const httpServer = http.createServer();
+        const devServer = await mkDevServer(optionsForDir('./simple-page', httpServer));
+        const entry = await devServer.freezeStore!.save('/', {});
+
+        const [html] = await makeRequest(
+            devServer.routes[0].handler,
+            `/?_jay_freeze=${entry.id}&format=fragment`,
+        );
+        await devServer.viteServer.close();
+
+        expect(html).not.toContain('/@vite/client');
+        expect(html).not.toContain('jay:page-reload');
+        expect(html).toContain('Hello World');
+    });
 });
 
 describe('DevServerService', () => {

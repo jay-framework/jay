@@ -154,6 +154,20 @@ ${clientParts.map((part) => '        ' + part.clientPart).join(',\n')}
     };
 }
 
+/** Dev-only: subscribe to jay:page-reload and reload when route prefix matches. */
+export function buildPageReloadHmrScript(): string {
+    return `
+      if (import.meta.hot) {
+        import.meta.hot.on('jay:page-reload', (data) => {
+          const prefix = data.routePrefix;
+          const pathname = window.location.pathname;
+          if (pathname === prefix || pathname.startsWith(prefix + '/')) {
+            window.location.reload();
+          }
+        });
+      }`;
+}
+
 /**
  * Client-side freeze shortcut script (DL#127, DL#128).
  * Alt+S (Option+S on Mac) captures the current ViewState, saves it, and opens a frozen tab.
@@ -236,15 +250,7 @@ function buildFreezeScript(routePattern?: string): string {
       }
 
       // Targeted page reload: only reload if this page matches the changed route prefix
-      if (import.meta.hot) {
-        import.meta.hot.on('jay:page-reload', (data) => {
-          const prefix = data.routePrefix;
-          const pathname = window.location.pathname;
-          if (pathname === prefix || pathname.startsWith(prefix + '/')) {
-            window.location.reload();
-          }
-        });
-      }`;
+${buildPageReloadHmrScript()}`;
 }
 
 /**

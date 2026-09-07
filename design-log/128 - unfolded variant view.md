@@ -386,3 +386,15 @@ vite.ws.send({
 | ---------------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | `dev-server/lib/dev-server.ts`                       | `getRoutePrefix()`, `sendPageReload()`; 3 page-specific reload calls switched to custom event |
 | `stack-server-runtime/lib/generate-client-script.ts` | `import.meta.hot.on('jay:page-reload')` listener in freeze script                             |
+
+## Addendum: Dev full-page frozen HMR (DL#179, 2026-09-06)
+
+**Supersedes (partially):** Trade-off row _"Socket for refresh: shadow DOM views can't use HMR"_ — still true for **fragment** embedders; **dev full-page** frozen views (`?_jay_freeze=<id>` in iframe/tab) now self-reload via the same `jay:page-reload` HMR path as live pages.
+
+| Context                              | Refresh mechanism                                                                                                  |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| Dev full-page frozen (`format=page`) | HMR listener + `vite.transformIndexHtml` — no host wiring ([DL#179](179%20-%20frozen-page-hmr-on-template-change)) |
+| Fragment / shadow DOM embed          | Host re-fetch or future `freezeChanged` / fetch-and-swap protocol (unchanged)                                      |
+| Production frozen pages              | Static SSR, no client scripts (unchanged)                                                                          |
+
+**Invariant clarification:** DL#128 "no client scripts" applies to production and fragment output. Dev full-page frozen responses may include a **minimal dev-only** reload listener (no hydration, automation, or freeze capture) — see DL#179 JSDoc policy.

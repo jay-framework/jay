@@ -287,6 +287,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 124 | [contract props and params consistency](124%20-%20contract%20props%20and%20params%20consistency)                                      | Ensure contracts declare props/params; agent-kit authoring docs + validate checks         |
 | 125 | [plugin agent-kit](125%20-%20plugin%20agent-kit)                                                                                      | `agent-kit --mode plugin` for AI agents creating plugins (contracts, components, actions) |
 | 128 | [unfolded variant view](128%20-%20unfolded%20variant%20view)                                                                          | Page freeze: capture ViewState, render static SSR snapshots for side-by-side comparison   |
+| 179 | [frozen page hmr on template change](179%20-%20frozen-page-hmr-on-template-change)                                                    | Dev HMR reload for `?_jay_freeze` full pages when jay-html/CSS changes; data stays frozen |
 | 92  | [Gemini agent plugin for jay-stack](92%20-%20gemini%20agent%20plugin%20for%20jay-stack)                                               | Embedded AI agent: Gemini API, .jay-action metadata, chat contract, page automation       |
 | 97  | [Contract-based tool descriptions for gemini agent](97%20-%20contract-based%20tool%20descriptions%20for%20gemini%20agent)             | Semantic tool descriptions from .jay-contract via server action, not embedded in HTML     |
 | 132 | [ui-kit headless primitives](132%20-%20ui-kit%20headless%20primitives)                                                                | Popover menu, scroll carousel, tab switcher, clipboard copy — thin JS over HTML/CSS       |
@@ -330,7 +331,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ### "I'm working on the dev server"
 
-→ See #26 (jay start), #74 (file watching), #77 (automation integration), #81 (test mode), #107 (consistency and phase optionality)
+→ See #26 (jay start), #74 (file watching), #77 (automation integration), #81 (test mode), #107 (consistency and phase optionality), #128 (page freeze), #179 (frozen page HMR on template change)
 
 ### "I need to understand security model"
 
