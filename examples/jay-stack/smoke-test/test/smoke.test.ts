@@ -441,6 +441,21 @@ describe('Smoke Test', () => {
             expect(data.message).toBe('smoke test data');
         });
 
+        it('/robots.txt — served from public folder', async () => {
+            const response = await fetch(`${server.url}/robots.txt`);
+            expect(response.ok).toBe(true);
+            const text = await response.text();
+            expect(text).toMatch(/User-agent/);
+            expect(text).toMatch(/Sitemap/);
+        });
+
+        it('/sitemap.xml — dev placeholder', async () => {
+            const response = await fetch(`${server.url}/sitemap.xml`);
+            expect(response.ok).toBe(true);
+            const text = await response.text();
+            expect(text).toMatch(/<urlset/);
+        });
+
         it('/foreach — forEach rendering', async () => {
             const { status, body } = await fetchPage(server.url, '/foreach/');
             expect(status).toBe(200);
@@ -638,6 +653,25 @@ describe('Smoke Test', () => {
             const { status, body } = await fetchPage(server.url, '/markdown/hello/');
             expect(status).toBe(200);
             expect(body).toMatch(/Hello from Markdown/);
+        });
+
+        it('/robots.txt — served in production', async () => {
+            const response = await fetch(`${server.url}/robots.txt`);
+            expect(response.ok).toBe(true);
+            const text = await response.text();
+            expect(text).toMatch(/User-agent/);
+            expect(text).toMatch(/Sitemap/);
+        });
+
+        it('/sitemap.xml — generated from route manifest', async () => {
+            const response = await fetch(`${server.url}/sitemap.xml`);
+            expect(response.ok).toBe(true);
+            const text = await response.text();
+            expect(text).toMatch(/<urlset/);
+            expect(text).toMatch(/https:\/\/smoke-test\.example\.com\//);
+            expect(text).toMatch(/\/phases/);
+            expect(text).toMatch(/\/dynamic\/item-a/);
+            expect(text).toMatch(/\/dynamic\/item-b/);
         });
     });
 

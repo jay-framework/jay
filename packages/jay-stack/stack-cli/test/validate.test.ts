@@ -314,18 +314,16 @@ describe('headless instance props validation (DL#124 Phase 2)', () => {
         );
     });
 
-    it('should warn when jay:xxx is missing a required contract prop', async () => {
+    it('should error when jay:xxx is missing a required contract prop', async () => {
         const fixtureDir = path.join(baseFixturesDir, 'headless-props-missing-required');
         const result = await validateJayFiles({
             path: fixtureDir,
             projectRoot: fixtureDir,
         });
 
-        const propWarnings = result.warnings.filter((w) =>
-            w.message.includes('missing required prop'),
-        );
-        expect(propWarnings).toHaveLength(1);
-        expect(propWarnings[0].message).toEqual(
+        const propErrors = result.errors.filter((e) => e.message.includes('missing required prop'));
+        expect(propErrors).toHaveLength(1);
+        expect(propErrors[0].message).toEqual(
             '<jay:test-widget> is missing required prop "itemId" declared in the "Widget" contract.',
         );
     });

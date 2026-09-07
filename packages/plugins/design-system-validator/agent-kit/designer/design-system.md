@@ -97,7 +97,7 @@ Use the token values directly in your `<style>` blocks:
 }
 ```
 
-CSS custom properties (`var(--name)`) are resolved statically when defined in `:root`. Unresolvable vars are accepted without validation.
+CSS custom properties (`var(--name)`) are resolved statically when defined in the page's CSS (inline `<style>` or linked local stylesheets). Variables that are used but never defined are flagged as warnings.
 
 ## Breakpoints
 
@@ -132,11 +132,17 @@ The `components` section defines expected styles for HTML elements (matched by c
 
 When a value intentionally breaks the design system, exempt it:
 
-**In CSS** — add a comment after the declaration:
+**In CSS** — add a comment on the same line or the line immediately after the declaration:
 
 ```css
 .hero {
   padding: 7.5rem 0; /* design-system: allow */
+}
+
+/* or on the next line: */
+.hero {
+  padding: 7.5rem 0;
+  /* design-system: allow */
 }
 ```
 
@@ -211,6 +217,14 @@ These are the errors the validator produces. Use them to align your CSS with the
 ```
 ⚠ Media query @media (max-width: 750px) not in DESIGN.md breakpoints
   Suggestion: Use a DESIGN.md breakpoint: mobile (600px), tablet (768px), desktop (1024px)
+```
+
+**Undefined CSS variable:**
+
+```
+⚠ CSS variable "--color-surface-tint" is used but never defined
+  Suggestion: Define --color-surface-tint in a :root block, or replace with a DESIGN.md token value directly.
+  To suppress: add /* design-system: allow */ on the same line or the line after the declaration.
 ```
 
 **Low contrast:**

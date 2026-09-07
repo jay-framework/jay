@@ -8,7 +8,20 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { createRequire } from 'node:module';
-import { loadPluginManifest, type PluginManifest } from '@jay-framework/compiler-shared';
+import yaml from 'yaml';
+
+/** Plugin manifest parsed from plugin.yaml. Typed loosely here to avoid compiler-shared dep. */
+export type PluginManifest = Record<string, any> & { name: string };
+
+function loadPluginManifest(pluginDir: string): PluginManifest | null {
+    const pluginYamlPath = path.join(pluginDir, 'plugin.yaml');
+    if (!fs.existsSync(pluginYamlPath)) return null;
+    try {
+        return yaml.parse(fs.readFileSync(pluginYamlPath, 'utf-8'));
+    } catch {
+        return null;
+    }
+}
 import { getLogger } from '@jay-framework/logger';
 
 const require = createRequire(import.meta.url);

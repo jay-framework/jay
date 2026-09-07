@@ -16,14 +16,16 @@ import YAML from 'yaml';
 import { createViteForCli } from '@jay-framework/dev-server';
 import { getLogger } from '@jay-framework/logger';
 import {
-    SetupNeedsAnswerError,
-    discoverPluginsWithSetup,
-    executePluginSetup,
     discoverPluginsWithInit,
     sortPluginsByDependencies,
     executePluginServerInits,
     runInitCallbacks,
 } from '@jay-framework/stack-server-runtime';
+import {
+    SetupNeedsAnswerError,
+    discoverPluginsWithSetup,
+    executePluginSetup,
+} from '@jay-framework/stack-server-build';
 import { loadConfig } from './config';
 import {
     createInteractivePrompt,

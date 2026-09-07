@@ -956,6 +956,8 @@ async function parseHeadfullFSImports(
      *  pre-rendered files, this is the original source page directory. When not set,
      *  filePath is used (normal source compilation). */
     sourceDir?: string,
+    /** Resolved CSS file paths already linked by the page — components skip these to avoid duplication. */
+    pageLinkedCssPaths?: Set<string>,
 ): Promise<HeadfullFSParseResult> {
     const headlessImports: JayHeadlessImports[] = [];
     const cssParts: string[] = [];
@@ -1094,10 +1096,10 @@ async function parseHeadfullFSImports(
         // Extract CSS from component's jay-html head — use the actual directory
         // where the jay-html was found (handles directory convention correctly)
         const componentDir = jayHtmlResult.componentDir;
-        const componentCssResult = await extractCss(jayHtmlRoot, componentDir);
+        const componentCssResult = await extractCss(jayHtmlRoot, componentDir, pageLinkedCssPaths);
         validations.push(...componentCssResult.validations);
         if (componentCssResult.val?.css) {
-            cssParts.push(componentCssResult.val.css);
+            cssParts.push(`/* Component: ${contractName} */\n${componentCssResult.val.css}`);
         }
         if (componentCssResult.val?.linkedCssFiles) {
             linkedCssFiles.push(...componentCssResult.val.linkedCssFiles);
@@ -1153,6 +1155,8 @@ async function parseHeadfullFSImports(
                 jayHtmlBody,
                 projectRoot,
                 visited,
+                undefined,
+                pageLinkedCssPaths,
             );
             headlessImports.push(...nestedResult.headlessImports);
             if (nestedResult.css) {
@@ -1456,6 +1460,28 @@ function parseHeadMeta(root: HTMLElement): JayHtmlHeadMeta | undefined {
     return { title, meta, links };
 }
 
+function parseValidationOverrides(
+    root: HTMLElement,
+): Record<string, Record<string, boolean | string[]>> | undefined {
+    const el = root.querySelector('script[type="application/jay-validations"]');
+    if (!el) return undefined;
+    const text = el.textContent?.trim();
+    if (!text) return undefined;
+    try {
+        const parsed = yaml.load(text) as Record<string, unknown> | null;
+        if (!parsed || typeof parsed !== 'object') return undefined;
+        const result: Record<string, Record<string, boolean | string[]>> = {};
+        for (const [key, value] of Object.entries(parsed)) {
+            if (value && typeof value === 'object') {
+                result[key] = value as Record<string, boolean | string[]>;
+            }
+        }
+        return Object.keys(result).length > 0 ? result : undefined;
+    } catch {
+        return undefined;
+    }
+}
+
 interface ExtractCssResult {
     css: string | undefined;
     linkedCssFiles: string[];
@@ -1482,6 +1508,7 @@ function resolveNestedCssImports(css: string, cssDir: string, visited?: Set<stri
 async function extractCss(
     root: HTMLElement,
     filePath: string,
+    skipPaths?: Set<string>,
 ): Promise<WithValidations<ExtractCssResult>> {
     const cssParts: string[] = [];
     const validations: string[] = [];
@@ -1498,16 +1525,14 @@ async function extractCss(
                 href.startsWith('https://') ||
                 href.startsWith('//')
             ) {
-                // Skip external URLs - they won't be extracted
                 continue;
             }
 
-            // Only attempt to read files if we have a valid file path
             if (filePath) {
-                // Resolve the CSS file path relative to the jay-html file
                 const cssFilePath = path.resolve(filePath, href);
-                // Track the CSS file for watching (even if it doesn't exist yet)
                 linkedCssFiles.push(cssFilePath);
+
+                if (skipPaths?.has(cssFilePath)) continue;
 
                 try {
                     const cssContent = await fs.readFile(cssFilePath, 'utf-8');
@@ -1520,7 +1545,6 @@ async function extractCss(
                     validations.push(`CSS file not found or unreadable: ${href}`);
                 }
             } else {
-                // If no file path is provided, just add a comment indicating the external CSS file
                 cssParts.push(`/* External CSS: ${href} */`);
             }
         }
@@ -1678,6 +1702,20 @@ export async function parseJayFile(
         return new WithValidations(undefined, validations);
     }
 
+    // Collect page-level linked CSS paths so headfull components can skip duplicates
+    const pageLinkedCssPaths = new Set<string>();
+    for (const link of root.querySelectorAll('head link[rel="stylesheet"]')) {
+        const href = link.getAttribute('href');
+        if (
+            href &&
+            !href.startsWith('http://') &&
+            !href.startsWith('https://') &&
+            !href.startsWith('//')
+        ) {
+            pageLinkedCssPaths.add(path.resolve(filePath, href));
+        }
+    }
+
     // Parse headfull full-stack imports (loads contracts, injects templates, extracts CSS)
     const headfullFSResult = await parseHeadfullFSImports(
         fsHeadfullElements,
@@ -1688,6 +1726,7 @@ export async function parseJayFile(
         projectRoot,
         undefined, // visited
         sourceDir,
+        pageLinkedCssPaths,
     );
 
     const headlessImports = await parseHeadlessImports(
@@ -1736,6 +1775,7 @@ export async function parseJayFile(
     const excludeCssLinks = !!filePath;
     const headLinks = parseHeadLinks(root, excludeCssLinks);
     const headMeta = parseHeadMeta(root);
+    const validationOverrides = parseValidationOverrides(root);
     const scripts = validateAndCollectScripts(root, validations);
 
     // Merge CSS validations with existing validations
@@ -1786,6 +1826,7 @@ export async function parseJayFile(
             clientTrackByMap:
                 Object.keys(clientTrackByMap).length > 0 ? clientTrackByMap : undefined,
             headMeta,
+            validationOverrides,
             scripts: scripts.length > 0 ? scripts : undefined,
         } as JayHtmlSourceFile,
         validations,

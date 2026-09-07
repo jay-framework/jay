@@ -2,3 +2,5 @@ devServer:
   portRange: [3300, 3310]
   pagesBase: './src/pages'
   publicFolder: './public'
+site:
+  baseUrl: https://smoke-test.example.com

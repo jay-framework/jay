@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import path from 'path';
+import fs from 'fs';
 import { promises as fsp } from 'fs';
 import { glob } from 'glob';
 import {
@@ -474,6 +475,84 @@ export function checkRefElementTypes(jayHtml: JayHtmlSourceFile, file: string): 
     return warnings;
 }
 
+// --- Page component export check ---
+
+function checkPageComponentExport(jayHtmlPath: string): string | null {
+    const dirname = path.dirname(jayHtmlPath);
+    const compPath = path.join(dirname, 'page.ts');
+    if (!fs.existsSync(compPath)) return null;
+
+    let content: string;
+    try {
+        content = fs.readFileSync(compPath, 'utf-8');
+    } catch {
+        return null;
+    }
+
+    const exportName = 'page';
+    const patterns = [
+        new RegExp(`export\\s*\\{[^}]*\\b${exportName}\\b[^}]*\\}`, 'm'),
+        new RegExp(`export\\s+(?:async\\s+)?function\\s+${exportName}\\b`),
+        new RegExp(`export\\s+(?:const|let|var)\\s+${exportName}\\b`),
+    ];
+
+    if (patterns.some((p) => p.test(content))) return null;
+
+    return (
+        `${path.relative(dirname, compPath)} exists but does not export "${exportName}". ` +
+        `Remove the file or add the export.`
+    );
+}
+
+// --- Direct document access check ---
+
+const DOCUMENT_ACCESS_PATTERNS = [
+    /document\.getElementById\b/,
+    /document\.querySelector\b/,
+    /document\.querySelectorAll\b/,
+    /document\.getElementsBy\w+/,
+    /document\.createElement\b/,
+    /document\.body\.appendChild\b/,
+    /document\.addEventListener\b/,
+];
+
+const DOM_SUPPRESS_COMMENT = 'jay-dom: allow';
+
+function checkDirectDocumentAccess(jayHtmlPath: string): string[] {
+    const dirname = path.dirname(jayHtmlPath);
+    const basename = path.basename(jayHtmlPath, JAY_EXTENSION);
+    const candidates = [path.join(dirname, `${basename}.ts`), path.join(dirname, 'page.ts')];
+    const compPath = candidates.find((p) => fs.existsSync(p));
+    if (!compPath) return [];
+    const compName = path.basename(compPath);
+
+    let content: string;
+    try {
+        content = fs.readFileSync(compPath, 'utf-8');
+    } catch {
+        return [];
+    }
+
+    const warnings: string[] = [];
+    const lines = content.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (line.includes(DOM_SUPPRESS_COMMENT)) continue;
+        for (const pattern of DOCUMENT_ACCESS_PATTERNS) {
+            const match = pattern.exec(line);
+            if (match) {
+                warnings.push(
+                    `${compName}:${i + 1} — Direct DOM access "${match[0]}" — use Jay refs instead. ` +
+                        `Suppress with // ${DOM_SUPPRESS_COMMENT} on the same line. ` +
+                        `See agent-kit/developer/component-refs.md`,
+                );
+                break;
+            }
+        }
+    }
+    return warnings;
+}
+
 // Same regex as route-scanner: matches [param], [[optional]], [...catchAll]
 const PARSE_PARAM = /^\[(\[)?(\.\.\.)?([^\]]+)\]?\]$/;
 
@@ -908,6 +987,7 @@ async function runPluginValidators(
                         };
                     }),
                     projectRoot,
+                    validationOverrides: parsed.validationOverrides,
                 };
 
                 try {
@@ -946,9 +1026,9 @@ async function runPluginValidators(
 }
 
 export async function validateJayFiles(options: ValidateOptions = {}): Promise<ValidationResult> {
-    const config = loadConfig();
-    const resolvedConfig = getConfigWithDefaults(config);
     const projectRoot = options.projectRoot ?? process.cwd();
+    const config = loadConfig(projectRoot);
+    const resolvedConfig = getConfigWithDefaults(config);
 
     // Use provided path or default to pagesBase from config
     const scanDir = options.path
@@ -1055,6 +1135,22 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                 });
             }
 
+            // Check page.ts exports the expected component
+            const pageExportError = checkPageComponentExport(jayFile);
+            if (pageExportError) {
+                errors.push({
+                    file: relativePath,
+                    message: pageExportError,
+                    stage: 'generate',
+                });
+            }
+
+            // Check page.ts for direct document access
+            const domWarnings = checkDirectDocumentAccess(jayFile);
+            for (const msg of domWarnings) {
+                warnings.push({ file: relativePath, message: msg });
+            }
+
             // Check route params match contract params (contract→route)
             const routeParamWarnings = checkRouteParams(parsedFile.val!, jayFile, scanDir);
             for (const msg of routeParamWarnings) {
@@ -1078,15 +1174,41 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
             }
 
             // Check headless instance props match contract (DL#124 Phase 2)
-            const headlessPropWarnings = checkHeadlessInstanceProps(parsedFile.val!, relativePath);
-            for (const msg of headlessPropWarnings) {
-                warnings.push({ file: relativePath, message: msg });
+            const headlessPropResults = checkHeadlessInstanceProps(parsedFile.val!, relativePath);
+            for (const msg of headlessPropResults) {
+                if (
+                    msg.includes('is missing required prop') ||
+                    msg.includes('source phase must be')
+                ) {
+                    errors.push({ file: relativePath, message: msg, stage: 'generate' });
+                } else {
+                    warnings.push({ file: relativePath, message: msg });
+                }
             }
 
             // Analyze tag coverage for headless imports
             const fileCoverage = analyzeTagCoverage(parsedFile.val!, relativePath);
             if (fileCoverage) {
                 coverage.push(fileCoverage);
+                const allowedUnused =
+                    parsedFile.val!.validationOverrides?.['jay-stack']?.['allow-unused-tags'];
+                const allowedSet = new Set(Array.isArray(allowedUnused) ? allowedUnused : []);
+                for (const contract of fileCoverage.contracts) {
+                    for (const tag of contract.requiredUnusedTags) {
+                        const qualifiedTag = contract.key ? `${contract.key}.${tag}` : tag;
+                        if (allowedSet.has(qualifiedTag) || allowedSet.has(tag)) continue;
+                        const label = contract.key
+                            ? `${contract.key} (${contract.contractName})`
+                            : contract.contractName;
+                        warnings.push({
+                            file: relativePath,
+                            message:
+                                `Required tag "${tag}" from contract "${label}" is not used in the template. ` +
+                                `Suppress with jay-stack: { allow-unused-tags: ["${qualifiedTag}"] } in <script type="application/jay-validations">. ` +
+                                `See agent-kit/designer/validation-guide.md`,
+                        });
+                    }
+                }
             }
 
             // Try to generate the code (without writing to disk)
@@ -1133,6 +1255,27 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                 getLogger().info(chalk.red(`❌ ${relativePath}`));
             }
         }
+    }
+
+    // --- Project-level validations (DL#175) ---
+    const robotsTxtPath = path.resolve(projectRoot, 'public/robots.txt');
+    if (!fs.existsSync(robotsTxtPath)) {
+        warnings.push({
+            file: 'public/robots.txt',
+            message:
+                "public/robots.txt not found — search engines may crawl pages you don't intend to expose.",
+            suggestion:
+                'Create public/robots.txt with: User-agent: *\nAllow: /\nSitemap: https://your-domain.com/sitemap.xml',
+        });
+    }
+
+    if (!config.site?.baseUrl) {
+        warnings.push({
+            file: '.jay',
+            message:
+                'site.baseUrl not configured — sitemap.xml will not be generated in production.',
+            suggestion: 'Add to .jay config:\n  site:\n    baseUrl: https://your-domain.com',
+        });
     }
 
     // --- Plugin validators (DL#145) ---
@@ -1231,8 +1374,8 @@ export function printJayValidationResult(result: ValidationResult, options: Vali
         }
     }
 
-    // --- Tag coverage section ---
-    if (result.coverage.length > 0) {
+    // --- Tag coverage section (verbose only) ---
+    if (options.verbose && result.coverage.length > 0) {
         logger.important('');
         logger.important(chalk.bold('📦 Tag Coverage'));
         for (const fileCov of result.coverage) {
@@ -1249,26 +1392,32 @@ export function printJayValidationResult(result: ValidationResult, options: Vali
                         chalk.gray(`       Unused: ${contract.unusedTags.join(', ')}`),
                     );
                 }
-                if (contract.requiredUnusedTags.length > 0) {
-                    logger.important(
-                        chalk.yellow(
-                            `       ⚠ Required unused: ${contract.requiredUnusedTags.join(', ')}`,
-                        ),
-                    );
-                }
             }
         }
     }
 
     // --- Summary ---
     logger.important('');
-    if (result.valid) {
+    if (result.valid && result.warnings.length === 0) {
         logger.important(chalk.green('Validation passed.'));
+    } else if (result.valid) {
+        logger.important(
+            chalk.yellow(
+                `Validation passed with ${result.warnings.length} warning(s). Warnings must be fixed or explicitly suppressed — do not ignore them.`,
+            ),
+        );
     } else {
-        logger.important(chalk.red(`Validation failed — ${result.errors.length} error(s).`));
+        logger.important(
+            chalk.red(
+                `Validation failed — ${result.errors.length} error(s)` +
+                    (result.warnings.length > 0
+                        ? `, ${result.warnings.length} warning(s). Errors must be fixed. Warnings must be fixed or explicitly suppressed.`
+                        : '.'),
+            ),
+        );
     }
 
-    const totalIssues = result.errors.length + result.warnings.length + result.coverage.length;
+    const totalIssues = result.errors.length + result.warnings.length;
     if (totalIssues > 0) {
         logger.important(
             chalk.gray(

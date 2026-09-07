@@ -12,6 +12,14 @@ import chalk from 'chalk';
 import path from 'node:path';
 import { createViteForCli } from '@jay-framework/dev-server';
 import { getLogger } from '@jay-framework/logger';
+import { registerService } from '@jay-framework/stack-server-runtime';
+import {
+    discoverPluginCommands,
+    commandSchemaToFlags,
+    parseInputFromFlags,
+    executePluginCommand,
+} from '@jay-framework/stack-server-build';
+import { CONSOLE_CONTEXT } from '@jay-framework/fullstack-component';
 import type { InitializeServicesForCli } from './cli-services';
 import { loadConfig } from './config';
 import { resolveVersionFromPackageJson } from './run-production';
@@ -31,13 +39,6 @@ export async function runCommand(
     let viteServer: Awaited<ReturnType<typeof createViteForCli>> | undefined;
 
     try {
-        const {
-            discoverPluginCommands,
-            commandSchemaToFlags,
-            parseInputFromFlags,
-            executePluginCommand,
-        } = await import('@jay-framework/stack-server-runtime');
-
         const commands = await discoverPluginCommands({
             projectRoot,
             verbose: options.verbose,
@@ -111,8 +112,6 @@ export async function runCommand(
         await initializeServices(projectRoot, viteServer);
 
         // Register CONSOLE_CONTEXT
-        const { registerService } = await import('@jay-framework/stack-server-runtime');
-        const { CONSOLE_CONTEXT } = await import('@jay-framework/fullstack-component');
         const jayConfig = loadConfig();
         const publicFolder = path.resolve(
             projectRoot,

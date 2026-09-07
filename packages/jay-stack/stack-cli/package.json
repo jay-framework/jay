@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/jay-stack-cli",
-  "version": "0.24.0",
+  "version": "0.24.2",
   "license": "Apache-2.0",
   "type": "module",
   "main": "dist/index.js",
@@ -31,7 +31,9 @@
     "@jay-framework/fullstack-component": "workspace:^",
     "@jay-framework/logger": "workspace:^",
     "@jay-framework/plugin-validator": "workspace:^",
+    "@jay-framework/production-build": "workspace:^",
     "@jay-framework/production-server": "workspace:^",
+    "@jay-framework/stack-server-build": "workspace:^",
     "@jay-framework/stack-server-runtime": "workspace:^",
     "chalk": "^4.1.2",
     "commander": "^14.0.0",

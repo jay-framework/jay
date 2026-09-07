@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/dev-server",
-  "version": "0.24.0",
+  "version": "0.24.2",
   "type": "module",
   "license": "Apache-2.0",
   "main": "dist/index.js",
@@ -31,6 +31,7 @@
     "@jay-framework/runtime": "workspace:^",
     "@jay-framework/stack-client-runtime": "workspace:^",
     "@jay-framework/stack-route-scanner": "workspace:^",
+    "@jay-framework/stack-server-build": "workspace:^",
     "@jay-framework/stack-server-runtime": "workspace:^",
     "@jay-framework/view-state-merge": "workspace:^",
     "busboy": "^1.6.0",

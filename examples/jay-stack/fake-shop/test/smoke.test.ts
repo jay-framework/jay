@@ -276,4 +276,19 @@ describe('Fake Shop Smoke Tests', () => {
         expect(body).not.toContain('client error');
         expect(body).not.toContain('server error');
     });
+
+    it('should serve robots.txt from public folder', async () => {
+        const response = await fetch(`${devServerUrl}/robots.txt`);
+        expect(response.ok).toBe(true);
+        const text = await response.text();
+        expect(text).toMatch(/User-agent/);
+        expect(text).toMatch(/Sitemap/);
+    });
+
+    it('should serve sitemap.xml dev placeholder', async () => {
+        const response = await fetch(`${devServerUrl}/sitemap.xml`);
+        expect(response.ok).toBe(true);
+        const text = await response.text();
+        expect(text).toMatch(/<urlset/);
+    });
 });

@@ -22,12 +22,17 @@ The validator processes each `.jay-html` file with:
 
 So a warning about an `<img>` might come from a headfull component's template, not your page template. A CSS warning might come from a linked stylesheet.
 
+## Errors vs Warnings
+
+- **Errors** block the build. They must be fixed — there is no way to suppress them.
+- **Warnings** must be either fixed or explicitly suppressed. Do not ignore warnings — each one has a clear resolution path (add the missing attribute, or suppress via `<script type="application/jay-validations">`).
+
 ## How to Read Warnings
 
 Each warning has:
 
 - **Message** — what was found and why it matters
-- **Suggestion** — how to fix it
+- **Suggestion** — how to fix it, and how to suppress it if the warning is intentional
 - **Element** — which HTML element triggered it (some include the full tag with attributes)
 
 ### Acting on Warnings
@@ -72,6 +77,32 @@ For design-system token warnings, add `/* design-system: allow */` as a comment 
 
 ```css
 padding: 96px 0; /* design-system: allow */
+```
+
+### Page-level validation overrides
+
+For page-level warnings that can't be fixed by adding an attribute (e.g., "no LCP image" on a text-first page), use a `<script type="application/jay-validations">` tag in the `<head>`:
+
+```html
+<head>
+  <script type="application/jay-validations">
+    seo:
+      no-lcp-image: true
+  </script>
+</head>
+```
+
+The YAML body is keyed by plugin name. Each plugin defines its own suppressible rules. This tag is a build-time directive — it's parsed during validation and never rendered in the page output.
+
+Multiple plugins can be configured in one tag:
+
+```html
+<script type="application/jay-validations">
+  seo:
+    no-lcp-image: true
+  design-system:
+    allow-undefined-vars: true
+</script>
 ```
 
 ### When you can't suppress

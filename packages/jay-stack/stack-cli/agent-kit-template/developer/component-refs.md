@@ -124,6 +124,8 @@ This generates both a ViewState field and a ref.
 
 Refs are the **only supported path** from TypeScript to elements Jay renders. Direct `document` access bypasses the framework and can break rendering, updates, and performance.
 
+`jay-stack validate` warns on `document.querySelector`, `document.getElementById`, `document.createElement`, and `document.addEventListener` in page and component `.ts` files. Suppress with `// jay-dom: allow` on the same line when an exception is genuinely needed.
+
 ### Do
 
 - Declare elements in **jay-html** with `ref="..."`.
@@ -134,20 +136,135 @@ Refs are the **only supported path** from TypeScript to elements Jay renders. Di
 
 ### Avoid
 
-- `document.querySelector` / `getElementById` to find template elements
-- `document.createElement` + `appendChild` for UI that belongs in jay-html
-- `document.addEventListener('mousemove'|'mouseup')` for drags (use pointer capture instead)
+- `document.querySelector` / `getElementById` to find template elements — use refs
+- `document.createElement` + `appendChild` for UI that belongs in jay-html — use `forEach` with ViewState
+- `document.addEventListener` for global events — use the root ref pattern (below)
+
+## Root ref pattern — replacing `document.addEventListener`
+
+Wrap the page content in a shell element with a ref. Use capture-phase listeners on the shell to intercept events before they reach children — functionally equivalent to `document.addEventListener`.
+
+### Setup
+
+```html
+<!-- jay-html -->
+<div ref="shell" class="page-shell">... entire page content ...</div>
+```
+
+```yaml
+# Contract
+- tag: shell
+  type: interactive
+  elementType: HTMLDivElement
+```
+
+### Global keyboard navigation
+
+Instead of `document.addEventListener('keydown', ...)`:
+
+```typescript
+.withInteractive(function Page(_props, refs) {
+    let keyboardNav = false;
+
+    refs.shell.onkeydown(({ event }) => {
+        if (event.key === 'Tab') keyboardNav = true;
+    });
+
+    refs.shell.onmousedown(() => {
+        keyboardNav = false;
+    });
+})
+```
+
+Events bubble up from children to the shell — a handler on the shell sees all keyboard and mouse events from the entire page.
+
+Use `refs.shell.addEventListener(type, handler, { capture: true })` only when you need to intercept events _before_ children handle them (e.g., preventing default on specific keys).
+
+### Focus management (scroll into view)
+
+Instead of `document.addEventListener('focusin', ...)`:
+
+```typescript
+refs.shell.onfocusin(({ event }) => {
+  if (!keyboardNav) return;
+  const el = event.target as HTMLElement;
+  refs.shell.exec$(() => {
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+});
+```
+
+### Detecting pointer leaving the page
+
+Instead of `document.addEventListener('mouseleave', ...)`:
+
+```typescript
+refs.shell.onpointerleave(({ event }) => {
+  // Pointer left the shell — equivalent to leaving the viewport
+  // if the shell covers the full viewport
+});
+```
+
+Ensure the shell has no margin/padding gap so it covers the full viewport. `pointer-events: auto` (the default) is sufficient.
+
+### Finding elements by class → use refs
+
+Instead of `document.querySelector('.site-header')`:
+
+```html
+<!-- jay-html -->
+<header ref="siteHeader" class="site-header">...</header>
+```
+
+```typescript
+refs.siteHeader.onclick(() => {
+  /* ... */
+});
+
+refs.siteHeader.exec$((el) => {
+  el.classList.add('is-hidden');
+});
+```
+
+### Dynamic lists → use forEach
+
+Instead of creating elements with `document.createElement` in a loop:
+
+```html
+<!-- jay-html -->
+<div forEach="cards" trackBy="id" class="card-grid">
+  <div class="card">
+    <img src="{imageUrl}" alt="{title}" />
+    <span>{title}</span>
+  </div>
+</div>
+```
+
+Update the ViewState to add/remove cards — the framework handles DOM creation.
+
+### Using `exec$` for native DOM APIs
+
+For DOM operations that refs don't wrap (scroll, focus, measurements), use `exec$` inside an event handler:
+
+```typescript
+refs.myInput.onclick(() => {
+  refs.myInput.exec$((el) => {
+    el.focus();
+    el.select();
+  });
+});
+
+refs.scrollContainer.exec$((el) => {
+  el.scrollTo({ top: 0, behavior: 'smooth' });
+});
+```
 
 ### Rare `document` exceptions
 
-Use only when no ref can exist, with an inline comment:
+Use only when no ref can exist, with `// jay-dom: allow` to suppress the validation warning:
 
-| Case                   | Example                                               |
-| ---------------------- | ----------------------------------------------------- |
-| Offscreen processing   | `document.createElement('canvas')` for image export   |
-| Coordinate hit-testing | `document.elementFromPoint` during cross-overlay drag |
-| Tests                  | `document.dispatchEvent` in Vitest                    |
-
-Global shortcuts or paste: prefer a root shell ref (`ref="appRoot"`) with capture listeners.
-
-See also: `.cursor/skills/jay-dom-refs/SKILL.md` in the jay monorepo.
+| Case                   | Example                                                               |
+| ---------------------- | --------------------------------------------------------------------- |
+| Offscreen processing   | `document.createElement('canvas') // jay-dom: allow` for image export |
+| Coordinate hit-testing | `document.elementFromPoint(...) // jay-dom: allow` during drag        |
+| Tests                  | `document.dispatchEvent // jay-dom: allow` in Vitest                  |

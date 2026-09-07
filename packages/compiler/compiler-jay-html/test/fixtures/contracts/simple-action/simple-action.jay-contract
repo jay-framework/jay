@@ -1,0 +1,11 @@
+name: SimpleAction
+props:
+  - name: text
+    type: string
+tags:
+  - tag: actionBtn
+    type: interactive
+    elementType: HTMLButtonElement
+  - tag: done
+    type: interactive
+    elementType: HTMLSpanElement

@@ -14,7 +14,7 @@ import type {
     CacheOptions,
 } from '@jay-framework/fullstack-component';
 import { resolveServices } from './services';
-import type { ActionMetadata } from './action-metadata';
+import type { ActionMetadata } from './types';
 
 // ============================================================================
 // Action Registry Types

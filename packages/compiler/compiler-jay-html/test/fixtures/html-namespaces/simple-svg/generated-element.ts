@@ -40,7 +40,7 @@ export function render(options?: RenderElementOptions): SimpleSvgElementPreRende
     const render = (viewState: SimpleSvgViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
-                svg('svg', { width: '200', height: '200', viewbox: '0 0 200' }, [
+                svg('svg', { width: '200', height: '200', viewBox: '0 0 200' }, [
                     svg(
                         'circle',
                         { r: '50', cx: '100', cy: '100', fill: da((vs) => vs.color) },

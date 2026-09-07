@@ -446,7 +446,7 @@ describe('seo-validator', () => {
                     message:
                         'CSS @import of external URL "https://fonts.googleapis.com/css2?family=Inter" creates a chained blocking request that delays page rendering',
                     suggestion:
-                        'Move this to a <link rel="stylesheet" href="..."> tag in the HTML <head> instead. This allows the browser preload scanner to discover both resources in parallel.',
+                        'Move this to a <link rel="stylesheet" href="..."> tag in the HTML <head> instead. This allows the browser preload scanner to discover both resources in parallel. If intentional, suppress with seo: { allow-css-import: true } in <script type="application/jay-validations">. See agent-kit/designer/validation-guide.md',
                     element: '<style>',
                 },
             ]);
@@ -464,7 +464,7 @@ describe('seo-validator', () => {
                     message:
                         'CSS @import of external URL "http://example.com/styles.css" creates a chained blocking request that delays page rendering',
                     suggestion:
-                        'Move this to a <link rel="stylesheet" href="..."> tag in the HTML <head> instead. This allows the browser preload scanner to discover both resources in parallel.',
+                        'Move this to a <link rel="stylesheet" href="..."> tag in the HTML <head> instead. This allows the browser preload scanner to discover both resources in parallel. If intentional, suppress with seo: { allow-css-import: true } in <script type="application/jay-validations">. See agent-kit/designer/validation-guide.md',
                     element: '<style>',
                 },
             ]);
@@ -501,7 +501,7 @@ describe('seo-validator', () => {
                     message:
                         'CSS @import of external URL "https://fonts.googleapis.com/css2?family=Inter" creates a chained blocking request that delays page rendering',
                     suggestion:
-                        'Move this to a <link rel="stylesheet" href="..."> tag in the HTML <head> instead. This allows the browser preload scanner to discover both resources in parallel.',
+                        'Move this to a <link rel="stylesheet" href="..."> tag in the HTML <head> instead. This allows the browser preload scanner to discover both resources in parallel. If intentional, suppress with seo: { allow-css-import: true } in <script type="application/jay-validations">. See agent-kit/designer/validation-guide.md',
                     element: '<link href="./theme.css">',
                 },
             ]);

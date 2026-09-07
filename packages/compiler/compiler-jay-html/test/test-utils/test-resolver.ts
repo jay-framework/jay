@@ -30,6 +30,11 @@ export const TEST_IMPORT_RESOLVER: JayImportResolver = {
                 file: 'duplicate-ref-headless',
             },
             'test-product-card:product-card': { dir: 'product-card', file: 'product-card' },
+            'test-data-list:data-list-simple': {
+                dir: 'data-list-simple',
+                file: 'data-list-simple',
+            },
+            'test-simple-action:simple-action': { dir: 'simple-action', file: 'simple-action' },
             'test-word-split:word-split': {
                 dir: 'page-with-headless-foreach-template',
                 file: 'word-split',
@@ -130,6 +135,40 @@ export const TEST_IMPORT_RESOLVER: JayImportResolver = {
                     ),
                     componentPath: path.resolve(projectRoot, 'contracts/product-card/product-card'),
                     componentName: 'productCard',
+                    isNpmPackage: false,
+                },
+                [],
+            );
+        }
+        if (pluginName === 'test-data-list' && contractName === 'data-list-simple') {
+            return new WithValidations(
+                {
+                    contractPath: path.resolve(
+                        projectRoot,
+                        'contracts/data-list-simple/data-list-simple.jay-contract',
+                    ),
+                    componentPath: path.resolve(
+                        projectRoot,
+                        'contracts/data-list-simple/data-list-simple',
+                    ),
+                    componentName: 'dataListSimple',
+                    isNpmPackage: false,
+                },
+                [],
+            );
+        }
+        if (pluginName === 'test-simple-action' && contractName === 'simple-action') {
+            return new WithValidations(
+                {
+                    contractPath: path.resolve(
+                        projectRoot,
+                        'contracts/simple-action/simple-action.jay-contract',
+                    ),
+                    componentPath: path.resolve(
+                        projectRoot,
+                        'contracts/simple-action/simple-action',
+                    ),
+                    componentName: 'simpleAction',
                     isNpmPackage: false,
                 },
                 [],

@@ -20,6 +20,24 @@ function createTempPlugin(structure: {
     return dir;
 }
 
+function createTempPluginWithSource(structure: {
+    pluginYaml: string;
+    packageJson: Record<string, unknown>;
+    sourceFiles?: Record<string, string>;
+}): string {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'plugin-validator-test-'));
+    fs.writeFileSync(path.join(dir, 'plugin.yaml'), structure.pluginYaml);
+    fs.writeFileSync(path.join(dir, 'package.json'), JSON.stringify(structure.packageJson));
+    if (structure.sourceFiles) {
+        for (const [filePath, content] of Object.entries(structure.sourceFiles)) {
+            const fullPath = path.join(dir, filePath);
+            fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+            fs.writeFileSync(fullPath, content);
+        }
+    }
+    return dir;
+}
+
 const minimalPluginYaml = `name: test-plugin\nvalidators:\n  - name: test\n    handler: testHandler\n`;
 
 describe('validatePlugin — agent-kit shipping', () => {
@@ -90,5 +108,68 @@ describe('validatePlugin — agent-kit shipping', () => {
             w.message.includes('agent-kit directory exists but is not listed'),
         );
         expect(agentKitWarning).toBeUndefined();
+    });
+});
+
+describe('validatePlugin — dynamic contract generator shape', () => {
+    it('should error when generator is a bare function instead of DynamicContractGenerator', async () => {
+        const dir = createTempPluginWithSource({
+            pluginYaml: [
+                'name: test-plugin',
+                'dynamic_contracts:',
+                '  - prefix: data-pages',
+                '    component: dataPages',
+                '    generator: generateContract',
+            ].join('\n'),
+            packageJson: {
+                name: '@jay-framework/test-plugin',
+                exports: {
+                    '.': './dist/index.js',
+                    './plugin.yaml': './plugin.yaml',
+                },
+            },
+            sourceFiles: {
+                'lib/index.ts': `export { generateContract } from './gen.js';\nexport { dataPages } from './comp.js';\n`,
+                'lib/gen.ts': `export async function* generateContract() { yield { name: 'x', yaml: '' }; }\n`,
+                'dist/index.js': `export { generateContract } from './gen.js';\nexport { dataPages } from './comp.js';\n`,
+            },
+        });
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        const genError = result.errors.find((e) => e.message.includes('bare function'));
+        expect(genError).toBeDefined();
+        expect(genError!.suggestion).toEqual(
+            'Use makeContractGenerator().generateWith(...) from @jay-framework/fullstack-component instead of exporting a plain function',
+        );
+    });
+
+    it('should not error when generator is a const (DynamicContractGenerator object)', async () => {
+        const dir = createTempPluginWithSource({
+            pluginYaml: [
+                'name: test-plugin',
+                'dynamic_contracts:',
+                '  - prefix: data-pages',
+                '    component: dataPages',
+                '    generator: generateContract',
+            ].join('\n'),
+            packageJson: {
+                name: '@jay-framework/test-plugin',
+                exports: {
+                    '.': './dist/index.js',
+                    './plugin.yaml': './plugin.yaml',
+                },
+            },
+            sourceFiles: {
+                'lib/index.ts': `export { generateContract } from './gen.js';\nexport { dataPages } from './comp.js';\n`,
+                'lib/gen.ts': `export const generateContract = makeContractGenerator().generateWith(async () => []);\n`,
+                'dist/index.js': `export { generateContract } from './gen.js';\nexport { dataPages } from './comp.js';\n`,
+            },
+        });
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        const genError = result.errors.find((e) => e.message.includes('bare function'));
+        expect(genError).toBeUndefined();
     });
 });

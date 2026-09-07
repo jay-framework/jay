@@ -16,6 +16,8 @@ export interface RendererServerOptions {
     pagesRoot: string;
     tsConfigFilePath?: string;
     minify?: boolean;
+    /** Site base URL for sitemap regeneration on rebuild (e.g. "https://example.com"). */
+    siteBaseUrl?: string;
 }
 
 export async function startRendererServer(options: RendererServerOptions): Promise<void> {
@@ -50,6 +52,7 @@ export async function startRendererServer(options: RendererServerOptions): Promi
                 params,
                 tsConfigFilePath: options.tsConfigFilePath,
                 minify: options.minify,
+                siteBaseUrl: options.siteBaseUrl,
             });
         };
     };
@@ -126,6 +129,7 @@ export async function startRendererServer(options: RendererServerOptions): Promi
                     target,
                     tsConfigFilePath: options.tsConfigFilePath,
                     minify: options.minify,
+                    siteBaseUrl: options.siteBaseUrl,
                 });
 
                 res.writeHead(200, { 'Content-Type': 'application/json' });

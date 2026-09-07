@@ -375,13 +375,12 @@ function renderServerAttributes(element: HTMLElement, context: ServerContext): R
 
         if (propertyMapping[attrCanonical]?.type === BOOLEAN_ATTRIBUTE) {
             if (attrValue === '') {
-                parts.push(w(indent, `' ${attrCanonical}'`));
+                parts.push(w(indent, `' ${attrName}'`));
             } else {
-                // Use condition PEG rule (raw expression)
                 const condExpr = parseServerCondition(attrValue, variables);
                 parts.push(
                     new RenderFragment(
-                        `${indent.firstLine}if (${condExpr.rendered}) { w(' ${attrCanonical}'); }`,
+                        `${indent.firstLine}if (${condExpr.rendered}) { w(' ${attrName}'); }`,
                     ),
                 );
             }
@@ -391,20 +390,17 @@ function renderServerAttributes(element: HTMLElement, context: ServerContext): R
                 parts.push(
                     w(
                         indent,
-                        `' ${attrCanonical}="' + escapeAttr(String(${fragment.rendered})) + '"'`,
+                        `' ${attrName}="' + escapeAttr(String(${fragment.rendered})) + '"'`,
                         Imports.for(Import.escapeAttr),
                     ),
                 );
             } else {
                 const escaped = escapeForJsString(attrValue);
-                parts.push(w(indent, `' ${attrCanonical}="${escaped}"'`));
+                parts.push(w(indent, `' ${attrName}="${escaped}"'`));
             }
         } else if (attrCanonical === 'class') {
-            // Class attribute — may have conditional class syntax like {bool1?main}
             const classExpr = parseClassExpression(attrValue, variables);
             if (classExpr.imports.has(Import.dynamicAttribute)) {
-                // classExpression PEG wraps dynamic classes with da(vs => `...`).
-                // Extract the template literal: strip "da(vs => " prefix and ")" suffix.
                 const rawExpr = classExpr.rendered.replace(/^da\(\w+ => /, '').replace(/\)$/, '');
                 parts.push(
                     w(
@@ -435,7 +431,6 @@ function renderServerAttributes(element: HTMLElement, context: ServerContext): R
                 parts.push(w(indent, `' style="${escaped}"'`));
             }
         } else {
-            // Regular attribute — use template PEG rule for raw accessor
             const [fragment, isDynamic] = parseServerTemplateExpression(
                 textEscape(attrValue),
                 variables,
@@ -444,13 +439,13 @@ function renderServerAttributes(element: HTMLElement, context: ServerContext): R
                 parts.push(
                     w(
                         indent,
-                        `' ${attrCanonical}="' + escapeAttr(String(${fragment.rendered})) + '"'`,
+                        `' ${attrName}="' + escapeAttr(String(${fragment.rendered})) + '"'`,
                         Imports.for(Import.escapeAttr),
                     ),
                 );
             } else {
                 const escaped = escapeForJsString(attrValue);
-                parts.push(w(indent, `' ${attrCanonical}="${escaped}"'`));
+                parts.push(w(indent, `' ${attrName}="${escaped}"'`));
             }
         }
     });
@@ -646,21 +641,20 @@ function renderServerAttributesAsString(
 
         if (propertyMapping[attrCanonical]?.type === BOOLEAN_ATTRIBUTE) {
             if (attrValue === '') {
-                parts.push(new RenderFragment(`' ${attrCanonical}'`));
+                parts.push(new RenderFragment(`' ${attrName}'`));
             }
-            // Dynamic boolean attributes in template strings are complex — skip for now
         } else if (propertyMapping[attrCanonical]?.type === PROPERTY) {
             const [fragment, isDynamic] = parseServerTemplateExpression(attrValue, variables);
             if (isDynamic) {
                 parts.push(
                     new RenderFragment(
-                        `' ${attrCanonical}="' + escapeAttr(String(${fragment.rendered})) + '"'`,
+                        `' ${attrName}="' + escapeAttr(String(${fragment.rendered})) + '"'`,
                         Imports.for(Import.escapeAttr),
                     ),
                 );
             } else {
                 const escaped = escapeForJsString(attrValue);
-                parts.push(new RenderFragment(`' ${attrCanonical}="${escaped}"'`));
+                parts.push(new RenderFragment(`' ${attrName}="${escaped}"'`));
             }
         } else if (attrCanonical === 'class') {
             const classExpr = parseClassExpression(attrValue, variables);
@@ -700,13 +694,13 @@ function renderServerAttributesAsString(
             if (isDynamic) {
                 parts.push(
                     new RenderFragment(
-                        `' ${attrCanonical}="' + escapeAttr(String(${fragment.rendered})) + '"'`,
+                        `' ${attrName}="' + escapeAttr(String(${fragment.rendered})) + '"'`,
                         Imports.for(Import.escapeAttr),
                     ),
                 );
             } else {
                 const escaped = escapeForJsString(attrValue);
-                parts.push(new RenderFragment(`' ${attrCanonical}="${escaped}"'`));
+                parts.push(new RenderFragment(`' ${attrName}="${escaped}"'`));
             }
         }
     });

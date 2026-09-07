@@ -9,6 +9,7 @@ import {
     JayTypeAlias,
     JayUnionType,
     mkRefsTree,
+    mergeRefsTrees,
     Ref,
     RefsTree,
     RenderFragment,
@@ -342,6 +343,64 @@ function updateImportRefsWithTemplateConstNames(
     );
 }
 
+/**
+ * Graft template-only auto-refs into the import tree. Adds auto-ref entries
+ * (e.g., from headless instances nested inside forEach) that exist in the
+ * template tree but not in the import tree, and recurses into shared children
+ * so deeply nested template-only refs are preserved.
+ */
+function graftTemplateOnlyRefs(
+    importTree: RefsTree,
+    templateTree: RefsTree,
+    allImportRefNames?: Set<string>,
+): RefsTree {
+    const knownNames = allImportRefNames ?? collectAllRefNames(importTree);
+    const importRefNames = new Set(importTree.refs.map((r) => r.ref));
+    const extraRefs = templateTree.refs.filter(
+        (r) => !importRefNames.has(r.ref) && !knownNames.has(r.ref),
+    );
+
+    let childrenChanged = false;
+    const children = { ...importTree.children };
+    for (const [key, templateChild] of Object.entries(templateTree.children)) {
+        if (!(key in children)) {
+            if (hasRefsNotIn(templateChild, knownNames)) {
+                children[key] = templateChild;
+                childrenChanged = true;
+            }
+        } else {
+            const grafted = graftTemplateOnlyRefs(children[key], templateChild, knownNames);
+            if (grafted !== children[key]) {
+                children[key] = grafted;
+                childrenChanged = true;
+            }
+        }
+    }
+
+    if (extraRefs.length === 0 && !childrenChanged) return importTree;
+    return mkRefsTree(
+        [...importTree.refs, ...extraRefs],
+        children,
+        importTree.repeated,
+        importTree?.imported?.refsTypeName,
+        importTree?.imported?.repeatedRefsTypeName,
+    );
+}
+
+function hasRefsNotIn(tree: RefsTree, knownNames: Set<string>): boolean {
+    if (tree.refs.some((r) => !knownNames.has(r.ref))) return true;
+    return Object.values(tree.children).some((c) => hasRefsNotIn(c, knownNames));
+}
+
+function collectAllRefNames(tree: RefsTree): Set<string> {
+    const names = new Set<string>();
+    for (const ref of tree.refs) names.add(ref.ref);
+    for (const child of Object.values(tree.children)) {
+        for (const name of collectAllRefNames(child)) names.add(name);
+    }
+    return names;
+}
+
 export function optimizeRefs(
     { rendered, imports, validations, refs, recursiveRegions }: RenderFragment,
     headlessImports: JayHeadlessImports[] = [],
@@ -424,11 +483,11 @@ export function optimizeRefs(
         }),
     );
 
-    // Merge: use import's structure (canonical), which now has correct constNames
-    // For non-import children from template, keep them as-is
+    // Merge: use import's structure (canonical), which now has correct constNames.
+    // For import keys, graft template-only children (e.g., auto-refs from headless
+    // instances nested inside forEach) into the import tree so they aren't lost.
     const mergedChildren: Record<string, RefsTree> = {};
 
-    // First, add all children from template that are NOT headless imports
     const importKeys = new Set(pageLevelHeadless.map((_) => _.key!));
     for (const [key, child] of Object.entries(markedAutoOnImported.children)) {
         if (!importKeys.has(key)) {
@@ -436,9 +495,9 @@ export function optimizeRefs(
         }
     }
 
-    // Then add all import refs (which now have updated constNames)
     for (const [key, child] of Object.entries(importedRefsUpdated)) {
-        mergedChildren[key] = child;
+        const templateChild = markedAutoOnImported.children[key];
+        mergedChildren[key] = templateChild ? graftTemplateOnlyRefs(child, templateChild) : child;
     }
 
     const combined = mkRefsTree(

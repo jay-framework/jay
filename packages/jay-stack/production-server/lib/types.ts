@@ -1,4 +1,4 @@
-import type { JayHtmlHeadMeta } from '@jay-framework/compiler-shared';
+import type { JayHtmlHeadMeta } from '@jay-framework/stack-server-runtime';
 
 export interface RouteManifest {
     version: string;
@@ -33,9 +33,13 @@ export interface RouteEntry {
     cssImports?: string[];
     /** Head metadata from jay-html <head> (title, meta tags). */
     headMeta?: JayHtmlHeadMeta;
+    /** True when page has static <meta name="robots" content="noindex"> */
+    noIndex?: boolean;
     instances: InstanceEntry[];
     isPlugin?: boolean;
     pluginName?: string;
+    /** Shared chunk package names this route's hydrate script imports (DL#177). */
+    sharedDeps?: string[];
     /** When true, dev-server tooling route (future: excluded from production builds). */
     devOnly?: boolean;
 }
@@ -81,6 +85,8 @@ export interface BuildOptions {
     concurrency: number;
     tsConfigFilePath: string;
     minify?: boolean;
+    /** Site base URL for sitemap generation (e.g. "https://example.com"). */
+    siteBaseUrl?: string;
 }
 
 export interface ServerElementModule {

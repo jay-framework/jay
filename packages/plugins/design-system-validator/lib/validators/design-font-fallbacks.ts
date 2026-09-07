@@ -203,12 +203,19 @@ export const validateFontFallbacks: JayHtmlValidatorFn = (ctx) => {
 
         const familyItselfIsMetricMatched = metricMatchedFallbacks.has(family);
 
-        if (!hasFallbackFace && !familyItselfIsMetricMatched) {
+        if (
+            !hasFallbackFace &&
+            !familyItselfIsMetricMatched &&
+            !ctx.validationOverrides?.['design-system']?.['allow-font-no-fallback']
+        ) {
             flagged.add(family);
             findings.push({
                 severity: 'warning',
                 message: `font-family "${family}" loads from a URL but has no metric-matched fallback. This causes layout shift (CLS) when the font loads.`,
-                suggestion: `Generate a fallback with: npx jay-stack-cli action design-system-validator/fontFallback --input '{"primary":"${family}","fallback":"Arial"}'`,
+                suggestion:
+                    `Generate a fallback with: npx jay-stack-cli action design-system-validator/fontFallback --input '{"primary":"${family}","fallback":"Arial"}'. ` +
+                    `If intentional, suppress with design-system: { allow-font-no-fallback: true } in <script type="application/jay-validations">. ` +
+                    `See agent-kit/designer/validation-guide.md`,
             });
         }
     }

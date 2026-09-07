@@ -150,34 +150,39 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ## Compiler & Build System
 
-| #    | Title                                                                                                 | Description                                                                                  |
-| ---- | ----------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| 04   | [compiler](04%20-%20compiler)                                                                         | Initial compiler design                                                                      |
-| 20   | [component compiler](20%20-%20component%20compiler)                                                   | Component compilation                                                                        |
-| 25   | [building the compiler](25%20-%20building%20the%20compiler)                                           | Compiler architecture, code splitting                                                        |
-| 28   | [runtime compiler](28%20-%20runtime%20compiler)                                                       | Runtime compilation                                                                          |
-| 29   | [algorithm to split safe code](29%20-%20algorithm%20to%20split%20safe%20code)                         | Safe code splitting algorithm                                                                |
-| 73   | [jay-stack validate command](73%20-%20jay-stack%20validate%20command)                                 | Plugin validation command                                                                    |
-| 74   | [watch linked style files in dev server](74%20-%20watch%20linked%20style%20files%20in%20dev%20server) | Dev server file watching                                                                     |
-| 118  | [jay-html-compiler refactor](118%20-%20jay-html-compiler%20refactor)                                  | Extract shared algorithms + split by compilation target                                      |
-| 134  | [production build](134%20-%20production%20build)                                                      | Two-server production architecture: main server + slow render server                         |
-| 134a | [build pipeline](134a%20-%20build%20pipeline)                                                         | Per-instance compilation, shared chunks, Vite build strategy                                 |
-| 134b | [main server](134b%20-%20main%20server)                                                               | Production request handling: fast phase + SSR with pre-built artifacts                       |
-| 134c | [slow render server](134c%20-%20slow%20render%20server)                                               | Webhook invalidation, per-instance rebuild, versioned bucket building                        |
-| 134d | [server build](134d%20-%20server%20build)                                                             | Compiling page.ts, actions, services, init.ts to production JS                               |
-| 136  | [loadParams route context](136%20-%20loadParams%20route%20context)                                    | Passing inferred/route params to loadParams for multi-prefix filtering                       |
-| 139  | [wix deployment separation](139%20-%20wix%20deployment%20separation)                                  | Split build into frontend (CDN) + backend (container); Cloudflare-compatible fetch handler   |
-| 140  | [production smoke test](140%20-%20production%20smoke%20test)                                          | Dedicated example project validating dev, production self-hosted, and production CDN modes   |
-| 143  | [artifact store abstraction for BaaS](143%20-%20artifact%20store%20abstraction%20for%20BaaS)          | ArtifactStore interface, serve-only export, pre-imported modules for cloud deployment        |
-| 144  | [per-route server elements](144%20-%20per-route%20server%20elements)                                  | One server-element.js per route instead of per instance; render from ViewState, not literals |
-| 145  | [pluggable jay-html validation](145%20-%20pluggable%20jay-html%20validation)                          | Plugin-provided validation rules for jay-html files with agent-friendly feedback             |
-| 146  | [css performance fixes](146%20-%20css%20performance%20fixes)                                          | CSS minification in production build, preload hints for route CSS                            |
-| 150  | [build content hash](150%20-%20build%20content%20hash)                                                | SHA-256 content hash of build output for deployment client/server sync                       |
-| 153  | [npm create jay](153%20-%20npm%20create%20jay)                                                        | Interactive project scaffolding: name, plugin selection, agent-kit, setup banner             |
-| 158  | [staged npm publish](158%20-%20staged%20npm%20publish)                                                | Two-phase publish: stage all packages without OTP, then bulk-approve with single OTP         |
-| 147  | [jay-html validation rules catalog](147%20-%20jay-html%20validation%20rules%20catalog)                | Complete catalog of all validation rules across wix-media, SEO, and a11y                     |
-| 165  | [graceful expression parse errors](165%20-%20graceful%20expression%20parse%20errors)                  | Convert expression parse errors to validation messages instead of crashing the page          |
-| 166  | [a11y form and label validation rules](166%20-%20a11y%20form%20and%20label%20validation%20rules)      | Extend a11y-validator: checkbox/radio, ARIA name integrity, duplicate ids, label hygiene     |
+| #    | Title                                                                                                  | Description                                                                                  |
+| ---- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| 04   | [compiler](04%20-%20compiler)                                                                          | Initial compiler design                                                                      |
+| 20   | [component compiler](20%20-%20component%20compiler)                                                    | Component compilation                                                                        |
+| 25   | [building the compiler](25%20-%20building%20the%20compiler)                                            | Compiler architecture, code splitting                                                        |
+| 28   | [runtime compiler](28%20-%20runtime%20compiler)                                                        | Runtime compilation                                                                          |
+| 29   | [algorithm to split safe code](29%20-%20algorithm%20to%20split%20safe%20code)                          | Safe code splitting algorithm                                                                |
+| 73   | [jay-stack validate command](73%20-%20jay-stack%20validate%20command)                                  | Plugin validation command                                                                    |
+| 74   | [watch linked style files in dev server](74%20-%20watch%20linked%20style%20files%20in%20dev%20server)  | Dev server file watching                                                                     |
+| 118  | [jay-html-compiler refactor](118%20-%20jay-html-compiler%20refactor)                                   | Extract shared algorithms + split by compilation target                                      |
+| 134  | [production build](134%20-%20production%20build)                                                       | Two-server production architecture: main server + slow render server                         |
+| 134a | [build pipeline](134a%20-%20build%20pipeline)                                                          | Per-instance compilation, shared chunks, Vite build strategy                                 |
+| 134b | [main server](134b%20-%20main%20server)                                                                | Production request handling: fast phase + SSR with pre-built artifacts                       |
+| 134c | [slow render server](134c%20-%20slow%20render%20server)                                                | Webhook invalidation, per-instance rebuild, versioned bucket building                        |
+| 134d | [server build](134d%20-%20server%20build)                                                              | Compiling page.ts, actions, services, init.ts to production JS                               |
+| 136  | [loadParams route context](136%20-%20loadParams%20route%20context)                                     | Passing inferred/route params to loadParams for multi-prefix filtering                       |
+| 139  | [wix deployment separation](139%20-%20wix%20deployment%20separation)                                   | Split build into frontend (CDN) + backend (container); Cloudflare-compatible fetch handler   |
+| 140  | [production smoke test](140%20-%20production%20smoke%20test)                                           | Dedicated example project validating dev, production self-hosted, and production CDN modes   |
+| 143  | [artifact store abstraction for BaaS](143%20-%20artifact%20store%20abstraction%20for%20BaaS)           | ArtifactStore interface, serve-only export, pre-imported modules for cloud deployment        |
+| 144  | [per-route server elements](144%20-%20per-route%20server%20elements)                                   | One server-element.js per route instead of per instance; render from ViewState, not literals |
+| 145  | [pluggable jay-html validation](145%20-%20pluggable%20jay-html%20validation)                           | Plugin-provided validation rules for jay-html files with agent-friendly feedback             |
+| 146  | [css performance fixes](146%20-%20css%20performance%20fixes)                                           | CSS minification in production build, preload hints for route CSS                            |
+| 150  | [build content hash](150%20-%20build%20content%20hash)                                                 | SHA-256 content hash of build output for deployment client/server sync                       |
+| 153  | [npm create jay](153%20-%20npm%20create%20jay)                                                         | Interactive project scaffolding: name, plugin selection, agent-kit, setup banner             |
+| 158  | [staged npm publish](158%20-%20staged%20npm%20publish)                                                 | Two-phase publish: stage all packages without OTP, then bulk-approve with single OTP         |
+| 147  | [jay-html validation rules catalog](147%20-%20jay-html%20validation%20rules%20catalog)                 | Complete catalog of all validation rules across wix-media, SEO, and a11y                     |
+| 165  | [graceful expression parse errors](165%20-%20graceful%20expression%20parse%20errors)                   | Convert expression parse errors to validation messages instead of crashing the page          |
+| 166  | [a11y form and label validation rules](166%20-%20a11y%20form%20and%20label%20validation%20rules)       | Extend a11y-validator: checkbox/radio, ARIA name integrity, duplicate ids, label hygiene     |
+| 174  | [undefined css variable validation](174%20-%20undefined%20css%20variable%20validation)                 | Validate that CSS `var(--name)` references have corresponding `:root` definitions            |
+| 175  | [sitemap generation and robots validation](175%20-%20sitemap%20generation%20and%20robots%20validation) | `jay-stack sitemap` command + robots.txt existence validation                                |
+| 176  | [validation warning suppression audit](176%20-%20validation%20warning%20suppression%20audit)           | Every warning must be suppressible; `jay-validations` script; promote some to errors         |
+| 177  | [tree-shake unused plugin client bundles](177%20-%20tree-shake%20unused%20plugin%20client%20bundles)   | Only preload shared chunks each page actually imports; per-route `sharedDeps`                |
+| 178  | [compiler-free production runtime](178%20-%20compiler-free%20production%20runtime)                     | Eliminate compiler deps from serve + rebuild; use `page-parts.json` for rebuild              |
 
 ---
 
@@ -279,6 +284,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 124 | [contract props and params consistency](124%20-%20contract%20props%20and%20params%20consistency)                                      | Ensure contracts declare props/params; agent-kit authoring docs + validate checks         |
 | 125 | [plugin agent-kit](125%20-%20plugin%20agent-kit)                                                                                      | `agent-kit --mode plugin` for AI agents creating plugins (contracts, components, actions) |
 | 128 | [unfolded variant view](128%20-%20unfolded%20variant%20view)                                                                          | Page freeze: capture ViewState, render static SSR snapshots for side-by-side comparison   |
+| 179 | [frozen page hmr on template change](179%20-%20frozen-page-hmr-on-template-change)                                                    | Dev HMR reload for `?_jay_freeze` full pages when jay-html/CSS changes; data stays frozen |
 | 92  | [Gemini agent plugin for jay-stack](92%20-%20gemini%20agent%20plugin%20for%20jay-stack)                                               | Embedded AI agent: Gemini API, .jay-action metadata, chat contract, page automation       |
 | 97  | [Contract-based tool descriptions for gemini agent](97%20-%20contract-based%20tool%20descriptions%20for%20gemini%20agent)             | Semantic tool descriptions from .jay-contract via server action, not embedded in HTML     |
 | 132 | [ui-kit headless primitives](132%20-%20ui-kit%20headless%20primitives)                                                                | Popover menu, scroll carousel, tab switcher, clipboard copy — thin JS over HTML/CSS       |
@@ -322,7 +328,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ### "I'm working on the dev server"
 
-→ See #26 (jay start), #74 (file watching), #77 (automation integration), #81 (test mode), #107 (consistency and phase optionality)
+→ See #26 (jay start), #74 (file watching), #77 (automation integration), #81 (test mode), #107 (consistency and phase optionality), #128 (page freeze), #179 (frozen page HMR on template change)
 
 ### "I need to understand security model"
 

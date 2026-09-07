@@ -14,9 +14,8 @@ import {
     preparePluginClientInits,
     type PluginWithInit,
     type PluginClientInitInfo,
-    SlowRenderCache,
-    type SlowRenderCacheEntry,
 } from '@jay-framework/stack-server-runtime';
+import { SlowRenderCache, type SlowRenderCacheEntry } from '@jay-framework/stack-server-build';
 import type {
     ClientError4xx,
     HeadTag,
@@ -33,14 +32,14 @@ import {
     mergeHeadTags,
     parseCookies,
 } from '@jay-framework/stack-server-runtime';
-import { loadPageParts } from '@jay-framework/stack-server-runtime';
+import { loadPageParts } from '@jay-framework/stack-server-build';
 import {
     generateClientScript,
     generateSSRPageHtml,
     generateFrozenPageHtml,
     clearServerElementCache,
-    ProjectClientInitInfo,
-} from '@jay-framework/stack-server-runtime';
+} from '@jay-framework/stack-server-build';
+import { ProjectClientInitInfo } from '@jay-framework/stack-server-build';
 import { Request, Response } from 'express';
 import { DevServerOptions } from './dev-server-options';
 import { ServiceLifecycleManager } from './service-lifecycle';
@@ -59,15 +58,14 @@ import {
     type JayHtmlScript,
 } from '@jay-framework/compiler-jay-html';
 import {
-    LoadedPageParts,
     getServiceRegistry,
-    materializeContracts,
     slowRenderInstances,
     normalizeAndResolveInstanceProps,
     type HeadlessInstanceComponent,
     type InstancePhaseData,
     type ForEachHeadlessInstance,
 } from '@jay-framework/stack-server-runtime';
+import { LoadedPageParts, materializeContracts } from '@jay-framework/stack-server-build';
 import { scanPlugins } from '@jay-framework/stack-server-runtime';
 import { WithValidations } from '@jay-framework/compiler-shared';
 import { getLogger, getDevLogger, type RequestTiming } from '@jay-framework/logger';
@@ -366,7 +364,7 @@ function mkRoute(
             const cookies = parseCookies(req.headers.cookie);
 
             // Frozen page rendering (DL#127): serve a static SSR snapshot
-            // from a saved ViewState — no component logic, no client scripts.
+            // from a saved ViewState — no component logic. Dev full-page adds HMR reload (DL#179).
             const freezeId = query['_jay_freeze'];
             if (freezeId && freezeStore) {
                 timing?.annotate('[FROZEN]');
@@ -380,6 +378,7 @@ function mkRoute(
                     pageParams,
                     query['format'] === 'fragment' ? 'fragment' : 'page',
                     res,
+                    url,
                     timing,
                 );
                 return;
@@ -499,6 +498,12 @@ async function handleCachedRequest(
         res.status(500).end(pagePartsResult.validations.join('\n'));
         timing?.end();
         return;
+    }
+
+    if (pagePartsResult.validations.length > 0) {
+        for (const v of pagePartsResult.validations) {
+            getLogger().warn(v);
+        }
     }
 
     const {
@@ -638,6 +643,12 @@ async function handlePreRenderRequest(
         return;
     }
 
+    if (initialPartsResult.validations.length > 0) {
+        for (const v of initialPartsResult.validations) {
+            getLogger().warn(v);
+        }
+    }
+
     // Register linked files for watching
     const { linkedCssFiles: initCss, linkedComponentFiles: initComps } = initialPartsResult.val;
     _watchLinkedFiles([...(initCss || []), ...(initComps || [])], route);
@@ -768,6 +779,12 @@ async function handleClientOnlyRequest(
         res.status(500).end(pagePartsResult.validations.join('\n'));
         timing?.end();
         return;
+    }
+
+    if (pagePartsResult.validations.length > 0) {
+        for (const v of pagePartsResult.validations) {
+            getLogger().warn(v);
+        }
     }
 
     const {
@@ -1004,7 +1021,7 @@ async function sendResponse(
 
 /**
  * Handle a frozen page request — render SSR with a saved ViewState.
- * No component logic runs, no client scripts are included.
+ * No component logic runs. Dev full-page format injects a minimal HMR reload listener (DL#179).
  */
 async function handleFrozenRequest(
     vite: ViteDevServer,
@@ -1016,6 +1033,7 @@ async function handleFrozenRequest(
     pageParams: Record<string, string>,
     format: 'page' | 'fragment',
     res: Response,
+    url: string,
     timing?: RequestTiming,
 ): Promise<void> {
     const entry = await freezeStore.get(freezeId);
@@ -1049,6 +1067,7 @@ async function handleFrozenRequest(
             JAY_IMPORT_RESOLVER,
         );
 
+        const injectDevHmr = format === 'page';
         const html = await generateFrozenPageHtml(
             vite,
             fullJayHtml,
@@ -1062,13 +1081,20 @@ async function handleFrozenRequest(
             sourceDir,
             format,
             entry.name,
+            injectDevHmr ? { injectDevHmr: true } : undefined,
         );
 
         const headers: Record<string, string> = { 'Content-Type': 'text/html' };
         if (format === 'fragment') {
             headers['Access-Control-Allow-Origin'] = '*';
         }
-        res.status(200).set(headers).send(html);
+
+        if (injectDevHmr) {
+            const compiledHtml = await vite.transformIndexHtml(url || '/', html);
+            res.status(200).set(headers).send(compiledHtml);
+        } else {
+            res.status(200).set(headers).send(html);
+        }
     } catch (err: any) {
         getLogger().warn(`[Freeze] Failed to render frozen page: ${err.message}`);
         res.status(500).send(`Failed to render frozen page: ${err.message}`);

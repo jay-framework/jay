@@ -163,12 +163,15 @@ export const validateTokens: JayHtmlValidatorFn = (ctx) => {
 
     const byBreakpoint = resolveCascadeByBreakpoint(cssSources, ctx.body);
 
+    const dsOverrides = ctx.validationOverrides?.['design-system'];
+
     for (const [breakpoint, cascade] of byBreakpoint) {
         if (
             breakpoint &&
             hasBreakpoints &&
             breakpoint.includes('max-width') &&
-            !breakpointNames.has(breakpoint)
+            !breakpointNames.has(breakpoint) &&
+            !dsOverrides?.['allow-custom-breakpoints']
         ) {
             if (!flaggedBreakpoints.has(breakpoint)) {
                 flaggedBreakpoints.add(breakpoint);
@@ -178,7 +181,10 @@ export const validateTokens: JayHtmlValidatorFn = (ctx) => {
                 findings.push({
                     severity: 'warning',
                     message: `Media query @media ${breakpoint} not in DESIGN.md breakpoints`,
-                    suggestion: `Use a ${designMdPath} breakpoint: ${defined}`,
+                    suggestion:
+                        `Use a ${designMdPath} breakpoint: ${defined}. ` +
+                        `If intentional, suppress with design-system: { allow-custom-breakpoints: true } in <script type="application/jay-validations">. ` +
+                        `See agent-kit/designer/validation-guide.md`,
                 });
             }
         }
@@ -189,7 +195,7 @@ export const validateTokens: JayHtmlValidatorFn = (ctx) => {
         }
     }
 
-    if (Object.keys(tokens.animations).length > 0) {
+    if (Object.keys(tokens.animations).length > 0 && !dsOverrides?.['allow-no-reduced-motion']) {
         checkReducedMotion(cssSources, findings);
     }
 
@@ -235,7 +241,9 @@ function checkReducedMotion(cssSources: string[], findings: JayHtmlValidationFin
             message:
                 'Page uses transitions/animations but has no @media (prefers-reduced-motion) override',
             suggestion:
-                'Add @media (prefers-reduced-motion: reduce) { * { transition-duration: 0s !important; animation-duration: 0s !important; } }',
+                'Add @media (prefers-reduced-motion: reduce) { * { transition-duration: 0s !important; animation-duration: 0s !important; } }. ' +
+                'If intentional, suppress with design-system: { allow-no-reduced-motion: true } in <script type="application/jay-validations">. ' +
+                'See agent-kit/designer/validation-guide.md',
         });
     }
 }

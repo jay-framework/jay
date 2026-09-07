@@ -213,10 +213,8 @@ export function renderAttributes(
     let attributes = element.attributes;
     let renderedAttributes = [];
     Object.keys(attributes).forEach((attrName) => {
-        let attrCanonical = attrName.toLowerCase();
-        let attrKey = attrCanonical.match(attributesRequiresQuotes)
-            ? `"${attrCanonical}"`
-            : attrCanonical;
+        const attrCanonical = attrName.toLowerCase();
+        const attrKey = attrName.match(attributesRequiresQuotes) ? `"${attrName}"` : attrName;
         if (isDirectiveAttribute(attrCanonical)) return;
         if (attrCanonical === 'style') {
             renderedAttributes.push(renderStyleAttribute(attributes[attrName], variables));
@@ -228,7 +226,6 @@ export function renderAttributes(
             renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
         } else if (propertyMapping[attrCanonical]?.type === BOOLEAN_ATTRIBUTE) {
             const attrValue = attributes[attrName];
-            // Empty boolean attribute (e.g., <button disabled></button>) renders as empty string
             if (attrValue === '') {
                 renderedAttributes.push(new RenderFragment(`${attrKey}: ''`, Imports.none()));
             } else {
@@ -236,7 +233,6 @@ export function renderAttributes(
                 renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
             }
         } else {
-            // Escape single quotes in attribute values so they can be safely wrapped in single quotes
             let attributeExpression = parseAttributeExpression(
                 textEscape(attributes[attrName]),
                 variables,
@@ -266,25 +262,20 @@ export function renderDynamicAttributes(
     const renderedAttributes: RenderFragment[] = [];
     Object.keys(attributes).forEach((attrName) => {
         const attrCanonical = attrName.toLowerCase();
-        const attrKey = attrCanonical.match(attributesRequiresQuotes)
-            ? `"${attrCanonical}"`
-            : attrCanonical;
+        const attrKey = attrName.match(attributesRequiresQuotes) ? `"${attrName}"` : attrName;
         if (isDirectiveAttribute(attrCanonical)) return;
         if (attrCanonical === 'style') {
             const styleFragment = renderStyleAttribute(attributes[attrName], variables);
-            // Only include if it has dynamic imports (da)
             if (styleFragment.imports.has(Import.dynamicAttribute)) {
                 renderedAttributes.push(styleFragment);
             }
         } else if (attrCanonical === 'class') {
             const classExpression = parseClassExpression(attributes[attrName], variables);
-            // Only include if it has dynamic imports (da)
             if (classExpression.imports.has(Import.dynamicAttribute)) {
                 renderedAttributes.push(classExpression.map((_) => `class: ${_}`));
             }
         } else if (propertyMapping[attrCanonical]?.type === PROPERTY) {
             const attributeExpression = parsePropertyExpression(attributes[attrName], variables);
-            // Only include if it has dynamic imports (dp)
             if (attributeExpression.imports.has(Import.dynamicProperty)) {
                 renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
             }
@@ -303,7 +294,6 @@ export function renderDynamicAttributes(
                 textEscape(attributes[attrName]),
                 variables,
             );
-            // Only include if it has dynamic imports (da)
             if (attributeExpression.imports.has(Import.dynamicAttribute)) {
                 renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
             }

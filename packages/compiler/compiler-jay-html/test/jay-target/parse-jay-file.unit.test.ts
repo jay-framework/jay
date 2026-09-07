@@ -2343,7 +2343,7 @@ describe('compiler', () => {
             );
 
             expect(jayFile.validations).toEqual([]);
-            expect(jayFile.val.css).toEqual('.header { color: red; }');
+            expect(jayFile.val.css).toEqual('/* Component: header */\n.header { color: red; }');
         });
 
         it('should handle case-insensitive tag matching', async () => {
@@ -2539,7 +2539,7 @@ describe('compiler', () => {
             expect(jayFile.validations).toEqual([]);
             expect(jayFile.val.headlessImports).toHaveLength(1);
             expect(jayFile.val.headlessImports[0].contractName).toEqual('bizheader');
-            expect(jayFile.val.css).toEqual('.header { color: blue; }');
+            expect(jayFile.val.css).toEqual('/* Component: bizheader */\n.header { color: blue; }');
         });
 
         it('should resolve headfull FS files from sourceDir when filePath is pre-rendered cache', async () => {
@@ -2795,6 +2795,78 @@ describe('compiler', () => {
             expect(result.validations).toEqual([]);
             expect(result.val!.headMeta?.title).toBeUndefined();
             expect(result.val!.headMeta?.meta).toEqual([]);
+        });
+    });
+
+    describe('validation overrides parsing', () => {
+        it('should parse jay-validations script', async () => {
+            const result = await parseJayFile(
+                jayFileWith(
+                    `data:
+                    |   title: string
+                    |`,
+                    `<body><h1>{title}</h1></body>`,
+                    `<script type="application/jay-validations">
+                    seo:
+                      no-lcp-image: true
+                    </script>`,
+                ),
+                'test.jay-html',
+                __dirname,
+                {},
+                JAY_IMPORT_RESOLVER,
+                path.resolve(__dirname, '../fixtures'),
+            );
+            expect(result.validations).toEqual([]);
+            expect(result.val!.validationOverrides).toEqual({
+                seo: { 'no-lcp-image': true },
+            });
+        });
+
+        it('should return undefined when no jay-validations script', async () => {
+            const result = await parseJayFile(
+                jayFileWith(
+                    `data:
+                    |   title: string
+                    |`,
+                    `<body><h1>{title}</h1></body>`,
+                ),
+                'test.jay-html',
+                __dirname,
+                {},
+                JAY_IMPORT_RESOLVER,
+                path.resolve(__dirname, '../fixtures'),
+            );
+            expect(result.validations).toEqual([]);
+            expect(result.val!.validationOverrides).toBeUndefined();
+        });
+
+        it('should handle multiple plugin keys', async () => {
+            const html = `<html><head>
+                <script type="application/jay-validations">
+seo:
+  no-lcp-image: true
+design-system:
+  allow-undefined-vars: true
+                </script>
+                <script type="application/jay-data">
+data:
+  title: string
+                </script>
+            </head><body><h1>{title}</h1></body></html>`;
+            const result = await parseJayFile(
+                html,
+                'test.jay-html',
+                __dirname,
+                {},
+                JAY_IMPORT_RESOLVER,
+                path.resolve(__dirname, '../fixtures'),
+            );
+            expect(result.validations).toEqual([]);
+            expect(result.val!.validationOverrides).toEqual({
+                seo: { 'no-lcp-image': true },
+                'design-system': { 'allow-undefined-vars': true },
+            });
         });
     });
 

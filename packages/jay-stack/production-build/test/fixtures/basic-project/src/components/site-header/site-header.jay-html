@@ -1,0 +1,21 @@
+<html>
+<head>
+    <script type="application/jay-headless"
+            plugin="cart-badge"
+            contract="cart-badge"></script>
+    <script type="application/jay-data">
+data:
+    logoUrl: string
+    headerTitle: string
+    </script>
+</head>
+<body>
+    <header>
+        <img src="{logoUrl}" />
+        <span>{headerTitle}</span>
+        <jay:cart-badge label="Cart">
+            <span class="badge">{badgeLabel}: {count}</span>
+        </jay:cart-badge>
+    </header>
+</body>
+</html>

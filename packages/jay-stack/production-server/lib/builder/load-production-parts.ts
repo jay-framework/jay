@@ -1,236 +1,14 @@
-import path from 'node:path';
-import fs from 'node:fs/promises';
-import { createRequire } from 'node:module';
 import type { ArtifactStore } from '../serve/artifact-store';
-import { getLogger } from '@jay-framework/logger';
-import {
-    parseJayFile,
-    JAY_IMPORT_RESOLVER,
-    injectHeadfullFSTemplates,
-    discoverHeadlessInstances,
-    assignCoordinatesToJayHtml,
-    type HeadlessContractInfo,
-    type DiscoveredHeadlessInstance,
-    type ForEachHeadlessInstance,
-} from '@jay-framework/compiler-jay-html';
-import { checkValidationErrors } from '@jay-framework/compiler-shared';
-import type { AnyJayStackComponentDefinition } from '@jay-framework/fullstack-component';
 import type {
     DevServerPagePart,
     HeadlessInstanceComponent,
+    ForEachHeadlessInstance,
 } from '@jay-framework/stack-server-runtime';
-import type { JayRoute } from '@jay-framework/stack-route-scanner';
 
-const require = createRequire(import.meta.url);
-
-export interface KeyedPartModule {
-    key: string;
+export interface PagePartsConfigEntry {
     modulePath: string;
     exportName: string;
-}
-
-export interface HeadlessModuleInfo {
-    modulePath: string;
-    exportName: string;
-    isLocal: boolean;
-    contractName?: string;
-    key?: string;
-    propNames?: string[];
-    contractInfo?: { contractName: string; metadata?: Record<string, unknown> };
-    headlessProps?: Record<string, string>;
-    structural?: boolean;
-}
-
-export interface ProductionPageParts {
-    parts: DevServerPagePart[];
-    headlessContracts: HeadlessContractInfo[];
-    headlessInstanceComponents: HeadlessInstanceComponent[];
-    discoveredInstances: DiscoveredHeadlessInstance[];
-    forEachInstances: ForEachHeadlessInstance[];
-    keyedPartModules: KeyedPartModule[];
-    headlessModuleInfos: HeadlessModuleInfo[];
-    serverTrackByMap?: Record<string, string>;
-    clientTrackByMap?: Record<string, string>;
-}
-
-export async function loadProductionPageParts(
-    route: JayRoute | { jayHtmlPath: string; componentExport?: string },
-    pageModule: any,
-    jayHtmlContent: string,
-    projectRoot: string,
-    tsConfigFilePath?: string,
-    serverBuildDir?: string,
-): Promise<ProductionPageParts> {
-    const exportName = (route as any).componentExport || 'page';
-    const compDefinition: AnyJayStackComponentDefinition | undefined =
-        pageModule[exportName] ?? pageModule.default;
-
-    const parts: DevServerPagePart[] = compDefinition
-        ? [{ compDefinition, clientImport: '', clientPart: '' }]
-        : [];
-
-    const dirName = path.dirname(route.jayHtmlPath);
-    const fileName = path.basename(route.jayHtmlPath);
-
-    const jayHtmlWithValidations = await parseJayFile(
-        jayHtmlContent,
-        fileName,
-        dirName,
-        { relativePath: tsConfigFilePath },
-        JAY_IMPORT_RESOLVER,
-        projectRoot,
-    );
-    const jayHtml = checkValidationErrors(jayHtmlWithValidations);
-
-    const headlessInstanceComponents: HeadlessInstanceComponent[] = [];
-    const keyedPartModules: KeyedPartModule[] = [];
-    const headlessModuleInfos: HeadlessModuleInfo[] = [];
-
-    const headlessImports = (jayHtml as any).headlessImports ?? [];
-    getLogger().info(
-        `[Build] headlessImports for ${fileName}: ${headlessImports.length}, keys: ${Object.keys(jayHtml as any).join(',')}`,
-    );
-
-    for (const headlessImport of headlessImports) {
-        const module = headlessImport.codeLink.module;
-        const name = headlessImport.codeLink.names[0].name;
-        const isLocalModule = module[0] === '.' || module[0] === '/';
-        let modulePath: string;
-        if (isLocalModule) {
-            const sourcePath = path.resolve(dirName, module);
-            if (serverBuildDir) {
-                const relativeToSrc = path.relative(path.join(projectRoot, 'src'), sourcePath);
-                let compiledPath = path.join(serverBuildDir, relativeToSrc);
-                compiledPath = compiledPath.replace(/\.ts$/, '.js');
-                if (!compiledPath.endsWith('.js')) {
-                    const indexPath = path.join(compiledPath, 'index.js');
-                    try {
-                        await fs.access(indexPath);
-                        compiledPath = indexPath;
-                    } catch {
-                        compiledPath += '.js';
-                    }
-                }
-                modulePath = compiledPath;
-            } else {
-                modulePath = sourcePath;
-            }
-        } else {
-            modulePath = module;
-        }
-
-        let headlessCompDef: any;
-
-        if (headlessImport.structural) {
-            // Structural component (DL#162): template-only, no code file.
-            // Data comes from headless imports inside the component's own jay-html.
-            // Template was already injected at parse time — skip module loading.
-            continue;
-        } else {
-            const resolvedModulePath = isLocalModule
-                ? modulePath
-                : require.resolve(module, { paths: [dirName] });
-            const headlessModule = await import(resolvedModulePath);
-            headlessCompDef = headlessModule[name];
-        }
-
-        if (headlessImport.key) {
-            const clientModulePath = isLocalModule
-                ? path.resolve(dirName, module)
-                : `${module}/client`;
-            const ci = headlessImport.contract
-                ? { contractName: headlessImport.contract.name, metadata: headlessImport.metadata }
-                : undefined;
-            parts.push({
-                key: headlessImport.key,
-                compDefinition: headlessCompDef,
-                clientImport: '',
-                clientPart: '',
-                contractInfo: ci,
-                headlessProps: headlessImport.headlessProps,
-            });
-            const hasClientComp =
-                !!headlessCompDef?.fastRender || !!headlessCompDef?.hasInteractive;
-            if (!headlessImport.structural && hasClientComp) {
-                keyedPartModules.push({
-                    key: headlessImport.key,
-                    modulePath: clientModulePath,
-                    exportName: name,
-                });
-            }
-            headlessModuleInfos.push({
-                modulePath,
-                exportName: name,
-                isLocal: isLocalModule,
-                key: headlessImport.key,
-                contractInfo: ci,
-                headlessProps: headlessImport.headlessProps,
-                structural: headlessImport.structural,
-            });
-        }
-
-        if (!headlessImport.key && headlessImport.contract) {
-            headlessInstanceComponents.push({
-                contractName: headlessImport.contractName,
-                compDefinition: headlessCompDef,
-                contract: headlessImport.contract,
-            });
-            headlessModuleInfos.push({
-                modulePath,
-                exportName: name,
-                isLocal: isLocalModule,
-                contractName: headlessImport.contractName,
-                propNames: headlessImport.contract.props?.map((p: any) => p.name) ?? [],
-                structural: headlessImport.structural,
-            });
-        }
-    }
-
-    const headlessContracts: HeadlessContractInfo[] = ((jayHtml as any).headlessImports ?? [])
-        .filter((hi: any) => hi.contract && hi.key)
-        .map((hi: any) => ({
-            key: hi.key,
-            contract: hi.contract,
-            contractPath: hi.contractPath,
-        }));
-
-    // Discover headless instances from original jay-html (DL#144).
-    // assignCoordinates runs first to pre-assign refs that match the hydrate compiler.
-    const jayHtmlForDiscovery = injectHeadfullFSTemplates(
-        jayHtmlContent,
-        dirName,
-        JAY_IMPORT_RESOLVER,
-    );
-    let discoveredInstances: DiscoveredHeadlessInstance[] = [];
-    let forEachInstances: ForEachHeadlessInstance[] = [];
-
-    if (headlessInstanceComponents.length > 0) {
-        const contractNames = new Set(headlessInstanceComponents.map((c) => c.contractName));
-        const withCoords = assignCoordinatesToJayHtml(jayHtmlForDiscovery, contractNames);
-        const discovery = discoverHeadlessInstances(withCoords);
-        discoveredInstances = discovery.instances;
-        forEachInstances = discovery.forEachInstances;
-    }
-
-    return {
-        parts,
-        headlessContracts,
-        headlessInstanceComponents,
-        discoveredInstances,
-        forEachInstances,
-        keyedPartModules,
-        headlessModuleInfos,
-        serverTrackByMap: (jayHtml as any).serverTrackByMap,
-        clientTrackByMap: (jayHtml as any).clientTrackByMap,
-    };
-}
-
-// ── Page Parts Config (DL#137) ──
-
-interface PagePartsConfigEntry {
-    modulePath: string;
-    exportName: string;
-    source: 'npm' | 'local';
+    source: 'local' | 'npm';
     structural?: boolean;
 }
 
@@ -257,71 +35,18 @@ export interface PagePartsConfig {
     }>;
 }
 
-export function buildPagePartsConfig(
-    pageParts: ProductionPageParts,
-    pageServerModule: string,
-    pageExportName: string,
-    buildDir: string,
-    pageIsPlugin: boolean = false,
-): PagePartsConfig {
-    const parts: PagePartsConfig['parts'] = [];
-
-    if (pageServerModule) {
-        parts.push({
-            modulePath: pageServerModule,
-            exportName: pageExportName,
-            source: pageIsPlugin ? 'npm' : 'local',
-        });
-    }
-
-    for (const info of pageParts.headlessModuleInfos) {
-        if (info.key) {
-            parts.push({
-                modulePath: info.isLocal
-                    ? path.relative(buildDir, info.modulePath)
-                    : info.modulePath,
-                exportName: info.exportName,
-                source: info.isLocal ? 'local' : 'npm',
-                key: info.key,
-                contractInfo: info.contractInfo,
-                headlessProps: info.headlessProps,
-            });
-        }
-    }
-
-    const instanceComponents: PagePartsConfig['instanceComponents'] = [];
-    for (const info of pageParts.headlessModuleInfos) {
-        if (info.contractName) {
-            instanceComponents.push({
-                modulePath: info.structural
-                    ? ''
-                    : info.isLocal
-                      ? path.relative(buildDir, info.modulePath)
-                      : info.modulePath,
-                exportName: info.exportName,
-                source: info.isLocal ? 'local' : 'npm',
-                contractName: info.contractName,
-                propNames: info.propNames ?? [],
-                ...(info.structural ? { structural: true } : {}),
-            });
-        }
-    }
-
-    return {
-        parts,
-        instanceComponents,
-        forEachInstances: pageParts.forEachInstances.map((fi) => ({
-            contractName: fi.contractName,
-            forEachPath: fi.forEachPath,
-            trackBy: fi.trackBy,
-            propBindings: fi.propBindings,
-            coordinateSuffix: fi.coordinateSuffix,
-        })),
-    };
+interface ServeTimeContract {
+    props: Array<{ name: string }>;
 }
 
-export interface ServeTimeContract {
-    props: Array<{ name: string }>;
+export interface ProductionPageParts {
+    parts: DevServerPagePart[];
+    headlessContracts: any[];
+    headlessInstanceComponents: HeadlessInstanceComponent[];
+    discoveredInstances: any[];
+    forEachInstances: ForEachHeadlessInstance[];
+    keyedPartModules: any[];
+    headlessModuleInfos: any[];
 }
 
 export async function loadPagePartsFromConfig(

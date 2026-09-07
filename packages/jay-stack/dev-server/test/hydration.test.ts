@@ -8,7 +8,7 @@
  */
 
 import { mkDevServer, type DevServer } from '../lib';
-import { clearServerElementCache } from '@jay-framework/stack-server-runtime';
+import { clearServerElementCache } from '@jay-framework/stack-server-build';
 import { JayRollupConfig } from '@jay-framework/vite-plugin';
 import path from 'path';
 import fs from 'fs';
