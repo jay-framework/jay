@@ -1,7 +1,20 @@
-import type { JayHtmlValidatorFn, JayHtmlValidationFinding } from '@jay-framework/compiler-shared';
+import type {
+    JayHtmlValidatorFn,
+    JayHtmlValidationFinding,
+    JayHtmlValidationContext,
+} from '@jay-framework/compiler-shared';
 import { walkElements } from '@jay-framework/compiler-shared';
 
 const A11Y_GUIDE = '\nSee: agent-kit/designer/a11y-patterns.md';
+
+/**
+ * Rule-level suppression via <script type="application/jay-validations">, mirroring the
+ * seo-validator / design-system-validator mechanism. Authors opt out per rule under the
+ * `a11y:` namespace, e.g. `a11y: { allow-adjacent-duplicate-text: true }` (DL#185).
+ */
+function isSuppressed(ctx: JayHtmlValidationContext, rule: string): boolean {
+    return ctx.validationOverrides?.a11y?.[rule] === true;
+}
 
 function pushFinding(
     findings: JayHtmlValidationFinding[],
@@ -292,7 +305,11 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
     });
 
     // --- Rule: adjacent elements with duplicate text content ---
-    checkDuplicateAdjacentText(ctx.body, findings);
+    checkDuplicateAdjacentText(
+        ctx.body,
+        findings,
+        isSuppressed(ctx, 'allow-adjacent-duplicate-text'),
+    );
 
     // --- Rule: interactive elements must not be nested ---
     checkNestedInteractive(ctx.body, findings);
@@ -550,17 +567,71 @@ function checkNestedInteractive(root: any, findings: JayHtmlValidationFinding[])
     walk(root, undefined);
 }
 
-function getVisibleText(el: any): string {
-    if (el.getAttribute?.('aria-hidden') === 'true') return '';
-    return (el.textContent ?? '').trim().replace(/\s+/g, ' ');
+/**
+ * Directives that make an element's rendered content dynamic: the flattened static
+ * template text is no longer representative of the runtime DOM (DL#184 / DL#185).
+ * - forEach / slowForEach: repeats into N distinct, per-item-scoped records
+ * - if / when-*: may not render at all, or renders per-item-scoped {binding} text
+ */
+const DYNAMIC_DIRECTIVES = [
+    'forEach',
+    'slowForEach',
+    'if',
+    'when-resolved',
+    'when-loading',
+    'when-rejected',
+];
+
+/**
+ * True when `el` or any descendant carries a dynamic directive, so its collapsed
+ * text cannot be meaningfully compared as a static duplicate (DL#184). Scoped to the
+ * subtree (self + descendants) only — NOT ancestors: two simple, same-scope siblings
+ * under a shared forEach ancestor render identical text each iteration and must still warn.
+ */
+function isDynamicSubtree(el: any): boolean {
+    if (DYNAMIC_DIRECTIVES.some((d) => el.getAttribute?.(d) != null)) return true;
+    return (el.childNodes ?? [])
+        .filter((n: any) => n.nodeType === 1)
+        .some((child: any) => isDynamicSubtree(child));
 }
 
-function checkDuplicateAdjacentText(root: any, findings: JayHtmlValidationFinding[]): void {
+/**
+ * Aggregate the visible text of a subtree, excluding any element marked
+ * aria-hidden="true" (self or descendant), matching how assistive tech computes the
+ * accessible name (DL#185). Whitespace is normalized by the caller.
+ */
+function collectVisibleText(node: any): string {
+    if (node.nodeType === 3) return node.textContent ?? '';
+    if (node.nodeType !== 1) return '';
+    if (node.getAttribute?.('aria-hidden') === 'true') return '';
+    let text = '';
+    for (const child of node.childNodes ?? []) {
+        text += collectVisibleText(child);
+    }
+    return text;
+}
+
+function getVisibleText(el: any): string {
+    if (el.getAttribute?.('aria-hidden') === 'true') return '';
+    return collectVisibleText(el).trim().replace(/\s+/g, ' ');
+}
+
+function checkDuplicateAdjacentText(
+    root: any,
+    findings: JayHtmlValidationFinding[],
+    suppressed: boolean,
+): void {
+    if (suppressed) return;
     function walk(el: any): void {
         const children = (el.childNodes ?? []).filter((n: any) => n.nodeType === 1);
         for (let i = 0; i < children.length - 1; i++) {
             const current = children[i];
             const next = children[i + 1];
+
+            // Only compare simple, fully-static subtrees. If either element (or a
+            // descendant) is dynamic, the flattened template text is unreliable (DL#184).
+            if (isDynamicSubtree(current) || isDynamicSubtree(next)) continue;
+
             const currentText = getVisibleText(current);
             const nextText = getVisibleText(next);
 

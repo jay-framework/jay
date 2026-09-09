@@ -466,6 +466,49 @@ describe('headless instance props validation (DL#124 Phase 2)', () => {
         });
     });
 
+    describe('compiler-injected jc marker (DL#186)', () => {
+        function makeJayHtmlWithAttrs(attributes: Record<string, string>): any {
+            return {
+                body: {
+                    childNodes: [
+                        {
+                            nodeType: 1,
+                            rawTagName: 'jay:site-header',
+                            attributes,
+                            childNodes: [],
+                        },
+                    ],
+                },
+                headlessImports: [
+                    {
+                        contractName: 'site-header',
+                        contract: {
+                            name: 'site-header',
+                            tags: [],
+                            props: [],
+                        },
+                    },
+                ],
+                contract: { name: 'page', tags: [] },
+            };
+        }
+
+        it('should not warn for the compiler-injected jc attribute on an empty headfull instance', () => {
+            const jayHtml = makeJayHtmlWithAttrs({ jc: 'site-header' });
+            const warnings = checkHeadlessInstanceProps(jayHtml, 'test.jay-html');
+            expect(warnings).toEqual([]);
+        });
+
+        it('should still warn for an author-supplied undeclared attribute (control)', () => {
+            const jayHtml = makeJayHtmlWithAttrs({ jc: 'site-header', foo: 'x' });
+            const warnings = checkHeadlessInstanceProps(jayHtml, 'test.jay-html');
+            expect(warnings).toEqual([
+                '<jay:site-header> passes attribute "foo" but the "site-header" contract does not declare it as a prop. ' +
+                    'Add to site-header.jay-contract: props: [{ name: foo, type: string }]',
+            ]);
+        });
+    });
+
     describe('plugin validators (DL#145)', () => {
         const pluginFixtureDir = path.join(baseFixturesDir, 'plugin-validator');
 

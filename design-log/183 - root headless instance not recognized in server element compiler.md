@@ -24,8 +24,8 @@
   template children against the **contract's** ViewState (not the page's).
 - `jay-stack validate` compiles all three targets for every `.jay-html`. The SSR compilation was wired
   into `validate` by commit `1e143e79` ("fix hydrate compiler: forEach inside headless instance template
-  now resolves bindings correctly"), with the note *"Also validate server element compilation (SSR) —
-  catches binding errors inside headless instance templates"* (`stack-cli/lib/validate.ts:1240-1251`).
+  now resolves bindings correctly"), with the note _"Also validate server element compilation (SSR) —
+  catches binding errors inside headless instance templates"_ (`stack-cli/lib/validate.ts:1240-1251`).
   That is why this defect now surfaces as a **validation error** rather than only a runtime SSR failure.
 
 ## Problem
@@ -48,8 +48,8 @@ The page body root is the headless instance itself:
   <jay:auth-callback>
     <main class="auth-callback">
       <div class="auth-callback-content">
-        <div if="isProcessing"> ... </div>
-        <div if="hasError"> <p>{errorMessage}</p> </div>
+        <div if="isProcessing">...</div>
+        <div if="hasError"><p>{errorMessage}</p></div>
       </div>
     </main>
   </jay:auth-callback>
@@ -82,9 +82,9 @@ export function renderToStream(vs: PageViewState, ctx: ServerRenderContext): voi
 
 The correct output would **not** emit a `<jay:...>` element at all; it would look up the instance
 ViewState from `vs.__headlessInstances[...]` and bind the children against it (as
-`renderServerHeadlessInstance` does for *nested* instances).
+`renderServerHeadlessInstance` does for _nested_ instances).
 
-**Why only the root, and only SSR:** *nested* `<jay:...>` instances work in all three targets. For
+**Why only the root, and only SSR:** _nested_ `<jay:...>` instances work in all three targets. For
 example, `site-header.jay-html` embeds `<jay:cart-indicator>` and `<jay:login-indicator>` as children and
 produces **no** SSR error — because child elements pass through `renderServerElement`, which performs the
 headless check. The **root** element, however, is rendered by a different call that skips that check.
@@ -100,7 +100,7 @@ headless-instance detection (that lives in `renderServerElement`).
 ```ts
 // generateServerElementFile(...) — line ~1080
 const rendered = renderServerElementContent(rootElement.val as HTMLElement, context, {
-    isRoot: true,
+  isRoot: true,
 });
 ```
 
@@ -108,16 +108,16 @@ The headless check exists only on the child path (`renderServerElement`, lines ~
 
 ```ts
 function renderServerElement(element: HTMLElement, context: ServerContext): RenderFragment {
-    // --- Headless component instance (<jay:contract-name>) ---
-    const componentMatch = getComponentName(
-        element.rawTagName,
-        new Set(),                       // no headful component imports in the server target
-        context.headlessContractNames,
-    );
-    if (componentMatch !== null && componentMatch.kind === 'headless-instance') {
-        return renderServerHeadlessInstance(element, context, componentMatch.name);
-    }
-    // ... conditional / forEach / regular element ...
+  // --- Headless component instance (<jay:contract-name>) ---
+  const componentMatch = getComponentName(
+    element.rawTagName,
+    new Set(), // no headful component imports in the server target
+    context.headlessContractNames,
+  );
+  if (componentMatch !== null && componentMatch.kind === 'headless-instance') {
+    return renderServerHeadlessInstance(element, context, componentMatch.name);
+  }
+  // ... conditional / forEach / regular element ...
 }
 ```
 
@@ -136,15 +136,15 @@ HTML stream.
 // renderHydrateElement. When the root IS a headless instance, we must route through
 // renderHydrateElement so the component's Variables and interactivePaths are used.
 const rootComponentMatch = getComponentName(
-    rootElement.val.rawTagName,
-    context.importedSymbols,
-    context.headlessContractNames,
+  rootElement.val.rawTagName,
+  context.importedSymbols,
+  context.headlessContractNames,
 );
 let renderedHydrate: RenderFragment;
 if (rootComponentMatch !== null && rootComponentMatch.kind === 'headless-instance') {
-    renderedHydrate = renderHydrateElement(rootElement.val, context);
+  renderedHydrate = renderHydrateElement(rootElement.val, context);
 } else {
-    renderedHydrate = renderHydrateElementContent(rootElement.val, context, /* forceAdopt */ true);
+  renderedHydrate = renderHydrateElementContent(rootElement.val, context, /* forceAdopt */ true);
 }
 ```
 
@@ -160,8 +160,11 @@ Any page whose body root is a headless instance. Minimal repro against the built
 (run from inside a project that has `@jay-framework/*` installed, e.g. `examples/jay-onsko-shop`):
 
 ```js
-import { parseJayFile, generateServerElementFile, JAY_IMPORT_RESOLVER }
-  from '@jay-framework/compiler-jay-html';
+import {
+  parseJayFile,
+  generateServerElementFile,
+  JAY_IMPORT_RESOLVER,
+} from '@jay-framework/compiler-jay-html';
 import path from 'path';
 
 const projectRoot = process.cwd();
@@ -180,11 +183,14 @@ const content = `<html><head>
 </body></html>`;
 
 const parsed = await parseJayFile(
-  content, 'page.jay-html',
+  content,
+  'page.jay-html',
   path.resolve(projectRoot, 'src/pages/auth/callback'),
-  {}, JAY_IMPORT_RESOLVER, projectRoot,
+  {},
+  JAY_IMPORT_RESOLVER,
+  projectRoot,
 );
-console.log('parse:', parsed.validations);                       // []
+console.log('parse:', parsed.validations); // []
 console.log('SSR:', generateServerElementFile(parsed.val).validations);
 // → ['the data field [isProcessing] not found in Jay data',
 //    'the data field [hasError] not found in Jay data']
@@ -195,7 +201,8 @@ longer the body root — SSR validations become `[]`:
 
 ```html
 <body>
-  <main class="auth-callback">      <!-- root is now <main> -->
+  <main class="auth-callback">
+    <!-- root is now <main> -->
     <jay:auth-callback>
       <div class="c">
         <div if="isProcessing">...</div>
@@ -224,14 +231,14 @@ rendering, and route it through the headless path.
 // instance's ViewState (vs.__headlessInstances[...]) and interactivePaths are used,
 // instead of binding the inline template against the page ViewState.
 const rootComponentMatch = getComponentName(
-    (rootElement.val as HTMLElement).rawTagName,
-    new Set(),                       // no headful component imports in the server target
-    headlessContractNames,
+  (rootElement.val as HTMLElement).rawTagName,
+  new Set(), // no headful component imports in the server target
+  headlessContractNames,
 );
 const rendered =
-    rootComponentMatch !== null && rootComponentMatch.kind === 'headless-instance'
-        ? renderServerElement(rootElement.val as HTMLElement, context)
-        : renderServerElementContent(rootElement.val as HTMLElement, context, { isRoot: true });
+  rootComponentMatch !== null && rootComponentMatch.kind === 'headless-instance'
+    ? renderServerElement(rootElement.val as HTMLElement, context)
+    : renderServerElementContent(rootElement.val as HTMLElement, context, { isRoot: true });
 ```
 
 Routing through `renderServerElement` reuses the existing `renderServerHeadlessInstance` path (which
@@ -297,3 +304,31 @@ Full-string comparisons on generated code (per repo rules — no `toContain` on 
   coordinate parity for the root instance (see the alignment note above).
 - **#84 headless component props and repeater support / #90 headless instances in interactive forEach** —
   background on how `<jay:...>` instances and their ViewStates are compiled.
+
+## Implementation Results (2026-09-08)
+
+**Status: implemented.** Fix landed in
+`packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler-server.ts` at the root-render site
+in `generateServerElementFile` (~line 1078): detect a root headless instance via
+`getComponentName(rootTag, new Set(), headlessContractNames)` (imported line 25; `headlessContractNames`
+local at line 1061) and route it through `renderServerElement` (the child path, line 108, which owns the
+headless check) when `kind === 'headless-instance'`; otherwise keep the existing
+`renderServerElementContent(..., { isRoot: true })` path. Mirrors the hydrate target
+(`jay-html-compiler-hydrate.ts:1311-1318`).
+
+**Coordinate alignment — verified, no fix needed** (deviation from the DL's "must verify" caution: it
+aligned by construction). Both targets run the identical `assignCoordinates(body, { headlessContractNames })`
+pre-pass and read the same pre-assigned `jay-coordinate-base` via `extractHeadlessCoordinate`. Confirmed
+empirically on the fixture: SSR emits `{S0/0/0, S0/0/0/0, S0/0/0/1, S0/0/0/2}` with instance key `S0/0`;
+hydrate adopts exactly the same coordinates and `makeHeadlessInstanceComponent(..., 'S0/0', ...)`. A
+cross-target test asserts this programmatically.
+
+**Tests** (fixture/full-string based, no `toContain`):
+`test/jay-target/generate-server-element.test.ts` +2 — (1) root `<jay:contract>` → no validations, no
+literal `<jay:...>` tag, full `prettify` `toEqual` against the golden server fixture; (2) cross-target
+coordinate-alignment set comparison. New fixture
+`test/fixtures/contracts/page-with-root-headless-instance/` (`.jay-html` + golden server + hydrate). The
+pre-existing nested-instance control still passes.
+
+**Results:** `generate-server-element.test.ts` 22/22; full `compiler-jay-html` suite 698 passed / 4
+pre-existing skips; `tsc --noEmit` clean; monorepo `yarn confirm` green.

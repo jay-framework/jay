@@ -1077,9 +1077,25 @@ export function generateServerElementFile(
 
     // Render root element — coordinate comes from jay-coordinate-base.
     // Root must emit jay-coordinate="S0/0" so hydrate can resolve adoptElement("S0/0", ...).
-    const rendered = renderServerElementContent(rootElement.val as HTMLElement, context, {
-        isRoot: true,
-    });
+    //
+    // Check if the root element is a headless instance (<jay:xxx>) (DL#183).
+    // renderServerElementContent doesn't detect headless instances — that's done by
+    // renderServerElement. When the root IS a headless instance, route through it so the
+    // instance's ViewState (vs.__headlessInstances[...]) and interactivePaths are used,
+    // instead of binding the inline template against the (empty) page ViewState.
+    // Mirrors the hydrate target (jay-html-compiler-hydrate.ts). Coordinates align by
+    // construction: both targets read the same pre-assigned jay-coordinate-base.
+    const rootComponentMatch = getComponentName(
+        (rootElement.val as HTMLElement).rawTagName,
+        new Set(), // No headful component imports in server-element target
+        headlessContractNames,
+    );
+    const rendered =
+        rootComponentMatch !== null && rootComponentMatch.kind === 'headless-instance'
+            ? renderServerElement(rootElement.val as HTMLElement, context)
+            : renderServerElementContent(rootElement.val as HTMLElement, context, {
+                  isRoot: true,
+              });
 
     const viewStateType = jayFile.types.name;
 

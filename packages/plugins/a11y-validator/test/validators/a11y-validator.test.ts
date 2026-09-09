@@ -696,4 +696,135 @@ describe('a11y-validator', () => {
             expect(dup).toBeDefined();
         });
     });
+
+    describe('duplicate adjacent text — dynamic subtree guard (DL#184)', () => {
+        it('does not flag two adjacent forEach siblings (items / loadedItems)', async () => {
+            const ctx = makeContext(`
+                <div class="recipes-grid">
+                    <article forEach="recipes.items" trackBy="_id">{title}</article>
+                    <article forEach="recipes.loadedItems" trackBy="_id">{title}</article>
+                </div>
+            `);
+            const findings = await validate(ctx);
+            const dup = findings.find((f) => f.message.includes('identical text'));
+            expect(dup).toBeUndefined();
+        });
+
+        it('does not flag a label next to a select whose options loop a child collection', async () => {
+            const ctx = makeContext(`
+                <div class="option-group">
+                    <label class="option-label">{name}</label>
+                    <select class="select">
+                        <option forEach="choices" trackBy="choiceId">{name}</option>
+                    </select>
+                </div>
+            `);
+            const findings = await validate(ctx);
+            const dup = findings.find((f) => f.message.includes('identical text'));
+            expect(dup).toBeUndefined();
+        });
+
+        it('does not flag adjacent if-guarded containers with descendant forEach loops', async () => {
+            const ctx = makeContext(`
+                <div class="product">
+                    <div class="product-options" if="productPage.options">
+                        <div forEach="productPage.options" trackBy="_id">{name}</div>
+                    </div>
+                    <div class="product-modifiers" if="productPage.modifiers">
+                        <div forEach="productPage.modifiers" trackBy="_id">{name}</div>
+                    </div>
+                </div>
+            `);
+            const findings = await validate(ctx);
+            const dup = findings.find((f) => f.message.includes('identical text'));
+            expect(dup).toBeUndefined();
+        });
+
+        it('still flags two static siblings with no dynamic directive', async () => {
+            const ctx = makeContext(`
+                <div class="rating">
+                    <span>★</span>
+                    <span>★</span>
+                </div>
+            `);
+            const findings = await validate(ctx);
+            const dup = findings.find((f) => f.message.includes('identical text'));
+            expect(dup).toBeDefined();
+            expect(dup!.severity).toEqual('warning');
+        });
+
+        it('still flags simple same-scope siblings under a shared forEach ancestor', async () => {
+            // The forEach is on the ancestor, not on the compared siblings or their
+            // subtrees — each iteration renders identical text, a real duplicate.
+            const ctx = makeContext(`
+                <ul class="list">
+                    <li forEach="items" trackBy="_id">
+                        <label>{name}</label>
+                        <span>{name}</span>
+                    </li>
+                </ul>
+            `);
+            const findings = await validate(ctx);
+            const dup = findings.find((f) => f.message.includes('identical text'));
+            expect(dup).toBeDefined();
+        });
+    });
+
+    describe('duplicate adjacent text — descendant aria-hidden (DL#185)', () => {
+        it('does not flag when the only duplicate text is inside an aria-hidden descendant', async () => {
+            const ctx = makeContext(`
+                <div class="wrap">
+                    <div class="a"><span aria-hidden="true">Size</span></div>
+                    <div class="b"><span aria-hidden="true">Size</span></div>
+                </div>
+            `);
+            const findings = await validate(ctx);
+            const dup = findings.find((f) => f.message.includes('identical text'));
+            expect(dup).toBeUndefined();
+        });
+
+        it('still flags when duplicate text is visible alongside an aria-hidden decorative node', async () => {
+            const ctx = makeContext(`
+                <div class="wrap">
+                    <div class="a"><i aria-hidden="true">✔</i>Size</div>
+                    <div class="b"><i aria-hidden="true">✔</i>Size</div>
+                </div>
+            `);
+            const findings = await validate(ctx);
+            const dup = findings.find((f) => f.message.includes('identical text'));
+            expect(dup).toBeDefined();
+        });
+    });
+
+    describe('duplicate adjacent text — suppression (DL#185)', () => {
+        it('suppresses the rule via a11y: { allow-adjacent-duplicate-text: true }', async () => {
+            const ctx: JayHtmlValidationContext = {
+                ...makeContext(`
+                    <div>
+                        <h1>Welcome</h1>
+                        <h1>Welcome</h1>
+                    </div>
+                `),
+                validationOverrides: { a11y: { 'allow-adjacent-duplicate-text': true } },
+            };
+            const findings = await validate(ctx);
+            const dup = findings.find((f) => f.message.includes('identical text'));
+            expect(dup).toBeUndefined();
+        });
+
+        it('does not suppress when the override is absent', async () => {
+            const ctx: JayHtmlValidationContext = {
+                ...makeContext(`
+                    <div>
+                        <h1>Welcome</h1>
+                        <h1>Welcome</h1>
+                    </div>
+                `),
+                validationOverrides: { a11y: {} },
+            };
+            const findings = await validate(ctx);
+            const dup = findings.find((f) => f.message.includes('identical text'));
+            expect(dup).toBeDefined();
+        });
+    });
 });

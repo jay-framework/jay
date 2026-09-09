@@ -707,6 +707,7 @@ const HEADLESS_SKIP_ATTRS = new Set([
     'key',
     'jay-coordinate-base',
     'jay-scope',
+    'jc', // compiler-injected marker (parseHeadfullFSImports, jay-html-parser.ts:1180)
 ]);
 
 const PHASE_ORDER: Record<string, number> = {

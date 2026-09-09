@@ -15,7 +15,7 @@
   `<script type="application/jay-headfull" src="..." names="SiteHeader" contract="...site-header.jay-contract">`.
 - During parsing, `jay-html-parser.ts` inlines an empty component instance's content and stamps a marker
   attribute `jc` (contract name) on the tag so later compiler passes can identify the instance. Two
-  *different functions* do this — and only one of them is on the `jay-stack validate` path:
+  _different functions_ do this — and only one of them is on the `jay-stack validate` path:
 
   ```ts
   // Site A — parseHeadfullFSImports, jay-html-parser.ts:1174-1181  ← THE VALIDATE PATH
@@ -41,7 +41,7 @@
 
 - Immediately after Site A injects `jc`, `parseHeadfullFSImports` checks whether the instance has a
   backing code file (`.ts`/`.js`, `jay-html-parser.ts:1190-1194`). **Structural** headfull components
-  (no code file, DL#162) are *unwrapped* — the `<jay:...>` tag is replaced by its children and the `jc`
+  (no code file, DL#162) are _unwrapped_ — the `<jay:...>` tag is replaced by its children and the `jc`
   marker is discarded (`jay-html-parser.ts:1198-1203`). So `jc` survives to the validator **only** on
   `.ts`-backed instances such as `SiteHeader` / `SiteFooter`.
 
@@ -85,16 +85,28 @@ but is **absent** from the validator's skip-set, so the prop-coverage check coun
 ```ts
 // stack-cli/lib/validate.ts:694-710
 const HEADLESS_SKIP_ATTRS = new Set([
-  'foreach', 'if', 'ref', 'trackby', 'slowforeach', 'jayindex', 'jaytrackby',
-  'when-resolved', 'when-loading', 'when-rejected', 'accessor', 'props', 'key',
-  'jay-coordinate-base', 'jay-scope',
+  'foreach',
+  'if',
+  'ref',
+  'trackby',
+  'slowforeach',
+  'jayindex',
+  'jaytrackby',
+  'when-resolved',
+  'when-loading',
+  'when-rejected',
+  'accessor',
+  'props',
+  'key',
+  'jay-coordinate-base',
+  'jay-scope',
   // 'jc'  ← MISSING
 ]);
 
 // :776-795
 for (const attrName of Object.keys(attrs)) {
   if (!HEADLESS_SKIP_ATTRS.has(attrName.toLowerCase())) {
-    passedProps.add(attrName);          // 'jc' wrongly added here
+    passedProps.add(attrName); // 'jc' wrongly added here
   }
 }
 // ... 'jc' not in contract.props → warning emitted
@@ -132,10 +144,22 @@ Add `jc` to the validator's skip-set — it is a compiler marker, never a user p
 ```ts
 // stack-cli/lib/validate.ts:694
 const HEADLESS_SKIP_ATTRS = new Set([
-  'foreach', 'if', 'ref', 'trackby', 'slowforeach', 'jayindex', 'jaytrackby',
-  'when-resolved', 'when-loading', 'when-rejected', 'accessor', 'props', 'key',
-  'jay-coordinate-base', 'jay-scope',
-  'jc',                       // compiler-injected marker (parseHeadfullFSImports, jay-html-parser.ts:1180)
+  'foreach',
+  'if',
+  'ref',
+  'trackby',
+  'slowforeach',
+  'jayindex',
+  'jaytrackby',
+  'when-resolved',
+  'when-loading',
+  'when-rejected',
+  'accessor',
+  'props',
+  'key',
+  'jay-coordinate-base',
+  'jay-scope',
+  'jc', // compiler-injected marker (parseHeadfullFSImports, jay-html-parser.ts:1180)
 ]);
 ```
 
@@ -175,7 +199,7 @@ path (Site B) never runs under `jay-stack validate` (see Root Cause note).
 
 ## Relationship to Other Logs
 
-- **#162 (structural headfull component)** — added the code-file check and the *unwrap* branch in this
+- **#162 (structural headfull component)** — added the code-file check and the _unwrap_ branch in this
   same `parseHeadfullFSImports` block (`:1190-1203`). Structural (no-`.ts`) instances are unwrapped and
   lose `jc`; the examples' `SiteHeader`/`SiteFooter` are `.ts`-backed, so they take the **other** branch
   that keeps the `jc` marker — which is why the false positive appears on them and not on structural ones.
@@ -183,3 +207,19 @@ path (Site B) never runs under `jay-stack validate` (see Root Cause note).
   headfull component instances and contract prop passing that this validator check governs.
 - **#176 (validation warning suppression audit)** — related validator-hygiene work; this is a
   false-positive to eliminate at the source rather than suppress.
+
+## Implementation Results (2026-09-08)
+
+**Status: implemented — validator-side only.** Added `'jc'` to `HEADLESS_SKIP_ATTRS` in
+`packages/jay-stack/stack-cli/lib/validate.ts` with the comment
+`// compiler-injected marker (parseHeadfullFSImports, jay-html-parser.ts:1180)`. No `style` skip added
+(Site B never reaches validate) and no `.jay-contract` files modified.
+
+**Tests** (`packages/jay-stack/stack-cli/test/validate.test.ts`, direct
+`checkHeadlessInstanceProps(...)` unit style, asserting on the returned warnings array with `toEqual`; no
+`toContain`): empty `.ts`-backed instance carrying `jc` → no warning; control — an author-supplied
+undeclared attribute (`foo="x"`) still emits the full "passes attribute" warning (full-string asserted),
+proving the skip-set doesn't over-suppress.
+
+**Results:** stack-cli suite 68/68 (+2 new); monorepo `yarn confirm` green. No deviations from the
+design.
