@@ -83,6 +83,25 @@ The form label rule skips `type="hidden"`, `type="submit"`, `type="button"`, and
 
 The nested interactive rule (DL#167) treats `<a href>`, `<button>`, `[role="button"]`, and `[role="link"]` as containers, and reports one error per focusable descendant — `<a href>`, `<button>`, non-hidden `<input>`, `<select>`, `<textarea>`, `<summary>`, `tabindex >= 0`, or a widget role.
 
+### design-system-validator / design-system
+
+Package: `@jay-framework/design-system-validator` (monorepo, dev dependency). CSS-string rules; most resolve
+the CSS cascade against the jay-html tree (`css-cascade.ts`, which includes the top-level `<body>` container
+itself — DL#188). Applies to page files only (`/pages/`); component files inherit layout context.
+
+| Rule                   | Severity | Element                  | What it checks                                                                                                                                                                                                                                                                            | Suppress key                                                    |
+| ---------------------- | -------- | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| design-tokens          | warning  | any styled               | CSS values vs `DESIGN.md` tokens (colors, spacing, rounded, typography)                                                                                                                                                                                                                   | `allow-custom-breakpoints`, `allow-no-reduced-motion`           |
+| design-components      | warning  | HTML / `jay:` components | Component styles vs `DESIGN.md` component specs                                                                                                                                                                                                                                           | —                                                               |
+| design-structure       | warning  | page                     | Structural rules (max font weights, primary-button count)                                                                                                                                                                                                                                 | —                                                               |
+| design-contrast        | warning  | color pairs              | WCAG AA contrast on statically determinable foreground/background pairs                                                                                                                                                                                                                   | —                                                               |
+| font-fallbacks         | warning  | `@font-face`             | Web font loaded via URL without a metric-matched local fallback (causes CLS)                                                                                                                                                                                                              | `allow-font-no-fallback`                                        |
+| undefined-vars         | warning  | CSS `var()`              | `var(--name)` reference never defined as a custom property                                                                                                                                                                                                                                | `allow-undefined-vars` (or inline `/* design-system: allow */`) |
+| design-viewport-height | warning  | top-level container      | Unbounded viewport-height units (`vh`/`svh`/`lvh`/`dvh`/`vmax`) on `<html>`/`<body>`/`<main>` or a direct child — distorts Googlebot's ~12,000px tall render (Search Console screenshots / mobile usability). In-flow + unbounded only; media-scoped and out-of-flow are ignored (DL#188) | `allow-viewport-height`                                         |
+
+Design-system suppression keys live under the `design-system:` namespace in
+`<script type="application/jay-validations">`. See DL#176.
+
 ## Rule Overlap
 
 **Image alt** is checked by both SEO (warning) and a11y (error). This is intentional:

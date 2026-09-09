@@ -102,8 +102,13 @@ Multiple plugins can be configured in one tag:
     no-lcp-image: true
   design-system:
     allow-undefined-vars: true
+    allow-viewport-height: true
 </script>
 ```
+
+Design-system suppression keys include `allow-undefined-vars`, `allow-viewport-height` (top-level
+viewport-height containers — see `jay-html-styling.md`), `allow-custom-breakpoints`,
+`allow-no-reduced-motion`, and `allow-font-no-fallback`.
 
 ### When you can't suppress
 

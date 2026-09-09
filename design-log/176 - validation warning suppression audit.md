@@ -59,13 +59,14 @@ These don't need a separate suppression because the fix IS the suppression. Addi
 
 These are cases where the "fix" may be intentionally wrong for the page:
 
-| Warning                                              | Plugin key    | Rule name                | Why suppression needed                              |
-| ---------------------------------------------------- | ------------- | ------------------------ | --------------------------------------------------- |
-| `<meta name="robots" content="noindex">`             | seo           | allow-noindex            | Intentional for admin/draft pages                   |
-| `@media breakpoint not in DESIGN.md`                 | design-system | allow-custom-breakpoints | One-off or container-query breakpoints              |
-| `Page uses animations but no prefers-reduced-motion` | design-system | allow-no-reduced-motion  | Very subtle animations that don't need the override |
-| `Font missing metric-matched fallback`               | design-system | allow-font-no-fallback   | Intentional when CLS is acceptable                  |
-| CSS `@import` of external URL                        | seo           | allow-css-import         | Intentional external dependency                     |
+| Warning                                              | Plugin key    | Rule name                | Why suppression needed                                                                 |
+| ---------------------------------------------------- | ------------- | ------------------------ | -------------------------------------------------------------------------------------- |
+| `<meta name="robots" content="noindex">`             | seo           | allow-noindex            | Intentional for admin/draft pages                                                      |
+| `@media breakpoint not in DESIGN.md`                 | design-system | allow-custom-breakpoints | One-off or container-query breakpoints                                                 |
+| `Page uses animations but no prefers-reduced-motion` | design-system | allow-no-reduced-motion  | Very subtle animations that don't need the override                                    |
+| `Font missing metric-matched fallback`               | design-system | allow-font-no-fallback   | Intentional when CLS is acceptable                                                     |
+| `Top-level viewport-height container`                | design-system | allow-viewport-height    | Legitimate full-viewport layout where the tall Googlebot render is acceptable (DL#188) |
+| CSS `@import` of external URL                        | seo           | allow-css-import         | Intentional external dependency                                                        |
 
 ### Informational warnings (not errors, not suppressible, keep as-is)
 

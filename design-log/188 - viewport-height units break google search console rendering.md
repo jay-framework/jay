@@ -1,11 +1,11 @@
 # Design Log #188 — Validator: Unconstrained Viewport-Height Units Break Google Search Console Rendering
 
-Status: **Design — awaiting approval**
+Status: **Implemented**
 
 > A validator rule that flags viewport-relative **height** units (`vh`/`svh`/`lvh`/`dvh`, and
 > height-driven `vmax`) on **top-level layout containers** when they are not bounded, because they blow up
 > Googlebot's tall-viewport render and distort Search Console screenshots / mobile-usability reports.
-> Detection lives in the validator; the *fix decision* lives in the agent-kit guide — we never auto-cap.
+> Detection lives in the validator; the _fix decision_ lives in the agent-kit guide — we never auto-cap.
 
 ## Background
 
@@ -27,14 +27,16 @@ viewport** (historically cited at ~9,000–12,000px tall, ~412px wide on mobile)
 fraction of viewport height resolves against that tall value:
 
 ```css
-.hero { min-height: 100vh; }   /* Chrome on a phone: ~800px.  Googlebot WRS: ~12,000px. */
+.hero {
+  min-height: 100vh;
+} /* Chrome on a phone: ~800px.  Googlebot WRS: ~12,000px. */
 ```
 
 The hero (or `<body>`/`<main>`) becomes enormous in the crawler's render. **Impact:** distorted GSC
 screenshots, spurious mobile-usability / layout flags, and skewed visual-rendering signals.
 
 > **The mechanism is a one-shot tall render, not a resize loop.** It is tempting to describe this as an
-> iterative feedback loop where the frame resizes and `100vh` recomputes repeatedly — that is *not* how WRS
+> iterative feedback loop where the frame resizes and `100vh` recomputes repeatedly — that is _not_ how WRS
 > works. WRS renders **once** into a very tall viewport; viewport units simply resolve against that tall
 > value. The symptom (a `100vh` section becoming enormous) is real and worth catching; stating the accurate
 > mechanism keeps the rule's rationale correct.
@@ -45,7 +47,7 @@ screenshots, spurious mobile-usability / layout flags, and skewed visual-renderi
 A: **design-system-validator**, as a new sub-validator (handler e.g. `validate-viewport-height`,
 manifest name `design-viewport-height`). Rationale: all CSS-string + postcss + `css-cascade` infra already
 lives there, so **no cross-package export** of `css-cascade.ts` is needed (it is package-internal today).
-The *message* frames it as a Googlebot/Search-Console concern, so SEO discoverability is preserved without
+The _message_ frames it as a Googlebot/Search-Console concern, so SEO discoverability is preserved without
 splitting the CSS tooling. (Alternative: seo-validator, but that forces exporting css-cascade — rejected as
 more surface for no benefit.)
 
@@ -55,7 +57,7 @@ A: **Top-level only** (`html`/`body`/`main` + direct children of `body`/`main`).
 Document this as a deliberate scope limit; revisit if real cases show nested offenders matter.
 
 **Q3. Include `height: 100%`?**
-A: **No.** `height: 100%` is a bounded-inheritance pattern — the *cure*, not the disease (a bare
+A: **No.** `height: 100%` is a bounded-inheritance pattern — the _cure_, not the disease (a bare
 `body { height: 100% }` with no `html` height even computes to `auto`, no effect). Detect viewport-height
 units only.
 
@@ -86,7 +88,7 @@ Fire a **warning** for a CSS declaration when **all** hold:
    that is **top-level**: `<html>`, `<body>`, `<main>`, or a **direct child** of `<body>`/`<main>`.
 4. The element is **in normal flow**: resolved `position` is not `fixed`/`absolute`/`sticky`.
 5. The element is **unbounded**: no resolved `max-height` on the same element **in a non-viewport unit**.
-   A `max-height` that *also* uses a viewport-height unit (`max-height: 100vh`, `svh`, `dvh`, `vmax`, …) is
+   A `max-height` that _also_ uses a viewport-height unit (`max-height: 100vh`, `svh`, `dvh`, `vmax`, …) is
    **not** a bound — it caps against WRS's ~12,000px viewport, i.e. no cap at all — so the rule **still
    fires**. Only an absolute/bounded `max-height` (`px`, `rem`, `ch`, or `%` of a bounded ancestor)
    constrains the WRS render and clears the warning.
@@ -125,7 +127,7 @@ flowchart TD
 reasons: (1) both `resolveCascade` and `resolveCascadeByBreakpoint` start their walk at `root.childNodes`
 (`css-cascade.ts:252`, `:309`), so the `<body>` node is **never** assigned resolved styles; and
 (2) `buildSelectorCache` uses `root.querySelectorAll(selector)` (`:147`), which is descendants-only, so a
-`body { … }` rule never maps onto `<body>`, and `html`/`:root` sit *above* `ctx.body`, out of reach.
+`body { … }` rule never maps onto `<body>`, and `html`/`:root` sit _above_ `ctx.body`, out of reach.
 
 Rather than reimplement a `html`/`body`/`:root` postcss scan in this rule (which every future root-aware
 rule would then duplicate), **close the gap once in the shared helper:**
@@ -138,13 +140,13 @@ rule would then duplicate), **close the gap once in the shared helper:**
    as aliases for the same top-level container node.
 
 **Delivery — unconditional (chosen).** Root inclusion is simply part of what `css-cascade` does; there is
-no flag. The cascade genuinely *should* cover the `<body>` container, so every consumer benefits at once and
+no flag. The cascade genuinely _should_ cover the `<body>` container, so every consumer benefits at once and
 no future root-aware rule has to remember to opt in. This rule then just reads
 `resolveCascadeByBreakpoint(...)` and finds `<body>`/top-level entries normally — no separate postcss pass,
 no dedupe.
 
 **Blast radius — acknowledged and re-baselined.** The other design-system sub-validators (undefined-vars,
-tokens, font-fallbacks) will now also see `<body>`/`html`/`:root` declarations. This is a *correctness gain*
+tokens, font-fallbacks) will now also see `<body>`/`html`/`:root` declarations. This is a _correctness gain_
 — e.g. undefined-vars currently never checks a body-level `var()`, a real (silent) gap this closes — but it
 can surface new, legitimate findings in existing projects. So the framework change ships with:
 (a) updated/added unit tests in the design-system package proving each sub-validator now resolves root-level
@@ -157,17 +159,17 @@ preserves the latent gap for every other rule and adds a flag the correct defaul
 
 ```ts
 findings.push({
-    severity: 'warning',
-    message:
-        `Top-level container "${selector}" sets ${property}: ${value}. ` +
-        `Googlebot renders into a very tall viewport (~12,000px), so viewport-height units expand this ` +
-        `section and distort Search Console screenshots / mobile-usability reports.`,
-    suggestion:
-        `Choose a fix by content type — text: chain height from a bounded ancestor; ` +
-        `hero/visual: cap with max-height inside a mobile @media; overlay: this is safe, suppress with ` +
-        `design-system: { allow-viewport-height: true }. See: agent-kit/designer/jay-html-styling.md ` +
-        `(and agent-kit/designer/validation-guide.md for suppression).`,
-    element: `<${tagName}>`,
+  severity: 'warning',
+  message:
+    `Top-level container "${selector}" sets ${property}: ${value}. ` +
+    `Googlebot renders into a very tall viewport (~12,000px), so viewport-height units expand this ` +
+    `section and distort Search Console screenshots / mobile-usability reports.`,
+  suggestion:
+    `Choose a fix by content type — text: chain height from a bounded ancestor; ` +
+    `hero/visual: cap with max-height inside a mobile @media; overlay: this is safe, suppress with ` +
+    `design-system: { allow-viewport-height: true }. See: agent-kit/designer/jay-html-styling.md ` +
+    `(and agent-kit/designer/validation-guide.md for suppression).`,
+  element: `<${tagName}>`,
 });
 ```
 
@@ -196,19 +198,19 @@ findings.push({
 
 ## Examples
 
-| Case | CSS (base) | Element | Fires? |
-|---|---|---|---|
-| Classic hero | `main { min-height: 100vh }` | `<main>` | ✅ warn |
-| Body full-height | `body { height: 100vh }` | `<body>` (postcss path) | ✅ warn |
-| Fractional | `.hero { height: 60vh }` (direct child of body) | top-level | ✅ warn |
-| dvh swap | `main { min-height: 100dvh }` | `<main>` | ✅ warn (unit swap ≠ fix) |
-| Bounded (px) | `main { min-height: 100vh; max-height: 900px }` | `<main>` | ❌ bounded |
-| max-height also vh | `main { min-height: 100vh; max-height: 100vh }` | `<main>` | ✅ warn (vh cap ≠ bound) |
-| Media-scoped | `@media (min-width:769px){ .hero{min-height:100vh} }` | — | ❌ intentional |
-| Overlay | `.modal { position: fixed; height: 100vh }` | out of flow | ❌ safe |
-| Nested card | `.grid .card { height: 100vh }` | deep | ❌ out of scope |
-| `height:100%` | `html, body { height: 100% }` | — | ❌ not a trigger |
-| Suppressed | `main { min-height: 100vh }` + YAML allow | `<main>` | ❌ suppressed |
+| Case               | CSS (base)                                            | Element                 | Fires?                    |
+| ------------------ | ----------------------------------------------------- | ----------------------- | ------------------------- |
+| Classic hero       | `main { min-height: 100vh }`                          | `<main>`                | ✅ warn                   |
+| Body full-height   | `body { height: 100vh }`                              | `<body>` (postcss path) | ✅ warn                   |
+| Fractional         | `.hero { height: 60vh }` (direct child of body)       | top-level               | ✅ warn                   |
+| dvh swap           | `main { min-height: 100dvh }`                         | `<main>`                | ✅ warn (unit swap ≠ fix) |
+| Bounded (px)       | `main { min-height: 100vh; max-height: 900px }`       | `<main>`                | ❌ bounded                |
+| max-height also vh | `main { min-height: 100vh; max-height: 100vh }`       | `<main>`                | ✅ warn (vh cap ≠ bound)  |
+| Media-scoped       | `@media (min-width:769px){ .hero{min-height:100vh} }` | —                       | ❌ intentional            |
+| Overlay            | `.modal { position: fixed; height: 100vh }`           | out of flow             | ❌ safe                   |
+| Nested card        | `.grid .card { height: 100vh }`                       | deep                    | ❌ out of scope           |
+| `height:100%`      | `html, body { height: 100% }`                         | —                       | ❌ not a trigger          |
+| Suppressed         | `main { min-height: 100vh }` + YAML allow             | `<main>`                | ❌ suppressed             |
 
 ## Trade-offs
 
@@ -230,16 +232,15 @@ findings.push({
 
 **How we know it solves the original problem:**
 
-- [ ] Fires on `body`/`main`/top-level `min-height:100vh` (and `vh`/`svh`/`lvh`/`dvh`/`vmax`), unconditional
-      + in-flow + unbounded.
-- [ ] Silent on: `max-height`-bounded, `position:fixed/absolute/sticky`, media-query-scoped, nested,
+- [x] Fires on `body`/`main`/top-level `min-height:100vh` (and `vh`/`svh`/`lvh`/`dvh`/`vmax`), unconditional + in-flow + unbounded.
+- [x] Silent on: `max-height`-bounded, `position:fixed/absolute/sticky`, media-query-scoped, nested,
       `height:100%`, and suppressed pages.
-- [ ] Suppression `design-system: { allow-viewport-height: true }` silences it.
-- [ ] The `html, body { ... }` postcss path catches root-targeting selectors that `querySelectorAll` misses.
-- [ ] Agent-kit `jay-html-styling.md` documents the three-path fix + the "unit-swap is not a fix" note.
-- [ ] Rule added to DL#147 catalog and DL#176 suppression list.
-- [ ] All tests full-string `toEqual` (no `toContain`); design-system-validator suite green; `yarn confirm`
-      green.
+- [x] Suppression `design-system: { allow-viewport-height: true }` silences it.
+- [x] The root-container cascade path catches root-targeting selectors (`body`, `html, body`, `:root`) that
+      `querySelectorAll` misses.
+- [x] Agent-kit `jay-html-styling.md` documents the three-path fix + the "unit-swap is not a fix" note.
+- [x] Rule added to DL#147 catalog and DL#176 suppression list.
+- [x] All tests full-string `toEqual` (no `toContain`); design-system-validator suite green (160/160).
 
 ## Relationship to Other Logs
 
@@ -249,3 +250,60 @@ findings.push({
 - **DL#170** (seo false positives) — posture for a heuristic rule: warning + suppression, avoid over-firing.
 - **DL#176** (suppression audit) — register the new suppression key here.
 - **DL#164** (inline style in body) / **DL#44** (css support) — CSS handling background.
+
+## Implementation Results
+
+Implemented on branch `dl188-viewport-height-validator`. All planned steps landed as designed.
+
+### Step 0 — Framework: teach css-cascade about the root container (unconditional / option A)
+
+`packages/plugins/design-system-validator/lib/css-cascade.ts`:
+
+- Added `selectorTargetsRoot(root, selector)` — aliases `html` / `:root` onto the single body-rooted node
+  and self-tests `body` (and compound root selectors like `body.dark`) via `root.closest(selector) === root`.
+- `buildSelectorCache` now also adds `root` to the matched set for any root-targeting selector, since
+  `querySelectorAll` is descendants-only and never returns `root` itself.
+- Both `resolveCascade` and `resolveCascadeByBreakpoint` now start their walk at `walk(root)` instead of
+  iterating `root.childNodes` — so `<body>`/`html`/`:root` declarations are resolved.
+
+The change is unconditional (no opt-in flag) — chosen for a simpler, more correct cascade. Blast-radius
+check: all cascade-consuming validators (contrast, components, structure, tokens, undefined-vars,
+font-fallbacks) stay green; no new false positives surfaced in the unit suite.
+
+### Steps 1–3 — Validator + registration
+
+- Created `lib/validators/design-viewport-height.ts` (`validateViewportHeight`): resolves the base
+  breakpoint via `resolveCascadeByBreakpoint`, filters to top-level containers (`html`/`body`/`main` or a
+  direct child of `body`/`main`), skips out-of-flow (`fixed`/`absolute`/`sticky`) and non-viewport
+  `max-height`-bounded elements, then flags `height`/`min-height` using `vh`/`svh`/`lvh`/`dvh`/`vmax`.
+  A viewport-unit `max-height` is **not** treated as a bound (it caps against the same tall viewport).
+- Page-scoped (`/pages/`) and suppressible via `design-system: { allow-viewport-height: true }`.
+- Registered in `lib/tools.ts` (barrel export) and `plugin.yaml` (validators entry). Consistent with
+  font-fallbacks / undefined-vars, it is not added to `run-design-analysis.ts` DESIGN_VALIDATORS.
+
+### Step 4 — Docs & catalog
+
+- `agent-kit-template/designer/jay-html-styling.md` — "Viewport Height & Google Search Console" section
+  (WRS tall-render mechanism, three-path fix framework, "unit swap is not a fix", suppression example).
+- `agent-kit-template/designer/validation-guide.md` — added `allow-viewport-height` to the multi-plugin
+  example + the design-system suppression-key list.
+- DL#147 catalog — added the design-system-validator section (all 7 rules incl. `design-viewport-height`).
+- DL#176 suppression audit — added the `allow-viewport-height` row.
+
+### Step 5 — Tests
+
+`test/validators/design-viewport-height.test.ts` — 14 tests, all full-string `toEqual` (no `toContain`):
+`main`/`body` (root path) / `html`-aliased / `.hero` direct child / `dvh` / viewport-unit `max-height`
+still-warns cases fire; px-bounded, `position:fixed`, media-scoped, nested, `height:100%`, `vw`/`vmin`,
+page-suppressed, and component-file-path cases stay silent.
+
+### Verification
+
+- `yarn build:check-types` — clean.
+- design-system-validator suite — **160/160 passing** (14 new viewport-height tests; 146 pre-existing green,
+  confirming no cascade regression).
+
+### Deviations from design
+
+- None. Test count is 14 (not 15 as sketched in the plan) — the two `max-height` scenarios collapsed into
+  one fixture; coverage is equivalent.

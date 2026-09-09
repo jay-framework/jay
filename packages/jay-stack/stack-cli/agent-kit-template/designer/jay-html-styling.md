@@ -95,3 +95,63 @@ Mix static, dynamic, and conditional classes:
 - `{condition ? classA : classB}` switches between two classes
 - `{!condition ? class}` uses negation
 - Multiple bindings can be combined in one `class` attribute
+
+## Viewport Height & Google Search Console
+
+Googlebot's Web Rendering Service does **not** render at a normal phone height. To capture lazy-loaded and
+below-the-fold content in one pass, it renders the page once into a **very tall viewport**
+(~9,000–12,000px). Any element sized to a fraction of viewport height resolves against that tall value:
+
+```css
+.hero {
+  min-height: 100vh;
+} /* phone: ~800px.  Googlebot: ~12,000px. */
+```
+
+On a **top-level container** (`<html>`/`<body>`/`<main>`, or a direct child of `<body>`/`<main>`) that
+makes the section enormous in the crawler's render — distorting Search Console screenshots and mobile
+usability / layout signals. The `design-viewport-height` validator flags unbounded viewport-height units
+(`vh`, `svh`, `lvh`, `dvh`, `vmax`) on these containers.
+
+**Swapping the unit is NOT a fix.** `svh`/`lvh`/`dvh` all resolve against the same tall viewport under
+Googlebot (there is no browser chrome to differentiate them), so `vh → dvh` changes nothing here.
+
+Choose the fix by what the container holds:
+
+- **Text-heavy section** — don't force full-viewport height at all. Let content determine height, or chain
+  from a bounded ancestor:
+
+  ```css
+  main {
+    min-height: 100%;
+  } /* inherits a real height, not the viewport */
+  ```
+
+- **Hero / visual section** that genuinely wants a full-screen feel — cap it, and scope the viewport height
+  to a real screen via a media query so it never applies to Googlebot's tall canvas:
+
+  ```css
+  .hero {
+    max-height: 900px;
+  }
+  @media (min-width: 480px) {
+    .hero {
+      min-height: 100vh;
+    }
+  }
+  ```
+
+  A `max-height` in an **absolute** unit (`px`/`rem`, or `%` of a bounded ancestor) clears the warning. A
+  `max-height` that also uses a viewport unit (`max-height: 100vh`) does **not** — it caps against the same
+  ~12,000px viewport.
+
+- **Overlay / modal / drawer** that is out of flow (`position: fixed/absolute/sticky`) — this is safe (it
+  doesn't expand the document canvas) and the validator already ignores it. If a false positive slips
+  through, suppress it per-page (see `validation-guide.md`):
+
+  ```html
+  <script type="application/jay-validations">
+    design-system:
+      allow-viewport-height: true
+  </script>
+  ```

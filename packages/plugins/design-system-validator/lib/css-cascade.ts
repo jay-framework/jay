@@ -139,16 +139,37 @@ function parseInlineStyles(
     return declarations;
 }
 
+/**
+ * Whether a single CSS selector targets the top-level container node we walk (`root`, the `<body>`
+ * element). `querySelectorAll` is descendants-only, so it never matches `root` itself; and `html`/`:root`
+ * sit *above* `root` and are out of reach. We alias both onto the single top-level container so that
+ * root-level rules (`body { … }`, `html, body { … }`, `:root { … }`) resolve onto it. (DL#188)
+ */
+function selectorTargetsRoot(root: HTMLElement, selector: string): boolean {
+    const trimmed = selector.trim();
+    // html / :root have no counterpart node in a body-rooted tree — alias them to the top-level container.
+    if (trimmed === 'html' || trimmed === ':root') return true;
+    // body (and compound selectors on the root such as `body.dark`) — self-match test.
+    try {
+        return root.closest(trimmed) === root;
+    } catch {
+        return false;
+    }
+}
+
 function buildSelectorCache(rules: CssRule[], root: HTMLElement): Map<string, Set<HTMLElement>> {
     const cache = new Map<string, Set<HTMLElement>>();
     for (const rule of rules) {
         if (cache.has(rule.selector)) continue;
+        const matched = new Set<HTMLElement>();
         try {
-            const matches = root.querySelectorAll(rule.selector);
-            cache.set(rule.selector, new Set(matches as HTMLElement[]));
+            for (const el of root.querySelectorAll(rule.selector)) matched.add(el as HTMLElement);
         } catch {
-            cache.set(rule.selector, new Set());
+            // invalid selector — leave matched empty
         }
+        // The cascade walk includes `root` itself (DL#188), so map root-targeting selectors onto it.
+        if (selectorTargetsRoot(root, rule.selector)) matched.add(root);
+        cache.set(rule.selector, matched);
     }
     return cache;
 }
@@ -249,9 +270,8 @@ export function resolveCascade(
         }
     }
 
-    for (const child of root.childNodes) {
-        if (child.nodeType === 1) walk(child as HTMLElement);
-    }
+    // Include `root` (the top-level `<body>` container) itself, not just its descendants (DL#188).
+    walk(root);
 
     return result;
 }
@@ -306,9 +326,8 @@ export function resolveCascadeByBreakpoint(
             }
         }
 
-        for (const child of root.childNodes) {
-            if (child.nodeType === 1) walk(child as HTMLElement);
-        }
+        // Include `root` (the top-level `<body>` container) itself, not just its descendants (DL#188).
+        walk(root);
 
         result.set(breakpoint, breakpointResult);
     }

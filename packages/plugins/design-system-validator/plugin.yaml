@@ -51,3 +51,7 @@ validators:
   - name: undefined-vars
     handler: validateUndefinedVars
     description: Flags CSS var(--name) references that are never defined as custom properties
+
+  - name: design-viewport-height
+    handler: validateViewportHeight
+    description: Flags unbounded viewport-height units (vh/svh/lvh/dvh/vmax) on top-level containers that distort Googlebot's tall-viewport render (Search Console screenshots / mobile-usability)
