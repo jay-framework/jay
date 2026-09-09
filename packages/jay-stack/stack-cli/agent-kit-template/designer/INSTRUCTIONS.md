@@ -42,7 +42,7 @@ There is no standalone "interactive" phase. Any tag with `type: interactive` (re
 | [project-structure.md](project-structure.md)               | Project layout, styling patterns (CSS themes, design tokens), configuration files               |
 | [jay-html-syntax.md](jay-html-syntax.md)                   | Jay-HTML overview: philosophy, component types, nesting rules, links to sub-files               |
 | [jay-html-template-syntax.md](jay-html-template-syntax.md) | Template markup: data binding, conditions, expression limits (no `.length`), loops, refs        |
-| [jay-html-components.md](jay-html-components.md)           | Component imports: headless (key/instance), headfull FS, nesting patterns                       |
+| [jay-html-components.md](jay-html-components.md)           | Component imports: headless (key/instance), headfull FS, nesting, `<override>` customization    |
 | [jay-html-styling.md](jay-html-styling.md)                 | Styling: inline, external, dynamic style bindings, class bindings                               |
 | [routing.md](routing.md)                                   | Directory-based routing: page structure, dynamic routes, route priority                         |
 | [navigation-patterns.md](navigation-patterns.md)           | Active menu/sidebar patterns using `jay.url.path`, `===`, and `^=` operators                    |

@@ -1,0 +1,24 @@
+<html>
+<head>
+  <script type="application/jay-headfull"
+          src="../../components/override-card/override-card"
+          contract="../../components/override-card/override-card.jay-contract"
+          names="overrideCard"></script>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+  <div>
+    <h1>{pageTitle}</h1>
+    <jay:overrideCard>
+      <override ref="cta">Start free trial</override>
+      <override ref="hero" src="/images/new-hero.png" alt="New hero" />
+      <override ref="hero" style="border-radius: 16px; box-shadow: none" />
+      <override ref="disclaimer" remove />
+      <override ref="menu">
+        <a href="/home">Home</a>
+        <a href="/docs">Docs</a>
+      </override>
+    </jay:overrideCard>
+  </div>
+</body>
+</html>

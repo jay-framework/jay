@@ -2155,6 +2155,140 @@ describe('compiler', () => {
             expect(jayTag.querySelector('button')).toBeTruthy();
         });
 
+        it('should apply <override> content into the injected component template (DL#181)', async () => {
+            const resolver = makeHeadfullFSResolver();
+
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |   title: string
+                        |`,
+                    `<body>
+                        |   <h1>{title}</h1>
+                        |   <jay:header logoUrl="/logo.png">
+                        |     <override ref="increment">Add to cart</override>
+                        |   </jay:header>
+                        | </body>`,
+                    `<script type="application/jay-headfull"
+                        |   src="./header/header"
+                        |   contract="./header/header.jay-contract"
+                        |   names="header"
+                        | ></script>`,
+                ),
+                'Page',
+                tempDir,
+                {},
+                resolver,
+                '',
+            );
+
+            expect(jayFile.validations).toEqual([]);
+            const jayTag = jayFile.val.body
+                .querySelectorAll('*')
+                .find((el) => el.tagName?.toLowerCase() === 'jay:header');
+            expect(jayTag).toBeDefined();
+            const button = jayTag.querySelector('button');
+            expect(button.getAttribute('ref')).toEqual('increment');
+            expect(button.innerHTML).toEqual('Add to cart');
+        });
+
+        it('should report a compile error for an <override> targeting a missing ref (DL#181)', async () => {
+            const resolver = makeHeadfullFSResolver();
+
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |   title: string
+                        |`,
+                    `<body>
+                        |   <jay:header logoUrl="/logo.png">
+                        |     <override ref="not-a-ref">x</override>
+                        |   </jay:header>
+                        | </body>`,
+                    `<script type="application/jay-headfull"
+                        |   src="./header/header"
+                        |   contract="./header/header.jay-contract"
+                        |   names="header"
+                        | ></script>`,
+                ),
+                'Page',
+                tempDir,
+                {},
+                resolver,
+                '',
+            );
+
+            expect(jayFile.validations).toEqual([
+                'Cannot resolve override: no element with ref="not-a-ref" found in header. ' +
+                    'Add ref="not-a-ref" to the target element in that component\'s jay-html, ' +
+                    'then reference it here.',
+            ]);
+        });
+
+        it('should override a ref not required by the contract (override-only anchor, DL#181 Phase 2)', async () => {
+            // `tagline` is a ref in the component jay-html but NOT in headerContract — a pure
+            // override anchor. It must be allowed (no error) and remain overridable.
+            const headerWithOverrideOnlyRef = `<html>
+<head>
+    <script type="application/jay-data">
+        data:
+            logoUrl: string
+            cartCount: number
+    </script>
+</head>
+<body>
+    <header>
+        <img src="{logoUrl}" />
+        <span ref="tagline">Welcome</span>
+        <button ref="increment">+</button>
+    </header>
+</body>
+</html>`;
+            const headerDir = path.join(tempDir, 'header');
+            const resolver = makeHeadfullFSResolver({
+                readJayHtml(importingModuleDir: string, src: string) {
+                    if (src.includes('header'))
+                        return {
+                            content: headerWithOverrideOnlyRef,
+                            componentDir: headerDir,
+                            filePath: path.join(headerDir, 'header.jay-html'),
+                        };
+                    return null;
+                },
+            });
+
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |   title: string
+                        |`,
+                    `<body>
+                        |   <jay:header logoUrl="/logo.png">
+                        |     <override ref="tagline">Hi there</override>
+                        |   </jay:header>
+                        | </body>`,
+                    `<script type="application/jay-headfull"
+                        |   src="./header/header"
+                        |   contract="./header/header.jay-contract"
+                        |   names="header"
+                        | ></script>`,
+                ),
+                'Page',
+                tempDir,
+                {},
+                resolver,
+                '',
+            );
+
+            expect(jayFile.validations).toEqual([]);
+            const jayTag = jayFile.val.body
+                .querySelectorAll('*')
+                .find((el) => el.tagName?.toLowerCase() === 'jay:header');
+            const tagline = jayTag.querySelector('[ref="tagline"]');
+            expect(tagline).toBeTruthy();
+            expect(tagline.innerHTML).toEqual('Hi there');
+        });
+
         it('should not treat headfull imports without contract as full-stack', async () => {
             // Regular headfull import (no contract) should still be processed as JayImportLink
             const resolver: JayImportResolver = {

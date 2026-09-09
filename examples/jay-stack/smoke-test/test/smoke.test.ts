@@ -476,6 +476,24 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Block B/);
         });
 
+        it('/override — headfull component with <override> customizations (DL#181)', async () => {
+            const { status, body } = await fetchPage(server.url, '/override/');
+            expect(status).toBe(200);
+            expectPage(body);
+            expect(body).toMatch(/Override Test/);
+            // content replace
+            expect(body).toMatch(/Start free trial/);
+            expect(body).not.toMatch(/Buy Now/);
+            // attribute + style merge
+            expect(body).toMatch(/\/images\/new-hero\.png/);
+            expect(body).toMatch(/border-radius: 16px/);
+            // remove
+            expect(body).not.toMatch(/Default disclaimer text/);
+            // container content replace
+            expect(body).toMatch(/href="\/docs"/);
+            expect(body).not.toMatch(/Default link/);
+        });
+
         it('/html-string — string is escaped, html-string is not', async () => {
             const { status, body } = await fetchPage(server.url, '/html-string/');
             expect(status).toBe(200);
@@ -627,6 +645,19 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Nested Test/);
             expect(body).toMatch(/Block A/);
             expect(body).toMatch(/Block B/);
+        });
+
+        it('/override — headfull component with <override> customizations (DL#181)', async () => {
+            const { status, body } = await fetchPage(server.url, '/override/');
+            expect(status).toBe(200);
+            expect(body).toMatch(/Override Test/);
+            expect(body).toMatch(/Start free trial/);
+            expect(body).not.toMatch(/Buy Now/);
+            expect(body).toMatch(/\/images\/new-hero\.png/);
+            expect(body).toMatch(/border-radius: 16px/);
+            expect(body).not.toMatch(/Default disclaimer text/);
+            expect(body).toMatch(/href="\/docs"/);
+            expect(body).not.toMatch(/Default link/);
         });
 
         it('/html-string — string is escaped, html-string is not', async () => {

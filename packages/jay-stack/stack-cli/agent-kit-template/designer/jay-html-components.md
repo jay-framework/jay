@@ -220,6 +220,83 @@ For a structural component with only props and no data logic, `.withFastRender` 
 </html>
 ```
 
+## Overriding Headfull Component Markup
+
+A headfull component injects its own template at the usage site. To customize **part** of that
+markup — a label, an image, whether a paragraph appears, a container's children — without editing the
+component or replacing its whole template, nest `<override>` tags inside the `<jay:Name>` usage tag.
+Overrides are resolved at compile time; there is no runtime cost.
+
+### Two-step workflow
+
+An override targets an element by its `ref`. If the element you want to change **doesn't have a `ref`
+yet**:
+
+1. Add a `ref="..."` to that element in the **component's own `.jay-html`**. This is a design-file edit
+   only — no contract change, no `.ts` change, and it does not affect any other page that uses the
+   component. A `ref` that the contract doesn't require is allowed purely as an override anchor; it is not
+   added to the component's generated `Refs` type.
+2. Reference that `ref` from an `<override>` at the usage site.
+
+An `<override>` targeting a `ref` that doesn't exist in the component is a **compile error** that names
+the missing ref — add the ref in the component's jay-html, then override it.
+
+### Override forms
+
+**Replace an element's content (text or children):**
+
+```html
+<jay:PricingCard>
+  <override ref="cta">Start free trial</override>
+</jay:PricingCard>
+```
+
+The target element and its own attributes are left as authored; only its children are replaced.
+
+**Merge attributes (existing attributes not named are untouched):**
+
+```html
+<jay:PricingCard>
+  <override ref="hero" src="/images/new-hero.png" alt="New hero" />
+</jay:PricingCard>
+```
+
+Overriding `alt` does not clear `src`. `style` is merged **per CSS property** — overriding
+`border-radius` leaves other declared properties (and any from a CSS class) in place:
+
+```html
+<jay:PricingCard>
+  <override ref="hero" style="border-radius: 16px; box-shadow: none" />
+</jay:PricingCard>
+```
+
+**Remove an element (and its subtree):**
+
+```html
+<jay:PricingCard>
+  <override ref="disclaimer" remove />
+</jay:PricingCard>
+```
+
+`remove` is exclusive — it cannot be combined with content or attributes on the same `<override>`.
+
+**Replace a container's children:**
+
+```html
+<jay:SiteHeader>
+  <override ref="menu">
+    <a href="/home">Home</a>
+    <a href="/docs">Docs</a>
+  </override>
+</jay:SiteHeader>
+```
+
+### Bindings inside overrides
+
+Override content is compiled against the **target component's own** ViewState and Refs — the same scope
+its own template compiles against. `{binding}` expressions inside an override resolve to that component's
+data, not the usage site's.
+
 ## Nesting Components
 
 ### Headfull Inside Headfull

@@ -36,6 +36,7 @@ import { SourceFileFormat } from '@jay-framework/compiler-shared';
 import { JayImportLink, JayImportName } from '@jay-framework/compiler-shared';
 import { JayYamlStructure } from './jay-yaml-structure';
 import { Contract, ContractTag, RenderingPhase } from '../contract';
+import { applyHeadfullOverrides, hasOverrides } from './jay-html-overrides';
 
 import {
     JayHeadlessImports,
@@ -919,7 +920,15 @@ function injectHeadfullFSTemplatesRecursive(
             .filter((el) => el.tagName?.toLowerCase() === `jay:${contractName}`);
 
         for (const jayTag of jayTags) {
-            if (!jayTag.innerHTML.trim()) {
+            if (hasOverrides(jayTag)) {
+                // DL#181: usage tag contains <override> children — inject the component body with
+                // overrides applied. Errors are surfaced by the compile path (parseHeadfullFSImports);
+                // this pre-render path applies best-effort.
+                const overridden = applyHeadfullOverrides(jayHtmlBody, jayTag, contractName);
+                jayTag.set_content(overridden.val!);
+                jayTag.setAttribute('style', 'display: contents');
+                jayTag.setAttribute('jc', contractName);
+            } else if (!jayTag.innerHTML.trim()) {
                 jayTag.set_content(jayHtmlBody.innerHTML);
                 jayTag.setAttribute('style', 'display: contents');
                 jayTag.setAttribute('jc', contractName);
@@ -1172,6 +1181,15 @@ async function parseHeadfullFSImports(
             .filter((el) => el.tagName?.toLowerCase() === `jay:${contractName}`);
 
         for (const jayTag of jayTags) {
+            if (hasOverrides(jayTag)) {
+                // DL#181: usage tag contains <override> children — inject the component body with
+                // overrides applied, surfacing missing-ref / ambiguous-operation compile errors.
+                const overridden = applyHeadfullOverrides(jayHtmlBody, jayTag, contractName);
+                validations.push(...overridden.validations);
+                jayTag.set_content(overridden.val!);
+                jayTag.setAttribute('jc', contractName);
+                continue;
+            }
             const existingContent = jayTag.innerHTML.trim();
             if (existingContent) {
                 continue;

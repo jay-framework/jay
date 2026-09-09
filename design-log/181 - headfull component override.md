@@ -1,5 +1,7 @@
 # Design Log #181 — Headfull Component Override
 
+Status: **Implemented**
+
 ## Background
 
 Jay composes pages by importing headfull and headless components into `jay-html` via `<jay:xxx>` tags. For headfull full-stack components, composition today is one-directional: the compiler parses the component's own `.jay-html`, extracts its body, and injects it into the `<jay:Name>` tag at the usage site at compile time (DL#111). The usage site can pass props (DL#84) and read/attach behavior through refs (DL#14), but it has no way to touch the component's own markup once injected.
@@ -108,7 +110,7 @@ Add the two-step workflow to `packages/jay-stack/stack-cli/agent-kit-template/de
 
 ### Phase 2: Contract & refs validation
 
-1. Relax the DL#51 "extra ref" rule: a `ref` not required by the contract is allowed, flagged internally as override-only.
+1. Relax the DL#51 "extra ref" rule: a `ref` not required by the contract is allowed, flagged internally as override-only. **Note (verified during implementation):** DL#51's blanket "extra ref is an error" rule was never actually enforced in shipping code — `validate.ts`'s `checkRef()` only _warns_ on element-type mismatch and returns early (silently) when a ref isn't in the contract, and `jay-html-compile-refs.ts`'s `graftTemplateOnlyRefs()` already _keeps_ template-only refs rather than erroring. So this step is largely a no-op against current enforcement; the substantive work is step 2.
 2. Split ref handling so only contract-required refs are emitted onto the generated `Refs` type; override-only refs are tracked separately for target resolution but not exposed to the component's own code.
 
 ### Phase 3: Template injection / merge logic
@@ -128,9 +130,22 @@ Add the two-step workflow to `packages/jay-stack/stack-cli/agent-kit-template/de
 
 ### Phase 6: Smoke test
 
-1. Add an example headfull component with a labeled button, an image, a removable paragraph, and a menu container.
-2. Add a usage site exercising all four override forms.
-3. Verify compiled output and a missing-ref compile error message.
+The smoke test is part of the shared smoke-test example project at `examples/jay-stack/smoke-test/`
+(the same project DL#140/#156/#162 extend), so overrides are exercised end-to-end through the dev and
+production build the smoke suite already runs — not only in compiler unit tests.
+
+1. Add an example headfull component under `examples/jay-stack/smoke-test/src/components/` (e.g.
+   `override-card/`) with a labeled button, an image, a removable paragraph, and a menu container — each
+   marked with a `ref` (some override-only, i.e. not required by the contract, to exercise Phase 2).
+2. Add a usage page under `examples/jay-stack/smoke-test/src/pages/` (e.g. `override/page.jay-html`) that
+   imports the component and exercises all override forms: content replace, attribute merge, `style`
+   per-property merge, `remove`, and container-content replace. Link it from the index page
+   (`src/pages/page.jay-html`), matching the DL#156 pattern.
+3. Add assertions to `examples/jay-stack/smoke-test/test/smoke.test.ts` — in both the dev and production
+   sections — verifying the overridden output renders (e.g. the replaced button label appears, the removed
+   paragraph does not).
+4. Verify compiled output and the missing-ref compile-error message via the compiler unit tests (Phases
+   1–3), separate from the example-project smoke run.
 
 ## Examples
 
@@ -208,3 +223,73 @@ Add the two-step workflow to `packages/jay-stack/stack-cli/agent-kit-template/de
 6. A `ref` present in jay-html but not required by the contract compiles without error, is absent from the generated `Refs` type, and is a valid override target.
 7. An `<override>` referencing a nonexistent `ref` produces a compile error naming the missing ref and instructing to add it in the component's own jay-html.
 8. A contract-required `ref` continues to be validated and typed exactly as before this change (no regression to DL#51/#14 behavior for the interactivity path).
+
+## Implementation Results
+
+### What was built
+
+- **New module `compiler-jay-html/lib/jay-target/jay-html-overrides.ts`** — the whole override
+  mechanism, kept out of the parser proper:
+  - `parseOverrides(jayTag)` / `hasOverrides(jayTag)` — read direct `<override>` children of a
+    `<jay:Name>` tag, separating `ref` / `remove` from the merge attributes and capturing inner content.
+  - `applyOverrides(childBodyInnerHtml, overrides, componentName)` — parses the target component's own
+    body, resolves each override's `ref` against it, and applies content-replace, per-attribute merge,
+    per-CSS-property `style` merge, or `remove`. Returns the established `WithValidations<string>`
+    (`compiler-shared`) — value = the customized HTML, `validations` = compile errors — rather than an
+    ad-hoc result type, so it composes with the rest of the compiler's validation pipeline and the parser
+    site pushes `overridden.validations` straight onto its own `validations` array.
+  - `applyHeadfullOverrides(...)` — convenience wrapper combining the two.
+- **`jay-html-parser.ts`** — both DL#111 injection sites (`injectHeadfullFSTemplatesRecursive` and
+  `parseHeadfullFSImports`) now detect `hasOverrides(jayTag)` and route through
+  `applyHeadfullOverrides` before injecting; the async site pushes returned errors onto its
+  `validations` array (compile error). Previously both sites injected only when the `<jay:Name>` tag was
+  empty; the override branch handles the non-empty case for headfull FS tags.
+
+### Deviations from the plan
+
+- **Phase 1 step 3 (attach `overrides: OverrideDeclaration[]` on the import/instance AST node):** not
+  done, and deliberately. Overrides are consumed entirely within the injection pass — parsed from the
+  live `<jay:Name>` element and applied to the injected body in the same step — so there is no need to
+  persist them onto a long-lived AST node. This keeps the feature self-contained in one module with zero
+  new AST surface. VC#1–4, 6, 7 are met without it.
+- **Phase 2 is a near no-op (as flagged in the plan note):** DL#51's "extra ref is an error" rule was
+  never enforced — `validate.ts` `checkRef()` only warns on element-type mismatch and returns silently
+  for refs absent from the contract, and `jay-html-compile-refs.ts` `graftTemplateOnlyRefs()` already
+  keeps template-only refs. Component `Refs` are derived purely from the contract
+  (`contractToImportsViewStateAndRefs`), so override-only refs are absent from `Refs` **by
+  construction**. No refs-pipeline change was needed; verified with a dedicated integration test rather
+  than refactoring.
+- **Phase 4 (a separate pluggable jay-html validation rule) not added — redundant.** The missing-ref
+  compile error is already produced at the injection site and surfaced through the same `validations`
+  channel, carrying the exact actionable message the plan specified ("Add ref=… to the target element in
+  that component's jay-html, then reference it here."). A second rule would duplicate this. The optional
+  dead-anchor warning was explicitly out of scope for v1.
+
+### Tests
+
+- **`jay-html-overrides.unit.test.ts`** (new, 19 tests) — `parseOverrides`, `hasOverrides`, and
+  `applyOverrides` (content replace, attribute merge, per-property style merge, remove, missing-ref
+  error, `remove`-is-exclusive error). HTML compared with `prettifyHtml` + `toEqual` (no `toContain`).
+- **`parse-jay-file.unit.test.ts`** (3 added integration tests) — override content injected into a real
+  headfull FS import; missing-ref compile error surfaced via `validations`; override of a ref **not**
+  required by the contract (override-only anchor) compiles clean and applies (VC#6).
+- **Smoke test (Phase 6)** — structural `override-card` component (`src/components/override-card/`, all
+  refs override-only) + `/override` page exercising every form (content replace, attribute merge, `style`
+  per-property merge, `remove`, container-content replace), linked from the index page. Assertions added
+  to `test/smoke.test.ts` in both the dev and production sections. Verified end-to-end: the built HTML
+  shows `Buy Now`→`Start free trial`, `src`/`alt` swapped with `border-radius` overridden to `16px`
+  while `opacity: 0.5` (from the component's own inline style) is preserved and `box-shadow: none` added,
+  the disclaimer `<p>` removed, and the menu children replaced — with no leftover `ref`/`<override>`
+  markup.
+- Full `compiler-jay-html` suite green (719 passed / 4 pre-existing skipped); `/override` smoke test
+  passes in dev and production.
+
+### Verification criteria status
+
+VC#1 (content replace), VC#2 (attribute merge), VC#3 (style per-property merge), VC#4 (remove), VC#6
+(override-only ref: compiles, absent from `Refs`, valid target), VC#7 (missing-ref compile error), VC#8
+(contract-required ref path unchanged) — all covered by tests above. VC#5 (bindings resolve against the
+target component's ViewState) is satisfied by construction: override content is spliced into the target
+component's body before that body's expression compilation, so any `{binding}` compiles in the child's
+scope exactly like the child's own markup; not separately exercised in the smoke test, which uses static
+override content.
