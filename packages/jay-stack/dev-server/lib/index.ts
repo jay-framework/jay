@@ -8,4 +8,7 @@ export {
     DEV_SERVER_SERVICE,
     type RouteInfo,
     type DevServerRouteRegistrar,
+    type ScratchPagePreviewInput,
+    type ScratchPagePreviewResult,
 } from './dev-server-service';
+export { registerDevHtmlRoute, type DevHtmlRouteHandler } from './dev-html-routes';

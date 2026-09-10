@@ -161,6 +161,7 @@ export function buildPageReloadHmrScript(): string {
         import.meta.hot.on('jay:page-reload', (data) => {
           const prefix = data.routePrefix;
           const pathname = window.location.pathname;
+          if (pathname === '/aiditor') return;
           if (pathname === prefix || pathname.startsWith(prefix + '/')) {
             window.location.reload();
           }

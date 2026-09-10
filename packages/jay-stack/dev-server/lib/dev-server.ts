@@ -71,6 +71,10 @@ import { WithValidations } from '@jay-framework/compiler-shared';
 import { getLogger, getDevLogger, type RequestTiming } from '@jay-framework/logger';
 import { FreezeStore } from './freeze';
 import { DevServerService, DEV_SERVER_SERVICE } from './dev-server-service';
+import {
+    flushPendingDevHtmlRoutes,
+    setupDevHtmlRoutesMiddleware,
+} from './dev-html-routes';
 import { registerService } from '@jay-framework/stack-server-runtime';
 
 /** Callback to register linked files for watching. Set by setupSlowRenderCacheInvalidation. */
@@ -1420,12 +1424,17 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
         options.pagesRootFolder,
         options.projectRootFolder,
         options.jayRollupConfig,
+        buildFolder,
         freezeStore,
         rescanAndMergeNewRoutes,
     );
 
     // Register as a Jay service so plugin actions/components can inject it (DL#130)
     registerService(DEV_SERVER_SERVICE, service);
+
+    flushPendingDevHtmlRoutes(service);
+    setupDevHtmlRoutesMiddleware(vite, service);
+    setupScratchPreviewInvalidation(vite, projectRootFolder);
 
     return {
         server: vite.middlewares,
@@ -1582,6 +1591,39 @@ function sendPageReload(vite: ViteDevServer, jayHtmlPath: string, pagesRootFolde
     });
 }
 
+function sendRoutePrefixReload(vite: ViteDevServer, routePrefix: string): void {
+    vite.ws.send({
+        type: 'custom',
+        event: 'jay:page-reload',
+        data: { routePrefix },
+    });
+}
+
+/** Reload scratch preview iframes when explore option page.jay-html changes under .aiditor/scratch. */
+function setupScratchPreviewInvalidation(
+    vite: ViteDevServer,
+    projectRootFolder: string,
+): void {
+    const scratchRoot = path.join(projectRootFolder, '.aiditor', 'scratch');
+    if (!fsSync.existsSync(scratchRoot)) {
+        return;
+    }
+
+    vite.watcher.add(scratchRoot);
+    const scratchPreviewRoutePrefix = '/aiditor/scratch-preview';
+
+    const handleScratchWatch = (changedPath: string): void => {
+        if (!changedPath.startsWith(scratchRoot)) return;
+        if (!changedPath.endsWith('.jay-html')) return;
+        clearServerElementCache();
+        sendRoutePrefixReload(vite, scratchPreviewRoutePrefix);
+        getLogger().info(`[ScratchPreview] Cache cleared (scratch jay-html changed: ${changedPath})`);
+    };
+
+    vite.watcher.on('change', handleScratchWatch);
+    vite.watcher.on('add', handleScratchWatch);
+}
+
 function setupSlowRenderCacheInvalidation(
     vite: ViteDevServer,
     cache: SlowRenderCache,
@@ -1616,6 +1658,14 @@ function setupSlowRenderCacheInvalidation(
     };
 
     vite.watcher.on('change', (changedPath) => {
+        handlePageFileWatchEvent(changedPath);
+    });
+
+    vite.watcher.on('add', (addedPath) => {
+        handlePageFileWatchEvent(addedPath);
+    });
+
+    function handlePageFileWatchEvent(changedPath: string): void {
         // CSS or component files linked from jay-html.
         // CSS content is inlined in the SSR output; component jay-html templates
         // are injected into pages. Both require cache invalidation on change.
@@ -1685,7 +1735,7 @@ function setupSlowRenderCacheInvalidation(
             });
             return;
         }
-    });
+    }
 
     return watchLinkedFiles;
 }
