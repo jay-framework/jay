@@ -32,5 +32,10 @@ export default defineConfig({
         globals: true,
         setupFiles: '@jay-framework/dev-environment/library-dom/vitest.setup.ts',
         environment: 'jsdom',
+        // These suites drive the TypeScript compiler (transformComponent, imports file, full-project
+        // generation), so individual tests can take ~1-2s cold. Under the concurrent monorepo test
+        // run (wsrun runs ~60 package suites at once) CPU contention can push them past Vitest's 5s
+        // default — raise the ceiling so this is not flaky.
+        testTimeout: 30000,
     },
 });
