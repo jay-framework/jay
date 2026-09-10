@@ -8,6 +8,7 @@ import {
     RenderFragment,
     WithValidations,
 } from '@jay-framework/compiler-shared';
+import { buildStructuralCoercions } from './structural-coercions';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
 import {
@@ -300,8 +301,23 @@ function renderServerHeadlessInstance(
     //   const vs_pc0 = (vs as any).__headlessInstances?.[key] as Type | undefined;
     //   if (vs_pc0) { ... rendered children ... }
     const guardIndent = ifCondition ? new Indent(indent.curr + '    ') : indent;
+    // Structural (Tier 2) passthrough instances echo raw string props; coerce them to
+    // their declared contract types so the SSR HTML matches the compiled template and
+    // the client's coerced prop getter (DL#187).
+    const coercions = headlessImport.structural
+        ? buildStructuralCoercions(`${varName}_raw`, headlessImport.contract?.tags ?? [])
+        : [];
+    const extractionLines =
+        coercions.length > 0
+            ? [
+                  `${guardIndent.firstLine}const ${varName}_raw = (vs as any).__headlessInstances?.[${instanceKeyExpr}] as any;`,
+                  `${guardIndent.firstLine}const ${varName} = ${varName}_raw ? ({ ...${varName}_raw, ${coercions.join(', ')} } as ${viewStateTypeName}) : undefined;`,
+              ]
+            : [
+                  `${guardIndent.firstLine}const ${varName} = (vs as any).__headlessInstances?.[${instanceKeyExpr}] as ${viewStateTypeName} | undefined;`,
+              ];
     const guardedBlock = [
-        `${guardIndent.firstLine}const ${varName} = (vs as any).__headlessInstances?.[${instanceKeyExpr}] as ${viewStateTypeName} | undefined;`,
+        ...extractionLines,
         `${guardIndent.firstLine}if (${varName}) {`,
         renderedChildren.rendered,
         `${guardIndent.firstLine}}`,

@@ -100,10 +100,19 @@ props:
   - name: productId
     type: string
     required: true
+    phase: fast # slow (default), fast, or fast+interactive
     description: The ID of the product to display
 ```
 
-Use in jay-html: `<jay:contract-name productId="value">`.
+Use in jay-html: `<jay:contract-name productId="value">` (a literal), or bind a page tag: `<jay:contract-name productId="{someTag}">`.
+
+**Prop phase must cover the binding source.** A prop has a `phase` (like a tag) that declares when the component reads it. When you bind a prop to a page tag, the **source tag's phase must be ≤ the prop's phase**:
+
+- Binding a `slow` prop to a `fast` / `fast+interactive` tag is a **validation error** — the prop is resolved at build, where the source doesn't exist yet, so it would render `''` at SSR. Bind a `fast`-phase source, a route param, or a literal instead.
+- Binding a `fast` (constant) prop to a `fast+interactive` (changing) source is also an error — a constant can't track a value that changes on the client.
+- A higher-phase prop accepts any lower-or-equal source (e.g. a `fast+interactive` prop takes a `slow`, `fast`, or `fast+interactive` binding).
+
+`jay-stack validate` (and `dev` / `build`) report these mismatches with the exact prop, source, and phases.
 
 ### Params
 

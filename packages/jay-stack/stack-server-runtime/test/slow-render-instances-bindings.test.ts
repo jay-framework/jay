@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { phaseOutput } from '@jay-framework/fullstack-component';
-import { slowRenderInstances } from '../lib/instance-slow-render';
+import { slowRenderInstances } from '../lib';
 import type { HeadlessInstanceComponent } from '../lib';
 
 describe('slowRenderInstances prop binding resolution', () => {
@@ -47,10 +47,15 @@ describe('slowRenderInstances prop binding resolution', () => {
             },
         );
 
+        // slowlyRender still receives values resolved against the slow scope.
         expect(slowlyRender).toHaveBeenCalledWith({ productId: 'prod-1', categorySlug: 'bedroom' });
+
+        // DL#189 — discovered props keep the RAW bindings (names normalized, values
+        // unresolved) so the fast phase can re-resolve each prop at its own phase against
+        // the merged slow+fast scope, rather than baking slow-resolved literals.
         expect(result?.instancePhaseData.discovered[0].props).toEqual({
-            productId: 'prod-1',
-            categorySlug: 'bedroom',
+            productId: '{p._id}',
+            categorySlug: '{p.categorySlug}',
         });
     });
 });

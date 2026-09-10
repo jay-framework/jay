@@ -1211,13 +1211,24 @@ async function parseHeadfullFSImports(
             fsSync.existsSync(path.join(resolvedSrcPath, 'index.ts')) ||
             fsSync.existsSync(path.join(resolvedSrcPath, 'index.js'));
 
-        // For structural components (no .ts), unwrap the <jay:> tag —
-        // replace it with its children so the compiler treats the content as plain HTML.
+        // Tier detection (DL#187) — purely file-presence based (contract present, no .ts →
+        // Tier 2 pure headfull component). Split by contract contents into two sub-cases:
+        //   - empty contract (no props/tags): DL#162's degenerate case — unwrap the <jay:>
+        //     tag into plain HTML. Nothing to bind, no ViewState, no instance component.
+        //   - contract with props/tags: an auto-generated passthrough component — keep the
+        //     injected <jay:> tag and build a headlessImport marked `structural`, so the
+        //     compiler inlines the identity passthrough definition instead of importing a .ts.
+        let structural = false;
         if (!hasCodeFile) {
-            for (const jayTag of jayTags) {
-                jayTag.replaceWith(jayTag.innerHTML);
+            const contractHasFields =
+                (loadedContract.props?.length ?? 0) > 0 || (loadedContract.tags?.length ?? 0) > 0;
+            if (!contractHasFields) {
+                for (const jayTag of jayTags) {
+                    jayTag.replaceWith(jayTag.innerHTML);
+                }
+                continue;
             }
-            continue;
+            structural = true;
         }
 
         // Build JayHeadlessImports entry
@@ -1327,6 +1338,7 @@ async function parseHeadfullFSImports(
                     codeLink,
                     contract: loadedContract,
                     contractPath,
+                    structural,
                 });
             });
         } catch (e) {

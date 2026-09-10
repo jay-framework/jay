@@ -1,7 +1,8 @@
 name: clipboard-copy
 props:
   - name: text
-    kind: required
+    required: true
+    phase: fast+interactive
 tags:
   - tag: text
     type: data

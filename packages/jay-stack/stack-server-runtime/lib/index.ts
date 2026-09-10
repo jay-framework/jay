@@ -5,6 +5,7 @@ export * from './slowly-changing-runner';
 export * from './fast-changing-runner';
 export * from './services';
 export * from './instance-slow-render';
+export * from './passthrough-component';
 export * from './resolve-instance-props';
 export * from './action-registry';
 export * from './plugin-init-discovery';

@@ -16,6 +16,7 @@ import {
     type JayHtmlScript,
 } from '@jay-framework/compiler-jay-html';
 import { AnyJayStackComponentDefinition } from '@jay-framework/fullstack-component';
+import { makePassthroughInstanceComponent } from '@jay-framework/stack-server-runtime';
 import { JayRollupConfig } from '@jay-framework/rollup-plugin';
 import { createRequire } from 'module';
 
@@ -173,10 +174,17 @@ export async function loadPageParts(
             let isNpmPackage: boolean;
 
             if (headlessImport.structural) {
-                // Structural component (DL#162): no .ts file, template-only.
-                // Data comes from headless imports inside the component's own jay-html.
-                // Template was already injected at parse time — skip module loading.
-                continue;
+                // Tier 2 pure headfull component (DL#187): no .ts file. Synthesize an identity
+                // passthrough definition from the contract's tags (props ≡ tags) so its ViewState
+                // echoes the usage-site props, split per tag phase. No module to load.
+                compDefinition = makePassthroughInstanceComponent(
+                    (headlessImport.contract?.tags ?? []).map((t) => ({
+                        name: t.tag,
+                        phase: t.phase,
+                    })),
+                );
+                isNpmPackage = false;
+                clientModuleImport = '';
             } else {
                 const modulePath = isLocalModule
                     ? path.resolve(dirName, module)

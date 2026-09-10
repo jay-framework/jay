@@ -173,11 +173,29 @@ props:
   - name: productId
     type: string
     required: true
+    phase: fast # slow (default), fast, or fast+interactive
     description: The product to display
   - name: showPricing
     type: boolean
     default: 'true'
 ```
+
+#### Prop phases — declare the phase you consume the prop
+
+A prop has a `phase` just like a tag, and it declares **when your component reads that prop**. The binding at the usage site must have a source phase ≤ the prop's phase (validated at build; see [validation.md](validation.md)).
+
+| Prop phase         | Resolved at       | At `slow` it is…   | Read it in                                      | At interactive it is…              |
+| ------------------ | ----------------- | ------------------ | ----------------------------------------------- | ---------------------------------- |
+| `slow` (default)   | build             | present            | `slowlyRender`, `fastRender`, `withInteractive` | a signal `() => T`, constant value |
+| `fast`             | request           | `undefined` / `''` | `fastRender`, `withInteractive`                 | a signal `() => T`, constant value |
+| `fast+interactive` | request (initial) | `undefined` / `''` | `fastRender`, `withInteractive`                 | a **reactive** signal `() => T`    |
+
+Two rules to internalize:
+
+- **A `fast` / `fast+interactive` prop is `undefined` (or `''` for a string binding) during `slow`.** Never read such a prop in `slowlyRender` — declare the prop at the phase where you actually consume it (the same phase your render function runs at). `markdown-content` reads `props.markdown` at slow → `slow`; `markdown-live` reads it at fast and as a signal at interactive → `fast+interactive`.
+- **At the interactive phase every prop arrives as a signal (`() => T`)** — the same shape for all phases, reactive only for `fast+interactive`. Type interactive props as `() => T` in the `.ts` (matching client-only Jay), regardless of phase.
+
+The prop type stays a single in-code declaration (`.withProps<T>()`) — the framework does not generate per-phase prop types. It is the author's job (backed by validation) not to read a `fast` prop at slow.
 
 ### Params — URL route segments
 

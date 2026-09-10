@@ -1,8 +1,9 @@
 import type { ArtifactStore } from '../serve/artifact-store';
-import type {
-    DevServerPagePart,
-    HeadlessInstanceComponent,
-    ForEachHeadlessInstance,
+import {
+    makePassthroughInstanceComponent,
+    type DevServerPagePart,
+    type HeadlessInstanceComponent,
+    type ForEachHeadlessInstance,
 } from '@jay-framework/stack-server-runtime';
 
 export interface PagePartsConfigEntry {
@@ -24,6 +25,7 @@ export interface PagePartsConfig {
         PagePartsConfigEntry & {
             contractName: string;
             propNames: string[];
+            structuralTags?: Array<{ name: string; phase?: string }>;
         }
     >;
     forEachInstances: Array<{
@@ -82,7 +84,16 @@ export async function loadPagePartsFromConfig(
         const serveTimeContract: ServeTimeContract = {
             props: entry.propNames.map((name) => ({ name })),
         };
-        if (entry.structural) continue;
+        if (entry.structural) {
+            // Tier 2 pure headfull component (DL#187): rebuild the identity passthrough from the
+            // persisted tag phases — no module to load.
+            headlessInstanceComponents.push({
+                contractName: entry.contractName,
+                compDefinition: makePassthroughInstanceComponent(entry.structuralTags ?? []),
+                contract: serveTimeContract as any,
+            });
+            continue;
+        }
         const mod = await importModule(entry);
         headlessInstanceComponents.push({
             contractName: entry.contractName,

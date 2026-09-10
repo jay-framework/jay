@@ -68,6 +68,15 @@ export async function runBuild(
 ): Promise<void> {
     initLogger(options.verbose);
 
+    // DL#189 — fail the build on jay-html validation errors (e.g. a phase-binding mismatch that
+    // would render '' at SSR) before doing the expensive build work. The exit lives here (a real
+    // call site) rather than inside surfaceValidationIssues so Rollup can't fold the gate away.
+    const { surfaceValidationIssues } = await import('./run-validate');
+    const valid = await surfaceValidationIssues(projectPath, { verbose: options.verbose });
+    if (!valid) {
+        process.exit(1);
+    }
+
     const ctx = await resolveProductionContext(projectPath, options.version);
 
     const { buildVersion } = await import('@jay-framework/production-build');

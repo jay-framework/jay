@@ -1,0 +1,15 @@
+<html>
+<head>
+  <script type="application/jay-data" contract="./badge.jay-contract"></script>
+</head>
+<body>
+  <span class="badge {status === success ? badge--success} {status === warning ? badge--warning} {status === error ? badge--error}">
+    <span if="status == success" class="badge-icon badge-icon--success">[OK]</span>
+    <span if="status == warning" class="badge-icon badge-icon--warning">[!]</span>
+    <span if="status == error" class="badge-icon badge-icon--error">[X]</span>
+    <span class="badge-label">{label}</span>
+    <span class="badge-count">Count: {count}</span>
+    <span if="featured" class="badge-star">FEATURED</span>
+  </span>
+</body>
+</html>

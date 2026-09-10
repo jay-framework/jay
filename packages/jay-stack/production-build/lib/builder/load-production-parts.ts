@@ -15,9 +15,10 @@ import {
 } from '@jay-framework/compiler-jay-html';
 import { checkValidationErrors } from '@jay-framework/compiler-shared';
 import type { AnyJayStackComponentDefinition } from '@jay-framework/fullstack-component';
-import type {
-    DevServerPagePart,
-    HeadlessInstanceComponent,
+import {
+    makePassthroughInstanceComponent,
+    type DevServerPagePart,
+    type HeadlessInstanceComponent,
 } from '@jay-framework/stack-server-runtime';
 import type { JayRoute } from '@jay-framework/stack-route-scanner';
 
@@ -39,6 +40,9 @@ export interface HeadlessModuleInfo {
     contractInfo?: { contractName: string; metadata?: Record<string, unknown> };
     headlessProps?: Record<string, string>;
     structural?: boolean;
+    /** Tier 2 passthrough tags (name + phase) — persisted so the serve-time passthrough can be
+     * rebuilt from config without the compiler contract (DL#187). */
+    structuralTags?: Array<{ name: string; phase?: string }>;
 }
 
 export interface ProductionPageParts {
@@ -122,10 +126,15 @@ export async function loadProductionPageParts(
         let headlessCompDef: any;
 
         if (headlessImport.structural) {
-            // Structural component (DL#162): template-only, no code file.
-            // Data comes from headless imports inside the component's own jay-html.
-            // Template was already injected at parse time — skip module loading.
-            continue;
+            // Tier 2 pure headfull component (DL#187): no code file. Synthesize an identity
+            // passthrough definition from the contract's tags (props ≡ tags) so its ViewState
+            // echoes the usage-site props, split per tag phase. No module to load.
+            headlessCompDef = makePassthroughInstanceComponent(
+                (headlessImport.contract?.tags ?? []).map((t: any) => ({
+                    name: t.tag,
+                    phase: t.phase,
+                })),
+            );
         } else {
             const resolvedModulePath = isLocalModule
                 ? modulePath
@@ -182,6 +191,14 @@ export async function loadProductionPageParts(
                 contractName: headlessImport.contractName,
                 propNames: headlessImport.contract.props?.map((p: any) => p.name) ?? [],
                 structural: headlessImport.structural,
+                ...(headlessImport.structural
+                    ? {
+                          structuralTags: (headlessImport.contract.tags ?? []).map((t: any) => ({
+                              name: t.tag,
+                              phase: t.phase,
+                          })),
+                      }
+                    : {}),
             });
         }
     }
@@ -246,6 +263,7 @@ export interface PagePartsConfig {
         PagePartsConfigEntry & {
             contractName: string;
             propNames: string[];
+            structuralTags?: Array<{ name: string; phase?: string }>;
         }
     >;
     forEachInstances: Array<{
@@ -302,7 +320,9 @@ export function buildPagePartsConfig(
                 source: info.isLocal ? 'local' : 'npm',
                 contractName: info.contractName,
                 propNames: info.propNames ?? [],
-                ...(info.structural ? { structural: true } : {}),
+                ...(info.structural
+                    ? { structural: true, structuralTags: info.structuralTags ?? [] }
+                    : {}),
             });
         }
     }
@@ -357,7 +377,16 @@ export async function loadPagePartsFromConfig(
         const serveTimeContract: ServeTimeContract = {
             props: entry.propNames.map((name) => ({ name })),
         };
-        if (entry.structural) continue;
+        if (entry.structural) {
+            // Tier 2 pure headfull component (DL#187): rebuild the identity passthrough from the
+            // persisted tag phases — no module to load.
+            headlessInstanceComponents.push({
+                contractName: entry.contractName,
+                compDefinition: makePassthroughInstanceComponent(entry.structuralTags ?? []),
+                contract: serveTimeContract as any,
+            });
+            continue;
+        }
         const mod = await importModule(entry);
         headlessInstanceComponents.push({
             contractName: entry.contractName,

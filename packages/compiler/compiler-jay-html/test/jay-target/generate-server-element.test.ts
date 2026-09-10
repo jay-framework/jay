@@ -173,6 +173,20 @@ describe('generate jay-html server element', () => {
                 await readFixtureServerElementFile(folder),
             );
         });
+
+        // DL#187 — a structural (Tier 2) headfull component (jay-html + contract, no .ts)
+        // renders via an identity passthrough that echoes raw string props. The server
+        // element coerces those strings to the declared contract types (enum via the
+        // numeric enum reverse-map, number via Number, boolean via === 'true') so the
+        // SSR HTML matches the client's coerced prop getter.
+        it('for structural (Tier 2) instance — coerces passthrough props by dataType (DL#187)', async () => {
+            const folder = 'contracts/page-with-structural-badge';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
     });
 
     describe('slowForEach', () => {

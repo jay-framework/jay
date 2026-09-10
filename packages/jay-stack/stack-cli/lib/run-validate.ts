@@ -20,6 +20,39 @@ export async function runValidate(
     }
 }
 
+/**
+ * DL#189 — surface jay-html validation (including phase-binding mismatches) during `dev` and
+ * `build`, not only via the explicit `jay-stack validate` command. A binding whose source phase
+ * exceeds the prop phase would otherwise silently render `''` at SSR (prevention-first).
+ *
+ * Returns `true` when the project validates (or validation could not run), `false` when there are
+ * validation errors. Callers decide what to do: `build` exits the process on `false` so a broken
+ * build fails loudly; `dev` ignores the result and keeps serving so the author can iterate.
+ *
+ * The exit decision is deliberately left to the caller rather than gated on a `fatal` parameter:
+ * Rollup's constant-propagation over such a parameter dead-code-eliminates the `process.exit(1)`
+ * branch during the vite lib build, silently disabling the gate.
+ */
+export async function surfaceValidationIssues(
+    projectPath: string | undefined,
+    options: { verbose?: boolean },
+): Promise<boolean> {
+    let result;
+    try {
+        result = await validateJayFiles({ path: projectPath, verbose: options.verbose });
+    } catch (error: any) {
+        // Never let validation crash a build/dev run — report and move on.
+        getLogger().warn(chalk.yellow(`Skipped jay-html validation: ${error?.message ?? error}`));
+        return true;
+    }
+
+    if (!result.valid) {
+        printJayValidationResult(result, { verbose: options.verbose });
+        return false;
+    }
+    return true;
+}
+
 export async function runValidatePlugin(
     pluginPath: string | undefined,
     options: { local?: boolean; verbose?: boolean; strict?: boolean; generateTypes?: boolean },

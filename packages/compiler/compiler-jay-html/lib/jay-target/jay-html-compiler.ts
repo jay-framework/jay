@@ -48,6 +48,7 @@ import {
     JayHtmlNamespace,
     JayHtmlSourceFile,
 } from './jay-html-source-file';
+import { buildStructuralPassthroughComp } from './structural-coercions';
 import {
     AsyncDirectiveType,
     AsyncDirectiveTypes,
@@ -372,6 +373,32 @@ export function renderElementRef(
     } else return RenderFragment.empty();
 }
 
+/**
+ * Coerce a static (non-`{expr}`) component-prop attribute value to its declared contract dataType
+ * (DL#187). A static attribute is plain text, so the expression grammar always yields a quoted
+ * string (or a bare number for all-digit text) — which is wrong for enum/number/boolean props.
+ * Returns the coerced TypeScript source, or `undefined` to leave the parsed value as-is (string
+ * props, unknown types, or a value that isn't a valid member/literal of the declared type — the
+ * latter is left for value-level validation, a separate concern).
+ */
+function coerceStaticComponentProp(value: string, expectedType?: JayType): string | undefined {
+    if (!expectedType) return undefined;
+    if (isEnumType(expectedType)) {
+        return expectedType.values.includes(value)
+            ? `${expectedType.alias ?? expectedType.name}.${value}`
+            : undefined;
+    }
+    if (expectedType.name === 'number') {
+        return /^-?\d+(\.\d+)?$/.test(value) ? value : undefined;
+    }
+    if (expectedType.name === 'boolean') {
+        if (value === 'true') return 'true';
+        if (value === 'false') return 'false';
+        return undefined;
+    }
+    return undefined;
+}
+
 export function renderChildCompProps(
     element: HTMLElement,
     { variables }: RenderContext,
@@ -402,14 +429,31 @@ export function renderChildCompProps(
         if (attrCanonical === 'ref') {
             return;
         } else {
-            let prop = parseComponentPropExpression(attributes[attrName], variables);
+            const rawValue = attributes[attrName];
+            const isStatic = !rawValue.includes('{');
+            let prop = parseComponentPropExpression(rawValue, variables);
             // Use contract prop name when available (case-insensitive match) so that
             // HTML-parser lowercased attributes (e.g. productid) map to contract names (e.g. productId)
             const outputKey =
                 contractProps?.find((p) => p.name.toLowerCase() === attrCanonical)?.name ?? attrKey;
-            // If contract declares this prop as string but parser produced a number literal, wrap in quotes
             const expectedType = propTypeMap?.get(attrName) ?? propTypeMap?.get(outputKey);
-            if (expectedType && expectedType.name === 'string' && /^\d+$/.test(prop.rendered)) {
+            // Static-value coercion (DL#187): a static attribute is plain text, so the grammar
+            // produces a quoted string (or bare number) regardless of the prop's declared type.
+            // Coerce it to the declared dataType — enum member, number, or boolean literal — so
+            // the value lands as the right TypeScript type (e.g. `Status.success`, not `'success'`;
+            // `true`, not `'true'`). Dynamic `{expr}` bindings already carry their source's type and
+            // are left untouched.
+            const coerced = isStatic
+                ? coerceStaticComponentProp(rawValue.trim(), expectedType)
+                : undefined;
+            if (coerced !== undefined) {
+                prop = prop.map(() => coerced);
+            } else if (
+                expectedType &&
+                expectedType.name === 'string' &&
+                /^\d+$/.test(prop.rendered)
+            ) {
+                // declared string but the number heuristic already produced a bare literal — re-quote
                 prop = prop.map((_) => `'${_}'`);
             }
             props.push(prop.map((_) => `${outputKey}: ${_}`));
@@ -914,7 +958,7 @@ ${inlineBody.rendered}
 
 const ${componentSymbol} = makeHeadlessInstanceComponent(
     ${renderFnName},
-    ${headlessImport.structural ? `{ comp: (_props, _refs) => ({ render: () => _props }) }` : pluginComponentName},
+    ${headlessImport.structural ? buildStructuralPassthroughComp(headlessImport.contract?.tags ?? []) : pluginComponentName},
     ${isInsideForEach ? `(dataIds) => [...dataIds, '${coordinateSuffix}'].toString()` : `'${coordinateKey}'`},
 );`;
 
@@ -1305,10 +1349,11 @@ function renderFunctionImplementation(
     const { importedSymbols, importedSandboxedSymbols } =
         processImportedComponents(importStatements);
     const importedRefNameToRef = processImportedHeadless(headlessImports);
-    // Build set of headless contract names for detecting <jay:contract-name> instances
-    const headlessContractNames = new Set(
-        headlessImports.filter((h) => !h.structural).map((h) => h.contractName),
-    );
+    // Build set of headless contract names for detecting <jay:contract-name> instances.
+    // Tier 2 pure headfull components (DL#187, `structural`) are real instances too — the
+    // compiler inlines an identity passthrough definition for them (see line ~917), so they
+    // must be recognized here to receive coordinates and be treated as component instances.
+    const headlessContractNames = new Set(headlessImports.map((h) => h.contractName));
 
     // Pre-process: assign scoped coordinates (DL#126) so headless instance keys
     // match the server/hydrate targets. Must run before element rendering.
@@ -1696,7 +1741,9 @@ export function generateElementHydrateFile(
 
     // Pre-assign coordinates and refs before element compilation so the element
     // compiler reads the same refs that the hydrate and server-element compilers use.
-    const headlessImports = jayFile.headlessImports?.filter((h) => !h.key && !h.structural) ?? [];
+    // Tier 2 pure headfull components (DL#187, `structural`) are instances here too, so
+    // their coordinates must match the element file — include them (only skip keyed ones).
+    const headlessImports = jayFile.headlessImports?.filter((h) => !h.key) ?? [];
     const headlessContractNames = new Set(headlessImports.map((h) => h.contractName));
     assignCoordinates(jayFile.body, { headlessContractNames });
 

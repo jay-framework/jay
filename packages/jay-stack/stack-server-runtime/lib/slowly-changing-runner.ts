@@ -9,7 +9,10 @@ import type { DevServerPagePart, HeadlessInstanceComponent } from './types';
 import { resolveServices } from './services';
 import type { DiscoveredHeadlessInstance } from './types';
 import type { InstancePhaseData, InstanceSlowRenderResult } from './instance-slow-render';
-import { normalizeAndResolveInstanceProps } from './resolve-instance-props';
+import {
+    normalizeAndResolveInstanceProps,
+    normalizeInstancePropNames,
+} from './resolve-instance-props';
 
 export interface SlowlyChangingPhase {
     runSlowlyForPage(
@@ -99,10 +102,12 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
                     { pageViewState: slowlyViewState, pageParams, pageProps },
                 );
 
-                // Always add to discovered (enables fast phase for all instances)
+                // Always add to discovered (enables fast phase for all instances).
+                // Store RAW bindings so the fast phase re-resolves each prop at its own
+                // phase against the merged slow+fast scope (DL#189).
                 instancePhaseData.discovered.push({
                     contractName: instance.contractName,
-                    props: normalizedProps,
+                    props: normalizeInstancePropNames(instance.props, comp.contract?.props),
                     coordinate: instance.coordinate,
                 });
 

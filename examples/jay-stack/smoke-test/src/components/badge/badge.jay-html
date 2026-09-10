@@ -1,0 +1,33 @@
+<html>
+<head>
+  <script type="application/jay-data" contract="./badge.jay-contract"></script>
+  <style>
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 10px;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      font: 13px/1.4 sans-serif;
+    }
+    .badge--success { border-color: #2d7d2d; color: #2d7d2d; }
+    .badge--warning { border-color: #b8860b; color: #b8860b; }
+    .badge--error   { border-color: #c0392b; color: #c0392b; }
+    .badge-icon { font-weight: bold; }
+    .badge-label { font-weight: 600; }
+    .badge-count { color: #666; }
+    .badge-star { color: #d4af37; }
+  </style>
+</head>
+<body>
+  <span class="badge {status === success ? badge--success} {status === warning ? badge--warning} {status === error ? badge--error}">
+    <span if="status == success" class="badge-icon badge-icon--success">[OK]</span>
+    <span if="status == warning" class="badge-icon badge-icon--warning">[!]</span>
+    <span if="status == error" class="badge-icon badge-icon--error">[X]</span>
+    <span class="badge-label">{label}</span>
+    <span class="badge-count">Count: {count}</span>
+    <span if="featured" class="badge-star">FEATURED</span>
+  </span>
+</body>
+</html>

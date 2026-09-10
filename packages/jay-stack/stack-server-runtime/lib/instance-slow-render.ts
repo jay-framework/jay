@@ -18,6 +18,7 @@ import { resolveServices } from './services';
 import {
     type InstanceBindingContext,
     normalizeAndResolveInstanceProps,
+    normalizeInstancePropNames,
 } from './resolve-instance-props';
 export type { InstanceBindingContext } from './resolve-instance-props';
 
@@ -82,18 +83,22 @@ export async function slowRenderInstances(
         const comp = componentByContractName.get(instance.contractName);
         if (!comp) continue;
 
-        // Normalize prop names and resolve `{key.field}` bindings from page ViewState.
+        // Resolve `{key.field}` bindings against the slow scope for this instance's own
+        // slow render. Fast / fast+interactive props are not resolvable here and collapse
+        // to '' — which is correct: a slow-only component must not read them (DL#189).
         const normalizedProps = normalizeAndResolveInstanceProps(
             instance.props,
             comp.contract?.props,
             bindingContext,
         );
 
-        // Always add to discovered so the fast phase sees all instances —
-        // even those without slowlyRender (e.g., fast-only components).
+        // Always add to discovered so the fast phase sees all instances — even those
+        // without slowlyRender (e.g., fast-only components). Store the RAW bindings
+        // (names normalized, values unresolved) so the fast phase can re-resolve each
+        // prop at its own phase against the merged slow+fast scope (DL#189).
         discoveredForFast.push({
             contractName: instance.contractName,
-            props: normalizedProps,
+            props: normalizeInstancePropNames(instance.props, comp.contract?.props),
             coordinate: instance.coordinate,
         });
 

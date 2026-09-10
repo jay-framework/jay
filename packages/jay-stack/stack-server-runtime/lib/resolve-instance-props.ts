@@ -57,6 +57,28 @@ export function buildInstanceBindingScope(context: InstanceBindingContext = {}):
 }
 
 /**
+ * Normalize HTML attribute names to contract prop names, keeping the raw binding text.
+ *
+ * DL#189 — the slow phase must not bake resolved literals into the data the fast phase
+ * consumes: a `fast` / `fast+interactive` prop bound to `{currentStatus}` is not yet
+ * resolvable at slow (it would collapse to `''`). Storing the raw binding lets the fast
+ * phase re-resolve it against the merged slow+fast scope. Names are still normalized here
+ * so downstream lookups are stable.
+ */
+export function normalizeInstancePropNames(
+    instanceProps: Record<string, string>,
+    contractProps: RuntimeContract['props'],
+): Record<string, string> {
+    const normalized: Record<string, string> = {};
+    for (const [key, value] of Object.entries(instanceProps)) {
+        const match = contractProps?.find((p) => p.name.toLowerCase() === key.toLowerCase());
+        const propName = match ? match.name : key;
+        normalized[propName] = String(value);
+    }
+    return normalized;
+}
+
+/**
  * Normalize HTML attribute names to contract prop names and resolve `{binding}` values.
  */
 export function normalizeAndResolveInstanceProps(

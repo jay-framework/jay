@@ -38,6 +38,7 @@ import {
     isForEach,
 } from './jay-html-helpers';
 import { Indent } from './indent';
+import { buildStructuralPassthroughComp } from './structural-coercions';
 import {
     optimizeRefs,
     ReferenceManagerTarget,
@@ -589,6 +590,14 @@ function renderHydrateHeadlessInstance(
     const pascal = pascalCase(contractName);
     const renderFnName = `_headless${pascal}${idx}HydrateRender`;
     const pluginComponentName = headlessImport.codeLink.names[0].name;
+    // Tier 2 pure headfull components (DL#187) have no .ts to import — inline an identity
+    // passthrough definition instead of referencing an imported plugin component symbol. The
+    // passthrough coerces its raw string props to the contract dataTypes so the client adopt/
+    // update matches the coerced SSR HTML (DL#189) — without this the bootstrap `featured: "false"`
+    // reads truthy and the client seeks a node the SSR omitted (adoptBase coordinate not found).
+    const componentDefExpr = headlessImport.structural
+        ? buildStructuralPassthroughComp(headlessImport.contract?.tags ?? [])
+        : pluginComponentName;
 
     // Type names
     const interactiveViewStateType = `${pascal}InteractiveViewState`;
@@ -717,12 +726,12 @@ ${adoptInlineBody.rendered}
     let adoptComponentDef: string;
     if (isInsideForEach) {
         adoptComponentSymbol = `_Headless${pascal}${idx}Adopt`;
-        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName},\n    (dataIds) => [...dataIds, '${coordinateSuffix}'].toString(),\n);`;
+        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${componentDefExpr},\n    (dataIds) => [...dataIds, '${coordinateSuffix}'].toString(),\n);`;
     } else {
         adoptComponentSymbol = `_Headless${pascal}${idx}`;
         // Use the __headlessInstances key (not full DOM coordinate) for data lookup.
         // Static: 'widget:0'
-        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName},\n    '${coordinateKey}',\n);`;
+        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${componentDefExpr},\n    '${coordinateKey}',\n);`;
     }
 
     let adoptImports = adoptInlineBody.imports
@@ -795,7 +804,7 @@ ${createInlineBody.rendered}
 
 const ${createComponentSymbol} = makeHeadlessInstanceComponent(
     ${createRenderFnName},
-    ${pluginComponentName},
+    ${componentDefExpr},
     ${isInsideForEach ? `(dataIds) => [...dataIds, '${coordinateSuffix}'].toString()` : `'${coordinateKey}'`},
 );`;
         createImports = createInlineBody.imports.plus(createRefsImport);
@@ -810,7 +819,7 @@ const ${createComponentSymbol} = makeHeadlessInstanceComponent(
             '\n' +
             adoptComponentDef +
             (createRenderFnCode ? '\n' + createRenderFnCode : ''),
-        pluginComponentName,
+        pluginComponentName: headlessImport.structural ? undefined : pluginComponentName,
         imports: adoptImports.plus(createImports),
     });
 
@@ -1096,7 +1105,9 @@ function renderHydrateElementContent(
         }
 
         const refSuffix = renderedRef.rendered ? `, ${renderedRef.rendered}` : '';
-        const childrenArr = childParts.length ? `[${childParts.join(',\n')}]` : '[]';
+        const childrenArr = childParts.length
+            ? `[\n${childParts.join(',\n')}\n${indent.firstLine}]`
+            : '[]';
         return new RenderFragment(
             `${indent.firstLine}adoptDynamicElement("${coordinate}", ${attributes.rendered}, ${childrenArr}${refSuffix})`,
             Imports.for(Import.adoptDynamicElement)

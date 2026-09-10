@@ -466,6 +466,95 @@ describe('headless instance props validation (DL#124 Phase 2)', () => {
         });
     });
 
+    describe('structural (Tier 2) prop phase from tag (DL#189)', () => {
+        // A Tier 2 pure headfull component (DL#187): props ≡ tags. The parser defaults every
+        // prop's phase to slow and carries the real phase on the tags, so validation must read
+        // the effective prop phase from the matching tag for structural imports.
+        function makeStructuralJayHtml(options: {
+            statusTagPhase: string;
+            pageTagPhase: string;
+            propValue: string;
+        }): any {
+            const { statusTagPhase, pageTagPhase, propValue } = options;
+            return {
+                body: {
+                    childNodes: [
+                        {
+                            nodeType: 1,
+                            rawTagName: 'jay:badge',
+                            attributes: { status: propValue },
+                            childNodes: [],
+                        },
+                    ],
+                },
+                headlessImports: [
+                    {
+                        contractName: 'badge',
+                        structural: true,
+                        contract: {
+                            name: 'badge',
+                            tags: [{ tag: 'status', type: [2], phase: statusTagPhase }],
+                            // Parser defaults prop phase to slow (does not inherit from tag).
+                            props: [
+                                {
+                                    name: 'status',
+                                    dataType: { kind: 'primitive', name: 'string' },
+                                    phase: 'slow',
+                                },
+                            ],
+                        },
+                    },
+                ],
+                contract: {
+                    name: 'page',
+                    tags: [{ tag: 'currentStatus', type: [2], phase: pageTagPhase }],
+                },
+            };
+        }
+
+        it('does not warn when a fast+interactive source drives a fast+interactive tag prop', () => {
+            const jayHtml = makeStructuralJayHtml({
+                statusTagPhase: 'fast+interactive',
+                pageTagPhase: 'fast+interactive',
+                propValue: '{currentStatus}',
+            });
+            const warnings = checkHeadlessInstanceProps(jayHtml, 'test.jay-html');
+            const phaseWarnings = warnings.filter((w) => w.includes('phase'));
+            expect(phaseWarnings).toEqual([]);
+        });
+
+        it('warns when a fast+interactive source drives a constant fast tag prop', () => {
+            const jayHtml = makeStructuralJayHtml({
+                statusTagPhase: 'fast',
+                pageTagPhase: 'fast+interactive',
+                propValue: '{currentStatus}',
+            });
+            const warnings = checkHeadlessInstanceProps(jayHtml, 'test.jay-html');
+            expect(warnings).toEqual([
+                '<jay:badge> prop "status" (phase: fast) is bound to {currentStatus} which is phase: fast+interactive. ' +
+                    'The binding source phase must be ≤ the prop phase. ' +
+                    'Use a fast-phase binding, a route param, or a literal value.',
+            ]);
+        });
+
+        it('keeps the declared prop phase for a non-structural import even if a tag shares the name', () => {
+            const jayHtml = makeStructuralJayHtml({
+                statusTagPhase: 'fast+interactive',
+                pageTagPhase: 'fast+interactive',
+                propValue: '{currentStatus}',
+            });
+            // Flip to a code-backed import: props and tags are distinct, so the slow prop phase
+            // stands and the fast+interactive source is (correctly) flagged.
+            jayHtml.headlessImports[0].structural = false;
+            const warnings = checkHeadlessInstanceProps(jayHtml, 'test.jay-html');
+            expect(warnings).toEqual([
+                '<jay:badge> prop "status" (phase: slow) is bound to {currentStatus} which is phase: fast+interactive. ' +
+                    'The binding source phase must be ≤ the prop phase. ' +
+                    'Use a slow-phase binding, a route param, or a literal value.',
+            ]);
+        });
+    });
+
     describe('compiler-injected jc marker (DL#186)', () => {
         function makeJayHtmlWithAttrs(attributes: Record<string, string>): any {
             return {

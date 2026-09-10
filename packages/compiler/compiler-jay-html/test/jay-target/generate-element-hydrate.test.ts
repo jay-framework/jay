@@ -232,6 +232,18 @@ describe('generate jay-html element hydrate', () => {
             );
         });
 
+        // DL#187 — a structural (Tier 2) headfull component hydrates via the inline
+        // identity passthrough and the prop getter carries the coerced static prop
+        // values (enum member, number literal, boolean literal), matching the SSR.
+        it('for structural (Tier 2) instance — coerced static props (DL#187)', async () => {
+            const folder = 'contracts/page-with-structural-badge';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+
         it('for headless instance inside forEach', async () => {
             const folder = 'contracts/page-with-headless-in-foreach';
             const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);

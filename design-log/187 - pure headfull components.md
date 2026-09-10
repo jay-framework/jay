@@ -87,6 +87,8 @@ This has a genuinely good side effect for Phase 1's implementation: **tier is no
 
 Real cost, stated plainly: at Tier 2 this means writing the same field list twice (once as `props`, once as `tags`) for even a trivial component. That's authoring duplication DL#162 was originally trying to avoid — though it's YAML field repetition, not the `.ts` boilerplate DL#162 was actually complaining about, so the cost is much smaller. Worth deciding explicitly rather than by default: acceptable trade for a uniform contract shape across tiers, or should the compiler allow omitting `props:` at Tier 2 and _infer_ it equals `tags:` (same end validation, less typing)?
 
+**Decision (confirmed at implementation):** require both `props:` and `tags:`, validate equal — the field-repetition cost is accepted for a uniform contract shape at every tier and file-presence-only tier detection. The compiler does **not** infer `props:` from `tags:`.
+
 **Q10: `props:` entries and `tags:` entries don't use the same vocabulary today — a prop's `type:` means something different from a tag's `type:` (data/interactive/variant/sub-contract vs. a data type). "Same names, same types" consistency-checking has to reconcile these, not just diff two lists. Does this log solve that, or is it another flagged gap?**
 
 A10 (checked against the actual generator source, not inferred): the naming mismatch is real but shallower than it looked — a prop's `type` is equivalent to a tag's `dataType`, confirmed directly: both go through the exact same `parseDataType()` function in `contract-parser.ts`, and both accept the identical `enum(a | b | c)` grammar (the `type: enum` + separate `values: [...]` shape from DL#84's original draft was never actually implemented — the shipped parser treats props and tags identically here). So the name-level translation is trivial: prop `type` ↔ tag `dataType`, everything else (`string`, `number`, `boolean`, `enum(...)`) reads the same on both sides already.
@@ -198,6 +200,13 @@ makeJayStackComponent<Contract>()
 
 (Or `withSlowlyRender`/mixed, matching whatever phases the contract's tags declare — identity passthrough per phase, no transformation.) When the contract declares zero props/tags, the generated output degenerates to DL#162's existing unwrapped-fragment result (Q2) — same code path, trivial case.
 
+**Passthrough supply — decided at implementation (compiler-light, not virtual-module):** the passthrough splits along the server/client line and needs no bundler changes:
+
+- **Client:** the compiler inlines the existing one-line passthrough `{ comp: (_props, _refs) => ({ render: () => _props }) }` (present but dormant since DL#162, `jay-html-compiler.ts` line ~917). No phases needed client-side — the client renders whatever merged ViewState it is handed. Wiring this back on is just removing the dead `!h.structural` exclusions from `headlessContractNames` and the hydrate-file coordinate filter so a Tier 2 `<jay:Name>` is treated as a component instance; the codeLink import stays skipped for structural (no `.ts` to import).
+- **Server:** `load-parts` synthesizes the per-phase passthrough `compDefinition` from the contract at load time (where the tag phases are known), instead of the current `if (structural) continue`. This is the only substantive new logic and it lives entirely in the runtime — matching the "higher jay-stack abstraction" the passthrough belongs to.
+
+The alternative (parser emits a Tier-3-style import to a synthetic module resolved as a virtual passthrough in both the vite and rollup plugins, zero compiler changes) was rejected: it trades one dormant compiler line for virtual-module resolvers in two bundlers — more total complexity than it removes.
+
 ## Implementation Plan
 
 ### Phase 1: Tier detection in the parser
@@ -275,3 +284,18 @@ Add a Tier 2 `Badge` (props + matching tags, with a variant) alongside DL#162's 
 8. DL#181 `ref`-anchored overrides work against a Tier 2 component's injected template with no special-casing.
 9. No interactive refs are generated for a Tier 2 component — attempting one is a compile error, consistent with DL#162's Q2 answer.
 10. Tier 1 (no contract) and Tier 3's existing looser props-declaration check (DL#124) are both completely unchanged by this log.
+
+## Implementation Results — attribute-coercion gap (closes lines 113–127)
+
+The coercion gap flagged above (static/dynamic attribute values arriving as raw strings rather than their declared `dataType`) was resolved as part of this log rather than deferred to a separate one, because the pure-passthrough Tier 2 badge in the smoke test surfaced it immediately: a `status="{currentStatus}"` (enum), `count` (number), and `featured` (boolean) badge shipped raw attribute strings into the ViewState.
+
+**Root cause of the concrete failure:** coercion was asymmetric across render targets. The server (SSR) path already coerced structural passthrough props inline via `buildStructuralCoercions`, but the **client** targets — the hydrate passthrough comp and the client-element passthrough comp — emitted `render: () => _props` verbatim. So the server rendered `status: Status.warning` (correct icon) while the client hydrated against `status: "1"` and `featured: "false"` (truthy). The mismatch made the `featured`-gated coordinate `S3/0/5` present in the SSR DOM but absent from the client's adoption tree → `[jay hydration] adoptBase coordinate "S3/0/5" not found in DOM` → fallback fresh render → duplicate icons.
+
+**Fix:** coercion is now driven off the contract's declared `dataType` (not a text-shape heuristic) and shared across all three targets via `compiler-jay-html/lib/jay-target/structural-coercions.ts`:
+
+- `buildStructuralCoercions(rawVar, tags)` — server-element inline coercion (unchanged home).
+- `buildStructuralPassthroughComp(tags)` — emits the passthrough comp with per-tag coercion, used by both the hydrate generator and the client-element compiler.
+
+Per `dataType`: `enum` → `typeof (E as any)[v] === 'number' ? (E as any)[v] : Number(v)` (handles both member-name strings and stringified reverse-map numbers); `number` → `Number(v)`; `boolean` → `v === true || v === 'true'`; `string` → unchanged. This supersedes the note at lines 113–127 that the enum case was "fine by luck" — it was fine only when the source was a literal member name; a `{expr}`-bound enum arriving as a stringified number needed real coercion.
+
+**Verification:** compiler-jay-html suite 723 passed / 4 skipped; smoke test 61/61; the generated `page.jay-html?jay-hydrate.ts` passthrough comp now coerces `status`/`count`/`featured`, and the `adoptBase "S3/0/5" not found` error is gone with a single icon per badge in both SSR and hydrated client. A cosmetic generator nit was also fixed: `adoptDynamicElement(..., [` now breaks before its children (matching the forEach path).

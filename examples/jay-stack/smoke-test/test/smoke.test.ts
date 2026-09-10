@@ -372,6 +372,32 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Structural Component Works/);
         });
 
+        it('/headfull — Tier 2 pure headfull component (Badge) passthrough (DL#187)', async () => {
+            const { status, body } = await fetchPage(server.url, '/headfull/');
+            expect(status).toBe(200);
+            // Slow data tag baked at build; fast data/variant tags resolved at request time.
+            expect(body).toMatch(/Live Status/); // label (string, slow)
+            expect(body).toMatch(/Count: 42/); // count (number, fast) — static number coercion
+            expect(body).toMatch(/badge--success/); // variant value flows into class binding
+            expect(body).toMatch(/\[OK\]/); // status enum `if` icon — static enum coercion
+            expect(body).not.toMatch(/\[X\]/); // the error enum branch never renders here
+            expect(body).toMatch(/FEATURED/); // featured boolean `if` — static boolean coercion
+        });
+
+        it('/headfull — Tier 2 badge fed by a dynamic prop binding (vs -> prop -> vs, DL#187)', async () => {
+            const { status, body } = await fetchPage(server.url, '/headfull/');
+            expect(status).toBe(200);
+            // Two page tags flow through dynamic prop bindings into the badge at SSR (DL#189):
+            //   liveCount (fast) -> count="{liveCount}"           — a fast-phase prop binding
+            //   currentStatus (fast+interactive) -> status="{currentStatus}" — an interactive one
+            // Both resolve at the fast phase for SSR (not '' from slow), proving vs -> prop -> vs.
+            expect(body).toMatch(/Dynamic Status/); // label (string) on the second badge
+            expect(body).toMatch(/Count: 7/); // count (fast) resolved from the liveCount page tag
+            expect(body).toMatch(/badge--warning/); // interactive enum value flows into class binding
+            expect(body).toMatch(/\[!\]/); // warning icon — dynamic enum coercion (stringified number)
+            expect(body).toMatch(/Cycle status/); // interactive button wired to cycle the tag
+        });
+
         it('/actions — page with server actions', async () => {
             const { status, body } = await fetchPage(server.url, '/actions/');
             expect(status).toBe(200);
@@ -586,6 +612,27 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Headfull Test/);
             expect(body).toMatch(/Hello from banner/);
             expect(body).toMatch(/Structural Component Works/);
+        });
+
+        it('/headfull — Tier 2 pure headfull component (Badge) passthrough (DL#187)', async () => {
+            const { status, body } = await fetchPage(server.url, '/headfull/');
+            expect(status).toBe(200);
+            expect(body).toMatch(/Live Status/); // label (string, slow)
+            expect(body).toMatch(/Count: 42/); // count (number, fast) — static number coercion
+            expect(body).toMatch(/badge--success/); // variant value flows into class binding
+            expect(body).toMatch(/\[OK\]/); // status enum `if` icon — static enum coercion
+            expect(body).not.toMatch(/\[X\]/); // the error enum branch never renders here
+            expect(body).toMatch(/FEATURED/); // featured boolean `if` — static boolean coercion
+        });
+
+        it('/headfull — Tier 2 badge fed by a dynamic prop binding (vs -> prop -> vs, DL#187)', async () => {
+            const { status, body } = await fetchPage(server.url, '/headfull/');
+            expect(status).toBe(200);
+            expect(body).toMatch(/Dynamic Status/);
+            expect(body).toMatch(/Count: 7/);
+            expect(body).toMatch(/badge--warning/);
+            expect(body).toMatch(/\[!\]/);
+            expect(body).toMatch(/Cycle status/);
         });
 
         it('/actions — page renders', async () => {

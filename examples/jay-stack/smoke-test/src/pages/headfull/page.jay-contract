@@ -4,3 +4,24 @@ tags:
     type: data
     dataType: string
     phase: slow
+
+  # DL#189 — a fast (request-time) page tag bound to the badge's fast `count` prop, proving
+  # a fast-phase prop binding resolves at SSR (not a literal, not collapsed to '' from slow).
+  - tag: liveCount
+    type: data
+    dataType: number
+    phase: fast
+    description: Request-time count fed into the dynamic badge's fast `count` prop
+
+  # DL#187/#189 — drives a fast+interactive prop binding into a structural (Tier 2) badge
+  # instance, proving page ViewState -> child prop -> child ViewState (vs -> prop -> vs).
+  - tag: currentStatus
+    type: variant
+    dataType: enum (success | warning | error)
+    phase: fast+interactive
+    description: Status cycled by a button click and fed into the dynamic badge
+
+  - tag: cycleButton
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Button that cycles currentStatus

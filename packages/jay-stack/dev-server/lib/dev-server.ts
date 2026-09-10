@@ -60,7 +60,7 @@ import {
 import {
     getServiceRegistry,
     slowRenderInstances,
-    normalizeAndResolveInstanceProps,
+    normalizeInstancePropNames,
     type HeadlessInstanceComponent,
     type InstancePhaseData,
     type ForEachHeadlessInstance,
@@ -1230,16 +1230,17 @@ async function preRenderJayHtml(
                         .filter((i) => componentByContractName.has(i.contractName))
                         .map((i) => {
                             const comp = componentByContractName.get(i.contractName)!;
-                            const normalizedProps = normalizeAndResolveInstanceProps(
+                            // Store RAW bindings so the fast phase re-resolves each prop at
+                            // its own phase against the merged slow+fast scope (DL#189).
+                            const rawProps = normalizeInstancePropNames(
                                 Object.fromEntries(
                                     Object.entries(i.props).map(([k, v]) => [k, String(v)]),
                                 ),
                                 comp.contract?.props,
-                                { pageViewState: slowViewState, pageParams, pageProps },
                             );
                             return {
                                 contractName: i.contractName,
-                                props: normalizedProps,
+                                props: rawProps,
                                 coordinate: i.coordinate,
                             };
                         }),

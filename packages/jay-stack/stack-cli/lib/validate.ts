@@ -829,7 +829,17 @@ export function checkHeadlessInstanceProps(jayHtml: JayHtmlSourceFile, file: str
                         const sourcePhase = resolveBindingPhase(bindingPath, jayHtml);
                         if (!sourcePhase) continue;
 
-                        const propPhase = contractProp.phase ?? 'slow';
+                        // DL#189 — for a Tier 2 pure headfull component (DL#187) props ≡ tags:
+                        // the props section carries no phase (the parser defaults it to slow),
+                        // so the effective prop phase is the matching tag's phase. Using the tag
+                        // phase avoids wrongly flagging a valid fast/fast+interactive Tier 2
+                        // binding as a slow-only prop. For a code-backed (non-structural) import,
+                        // props and tags are distinct — keep the prop's own declared phase.
+                        const propPhase = imp.structural
+                            ? (resolveContractTag(contract, contractProp.name)?.phase ??
+                              contractProp.phase ??
+                              'slow')
+                            : (contractProp.phase ?? 'slow');
                         const sourceOrder = PHASE_ORDER[sourcePhase] ?? 0;
                         const propOrder = PHASE_ORDER[propPhase] ?? 0;
 

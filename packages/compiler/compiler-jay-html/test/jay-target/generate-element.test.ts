@@ -418,6 +418,17 @@ describe('generate jay-html element', () => {
             );
         });
 
+        // DL#187 — a structural (Tier 2) headfull component uses the inline identity
+        // passthrough `{ comp: (_props, _refs) => ({ render: () => _props }) }` and the
+        // prop getter coerces static attribute values to the declared prop types
+        // (enum → member, number → literal, boolean → literal).
+        it('generate element file with structural (Tier 2) instance — coerced static props (DL#187)', async () => {
+            const folder = 'contracts/page-with-structural-badge';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
         it('generate element file with headless component instance inside forEach', async () => {
             const folder = 'contracts/page-with-headless-in-foreach';
             const elementFile = await readFileAndGenerateElementFile(folder);

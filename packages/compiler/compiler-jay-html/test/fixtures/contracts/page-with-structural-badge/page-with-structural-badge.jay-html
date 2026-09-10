@@ -1,0 +1,18 @@
+<html>
+<head>
+    <script type="application/jay-headfull"
+            src="./badge/badge"
+            contract="./badge/badge.jay-contract"
+            names="badge"></script>
+    <script type="application/jay-data">
+data:
+    pageTitle: string
+    </script>
+</head>
+<body>
+<div>
+    <h1>{pageTitle}</h1>
+    <jay:badge label="Live Status" status="success" count="42" featured="true" />
+</div>
+</body>
+</html>
