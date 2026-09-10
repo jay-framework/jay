@@ -1258,12 +1258,19 @@ async function parseHeadfullFSImports(
                     repeatedRefsTypeName,
                 );
 
-                const relativeContractPath = path.relative(filePath, contractPath);
+                // Relative import specifiers must start with ./ or ../, otherwise a same-dir
+                // (or subdir) contract becomes a bare specifier the bundler can't resolve.
+                const toRelativeModule = (to: string) => {
+                    const relative = path.relative(filePath, to);
+                    return relative.startsWith('.') ? relative : './' + relative;
+                };
+
+                const relativeContractPath = toRelativeModule(contractPath);
 
                 const enumsToImportRelativeToJayHtml: EnumToImport[] = enumsToImport.map(
                     (enumToImport) => ({
                         type: enumToImport.type,
-                        declaringModule: path.relative(filePath, enumToImport.declaringModule),
+                        declaringModule: toRelativeModule(enumToImport.declaringModule),
                     }),
                 );
 

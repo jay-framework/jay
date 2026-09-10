@@ -249,9 +249,9 @@ diagnosis was reverted across `load-page-parts.ts`, both `load-production-parts.
 `structuralTags` types (name+phase only). The compiler `structural-coercions.ts` codegen was kept
 (Q5). Object/array bindings pass through untouched (Q8).
 
-### Deviations — two compiler bugs surfaced by the Tier 3 fixture
+### Deviations — compiler bugs surfaced by the typed-prop fixtures
 
-Both were pre-existing, blocked the canonical DL#190 pattern (an enum prop echoed to a same-named
+All were pre-existing, blocked the canonical DL#190 pattern (an enum prop echoed to a same-named
 enum tag), and were fixed in `compiler-jay-html` rather than worked around:
 
 1. **Bare-specifier contract-enum import** (`jay-target/jay-html-parser.ts`). When a headless
@@ -275,6 +275,27 @@ enum tag), and were fixed in `compiler-jay-html` rather than worked around:
    formatting changes. Harmless at runtime (the enum IIFE merges) but broke `tsc` over the fixture
    `.d.ts`.
 
+3. **Bare-specifier contract import for structural (Tier 2) headfull-FS instances** (a *second*
+   occurrence of bug #1, in the headfull-FS branch of `jay-html-parser.ts`, distinct from the
+   plugin/headless branch). Its `relativeContractPath` / enum `declaringModule` were also computed
+   with a bare `path.relative(...)`, so a subdir contract (`./badge/badge.jay-contract`) emitted as
+   `badge/badge.jay-contract` — unresolvable. Fixed with the same `toRelativeModule` guard.
+
+4. **Redundant, ill-typed client-side coercion in the structural passthrough `comp`**
+   (`jay-target/structural-coercions.ts`, `buildStructuralPassthroughComp`). For a Tier 2 structural
+   instance the client element/hydrate targets wrapped the inlined passthrough with a `comp` that
+   re-coerced every field at runtime (`Number(_props.count)`, `(Status as any)[_props.status]`,
+   `_props.featured === 'true'`). But the client, unlike the server, does **not** receive raw
+   attribute strings: its props come from the generated `childComp(...)` factory, which the compiler
+   already emits with compile-time coercion (static `status="success"` → `Status.success`, `"42"` →
+   `42`, `"true"` → `true`; `{binding}` props carry their source ViewState's type). Re-coercing typed
+   values was redundant and did not type-check — indexing an enum by an already-numeric value or a
+   `Getter`, `Number()`-ing a typed value — producing `TS2538`/`TS2367` over the fixtures. The client
+   passthrough is now a pure identity (`render: () => _props`). The **server** path keeps
+   `buildStructuralCoercions`, because SSR genuinely reads raw strings out of `__headlessInstances`.
+   This is the coercion asymmetry: **server coerces at runtime, client coerces at compile time**, and
+   both converge on typed ViewState (DL#189 lock-step).
+
 ### Fixtures
 
 - **Tier 2** — `8n-page-headfull-fs-typed-props` (pure headfull badge). Missing contract `.d.ts`
@@ -285,6 +306,11 @@ enum tag), and were fixed in `compiler-jay-html` rather than worked around:
   the test asserts the post-hydration `__headlessInstances` holds typed values (`count` and numeric
   enum `status` are `number`; `active` boolean gates ACTIVE) via the automation API, plus SSR
   correctness, no `[jay hydration]` warnings, and a working `+1` interaction that keeps `count` numeric.
+- **Compiler unit fixture** — `compiler-jay-html/test/fixtures/contracts/page-with-structural-badge`
+  (a structural Tier 2 badge with enum/number/boolean props). Its three generated files were
+  regenerated after fixes #3/#4 (relative `./badge/badge.jay-contract` import, identity-passthrough
+  client `comp`, coercion retained only in the server file), and its missing `badge.jay-contract.d.ts`
+  was generated (single `export enum Status` despite the enum being both a prop and a tag — bug #2).
 
 ### Test Results
 

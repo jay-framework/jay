@@ -20,7 +20,7 @@ import {
     BadgeRefs,
     Status,
     BadgeInteractiveViewState,
-} from 'badge/badge.jay-contract';
+} from './badge/badge.jay-contract';
 
 export interface PageWithStructuralBadgeViewState {
     pageTitle: string;
@@ -108,19 +108,7 @@ function _headlessBadge0HydrateRender(
 }
 const _HeadlessBadge0 = makeHeadlessInstanceComponent(
     _headlessBadge0HydrateRender,
-    {
-        comp: (_props, _refs) => ({
-            render: () => ({
-                ..._props,
-                status:
-                    typeof (Status as any)[_props.status] === 'number'
-                        ? (Status as any)[_props.status]
-                        : Number(_props.status),
-                count: Number(_props.count),
-                featured: _props.featured === true || _props.featured === 'true',
-            }),
-        }),
-    },
+    { comp: (_props, _refs) => ({ render: () => _props }) },
     'S0/0/badge:AR0',
 );
 

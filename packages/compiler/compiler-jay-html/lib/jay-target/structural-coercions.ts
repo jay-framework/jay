@@ -54,12 +54,17 @@ export function buildStructuralCoercions(rawVar: string, tags: StructuralTag[]):
 
 /**
  * Build the inline identity-passthrough component definition for a Tier 2 structural instance on
- * the client (hydrate + client element targets). It echoes the supplied props as its ViewState,
- * coercing each field to its contract dataType so the client render/adopt matches the SSR HTML.
- * With no coercible (non-string) tags it degrades to a pure identity passthrough.
+ * the client (hydrate + client element targets). It echoes the supplied props verbatim as its
+ * ViewState — no coercion.
+ *
+ * Unlike the server (which reads raw attribute strings out of `__headlessInstances` and must coerce
+ * them with {@link buildStructuralCoercions}), the client receives props from the generated
+ * `childComp(...)` factory, which the jay-html compiler already emits with compile-time coercion:
+ * static enum/number/boolean attributes land as typed literals (`Status.success`, `42`, `true`) and
+ * `{binding}` props carry their source ViewState's type. Re-coercing here would be redundant and, for
+ * bindings, ill-typed — `_props.field` is the typed value (or a `Getter`), not a string to `Number()`
+ * or index an enum with. `tags` is accepted for call-site symmetry with the server path but unused.
  */
-export function buildStructuralPassthroughComp(tags: StructuralTag[]): string {
-    const coercions = buildStructuralCoercions('_props', tags);
-    const renderExpr = coercions.length > 0 ? `({ ..._props, ${coercions.join(', ')} })` : '_props';
-    return `{ comp: (_props, _refs) => ({ render: () => ${renderExpr} }) }`;
+export function buildStructuralPassthroughComp(_tags: StructuralTag[]): string {
+    return `{ comp: (_props, _refs) => ({ render: () => _props }) }`;
 }

@@ -1,6 +1,6 @@
 import { escapeHtml, escapeAttr, type ServerRenderContext } from '@jay-framework/ssr-runtime';
 
-import { BadgeViewState, Status } from 'badge/badge.jay-contract';
+import { BadgeViewState, Status } from './badge/badge.jay-contract';
 
 export interface PageWithStructuralBadgeViewState {
     pageTitle: string;
