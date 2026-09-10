@@ -154,7 +154,10 @@ export async function renderFastChangingData(
                 for (const [propName, binding] of Object.entries(instance.propBindings)) {
                     const match = matchProp(propName);
                     const resolved = resolvePropBinding(String(binding), item);
-                    props[match?.name ?? propName] = coerceInstancePropValue(resolved, match?.dataType);
+                    props[match?.name ?? propName] = coerceInstancePropValue(
+                        resolved,
+                        match?.dataType,
+                    );
                 }
 
                 if (comp.compDefinition.fastRender) {

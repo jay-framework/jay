@@ -1,17 +1,16 @@
-import {JayContract} from "@jay-framework/runtime";
-
+import { JayContract } from '@jay-framework/runtime';
 
 export enum ReqStatus {
-  success,
-  warning,
-  error
+    success,
+    warning,
+    error,
 }
 
 export interface PageViewState {
-  pageTitle: string,
-  reqStatus: ReqStatus,
-  reqCount: number,
-  reqActive: boolean
+    pageTitle: string;
+    reqStatus: ReqStatus;
+    reqCount: number;
+    reqActive: boolean;
 }
 
 export type PageSlowViewState = Pick<PageViewState, 'pageTitle'>;
@@ -24,4 +23,10 @@ export interface PageRefs {}
 
 export interface PageRepeatedRefs {}
 
-export type PageContract = JayContract<PageViewState, PageRefs, PageSlowViewState, PageFastViewState, PageInteractiveViewState>
+export type PageContract = JayContract<
+    PageViewState,
+    PageRefs,
+    PageSlowViewState,
+    PageFastViewState,
+    PageInteractiveViewState
+>;

@@ -43,8 +43,8 @@ typed ViewState reads), and existing instance props were mostly strings or laund
 code. Tier 2 is the first case that pipes a raw prop straight into `status === Status.warning` /
 `if featured` with no `.ts` in between.
 
-DL#187 (lines 113–127) already flagged this and pointed at the fix: *"drive coercion off the
-contract's declared `dataType` instead of a text-shape heuristic … worth its own design log."* This
+DL#187 (lines 113–127) already flagged this and pointed at the fix: _"drive coercion off the
+contract's declared `dataType` instead of a text-shape heuristic … worth its own design log."_ This
 is that log.
 
 ## Questions & Answers
@@ -56,13 +56,14 @@ instance with a non-string prop. (User decision: generalize to all instances.)
 
 **Q2. Where is the single coercion point?**
 `normalizeAndResolveInstanceProps` in `resolve-instance-props.ts` — it already receives
-`contractProps` (each with `dataType`) and is the one function that produces *resolved* values.
+`contractProps` (each with `dataType`) and is the one function that produces _resolved_ values.
 `normalizeInstancePropNames` must stay string-only: per DL#189 it deliberately preserves the raw
 `{binding}` text for the slow phase so the fast phase can re-resolve; there is nothing to coerce
 until a value is resolved.
 
 **Q3. What are the coercion semantics?**
 Two parts (user framing):
+
 1. **Reading from the DOM/attributes** — parse each resolved string value against its declared prop
    type.
 2. **Serializing SSR → hydrate** — JSON natively carries `string` / `number` / `boolean`, so the
@@ -71,11 +72,12 @@ Two parts (user framing):
    against (`vs.status === Status.success`, where `Status.success` is `0`), so SSR DOM, serialized
    ViewState, and client hydrate all agree.
 
-Attribute-sourced prop types are `string | number | boolean | enum`, so a coerced *string* value is
+Attribute-sourced prop types are `string | number | boolean | enum`, so a coerced _string_ value is
 always one of `string | number | boolean`. Props **bound to an object/array** from a higher
 component/page (Q8) arrive already typed and pass through untouched, so the resolved value is one of
 `string | number | boolean | object` overall. Semantics (identical to the compiler's
 `structural-coercions.ts`):
+
 - `enum` → member-name string maps to its numeric value by declaration order; an already-numeric
   value (possibly stringified) passes through as a number.
 - `number` → `Number(value)`.
@@ -88,6 +90,7 @@ component/page (Q8) arrive already typed and pass through untouched, so the reso
 
 **Q4. Does this make the SSR-codegen and client-codegen coercions redundant?**
 Yes. Once the serialized `__headlessInstances` is typed:
+
 - the SSR server-element inline coercion becomes idempotent (kept as harmless defense-in-depth, or
   removed for cleanliness — see Q5);
 - the client hydrate reads typed values directly — no codegen coercion needed;
@@ -118,15 +121,16 @@ A prop can be bound to a page/parent value that is an **object or array** (e.g. 
 Those already work end-to-end: the binding delivers the actual object/array value (not a string),
 and JSON serialization carries objects/arrays natively into `__headlessInstances`. Two constraints
 this imposes on the fix:
+
 1. `resolvePropBinding` currently returns `String(resolved)` — that would flatten a bound object to
    `"[object Object]"` / an array to a CSV. It must return the resolved value **as-is** so
    object/array (and already-typed number/boolean/enum-number) bindings survive. Only a literal
    (non-`{…}`) attribute stays a raw string.
 2. `coerceInstancePropValue` must be a no-op for any **non-string** input — a value that arrived
    already typed (object, array, number, boolean) is passed straight through; only a resolved
-   *string* (a literal attribute, or a binding that resolved to a string) is coerced against its
+   _string_ (a literal attribute, or a binding that resolved to a string) is coerced against its
    declared `dataType`.
-This widens the coerced return type to include objects/arrays (see Q6).
+   This widens the coerced return type to include objects/arrays (see Q6).
 
 ## Design
 
@@ -135,26 +139,26 @@ Add a shared coercion helper and apply it at the single resolution point.
 ```ts
 // resolve-instance-props.ts (or a small shared module it and the passthrough both import)
 export function coerceInstancePropValue(
-    value: unknown,
-    dataType?: JayType,
+  value: unknown,
+  dataType?: JayType,
 ): string | number | boolean | object {
-    // Non-string values (object/array/number/boolean bound from a higher component/page, Q8)
-    // arrive already typed — pass through. Unresolved binding (DL#189, '') or no declared type
-    // → leave the raw string untouched.
-    if (typeof value !== 'string' || value === '' || !dataType) return value as any;
-    if (isEnumType(dataType)) {
-        const i = dataType.values.indexOf(value); // member name → numeric enum value
-        if (i >= 0) return i;
-        const n = Number(value); // already-numeric (possibly stringified) enum value
-        return Number.isNaN(n) ? value : n;
-    }
-    if (dataType.name === 'number') return Number(value);
-    if (dataType.name === 'boolean') return value === 'true';
-    return value; // string
+  // Non-string values (object/array/number/boolean bound from a higher component/page, Q8)
+  // arrive already typed — pass through. Unresolved binding (DL#189, '') or no declared type
+  // → leave the raw string untouched.
+  if (typeof value !== 'string' || value === '' || !dataType) return value as any;
+  if (isEnumType(dataType)) {
+    const i = dataType.values.indexOf(value); // member name → numeric enum value
+    if (i >= 0) return i;
+    const n = Number(value); // already-numeric (possibly stringified) enum value
+    return Number.isNaN(n) ? value : n;
+  }
+  if (dataType.name === 'number') return Number(value);
+  if (dataType.name === 'boolean') return value === 'true';
+  return value; // string
 }
 ```
 
-Coercion only touches *resolved strings*; anything already typed (object/array from a binding, or a
+Coercion only touches _resolved strings_; anything already typed (object/array from a binding, or a
 number/boolean the binding resolved to) passes through. The `value === ''` guard preserves DL#189's
 "absent at slow" behavior instead of collapsing to `0` / the first enum member.
 
@@ -231,7 +235,7 @@ attribute string ─▶ normalizeAndResolveInstanceProps (resolve + coerce by co
    icon per badge, matching SSR.
 4. DL#189 behavior preserved: fast/interactive props still absent (`undefined`) at slow, not coerced
    from an empty string.
-5b. A prop bound to a page/parent **object or array** (`data="{p.items}"`) reaches the instance as
+   5b. A prop bound to a page/parent **object or array** (`data="{p.items}"`) reaches the instance as
    the real object/array (not `"[object Object]"`), and serializes into `__headlessInstances` as
    JSON — unchanged from today.
 5. Full compiler-jay-html + stack-server-runtime suites and the smoke test pass.
@@ -275,7 +279,7 @@ enum tag), and were fixed in `compiler-jay-html` rather than worked around:
    formatting changes. Harmless at runtime (the enum IIFE merges) but broke `tsc` over the fixture
    `.d.ts`.
 
-3. **Bare-specifier contract import for structural (Tier 2) headfull-FS instances** (a *second*
+3. **Bare-specifier contract import for structural (Tier 2) headfull-FS instances** (a _second_
    occurrence of bug #1, in the headfull-FS branch of `jay-html-parser.ts`, distinct from the
    plugin/headless branch). Its `relativeContractPath` / enum `declaringModule` were also computed
    with a bare `path.relative(...)`, so a subdir contract (`./badge/badge.jay-contract`) emitted as
@@ -323,16 +327,17 @@ enum tag), and were fixed in `compiler-jay-html` rather than worked around:
 ### Consistency with the secure ViewState serializer
 
 Jay has a second ViewState serialization path — `@jay-framework/secure` (over `@jay-framework/serialization`
-+ `@jay-framework/json-patch`) — which serializes ViewState across the sandbox/worker boundary. It was
-checked for type-handling consistency with this design; the partial/diff nature (it emits JSON-Patch
-deltas because of the interactive sandbox) is expected and out of scope. The **typed wire
-representation matches**:
 
-| Type | secure (`json-patch` diff) | DL#190 (`coerceInstancePropValue`) |
-|------|----------------------------|-------------------------------------|
-| enum | raw runtime value → **number** (`Status.warning` → `1`) | member-name string `"warning"` → **numeric index `1`** |
-| number / boolean | raw value | `"42"`→`42`, `"false"`→`false` |
-| object / array | preserved (diffed structurally) | preserved (passthrough, no `String()`) |
+- `@jay-framework/json-patch`) — which serializes ViewState across the sandbox/worker boundary. It was
+  checked for type-handling consistency with this design; the partial/diff nature (it emits JSON-Patch
+  deltas because of the interactive sandbox) is expected and out of scope. The **typed wire
+  representation matches**:
+
+| Type             | secure (`json-patch` diff)                              | DL#190 (`coerceInstancePropValue`)                     |
+| ---------------- | ------------------------------------------------------- | ------------------------------------------------------ |
+| enum             | raw runtime value → **number** (`Status.warning` → `1`) | member-name string `"warning"` → **numeric index `1`** |
+| number / boolean | raw value                                               | `"42"`→`42`, `"false"`→`false`                         |
+| object / array   | preserved (diffed structurally)                         | preserved (passthrough, no `String()`)                 |
 
 Enums land as **numbers** on both sides, and the client compares them the same way
 (`vs.status === Status.success`, numeric).
@@ -342,7 +347,7 @@ The one structural difference is **why** each side is typed, and it is not a div
 - secure serializes values that are **already typed** (produced by a component's render/signals in JS),
   so it needs no coercion — only preservation, which `postMessage` structured-clone gives natively.
 - DL#190 serializes props that **originate as jay-html attribute strings**, where the type was erased
-  by the string encoding; the contract `dataType` is the only way to *recover* it. Coercion exists
+  by the string encoding; the contract `dataType` is the only way to _recover_ it. Coercion exists
   precisely to reach the same typed representation secure already has.
 
 So: secure is runtime-type-driven (its input never lost its type); DL#190 is contract-`dataType`-driven

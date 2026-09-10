@@ -72,7 +72,8 @@ function collectViewStateEnumNames(type: JayType, acc: Set<string> = new Set()):
     if (isEnumType(type)) acc.add(type.name);
     else if (isObjectType(type))
         for (const key of Object.keys(type.props)) collectViewStateEnumNames(type.props[key], acc);
-    else if (isArrayType(type) || isPromiseType(type)) collectViewStateEnumNames(type.itemType, acc);
+    else if (isArrayType(type) || isPromiseType(type))
+        collectViewStateEnumNames(type.itemType, acc);
     return acc;
 }
 
