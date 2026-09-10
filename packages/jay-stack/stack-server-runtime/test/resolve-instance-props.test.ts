@@ -2,6 +2,7 @@ import type { ContractProp } from '@jay-framework/compiler-jay-html';
 import { describe, expect, it } from 'vitest';
 import {
     buildInstanceBindingScope,
+    coerceInstancePropValue,
     normalizeAndResolveInstanceProps,
     resolvePathValue,
     resolvePropBinding,
@@ -56,6 +57,48 @@ describe('resolve-instance-props', () => {
         });
     });
 
+    describe('coerceInstancePropValue', () => {
+        const statusEnum = { name: 'Status', values: ['success', 'warning', 'error'] };
+
+        it('maps an enum member-name string to its numeric value', () => {
+            expect(coerceInstancePropValue('warning', statusEnum)).toBe(1);
+        });
+
+        it('passes an already-numeric (stringified) enum value through as a number', () => {
+            expect(coerceInstancePropValue('2', statusEnum)).toBe(2);
+        });
+
+        it('coerces a number dataType', () => {
+            expect(coerceInstancePropValue('42', { name: 'number' })).toBe(42);
+        });
+
+        it('coerces a boolean dataType (true only for "true")', () => {
+            expect(coerceInstancePropValue('true', { name: 'boolean' })).toBe(true);
+            expect(coerceInstancePropValue('false', { name: 'boolean' })).toBe(false);
+        });
+
+        it('leaves a string dataType unchanged', () => {
+            expect(coerceInstancePropValue('bedroom', { name: 'string' })).toBe('bedroom');
+        });
+
+        it('leaves an unresolved binding ("") and untyped values untouched', () => {
+            expect(coerceInstancePropValue('', { name: 'number' })).toBe('');
+            expect(coerceInstancePropValue('7', undefined)).toBe('7');
+        });
+
+        it('passes an already-typed object/array binding through unchanged', () => {
+            const items = [{ id: 1 }, { id: 2 }];
+            expect(coerceInstancePropValue(items, undefined)).toBe(items);
+            const obj = { a: 1 };
+            expect(coerceInstancePropValue(obj, { name: 'string' })).toBe(obj);
+        });
+
+        it('passes an already-typed number/boolean binding through unchanged', () => {
+            expect(coerceInstancePropValue(3, { name: 'number' })).toBe(3);
+            expect(coerceInstancePropValue(false, { name: 'boolean' })).toBe(false);
+        });
+    });
+
     describe('normalizeAndResolveInstanceProps', () => {
         const categoryProductsProps = [
             { name: 'productId', dataType: { kind: 'primitive', name: 'string' } },
@@ -81,7 +124,7 @@ describe('resolve-instance-props', () => {
             expect(props).toEqual({
                 productId: 'prod-1',
                 categorySlug: 'bedroom',
-                limit: '4',
+                limit: 4,
             });
         });
 

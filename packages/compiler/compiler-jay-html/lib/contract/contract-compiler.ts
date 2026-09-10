@@ -2,9 +2,13 @@ import {
     Import,
     Imports,
     ImportsFor,
+    isArrayType,
     isAtomicType,
     isEnumType,
+    isObjectType,
+    isPromiseType,
     JAY_CONTRACT_EXTENSION,
+    JayType,
     mkRefsTree,
     RefsTree,
     WithValidations,
@@ -59,9 +63,23 @@ function generateRefsInterface(
     return { imports: imports.plus(imports2), renderedRefs };
 }
 
+/**
+ * Collect the names of enums declared by the ViewState types (`generateTypes`), by walking the same
+ * JayType tree it renders. A prop echoed to a same-named enum tag must not re-declare the enum
+ * (duplicate-identifier TS error); this drives that dedup structurally rather than by scraping text.
+ */
+function collectViewStateEnumNames(type: JayType, acc: Set<string> = new Set()): Set<string> {
+    if (isEnumType(type)) acc.add(type.name);
+    else if (isObjectType(type))
+        for (const key of Object.keys(type.props)) collectViewStateEnumNames(type.props[key], acc);
+    else if (isArrayType(type) || isPromiseType(type)) collectViewStateEnumNames(type.itemType, acc);
+    return acc;
+}
+
 function generatePropsInterface(
     contractName: string,
     props: ContractProp[],
+    existingEnumNames: Set<string> = new Set(),
 ): { propsInterface: string; propsEnums: string } {
     const propsTypeName = `${contractName}Props`;
     const enums: string[] = [];
@@ -77,10 +95,15 @@ function generatePropsInterface(
 
         if (isEnumType(prop.dataType)) {
             typeName = prop.dataType.name;
-            const genEnum = `export enum ${prop.dataType.name} {\n${prop.dataType.values
-                .map((_) => '  ' + _)
-                .join(',\n')}\n}`;
-            enums.push(genEnum);
+            // Skip enums already declared by the ViewState section (a prop echoed to a
+            // same-named enum tag) — re-emitting would be a duplicate-identifier TS error.
+            if (!existingEnumNames.has(prop.dataType.name)) {
+                const genEnum = `export enum ${prop.dataType.name} {\n${prop.dataType.values
+                    .map((_) => '  ' + _)
+                    .join(',\n')}\n}`;
+                enums.push(genEnum);
+                existingEnumNames.add(prop.dataType.name);
+            }
         } else if (isAtomicType(prop.dataType)) {
             typeName = prop.dataType.name;
         } else {
@@ -173,9 +196,14 @@ export async function compileContract(
             const propsTypeName = `${contractName}Props`;
             let renderedProps = '';
             if (hasProps) {
+                // Enums already declared by the ViewState section — a prop echoed to a same-named
+                // enum tag must not re-declare the enum (duplicate-identifier TS error). Walk the
+                // ViewState JayType tree (the same `type` generateTypes rendered above) structurally.
+                const existingEnumNames = collectViewStateEnumNames(type);
                 const { propsInterface, propsEnums } = generatePropsInterface(
                     contractName,
                     contract.props,
+                    existingEnumNames,
                 );
                 renderedProps = propsEnums ? `${propsEnums}\n\n${propsInterface}` : propsInterface;
             }

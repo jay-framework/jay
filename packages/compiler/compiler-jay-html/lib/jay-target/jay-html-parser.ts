@@ -748,15 +748,22 @@ async function parseHeadlessImports(
                     repeatedRefsTypeName,
                 );
 
+                // Relative import specifiers must start with ./ or ../, otherwise a same-dir
+                // (or plugin-resolved) contract becomes a bare specifier the bundler can't resolve.
+                const toRelativeModule = (to: string) => {
+                    const relative = path.relative(filePath, to);
+                    return relative.startsWith('.') ? relative : './' + relative;
+                };
+
                 const enumsToImportRelativeToJayHtml: EnumToImport[] = enumsToImport.map(
                     (enumsToImport) => ({
                         type: enumsToImport.type,
-                        declaringModule: path.relative(filePath, enumsToImport.declaringModule),
+                        declaringModule: toRelativeModule(enumsToImport.declaringModule),
                     }),
                 );
 
                 // Make contract path relative to the jay-html file for imports
-                const relativeContractPath = path.relative(filePath, contractFile);
+                const relativeContractPath = toRelativeModule(contractFile);
 
                 const enumsFromContract = enumsToImportRelativeToJayHtml
                     .filter((_) => _.declaringModule === relativeContractPath)

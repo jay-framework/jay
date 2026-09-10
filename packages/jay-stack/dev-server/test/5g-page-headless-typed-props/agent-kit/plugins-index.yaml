@@ -1,0 +1,7 @@
+plugins:
+  - name: test-widget
+    path: ./src/plugins/test-widget
+    contracts:
+      - name: widget
+        type: static
+        path: ./widget.jay-contract

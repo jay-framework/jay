@@ -10,6 +10,7 @@ import type { InstancePhaseData } from './instance-slow-render';
 import type { ForEachHeadlessInstance } from './types';
 import { computeForEachInstanceKey } from './types';
 import {
+    coerceInstancePropValue,
     normalizeAndResolveInstanceProps,
     resolvePathValue,
     resolvePropBinding,
@@ -144,14 +145,16 @@ export async function renderFastChangingData(
             if (!Array.isArray(items)) continue;
 
             const contractProps = comp.contract?.props ?? [];
-            const normalizePropName = (key: string) =>
-                contractProps.find((p) => p.name.toLowerCase() === key.toLowerCase())?.name ?? key;
+            const matchProp = (key: string) =>
+                contractProps.find((p) => p.name.toLowerCase() === key.toLowerCase());
 
             for (const item of items) {
                 const trackByValue = String(item[instance.trackBy]);
-                const props: Record<string, string> = {};
+                const props: Record<string, string | number | boolean | object> = {};
                 for (const [propName, binding] of Object.entries(instance.propBindings)) {
-                    props[normalizePropName(propName)] = resolvePropBinding(String(binding), item);
+                    const match = matchProp(propName);
+                    const resolved = resolvePropBinding(String(binding), item);
+                    props[match?.name ?? propName] = coerceInstancePropValue(resolved, match?.dataType);
                 }
 
                 if (comp.compDefinition.fastRender) {

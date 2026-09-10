@@ -1001,6 +1001,78 @@ describe('hydration', () => {
         });
     });
 
+    describe('5g. Headless — Tier 3 code-backed typed instance props (DL#190)', () => {
+        // Tier 3 code-backed instance (widget: .jay-contract + .ts). Two <jay:widget> instances
+        // pass enum/number/boolean props both statically (status="warning" count="5" active="false")
+        // and via {binding} from page fast ViewState (status="{reqStatus}" ...). Verifies instance
+        // props are coerced to their declared type at the single serialization source
+        // (normalizeAndResolveInstanceProps): the serialized __headlessInstances is typed, SSR DOM
+        // and client hydration agree with no `adoptBase … not found` warning, and — because Tier 3
+        // client interactivity works — the post-hydration __headlessInstances holds typed values.
+        // The child template gates icons on the enum (status), text on the number (count), and a
+        // flag on the boolean (active) — all three coercions drive rendering.
+        testFixture('5g-page-headless-typed-props', {
+            ssrChecks: (html) => {
+                // Static widget A: status=warning → [!]; count=5; active=false → no ACTIVE.
+                // Bound widget B: status={reqStatus}=success → [OK]; count={reqCount}=9;
+                // active={reqActive}=true → ACTIVE. These only render correctly if the
+                // enum/number/boolean props were coerced from their attribute/binding strings
+                // before the instance ViewState was rendered.
+                expect(html).toMatch(/\[!\]/);
+                expect(html).toMatch(/Count: 5/);
+                expect(html).toMatch(/\[OK\]/);
+                expect(html).toMatch(/Count: 9/);
+                // active=false on widget A → exactly one ACTIVE (widget B). A pre-DL#190 string
+                // "false" is truthy → a second ACTIVE would render, and the client (reading the same
+                // serialized ViewState) would hit `adoptBase … not found` for the active-gated span.
+                expect(html.match(/ACTIVE/g)?.length).toEqual(1);
+            },
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Typed Props');
+                const widgets = await page.$$('#target .widget');
+                expect(widgets).toHaveLength(2);
+                // Widget A: warning icon (status enum coerced), Count 5, no ACTIVE flag.
+                expect(await widgets[0].textContent()).toContain('[!]');
+                expect(await widgets[0].textContent()).toContain('Count: 5');
+                expect(await widgets[0].$('.active-flag')).toBeNull();
+                // Widget B: OK icon (status enum coerced), Count 9, ACTIVE flag.
+                expect(await widgets[1].textContent()).toContain('[OK]');
+                expect(await widgets[1].textContent()).toContain('Count: 9');
+                expect(await widgets[1].$('.active-flag')).not.toBeNull();
+                // The serialized __headlessInstances the client hydrated against holds typed
+                // values (number count, numeric enum status) — not the raw attribute strings.
+                const instances = await page.evaluate(
+                    () =>
+                        (window as any).__jay?.automation?.getPageState()?.viewState
+                            ?.__headlessInstances,
+                );
+                const values = Object.values(instances ?? {}) as Array<Record<string, unknown>>;
+                const counts = values.map((v) => v.count).sort();
+                expect(counts).toEqual([5, 9]);
+                for (const v of values) {
+                    expect(typeof v.count).toEqual('number');
+                    expect(typeof v.status).toEqual('number');
+                }
+            },
+            interactivityChecks: async (page) => {
+                // Widget A's +1 button increments its typed count 5 → 6 (stays a number).
+                const buttons = await page.$$('#target .widget button');
+                expect(buttons).toHaveLength(2);
+                await buttons[0].click();
+                await page.waitForFunction(
+                    () =>
+                        document
+                            .querySelectorAll('#target .widget .count')[0]
+                            ?.textContent?.includes('6'),
+                    { timeout: 2000 },
+                );
+                const counts = await page.$$('#target .widget .count');
+                expect(await counts[0].textContent()).toContain('Count: 6');
+                expect(await counts[1].textContent()).toContain('Count: 9'); // second unchanged
+            },
+        });
+    });
+
     describe('6a. Key-based headless component', () => {
         // Page uses key-based headless inclusion (key="headless" on the script tag)
         // instead of instance-based <jay:xxx> pattern.
@@ -1447,6 +1519,42 @@ describe('hydration', () => {
                     { timeout: 2000 },
                 );
                 expect(await page.textContent('#target .full .value')).toEqual('11');
+            },
+        });
+    });
+
+    describe('8n. Headfull FS — Tier 2 typed instance props (DL#190)', () => {
+        // Tier 2 pure headfull (badge: .jay-contract + .jay-html, no .ts). Two <jay:badge>
+        // instances pass enum/number/boolean props both statically and via {binding}. Verifies
+        // instance props are coerced to their declared type at the single serialization source
+        // (normalizeAndResolveInstanceProps): the serialized __headlessInstances is typed, SSR DOM
+        // and client hydration agree, and there is no `adoptBase … not found` warning.
+        testFixture('8n-page-headfull-fs-typed-props', {
+            pagesSubdir: 'pages',
+            ssrChecks: (html) => {
+                // Static badge: status=success → [OK]; count=42; featured=true → FEATURED.
+                // These only render if the enum/number/boolean props were coerced from their
+                // attribute strings before the server-element rendered the instance ViewState.
+                expect(html).toMatch(/badge-icon--success/);
+                expect(html).toMatch(/Count: 42/);
+                // Dynamic badge: status={currentStatus}=warning → [!]; count={liveCount}=7.
+                expect(html).toMatch(/badge-icon--warning/);
+                expect(html).toMatch(/Count: 7/);
+                // featured=false on the dynamic badge → exactly one FEATURED (the static badge).
+                // A pre-DL#190 string "false" is truthy → a second FEATURED would render, and the
+                // client (reading the same typed serialized ViewState) would then hit
+                // `adoptBase … not found` for the featured-gated coordinate.
+                expect(html.match(/FEATURED/g)?.length).toEqual(1);
+            },
+            // The `no hydration warnings` case (asserted for every fixture) is the direct DL#190
+            // regression guard here: the client adopts against the serialized __headlessInstances,
+            // so it only matches the SSR DOM (no `adoptBase … not found`) when those instance
+            // ViewStates are typed (featured:false, status:1, count:7) rather than strings.
+            hydrationChecks: async (page) => {
+                // Slow content is stable across hydration. (Post-hydration interactive re-render of
+                // a Tier 2 pure-headfull instance's own props is a separate client-side concern —
+                // DL#190 Q7 — so this fixture asserts SSR correctness + adopt-without-warnings.)
+                expect(await page.textContent('#target h1')).toEqual('Typed Props');
             },
         });
     });

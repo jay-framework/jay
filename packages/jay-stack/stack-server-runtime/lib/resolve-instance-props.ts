@@ -23,8 +23,13 @@ export function resolvePathValue(obj: object, path: string): unknown {
 
 /**
  * Resolve a single prop value: literal strings pass through; `{path}` reads from scope.
+ *
+ * DL#190 — the resolved value is returned **as-is** (not `String(...)`-ed). A binding to a
+ * page/parent object or array delivers the real object/array (stringifying it would flatten it to
+ * `"[object Object]"`); a binding to a number/boolean delivers that value. Coercion of literal
+ * attribute strings by declared `dataType` happens in `coerceInstancePropValue`.
  */
-export function resolvePropBinding(value: string, scope: object): string {
+export function resolvePropBinding(value: string, scope: object): unknown {
     const match = value.match(/^\{(.+)\}$/);
     if (!match) {
         return value;
@@ -33,7 +38,46 @@ export function resolvePropBinding(value: string, scope: object): string {
     if (resolved === undefined || resolved === null) {
         return '';
     }
-    return String(resolved);
+    return resolved;
+}
+
+/**
+ * DL#190 — coerce a single resolved instance prop value to its declared `dataType`.
+ *
+ * Instance props originate from HTML attributes (`status="success"`, `count="42"`,
+ * `featured="false"`), so a *literal* value arrives as a string and must be parsed to the contract's
+ * declared type; otherwise the serialized `__headlessInstances` ships `count:"42"` / `featured:"false"`,
+ * which diverges from the SSR DOM (the server-element codegen coerces) and breaks client hydration.
+ * Values that already arrived typed — an object/array/number/boolean bound from a higher
+ * component/page — pass through untouched.
+ *
+ * `dataType` is a structural view of `JayType` (this runtime package avoids a compiler dependency):
+ * an enum carries an ordered `values` array of member names; primitives carry `name`.
+ *
+ * Semantics match the compiler's `structural-coercions.ts` codegen exactly:
+ * - enum   → member-name string maps to its numeric value via declaration order; an
+ *            already-numeric value (possibly stringified) passes through as a number.
+ * - number → `Number(value)`
+ * - boolean→ `true` only for `'true'`
+ * - string → unchanged
+ * - `''` (unresolved fast/interactive binding at slow, DL#189) → left as `''`, never coerced.
+ */
+export function coerceInstancePropValue(
+    value: unknown,
+    dataType?: { name?: string; values?: string[] },
+): string | number | boolean | object {
+    // Already-typed (object/array/number/boolean bound from a higher component/page), an
+    // unresolved binding (''), or no declared type → pass through untouched.
+    if (typeof value !== 'string' || value === '' || !dataType) return value as any;
+    if (Array.isArray(dataType.values)) {
+        const memberIndex = dataType.values.indexOf(value);
+        if (memberIndex >= 0) return memberIndex;
+        const asNumber = Number(value);
+        return Number.isNaN(asNumber) ? value : asNumber;
+    }
+    if (dataType.name === 'number') return Number(value);
+    if (dataType.name === 'boolean') return value === 'true';
+    return value;
 }
 
 /**
@@ -79,19 +123,21 @@ export function normalizeInstancePropNames(
 }
 
 /**
- * Normalize HTML attribute names to contract prop names and resolve `{binding}` values.
+ * Normalize HTML attribute names to contract prop names, resolve `{binding}` values, and coerce
+ * each resolved value to its declared prop `dataType` (DL#190).
  */
 export function normalizeAndResolveInstanceProps(
     instanceProps: Record<string, string>,
     contractProps: RuntimeContract['props'],
     bindingContext?: InstanceBindingContext,
-): Record<string, string> {
+): Record<string, string | number | boolean | object> {
     const scope = buildInstanceBindingScope(bindingContext);
-    const normalized: Record<string, string> = {};
+    const normalized: Record<string, string | number | boolean | object> = {};
     for (const [key, value] of Object.entries(instanceProps)) {
         const match = contractProps?.find((p) => p.name.toLowerCase() === key.toLowerCase());
         const propName = match ? match.name : key;
-        normalized[propName] = resolvePropBinding(String(value), scope);
+        const resolved = resolvePropBinding(value, scope);
+        normalized[propName] = coerceInstancePropValue(resolved, match?.dataType);
     }
     return normalized;
 }

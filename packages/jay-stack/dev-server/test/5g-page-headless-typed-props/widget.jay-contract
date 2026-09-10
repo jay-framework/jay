@@ -1,0 +1,34 @@
+name: Widget
+props:
+  - name: itemId
+    type: string
+    required: true
+  - name: status
+    type: enum (success | warning | error)
+    required: true
+  - name: count
+    type: number
+    required: true
+  - name: active
+    type: boolean
+    required: true
+tags:
+  - tag: label
+    type: data
+    dataType: string
+    phase: slow
+  - tag: status
+    type: variant
+    dataType: enum (success | warning | error)
+    phase: fast+interactive
+  - tag: count
+    type: data
+    dataType: number
+    phase: fast+interactive
+  - tag: active
+    type: variant
+    dataType: boolean
+    phase: fast
+  - tag: bump
+    type: interactive
+    elementType: HTMLButtonElement

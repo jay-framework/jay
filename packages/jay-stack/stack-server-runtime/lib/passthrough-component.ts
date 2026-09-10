@@ -13,10 +13,17 @@ export interface PassthroughTag {
 
 const isFastPhase = (phase?: string) => phase === 'fast' || phase === 'fast+interactive';
 
-const pickByName = (props: Record<string, any>, names: string[]): Record<string, any> => {
+/**
+ * Pick the given tags' props by name.
+ *
+ * Values are already resolved and coerced to their declared `dataType` upstream, at the single
+ * serialization source `normalizeAndResolveInstanceProps` (DL#190) — the passthrough echoes them
+ * verbatim.
+ */
+const pick = (props: Record<string, any>, tags: PassthroughTag[]): Record<string, any> => {
     const out: Record<string, any> = {};
-    for (const name of names) {
-        if (props && name in props) out[name] = props[name];
+    for (const tag of tags) {
+        if (props && tag.name in props) out[tag.name] = props[tag.name];
     }
     return out;
 };
@@ -26,7 +33,8 @@ const pickByName = (props: Record<string, any>, names: string[]): Record<string,
  * component (`.jay-html` + `.jay-contract`, no `.ts`). Its ViewState is exactly the props the usage
  * site supplies, split per tag phase so slow fields bake into the SSG output and fast fields resolve
  * at request time. There is no code to transform, no services, and no carryForward — each phase
- * echoes its subset of props straight through (props ≡ tags, validated at compile time).
+ * echoes its subset of props straight through (props ≡ tags, validated at compile time). Values are
+ * typed by contract `dataType` upstream in `normalizeAndResolveInstanceProps` (DL#190).
  *
  * Used by the dev server, the production build, and the production server so a Tier 2 instance
  * behaves like a code-backed instance component at every phase without an author-written `.ts`.
@@ -34,17 +42,17 @@ const pickByName = (props: Record<string, any>, names: string[]): Record<string,
 export function makePassthroughInstanceComponent(
     tags: PassthroughTag[],
 ): AnyJayStackComponentDefinition {
-    const slowNames = tags.filter((t) => !isFastPhase(t.phase)).map((t) => t.name);
-    const fastNames = tags.filter((t) => isFastPhase(t.phase)).map((t) => t.name);
+    const slowTags = tags.filter((t) => !isFastPhase(t.phase));
+    const fastTags = tags.filter((t) => isFastPhase(t.phase));
 
     const definition: any = { services: [] };
-    if (slowNames.length > 0) {
+    if (slowTags.length > 0) {
         definition.slowlyRender = async (props: Record<string, any>) =>
-            phaseOutput(pickByName(props, slowNames), {});
+            phaseOutput(pick(props, slowTags), {});
     }
-    if (fastNames.length > 0) {
+    if (fastTags.length > 0) {
         definition.fastRender = async (props: Record<string, any>) =>
-            phaseOutput(pickByName(props, fastNames), {});
+            phaseOutput(pick(props, fastTags), {});
     }
     return definition as AnyJayStackComponentDefinition;
 }

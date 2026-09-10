@@ -1,0 +1,24 @@
+name: Page
+tags:
+  - tag: pageTitle
+    type: data
+    dataType: string
+    phase: slow
+
+  # Fast (request-time) page tag bound into the dynamic badge's fast `count` prop —
+  # proves a fast-phase number prop binding resolves and coerces at SSR (DL#189/#190).
+  - tag: liveCount
+    type: data
+    dataType: number
+    phase: fast
+
+  # Fast+interactive page tag bound into the dynamic badge's `status` enum prop —
+  # proves page ViewState -> child enum prop -> child ViewState, serialized as a number (DL#190).
+  - tag: currentStatus
+    type: variant
+    dataType: enum (success | warning | error)
+    phase: fast+interactive
+
+  - tag: cycleButton
+    type: interactive
+    elementType: HTMLButtonElement

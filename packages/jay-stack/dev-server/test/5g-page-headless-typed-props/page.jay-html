@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-headless"
+            plugin="test-widget"
+            contract="widget"></script>
+    <script type="application/jay-data" contract="./page.jay-contract">
+    </script>
+</head>
+<body>
+    <div>
+        <h1>{pageTitle}</h1>
+        <jay:widget itemId="A" status="warning" count="5" active="false">
+            <div class="widget">
+                <span class="icon-ok" if="status == success">[OK]</span>
+                <span class="icon-warn" if="status == warning">[!]</span>
+                <span class="icon-err" if="status == error">[X]</span>
+                <span class="label">{label}</span>
+                <span class="count">Count: {count}</span>
+                <span class="active-flag" if="active">ACTIVE</span>
+                <button ref="bump">+1</button>
+            </div>
+        </jay:widget>
+        <jay:widget itemId="B" status="{reqStatus}" count="{reqCount}" active="{reqActive}">
+            <div class="widget">
+                <span class="icon-ok" if="status == success">[OK]</span>
+                <span class="icon-warn" if="status == warning">[!]</span>
+                <span class="icon-err" if="status == error">[X]</span>
+                <span class="label">{label}</span>
+                <span class="count">Count: {count}</span>
+                <span class="active-flag" if="active">ACTIVE</span>
+                <button ref="bump">+1</button>
+            </div>
+        </jay:widget>
+    </div>
+</body>
+</html>

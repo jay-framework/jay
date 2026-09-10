@@ -208,6 +208,6 @@ describe('renderFastChangingData prop binding resolution', () => {
             {},
         );
 
-        expect(fastRender).toHaveBeenCalledWith(expect.objectContaining({ limit: '4' }));
+        expect(fastRender).toHaveBeenCalledWith(expect.objectContaining({ limit: 4 }));
     });
 });
