@@ -33,6 +33,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 163 | [built-in bindings and field comparison](163%20-%20params%20binding%20in%20templates)                            | `jay.params`, `jay.url.path` bindings; field-to-field `===` comparison; active menu pattern |
 | 164 | [inline style in body](164%20-%20inline%20style%20in%20body)                                                     | Body `<style>` tags crash the template parser; skip, warn, or hoist to head                 |
 | 165 | [graceful expression parse errors](165%20-%20graceful%20expression%20parse%20errors)                             | Convert expression parse errors to validation messages instead of crashing the page         |
+| 193 | [binding across component composition boundaries](193%20-%20binding%20across%20component%20composition%20boundaries.md) | **DESIGN** — parent-scope `$parent` binding, pure-component inner ref forwarding, override-introduced ref/data binding; mapped from compiler (type-gen) + runtime perspectives |
 
 ---
 
