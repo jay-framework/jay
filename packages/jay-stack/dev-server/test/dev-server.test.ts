@@ -1,5 +1,8 @@
 import { DevServerOptions, mkDevServer } from '../lib';
-import { generateFrozenPageHtml } from '@jay-framework/stack-server-build';
+import {
+    clearServerElementCache,
+    generateFrozenPageHtml,
+} from '@jay-framework/stack-server-build';
 import { JayRollupConfig } from '@jay-framework/vite-plugin';
 import path from 'path';
 import fs from 'node:fs';
@@ -246,6 +249,68 @@ target.appendChild(wrapped.element.dom);
         expect(rawHtml).toContain("import.meta.hot.on('jay:page-reload'");
         expect(rawHtml).not.toContain('/@vite/client');
         expect(rawHtml).toContain('Hello World');
+
+        await devServer.viteServer.close();
+    });
+
+    it('should render distinct frozen HTML per moduleCacheKey for same page filename', async () => {
+        const httpServer = http.createServer();
+        const devServer = await mkDevServer(optionsForDir('./simple-page', httpServer));
+        const fixtureDir = path.resolve(__dirname, 'simple-page');
+        const buildFolder = path.join(fixtureDir, 'build/dev');
+        const tsConfig = path.resolve(__dirname, '../../../tsconfig.json');
+
+        const contentA = `<!DOCTYPE html>
+<html><head><style>h1 { color: #ff0000; }</style>
+<script type="application/jay-data">data:</script></head>
+<body><h1>Scratch option A</h1></body></html>`;
+        const contentB = `<!DOCTYPE html>
+<html><head><style>h1 { color: #0000ff; }</style>
+<script type="application/jay-data">data:</script></head>
+<body><h1>Scratch option B</h1></body></html>`;
+
+        clearServerElementCache();
+
+        const htmlA = await generateFrozenPageHtml(
+            devServer.viteServer,
+            contentA,
+            'page.jay-html',
+            fixtureDir,
+            {},
+            buildFolder,
+            fixtureDir,
+            'index',
+            tsConfig,
+            fixtureDir,
+            'page',
+            undefined,
+            {
+                moduleCacheKey: path.join(fixtureDir, 'scratch-option-a.jay-html'),
+                outputRouteDir: 'scratch/test-batch/option-a',
+            },
+        );
+        const htmlB = await generateFrozenPageHtml(
+            devServer.viteServer,
+            contentB,
+            'page.jay-html',
+            fixtureDir,
+            {},
+            buildFolder,
+            fixtureDir,
+            'index',
+            tsConfig,
+            fixtureDir,
+            'page',
+            undefined,
+            {
+                moduleCacheKey: path.join(fixtureDir, 'scratch-option-b.jay-html'),
+                outputRouteDir: 'scratch/test-batch/option-b',
+            },
+        );
+
+        expect(htmlA).toContain('Scratch option A');
+        expect(htmlB).toContain('Scratch option B');
+        expect(htmlA).not.toEqual(htmlB);
 
         await devServer.viteServer.close();
     });

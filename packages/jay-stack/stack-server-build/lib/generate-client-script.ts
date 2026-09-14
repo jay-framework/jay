@@ -161,6 +161,7 @@ export function buildPageReloadHmrScript(): string {
         import.meta.hot.on('jay:page-reload', (data) => {
           const prefix = data.routePrefix;
           const pathname = window.location.pathname;
+          // AIditor editor shell — never reload from scratch preview HMR events.
           if (pathname === '/aiditor') return;
           if (pathname === prefix || pathname.startsWith(prefix + '/')) {
             window.location.reload();

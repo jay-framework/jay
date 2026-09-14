@@ -279,6 +279,19 @@ ${titleTag}${headExtras ? headExtras + '\n' : ''}  </head>
  *
  * @param format - 'page' for full HTML document, 'fragment' for body-only (shadow DOM)
  */
+export type GenerateFrozenPageHtmlOptions = {
+    injectDevHmr?: boolean;
+    /**
+     * Override server-module cache key (typically absolute scratch jay-html path).
+     * Without this, all scratch explore options sharing a production page filename collide.
+     */
+    moduleCacheKey?: string;
+    /** Override pre-rendered output subdirectory under build/pre-rendered/. */
+    outputRouteDir?: string;
+    /** Headfull component iframe preview — no viewport min-height fill. */
+    compactPreview?: boolean;
+};
+
 export async function generateFrozenPageHtml(
     vite: ViteDevServer,
     jayHtmlContent: string,
@@ -292,12 +305,13 @@ export async function generateFrozenPageHtml(
     sourceDir?: string,
     format: 'page' | 'fragment' = 'page',
     freezeName?: string,
-    options?: { injectDevHmr?: boolean },
+    options?: GenerateFrozenPageHtmlOptions,
 ): Promise<string> {
-    const jayHtmlPath = path.join(jayHtmlDir, jayHtmlFilename);
+    const moduleCacheKey = options?.moduleCacheKey ?? path.join(jayHtmlDir, jayHtmlFilename);
+    const compileRouteDir = options?.outputRouteDir ?? routeDir;
 
     // Reuse the same server element cache
-    let cached = serverModuleCache.get(jayHtmlPath);
+    let cached = serverModuleCache.get(moduleCacheKey);
     if (!cached) {
         cached = await compileAndLoadServerElement(
             vite,
@@ -306,11 +320,11 @@ export async function generateFrozenPageHtml(
             jayHtmlDir,
             buildFolder,
             projectRoot,
-            routeDir,
+            compileRouteDir,
             tsConfigFilePath,
             sourceDir,
         );
-        serverModuleCache.set(jayHtmlPath, cached);
+        serverModuleCache.set(moduleCacheKey, cached);
     }
 
     // Render HTML
@@ -358,6 +372,21 @@ export async function generateFrozenPageHtml(
         options?.injectDevHmr === true
             ? `\n    <script type="module">${buildPageReloadHmrScript()}\n    </script>`
             : '';
+    const compactPreviewCss =
+        options?.compactPreview === true
+            ? `
+      html, body {
+        margin: 0;
+        min-height: 0 !important;
+        height: auto !important;
+        overflow: visible !important;
+      }
+      #target {
+        display: block;
+        min-height: 0 !important;
+        height: auto !important;
+      }`
+            : '';
 
     return `<!doctype html>
 <html lang="en">
@@ -366,6 +395,7 @@ export async function generateFrozenPageHtml(
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Frozen${label}</title>
 ${headExtras ? headExtras + '\n' : ''}    <style>
+${compactPreviewCss}
       body::before {
         content: 'FROZEN${label ? `: ${freezeName}` : ''}';
         position: fixed;

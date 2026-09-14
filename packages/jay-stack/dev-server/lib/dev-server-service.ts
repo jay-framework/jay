@@ -17,6 +17,11 @@ import { getLogger } from '@jay-framework/logger';
 import { runLoadParams } from '@jay-framework/stack-server-runtime';
 import { generateFrozenPageHtml, loadPageParts } from '@jay-framework/stack-server-build';
 import {
+    renderHeadfullPagePreview,
+    type HeadfullPagePreviewInput,
+    type HeadfullPagePreviewResult,
+} from './render-headfull-page-preview.js';
+import {
     renderScratchPagePreview,
     type ScratchPagePreviewInput,
     type ScratchPagePreviewResult,
@@ -218,6 +223,21 @@ export class DevServerService {
             matched.fsRoute,
             input,
             this.pagesBase,
+            this.projectBase,
+            this.buildFolder,
+            this.jayRollupConfig,
+        );
+    }
+
+    /**
+     * SSR-render a headfull component as a full HTML document for iframe preview.
+     */
+    async renderHeadfullPagePreview(
+        input: HeadfullPagePreviewInput,
+    ): Promise<HeadfullPagePreviewResult> {
+        return renderHeadfullPagePreview(
+            this.vite,
+            input,
             this.projectBase,
             this.buildFolder,
             this.jayRollupConfig,

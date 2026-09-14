@@ -57,6 +57,11 @@ export async function createViteServer(options: CreateViteServerOptions): Promis
             {
                 name: 'jay-stack-hmr',
                 handleHotUpdate({ file }) {
+                    // AIditor scratch + canvas docs live under .aiditor/ — Jay handles
+                    // invalidation via custom watchers; suppress Vite full-page reload.
+                    if (file.includes('.aiditor/') || file.includes('.aiditor\\')) {
+                        return [];
+                    }
                     if (
                         file.endsWith('.jay-html') ||
                         file.endsWith('.jay-contract') ||

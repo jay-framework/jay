@@ -40,6 +40,7 @@ describe('buildPageReloadHmrScript', () => {
         expect(script).toContain("import.meta.hot.on('jay:page-reload'");
         expect(script).toContain('window.location.reload()');
         expect(script).toContain("pathname.startsWith(prefix + '/')");
+        expect(script).toContain("pathname === '/aiditor'");
     });
 });
 

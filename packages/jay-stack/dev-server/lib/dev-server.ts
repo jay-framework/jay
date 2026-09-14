@@ -38,6 +38,7 @@ import {
     generateSSRPageHtml,
     generateFrozenPageHtml,
     clearServerElementCache,
+    invalidateServerElementCache,
 } from '@jay-framework/stack-server-build';
 import { ProjectClientInitInfo } from '@jay-framework/stack-server-build';
 import { Request, Response } from 'express';
@@ -1612,16 +1613,17 @@ function setupScratchPreviewInvalidation(
     vite.watcher.add(scratchRoot);
     const scratchPreviewRoutePrefix = '/aiditor/scratch-preview';
 
-    const handleScratchWatch = (changedPath: string): void => {
+    const handleScratchJayHtmlEvent = (changedPath: string): void => {
         if (!changedPath.startsWith(scratchRoot)) return;
         if (!changedPath.endsWith('.jay-html')) return;
-        clearServerElementCache();
+        invalidateServerElementCache(path.resolve(changedPath));
         sendRoutePrefixReload(vite, scratchPreviewRoutePrefix);
-        getLogger().info(`[ScratchPreview] Cache cleared (scratch jay-html changed: ${changedPath})`);
+        getLogger().info(`[ScratchPreview] Cache invalidated (scratch jay-html: ${changedPath})`);
     };
 
-    vite.watcher.on('change', handleScratchWatch);
-    vite.watcher.on('add', handleScratchWatch);
+    vite.watcher.on('change', handleScratchJayHtmlEvent);
+    vite.watcher.on('add', handleScratchJayHtmlEvent);
+    vite.watcher.on('unlink', handleScratchJayHtmlEvent);
 }
 
 function setupSlowRenderCacheInvalidation(

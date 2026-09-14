@@ -4,6 +4,7 @@
  */
 
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import type { ViteDevServer } from 'vite';
 import type { JayRoute } from '@jay-framework/stack-route-scanner';
@@ -33,6 +34,25 @@ export type ScratchPagePreviewResult =
 
 function getRouteDir(route: JayRoute): string {
     return route.rawRoute.replace(/^\//, '') || 'index';
+}
+
+/**
+ * Unique pre-rendered output dir per scratch option so compiled server elements and CSS
+ * do not overwrite each other (all share page.jay-html filename + production jayHtmlDir).
+ */
+export function scratchPreviewOutputRouteDir(
+    projectBase: string,
+    scratchJayHtmlPath: string,
+): string {
+    const rel = path
+        .relative(path.resolve(projectBase), path.resolve(scratchJayHtmlPath))
+        .replace(/\\/g, '/');
+    const match = rel.match(/\.aiditor\/scratch\/([^/]+)\/([^/]+)\//);
+    if (match) {
+        return `scratch/${match[1]}/${match[2]}`;
+    }
+    const hash = createHash('sha256').update(scratchJayHtmlPath).digest('hex').slice(0, 16);
+    return `scratch/${hash}`;
 }
 
 export async function renderScratchPagePreview(
@@ -130,6 +150,7 @@ export async function renderScratchPagePreview(
         );
 
         const routeDir = getRouteDir(route);
+        const resolvedScratchPath = path.resolve(input.scratchJayHtmlPath);
         let html = await generateFrozenPageHtml(
             vite,
             injectedJayHtml,
@@ -143,11 +164,16 @@ export async function renderScratchPagePreview(
             path.join(projectBase, 'src'),
             'page',
             undefined,
-            input.injectDevHmr ? { injectDevHmr: true } : undefined,
+            {
+                injectDevHmr: input.injectDevHmr === true,
+                moduleCacheKey: resolvedScratchPath,
+                outputRouteDir: scratchPreviewOutputRouteDir(projectBase, resolvedScratchPath),
+            },
         );
 
+        // Stable path for Vite html-proxy — query strings break module lookup when iframes update.
         if (input.injectDevHmr) {
-            html = await vite.transformIndexHtml(input.requestUrl ?? '/', html);
+            html = await vite.transformIndexHtml('/aiditor/scratch-preview', html);
         }
 
         return { ok: true, html };

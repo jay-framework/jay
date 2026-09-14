@@ -11,4 +11,10 @@ export {
     type ScratchPagePreviewInput,
     type ScratchPagePreviewResult,
 } from './dev-server-service';
+export {
+    headfullPreviewOutputRouteDir,
+    renderHeadfullPagePreview,
+    type HeadfullPagePreviewInput,
+    type HeadfullPagePreviewResult,
+} from './render-headfull-page-preview';
 export { registerDevHtmlRoute, type DevHtmlRouteHandler } from './dev-html-routes';
