@@ -1,0 +1,18 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+    <script type="application/jay-headless"
+            plugin="test-badge"
+            contract="test-badge"></script>
+</head>
+<body>
+<div>
+    <h1>{title}</h1>
+    <!-- "pending" is not a member of enum(success | warning | error) — must fail validation (DL#192) -->
+    <jay:test-badge label="Live" status="pending"><span>{label}</span></jay:test-badge>
+</div>
+</body>
+</html>

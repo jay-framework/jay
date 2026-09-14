@@ -1,0 +1,6 @@
+name: test-badge
+module: ./test-badge
+contracts:
+  - name: test-badge
+    contract: ./test-badge.jay-contract
+    component: testBadge

@@ -1,0 +1,12 @@
+name: Badge
+props:
+  - name: label
+    type: string
+    required: true
+  - name: status
+    type: enum (success | warning | error)
+    required: true
+tags:
+  - tag: label
+    type: data
+    dataType: string

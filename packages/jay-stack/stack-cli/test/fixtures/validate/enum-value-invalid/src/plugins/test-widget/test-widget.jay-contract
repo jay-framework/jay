@@ -1,0 +1,9 @@
+name: Widget
+props:
+  - name: status
+    type: enum (active | inactive | archived)
+    required: true
+tags:
+  - tag: label
+    type: data
+    dataType: string
