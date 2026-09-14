@@ -50,6 +50,22 @@ templates & context switching), DL#14/#24 (References API).
   traps `EVENT_TRAP` (onXxx → addEventListener) and `DELEGATE_REFS_TO_COMP_TRAP` (forward
   member access to the mounted instance's public API).
 
+**Refs carry a live, updated scope viewState (key for this design).** Unlike `dt`/`da` — which
+receive viewState only as the argument of their `update(newData)` closure — a `RefImpl` holds
+its scope's viewState as a **field** (`node-reference.ts:240`) that is kept current by
+`update(newData) { this.viewState = newData }` (line 293-295). `formatEvent` then injects that
+live viewState into every `JayEvent` delivered to handlers:
+```ts
+formatEvent(event) { return { event, viewState: this.viewState, coordinate: this.coordinate }; }
+```
+So an event handler `refs.x.onclick(({ event, viewState, coordinate }) => …)` already gets the
+**current** scope viewState for that ref — for a ref inside a `forEach`, the correct per-item
+viewState (via the collection's per-ref `update`), not a stale capture. Refs are therefore a
+**second viewState-threading channel** that is already live, and the type side mirrors it:
+`${name}Ref<ParentVS> = MapEventEmitterViewState<ParentVS, …>` re-bases the event viewState to
+the parent scope. This is the natural place to also carry **parent** viewState (issue 3 in
+event handlers) and it is what forwarding must re-base correctly (issue 1).
+
 ### How expression scope works
 - `Variables` tracks `currentVar` (`vs`, `vs1`, `vs2` by depth), `currentType`, and a
   `parent` link. `forEach` creates a child scope via `childVariableFor(accessor)` (itemType,
@@ -167,6 +183,21 @@ mapped). It also means Q3-option-a ("splice override at outer scope, no runtime 
 holds for **static/one-shot** outer bindings; reactive outer bindings inside an inner
 `forEach` hit the same staleness wall.
 
+**But parent access in _event handlers_ is much cheaper** — because refs already hold a live,
+updated scope viewState (Current architecture §"Refs carry a live scope viewState"). A ref
+inside a `forEach` already delivers the current item viewState to its handler; extending
+`RefImpl` to also hold the parent viewState (and `formatEvent` to include it) is a localized
+change to one already-live channel:
+```ts
+// today the handler event carries the ref's own scope viewState:
+refs.removeBtn.onclick(({ event, viewState /* item */ }) => remove(viewState.id));
+// parent-in-event goal — piggyback on the ref's live viewState field, add a parent slot:
+refs.removeBtn.onclick(({ event, viewState, parentViewState }) => remove(viewState.id, parentViewState.listTitle));
+```
+So issue 3 splits by binding kind: **text/attribute** parent bindings need the `dt`/`da`
+staleness fix above; **event-handler** parent access rides the ref channel with a smaller,
+already-live extension. Worth deciding (Q1/Q6) whether we support both or start with events.
+
 ### B. Pure-component inner-ref forwarding — issue 1
 
 **Inner button** (`button.jay-html` + `button.jay-contract`, Tier 1/3 — has `onClick`):
@@ -207,6 +238,14 @@ export interface CardRefs {
 // page.ts usage:
 refs.signupCard.cta.onClick(() => navigate('/signup'));
 ```
+
+**Runtime nuance — event viewState re-basing.** The forwarded `cta` ref lives inside `Card` and
+its `RefImpl.viewState` is `Card`'s scope. But the type `ButtonRef<PageViewState>` promises the
+usage site's viewState in the event. Forwarding must therefore re-base what `formatEvent`
+delivers so `cta.onClick(({ viewState }) => …)` gets the **page** viewState, not `Card`'s inner
+one — either by constructing the forwarded ref against the usage-site scope, or by mapping the
+event as it crosses the boundary. This is exactly the live-viewState channel from the
+architecture note, seen from the other side.
 
 **Under a `forEach` inside the composite** (the case the user flagged) — the forwarded ref
 becomes a collection, matching the existing single-vs-collection machinery:
@@ -307,6 +346,16 @@ user-driving features; issue 3 (forEach parent) is explicitly low priority but i
 cheap parent-data primitive first, then overrides on top, then the refs-forwarding work).
 > _Answer:_
 
+**Q6. Parent access — event handlers vs text/attribute bindings (surfaced by the ref
+channel).** Parent access in **event handlers** is cheap: refs already hold a live, updated
+scope viewState (Examples §A), so it's a localized `RefImpl`/`formatEvent` extension. Parent
+access in **text/attribute** bindings needs the `dt`/`da` staleness fix (new parent-aware
+helper + `ConstructContext` pointer). Do we support both, or ship **event-handler parent access
+first** (covers most real cases: "click in a row, act on the list") and defer text/attr?
+**Recommendation: event-handler first** — smaller, rides an already-live channel; add text/attr
+parent bindings only if a concrete need appears.
+> _Answer:_
+
 ---
 
 ## Design
@@ -334,6 +383,12 @@ parent data:
 - Add a parent-aware binding helper (e.g. `dtp`/`dap`) whose closure receives `(item, parent)`
   — or thread a `{self, parent}` envelope through item `update` (Examples §A, A1/A2).
 - Only truly-static outer bindings (no reactivity) could skip this; not worth a separate path.
+
+**Two channels, two costs (Q6):** the above is the **text/attribute** path. **Event-handler**
+parent access is cheaper because refs already thread a live scope viewState: extend `RefImpl`
+to also hold the parent viewState (fed by the same per-ref `update`) and have `formatEvent`
+include it (`{ event, viewState, parentViewState, coordinate }`). The type side already has the
+re-basing vehicle (`MapEventEmitterViewState`). Recommend shipping the ref/event path first.
 
 **Files:** `expression-parser.pegjs` (+ `.cjs` rebuild + prettier), `expression-compiler.ts`
 (`resolveAccessor`, maybe `Accessor`), no client runtime change. Deferred: `context.ts`,
