@@ -127,15 +127,16 @@ The three problems reduce to **two runtime capabilities**:
   must be *surfaced* to the outer scope and the passthrough/override component must *forward* the
   child refs through its public API (the existing `DELEGATE_REFS_TO_COMP_TRAP` already forwards
   member access at runtime). **Forwarding is pure passthrough — no event re-basing:** a surfaced
-  ref keeps the scope it was compiled in (inner for §B, outer for override option-a), so there is
-  nothing to map across the boundary and no `formatEvent` change (§B, §C).
+  ref keeps the scope it was compiled in (inner `CardViewState` for §B; the specialization's
+  `Panel$1ViewState` for overrides, §C), so there is nothing to map across the boundary and no
+  `formatEvent` change (§B, §C).
 
 The three features draw on these in different combinations:
 
 | Feature | Parent-data (A) | Forwarded refs (B) |
 | --- | --- | --- |
 | 1. Pure-component inner refs | no | **yes** |
-| 2. Overrides — bind outer data | **yes** (or splice-at-outer-scope) | — |
+| 2. Overrides — bind outer data | only inside inner `forEach` | via inheritance (§C) |
 | 2. Overrides — reach injected refs | — | **yes** |
 | 3. forEach parent binding | **yes** | no |
 
@@ -234,8 +235,9 @@ So issue 3 is a **compiler + runtime** change scoped to **reactive text/attribut
 Runtime change: `ConstructContext` gains `parent` + `update`; the scope-switch updates
 (`mkUpdateCollection`, `mkUpdateWithData`, `forAsync`/`resolved`) call `parentContext.update`.
 Cost is **O(scopes)** writes per cascade, not O(items), and no user data is mutated. Secure/bridge
-re-attaches parent on the receiving side. This also settles Q3-option-a: reactive outer bindings
-inside an inner `forEach` reuse this same carrier.
+re-attaches parent on the receiving side. This also serves the override sub-case (Q3-option-c):
+an override mounted inside the inner component's `forEach` reaches its hoisted member via this same
+carrier.
 
 ### B. Pure-component inner-ref forwarding — issue 1
 
@@ -333,31 +335,75 @@ injects a button and binds **outer** data into it:
 </jay:Panel>
 ```
 
-**What must be generated for the page** (override compiled against the **outer** ViewState/Refs,
-per Q3-option-a):
+**What must be generated — an override *specialization* by inheritance (recommended, Q3-option-c).**
+The override turns `Panel` into a per-usage-site specialization `Panel$1` whose ViewState and Refs
+**inherit** the base component's and **add** the override's members:
 
 ```ts
-export interface PageElementRefs {
-    save: HTMLElementProxy<PageViewState, HTMLButtonElement>;   // override ref grafted to outer tree
+// generated for the Panel$1 specialization (one per override site):
+interface Panel$1ViewState extends PanelViewState {
+    documentName: string;                 // hoisted from the override's outer-data references
 }
-export interface PageViewState { documentName: string; /* ... */ }
+interface Panel$1Refs extends PanelRefs {
+    save: HTMLElementProxy<Panel$1ViewState, HTMLButtonElement>;   // override ref, Panel$1 scope
+}
 
-// page.ts usage:
-refs.save.onclick(() => store.save());
+// page.ts usage — the specialization instance's forwarded ref surfaces at the page:
+refs.panel.save.onclick(({ viewState }) => store.save(viewState.documentName));
 ```
 
-Today none of this is generated: override provenance is dropped from the AST, so the compiler
-can neither graft `save` into `PageElementRefs` nor resolve `{documentName}` against the page
-scope (it currently resolves against the **inner** Panel scope and would error/miscompile).
+Three properties, all consistent with §B:
+- **Events carry `Panel$1ViewState` (no re-basing).** `Panel$1ViewState extends PanelViewState`,
+  so the event is a `PanelViewState` plus the override's added members — the same *keep the inner
+  scope* rule as forwarded pure-component refs. (Correction to the first sketch: the ref is typed
+  `HTMLElementProxy<Panel$1ViewState, …>`, **not** `<PageViewState, …>` — events carry the
+  specialized Panel's view state, per the "no re-basing" rule.)
+- **Bindings pass through, like a pure component.** `{documentName}` resolves against
+  `Panel$1ViewState.documentName`, exactly as a pure component's template reads its own ViewState.
+- **Outer data flows down the normal channel.** The override's free outer references (here
+  `documentName`) are *hoisted* into `Panel$1ViewState` as added members, typed by resolving them
+  against the **outer** (page) scope where the override is authored, and **supplied by the outer
+  scope** as extra data — no runtime back-pointer. **`Panel$1ViewState extends PanelViewState` is a
+  compile-time composition** for typing the override subtree's bindings and forwarded ref; whether
+  the captured data literally becomes a member of the component's runtime ViewState depends on the
+  tier (Q8): trivially yes for Tier 2 (props = tags = ViewState), but for a Tier 3 (coded) Panel it
+  rides the `ConstructContext` carrier instead — Panel's own ViewState stays exactly what its code
+  produces.
 
-**Consistent with §B — override refs are also surfaced without re-basing.** The rule is uniform:
-*a surfaced ref carries the scope it was authored/compiled in, and we never re-base its event
-viewState.* For pure-component forwarding (§B) that scope is the inner component's; for overrides
-under option-a (Q3) the fragment is compiled **against the outer scope**, so `save` is genuinely
-outer-scoped and `refs.save.onclick(({ viewState }) => …)` receives `PageViewState` — not because
-we mapped it across a boundary, but because that is the scope it was compiled in. No `formatEvent`
-change in either case. (Under option-b the override compiles against the inner scope and the ref
-would carry inner-scope viewState, reaching outer data via `$parent` — still no re-basing.)
+Today none of this is generated: override provenance is dropped from the AST, so the compiler
+neither emits a `Panel$1` specialization, grafts `save` into the forwarded Refs, nor hoists
+`documentName` into `Panel$1ViewState` (it currently resolves `{documentName}` against the base
+Panel scope and would error/miscompile).
+
+**Where the hoisted members come from — automatic capture, not author ceremony.** This is the
+crux, and the answer is that there is no ceremony: it is ordinary lexical scoping plus
+free-variable capture. The override fragment is *authored in `page.jay-html`*, so its bindings
+belong to the **outer (page) scope** — exactly like every other binding in that file. So:
+- `{documentName}` resolves against the page scope **because that is where it is written** — no
+  `$parent`, no declaration on `<jay:Panel>`.
+- The compiler scans the override fragment for the outer identifiers it references (a free-variable
+  scan) and *that set is* the added members of `Panel$1ViewState`. The author never lists them —
+  it is **capture, not declaration**. Mental model: the override is a *closure over the outer
+  scope*, and `Panel$1ViewState` is its automatically-computed capture record.
+- `$parent` stays **compiler-internal**. The author never types it in an override; the compiler
+  only emits a parent-access when it splices the override inside `Panel`'s own `forEach` to reach
+  the hoisted top-level member from the item scope (the sub-case below). This is why option-b's
+  author-facing `$parent.` (noisy) is rejected for overrides — the same primitive is used, but
+  under the hood.
+
+This keeps DL#84 intact: DL#84 bans a component's *own* template from reaching up into its parent.
+The override fragment is **not** Panel's own template — it is page-authored content injected into
+Panel, so resolving its bindings against the page scope is lexically correct, not an isolation
+breach. (Edge case to validate: an outer reference whose name collides with an existing
+`PanelViewState` member of a *different* type makes `Panel$1ViewState extends PanelViewState`
+ill-typed — report it. Reaching Panel's *own* internal data from an override is a separate
+slot-props/render-props concern, out of scope for this DL.)
+
+**Sub-case — override region inside Panel's own `forEach`.** If the override mounts inside an
+internal `Panel` `forEach`, the added member `documentName` lives at `Panel$1` top level but the
+spliced override elements render in the item scope — reading it there is exactly Capability A
+(`$parent`). So the inheritance model is the **type/surfacing** story; Capability A remains the
+runtime primitive for this sub-case. They compose (this is the strongest reason to build A first).
 
 ## Questions (for the user)
 
@@ -387,19 +433,34 @@ that a pure component **cannot `forEach` internally** (no composite/array prop �
 composite itself is repeated at the usage site.
 > _Answer:_
 
-**Q3. Overrides — bind-at-outer vs parent-pointer (issue 2-data).** Two designs:
-(a) **Splice-at-outer-scope:** persist override provenance on the AST node and compile the
-override fragment against the **outer** ViewState/Refs (the scope where `<jay:Container>` is
-written). Natural — the override author is writing in the outer file. Static outer bindings
-need no runtime change; but reactive outer bindings that land inside an inner `forEach` hit the
-same staleness wall as issue 3 (Examples §A), so this shares Capability A's runtime work there.
-(b) **Parent-pointer:** keep compiling override against inner scope, add `$parent` to reach
-outer data (reuses Capability A directly).
-**Recommendation: (a)** — it matches author intuition (the author writes the override in the
-outer file, so bindings resolving to outer scope is least surprising). Where an override lands
-inside the inner component's `forEach`, its reactive outer bindings reuse Capability A's live
-`ConstructContext` carrier (no separate mechanism). Flag: interaction with inner `forEach` mount
-points still needs design in Phase 2.
+**Q3. Overrides — how is override-introduced data/refs modeled? (issue 2-data).** Three designs:
+(a) **Splice-at-outer-scope:** persist override provenance, compile the override fragment against
+the **outer** ViewState/Refs. Bindings and refs resolve to the outer (page) scope; events carry
+`PageViewState`. Superseded by (c) — it re-bases events to the outer scope, breaking the uniform
+"surfaced ref keeps its compiled scope" rule from §B.
+(b) **Parent-pointer:** compile override against the inner scope, add `$parent` to reach outer
+data (reuses Capability A directly). Verbose for the author (every outer reference needs
+`$parent.`).
+(c) **Inheritance / specialization — RECOMMENDED.** The override produces a per-site subtype
+`Panel$1ViewState extends PanelViewState` / `Panel$1Refs extends PanelRefs` (Examples §C): the
+override's added data members and refs are *added* to the base via inheritance; the override's
+free outer references are **hoisted** into the extended ViewState (typed against the outer scope)
+and **supplied by the outer scope** as extra data down the normal update channel — the same
+props→ViewState passthrough as a Tier 2 pure component. Events carry `Panel$1ViewState` (no
+re-basing), bindings pass through (`{documentName}` reads `Panel$1ViewState.documentName`), and
+the ref forwards up like any pure-component ref.
+**Recommendation: (c)** — it unifies overrides with the §B pure-component model (one "surfaced
+ref keeps its compiled scope, data passes through as ViewState" rule for both features), keeps
+events un-re-based, and routes outer data through the existing top-down update channel rather than
+a runtime back-pointer. The one sub-case still needing Capability A is an override mounted inside
+`Panel`'s own internal `forEach` (the hoisted member sits at `Panel$1` top level, read from an
+item scope → `$parent`); the type/surfacing model and the runtime `$parent` primitive compose.
+**How the hoist is computed (resolved):** no author ceremony — the override is authored in the
+outer file, so its bindings resolve against the outer scope by ordinary lexical scoping, and the
+compiler's free-variable scan of the fragment *is* the capture list that becomes
+`Panel$1ViewState`'s added members (see §C "automatic capture"). Author never declares them and
+never writes `$parent` (that stays compiler-internal for the inner-`forEach` sub-case). Still
+open: the `Panel$1` naming/uniquing convention, and validating outer/inner name collisions.
 > _Answer:_
 
 **Q4. Reactive parent bindings need runtime work on _all_ targets (revised).** The
@@ -498,6 +559,30 @@ for scope state), but worth stating explicitly since it changes the object's lif
 and means its `data` is now mutable state, not an immutable snapshot.
 > _Answer:_
 
+**Q8. How does pass-through data reach a component *with code* (Tier 3)?** For Tier 2 (pure),
+pass-through is trivial: props mirror tags = ViewState (DL#187 Q3/Q9), so a captured override
+member is already a ViewState member. Tier 3 breaks that — the `.ts` computes ViewState from props,
+and DL#187 Q3 / DL#84 deliberately keep props ≠ ViewState. Two routes for getting the override's
+captured outer data to the override subtree of a coded component:
+(a) **Props default to ViewState members** — auto-merge every prop into the ViewState unless a
+declared ViewState field of the same name shadows it. Makes pass-through uniform across tiers, but
+**widens ViewState type-gen for every coded component**, invents implicit members + shadowing
+rules, and erases the props/ViewState separation Tier 3 exists to provide. Broad change for a
+narrow need.
+(b) **Targeted supply via the live-context carrier — RECOMMENDED.** Keep the component's ViewState
+exactly what its code declares. `Panel$1ViewState extends PanelViewState` is a **compile-time
+composition** for typing the override subtree's bindings and forwarded ref — **not** a runtime
+member added to Panel's ViewState object. At runtime the captured data rides the same
+`ConstructContext` carrier introduced for Capability A (Q7), injected at the override mount point;
+the override subtree reads its captured members from that context. No props→ViewState projection,
+no widened coded-component type-gen, separation intact.
+**Recommendation: (b).** The narrow need (make captured outer data visible to the override
+subtree) is served by the carrier we already need; Panel's own code and template never see it, so
+it should never enter Panel's runtime ViewState. Route (a) is a large, surprising semantic change
+to Tier 3 for something the carrier already covers. (Tier 2 stays trivial by its own props=tags
+rule — no carrier needed there.)
+> _Answer:_
+
 ---
 
 ## Design
@@ -572,12 +657,14 @@ component contributes no refs. To forward:
    at the usage site; the existing collection machinery covers it once the tree carries the
    forwarded ref.
 
-**Issue 2 — override-introduced refs.** Requires persisting override provenance on the AST
-node (re-introduce `overrides: OverrideDeclaration[]` on the `<jay:Name>` node) so the injected
-elements/components can (a) be compiled with a ref surface and (b) be grafted into the outer
-RefsTree. Files: `jay-html-overrides.ts`, `jay-html-parser.ts` injection sites,
-`jay-html-compile-refs.ts` (`graftTemplateOnlyRefs`), `contract-to-view-state-and-refs.ts`,
-`jay-html-compiler-shared.ts`.
+**Issue 2 — override-introduced refs (inheritance model, Q3-option-c).** Requires persisting
+override provenance on the AST node (re-introduce `overrides: OverrideDeclaration[]` on the
+`<jay:Name>` node), then emitting a per-site specialization: `Panel$1Refs extends PanelRefs` with
+the override's refs *added* (typed against `Panel$1ViewState`, not the outer VS — §C). The added
+refs graft into the specialization's RefsTree and forward up exactly like §B pure-component refs
+(same `DELEGATE_REFS_TO_COMP_TRAP` passthrough, no re-basing). Files: `jay-html-overrides.ts`,
+`jay-html-parser.ts` injection sites, `jay-html-compile-refs.ts` (`graftTemplateOnlyRefs`),
+`contract-to-view-state-and-refs.ts`, `jay-html-compiler-shared.ts`.
 
 **Runtime (B):** `references-manager.ts` (`mkRefs`/`mkManagedRef`) and `node-reference.ts`
 (`ComponentRefsImpl`, `DELEGATE_REFS_TO_COMP_TRAP`) already forward member access to a mounted
@@ -587,15 +674,27 @@ API *carries* the child refs — mostly a compiler-emission change, minimal runt
 carrying the refs: `RefImpl` keeps delivering its own scope viewState via the existing
 `formatEvent`; no boundary-crossing viewState mapping is added.
 
-### Issue 2 — override data binding (2a, recommended option-a)
+### Issue 2 — override data binding (inheritance model, recommended option-c)
 
-Compile the override fragment against the **outer** ViewState/Refs (splice-at-outer-scope),
-persisting provenance so the compiler knows which scope each override node belongs to. Client:
-no runtime change (outer vars are lexically available at the injection call site if we emit the
-mount there). The open risk is the inner component's own `forEach`/conditional mount points —
-if the override lands inside an inner `forEach`, outer bindings and inner-item bindings
-coexist, which pulls in Capability A (`$parent`) as the disambiguator. **This is the strongest
-argument for building A first (Q5).**
+Emit a per-site specialization `Panel$1ViewState extends PanelViewState` (§C, Q3-c). The added
+members are computed **by capture, not declaration**: the override is authored in the outer file,
+so its bindings resolve against the outer scope by ordinary lexical scoping; the compiler's
+free-variable scan of the fragment is the capture list, and each captured outer identifier
+(typed by resolving against the outer scope) becomes an added `Panel$1ViewState` member, supplied
+from the outer scope as extra data down the normal update channel — the same props→ViewState
+passthrough as a Tier 2 pure component. The override's bindings then read `Panel$1ViewState`
+(pass-through), and its refs forward up carrying `Panel$1ViewState` (no re-basing). `$parent` is
+never authored here — the compiler emits it internally only for the inner-`forEach` sub-case
+below. Persist override provenance so the compiler knows which nodes belong to the specialization.
+Validate outer/inner name collisions (an outer capture colliding with a differently-typed
+`PanelViewState` member makes the `extends` ill-typed). Files: `jay-html-overrides.ts`,
+`jay-html-parser.ts`, `jay-html-compiler.ts` (emit the specialization + extra-data wiring),
+`expression-compiler.ts` (free-var scan / outer-scope typing), `contract-to-view-state-and-refs.ts`.
+
+The one remaining sub-case: an override mounted inside `Panel`'s own internal `forEach` — the
+hoisted member sits at `Panel$1` top level but is read from an item scope, which is Capability A
+(`$parent`). The inheritance model (type/surfacing) and the `$parent` runtime primitive compose.
+**This is the strongest argument for building A first (Q5).**
 
 ---
 
@@ -633,8 +732,10 @@ prevention-first (add validation for unsupported target/phase combos before addi
 - **Ref forwarding crosses DL#187's "Tier 2 has no refs" line.** It adds *no code* to the
   Tier 2 component but does make it a ref surface. Needs an explicit decision (Q2); may warrant
   a one-line amendment to DL#187.
-- **Splice-at-outer-scope for overrides** is the most intuitive for authors but couples the
-  override to the inner component's mount lifecycle; nested inner `forEach` is the sharp edge.
+- **Inheritance/specialization for overrides** (`Panel$1 extends Panel`) unifies overrides with
+  the §B pure-component model (no re-basing, data passes through as ViewState) and avoids a runtime
+  back-pointer, but adds a per-site generated subtype and a free-var hoist pass; nested inner
+  `forEach` still needs Capability A (`$parent`) and is the sharp edge.
 - **Parent bindings cost a `ConstructContext` parent pointer on all targets** (Examples §A) —
   the "free on client via lexical capture" shortcut is unsafe (stale on keyed reuse). This is a
   small but real shared runtime primitive; building it once is cheaper than a client-only
@@ -652,7 +753,11 @@ prevention-first (add validation for unsupported target/phase combos before addi
    delivers `CardViewState`. Placing the composite under a usage-site `forEach` exposes
    `ButtonRefs<CardViewState>` (collection). No `forEach` inside the pure composite is possible
    (compile error / validation if attempted, since no array prop can reach it).
-3. An override injecting `<button ref="x">` into a container exposes `x` to the outer scope and
-   binds outer data into injected elements; events fire to the outer component.
+3. An override injecting `<button ref="save">Save {documentName}</button>` into a container emits
+   a `Panel$1ViewState extends PanelViewState` / `Panel$1Refs extends PanelRefs` specialization:
+   `documentName` is hoisted into `Panel$1ViewState` (typed from the outer scope, supplied as extra
+   data); `save` forwards up typed `HTMLElementProxy<Panel$1ViewState, …>` (no re-basing) and its
+   event delivers `Panel$1ViewState`. An override mounted inside `Panel`'s internal `forEach`
+   reaches the hoisted member via `$parent` (Capability A).
 4. Unsupported target/phase combinations produce a clear validation error, not a silent
    miscompile.
