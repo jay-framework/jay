@@ -97,20 +97,21 @@ event handlers) and it is what forwarding must re-base correctly (issue 1).
 
 ## The unifying insight
 
-The three problems split cleanly along **one axis: does the target reach the parent scope
-lexically or through `ConstructContext`?**
+The three problems reduce to **two runtime capabilities**:
 
-- **Client/trusted target** already has the parent var in lexical scope. Cross-boundary
-  *data* binding there is mostly a **compiler** problem (grammar + resolution + type), with
-  **no runtime change**.
-- **Bridge/server (data-id) targets** drop parent data in `ConstructContext`. Cross-boundary
-  binding there needs a **runtime** change (parent back-pointer) **and** compiler threading.
-- **Refs** across boundaries (issues 1 & 2) are a different mechanism entirely: they need the
-  inner/override RefsTree to be *surfaced* to the outer scope and the passthrough/override
-  component to *forward* the child refs through its public API.
+- **(A) Parent-data reachability.** A binding in a child scope must read *live* parent data.
+  This is NOT free on any target: `dt`/`da` closures and refs only ever see the current scope's
+  viewState, and keyed list reuse makes any lexically-captured or snapshot parent stale
+  (Examples §A). The carrier is the existing **`ConstructContext` made live** — add a `parent`
+  pointer + in-place `update` so leaf helpers (which already retain their context) read
+  `context.parent.currData` (Q7; resolves the standing TODO at element.ts:413). The sandbox/bridge
+  target re-attaches parent on the receiving side.
+- **(B) Forwarded refs.** Issues 1 & 2 are a different mechanism: the inner/override RefsTree
+  must be *surfaced* to the outer scope and the passthrough/override component must *forward* the
+  child refs through its public API (the existing `DELEGATE_REFS_TO_COMP_TRAP` already forwards
+  member access at runtime).
 
-So this is really **two runtime capabilities** — (A) *parent-data reachability* and (B)
-*forwarded refs* — that the three features draw on in different combinations:
+The three features draw on these in different combinations:
 
 | Feature | Parent-data (A) | Forwarded refs (B) |
 | --- | --- | --- |
@@ -165,38 +166,59 @@ update: (newData: ViewState) => {           // newData === the item, never the p
 ```
 
 Keyed list reuse (`listCompare` by `trackBy`) reuses an item element across parent-data
-changes, so a *lexically captured* parent var would be **stale**. Therefore reactive
-`$parent` needs the update path to carry parent data on **every** target, not just
-bridge/server. Two viable runtime shapes:
+changes, so a *lexically captured* parent var would be **stale**. Several carriers were weighed
+(Q7) and rejected: variadic `update(vs, parentVs, …)` (too invasive) and `vs[SymbolParent]`
+(mutates user-provided array members → spread/freeze/shared-ref footguns).
+
+**Chosen carrier — reuse `ConstructContext` (Q7): add a `parent` pointer + in-place `update`.**
+Today `ConstructContext` supplies only *initial* data at element construction and is never
+consulted again; making it updatable turns it into a **live per-scope state carrier**. The
+scope-switch update writes its own context in place each cascade — `mkUpdateCollection` already
+has the TODO for this (element.ts:413). Leaf binding helpers **already capture their context**
+(`dynamicText`, line 540), so a `$parent` binding reads `context.parent.currData` — live, because
+the captured context object is mutated in place; reused keyed items keep their `childContext`
+whose `.parent` is that same object. No user-data mutation, no parallel structure, one mechanism
+for both binding kinds.
 
 ```ts
-// Option A1 — a parent-aware binding helper that reads parent data from the construction context
-e('button', {}, [`Remove from `, dtp((vs1, p: PageViewState) => p.listTitle)])
-//                                 ^ new helper: closure gets (item, parent)
+// runtime — mkUpdateCollection.update resolves the line-413 TODO:
+const update = (newData) => {
+    parentContext.update(newData);          // NEW: make the captured context live
+    ... existing item diff/update ...
+};
 
-// Option A2 — item element update receives a {self, parent} envelope
-update: (d: { self: Item; parent: PageViewState }) => { ... d.parent.listTitle ... }
+// generated element — text/attribute binding for {$parent.listTitle}.
+// dt passes parent data into the closure (read from its retained context); the compiler emits
+// the $parent accessor as the extra param `p`:
+forEach(
+    (vs: PageViewState) => vs.items,
+    (vs1: Item) => {
+        return e('div', {}, [
+            e('span', {}, [dt((vs1) => vs1.name)]),
+            e('button', {}, [`Remove from `, dt((vs1, p: PageViewState) => p.listTitle)], refRemoveBtn()),
+        ]);                                  // ^ p === context.parent.currData, kept live
+    },
+    'id',
+);
 ```
 
-This makes issue 3 a **compiler + runtime** change (small, but not zero-runtime as first
-mapped). It also means Q3-option-a ("splice override at outer scope, no runtime change") only
-holds for **static/one-shot** outer bindings; reactive outer bindings inside an inner
-`forEach` hit the same staleness wall.
+**Event handlers** get it off the same context — the ref reads `context.parent?.currData` and
+`formatEvent` surfaces it as `parentViewState`:
 
-**But parent access in _event handlers_ is much cheaper** — because refs already hold a live,
-updated scope viewState (Current architecture §"Refs carry a live scope viewState"). A ref
-inside a `forEach` already delivers the current item viewState to its handler; extending
-`RefImpl` to also hold the parent viewState (and `formatEvent` to include it) is a localized
-change to one already-live channel:
 ```ts
 // today the handler event carries the ref's own scope viewState:
 refs.removeBtn.onclick(({ event, viewState /* item */ }) => remove(viewState.id));
-// parent-in-event goal — piggyback on the ref's live viewState field, add a parent slot:
+// context.parent.currData surfaced as parentViewState:
 refs.removeBtn.onclick(({ event, viewState, parentViewState }) => remove(viewState.id, parentViewState.listTitle));
 ```
-So issue 3 splits by binding kind: **text/attribute** parent bindings need the `dt`/`da`
-staleness fix above; **event-handler** parent access rides the ref channel with a smaller,
-already-live extension. Worth deciding (Q1/Q6) whether we support both or start with events.
+
+So issue 3 is a **compiler + runtime** change, but a **single, unified** one: text/attr and
+event-handler parent access share one carrier, no two-channel split (Q6), and no user data is
+mutated. Runtime change: `ConstructContext` gains `parent` + `update`; the scope-switch updates
+(`mkUpdateCollection`, `mkUpdateWithData`, `forAsync`/`resolved`) call `parentContext.update`.
+Cost is **O(scopes)** writes per cascade, not O(items). Secure/bridge re-attaches parent on the
+receiving side. This also settles Q3-option-a: reactive outer bindings inside an inner `forEach`
+reuse this same carrier.
 
 ### B. Pure-component inner-ref forwarding — issue 1
 
@@ -305,7 +327,12 @@ scope (it currently resolves against the **inner** Panel scope and would error/m
 `$parent.field` / `../field` / `^field`. `$` is already a legal `IdentifierStart`, and `jay`
 already demonstrates the "special root token" pattern, so `$parent` is the cheapest to slot
 in. Multi-level (`$parent.$parent.x` vs `../../x`)? **Recommendation: `$parent.` chainable.**
-> _Answer:_
+> _Answer (2026-09-14): **Explicit `$parent.`, not implicit search-up.** Implicit ancestor
+> lookup ("bind `listTitle` here, else walk up") was considered and rejected: it reintroduces
+> the coupling DL#84 deliberately removed, creates shadowing fragility (adding/removing an
+> inner field silently re-targets an existing binding), and makes type-gen/validation ambiguous
+> when multiple ancestors expose the field. Explicit is unambiguous for the compiler, reads as
+> documentation at the call site, and keeps isolation the default. Chainable `$parent.$parent.`._
 
 **Q2. Scope of issue 1 (pure-component ref forwarding).** DL#187 Q6 / criterion 9 explicitly
 say Tier 2 components have **no refs**. Forwarding inner child refs makes a Tier 2 component a
@@ -325,19 +352,21 @@ written). Natural — the override author is writing in the outer file. Static o
 need no runtime change; but reactive outer bindings that land inside an inner `forEach` hit the
 same staleness wall as issue 3 (Examples §A), so this shares Capability A's runtime work there.
 (b) **Parent-pointer:** keep compiling override against inner scope, add `$parent` to reach
-outer data (needs runtime A).
-**Recommendation: (a)** — it matches author intuition and avoids a runtime back-pointer for
-the common client case. Flag: interaction with inner component's `forEach` mount points.
+outer data (reuses Capability A directly).
+**Recommendation: (a)** — it matches author intuition (the author writes the override in the
+outer file, so bindings resolving to outer scope is least surprising). Where an override lands
+inside the inner component's `forEach`, its reactive outer bindings reuse Capability A's live
+`ConstructContext` carrier (no separate mechanism). Flag: interaction with inner `forEach` mount
+points still needs design in Phase 2.
 > _Answer:_
 
 **Q4. Reactive parent bindings need runtime work on _all_ targets (revised).** The
-"free on client" assumption was wrong (Examples §A): `dynamicText.update` gets only the item,
-so parent data must be threaded through `ConstructContext` + a parent-aware binding helper on
-every target. Given that, do we still phase secure/server behind client, or build the
-`ConstructContext` parent back-pointer once and enable all targets together?
-**Recommendation: build the `ConstructContext` parent pointer once (shared primitive), enable
-client + hydrate first, follow with secure/server** — the runtime cost is paid regardless, so
-splitting buys little.
+"free on client" assumption was wrong (Examples §A): `dynamicText.update` gets only the item, so
+parent data must be carried down by making `ConstructContext` live (Q7). Client/hydrate share
+that carrier; the sandbox/bridge target needs its own re-attach on the receiving side. Do we
+phase secure/bridge behind client, or land both together?
+**Recommendation: make `ConstructContext` live once, enable client + hydrate first, follow with
+secure/bridge** (which needs the extra receiving-side re-attach).
 > _Answer:_
 
 **Q5. Priority / sequencing.** Issue 1 (pure refs) and issue 2 (overrides) are the
@@ -346,14 +375,88 @@ user-driving features; issue 3 (forEach parent) is explicitly low priority but i
 cheap parent-data primitive first, then overrides on top, then the refs-forwarding work).
 > _Answer:_
 
-**Q6. Parent access — event handlers vs text/attribute bindings (surfaced by the ref
-channel).** Parent access in **event handlers** is cheap: refs already hold a live, updated
-scope viewState (Examples §A), so it's a localized `RefImpl`/`formatEvent` extension. Parent
-access in **text/attribute** bindings needs the `dt`/`da` staleness fix (new parent-aware
-helper + `ConstructContext` pointer). Do we support both, or ship **event-handler parent access
-first** (covers most real cases: "click in a row, act on the list") and defer text/attr?
-**Recommendation: event-handler first** — smaller, rides an already-live channel; add text/attr
-parent bindings only if a concrete need appears.
+**Q6. Do we ship both binding kinds together?** With the live-`ConstructContext` carrier chosen
+(Q7), event-handler and text/attribute parent access share **one** mechanism (`context.parent`,
+updated each cascade), so the earlier "two channels, two costs" split no longer forces a phasing decision —
+both fall out of the same runtime change. Remaining choice is only about **scope of the first
+cut**: enable both immediately, or land the carrier + event-handler path first (covers "click
+in a row, act on the list") and add the text/attr compile path in the same phase once fixtures
+exist. **Recommendation: one runtime carrier, enable both; sequence text/attr fixtures right
+after the event-handler ones.**
+> _Answer:_
+
+**Q7. How is parent viewState carried down? (update-flow mechanism.)** Three carriers
+considered (Jay's data flow is always top-down through `update`, so all are viable):
+
+- **(a) Variadic `update(vs, parentVs, parentParentVs, …)`.** Conceptually cleanest (no data
+  mutation, explicit types) but **most invasive**: every generic single-arg `update` in the
+  runtime (`dynamicText`, `dynamicAttribute`, all `mkUpdate*`, refs) becomes variadic, every
+  intermediate site must forward the whole chain, and arg-count grows with nesting. Fights the
+  single-arg update design. **Not recommended.**
+- **(b) `vs[SymbolParent]` — REJECTED (mutates user data).** A hidden symbol on the viewState
+  set fresh each update. Fine for the **top-level** viewState (the component render constructs
+  it fresh each invocation), but `$parent` inside a `forEach` needs the symbol on **array
+  members**, which are **user-provided** objects. Mutating those has real footguns: object
+  spread `{...item}` **copies enumerable own symbols**, `Object.freeze`d data throws, and a
+  shared object reference reused across scopes carries one scope's parent. Not worth it even
+  though the symbol conveniently auto-drops on `JSON.stringify`.
+- **(b') `WeakMap<childObj, parentObj>`.** Side table instead of mutation; walk the chain via
+  `map.get(map.get(item))`. ✅ no data mutation, GC-friendly, target-uniform, minimal compiler
+  work. ⚠️ **O(items) sets per cascade** (same order as the symbol); ⚠️ **identity collision** —
+  keyed by object identity, so the *same* object reference used as an item in two scopes gets
+  last-writer-wins and one scope reads the wrong parent. (A strong `Map` is worse — it leaks; if
+  going this route it must be `WeakMap`.) Perf is acceptable (V8 `WeakMap` is ~O(1); the "slow"
+  reputation is largely myth at UI volumes).
+- **(b'') Captured holder cell (per scope-switch).** The generated `forEach`/`withData` body
+  creates one `let parentHolder = { current }` captured by all item closures; the scope-switch
+  update sets `parentHolder.current = newData` each cascade. ✅ no data mutation, no identity
+  collision, O(scopes) writes. ⚠️ but it's a **parallel structure** that duplicates what
+  `ConstructContext` already is (a per-scope object the leaf helpers already capture), plus
+  extra codegen. Superseded by (c-live).
+- **(c-live) Reuse `ConstructContext`: add `parent` pointer + in-place `update` — RECOMMENDED.**
+  My earlier rejection of (c) was wrong: it conflated "context isn't updated *today*" with
+  "context *can't* be updated." The context does not need to be *reconstructed* on the cascade
+  (infeasible) — it needs to be **mutated in place** at the scope-switch update points that
+  already hold it. `mkUpdateCollection` even has a standing TODO for this (element.ts:413:
+  `// todo handle data updates of the parent contexts`). Design:
+  - `ConstructContext` gains `parent?: ConstructContext` (set in `forItem`/`forAsync`/`forScope`)
+    and `update(newData)` writing `this.data` (drop `readonly`).
+  - Each scope-switch update writes its own context live — `parentContext.update(newData)` at the
+    top of `mkUpdateCollection.update` (resolves the TODO), same in `mkUpdateWithData`/condition.
+    The cascade already flows through these, so the whole parent chain stays current.
+  - **Leaf helpers already retain their context** (`dynamicText` captures
+    `context = currentConstructionContext()` at line 540); a parent binding reads
+    `context.parent.currData`. Reused keyed items keep their `childContext`, whose `.parent` is
+    the same captured object we mutate — so no staleness.
+  - ✅ no data mutation; ✅ no identity collision; ✅ O(scopes) writes; ✅ **no new structure and
+    simpler codegen** (no generated holder to thread) — the helper supplies parent to the closure
+    from its retained context. ⚠️ makes `ConstructContext.data` mutable (was `readonly`); the
+    sandbox/bridge still needs a receiving-side re-attach (unavoidable for any carrier).
+- **(c-snapshot) `ConstructContext` read without in-place update — REJECTED.** Reading
+  `context.parent.currData` when the context is a construction-time snapshot returns stale data.
+  This is the trap; (c-live) fixes it precisely by adding the in-place `update`.
+
+**Recommendation — (c-live): reuse `ConstructContext` (parent pointer + in-place `update`), one
+carrier for BOTH locations.** It rides the existing top-down cascade without touching user data
+and without a parallel structure:
+- **text/attr:** the helper passes parent data into the closure; binding compiles to
+  `dt((vs, p) => p.listTitle)` where `p = context.parent?.currData`.
+- **event handlers:** the ref reads `context.parent?.currData`; `formatEvent` surfaces it as
+  `parentViewState`.
+
+`WeakMap` (b') / holder (b'') remain as fallbacks if we'd rather not make `ConstructContext.data`
+mutable. Reject **(a)** (variadic/invasive), **(b)** (mutates user data), and **(c-snapshot)**
+(stale). Injection sites for the in-place `parentContext.update(newData)`: `mkUpdateCollection`
+(element.ts, the existing TODO at line 413), `mkUpdateWithData`, and `forAsync`/`resolved`.
+Secure/bridge re-attaches parent on the receiving side regardless of carrier.
+
+**Note — this expands `ConstructContext`'s role.** Today `ConstructContext` is a
+**construction-time-only** object: it supplies *initial* data when new elements are created
+(`currData` read by `dt`/`da`/refs at construction) and is never consulted again. Adding
+`update` makes it a **persistent, live per-scope state carrier** used at both construction and
+update. That is a deliberate, reasonable promotion (it becomes "more complete" — the natural home
+for scope state), but worth stating explicitly since it changes the object's lifecycle contract
+and means its `data` is now mutable state, not an immutable snapshot.
 > _Answer:_
 
 ---
@@ -367,32 +470,41 @@ parent bindings only if a concrete need appears.
    `propertyAccessor`, dispatched like the existing `jay`→`__jay` special case. Applies to the
    slow/dotted accessor rules too, for parity.
 2. **`Variables.resolveAccessor`** (`expression-compiler.ts`): on a parent token, walk
-   `this.parent` N levels, resolve remaining terms against `parent.currentType`, and return an
-   `Accessor` whose `rootVar` is the parent's `currentVar` (e.g. `vs` from inside a `vs1`
-   body). Type-safety flows automatically because `resolvedType` comes from the parent chain.
-   `Accessor.render()` already honors `rootVar` verbatim → emits valid `vs.foo`.
-3. `Accessor` may need to record the climbed level (or just bake the resolved `rootVar`).
+   `this.parent` N levels and resolve remaining terms against `parent.currentType`. Type-safety
+   flows automatically because `resolvedType` comes from the parent chain.
+3. **`Accessor.render()`** must NOT root a parent access at the parent's `currentVar` — that var
+   is not lexically in scope inside the child callback (Examples §A). A parent access renders to
+   an extra closure param the binding helper supplies from its retained context, e.g.
+   `dt((vs, p) => p.foo)` (or `p1`/`p2` for grandparent). `Accessor` records the climbed level so
+   `render()` picks the right param.
 
-**Runtime (revised — see Examples §A):** the initial map assumed the client target needs no
-runtime change because the parent var is lexically in scope. **That is wrong for reactive
-bindings:** `dynamicText.update(newData)` receives only the current item, and keyed list reuse
-makes any lexically-captured parent var stale. So **all** targets need the update path to carry
-parent data:
-- Add `parent?: ConstructContext` to `ConstructContext`; set it in
-  `forItem`/`forAsync`/`forScope`/`withHydration*`; expose parent `currData`.
-- Add a parent-aware binding helper (e.g. `dtp`/`dap`) whose closure receives `(item, parent)`
-  — or thread a `{self, parent}` envelope through item `update` (Examples §A, A1/A2).
-- Only truly-static outer bindings (no reactivity) could skip this; not worth a separate path.
-
-**Two channels, two costs (Q6):** the above is the **text/attribute** path. **Event-handler**
-parent access is cheaper because refs already thread a live scope viewState: extend `RefImpl`
-to also hold the parent viewState (fed by the same per-ref `update`) and have `formatEvent`
-include it (`{ event, viewState, parentViewState, coordinate }`). The type side already has the
-re-basing vehicle (`MapEventEmitterViewState`). Recommend shipping the ref/event path first.
+**Runtime (revised — reuse `ConstructContext`; see Examples §A and Q7):** the initial map assumed
+the client needs no runtime change because the parent var is lexically in scope. **That is wrong
+for reactive bindings:** `dynamicText.update(newData)` receives only the current item, and keyed
+list reuse makes any lexically-captured parent var stale. The chosen carrier makes the existing
+`ConstructContext` live (variadic update and `vs[SymbolParent]` were rejected — Q7):
+- **`ConstructContext`** (`context.ts`): add `parent?: ConstructContext` (set in
+  `forItem`/`forAsync`/`forScope`) and an `update(newData)` that writes `this.data` (drop
+  `readonly`). This promotes the context from a construction-time snapshot to a live per-scope
+  carrier (see the role-change note in Q7).
+- **Scope-switch updates** (`element.ts`): each writes its own context live —
+  `parentContext.update(newData)` at the top of `mkUpdateCollection.update` (resolves the
+  standing TODO at line 413), same in `mkUpdateWithData` and the conditional/async paths. The
+  cascade already runs these, so the whole parent chain stays current.
+- **Leaf helpers** already retain their context (`dynamicText` line 540). `dynamicText` /
+  `dynamicAttribute` pass parent data (`context.parent?.currData`, chained for deeper levels)
+  into the binding closure as extra params → `dt((vs, p) => p.foo)`.
+- **event handlers:** `RefImpl` reads `context.parent?.currData`; `formatEvent` adds
+  `parentViewState` (`{ event, viewState, parentViewState, coordinate }`). Type side re-bases via
+  `MapEventEmitterViewState`.
+- **secure/bridge:** context is runtime structure (not serialized), so the main side works
+  uniformly; the bridge target re-attaches parent on the receiving side.
 
 **Files:** `expression-parser.pegjs` (+ `.cjs` rebuild + prettier), `expression-compiler.ts`
-(`resolveAccessor`, maybe `Accessor`), no client runtime change. Deferred: `context.ts`,
-`element.ts`, `jay-html-compiler-bridge.ts`, `jay-html-compiler-server.ts`.
+(`resolveAccessor`, `Accessor`), `context.ts` (`parent` + `update`), `element.ts`
+(`mkUpdateCollection`/`mkUpdateWithData`/async — set parent context live; `dynamicText`/
+`dynamicAttribute` — pass parent to closures; `RefImpl`/`formatEvent`), and the jay/hydrate
+codegen. Deferred to Phase 4: `jay-html-compiler-bridge.ts`, `jay-html-compiler-server.ts`.
 
 ### Capability B — forwarded refs (issues 1, 2-refs)
 
