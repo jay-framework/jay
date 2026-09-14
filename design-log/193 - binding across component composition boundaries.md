@@ -13,8 +13,10 @@ patterns:
 
 1. **Pure (Tier 2) components — forwarding inner child refs.** A `Button` component has an
    `onClick`. We wrap it inside a pure composite/section component. At the composite's usage
-   site, how do we reach the inner button to attach `onClick`? Complicated by the button
-   possibly sitting under a `forEach` inside the composite (→ collection refs).
+   site, how do we reach the inner button to attach `onClick`? The collection variant is the
+   composite itself being repeated at the usage site (`<jay:Card forEach=…>`) → collection refs.
+   (A `forEach` *inside* the composite is not possible — a pure component takes no array prop to
+   iterate; see §B.)
 
 2. **Component overrides — binding to override-introduced content.** A container component
    exposes an overridable containment area. The override jay-html injects elements/components.
@@ -63,7 +65,9 @@ So an event handler `refs.x.onclick(({ event, viewState, coordinate }) => …)` 
 viewState (via the collection's per-ref `update`), not a stale capture. Refs are therefore a
 **second viewState-threading channel** that is already live, and the type side mirrors it:
 `${name}Ref<ParentVS> = MapEventEmitterViewState<ParentVS, …>` re-bases the event viewState to
-the parent scope. This is what forwarding must re-base correctly (issue 1).
+the parent scope. Ref forwarding (issue 1) rides this live channel **as-is** — the forwarded ref
+keeps the *inner* component's scope viewState; we deliberately do NOT re-base it to the usage-site
+scope (see §B).
 
 **Event handlers do NOT need parent viewState threaded in (decided).** An earlier draft proposed
 adding `parentViewState` to `JayEvent`. That is unnecessary: the handler is written in the
@@ -122,7 +126,9 @@ The three problems reduce to **two runtime capabilities**:
 - **(B) Forwarded refs.** Issues 1 & 2 are a different mechanism: the inner/override RefsTree
   must be *surfaced* to the outer scope and the passthrough/override component must *forward* the
   child refs through its public API (the existing `DELEGATE_REFS_TO_COMP_TRAP` already forwards
-  member access at runtime).
+  member access at runtime). **Forwarding is pure passthrough — no event re-basing:** a surfaced
+  ref keeps the scope it was compiled in (inner for §B, outer for override option-a), so there is
+  nothing to map across the boundary and no `formatEvent` change (§B, §C).
 
 The three features draw on these in different combinations:
 
@@ -265,41 +271,53 @@ export interface PageElementRefs {
     signupCard: CardRefs;                 // the composite instance
 }
 export interface CardRefs {
-    cta: ButtonRef<PageViewState>;        // forwarded from inside Card, re-based to page VS
+    cta: ButtonRef<CardViewState>;        // forwarded AS-IS, keeps Card's scope — no re-basing
 }
 
 // page.ts usage:
 refs.signupCard.cta.onClick(() => navigate('/signup'));
 ```
 
-**Runtime nuance — event viewState re-basing.** The forwarded `cta` ref lives inside `Card` and
-its `RefImpl.viewState` is `Card`'s scope. But the type `ButtonRef<PageViewState>` promises the
-usage site's viewState in the event. Forwarding must therefore re-base what `formatEvent`
-delivers so `cta.onClick(({ viewState }) => …)` gets the **page** viewState, not `Card`'s inner
-one — either by constructing the forwarded ref against the usage-site scope, or by mapping the
-event as it crosses the boundary. This is exactly the live-viewState channel from the
-architecture note, seen from the other side.
+**No event re-basing (decided — the simpler model).** The forwarded `cta` ref lives inside `Card`
+and its `RefImpl.viewState` is already `Card`'s scope. We surface it **as-is**, typed
+`ButtonRef<CardViewState>` — we do *not* re-base its event to `PageViewState`. Two reasons:
+- **It's less code.** `RefImpl` already carries its own scope viewState and `formatEvent` already
+  delivers it; forwarding is then pure passthrough (the existing `DELEGATE_REFS_TO_COMP_TRAP`),
+  with nothing to map across the boundary.
+- **`CardViewState` is the *correct* data, not a lossy substitute.** Everything the button was
+  rendered against is, by construction, part of `CardViewState` (a pure component's only data is
+  its own ViewState = its contract tags, DL#187). So `cta.onClick(({ viewState }) => …)` receives
+  exactly the data the button displayed. Re-basing to `PageViewState` would hand the handler data
+  the button was *never* bound against — more work for a worse result.
 
-**Under a `forEach` inside the composite** (the case the user flagged) — the forwarded ref
-becomes a collection, matching the existing single-vs-collection machinery:
+**No `forEach` *inside* a pure composite.** A pure (Tier 2) component gets data only through
+declared `props`, and props mirror `tags` as scalar/enum values (DL#187 Q9/Q3, DL#84) — there is
+**no composite/array prop** to drive an internal `forEach`. So the "button under a `forEach`
+inside the composite" case does not arise. Collections come from the **other** direction: placing
+the pure composite itself under a `forEach` at the **usage site**:
 
 ```html
-<!-- card.jay-html -->
-<div forEach="rows" trackBy="id">
-  <jay:Button ref="rowCta">{label}</jay:Button>
-</div>
+<!-- page.jay-html — the composite is repeated, not its innards -->
+<jay:Card forEach="cards" trackBy="id" ref="cards" ctaLabel="{label}" />
 ```
 
 ```ts
+// repeated=true on the composite → the forwarded ref rides the usage-site collection:
+export interface PageElementRefs {
+    cards: CardRefs;                      // collection of Card instances (nested under the forEach)
+}
 export interface CardRefs {
-    // repeated=true → collection type, nested under the forEach scope:
-    rowCta: ButtonRefs<RowViewState>;     // ComponentCollectionProxy & OnlyEventEmitters
+    cta: ButtonRefs<CardViewState>;       // one cta per card — still Card's own scope, no re-basing
 }
 
 // page.ts usage — same API as a locally-declared collection ref:
-refs.signupCard.rowCta.onClick((e) => remove(e.viewState.id));   // event across all rows
-refs.signupCard.rowCta.find((r, vs) => vs.id === '3');           // reach one row
+refs.cards.cta.onClick((e) => navigate(e.viewState.ctaLabel));   // event across all cards
+refs.cards.cta.find((r, vs) => vs.ctaLabel === 'Sign up');       // reach one card
 ```
+
+The single-vs-collection distinction is decided by the **usage-site** `forEach`, not by anything
+inside the pure component — so the existing collection machinery covers it once the forwarded ref
+is in the tree.
 
 ### C. Override-introduced refs & data — issue 2
 
@@ -332,6 +350,15 @@ Today none of this is generated: override provenance is dropped from the AST, so
 can neither graft `save` into `PageElementRefs` nor resolve `{documentName}` against the page
 scope (it currently resolves against the **inner** Panel scope and would error/miscompile).
 
+**Consistent with §B — override refs are also surfaced without re-basing.** The rule is uniform:
+*a surfaced ref carries the scope it was authored/compiled in, and we never re-base its event
+viewState.* For pure-component forwarding (§B) that scope is the inner component's; for overrides
+under option-a (Q3) the fragment is compiled **against the outer scope**, so `save` is genuinely
+outer-scoped and `refs.save.onclick(({ viewState }) => …)` receives `PageViewState` — not because
+we mapped it across a boundary, but because that is the scope it was compiled in. No `formatEvent`
+change in either case. (Under option-b the override compiles against the inner scope and the ref
+would carry inner-scope viewState, reaching outer data via `$parent` — still no re-basing.)
+
 ## Questions (for the user)
 
 **Q1. Syntax for parent-scope access (issues 2-data & 3).** Preferred sigil? Options:
@@ -353,7 +380,11 @@ say Tier 2 components have **no refs**. Forwarding inner child refs makes a Tier
 new `ContractTagType`)?
 **Recommendation: (a) implicit** for named (`ref="..."`) inner instances only — auto-refs stay
 private. Keeps the contract vocabulary unchanged; matches "pure = no code, but structure is
-visible."
+visible." The no-re-basing decision (§B) makes (a) cheaper still: forwarding named inner refs is
+pure passthrough of `ButtonRef<CardViewState>`, no per-ref event mapping to generate. Note also
+that a pure component **cannot `forEach` internally** (no composite/array prop — DL#187/DL#84), so
+"forward all inner refs" has a bounded, statically-known shape; collections only appear when the
+composite itself is repeated at the usage site.
 > _Answer:_
 
 **Q3. Overrides — bind-at-outer vs parent-pointer (issue 2-data).** Two designs:
@@ -525,15 +556,21 @@ component contributes no refs. To forward:
 2. **Passthrough** (`structural-coercions.ts` `buildStructuralPassthroughComp`): today emits
    `(_props, _refs) => ({ render: () => _props })` and ignores `_refs`. Forward the inner
    refs through the returned object so the outer `DELEGATE_REFS_TO_COMP_TRAP` can reach them.
+   **Pure passthrough — no event re-basing** (§B): the forwarded ref keeps the inner component's
+   scope viewState; there is nothing to map, so this is a plain re-export.
 3. **Type-gen** (`jay-html-compiler.ts` `renderHeadlessInstance` ref-type selection;
    `jay-html-compile-refs.ts` `renderRefsType`/`renderReferenceManager`): compose the forwarded
-   sub-tree into the usage site's Refs type. `optimizeRefs`/`graftTemplateOnlyRefs` already
-   know how to graft imported sub-trees — the forwarded refs must actually populate the tree.
-4. **forEach-inside-composite:** a forwarded ref that sits under a `forEach` in the composite
-   is `repeated=true` → surfaces as `XxxRefs<ItemVS>` (collection) nested under the forEach
-   child manager, exactly like a locally-declared collection ref. This is the "collection
-   refs" case the user anticipated; the existing single-vs-collection machinery covers it once
-   the tree carries the forwarded ref.
+   sub-tree into the usage site's Refs type, typed against the **inner** scope
+   (`cta: ButtonRef<CardViewState>`) — no re-basing to the usage-site VS.
+   `optimizeRefs`/`graftTemplateOnlyRefs` already know how to graft imported sub-trees — the
+   forwarded refs must actually populate the tree.
+4. **No `forEach` inside a pure composite** (corrected): a pure component cannot receive a
+   composite/array prop (DL#187/DL#84), so it has no internal `forEach` and no inner collection
+   refs. Collections arise only when the **composite itself** is placed under a usage-site
+   `forEach` (`<jay:Card forEach="cards" ref="cards">`) → `cta` becomes `ButtonRefs<CardViewState>`
+   nested under the usage-site forEach manager. The single-vs-collection decision is made entirely
+   at the usage site; the existing collection machinery covers it once the tree carries the
+   forwarded ref.
 
 **Issue 2 — override-introduced refs.** Requires persisting override provenance on the AST
 node (re-introduce `overrides: OverrideDeclaration[]` on the `<jay:Name>` node) so the injected
@@ -546,6 +583,9 @@ RefsTree. Files: `jay-html-overrides.ts`, `jay-html-parser.ts` injection sites,
 (`ComponentRefsImpl`, `DELEGATE_REFS_TO_COMP_TRAP`) already forward member access to a mounted
 instance's public API. The new requirement is that the passthrough/override component's public
 API *carries* the child refs — mostly a compiler-emission change, minimal runtime change.
+**Because forwarding does not re-base events** (§B), the runtime side is unchanged beyond
+carrying the refs: `RefImpl` keeps delivering its own scope viewState via the existing
+`formatEvent`; no boundary-crossing viewState mapping is added.
 
 ### Issue 2 — override data binding (2a, recommended option-a)
 
@@ -607,9 +647,11 @@ prevention-first (add validation for unsupported target/phase combos before addi
 1a. A runnable `examples/jay/` example binds `{$parent.field}` inside a `forEach` and renders the
    **same** output in **regular mode** (`lib/` + `index.html`) and **secure mode** (`lib-secure/` +
    `secure.html`), updating live as parent data changes (no staleness on keyed reuse).
-2. A pure composite wrapping `<jay:Button ref="cta">` exposes `cta` at the usage site with the
-   correct `ButtonRef<VS>` type; the same button under a composite `forEach` exposes
-   `ButtonRefs<ItemVS>`.
+2. A pure composite wrapping `<jay:Button ref="cta">` exposes `cta` at the usage site typed
+   `ButtonRef<CardViewState>` (inner scope, **not** re-based to the usage-site VS); its event
+   delivers `CardViewState`. Placing the composite under a usage-site `forEach` exposes
+   `ButtonRefs<CardViewState>` (collection). No `forEach` inside the pure composite is possible
+   (compile error / validation if attempted, since no array prop can reach it).
 3. An override injecting `<button ref="x">` into a container exposes `x` to the outer scope and
    binds outer data into injected elements; events fire to the outer component.
 4. Unsupported target/phase combinations produce a clear validation error, not a silent
