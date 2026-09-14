@@ -63,8 +63,19 @@ So an event handler `refs.x.onclick(({ event, viewState, coordinate }) => …)` 
 viewState (via the collection's per-ref `update`), not a stale capture. Refs are therefore a
 **second viewState-threading channel** that is already live, and the type side mirrors it:
 `${name}Ref<ParentVS> = MapEventEmitterViewState<ParentVS, …>` re-bases the event viewState to
-the parent scope. This is the natural place to also carry **parent** viewState (issue 3 in
-event handlers) and it is what forwarding must re-base correctly (issue 1).
+the parent scope. This is what forwarding must re-base correctly (issue 1).
+
+**Event handlers do NOT need parent viewState threaded in (decided).** An earlier draft proposed
+adding `parentViewState` to `JayEvent`. That is unnecessary: the handler is written in the
+component `.ts` that **already owns the full top-level ViewState** (the same component declares
+both the `forEach` list and the parent fields), and every ref delivers a `coordinate` (the
+trackBy id chain) identifying which item fired. So `refs.removeBtn.onclick(({ viewState,
+coordinate }) => remove(viewState.id))` can read any parent field directly from the component's
+own state — no `formatEvent`/`JayEvent` change. Parent-data reachability (Capability A) is
+therefore needed **only for reactive text/attribute bindings** (`{$parent.field}` rendered in the
+DOM), which have no component code to reach up. Overrides *might* be the one exception (handler in
+the outer component, ref in the inner one), but the coordinate system covers that too — so we do
+not extend the event API for them either.
 
 ### How expression scope works
 - `Variables` tracks `currentVar` (`vs`, `vs1`, `vs2` by depth), `currentType`, and a
@@ -99,13 +110,15 @@ event handlers) and it is what forwarding must re-base correctly (issue 1).
 
 The three problems reduce to **two runtime capabilities**:
 
-- **(A) Parent-data reachability.** A binding in a child scope must read *live* parent data.
-  This is NOT free on any target: `dt`/`da` closures and refs only ever see the current scope's
-  viewState, and keyed list reuse makes any lexically-captured or snapshot parent stale
-  (Examples §A). The carrier is the existing **`ConstructContext` made live** — add a `parent`
-  pointer + in-place `update` so leaf helpers (which already retain their context) read
-  `context.parent.currData` (Q7; resolves the standing TODO at element.ts:413). The sandbox/bridge
-  target re-attaches parent on the receiving side.
+- **(A) Parent-data reachability — reactive text/attribute bindings only.** A declarative
+  `{$parent.field}` in a child scope must read *live* parent data. This is NOT free on any target:
+  `dt`/`da` closures only ever see the current scope's viewState, and keyed list reuse makes any
+  lexically-captured or snapshot parent stale (Examples §A). The carrier is the existing
+  **`ConstructContext` made live** — add a `parent` pointer + in-place `update` so leaf helpers
+  (which already retain their context) read `context.parent.currData` (Q7; resolves the standing
+  TODO at element.ts:413). The sandbox/bridge target re-attaches parent on the receiving side.
+  **Event handlers are out of scope for (A)** — the owning component already holds parent data +
+  `coordinate` (see architecture note), so no `JayEvent` change.
 - **(B) Forwarded refs.** Issues 1 & 2 are a different mechanism: the inner/override RefsTree
   must be *surfaced* to the outer scope and the passthrough/override component must *forward* the
   child refs through its public API (the existing `DELEGATE_REFS_TO_COMP_TRAP` already forwards
@@ -202,23 +215,21 @@ forEach(
 );
 ```
 
-**Event handlers** get it off the same context — the ref reads `context.parent?.currData` and
-`formatEvent` surfaces it as `parentViewState`:
+**Event handlers need NO change and NO parent carrier.** The handler is written in the component
+that owns the whole ViewState, so it just reads the parent field directly and uses `coordinate`
+(or `viewState.id`) to know which item fired:
 
 ```ts
-// today the handler event carries the ref's own scope viewState:
-refs.removeBtn.onclick(({ event, viewState /* item */ }) => remove(viewState.id));
-// context.parent.currData surfaced as parentViewState:
-refs.removeBtn.onclick(({ event, viewState, parentViewState }) => remove(viewState.id, parentViewState.listTitle));
+// no parentViewState needed — listTitle is the component's own state, coordinate identifies the row:
+refs.removeBtn.onclick(({ event, viewState /* item */, coordinate }) => remove(viewState.id));
 ```
 
-So issue 3 is a **compiler + runtime** change, but a **single, unified** one: text/attr and
-event-handler parent access share one carrier, no two-channel split (Q6), and no user data is
-mutated. Runtime change: `ConstructContext` gains `parent` + `update`; the scope-switch updates
+So issue 3 is a **compiler + runtime** change scoped to **reactive text/attribute bindings only**.
+Runtime change: `ConstructContext` gains `parent` + `update`; the scope-switch updates
 (`mkUpdateCollection`, `mkUpdateWithData`, `forAsync`/`resolved`) call `parentContext.update`.
-Cost is **O(scopes)** writes per cascade, not O(items). Secure/bridge re-attaches parent on the
-receiving side. This also settles Q3-option-a: reactive outer bindings inside an inner `forEach`
-reuse this same carrier.
+Cost is **O(scopes)** writes per cascade, not O(items), and no user data is mutated. Secure/bridge
+re-attaches parent on the receiving side. This also settles Q3-option-a: reactive outer bindings
+inside an inner `forEach` reuse this same carrier.
 
 ### B. Pure-component inner-ref forwarding — issue 1
 
@@ -375,15 +386,12 @@ user-driving features; issue 3 (forEach parent) is explicitly low priority but i
 cheap parent-data primitive first, then overrides on top, then the refs-forwarding work).
 > _Answer:_
 
-**Q6. Do we ship both binding kinds together?** With the live-`ConstructContext` carrier chosen
-(Q7), event-handler and text/attribute parent access share **one** mechanism (`context.parent`,
-updated each cascade), so the earlier "two channels, two costs" split no longer forces a phasing decision —
-both fall out of the same runtime change. Remaining choice is only about **scope of the first
-cut**: enable both immediately, or land the carrier + event-handler path first (covers "click
-in a row, act on the list") and add the text/attr compile path in the same phase once fixtures
-exist. **Recommendation: one runtime carrier, enable both; sequence text/attr fixtures right
-after the event-handler ones.**
-> _Answer:_
+**Q6. Do we ship both binding kinds together? — RESOLVED, moot.** The two "binding kinds"
+(event-handler parent access vs text/attribute parent access) are no longer both in scope: event
+handlers reach parent data directly from the owning component + `coordinate` (architecture note),
+so **only reactive text/attribute bindings** use the live-`ConstructContext` carrier. There is one
+binding kind and one mechanism; nothing to phase apart.
+> _Answer: resolved — only text/attr uses the carrier; event handlers need no change._
 
 **Q7. How is parent viewState carried down? (update-flow mechanism.)** Three carriers
 considered (Jay's data flow is always top-down through `update`, so all are viable):
@@ -436,13 +444,13 @@ considered (Jay's data flow is always top-down through `update`, so all are viab
   `context.parent.currData` when the context is a construction-time snapshot returns stale data.
   This is the trap; (c-live) fixes it precisely by adding the in-place `update`.
 
-**Recommendation — (c-live): reuse `ConstructContext` (parent pointer + in-place `update`), one
-carrier for BOTH locations.** It rides the existing top-down cascade without touching user data
-and without a parallel structure:
+**Recommendation — (c-live): reuse `ConstructContext` (parent pointer + in-place `update`) for
+the one location that needs it — reactive text/attribute bindings.** It rides the existing
+top-down cascade without touching user data and without a parallel structure:
 - **text/attr:** the helper passes parent data into the closure; binding compiles to
   `dt((vs, p) => p.listTitle)` where `p = context.parent?.currData`.
-- **event handlers:** the ref reads `context.parent?.currData`; `formatEvent` surfaces it as
-  `parentViewState`.
+- **event handlers:** no carrier needed — the owning component already has parent data +
+  `coordinate` (see architecture note), so `formatEvent`/`JayEvent` are unchanged.
 
 `WeakMap` (b') / holder (b'') remain as fallbacks if we'd rather not make `ConstructContext.data`
 mutable. Reject **(a)** (variadic/invasive), **(b)** (mutates user data), and **(c-snapshot)**
@@ -494,17 +502,17 @@ list reuse makes any lexically-captured parent var stale. The chosen carrier mak
 - **Leaf helpers** already retain their context (`dynamicText` line 540). `dynamicText` /
   `dynamicAttribute` pass parent data (`context.parent?.currData`, chained for deeper levels)
   into the binding closure as extra params → `dt((vs, p) => p.foo)`.
-- **event handlers:** `RefImpl` reads `context.parent?.currData`; `formatEvent` adds
-  `parentViewState` (`{ event, viewState, parentViewState, coordinate }`). Type side re-bases via
-  `MapEventEmitterViewState`.
+- **event handlers:** unchanged. No `formatEvent`/`JayEvent` change — the owning component reads
+  parent fields directly from its own ViewState and uses `coordinate` to identify the item.
 - **secure/bridge:** context is runtime structure (not serialized), so the main side works
   uniformly; the bridge target re-attaches parent on the receiving side.
 
 **Files:** `expression-parser.pegjs` (+ `.cjs` rebuild + prettier), `expression-compiler.ts`
 (`resolveAccessor`, `Accessor`), `context.ts` (`parent` + `update`), `element.ts`
 (`mkUpdateCollection`/`mkUpdateWithData`/async — set parent context live; `dynamicText`/
-`dynamicAttribute` — pass parent to closures; `RefImpl`/`formatEvent`), and the jay/hydrate
-codegen. Deferred to Phase 4: `jay-html-compiler-bridge.ts`, `jay-html-compiler-server.ts`.
+`dynamicAttribute` — pass parent to closures), and the jay/hydrate codegen. **No change to
+`node-reference.ts`/`formatEvent`** (event handlers reach parent data via the owning component +
+`coordinate`). Deferred to Phase 4: `jay-html-compiler-bridge.ts`, `jay-html-compiler-server.ts`.
 
 ### Capability B — forwarded refs (issues 1, 2-refs)
 
@@ -557,6 +565,14 @@ argument for building A first (Q5).**
 - **Phase 1 — Capability A (issue 3):** grammar `$parent`, `resolveAccessor` parent walk,
   type tests, fixtures **plus** the runtime primitive — `ConstructContext` parent pointer +
   parent-aware binding helper (Examples §A). Client + hydrate first. Unblocks 2a disambiguation.
+  **Plus a runnable example** — add a `$parent`-in-`forEach` example under `examples/jay/`
+  (non-jay-stack), following the `examples/jay/todo` dual layout: a `lib/` build (regular/trusted,
+  `index.html`) **and** a `lib-secure/` build (sandbox/bridge, `secure.html`), both wired through
+  the vite plugin. This is the end-to-end proof that the same `{$parent.field}` template renders
+  identically in **regular and secure mode** (secure exercises the receiving-side parent re-attach).
+  Note: secure/bridge parent plumbing is Phase 4, so this example's secure build is the forcing
+  function that Phase 4 must satisfy — track it as the secure-mode acceptance gate, not a
+  Phase-1-only deliverable.
 - **Phase 2 — Issue 2 (overrides):** persist override provenance; compile against outer scope;
   graft override refs into outer RefsTree; forward override refs at runtime.
 - **Phase 3 — Issue 1 (pure-component ref forwarding):** parser discovers inner refs;
@@ -588,6 +604,9 @@ prevention-first (add validation for unsupported target/phase combos before addi
 
 1. From inside a `forEach`, `$parent.field` compiles to a type-safe binding on the parent var
    (client) with a full-fixture `toEqual` match; unknown parent member → validation error.
+1a. A runnable `examples/jay/` example binds `{$parent.field}` inside a `forEach` and renders the
+   **same** output in **regular mode** (`lib/` + `index.html`) and **secure mode** (`lib-secure/` +
+   `secure.html`), updating live as parent data changes (no staleness on keyed reuse).
 2. A pure composite wrapping `<jay:Button ref="cta">` exposes `cta` at the usage site with the
    correct `ButtonRef<VS>` type; the same button under a composite `forEach` exposes
    `ButtonRefs<ItemVS>`.
