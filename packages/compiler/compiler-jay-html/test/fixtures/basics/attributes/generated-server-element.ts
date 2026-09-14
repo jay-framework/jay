@@ -1,4 +1,9 @@
-import { escapeHtml, escapeAttr, type ServerRenderContext } from '@jay-framework/ssr-runtime';
+import {
+    escapeHtml,
+    escapeAttr,
+    classNames as cx,
+    type ServerRenderContext,
+} from '@jay-framework/ssr-runtime';
 
 export interface AttributesViewState {
     text: string;
@@ -44,12 +49,12 @@ export function renderToStream(vs: AttributesViewState, ctx: ServerRenderContext
     w(escapeHtml(String(vs.text3)));
     w('</div>');
     w('<div');
-    w(' class="' + escapeAttr(String(`${vs.bool1 ? 'main' : ''}`)) + '"');
+    w(' class="' + escapeAttr(String(vs.bool1 ? 'main' : '')) + '"');
     w(' jay-coordinate="S0/0/7">');
     w(escapeHtml(String(vs.text3)));
     w('</div>');
     w('<div');
-    w(' class="' + escapeAttr(String(`${vs.bool1 ? 'main' : 'second'}`)) + '"');
+    w(' class="' + escapeAttr(String(vs.bool1 ? 'main' : 'second')) + '"');
     w(' jay-coordinate="S0/0/8">');
     w(escapeHtml(String(vs.text3)));
     w('</div>');
@@ -58,7 +63,7 @@ export function renderToStream(vs: AttributesViewState, ctx: ServerRenderContext
         ' class="' +
             escapeAttr(
                 String(
-                    `first-class ${vs.bool1 ? 'main' : 'second'} ${!vs.bool1 ? 'third' : 'forth'}`,
+                    cx('first-class', vs.bool1 ? 'main' : 'second', !vs.bool1 ? 'third' : 'forth'),
                 ),
             ) +
             '"',

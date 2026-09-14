@@ -114,6 +114,11 @@ Use in jay-html: `<jay:contract-name productId="value">` (a literal), or bind a 
 
 `jay-stack validate` (and `dev` / `build`) report these mismatches with the exact prop, source, and phases.
 
+**Enum prop values must match the contract.** For a prop typed `enum(a | b | c)`:
+
+- A **literal** value must be one of the declared members, case-sensitive — `status="success"` is fine, `status="sucess"` or `status="Success"` is a **validation error** naming the allowed members. (A wrong value silently renders nothing, because no `if="status===..."` branch matches.)
+- A **bound** value (`status="{someTag}"`) must come from a source that is itself an enum with the **same members in the same order**. Binding a `string` tag, or an enum with different or reordered members, to an enum prop is a validation error.
+
 ### Params
 
 Page components with dynamic routes:

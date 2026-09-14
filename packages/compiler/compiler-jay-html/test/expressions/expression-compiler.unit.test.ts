@@ -400,7 +400,7 @@ describe('expression-compiler', () => {
 
         it('class as value from view state', () => {
             const actual = parseClassExpression('{classProperty}', defaultVars);
-            expect(actual.rendered).toEqual('da(vs => `${vs.classProperty}`)');
+            expect(actual.rendered).toEqual('da(vs => vs.classProperty)');
             expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy();
         });
 
@@ -410,27 +410,29 @@ describe('expression-compiler', () => {
                 defaultVars,
             );
             expect(actual.rendered).toEqual(
-                "da(vs => `${vs.isOne?'class1':''} ${vs.isTwo?'classTwo':''} three`)",
+                "da(vs => cx(vs.isOne?'class1':'', vs.isTwo?'classTwo':'', 'three'))",
             );
             expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy();
+            expect(actual.imports.has(Import.classNames)).toBeTruthy();
         });
 
         it('one dynamic class declaration', () => {
             const actual = parseClassExpression('{isOne? class1}', defaultVars);
-            expect(actual.rendered).toEqual("da(vs => `${vs.isOne?'class1':''}`)");
+            expect(actual.rendered).toEqual("da(vs => vs.isOne?'class1':'')");
             expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy();
         });
 
         it('dynamic class declaration with enum', () => {
             const actual = parseClassExpression('{anEnum == one? class1}', defaultVars);
-            expect(actual.rendered).toEqual("da(vs => `${vs.anEnum === AnEnum.one?'class1':''}`)");
+            expect(actual.rendered).toEqual("da(vs => vs.anEnum === AnEnum.one?'class1':'')");
             expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy();
         });
 
         it('dynamic class declaration with fallback', () => {
             const actual = parseClassExpression('{isOne? class1:class2} three', defaultVars);
-            expect(actual.rendered).toEqual("da(vs => `${vs.isOne?'class1':'class2'} three`)");
+            expect(actual.rendered).toEqual("da(vs => cx(vs.isOne?'class1':'class2', 'three'))");
             expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy();
+            expect(actual.imports.has(Import.classNames)).toBeTruthy();
         });
     });
 
@@ -464,7 +466,7 @@ describe('expression-compiler', () => {
                 defaultVars,
             );
             expect(actual.rendered).toEqual(
-                "{`${vs.isOne?'class1':''} ${vs.isTwo?'classTwo':''} three`}",
+                "{cx(vs.isOne?'class1':'', vs.isTwo?'classTwo':'', 'three')}",
             );
         });
 
@@ -480,7 +482,7 @@ describe('expression-compiler', () => {
 
         it('dynamic class declaration with fallback', () => {
             const actual = parseReactClassExpression('{isOne? class1:class2} three', defaultVars);
-            expect(actual.rendered).toEqual("{`${vs.isOne?'class1':'class2'} three`}");
+            expect(actual.rendered).toEqual("{cx(vs.isOne?'class1':'class2', 'three')}");
         });
     });
 

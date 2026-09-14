@@ -10,6 +10,7 @@ import {
     ConstructContext,
     RenderElementOptions,
     JayContract,
+    classNames as cx,
 } from '@jay-framework/runtime';
 
 export interface AttributesViewState {
@@ -61,18 +62,19 @@ export function render(options?: RenderElementOptions): AttributesElementPreRend
                 ),
                 e('label', { for: 'abc' }, []),
                 e('div', { class: 'main second' }, [dt((vs) => vs.text3)]),
-                e('div', { class: da((vs) => `${vs.bool1 ? 'main' : ''}`) }, [
-                    dt((vs) => vs.text3),
-                ]),
-                e('div', { class: da((vs) => `${vs.bool1 ? 'main' : 'second'}`) }, [
+                e('div', { class: da((vs) => (vs.bool1 ? 'main' : '')) }, [dt((vs) => vs.text3)]),
+                e('div', { class: da((vs) => (vs.bool1 ? 'main' : 'second')) }, [
                     dt((vs) => vs.text3),
                 ]),
                 e(
                     'div',
                     {
-                        class: da(
-                            (vs) =>
-                                `first-class ${vs.bool1 ? 'main' : 'second'} ${!vs.bool1 ? 'third' : 'forth'}`,
+                        class: da((vs) =>
+                            cx(
+                                'first-class',
+                                vs.bool1 ? 'main' : 'second',
+                                !vs.bool1 ? 'third' : 'forth',
+                            ),
                         ),
                     },
                     [dt((vs) => vs.text3)],

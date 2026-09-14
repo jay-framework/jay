@@ -328,6 +328,17 @@ export const Import = {
         ImportsFor.implementation,
     ),
     STATIC: importStatementFragment(JAY_RUNTIME, 'STATIC', ImportsFor.implementation),
+    classNames: importStatementFragment(JAY_RUNTIME, 'classNames as cx', ImportsFor.implementation),
+    classNamesServer: importStatementFragment(
+        JAY_SSR_RUNTIME,
+        'classNames as cx',
+        ImportsFor.implementation,
+    ),
+    classNamesReact: importStatementFragment(
+        JAY_4_REACT,
+        'classNames as cx',
+        ImportsFor.implementation,
+    ),
     escapeHtml: importStatementFragment(JAY_SSR_RUNTIME, 'escapeHtml', ImportsFor.implementation),
     escapeAttr: importStatementFragment(JAY_SSR_RUNTIME, 'escapeAttr', ImportsFor.implementation),
     ServerRenderContext: importStatementFragment(

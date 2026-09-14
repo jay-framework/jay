@@ -10,6 +10,7 @@ import {
     JayContract,
     adoptText,
     adoptElement,
+    classNames as cx,
 } from '@jay-framework/runtime';
 
 export interface AttributesViewState {
@@ -57,18 +58,21 @@ export function hydrate(
                     [],
                 ),
                 adoptText('S0/0/6', (vs) => vs.text3),
-                adoptElement('S0/0/7', { class: da((vs) => `${vs.bool1 ? 'main' : ''}`) }, [
+                adoptElement('S0/0/7', { class: da((vs) => (vs.bool1 ? 'main' : '')) }, [
                     adoptText('S0/0/7', (vs) => vs.text3),
                 ]),
-                adoptElement('S0/0/8', { class: da((vs) => `${vs.bool1 ? 'main' : 'second'}`) }, [
+                adoptElement('S0/0/8', { class: da((vs) => (vs.bool1 ? 'main' : 'second')) }, [
                     adoptText('S0/0/8', (vs) => vs.text3),
                 ]),
                 adoptElement(
                     'S0/0/9',
                     {
-                        class: da(
-                            (vs) =>
-                                `first-class ${vs.bool1 ? 'main' : 'second'} ${!vs.bool1 ? 'third' : 'forth'}`,
+                        class: da((vs) =>
+                            cx(
+                                'first-class',
+                                vs.bool1 ? 'main' : 'second',
+                                !vs.bool1 ? 'third' : 'forth',
+                            ),
                         ),
                     },
                     [adoptText('S0/0/9', (vs) => vs.text3)],

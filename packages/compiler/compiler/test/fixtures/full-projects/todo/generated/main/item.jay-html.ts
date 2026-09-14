@@ -10,6 +10,7 @@ import {
     HTMLElementProxy,
     RenderElementOptions,
     JayContract,
+    classNames as cx,
 } from '@jay-framework/runtime';
 
 export interface ItemViewState {
@@ -54,9 +55,8 @@ export function render(options?: RenderElementOptions): ItemElementPreRender {
             e(
                 'li',
                 {
-                    class: da(
-                        (vs) =>
-                            `${vs.isCompleted ? 'completed' : ''} ${vs.isEditing ? 'editing' : ''}`,
+                    class: da((vs) =>
+                        cx(vs.isCompleted ? 'completed' : '', vs.isEditing ? 'editing' : ''),
                     ),
                 },
                 [

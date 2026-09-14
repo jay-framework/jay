@@ -240,9 +240,9 @@ export function isDateWithTimezoneType(aType: JayType): aType is JayAtomicType {
 }
 
 export function equalJayTypes(a: JayType, b: JayType) {
-    if (a.name !== b.name) return false;
-    if (a instanceof JayAtomicType && b instanceof JayAtomicType) return a.name === b.name;
-    else if (a instanceof JayEnumType && b instanceof JayEnumType)
+    // Enum names are field-derived (pascalCase of the tag/prop name) and carry no semantic identity,
+    // so two enums are equal iff their members match in order — checked before the name precheck.
+    if (a instanceof JayEnumType && b instanceof JayEnumType)
         return (
             a.values.length === b.values.length &&
             a.values.reduce(
@@ -250,6 +250,8 @@ export function equalJayTypes(a: JayType, b: JayType) {
                 true,
             )
         );
+    if (a.name !== b.name) return false;
+    if (a instanceof JayAtomicType && b instanceof JayAtomicType) return a.name === b.name;
     else if (a instanceof JayArrayType && b instanceof JayArrayType)
         return equalJayTypes(a.itemType, b.itemType);
     else if (a instanceof JayRecordType && b instanceof JayRecordType)

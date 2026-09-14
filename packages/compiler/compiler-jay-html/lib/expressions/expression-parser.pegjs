@@ -6,7 +6,8 @@
     let da = options.da;
     let dp = options.dp;
     let ba = options.ba;
-    
+    let cx = options.cx;
+
     // Slow render context for partial evaluation
     let slowContext = options.slowContext;
     
@@ -233,16 +234,15 @@ reactClassExpression
     if (isDynamic) {
         if (tail.length === 0)
             return head.map(_ => `\{${_}\}`);
-        const mappedClasses = classes.map(cls => {
-            return cls instanceof RenderFragment ?
-                cls.map(_ => `\$\{${_}\}`) :
-                new RenderFragment(cls, none)
-        })
-        const reduced = mappedClasses.reduce(
-            (result, fragment) => RenderFragment.merge(result, fragment, ' '),
+        // Emit `{cx(expr, expr, ...)}` so a false conditional class contributes
+        // nothing — no stray/double/trailing spaces in className.
+        const elements = classes.map(cls =>
+            cls instanceof RenderFragment ? cls : new RenderFragment(`'${cls}'`));
+        const reduced = elements.reduce(
+            (result, fragment) => RenderFragment.merge(result, fragment, ', '),
             RenderFragment.empty());
 
-        return reduced.map(_ => `\{\`${_}\`\}`)
+        return reduced.map(_ => `\{cx(${_})\}`).plusImport(cx);
     }
     else
         return new RenderFragment(classes.join(' '), none)
@@ -251,20 +251,23 @@ reactClassExpression
 
 classExpression
   = _ head: singleClassExpression tail:(_ singleClassExpression)* _ {
-    let isDynamic = false;
-    const renderClass = cls => {
-      isDynamic = isDynamic || cls instanceof RenderFragment;
-      return cls instanceof RenderFragment?
-        cls.map(_ => '${' + _ + '}') :
-        new RenderFragment(cls, none);
+    const classes = [head, ...tail.map(tuple => tuple[1])];
+    const isDynamic = classes.some(cls => cls instanceof RenderFragment);
+    if (isDynamic) {
+      // A single dynamic class needs no joining — emit the expression directly.
+      if (tail.length === 0)
+        return head.map(_ => `da(${vars.currentVar} => ${_})`);
+      // Multiple classes: join via `cx(expr, ...)` so a false conditional class
+      // contributes nothing — no stray/double/trailing spaces in the resulting
+      // class attribute.
+      const elements = classes.map(cls =>
+        cls instanceof RenderFragment ? cls : new RenderFragment(`'${cls}'`));
+      const arrayContents = elements.reduce(
+        (result, fragment) => RenderFragment.merge(result, fragment, ', '),
+        RenderFragment.empty());
+      return arrayContents.map(_ => `da(${vars.currentVar} => cx(${_}))`).plusImport(cx);
     }
-    let classString = tail.reduce((result, tuple) => {
-      const classExp = tuple[1];
-      return RenderFragment.merge(result, renderClass(classExp), ' ')
-    }, renderClass(head));
-    return isDynamic?
-      classString.map(_ => `da(${vars.currentVar} => \`${_}\`)`):
-      classString.map(_ => `'${_}'`);
+    return new RenderFragment(classes.join(' '), none).map(_ => `'${_}'`);
   }
 
 singleClassExpression

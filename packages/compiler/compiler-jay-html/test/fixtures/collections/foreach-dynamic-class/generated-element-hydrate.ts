@@ -13,6 +13,7 @@ import {
     adoptElement,
     hydrateForEach,
     adoptDynamicElement,
+    classNames as cx,
 } from '@jay-framework/runtime';
 
 export interface ItemOfForeachDynamicClassViewState {
@@ -83,7 +84,7 @@ export function hydrate(
                     (vs1: ItemOfForeachDynamicClassViewState) => [
                         adoptElement(
                             'S0/0/0',
-                            { class: da((vs1) => `item ${vs1.isActive ? 'active' : ''}`) },
+                            { class: da((vs1) => cx('item', vs1.isActive ? 'active' : '')) },
                             [adoptText('S1/0', (vs1) => vs1.name)],
                             refItemsSelected(),
                         ),
@@ -91,7 +92,7 @@ export function hydrate(
                     (vs1: ItemOfForeachDynamicClassViewState) => {
                         return e(
                             'div',
-                            { class: da((vs1) => `item ${vs1.isActive ? 'active' : ''}`) },
+                            { class: da((vs1) => cx('item', vs1.isActive ? 'active' : '')) },
                             [e('span', {}, [dt((vs1) => vs1.name)])],
                             refItemsSelected(),
                         );

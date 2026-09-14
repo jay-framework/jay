@@ -1,5 +1,5 @@
 import { ReactElement } from 'react';
-import { Jay4ReactElementProps, mimicJayElement } from '@jay-framework/4-react';
+import { Jay4ReactElementProps, mimicJayElement, classNames as cx } from '@jay-framework/4-react';
 
 export interface AttributesViewState {
     text: string;
@@ -29,7 +29,11 @@ export function reactRender({
             <div className={vs.bool1 ? 'main' : ''}>{vs.text3}</div>
             <div className={vs.bool1 ? 'main' : 'second'}>{vs.text3}</div>
             <div
-                className={`first-class ${vs.bool1 ? 'main' : 'second'} ${!vs.bool1 ? 'third' : 'forth'}`}
+                className={cx(
+                    'first-class',
+                    vs.bool1 ? 'main' : 'second',
+                    !vs.bool1 ? 'third' : 'forth',
+                )}
             >
                 {vs.text3}
             </div>

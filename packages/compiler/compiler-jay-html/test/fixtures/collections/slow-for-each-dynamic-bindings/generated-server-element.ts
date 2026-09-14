@@ -1,4 +1,9 @@
-import { escapeHtml, escapeAttr, type ServerRenderContext } from '@jay-framework/ssr-runtime';
+import {
+    escapeHtml,
+    escapeAttr,
+    classNames as cx,
+    type ServerRenderContext,
+} from '@jay-framework/ssr-runtime';
 
 export interface CategoryOfSlowForEachDynamicBindingsViewState {
     categoryId: string;
@@ -20,7 +25,7 @@ export function renderToStream(
     w(' jay-coordinate="S0/0">');
     for (const vs1 of vs.categories) {
         w('<label');
-        w(' class="' + escapeAttr(String(`chip ${vs1.isSelected ? 'selected' : ''}`)) + '"');
+        w(' class="' + escapeAttr(String(cx('chip', vs1.isSelected ? 'selected' : ''))) + '"');
         w(' jay-coordinate="S0/0/0">');
         w('<input');
         w(' type="checkbox"');

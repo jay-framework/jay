@@ -172,9 +172,10 @@ export function render(options?: RenderElementOptions): TodoElementPreRender {
                                             e(
                                                 'a',
                                                 {
-                                                    class: da(
-                                                        (vs) =>
-                                                            `${vs.filter === FilterOfTodoViewState.all ? 'selected' : ''}`,
+                                                    class: da((vs) =>
+                                                        vs.filter === FilterOfTodoViewState.all
+                                                            ? 'selected'
+                                                            : '',
                                                     ),
                                                 },
                                                 ['All'],
@@ -186,9 +187,10 @@ export function render(options?: RenderElementOptions): TodoElementPreRender {
                                             e(
                                                 'a',
                                                 {
-                                                    class: da(
-                                                        (vs) =>
-                                                            `${vs.filter === FilterOfTodoViewState.active ? 'selected' : ''}`,
+                                                    class: da((vs) =>
+                                                        vs.filter === FilterOfTodoViewState.active
+                                                            ? 'selected'
+                                                            : '',
                                                     ),
                                                 },
                                                 ['Active'],
@@ -200,9 +202,11 @@ export function render(options?: RenderElementOptions): TodoElementPreRender {
                                             e(
                                                 'a',
                                                 {
-                                                    class: da(
-                                                        (vs) =>
-                                                            `${vs.filter === FilterOfTodoViewState.completed ? 'selected' : ''}`,
+                                                    class: da((vs) =>
+                                                        vs.filter ===
+                                                        FilterOfTodoViewState.completed
+                                                            ? 'selected'
+                                                            : '',
                                                     ),
                                                 },
                                                 ['Completed'],

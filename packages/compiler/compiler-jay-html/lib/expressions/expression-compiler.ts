@@ -290,6 +290,7 @@ function doParse(
             da: Imports.for(Import.dynamicAttribute),
             dp: Imports.for(Import.dynamicProperty),
             ba: Imports.for(Import.booleanAttribute),
+            cx: Imports.for(Import.classNames),
             startRule,
         });
     } catch (e) {

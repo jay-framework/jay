@@ -125,7 +125,10 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
             );
         else if (attrName === 'class') {
             let classExpression = parseReactClassExpression(attributes[attrName], variables);
-            renderedAttributes.push(classExpression.map((_) => `className=${_}`));
+            let classFragment = classExpression.map((_) => `className=${_}`);
+            if (classExpression.rendered.includes('cx('))
+                classFragment = classFragment.plusImport(Imports.for(Import.classNamesReact));
+            renderedAttributes.push(classFragment);
         } else if (booleanAttributes.has(attrCanonical)) {
             const attrValue = attributes[attrName];
             // Empty boolean attribute (e.g., <button disabled></button>)

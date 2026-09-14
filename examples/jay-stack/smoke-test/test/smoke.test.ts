@@ -853,3 +853,64 @@ describe('Smoke Test', () => {
         });
     });
 });
+
+// Run `jay-stack-cli validate --json` inside a fixture project (cwd = fixture) so its own
+// src/pages + src/plugins are scanned, and return the parsed result plus exit code.
+async function runValidateCli(fixtureDir: string): Promise<{ code: number | null; result: any }> {
+    return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+            reject(new Error(`Validate did not complete within ${BUILD_TIMEOUT}ms`));
+        }, BUILD_TIMEOUT);
+
+        let stdout = '';
+        const proc = spawn('yarn', ['jay-stack-cli', 'validate', '--json'], {
+            cwd: fixtureDir,
+            shell: true,
+            stdio: ['pipe', 'pipe', 'pipe'],
+            env: { ...process.env, FORCE_COLOR: '0' },
+        });
+        proc.stdout?.on('data', (d) => (stdout += d.toString()));
+        proc.stderr?.on('data', (d) => (stdout += d.toString()));
+        proc.on('exit', (code) => {
+            clearTimeout(timeout);
+            // Extract the JSON object from surrounding tool chatter.
+            const start = stdout.indexOf('{');
+            const end = stdout.lastIndexOf('}');
+            let result: any = undefined;
+            if (start >= 0 && end > start) {
+                try {
+                    result = JSON.parse(stdout.slice(start, end + 1));
+                } catch {
+                    /* leave result undefined; the test asserts on code + parsed result */
+                }
+            }
+            resolve({ code, result });
+        });
+        proc.on('error', (err) => {
+            clearTimeout(timeout);
+            reject(err);
+        });
+    });
+}
+
+describe('DL#192 — enum value validation via the CLI', () => {
+    const fixtureDir = path.resolve(__dirname, 'fixtures/invalid-enum');
+
+    it(
+        'reports a non-member enum instance value as an error and exits non-zero',
+        async () => {
+            const { code, result } = await runValidateCli(fixtureDir);
+            expect(code).toBe(1);
+            expect(result?.valid).toBe(false);
+            const enumErrors = (result?.errors ?? []).filter((e: any) =>
+                e.message.includes('is not a declared value of enum'),
+            );
+            expect(enumErrors).toHaveLength(1);
+            expect(enumErrors[0].message).toEqual(
+                '<jay:test-badge> prop "status" = "pending" is not a declared value of ' +
+                    'enum(success | warning | error). Use one of: success, warning, error.',
+            );
+        },
+        BUILD_TIMEOUT,
+    );
+});

@@ -1,4 +1,9 @@
-import { escapeHtml, escapeAttr, type ServerRenderContext } from '@jay-framework/ssr-runtime';
+import {
+    escapeHtml,
+    escapeAttr,
+    classNames as cx,
+    type ServerRenderContext,
+} from '@jay-framework/ssr-runtime';
 
 import { BadgeViewState, Status } from './badge/badge.jay-contract';
 
@@ -35,7 +40,12 @@ export function renderToStream(
             ' class="' +
                 escapeAttr(
                     String(
-                        `badge ${vs_badge0.status === Status.success ? 'badge--success' : ''} ${vs_badge0.status === Status.warning ? 'badge--warning' : ''} ${vs_badge0.status === Status.error ? 'badge--error' : ''}`,
+                        cx(
+                            'badge',
+                            vs_badge0.status === Status.success ? 'badge--success' : '',
+                            vs_badge0.status === Status.warning ? 'badge--warning' : '',
+                            vs_badge0.status === Status.error ? 'badge--error' : '',
+                        ),
                     ),
                 ) +
                 '"',

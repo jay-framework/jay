@@ -11,7 +11,7 @@ export function renderToStream(
 ): void {
     const { write: w } = ctx;
     w('<label');
-    w(' class="' + escapeAttr(String(`${vs.isSelected ? 'selected' : ''}`)) + '"');
+    w(' class="' + escapeAttr(String(vs.isSelected ? 'selected' : '')) + '"');
     w(' jay-coordinate="S0/0">');
     w('<input');
     w(' type="checkbox"');

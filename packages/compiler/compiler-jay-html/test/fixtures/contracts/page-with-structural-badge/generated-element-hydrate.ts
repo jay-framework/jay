@@ -13,6 +13,7 @@ import {
     childCompHydrate,
     hydrateConditional,
     adoptDynamicElement,
+    classNames as cx,
 } from '@jay-framework/runtime';
 import { makeHeadlessInstanceComponent } from '@jay-framework/stack-client-runtime';
 import {
@@ -73,9 +74,13 @@ function _headlessBadge0HydrateRender(
             adoptDynamicElement(
                 'S1/0',
                 {
-                    class: da(
-                        (vs) =>
-                            `badge ${vs.status === Status.success ? 'badge--success' : ''} ${vs.status === Status.warning ? 'badge--warning' : ''} ${vs.status === Status.error ? 'badge--error' : ''}`,
+                    class: da((vs) =>
+                        cx(
+                            'badge',
+                            vs.status === Status.success ? 'badge--success' : '',
+                            vs.status === Status.warning ? 'badge--warning' : '',
+                            vs.status === Status.error ? 'badge--error' : '',
+                        ),
                     ),
                 },
                 [

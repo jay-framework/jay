@@ -51,7 +51,7 @@ export function hydrate(
     const [refManager, [refToggle]] = ReferencesManager.for(options, ['toggle'], [], [], []);
     const render = (viewState: DynamicAttrWithChildRefViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('S0/0', { class: da((vs) => `${vs.isSelected ? 'selected' : ''}`) }, [
+            adoptElement('S0/0', { class: da((vs) => (vs.isSelected ? 'selected' : '')) }, [
                 adoptElement('S0/0/0', {}, [], refToggle()),
             ]),
         ) as DynamicAttrWithChildRefElement;

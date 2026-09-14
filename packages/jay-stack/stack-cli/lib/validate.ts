@@ -9,6 +9,9 @@ import {
     GenerateTarget,
     RuntimeMode,
     findDynamicContract,
+    equalJayTypes,
+    isEnumType,
+    type JayType,
     type JayHtmlValidationContext,
     type JayHtmlValidatorFn,
 } from '@jay-framework/compiler-shared';
@@ -717,13 +720,13 @@ const PHASE_ORDER: Record<string, number> = {
 };
 
 /**
- * Resolve a binding path to its source tag and effective phase.
+ * Resolve a binding path to its source contract tag.
  * Handles keyed component paths (e.g., "p.categorySlug") and page-level paths.
  */
-function resolveBindingPhase(
+function resolveBindingTag(
     bindingPath: string,
     jayHtml: JayHtmlSourceFile,
-): RenderingPhase | undefined {
+): ContractTag | undefined {
     const segments = bindingPath.split('.');
     const root = segments[0];
 
@@ -732,19 +735,37 @@ function resolveBindingPhase(
     if (keyedImport?.contract) {
         const tagPath = segments.slice(1).join('.');
         if (!tagPath) return undefined;
-        const tag = resolveContractTag(keyedImport.contract, tagPath);
-        if (!tag) return undefined;
-        return tag.phase || 'slow';
+        return resolveContractTag(keyedImport.contract, tagPath);
     }
 
     // Check page contract
     if (jayHtml.contract) {
-        const tag = resolveContractTag(jayHtml.contract, bindingPath);
-        if (!tag) return undefined;
-        return tag.phase || 'slow';
+        return resolveContractTag(jayHtml.contract, bindingPath);
     }
 
     return undefined;
+}
+
+/** Resolve a binding path to its source tag's effective phase (DL#152). */
+function resolveBindingPhase(
+    bindingPath: string,
+    jayHtml: JayHtmlSourceFile,
+): RenderingPhase | undefined {
+    const tag = resolveBindingTag(bindingPath, jayHtml);
+    return tag ? tag.phase || 'slow' : undefined;
+}
+
+/** Resolve a binding path to its source tag's declared data type (DL#192). */
+function resolveBindingDataType(
+    bindingPath: string,
+    jayHtml: JayHtmlSourceFile,
+): JayType | undefined {
+    return resolveBindingTag(bindingPath, jayHtml)?.dataType;
+}
+
+/** Human-readable label for a prop/tag data type, used in validation messages (DL#192). */
+function typeLabel(t: JayType): string {
+    return isEnumType(t) ? `enum(${t.values.join(' | ')})` : t.name;
 }
 
 /**
@@ -812,7 +833,7 @@ export function checkHeadlessInstanceProps(jayHtml: JayHtmlSourceFile, file: str
                     }
                 }
 
-                // Check binding phase compatibility (DL#152)
+                // Check binding phase compatibility (DL#152) and prop value/type (DL#192)
                 if (contract.props) {
                     const lowerAttrs: Record<string, string> = {};
                     for (const [k, v] of Object.entries(attrs)) {
@@ -820,12 +841,42 @@ export function checkHeadlessInstanceProps(jayHtml: JayHtmlSourceFile, file: str
                     }
                     for (const contractProp of contract.props) {
                         const attrValue = lowerAttrs[contractProp.name.toLowerCase()];
-                        if (!attrValue) continue;
+                        if (attrValue === undefined) continue;
 
+                        const propType = contractProp.dataType;
                         const bindingMatch = attrValue.match(/^\{(.+)\}$/);
-                        if (!bindingMatch) continue;
+
+                        // Static (bare literal) value — no binding braces at all (DL#192 Q6).
+                        // Only validate values that are a pure literal; skip mixed/expression
+                        // values that embed a "{...}" fragment.
+                        if (!bindingMatch) {
+                            if (attrValue.includes('{')) continue;
+                            if (propType && isEnumType(propType)) {
+                                if (!propType.values.includes(attrValue)) {
+                                    warnings.push(
+                                        `<jay:${contractName}> prop "${contractProp.name}" = "${attrValue}" ` +
+                                            `is not a declared value of enum(${propType.values.join(' | ')}). ` +
+                                            `Use one of: ${propType.values.join(', ')}.`,
+                                    );
+                                }
+                            }
+                            continue;
+                        }
 
                         const bindingPath = bindingMatch[1];
+
+                        // Binding type compatibility (DL#192): the source tag's declared type
+                        // must match the prop type. Enums compare by ordered members (see
+                        // equalJayTypes), so field-derived enum names never cause false rejects.
+                        const sourceType = resolveBindingDataType(bindingPath, jayHtml);
+                        if (propType && sourceType && !equalJayTypes(propType, sourceType)) {
+                            warnings.push(
+                                `<jay:${contractName}> prop "${contractProp.name}" (${typeLabel(propType)}) ` +
+                                    `is bound to {${bindingPath}} (${typeLabel(sourceType)}). ` +
+                                    `The binding source type must match the prop type.`,
+                            );
+                        }
+
                         const sourcePhase = resolveBindingPhase(bindingPath, jayHtml);
                         if (!sourcePhase) continue;
 
@@ -1193,7 +1244,9 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
             for (const msg of headlessPropResults) {
                 if (
                     msg.includes('is missing required prop') ||
-                    msg.includes('source phase must be')
+                    msg.includes('source phase must be') ||
+                    msg.includes('is not a declared value of enum') ||
+                    msg.includes('binding source type must match')
                 ) {
                     errors.push({ file: relativePath, message: msg, stage: 'generate' });
                 } else {

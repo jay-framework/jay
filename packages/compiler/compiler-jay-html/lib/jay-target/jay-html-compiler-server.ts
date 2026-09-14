@@ -418,12 +418,11 @@ function renderServerAttributes(element: HTMLElement, context: ServerContext): R
             const classExpr = parseClassExpression(attrValue, variables);
             if (classExpr.imports.has(Import.dynamicAttribute)) {
                 const rawExpr = classExpr.rendered.replace(/^da\(\w+ => /, '').replace(/\)$/, '');
+                const classImports = classExpr.imports.has(Import.classNames)
+                    ? Imports.for(Import.escapeAttr, Import.classNamesServer)
+                    : Imports.for(Import.escapeAttr);
                 parts.push(
-                    w(
-                        indent,
-                        `' class="' + escapeAttr(String(${rawExpr})) + '"'`,
-                        Imports.for(Import.escapeAttr),
-                    ),
+                    w(indent, `' class="' + escapeAttr(String(${rawExpr})) + '"'`, classImports),
                 );
             } else {
                 const escaped = escapeForJsString(attrValue);
@@ -676,10 +675,13 @@ function renderServerAttributesAsString(
             const classExpr = parseClassExpression(attrValue, variables);
             if (classExpr.imports.has(Import.dynamicAttribute)) {
                 const rawExpr = classExpr.rendered.replace(/^da\(\w+ => /, '').replace(/\)$/, '');
+                const classImports = classExpr.imports.has(Import.classNames)
+                    ? Imports.for(Import.escapeAttr, Import.classNamesServer)
+                    : Imports.for(Import.escapeAttr);
                 parts.push(
                     new RenderFragment(
                         `' class="' + escapeAttr(String(${rawExpr})) + '"'`,
-                        Imports.for(Import.escapeAttr),
+                        classImports,
                     ),
                 );
             } else {
@@ -1122,6 +1124,7 @@ export function generateServerElementFile(
     const importParts: string[] = [];
     if (rendered.imports.has(Import.escapeHtml)) importParts.push('escapeHtml');
     if (rendered.imports.has(Import.escapeAttr)) importParts.push('escapeAttr');
+    if (rendered.imports.has(Import.classNamesServer)) importParts.push('classNames as cx');
     importParts.push('type ServerRenderContext');
 
     const importStatement = `import {${importParts.join(', ')}} from "@jay-framework/ssr-runtime";`;

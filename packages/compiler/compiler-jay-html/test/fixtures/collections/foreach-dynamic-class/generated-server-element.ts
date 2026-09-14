@@ -1,4 +1,9 @@
-import { escapeHtml, escapeAttr, type ServerRenderContext } from '@jay-framework/ssr-runtime';
+import {
+    escapeHtml,
+    escapeAttr,
+    classNames as cx,
+    type ServerRenderContext,
+} from '@jay-framework/ssr-runtime';
 
 export interface ItemOfForeachDynamicClassViewState {
     name: string;
@@ -16,7 +21,7 @@ export function renderToStream(vs: ForeachDynamicClassViewState, ctx: ServerRend
     w(' jay-coordinate="S0/0">');
     for (const vs1 of vs.items) {
         w('<div');
-        w(' class="' + escapeAttr(String(`item ${vs1.isActive ? 'active' : ''}`)) + '"');
+        w(' class="' + escapeAttr(String(cx('item', vs1.isActive ? 'active' : ''))) + '"');
         w(' jay-coordinate="S0/0/0">');
         w('<span');
         w(' jay-coordinate="S1/0">');

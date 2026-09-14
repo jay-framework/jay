@@ -8,6 +8,7 @@ import {
     checkHeadlessInstanceProps,
 } from '../lib/validate';
 import { parseJayFile, JAY_IMPORT_RESOLVER } from '@jay-framework/compiler-jay-html';
+import { JayEnumType, JayAtomicType } from '@jay-framework/compiler-shared';
 import { promises as fsp } from 'fs';
 
 describe('validateJayFiles', () => {
@@ -552,6 +553,189 @@ describe('headless instance props validation (DL#124 Phase 2)', () => {
                     'The binding source phase must be ≤ the prop phase. ' +
                     'Use a slow-phase binding, a route param, or a literal value.',
             ]);
+        });
+    });
+
+    describe('enum value / binding type validation (DL#192)', () => {
+        // Build a <jay:badge status="..."> instance whose `status` prop has the given data type.
+        // For bindings ({currentStatus}) the page contract exposes a `currentStatus` tag whose
+        // dataType is `sourceType`. equalJayTypes is instanceof-based, so tests pass real
+        // JayEnumType / JayAtomicType instances (not the plain {kind,name} objects used elsewhere).
+        function makeEnumJayHtml(options: {
+            propType: any;
+            propValue: string;
+            sourceType?: any;
+            structural?: boolean;
+        }): any {
+            const { propType, propValue, sourceType, structural } = options;
+            return {
+                body: {
+                    childNodes: [
+                        {
+                            nodeType: 1,
+                            rawTagName: 'jay:badge',
+                            attributes: { status: propValue },
+                            childNodes: [],
+                        },
+                    ],
+                },
+                headlessImports: [
+                    {
+                        contractName: 'badge',
+                        ...(structural ? { structural: true } : {}),
+                        contract: {
+                            name: 'badge',
+                            tags: structural
+                                ? [{ tag: 'status', type: [2], dataType: propType }]
+                                : [],
+                            props: [{ name: 'status', dataType: propType, required: false }],
+                        },
+                    },
+                ],
+                contract: {
+                    name: 'page',
+                    tags: sourceType
+                        ? [{ tag: 'currentStatus', type: [0], dataType: sourceType }]
+                        : [{ tag: 'currentStatus', type: [0] }],
+                },
+            };
+        }
+
+        const status = () => new JayEnumType('Status', ['active', 'inactive', 'archived']);
+
+        function typeErrors(warnings: string[]): string[] {
+            return warnings.filter(
+                (w) =>
+                    w.includes('is not a declared value of enum') ||
+                    w.includes('binding source type must match'),
+            );
+        }
+
+        it('does not warn for a valid static enum value', () => {
+            const jayHtml = makeEnumJayHtml({ propType: status(), propValue: 'active' });
+            const warnings = checkHeadlessInstanceProps(jayHtml, 'test.jay-html');
+            expect(typeErrors(warnings)).toEqual([]);
+        });
+
+        it('warns for a static value that is not a member of the enum', () => {
+            const jayHtml = makeEnumJayHtml({ propType: status(), propValue: 'pending' });
+            const warnings = checkHeadlessInstanceProps(jayHtml, 'test.jay-html');
+            expect(typeErrors(warnings)).toEqual([
+                '<jay:badge> prop "status" = "pending" is not a declared value of ' +
+                    'enum(active | inactive | archived). Use one of: active, inactive, archived.',
+            ]);
+        });
+
+        it('warns for a static value whose case does not match a member exactly', () => {
+            const jayHtml = makeEnumJayHtml({ propType: status(), propValue: 'Active' });
+            const warnings = checkHeadlessInstanceProps(jayHtml, 'test.jay-html');
+            expect(typeErrors(warnings)).toEqual([
+                '<jay:badge> prop "status" = "Active" is not a declared value of ' +
+                    'enum(active | inactive | archived). Use one of: active, inactive, archived.',
+            ]);
+        });
+
+        it('does not warn for a non-enum static value', () => {
+            const jayHtml = makeEnumJayHtml({
+                propType: new JayAtomicType('string'),
+                propValue: 'anything',
+            });
+            const warnings = checkHeadlessInstanceProps(jayHtml, 'test.jay-html');
+            expect(typeErrors(warnings)).toEqual([]);
+        });
+
+        it('does not warn for a binding whose source enum has the same members in order', () => {
+            const jayHtml = makeEnumJayHtml({
+                propType: status(),
+                propValue: '{currentStatus}',
+                sourceType: new JayEnumType('CurrentStatus', ['active', 'inactive', 'archived']),
+            });
+            const warnings = checkHeadlessInstanceProps(jayHtml, 'test.jay-html');
+            expect(typeErrors(warnings)).toEqual([]);
+        });
+
+        it('warns for a binding whose source enum has the same members in a different order', () => {
+            const jayHtml = makeEnumJayHtml({
+                propType: status(),
+                propValue: '{currentStatus}',
+                sourceType: new JayEnumType('CurrentStatus', ['inactive', 'active', 'archived']),
+            });
+            const warnings = checkHeadlessInstanceProps(jayHtml, 'test.jay-html');
+            expect(typeErrors(warnings)).toEqual([
+                '<jay:badge> prop "status" (enum(active | inactive | archived)) is bound to ' +
+                    '{currentStatus} (enum(inactive | active | archived)). ' +
+                    'The binding source type must match the prop type.',
+            ]);
+        });
+
+        it('warns for a binding whose source enum has different members', () => {
+            const jayHtml = makeEnumJayHtml({
+                propType: status(),
+                propValue: '{currentStatus}',
+                sourceType: new JayEnumType('CurrentStatus', ['on', 'off']),
+            });
+            const warnings = checkHeadlessInstanceProps(jayHtml, 'test.jay-html');
+            expect(typeErrors(warnings)).toEqual([
+                '<jay:badge> prop "status" (enum(active | inactive | archived)) is bound to ' +
+                    '{currentStatus} (enum(on | off)). ' +
+                    'The binding source type must match the prop type.',
+            ]);
+        });
+
+        it('warns for a binding whose source is a primitive bound to an enum prop', () => {
+            const jayHtml = makeEnumJayHtml({
+                propType: status(),
+                propValue: '{currentStatus}',
+                sourceType: new JayAtomicType('string'),
+            });
+            const warnings = checkHeadlessInstanceProps(jayHtml, 'test.jay-html');
+            expect(typeErrors(warnings)).toEqual([
+                '<jay:badge> prop "status" (enum(active | inactive | archived)) is bound to ' +
+                    '{currentStatus} (string). ' +
+                    'The binding source type must match the prop type.',
+            ]);
+        });
+
+        it('does not warn when the binding source type cannot be resolved', () => {
+            // Page tag exists but declares no dataType — nothing to compare against, skip.
+            const jayHtml = makeEnumJayHtml({
+                propType: status(),
+                propValue: '{currentStatus}',
+            });
+            const warnings = checkHeadlessInstanceProps(jayHtml, 'test.jay-html');
+            expect(typeErrors(warnings)).toEqual([]);
+        });
+
+        it('does not validate a mixed literal/expression attribute value', () => {
+            const jayHtml = makeEnumJayHtml({
+                propType: status(),
+                propValue: 'prefix-{currentStatus}',
+            });
+            const warnings = checkHeadlessInstanceProps(jayHtml, 'test.jay-html');
+            expect(typeErrors(warnings)).toEqual([]);
+        });
+
+        it('validates a static enum value for a Tier 2 structural import', () => {
+            const jayHtml = makeEnumJayHtml({
+                propType: status(),
+                propValue: 'pending',
+                structural: true,
+            });
+            const warnings = checkHeadlessInstanceProps(jayHtml, 'test.jay-html');
+            expect(typeErrors(warnings)).toEqual([
+                '<jay:badge> prop "status" = "pending" is not a declared value of ' +
+                    'enum(active | inactive | archived). Use one of: active, inactive, archived.',
+            ]);
+        });
+
+        it('classifies enum value and binding type mismatches as errors in validateJayFiles', async () => {
+            const dir = path.join(baseFixturesDir, 'enum-value-invalid');
+            const result = await validateJayFiles({ path: dir, projectRoot: dir });
+            expect(result.valid).toBe(false);
+            const enumErrors = result.errors.filter((e) =>
+                e.message.includes('is not a declared value of enum'),
+            );
+            expect(enumErrors.length).toBeGreaterThan(0);
         });
     });
 
