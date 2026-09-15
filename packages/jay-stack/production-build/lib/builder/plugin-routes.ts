@@ -40,7 +40,10 @@ export async function scanPluginRoutes(
                 continue;
             }
 
-            const compPath = resolvePluginModule(plugin.pluginPath);
+            const compPath = resolvePluginModule(
+                plugin.pluginPath,
+                route.devOnly === true ? './tools' : '.',
+            );
             const componentExport = route.component;
 
             pluginRoutes.push({
@@ -94,21 +97,33 @@ function resolvePluginExport(pluginPath: string, exportSubpath: string): string 
     return undefined;
 }
 
-function resolvePluginModule(pluginPath: string): string {
+type PluginPackageExportKey = '.' | './tools';
+
+function resolvePluginModule(
+    pluginPath: string,
+    exportKey: PluginPackageExportKey = '.',
+): string {
     const pkgJsonPath = path.join(pluginPath, 'package.json');
     try {
         const pkg = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'));
-        const mainExport = pkg.exports?.['.'];
+        const entry = pkg.exports?.[exportKey];
         const mainPath =
-            typeof mainExport === 'string'
-                ? mainExport
-                : mainExport?.default || mainExport?.import || pkg.main;
+            typeof entry === 'string'
+                ? entry
+                : entry?.default || entry?.import || (exportKey === '.' ? pkg.main : undefined);
         if (mainPath) {
             const resolved = path.join(pluginPath, mainPath);
             if (fs.existsSync(resolved)) return resolved;
         }
     } catch {
         /* skip */
+    }
+
+    if (exportKey === './tools') {
+        const toolsFallback = path.join(pluginPath, 'dist', 'tools.js');
+        if (fs.existsSync(toolsFallback)) {
+            return toolsFallback;
+        }
     }
 
     return path.join(pluginPath, 'dist', 'index.js');

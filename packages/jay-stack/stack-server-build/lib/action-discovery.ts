@@ -360,6 +360,26 @@ function resolveNpmActionMetadataPath(
 /**
  * Registers actions from an npm package plugin.
  */
+async function loadNpmPluginActionModule(
+    packageName: string,
+    viteServer?: ViteSSRLoader,
+): Promise<Record<string, unknown>> {
+    const load = async (specifier: string): Promise<Record<string, unknown>> => {
+        if (viteServer) {
+            return (await viteServer.ssrLoadModule(specifier)) as Record<string, unknown>;
+        }
+        return (await import(specifier)) as Record<string, unknown>;
+    };
+
+    const mainModule = await load(packageName);
+    try {
+        const toolsModule = await load(`${packageName}/tools`);
+        return { ...mainModule, ...toolsModule };
+    } catch {
+        return mainModule;
+    }
+}
+
 async function registerNpmPluginActions(
     packageName: string,
     pluginConfig: PluginManifest,
@@ -371,13 +391,7 @@ async function registerNpmPluginActions(
     const registeredActions: string[] = [];
 
     try {
-        // Import the package's main module
-        let pluginModule: Record<string, any>;
-        if (viteServer) {
-            pluginModule = await viteServer.ssrLoadModule(packageName);
-        } else {
-            pluginModule = await import(packageName);
-        }
+        const pluginModule = await loadNpmPluginActionModule(packageName, viteServer);
 
         // Register each declared action
         for (const entry of pluginConfig.actions!) {

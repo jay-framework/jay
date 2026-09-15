@@ -125,7 +125,7 @@ async function scanPluginRoutes(projectRoot: string, projectRoutes: JayRoutes): 
             const isLocalComponent = route.component.startsWith('.');
             const compPath = isLocalComponent
                 ? path.resolve(plugin.pluginPath, route.component)
-                : resolvePluginModule(plugin);
+                : resolvePluginModule(plugin, route.devOnly === true ? './tools' : '.');
             // For NPM plugins, route.component is the export name (e.g., 'aiditorPage')
             const componentExport = isLocalComponent ? undefined : route.component;
 
@@ -183,27 +183,51 @@ function resolvePluginExport(pluginPath: string, exportSubpath: string): string 
     return undefined;
 }
 
-/** Resolve the main module path for a plugin. */
-function resolvePluginModule(plugin: {
-    pluginPath: string;
-    manifest: { module?: string };
-}): string {
-    // For NPM packages: read main/exports from package.json
-    const pkgJsonPath = path.join(plugin.pluginPath, 'package.json');
-    if (fsSync.existsSync(pkgJsonPath)) {
-        try {
-            const pkg = JSON.parse(fsSync.readFileSync(pkgJsonPath, 'utf-8'));
-            const mainExport = pkg.exports?.['.'];
-            const mainPath =
-                typeof mainExport === 'string'
-                    ? mainExport
-                    : mainExport?.default || mainExport?.import || pkg.main;
-            if (mainPath) {
-                const resolved = path.join(plugin.pluginPath, mainPath);
-                if (fsSync.existsSync(resolved)) return resolved;
+type PluginPackageExportKey = '.' | './tools';
+
+function resolvePluginModuleFromPackageJson(
+    pluginPath: string,
+    exportKey: PluginPackageExportKey,
+): string | undefined {
+    const pkgJsonPath = path.join(pluginPath, 'package.json');
+    if (!fsSync.existsSync(pkgJsonPath)) {
+        return undefined;
+    }
+    try {
+        const pkg = JSON.parse(fsSync.readFileSync(pkgJsonPath, 'utf-8'));
+        const entry = pkg.exports?.[exportKey];
+        const mainPath =
+            typeof entry === 'string'
+                ? entry
+                : entry?.default || entry?.import || (exportKey === '.' ? pkg.main : undefined);
+        if (mainPath) {
+            const resolved = path.join(pluginPath, mainPath);
+            if (fsSync.existsSync(resolved)) {
+                return resolved;
             }
-        } catch {
-            /* fall through to manual resolution */
+        }
+    } catch {
+        return undefined;
+    }
+    return undefined;
+}
+
+/** Resolve the main module path for a plugin (`.` serve entry or `./tools` for dev-only routes). */
+function resolvePluginModule(
+    plugin: {
+        pluginPath: string;
+        manifest: { module?: string };
+    },
+    exportKey: PluginPackageExportKey = '.',
+): string {
+    const fromPackageJson = resolvePluginModuleFromPackageJson(plugin.pluginPath, exportKey);
+    if (fromPackageJson) {
+        return fromPackageJson;
+    }
+    if (exportKey === './tools') {
+        const toolsFallback = path.join(plugin.pluginPath, 'dist', 'tools.js');
+        if (fsSync.existsSync(toolsFallback)) {
+            return toolsFallback;
         }
     }
 

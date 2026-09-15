@@ -21,6 +21,14 @@ import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 
+/** Browser hydration entry for NPM plugin routes (serve `.` or `./tools` server entries). */
+export function resolveNpmPluginClientImportPath(compPath: string): string {
+    if (compPath.endsWith('tools.js')) {
+        return compPath.replace(/tools\.js$/, 'index.client.js');
+    }
+    return compPath.replace(/index\.js$/, 'index.client.js');
+}
+
 export interface DevServerPagePart {
     compDefinition: AnyJayStackComponentDefinition;
     key?: string;
@@ -116,7 +124,7 @@ export async function loadPageParts(
             // For NPM plugin routes (componentExport set), use the /client entry for browser imports.
             // The server entry (compPath) contains server-only code (actions, services).
             const clientImportPath = route.componentExport
-                ? route.compPath.replace(/index\.js$/, 'index.client.js')
+                ? resolveNpmPluginClientImportPath(route.compPath)
                 : route.compPath;
             parts.push({
                 compDefinition: pageComponent,

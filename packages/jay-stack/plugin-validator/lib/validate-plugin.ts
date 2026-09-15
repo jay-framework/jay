@@ -555,30 +555,44 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
     }
 }
 
-/**
- * Check if a named export exists in the plugin's main entry file.
- * Reads the built .js or .d.ts and searches for the export name.
- */
-function checkExportExists(exportName: string, context: PluginContext): boolean {
+function resolvePackageExportEntryPath(
+    context: PluginContext,
+    exportKey: '.' | './tools',
+): string | undefined {
     const packageJsonPath = path.join(context.pluginPath, 'package.json');
-    if (!fs.existsSync(packageJsonPath)) return true;
+    if (!fs.existsSync(packageJsonPath)) return undefined;
 
-    let mainPath: string | undefined;
     try {
         const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
-        if (packageJson.exports?.['.']) {
-            const entry = packageJson.exports['.'];
+        if (packageJson.exports?.[exportKey]) {
+            const entry = packageJson.exports[exportKey];
             const entryPath = typeof entry === 'string' ? entry : entry.default || entry.import;
-            if (entryPath) mainPath = path.join(context.pluginPath, entryPath);
+            if (entryPath) {
+                return path.join(context.pluginPath, entryPath);
+            }
         }
-        if (!mainPath && packageJson.main) {
-            mainPath = path.join(context.pluginPath, packageJson.main);
+        if (exportKey === '.' && packageJson.main) {
+            return path.join(context.pluginPath, packageJson.main);
         }
     } catch {
-        return true;
+        return undefined;
     }
+    return undefined;
+}
 
-    if (!mainPath || !fs.existsSync(mainPath)) return true;
+/**
+ * Check if a named export exists in a package entry file (`.` or `./tools`).
+ * Reads the built .js or .d.ts and searches for the export name.
+ */
+function checkExportExists(
+    exportName: string,
+    context: PluginContext,
+    exportKey: '.' | './tools' = '.',
+): boolean {
+    const mainPath = resolvePackageExportEntryPath(context, exportKey);
+    if (!mainPath || !fs.existsSync(mainPath)) {
+        return exportKey === './tools' ? false : true;
+    }
 
     try {
         const content = fs.readFileSync(mainPath, 'utf-8');
@@ -591,6 +605,13 @@ function checkExportExists(exportName: string, context: PluginContext): boolean 
     } catch {
         return true;
     }
+}
+
+function isExportNameInPackage(exportName: string, context: PluginContext): boolean {
+    return (
+        checkExportExists(exportName, context, '.') ||
+        checkExportExists(exportName, context, './tools')
+    );
 }
 
 function isRelativePath(value: string): boolean {
@@ -617,12 +638,15 @@ function validateHandlerRef(
                 location,
                 suggestion: `Export the function from the package entry point and use the export name instead of a path`,
             });
-        } else if (!checkExportExists(value, context)) {
+        } else if (!isExportNameInPackage(value, context)) {
+            const hasToolsEntry = Boolean(resolvePackageExportEntryPath(context, './tools'));
             result.errors.push({
                 type: 'export-mismatch',
                 message: `${label} "${value}" is not exported from the package`,
                 location,
-                suggestion: `Add "export { ${value} } from '...'" to the package entry point`,
+                suggestion: hasToolsEntry
+                    ? `Add "export { ${value} } from '...'" to the package "." or "./tools" entry point`
+                    : `Add "export { ${value} } from '...'" to the package entry point`,
             });
         }
     } else if (isRelativePath(value)) {
