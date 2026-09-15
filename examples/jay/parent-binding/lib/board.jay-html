@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<header>
+    <title>Parent Binding element</title>
+    <script type="application/jay-data">
+data:
+    groupLabel: string
+    cards:
+    - id: string
+      name: string
+    </script>
+</header>
+<body>
+<div class="board">
+    <div class="board-header">
+        <h1>{groupLabel}</h1>
+        <button class="relabel" ref="relabel">Relabel group</button>
+        <button class="shuffle" ref="shuffle">Shuffle cards</button>
+    </div>
+    <ul class="cards">
+        <li class="card" forEach="cards" trackBy="id" data-group="{$parent.groupLabel}">
+            <span class="card-name">{name}</span>
+            <span class="card-group">{$parent.groupLabel}</span>
+        </li>
+    </ul>
+</div>
+</body>
+</html>

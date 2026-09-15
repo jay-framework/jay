@@ -1,0 +1,19 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    listTitle: string
+    items:
+    -  name: string
+       id: string
+    </script>
+</head>
+<body>
+<ul>
+    <li forEach="items" trackBy="id" data-group="{$parent.listTitle}">
+        <span class="name">{name}</span>
+        <span class="title">{$parent.listTitle}</span>
+    </li>
+</ul>
+</body>
+</html>

@@ -1,0 +1,20 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    rows:
+    -  id: string
+       cells:
+       -  id: string
+          label: string
+    </script>
+</head>
+<body>
+<table>
+    <tr forEach="rows" trackBy="id">
+        <td forEach="cells" trackBy="id" class="cell">{$parent.$parent.title}</td>
+    </tr>
+</table>
+</body>
+</html>
