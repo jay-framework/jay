@@ -424,6 +424,73 @@ describe('hydrateConditional + forEach + STATIC (mixed children)', () => {
     });
 });
 
+// DL#193 Capability A — item leaves that bind `{$parent.…}` receive the parent data as a
+// positional `_p1` param. `dependsOnParent` weakens hydrateForEach's collection/per-item
+// gates so a parent-only change (items array ref unchanged) still re-runs the leaves.
+describe('hydrateForEach with $parent bindings (dependsOnParent)', () => {
+    interface ParentBindingViewState {
+        listTitle: string;
+        items: Item[];
+    }
+
+    // Each item's title span binds `_p1.listTitle`; name span binds the item's own name.
+    const parentBindingHTML =
+        '<ul jay-coordinate="0">' +
+        '<li jay-coordinate="0/0">' +
+        '<span jay-coordinate="S1/0">Alice</span>' +
+        '<span jay-coordinate="S1/1">Sales</span>' +
+        '</li>' +
+        '<li jay-coordinate="0/0">' +
+        '<span jay-coordinate="S1/0">Bob</span>' +
+        '<span jay-coordinate="S1/1">Sales</span>' +
+        '</li>' +
+        '</ul>';
+
+    function hydrateParentBinding(vs: ParentBindingViewState) {
+        return hydrate<ParentBindingViewState>(parentBindingHTML, vs, () =>
+            adoptDynamicElement<ParentBindingViewState>('0', {}, [
+                hydrateForEach<ParentBindingViewState, Item>(
+                    (state) => state.items,
+                    'id',
+                    '0/0',
+                    () => [
+                        adoptText<Item>('S1/0', (item) => item.name),
+                        adoptText<Item>(
+                            'S1/1',
+                            (_item, _p1: ParentBindingViewState) => _p1.listTitle,
+                        ),
+                    ],
+                    (_item, _id) =>
+                        de<Item>('li', {}, [
+                            e('span', {}, [dt((i: Item) => i.name)]),
+                            e('span', {}, [
+                                dt((_i: Item, _p1: ParentBindingViewState) => _p1.listTitle),
+                            ]),
+                        ]),
+                    true,
+                ),
+            ]),
+        );
+    }
+
+    it('re-runs $parent leaves when the parent changes and the items array ref is unchanged', () => {
+        const items: Item[] = [
+            { id: 'a', name: 'Alice' },
+            { id: 'b', name: 'Bob' },
+        ];
+        const { jayElement, root } = hydrateParentBinding({ listTitle: 'Sales', items });
+
+        // Update ONLY the parent field; pass the SAME items array reference so the
+        // collection gate (items !== lastItems) short-circuits — dependsOnParent must
+        // still re-run the item leaves against the live parent.
+        jayElement.update({ listTitle: 'Marketing', items });
+
+        const titles = root.querySelectorAll('[jay-coordinate="S1/1"]');
+        expect(titles[0].textContent).toBe('Marketing');
+        expect(titles[1].textContent).toBe('Marketing');
+    });
+});
+
 describe('nested hydrateForEach — ref coordinates include both trackBy levels', () => {
     interface Choice {
         choiceId: string;

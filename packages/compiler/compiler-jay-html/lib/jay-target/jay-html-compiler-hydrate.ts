@@ -521,8 +521,15 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         // Pass the item root coordinate so hydrateForEach can resolve each item's
         // root DOM element and build a local scope map for its subtree (DL#126).
         const itemRootCoordForEach = element.getAttribute(COORD_ATTR) || '0';
+        // DL#193 Capability A: force item re-runs when the body binds `{$parent.…}`. The
+        // item body carries the deepest `$parent` climb via parentDepth (widened closures
+        // are produced by the shared expression compiler); a climb > 0 means this forEach
+        // is the scope the binding climbs out of. The residual depth (for enclosing scopes)
+        // drops by one, since this forEach consumes one climb.
+        const bodyParentDepth = Math.max(itemContent.parentDepth, createChildren.parentDepth);
+        const dependsOnParent = bodyParentDepth > 0;
         const hydrateForEachFragment = new RenderFragment(
-            `${indent.firstLine}hydrateForEach(${forEachFragment.rendered}, '${trackBy}', '${itemRootCoordForEach}',\n${indent.firstLine}    ${adoptBody},\n${indent.firstLine}    ${createBody},\n${indent.firstLine})`,
+            `${indent.firstLine}hydrateForEach(${forEachFragment.rendered}, '${trackBy}', '${itemRootCoordForEach}',\n${indent.firstLine}    ${adoptBody},\n${indent.firstLine}    ${createBody},${dependsOnParent ? `\n${indent.firstLine}    true,` : ''}\n${indent.firstLine})`,
             allImports,
             [
                 ...forEachFragment.validations,
@@ -530,6 +537,8 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
                 ...createChildren.validations,
             ],
             mergeRefsTrees(itemContent.refs, itemRefFragment.refs),
+            [],
+            Math.max(forEachFragment.parentDepth, Math.max(0, bodyParentDepth - 1)),
         );
         // Nest refs under the forEach access path, matching the standard element target
         return nestRefs(forEachAccessor.terms, hydrateForEachFragment);

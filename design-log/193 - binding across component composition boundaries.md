@@ -7,7 +7,7 @@ Status: **DESIGN — for review, not yet implemented.**
 Three separate feature requests keep bumping into the same wall: **an expression or a ref
 declared in one component scope cannot reach an element/component that lives in another
 scope.** Jay's compiler is deliberately scope-isolated — every binding resolves against the
-*current* scope's ViewState type, and every ref is derived from the *current* component's
+_current_ scope's ViewState type, and every ref is derived from the _current_ component's
 contract. That isolation is the right default (DL#84), but it blocks three composition
 patterns:
 
@@ -15,7 +15,7 @@ patterns:
    `onClick`. We wrap it inside a pure composite/section component. At the composite's usage
    site, how do we reach the inner button to attach `onClick`? The collection variant is the
    composite itself being repeated at the usage site (`<jay:Card forEach=…>`) → collection refs.
-   (A `forEach` *inside* the composite is not possible — a pure component takes no array prop to
+   (A `forEach` _inside_ the composite is not possible — a pure component takes no array prop to
    iterate; see §B.)
 
 2. **Component overrides — binding to override-introduced content.** A container component
@@ -39,6 +39,7 @@ templates & context switching), DL#14/#24 (References API).
 ## Current architecture (as mapped by research)
 
 ### How refs are produced
+
 - A ref lands in a component's `RefsTree` **only** for `ContractTagType.interactive` tags
   (`contract-to-view-state-and-refs.ts` `traverseTag`), or for `ref="..."` on an
   element/child-instance in a jay-html template (`jay-html-compile-refs.ts`).
@@ -57,16 +58,18 @@ receive viewState only as the argument of their `update(newData)` closure — a 
 its scope's viewState as a **field** (`node-reference.ts:240`) that is kept current by
 `update(newData) { this.viewState = newData }` (line 293-295). `formatEvent` then injects that
 live viewState into every `JayEvent` delivered to handlers:
+
 ```ts
 formatEvent(event) { return { event, viewState: this.viewState, coordinate: this.coordinate }; }
 ```
+
 So an event handler `refs.x.onclick(({ event, viewState, coordinate }) => …)` already gets the
 **current** scope viewState for that ref — for a ref inside a `forEach`, the correct per-item
 viewState (via the collection's per-ref `update`), not a stale capture. Refs are therefore a
 **second viewState-threading channel** that is already live, and the type side mirrors it:
 `${name}Ref<ParentVS> = MapEventEmitterViewState<ParentVS, …>` re-bases the event viewState to
 the parent scope. Ref forwarding (issue 1) rides this live channel **as-is** — the forwarded ref
-keeps the *inner* component's scope viewState; we deliberately do NOT re-base it to the usage-site
+keeps the _inner_ component's scope viewState; we deliberately do NOT re-base it to the usage-site
 scope (see §B).
 
 **Event handlers do NOT need parent viewState threaded in (decided).** An earlier draft proposed
@@ -77,11 +80,12 @@ trackBy id chain) identifying which item fired. So `refs.removeBtn.onclick(({ vi
 coordinate }) => remove(viewState.id))` can read any parent field directly from the component's
 own state — no `formatEvent`/`JayEvent` change. Parent-data reachability (Capability A) is
 therefore needed **only for reactive text/attribute bindings** (`{$parent.field}` rendered in the
-DOM), which have no component code to reach up. Overrides *might* be the one exception (handler in
+DOM), which have no component code to reach up. Overrides _might_ be the one exception (handler in
 the outer component, ref in the inner one), but the coordinate system covers that too — so we do
 not extend the event API for them either.
 
 ### How expression scope works
+
 - `Variables` tracks `currentVar` (`vs`, `vs1`, `vs2` by depth), `currentType`, and a
   `parent` link. `forEach` creates a child scope via `childVariableFor(accessor)` (itemType,
   depth+1, parent=this).
@@ -93,6 +97,7 @@ not extend the event API for them either.
   client/trusted target — but the expression language offers no syntax to reach it.
 
 ### How overrides work (DL#181)
+
 - Overrides are **entirely compile-time template splicing**. `jay-html-overrides.ts`
   (`parseOverrides`/`applyOverrides`/`applyHeadfullOverrides`) injects the override fragment
   into the **inner** component's body, and it is compiled against the **inner** component's
@@ -102,6 +107,7 @@ not extend the event API for them either.
   compiler cannot even tell "this element came from the outer scope's override."
 
 ### Runtime scope plumbing
+
 - `ConstructContext.forItem`/`forAsync`/`forScope` create a child context holding **only** the
   child's `data`. There is **no back-pointer to the parent context or parent data.** Only
   `_dataIds` (the trackBy id chain) accumulates. So for the bridge/server (data-id) targets,
@@ -115,7 +121,7 @@ not extend the event API for them either.
 The three problems reduce to **two runtime capabilities**:
 
 - **(A) Parent-data reachability — reactive text/attribute bindings only.** A declarative
-  `{$parent.field}` in a child scope must read *live* parent data. This is NOT free on any target:
+  `{$parent.field}` in a child scope must read _live_ parent data. This is NOT free on any target:
   `dt`/`da` closures only ever see the current scope's viewState, and keyed list reuse makes any
   lexically-captured or snapshot parent stale (Examples §A). The carrier is the existing
   **`ConstructContext` made live** — add a `parent` pointer + in-place `update` so leaf helpers
@@ -124,7 +130,7 @@ The three problems reduce to **two runtime capabilities**:
   **Event handlers are out of scope for (A)** — the owning component already holds parent data +
   `coordinate` (see architecture note), so no `JayEvent` change.
 - **(B) Forwarded refs.** Issues 1 & 2 are a different mechanism: the inner/override RefsTree
-  must be *surfaced* to the outer scope and the passthrough/override component must *forward* the
+  must be _surfaced_ to the outer scope and the passthrough/override component must _forward_ the
   child refs through its public API (the existing `DELEGATE_REFS_TO_COMP_TRAP` already forwards
   member access at runtime). **Forwarding is pure passthrough — no event re-basing:** a surfaced
   ref keeps the scope it was compiled in (inner `CardViewState` for §B; the specialization's
@@ -133,12 +139,12 @@ The three problems reduce to **two runtime capabilities**:
 
 The three features draw on these in different combinations:
 
-| Feature | Parent-data (A) | Forwarded refs (B) |
-| --- | --- | --- |
-| 1. Pure-component inner refs | no | **yes** |
-| 2. Overrides — bind outer data | only inside inner `forEach` | via inheritance (§C) |
-| 2. Overrides — reach injected refs | — | **yes** |
-| 3. forEach parent binding | **yes** | no |
+| Feature                            | Parent-data (A)             | Forwarded refs (B)   |
+| ---------------------------------- | --------------------------- | -------------------- |
+| 1. Pure-component inner refs       | no                          | **yes**              |
+| 2. Overrides — bind outer data     | only inside inner `forEach` | via inheritance (§C) |
+| 2. Overrides — reach injected refs | —                           | **yes**              |
+| 3. forEach parent binding          | **yes**                     | no                   |
 
 ---
 
@@ -159,18 +165,18 @@ Q1–Q5 are decidable from real shapes rather than prose.
 ```
 
 **Generated element today** (from a real fixture pattern) — note the item element's text
-updates are driven by the item viewState *passed as the closure argument*, not by any parent:
+updates are driven by the item viewState _passed as the closure argument_, not by any parent:
 
 ```ts
 forEach(
-    (vs: PageViewState) => vs.items,
-    (vs1: Item) => {
-        return e('div', {}, [
-            e('span', {}, [dt((vs1) => vs1.name)]),
-            e('button', {}, [`Remove from `, /* {$parent.listTitle} goes here */], refRemoveBtn()),
-        ]);
-    },
-    'id',
+  (vs: PageViewState) => vs.items,
+  (vs1: Item) => {
+    return e('div', {}, [
+      e('span', {}, [dt((vs1) => vs1.name)]),
+      e('button', {}, [`Remove from ` /* {$parent.listTitle} goes here */], refRemoveBtn()),
+    ]);
+  },
+  'id',
 );
 ```
 
@@ -186,12 +192,12 @@ update: (newData: ViewState) => {           // newData === the item, never the p
 ```
 
 Keyed list reuse (`listCompare` by `trackBy`) reuses an item element across parent-data
-changes, so a *lexically captured* parent var would be **stale**. Several carriers were weighed
+changes, so a _lexically captured_ parent var would be **stale**. Several carriers were weighed
 (Q7) and rejected: variadic `update(vs, parentVs, …)` (too invasive) and `vs[SymbolParent]`
 (mutates user-provided array members → spread/freeze/shared-ref footguns).
 
 **Chosen carrier — reuse `ConstructContext` (Q7): add a `parent` pointer + in-place `update`.**
-Today `ConstructContext` supplies only *initial* data at element construction and is never
+Today `ConstructContext` supplies only _initial_ data at element construction and is never
 consulted again; making it updatable turns it into a **live per-scope state carrier**. The
 scope-switch update writes its own context in place each cascade — `mkUpdateCollection` already
 has the TODO for this (element.ts:413). Leaf binding helpers **already capture their context**
@@ -270,10 +276,10 @@ re-exports its named inner refs:
 ```ts
 // generated for the page — the forwarded inner ref surfaces here:
 export interface PageElementRefs {
-    signupCard: CardRefs;                 // the composite instance
+  signupCard: CardRefs; // the composite instance
 }
 export interface CardRefs {
-    cta: ButtonRef<CardViewState>;        // forwarded AS-IS, keeps Card's scope — no re-basing
+  cta: ButtonRef<CardViewState>; // forwarded AS-IS, keeps Card's scope — no re-basing
 }
 
 // page.ts usage:
@@ -282,17 +288,18 @@ refs.signupCard.cta.onClick(() => navigate('/signup'));
 
 **No event re-basing (decided — the simpler model).** The forwarded `cta` ref lives inside `Card`
 and its `RefImpl.viewState` is already `Card`'s scope. We surface it **as-is**, typed
-`ButtonRef<CardViewState>` — we do *not* re-base its event to `PageViewState`. Two reasons:
+`ButtonRef<CardViewState>` — we do _not_ re-base its event to `PageViewState`. Two reasons:
+
 - **It's less code.** `RefImpl` already carries its own scope viewState and `formatEvent` already
   delivers it; forwarding is then pure passthrough (the existing `DELEGATE_REFS_TO_COMP_TRAP`),
   with nothing to map across the boundary.
-- **`CardViewState` is the *correct* data, not a lossy substitute.** Everything the button was
+- **`CardViewState` is the _correct_ data, not a lossy substitute.** Everything the button was
   rendered against is, by construction, part of `CardViewState` (a pure component's only data is
   its own ViewState = its contract tags, DL#187). So `cta.onClick(({ viewState }) => …)` receives
   exactly the data the button displayed. Re-basing to `PageViewState` would hand the handler data
-  the button was *never* bound against — more work for a worse result.
+  the button was _never_ bound against — more work for a worse result.
 
-**No `forEach` *inside* a pure composite.** A pure (Tier 2) component gets data only through
+**No `forEach` _inside_ a pure composite.** A pure (Tier 2) component gets data only through
 declared `props`, and props mirror `tags` as scalar/enum values (DL#187 Q9/Q3, DL#84) — there is
 **no composite/array prop** to drive an internal `forEach`. So the "button under a `forEach`
 inside the composite" case does not arise. Collections come from the **other** direction: placing
@@ -306,15 +313,15 @@ the pure composite itself under a `forEach` at the **usage site**:
 ```ts
 // repeated=true on the composite → the forwarded ref rides the usage-site collection:
 export interface PageElementRefs {
-    cards: CardRefs;                      // collection of Card instances (nested under the forEach)
+  cards: CardRefs; // collection of Card instances (nested under the forEach)
 }
 export interface CardRefs {
-    cta: ButtonRefs<CardViewState>;       // one cta per card — still Card's own scope, no re-basing
+  cta: ButtonRefs<CardViewState>; // one cta per card — still Card's own scope, no re-basing
 }
 
 // page.ts usage — same API as a locally-declared collection ref:
-refs.cards.cta.onClick((e) => navigate(e.viewState.ctaLabel));   // event across all cards
-refs.cards.cta.find((r, vs) => vs.ctaLabel === 'Sign up');       // reach one card
+refs.cards.cta.onClick((e) => navigate(e.viewState.ctaLabel)); // event across all cards
+refs.cards.cta.find((r, vs) => vs.ctaLabel === 'Sign up'); // reach one card
 ```
 
 The single-vs-collection distinction is decided by the **usage-site** `forEach`, not by anything
@@ -330,22 +337,23 @@ injects a button and binds **outer** data into it:
 <!-- usage: page.jay-html -->
 <jay:Panel>
   <jay:override name="body">
-    <button ref="save">Save {documentName}</button>   <!-- documentName is OUTER (page) data -->
+    <button ref="save">Save {documentName}</button>
+    <!-- documentName is OUTER (page) data -->
   </jay:override>
 </jay:Panel>
 ```
 
-**What must be generated — an override *specialization* by inheritance (recommended, Q3-option-c).**
+**What must be generated — an override _specialization_ by inheritance (recommended, Q3-option-c).**
 The override turns `Panel` into a per-usage-site specialization `Panel$1` whose ViewState and Refs
 **inherit** the base component's and **add** the override's members:
 
 ```ts
 // generated for the Panel$1 specialization (one per override site):
 interface Panel$1ViewState extends PanelViewState {
-    documentName: string;                 // hoisted from the override's outer-data references
+  documentName: string; // hoisted from the override's outer-data references
 }
 interface Panel$1Refs extends PanelRefs {
-    save: HTMLElementProxy<Panel$1ViewState, HTMLButtonElement>;   // override ref, Panel$1 scope
+  save: HTMLElementProxy<Panel$1ViewState, HTMLButtonElement>; // override ref, Panel$1 scope
 }
 
 // page.ts usage — the specialization instance's forwarded ref surfaces at the page:
@@ -353,15 +361,16 @@ refs.panel.save.onclick(({ viewState }) => store.save(viewState.documentName));
 ```
 
 Three properties, all consistent with §B:
+
 - **Events carry `Panel$1ViewState` (no re-basing).** `Panel$1ViewState extends PanelViewState`,
-  so the event is a `PanelViewState` plus the override's added members — the same *keep the inner
-  scope* rule as forwarded pure-component refs. (Correction to the first sketch: the ref is typed
+  so the event is a `PanelViewState` plus the override's added members — the same _keep the inner
+  scope_ rule as forwarded pure-component refs. (Correction to the first sketch: the ref is typed
   `HTMLElementProxy<Panel$1ViewState, …>`, **not** `<PageViewState, …>` — events carry the
   specialized Panel's view state, per the "no re-basing" rule.)
 - **Bindings pass through, like a pure component.** `{documentName}` resolves against
   `Panel$1ViewState.documentName`, exactly as a pure component's template reads its own ViewState.
 - **Outer data flows down the normal channel.** The override's free outer references (here
-  `documentName`) are *hoisted* into `Panel$1ViewState` as added members, typed by resolving them
+  `documentName`) are _hoisted_ into `Panel$1ViewState` as added members, typed by resolving them
   against the **outer** (page) scope where the override is authored, and **supplied by the outer
   scope** as extra data — no runtime back-pointer. **`Panel$1ViewState extends PanelViewState` is a
   compile-time composition** for typing the override subtree's bindings and forwarded ref; whether
@@ -377,26 +386,27 @@ Panel scope and would error/miscompile).
 
 **Where the hoisted members come from — automatic capture, not author ceremony.** This is the
 crux, and the answer is that there is no ceremony: it is ordinary lexical scoping plus
-free-variable capture. The override fragment is *authored in `page.jay-html`*, so its bindings
+free-variable capture. The override fragment is _authored in `page.jay-html`_, so its bindings
 belong to the **outer (page) scope** — exactly like every other binding in that file. So:
+
 - `{documentName}` resolves against the page scope **because that is where it is written** — no
   `$parent`, no declaration on `<jay:Panel>`.
 - The compiler scans the override fragment for the outer identifiers it references (a free-variable
-  scan) and *that set is* the added members of `Panel$1ViewState`. The author never lists them —
-  it is **capture, not declaration**. Mental model: the override is a *closure over the outer
-  scope*, and `Panel$1ViewState` is its automatically-computed capture record.
+  scan) and _that set is_ the added members of `Panel$1ViewState`. The author never lists them —
+  it is **capture, not declaration**. Mental model: the override is a _closure over the outer
+  scope_, and `Panel$1ViewState` is its automatically-computed capture record.
 - `$parent` stays **compiler-internal**. The author never types it in an override; the compiler
   only emits a parent-access when it splices the override inside `Panel`'s own `forEach` to reach
   the hoisted top-level member from the item scope (the sub-case below). This is why option-b's
   author-facing `$parent.` (noisy) is rejected for overrides — the same primitive is used, but
   under the hood.
 
-This keeps DL#84 intact: DL#84 bans a component's *own* template from reaching up into its parent.
+This keeps DL#84 intact: DL#84 bans a component's _own_ template from reaching up into its parent.
 The override fragment is **not** Panel's own template — it is page-authored content injected into
 Panel, so resolving its bindings against the page scope is lexically correct, not an isolation
 breach. (Edge case to validate: an outer reference whose name collides with an existing
-`PanelViewState` member of a *different* type makes `Panel$1ViewState extends PanelViewState`
-ill-typed — report it. Reaching Panel's *own* internal data from an override is a separate
+`PanelViewState` member of a _different_ type makes `Panel$1ViewState extends PanelViewState`
+ill-typed — report it. Reaching Panel's _own_ internal data from an override is a separate
 slot-props/render-props concern, out of scope for this DL.)
 
 **Sub-case — override region inside Panel's own `forEach`.** If the override mounts inside an
@@ -411,6 +421,7 @@ runtime primitive for this sub-case. They compose (this is the strongest reason 
 `$parent.field` / `../field` / `^field`. `$` is already a legal `IdentifierStart`, and `jay`
 already demonstrates the "special root token" pattern, so `$parent` is the cheapest to slot
 in. Multi-level (`$parent.$parent.x` vs `../../x`)? **Recommendation: `$parent.` chainable.**
+
 > _Answer (2026-09-14): **Explicit `$parent.`, not implicit search-up.** Implicit ancestor
 > lookup ("bind `listTitle` here, else walk up") was considered and rejected: it reintroduces
 > the coupling DL#84 deliberately removed, creates shadowing fragility (adding/removing an
@@ -420,7 +431,7 @@ in. Multi-level (`$parent.$parent.x` vs `../../x`)? **Recommendation: `$parent.`
 
 **Q2. Scope of issue 1 (pure-component ref forwarding).** DL#187 Q6 / criterion 9 explicitly
 say Tier 2 components have **no refs**. Forwarding inner child refs makes a Tier 2 component a
-*ref surface* — crossing that line (without adding code to it). Do we:
+_ref surface_ — crossing that line (without adding code to it). Do we:
 (a) **implicitly forward all inner child-component refs** (auto), or
 (b) require the composite to **declare** which inner refs are exposed (new contract concept /
 new `ContractTagType`)?
@@ -431,6 +442,7 @@ pure passthrough of `ButtonRef<CardViewState>`, no per-ref event mapping to gene
 that a pure component **cannot `forEach` internally** (no composite/array prop — DL#187/DL#84), so
 "forward all inner refs" has a bounded, statically-known shape; collections only appear when the
 composite itself is repeated at the usage site.
+
 > _Answer: **(a) implicit.** Auto-forward all named (`ref="..."`) inner child-component refs; no
 > declaration required._
 
@@ -444,7 +456,7 @@ data (reuses Capability A directly). Verbose for the author (every outer referen
 `$parent.`).
 (c) **Inheritance / specialization — RECOMMENDED.** The override produces a per-site subtype
 `Panel$1ViewState extends PanelViewState` / `Panel$1Refs extends PanelRefs` (Examples §C): the
-override's added data members and refs are *added* to the base via inheritance; the override's
+override's added data members and refs are _added_ to the base via inheritance; the override's
 free outer references are **hoisted** into the extended ViewState (typed against the outer scope)
 and **supplied by the outer scope** as extra data down the normal update channel — the same
 props→ViewState passthrough as a Tier 2 pure component. Events carry `Panel$1ViewState` (no
@@ -458,10 +470,11 @@ a runtime back-pointer. The one sub-case still needing Capability A is an overri
 item scope → `$parent`); the type/surfacing model and the runtime `$parent` primitive compose.
 **How the hoist is computed (resolved):** no author ceremony — the override is authored in the
 outer file, so its bindings resolve against the outer scope by ordinary lexical scoping, and the
-compiler's free-variable scan of the fragment *is* the capture list that becomes
+compiler's free-variable scan of the fragment _is_ the capture list that becomes
 `Panel$1ViewState`'s added members (see §C "automatic capture"). Author never declares them and
 never writes `$parent` (that stays compiler-internal for the inner-`forEach` sub-case). Still
 open: the `Panel$1` naming/uniquing convention, and validating outer/inner name collisions.
+
 > _Answer: **(c) inheritance/specialization**, confirmed. Hoist by automatic capture (§C)._
 
 **Q4. Reactive parent bindings need runtime work on _all_ targets (revised).** The
@@ -471,12 +484,14 @@ that carrier; the sandbox/bridge target needs its own re-attach on the receiving
 phase secure/bridge behind client, or land both together?
 **Recommendation: make `ConstructContext` live once, enable client + hydrate first, follow with
 secure/bridge** (which needs the extra receiving-side re-attach).
+
 > _Answer: ok — client + hydrate first, secure/bridge after. **But a blocking runtime detail must
 > be solved first (below): the update gates skip the very leaves a `$parent` binding needs.**_
 
 **Q4a. The update-gate problem (raised in review — must be solved).** Jay's update path
 short-circuits on **reference checks** so an unchanged subtree is not re-touched. Three gates exist
 on the way to a `{$parent.field}` leaf inside a `forEach` (verified in source):
+
 1. **Collection gate** — `element.ts:418` `let isModified = items !== lastItems; if (isModified){…}`.
    If the items array reference is unchanged, **no** `elem.update` runs for any item.
 2. **Per-item gate** — `wrapWithModifiedCheck` (`context.ts:148-151`), applied to each item element
@@ -484,17 +499,18 @@ on the way to a `{$parent.field}` leaf inside a `forEach` (verified in source):
    reference is unchanged, the item element's update is skipped.
 3. **Leaf DOM-write gate** — `dynamicText.update` (`element.ts:546-549`) recomputes
    `textContent(newData)` **every call** and gates only the DOM write (`if (newContent !== content)`).
-   This one is *correct* for us: given the chance to run, it recomputes and, reading the now-live
+   This one is _correct_ for us: given the chance to run, it recomputes and, reading the now-live
    `context.parent.currData`, produces the new content.
 
 The problem: when the **parent** changes but the item array/item references do **not** (the common
-keyed-reuse case), gates 1 and 2 both short-circuit *before* gate 3 ever runs — so calling
+keyed-reuse case), gates 1 and 2 both short-circuit _before_ gate 3 ever runs — so calling
 `parentContext.update(newData)` alone (the base carrier design) makes the parent context live but
 the leaf never gets called to read it. Bindings stay stale.
 
 **Fix — a compile-time `dependsOnParent` flag that weakens gates 1 & 2 only where `$parent` is
 used.** The compiler already knows a scope's body references `$parent`; it marks that
 `forEach`/`conditional`/`withData` with `dependsOnParent: true`. Then, at runtime, per cascade:
+
 - Update the parent context **first** (`parentContext.update(newData)`), so `context.parent.currData`
   is fresh before any child update reads it.
 - **Gate 1:** add `parentModified = newData !== lastParentData`; when the body `dependsOnParent`
@@ -507,7 +523,7 @@ used.** The compiler already knows a scope's body references `$parent`; it marks
 Cost is opt-in and localized: a plain `forEach` keeps all three fast gates untouched; a
 `$parent`-using `forEach` re-runs its item leaves **only when the parent actually changed**
 (O(items) recompute for that scope, with gate 3 still suppressing no-op DOM writes). This refines
-the earlier "O(scopes) writes per cascade" claim: parent-*context* updates stay O(scopes), but a
+the earlier "O(scopes) writes per cascade" claim: parent-_context_ updates stay O(scopes), but a
 parent change forces O(items) leaf **recomputation** for each parent-dependent scope — inherent
 and unavoidable, since each item's `$parent` binding genuinely may now differ.
 
@@ -516,15 +532,17 @@ and unavoidable, since each item's `$parent` binding genuinely may now differ.
 down, in `packages/runtime/component/lib/hooks.ts`. `createDerivedArray` maps an array through a
 per-item cache (`WeakMap<T, MappedItemTracking>`) and decides re-mapping with an explicit predicate
 (`mapItem`, hooks.ts:98-127):
+
 ```ts
 const needToMap =
-    force ||                                             // <- MeasureOfChange.FULL propagated in
-    !cached ||
-    item !== cached.item ||                              // item reference changed (our gate 2)
-    (index !== cached.index && cached.usedIndex) ||      // index changed AND the mapper read index
-    (length !== cached.length && cached.usedLength);      // length changed AND the mapper read length
+  force || // <- MeasureOfChange.FULL propagated in
+  !cached ||
+  item !== cached.item || // item reference changed (our gate 2)
+  (index !== cached.index && cached.usedIndex) || // index changed AND the mapper read index
+  (length !== cached.length && cached.usedLength); // length changed AND the mapper read length
 ```
-Two ideas transfer directly and *validate* the Q4a design rather than replacing it:
+
+Two ideas transfer directly and _validate_ the Q4a design rather than replacing it:
 
 1. **`force` = our `dependsOnParent` + `parentModified`.** `force` comes from
    `MeasureOfChange.FULL` (`reactive.ts:1-6`: `NO_CHANGE | PARTIAL | FULL`) propagating down a
@@ -536,8 +554,8 @@ Two ideas transfer directly and *validate* the Q4a design rather than replacing 
 
 2. **`usedIndex`/`usedLength` dependency tracking is a sharper gate than a static flag.** Note
    `mapItem` does **not** blindly re-map on any index/length change — it re-maps only when the
-   value changed *and the mapper actually read it* (`trackableGetter`, hooks.ts:87-96, records
-   `wasUsed`). The parallel for us: re-run an item's leaves only when the parent changed *and* that
+   value changed _and the mapper actually read it_ (`trackableGetter`, hooks.ts:87-96, records
+   `wasUsed`). The parallel for us: re-run an item's leaves only when the parent changed _and_ that
    item's subtree actually reads `$parent`. Our compile-time `dependsOnParent` flag is the coarse
    (per-scope) version of this same discrimination — and coarse is the right call here: the
    compiler already knows statically whether a scope reads `$parent`, so there is no need for
@@ -551,12 +569,17 @@ and (b) the right gate is "changed AND actually used," which our static `$parent
 at compile time — strictly cheaper than the runtime `WeakMap`+`trackableGetter` machinery, which
 exists only because the reactive layer cannot see the mapper body. No change to the Q4a fix; we
 keep the compile-time `dependsOnParent` flag, now with a documented precedent.
-> _Answer:_
+
+> _Answer: ok — keep the compile-time `dependsOnParent` gate-weakening. `createDerivedArray`
+> confirms the idiom (`force`/`MeasureOfChange.FULL` = "recompute despite unchanged reference")
+> and that a static "reads `$parent`" flag is the cheaper compile-time analogue of its runtime
+> `usedIndex`/`usedLength` tracking. No design change._
 
 **Q5. Priority / sequencing.** Issue 1 (pure refs) and issue 2 (overrides) are the
 user-driving features; issue 3 (forEach parent) is explicitly low priority but is the
-*simplest* and shares runtime-A with issue 2a. Suggested order: **3 → 2 → 1** (build the
+_simplest_ and shares runtime-A with issue 2a. Suggested order: **3 → 2 → 1** (build the
 cheap parent-data primitive first, then overrides on top, then the refs-forwarding work).
+
 > _Answer: ok — **3 → 2 → 1**._
 
 **Q6. Do we ship both binding kinds together? — RESOLVED, moot.** The two "binding kinds"
@@ -564,6 +587,7 @@ cheap parent-data primitive first, then overrides on top, then the refs-forwardi
 handlers reach parent data directly from the owning component + `coordinate` (architecture note),
 so **only reactive text/attribute bindings** use the live-`ConstructContext` carrier. There is one
 binding kind and one mechanism; nothing to phase apart.
+
 > _Answer: resolved — only text/attr uses the carrier; event handlers need no change._
 
 **Q7. How is parent viewState carried down? (update-flow mechanism.)** Three carriers
@@ -584,7 +608,7 @@ considered (Jay's data flow is always top-down through `update`, so all are viab
 - **(b') `WeakMap<childObj, parentObj>`.** Side table instead of mutation; walk the chain via
   `map.get(map.get(item))`. ✅ no data mutation, GC-friendly, target-uniform, minimal compiler
   work. ⚠️ **O(items) sets per cascade** (same order as the symbol); ⚠️ **identity collision** —
-  keyed by object identity, so the *same* object reference used as an item in two scopes gets
+  keyed by object identity, so the _same_ object reference used as an item in two scopes gets
   last-writer-wins and one scope reads the wrong parent. (A strong `Map` is worse — it leaks; if
   going this route it must be `WeakMap`.) Perf is acceptable (V8 `WeakMap` is ~O(1); the "slow"
   reputation is largely myth at UI volumes).
@@ -595,8 +619,8 @@ considered (Jay's data flow is always top-down through `update`, so all are viab
   `ConstructContext` already is (a per-scope object the leaf helpers already capture), plus
   extra codegen. Superseded by (c-live).
 - **(c-live) Reuse `ConstructContext`: add `parent` pointer + in-place `update` — RECOMMENDED.**
-  My earlier rejection of (c) was wrong: it conflated "context isn't updated *today*" with
-  "context *can't* be updated." The context does not need to be *reconstructed* on the cascade
+  My earlier rejection of (c) was wrong: it conflated "context isn't updated _today_" with
+  "context _can't_ be updated." The context does not need to be _reconstructed_ on the cascade
   (infeasible) — it needs to be **mutated in place** at the scope-switch update points that
   already hold it. `mkUpdateCollection` even has a standing TODO for this (element.ts:413:
   `// todo handle data updates of the parent contexts`). Design:
@@ -620,6 +644,7 @@ considered (Jay's data flow is always top-down through `update`, so all are viab
 **Recommendation — (c-live): reuse `ConstructContext` (parent pointer + in-place `update`) for
 the one location that needs it — reactive text/attribute bindings.** It rides the existing
 top-down cascade without touching user data and without a parallel structure:
+
 - **text/attr:** the helper passes parent data into the closure; binding compiles to
   `dt((vs, p) => p.listTitle)` where `p = context.parent?.currData`.
 - **event handlers:** no carrier needed — the owning component already has parent data +
@@ -637,16 +662,17 @@ Secure/bridge re-attaches parent on the receiving side regardless of carrier.
 with the `dependsOnParent` gate-weakening from Q4a, or `$parent` bindings render stale.
 
 **Note — this expands `ConstructContext`'s role.** Today `ConstructContext` is a
-**construction-time-only** object: it supplies *initial* data when new elements are created
+**construction-time-only** object: it supplies _initial_ data when new elements are created
 (`currData` read by `dt`/`da`/refs at construction) and is never consulted again. Adding
 `update` makes it a **persistent, live per-scope state carrier** used at both construction and
 update. That is a deliberate, reasonable promotion (it becomes "more complete" — the natural home
 for scope state), but worth stating explicitly since it changes the object's lifecycle contract
 and means its `data` is now mutable state, not an immutable snapshot.
+
 > _Answer: ok — reuse `ConstructContext` (parent pointer + in-place `update`). **Ship with the Q4a
 > gate-weakening** so the live parent context actually reaches the leaves._
 
-**Q8. How does pass-through data reach a component *with code* (Tier 3)?** For Tier 2 (pure),
+**Q8. How does pass-through data reach a component _with code_ (Tier 3)?** For Tier 2 (pure),
 pass-through is trivial: props mirror tags = ViewState (DL#187 Q3/Q9), so a captured override
 member is already a ViewState member. Tier 3 breaks that — the `.ts` computes ViewState from props,
 and DL#187 Q3 / DL#84 deliberately keep props ≠ ViewState. Two routes for getting the override's
@@ -668,6 +694,7 @@ subtree) is served by the carrier we already need; Panel's own code and template
 it should never enter Panel's runtime ViewState. Route (a) is a large, surprising semantic change
 to Tier 3 for something the carrier already covers. (Tier 2 stays trivial by its own props=tags
 rule — no carrier needed there.)
+
 > _Answer: **(b)** — targeted supply via the carrier; do not make props default to ViewState
 > members. `Panel$1ViewState` stays a compile-time composition._
 
@@ -678,6 +705,7 @@ rule — no carrier needed there.)
 ### Capability A — parent-scope data access (issues 3, and 2a option-b)
 
 **Compiler (type generation):**
+
 1. **Grammar** (`expression-parser.pegjs`): recognize a parent sigil in `accessor` /
    `propertyAccessor`, dispatched like the existing `jay`→`__jay` special case. Applies to the
    slow/dotted accessor rules too, for parity.
@@ -695,6 +723,7 @@ the client needs no runtime change because the parent var is lexically in scope.
 for reactive bindings:** `dynamicText.update(newData)` receives only the current item, and keyed
 list reuse makes any lexically-captured parent var stale. The chosen carrier makes the existing
 `ConstructContext` live (variadic update and `vs[SymbolParent]` were rejected — Q7):
+
 - **`ConstructContext`** (`context.ts`): add `parent?: ConstructContext` (set in
   `forItem`/`forAsync`/`forScope`) and an `update(newData)` that writes `this.data` (drop
   `readonly`). This promotes the context from a construction-time snapshot to a live per-scope
@@ -733,6 +762,7 @@ flag) and its emission in the jay/hydrate codegen. **No change to `node-referenc
 **Issue 1 — pure-component inner refs.** The refs pipeline is
 `contract tags → RefsTree → optimize/merge → type-gen + manager-gen → runtime`. Today a Tier 2
 component contributes no refs. To forward:
+
 1. **Parser** (`jay-html-parser.ts` `parseHeadfullFSImports`): for a Tier 2 import, also
    compile its own `.jay-html` to discover the named child-component refs inside it, and record
    them on the import (new field on `JayHeadlessImports`, alongside `structural`).
@@ -758,7 +788,7 @@ component contributes no refs. To forward:
 **Issue 2 — override-introduced refs (inheritance model, Q3-option-c).** Requires persisting
 override provenance on the AST node (re-introduce `overrides: OverrideDeclaration[]` on the
 `<jay:Name>` node), then emitting a per-site specialization: `Panel$1Refs extends PanelRefs` with
-the override's refs *added* (typed against `Panel$1ViewState`, not the outer VS — §C). The added
+the override's refs _added_ (typed against `Panel$1ViewState`, not the outer VS — §C). The added
 refs graft into the specialization's RefsTree and forward up exactly like §B pure-component refs
 (same `DELEGATE_REFS_TO_COMP_TRAP` passthrough, no re-basing). Files: `jay-html-overrides.ts`,
 `jay-html-parser.ts` injection sites, `jay-html-compile-refs.ts` (`graftTemplateOnlyRefs`),
@@ -767,7 +797,7 @@ refs graft into the specialization's RefsTree and forward up exactly like §B pu
 **Runtime (B):** `references-manager.ts` (`mkRefs`/`mkManagedRef`) and `node-reference.ts`
 (`ComponentRefsImpl`, `DELEGATE_REFS_TO_COMP_TRAP`) already forward member access to a mounted
 instance's public API. The new requirement is that the passthrough/override component's public
-API *carries* the child refs — mostly a compiler-emission change, minimal runtime change.
+API _carries_ the child refs — mostly a compiler-emission change, minimal runtime change.
 **Because forwarding does not re-base events** (§B), the runtime side is unchanged beyond
 carrying the refs: `RefImpl` keeps delivering its own scope viewState via the existing
 `formatEvent`; no boundary-crossing viewState mapping is added.
@@ -845,13 +875,13 @@ exists to prevent.
   leaf, asserting **both** the DOM result (`toEqual` on rendered text) **and** that no redundant
   DOM write happened when nothing relevant changed (spy/observe `textContent` sets):
 
-  | # | parent data | items array ref | item member | expected |
-  | --- | --- | --- | --- | --- |
-  | 1 | changed | unchanged (keyed reuse) | unchanged | `$parent` leaf **updates** — the regression case |
-  | 2 | changed | changed | — | `$parent` + item leaves both correct |
-  | 3 | unchanged | unchanged | changed (one item) | item leaf updates; `$parent` leaf no DOM write |
-  | 4 | unchanged | unchanged | unchanged | **no** DOM writes at all |
-  | 5 | unchanged | reordered (same refs) | unchanged | keyed reuse intact, `$parent` unchanged |
+  | #   | parent data | items array ref         | item member        | expected                                         |
+  | --- | ----------- | ----------------------- | ------------------ | ------------------------------------------------ |
+  | 1   | changed     | unchanged (keyed reuse) | unchanged          | `$parent` leaf **updates** — the regression case |
+  | 2   | changed     | changed                 | —                  | `$parent` + item leaves both correct             |
+  | 3   | unchanged   | unchanged               | changed (one item) | item leaf updates; `$parent` leaf no DOM write   |
+  | 4   | unchanged   | unchanged               | unchanged          | **no** DOM writes at all                         |
+  | 5   | unchanged   | reordered (same refs)   | unchanged          | keyed reuse intact, `$parent` unchanged          |
 
 - **`element.test.ts` — fast path preserved.** A `forEach` **without** `$parent`
   (`dependsOnParent=false`) keeps the `items !== lastItems` skip and per-item
@@ -883,7 +913,7 @@ an expected generated file compared with full `toEqual`.
   parent type; `$parent.$parent`; unknown parent member → error; `$parent` at root (no parent) →
   error.
 - **Capability B type-gen.** Pure composite with `<jay:Button ref="cta">` → `CardRefs { cta:
-  ButtonRef<CardViewState> }` grafted into the usage site; composite under a usage-site `forEach` →
+ButtonRef<CardViewState> }` grafted into the usage site; composite under a usage-site `forEach` →
   `ButtonRefs<CardViewState>`. Auto (unnamed) inner refs are **not** forwarded.
 - **Override inheritance type-gen.** `Panel$1ViewState extends PanelViewState { documentName }` and
   `Panel$1Refs extends PanelRefs { save: HTMLElementProxy<Panel$1ViewState, …> }`; only the
@@ -931,7 +961,7 @@ criterion 4 → §4 validation. A criterion with no green test in **both** colum
 
 - **`$parent` weakens scope isolation** (DL#84's deliberate default). Mitigation: explicit
   opt-in sigil, not implicit fall-through; keep `resolveAccessor` erroring on unknown members.
-- **Ref forwarding crosses DL#187's "Tier 2 has no refs" line.** It adds *no code* to the
+- **Ref forwarding crosses DL#187's "Tier 2 has no refs" line.** It adds _no code_ to the
   Tier 2 component but does make it a ref surface. Needs an explicit decision (Q2); may warrant
   a one-line amendment to DL#187.
 - **Inheritance/specialization for overrides** (`Panel$1 extends Panel`) unifies overrides with
@@ -947,7 +977,7 @@ criterion 4 → §4 validation. A criterion with no green test in **both** colum
 
 1. From inside a `forEach`, `$parent.field` compiles to a type-safe binding on the parent var
    (client) with a full-fixture `toEqual` match; unknown parent member → validation error.
-1a. A runnable `examples/jay/` example binds `{$parent.field}` inside a `forEach` and renders the
+   1a. A runnable `examples/jay/` example binds `{$parent.field}` inside a `forEach` and renders the
    **same** output in **regular mode** (`lib/` + `index.html`) and **secure mode** (`lib-secure/` +
    `secure.html`), updating live as parent data changes (no staleness on keyed reuse).
 2. A pure composite wrapping `<jay:Button ref="cta">` exposes `cta` at the usage site typed
@@ -963,3 +993,74 @@ criterion 4 → §4 validation. A criterion with no green test in **both** colum
    reaches the hoisted member via `$parent` (Capability A).
 4. Unsupported target/phase combinations produce a clear validation error, not a silent
    miscompile.
+
+---
+
+## Implementation Results — Phase 1 (Capability A)
+
+Phase 1 (`$parent` parent-scope binding for reactive **text/attribute** bindings inside
+`forEach`/`if`/`withData` scopes) is complete for the **client** and **hydrate** targets, with
+React and server producing validation errors (unsupported-target, prevention-first). Event handlers
+are out of scope for Phase 1 as designed.
+
+### What shipped
+
+- **Grammar + accessor resolution.** `$parent` parses as an Identifier and is recognized in
+  `resolveAccessor`, which walks up the scope chain. Chainable (`$parent.$parent.field`). Unknown
+  parent member and `$parent` at root both error at compile time.
+- **`parentDepth` propagation.** `RenderFragment.parentDepth` carries the deepest `$parent` climb;
+  propagated via map/merge (`Math.max`), decrements by 1 at scope-switches (forEach/withData/async),
+  passes through unchanged at `if`.
+- **Codegen.** Leaf closures emit the parent positionally — `da((vs1, _p1) => _p1.groupLabel)`,
+  `dt((vs1, _p1) => _p1.groupLabel)` — and the enclosing `forEach`/`hydrateForEach` carries the
+  `dependsOnParent` flag to weaken the keyed-update gate so parent-only changes re-run item leaves.
+- **Runtime primitive.** `ConstructContext` parent pointer + `parentDataChain(context)` (nearest-first
+  `_p1, _p2, …`); the Q4a gate-weakening branches in `forEach`/`hydrateForEach`.
+- **Example.** `examples/jay/parent-binding` — dual regular (`lib/` + `index.html`) + secure
+  (`lib-secure/` + `secure.html`) build via the vite plugin, mirroring `examples/jay/todo`. The
+  "relabel group" action changes only `groupLabel` (cards array ref untouched) and every
+  `{$parent.groupLabel}` leaf updates — the case #1 regression, end-to-end.
+
+### Test results
+
+- **compiler-jay-html** full suite: **738 passed / 4 skipped**.
+- **runtime** full suite: **278 passed / 3 skipped**.
+- Example `yarn build:js`: both regular and secure builds succeed (23 modules); generated
+  `board.jay-html.ts` verified to emit `da/dt((vs1, _p1) => _p1.groupLabel)` and
+  `forEach(..., 'id', true)`.
+- `yarn build:check-types` on the example reports a `vite.config.ts` TS2769 overload error — this
+  is a **pre-existing** duplicate-vite-install type conflict shared by `examples/jay/todo`
+  (identical `vite.config.ts(15,29): error TS2769`), not a defect in the example source. All
+  `lib/`/`lib-secure/` sources type-check clean.
+
+### Deviations from the initial design
+
+1. **Closure param naming `_p{level}`** (not the design sketch's `p`). `_p1` = immediate parent,
+   supplied positionally by the runtime from `parentDataChain` (nearest-first). Chosen to avoid
+   collisions with the existing `vsN` viewState params and to make depth legible in generated code.
+2. **Only `forEach` carries the runtime `dependsOnParent` flag.** `if`/`withData` do not gate on a
+   keyed-collection identity check, so they re-render their leaves on any parent update without a
+   flag; the flag exists solely to weaken `forEach`'s `items !== lastItems` + per-item
+   `wrapWithModifiedCheck` skips.
+3. **React and server are validation errors, surfaced two different ways.**
+   - React: `guardReactParentBinding` appends `'$parent bindings are not supported in the React
+target'` when `parentDepth > 0` (React compiler preserves `fragment.validations`).
+   - Server: the server compiler **drops** `fragment.validations` at ~15 `w(...)` sites, so an
+     appended validation never reached output. Instead `guardServerParentBinding` **throws**
+     `UnsupportedServerParentBindingError`, caught in `generateServerElementFile` and converted to
+     `new WithValidations('', [UNSUPPORTED_TARGET_PARENT_MESSAGE])`. Throwing covers all sites
+     uniformly. Message: `'$parent bindings are not yet supported in the server target'`.
+4. **Bridge/secure needs no guard in Phase 1.** The `.jay-html` view renders on the **main** thread
+   via `?jay-mainSandbox` using the **client** target, so `$parent`/`dependsOnParent` codegen is
+   already present and correct; the worker sandbox (`?jay-workerSandbox`) uses `sandboxForEach`,
+   which only tracks the collection and needs no flag. (Full secure/bridge parent plumbing remains
+   Phase 4; this example's secure build is its acceptance gate.)
+5. **`forScope` data-liveness fix (`_liveDataSource`).** `forScope` previously snapshotted
+   `this.data`; the forScope decorator becomes the leaf's `_p1` parent during hydration and went
+   stale on in-place parent updates. Added `ConstructContext._liveDataSource`: `currData` delegates
+   to the live source, and `forScope` sets `child._liveDataSource = this`. This is a broad runtime
+   change beyond the original design sketch, required for correctness under hydration.
+6. **Hydrate parent-chain plumbing.** `adoptText` and `adoptBase` (dynamic attributes) now pass
+   `...parentDataChain(context)` on both init and update, with signatures widened to
+   `(vs, ...parents: any[])`. The original design described the client path; hydrate required the
+   same threading explicitly.

@@ -8,6 +8,18 @@ import { GenerateTarget, prettify, RuntimeMode } from '@jay-framework/compiler-s
 describe('generate jay-html element for react target', () => {
     const options: ReadFileAndGenerateElementFileOptions = { generateTarget: GenerateTarget.react };
 
+    // DL#193 Capability A — `$parent` bindings are unsupported in the React target and must
+    // be reported as a compile error (React renders bare JSX with no closure to receive the
+    // parent params, so `_p1` would be a runtime ReferenceError).
+    it('reports $parent bindings as unsupported in the React target', async () => {
+        const folder = 'collections/foreach-parent-binding';
+        const elementFile = await readFileAndGenerateElementFile(folder, options);
+        expect(elementFile.validations).toEqual([
+            '$parent bindings are not supported in the React target',
+            '$parent bindings are not supported in the React target',
+        ]);
+    });
+
     describe('basics', () => {
         it('for simple file with dynamic text', async () => {
             const folder = 'basics/simple-dynamic-text';

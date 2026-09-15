@@ -22,6 +22,7 @@ import {
 
 import { Import } from '@jay-framework/compiler-shared';
 import {
+    JayArrayType,
     JayBoolean,
     JayEnumType,
     JayImportedType,
@@ -65,6 +66,99 @@ describe('expression-compiler', () => {
                     JayUnknown,
                 ),
             );
+        });
+    });
+
+    // DL#193 Capability A — `$parent` climbs to an enclosing scope for reactive
+    // text/attribute bindings inside forEach / withData scopes.
+    describe('$parent parent-scope access (DL#193)', () => {
+        const listVars = new Variables(
+            new JayObjectType('data', {
+                listTitle: JayString,
+                items: new JayArrayType(
+                    new JayObjectType('Item', { name: JayString, id: JayString }),
+                ),
+            }),
+        );
+        const itemVars = listVars.childVariableFor(listVars.resolveAccessor(['items']));
+
+        const gridVars = new Variables(
+            new JayObjectType('data', {
+                title: JayString,
+                rows: new JayArrayType(
+                    new JayObjectType('Row', {
+                        id: JayString,
+                        cells: new JayArrayType(
+                            new JayObjectType('Cell', { id: JayString, label: JayString }),
+                        ),
+                    }),
+                ),
+            }),
+        );
+        const rowVars = gridVars.childVariableFor(gridVars.resolveAccessor(['rows']));
+        const cellVars = rowVars.childVariableFor(rowVars.resolveAccessor(['cells']));
+
+        describe('resolveAccessor', () => {
+            it('resolves $parent.field to the parent type with parentLevel 1', () => {
+                expect(itemVars.resolveAccessor(['$parent', 'listTitle'])).toEqual(
+                    new Accessor('vs', ['listTitle'], [], JayString, 1),
+                );
+            });
+
+            it('resolves $parent.$parent.field to the grandparent type with parentLevel 2', () => {
+                expect(cellVars.resolveAccessor(['$parent', '$parent', 'title'])).toEqual(
+                    new Accessor('vs', ['title'], [], JayString, 2),
+                );
+            });
+
+            it('reports an unknown member of the parent scope', () => {
+                expect(itemVars.resolveAccessor(['$parent', 'nope'])).toEqual(
+                    new Accessor(
+                        'vs',
+                        ['nope'],
+                        ['the data field [nope] not found in Jay data'],
+                        JayUnknown,
+                        1,
+                    ),
+                );
+            });
+
+            it('reports $parent used at the root scope with no parent', () => {
+                expect(listVars.resolveAccessor(['$parent', 'x'])).toEqual(
+                    new Accessor(
+                        'vs',
+                        ['x'],
+                        ['$parent used but there is no parent scope 1 level(s) up'],
+                        JayUnknown,
+                        1,
+                    ),
+                );
+            });
+        });
+
+        describe('codegen widens the closure signature with parent params', () => {
+            it('renders a $parent text binding with the parent param', () => {
+                const actual = parseTextExpression('{$parent.listTitle}', itemVars);
+                expect(actual.rendered).toEqual('dt((vs1, _p1) => _p1.listTitle)');
+                expect(actual.imports.has(Import.dynamicText)).toBeTruthy();
+            });
+
+            it('renders a $parent.$parent text binding with both parent params', () => {
+                const actual = parseTextExpression('{$parent.$parent.title}', cellVars);
+                expect(actual.rendered).toEqual('dt((vs2, _p1, _p2) => _p2.title)');
+            });
+
+            it('mixes self and $parent accessors in one text binding', () => {
+                const actual = parseTextExpression('{name} from {$parent.listTitle}', itemVars);
+                expect(actual.rendered).toEqual(
+                    'dt((vs1, _p1) => `${vs1.name} from ${_p1.listTitle}`)',
+                );
+            });
+
+            it('renders a $parent attribute binding with the parent param', () => {
+                const actual = parseAttributeExpression('{$parent.listTitle}', itemVars);
+                expect(actual.rendered).toEqual('da((vs1, _p1) => _p1.listTitle)');
+            });
         });
     });
 

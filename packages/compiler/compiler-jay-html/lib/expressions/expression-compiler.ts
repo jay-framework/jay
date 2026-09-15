@@ -16,25 +16,56 @@ import {
 import { getLogger } from '@jay-framework/logger';
 import { parse } from './expression-parser.cjs';
 
+/** DL#193 Capability A: the author-facing sigil for parent-scope access. */
+const PARENT_TOKEN = '$parent';
+
+/**
+ * DL#193 Capability A: the closure parameter name for a `$parent` access climbing
+ * `level` scopes. The runtime supplies these positionally from the live parent chain
+ * (`parentDataChain`, nearest-first): level 1 → `_p1`, level 2 → `_p2`, …
+ */
+export function parentParamName(level: number): string {
+    return `_p${level}`;
+}
+
 export class Accessor {
     readonly rootVar: string;
     readonly terms: Array<string>;
     readonly validations: JayValidations;
     readonly resolvedType: JayType;
+    /** DL#193: how many scopes a `$parent` access climbs (0 = current scope). */
+    readonly parentLevel: number;
 
     constructor(
         rootVar: string,
         terms: Array<string>,
         validations: JayValidations,
         resolvedType: JayType,
+        parentLevel: number = 0,
     ) {
         this.rootVar = rootVar;
         this.terms = terms;
         this.validations = validations;
         this.resolvedType = resolvedType;
+        this.parentLevel = parentLevel;
     }
 
     render() {
+        // DL#193 Capability A: a `$parent` access does NOT root at the parent scope's
+        // `currentVar` (not lexically in scope inside the child callback). It roots at an
+        // extra closure param the binding helper supplies from its retained context.
+        if (this.parentLevel > 0) {
+            const param = parentParamName(this.parentLevel);
+            const rendered = this.terms.length === 0 ? param : param + '.' + this.terms.join('?.');
+            return new RenderFragment(
+                rendered,
+                Imports.none(),
+                this.validations,
+                undefined,
+                undefined,
+                this.parentLevel,
+            );
+        }
         let renderedAccessor =
             this.terms.length === 1 && this.terms[0] === '.'
                 ? this.rootVar
@@ -68,6 +99,39 @@ export class Variables {
         if (accessor[0] === 'jay') {
             const jayPath = ['__jay', ...accessor.slice(1)];
             return new Accessor(this.currentVar, jayPath, [], JayString);
+        }
+        // DL#193 Capability A: `$parent.` climbs to an enclosing scope. Each leading
+        // `$parent` token walks one level up the `Variables.parent` chain; the remaining
+        // terms resolve against that ancestor's type. Type-safety flows automatically
+        // because `resolvedType` comes from the ancestor scope.
+        if (accessor[0] === PARENT_TOKEN) {
+            let parentLevel = 0;
+            let scope: Variables = this;
+            let terms = accessor;
+            while (terms[0] === PARENT_TOKEN) {
+                parentLevel++;
+                if (!scope.parent) {
+                    return new Accessor(
+                        this.currentVar,
+                        terms.slice(1),
+                        [
+                            `${'$parent'.repeat(parentLevel)} used but there is no parent scope ${parentLevel} level(s) up`,
+                        ],
+                        JayUnknown,
+                        parentLevel,
+                    );
+                }
+                scope = scope.parent;
+                terms = terms.slice(1);
+            }
+            const resolved = scope.resolveAccessor(terms);
+            return new Accessor(
+                scope.currentVar,
+                resolved.terms,
+                resolved.validations,
+                resolved.resolvedType,
+                parentLevel + resolved.parentLevel,
+            );
         }
         let curr: JayType = this.currentType;
         let validations = [];
@@ -314,8 +378,26 @@ export function parseCondition(expression: string, vars: Variables): RenderFragm
     return doParse(expression, 'conditionFunc', vars);
 }
 
+/**
+ * DL#193 Capability A is not supported in the React target: the parent chain is supplied
+ * to jay closures positionally (`(vs, _p1) => …`), but React bindings render as bare JSX
+ * expressions (`{_p1.field}`) with no closure to receive the parent params — `_p1` would be
+ * a runtime ReferenceError. Fail the compile with a clear message instead.
+ */
+function guardReactParentBinding(fragment: RenderFragment): RenderFragment {
+    if (fragment.parentDepth === 0) return fragment;
+    return new RenderFragment(
+        fragment.rendered,
+        fragment.imports,
+        [...fragment.validations, '$parent bindings are not supported in the React target'],
+        fragment.refs,
+        fragment.recursiveRegions,
+        fragment.parentDepth,
+    );
+}
+
 export function parseReactCondition(expression: string, vars: Variables): RenderFragment {
-    return doParse(expression, 'condition', vars);
+    return guardReactParentBinding(doParse(expression, 'condition', vars));
 }
 
 export function parseTextExpression(expression: string, vars: Variables): RenderFragment {
@@ -341,7 +423,9 @@ function unescapeBackslash(jsCode) {
 }
 
 export function parseReactTextExpression(expression: string, vars: Variables): RenderFragment {
-    return doParse(expression, 'reactDynamicText', vars).map((_) => unescapeBackslash(_));
+    return guardReactParentBinding(
+        doParse(expression, 'reactDynamicText', vars).map((_) => unescapeBackslash(_)),
+    );
 }
 
 export function parseBooleanAttributeExpression(
@@ -360,7 +444,7 @@ export function parsePropertyExpression(expression: string, vars: Variables): Re
 }
 
 export function parseReactPropertyExpression(expression: string, vars: Variables): RenderFragment {
-    return doParse(expression, 'reactDynamicProperty', vars);
+    return guardReactParentBinding(doParse(expression, 'reactDynamicProperty', vars));
 }
 
 export function parseComponentPropExpression(expression: string, vars: Variables): RenderFragment {
@@ -372,6 +456,30 @@ export function parseClassExpression(expression: string, vars: Variables): Rende
 }
 
 /**
+ * DL#193: server (SSG/SSR) parent plumbing is Phase 4. Until then `$parent` bindings render a
+ * `_pN` free variable in the server output. The server compiler renders text/attribute
+ * expressions through ~15 `w(...)` sites that only carry `fragment.rendered` and drop
+ * `fragment.validations`, so a per-fragment validation would never reach the output. Instead we
+ * throw a tagged error from the single parse choke points; `generateServerElementFile` catches it
+ * and surfaces it as a validation. This covers every site uniformly — no risk of a missed path
+ * silently emitting a broken `_pN` free variable.
+ */
+export const UNSUPPORTED_TARGET_PARENT_MESSAGE =
+    '$parent bindings are not yet supported in the server target';
+
+export class UnsupportedServerParentBindingError extends Error {
+    constructor() {
+        super(UNSUPPORTED_TARGET_PARENT_MESSAGE);
+        this.name = 'UnsupportedServerParentBindingError';
+    }
+}
+
+function guardServerParentBinding(fragment: RenderFragment): RenderFragment {
+    if (fragment.parentDepth === 0) return fragment;
+    throw new UnsupportedServerParentBindingError();
+}
+
+/**
  * Parse a template expression and return the raw accessor without dt()/da() wrapping.
  * Returns [fragment, isDynamic]. For the server target.
  */
@@ -379,7 +487,8 @@ export function parseServerTemplateExpression(
     expression: string,
     vars: Variables,
 ): [RenderFragment, boolean] {
-    return doParse(expression, 'template', vars);
+    const [fragment, isDynamic] = doParse(expression, 'template', vars);
+    return [guardServerParentBinding(fragment), isDynamic];
 }
 
 import type { TemplatePart } from '@jay-framework/compiler-shared';
@@ -395,16 +504,15 @@ export function parseTemplateParts(value: string): TemplatePart[] {
  * For the server target.
  */
 export function parseServerCondition(expression: string, vars: Variables): RenderFragment {
-    return doParse(expression, 'condition', vars);
+    return guardServerParentBinding(doParse(expression, 'condition', vars));
 }
 
 export function parseReactClassExpression(expression: string, vars: Variables): RenderFragment {
-    const { rendered, validations, refs }: RenderFragment = doParse(
-        expression,
-        'reactClassExpression',
-        vars,
+    const parsed: RenderFragment = doParse(expression, 'reactClassExpression', vars);
+    const { rendered, validations, refs } = parsed;
+    return guardReactParentBinding(
+        new RenderFragment(rendered, Imports.none(), validations, refs, [], parsed.parentDepth),
     );
-    return new RenderFragment(rendered, Imports.none(), validations, refs);
 }
 
 export function parseImportNames(expression: string): JayImportName[] {

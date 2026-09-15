@@ -136,6 +136,27 @@ describe('generate jay-html element hydrate', () => {
             );
         });
 
+        // DL#193 Capability A — `$parent` bindings inside a forEach emit `dependsOnParent`
+        // on hydrateForEach so a parent-only change re-runs item leaves during hydration.
+        it('for a $parent binding inside a forEach', async () => {
+            const folder = 'collections/foreach-parent-binding';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+
+        // DL#193 Capability A — `$parent.$parent` forces both nested hydrateForEach loops.
+        it('for a $parent.$parent binding inside nested forEach', async () => {
+            const folder = 'collections/foreach-parent-binding-grandparent';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+
         // Regression: a non-interactive (slow/fast) conditional inside a forEach item must
         // guard against the item ViewState (vs1), not the page ViewState (viewState). The
         // adopt callback receives the item so `...(vs1.name ? [...] : [])` is emitted —

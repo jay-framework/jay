@@ -173,6 +173,34 @@ describe('generate jay-html element', () => {
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
+        // DL#193 Capability A — `$parent` text/attribute bindings inside a forEach compile
+        // to a widened closure (`(vs1, _p1) => _p1.field`) and a `dependsOnParent` forEach flag.
+        it('for a $parent binding inside a forEach', async () => {
+            const folder = 'collections/foreach-parent-binding';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
+        // DL#193 Capability A — `$parent.$parent` in a nested forEach flags BOTH loops so the
+        // grandparent change reaches the inner leaf.
+        it('for a $parent.$parent binding inside nested forEach', async () => {
+            const folder = 'collections/foreach-parent-binding-grandparent';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
+        // DL#193 Capability A — `$parent` at the root scope (no enclosing forEach/with-data)
+        // is a compile-time error.
+        it('reports $parent used at the root scope with no parent', async () => {
+            const folder = 'basics/parent-at-root';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([
+                '$parent used but there is no parent scope 1 level(s) up',
+            ]);
+        });
+
         it('for collections with repeated refs', async () => {
             const folder = 'collections/collection-with-repeating-refs';
             const elementFile = await readFileAndGenerateElementFile(folder);

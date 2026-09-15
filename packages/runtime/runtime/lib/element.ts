@@ -20,6 +20,7 @@ import {
     restoreContext,
     saveContext,
     wrapWithModifiedCheck,
+    parentDataChain,
 } from './context';
 import { PrivateRef } from './node-reference';
 
@@ -77,7 +78,7 @@ const PROPERTY = 1,
     BOOLEAN_ATTRIBUTE = 3;
 type AttributeStyle = typeof PROPERTY | typeof ATTRIBUTE | typeof BOOLEAN_ATTRIBUTE;
 export interface DynamicAttributeOrProperty<ViewState, S> {
-    valueFunc: (data: ViewState) => S;
+    valueFunc: (data: ViewState, ...parents: any[]) => S;
     style: AttributeStyle;
 }
 
@@ -88,19 +89,19 @@ function isDynamicAttributeOrProperty<ViewState, S>(
 }
 
 export function dynamicAttribute<ViewState>(
-    attributeValue: (data: ViewState) => string,
+    attributeValue: (data: ViewState, ...parents: any[]) => string,
 ): DynamicAttributeOrProperty<ViewState, string> {
     return { valueFunc: attributeValue, style: ATTRIBUTE };
 }
 
 export function dynamicProperty<ViewState, S>(
-    propertyValue: (data: ViewState) => S,
+    propertyValue: (data: ViewState, ...parents: any[]) => S,
 ): DynamicAttributeOrProperty<ViewState, S> {
     return { valueFunc: propertyValue, style: PROPERTY };
 }
 
 export function booleanAttribute<ViewState, S>(
-    propertyValue: (data: ViewState) => S,
+    propertyValue: (data: ViewState, ...parents: any[]) => S,
 ): DynamicAttributeOrProperty<ViewState, S> {
     return { valueFunc: propertyValue, style: BOOLEAN_ATTRIBUTE };
 }
@@ -134,10 +135,10 @@ function setAttribute<ViewState, S>(
 ) {
     if (isDynamicAttributeOrProperty(value)) {
         let context = currentConstructionContext();
-        let attributeValue = value.valueFunc(context.currData);
+        let attributeValue = value.valueFunc(context.currData, ...parentDataChain(context));
         doSetAttribute(target, key, attributeValue, value.style);
         updates.push((newData: ViewState) => {
-            let newAttributeValue = value.valueFunc(newData);
+            let newAttributeValue = value.valueFunc(newData, ...parentDataChain(context));
             if (newAttributeValue !== attributeValue)
                 doSetAttribute(target, key, newAttributeValue, value.style);
             attributeValue = newAttributeValue;
@@ -315,6 +316,9 @@ function mkWhenConditionBase<ViewState, Resolved>(
     setupPromise(currentPromise, handleValue(currentPromise));
 
     const update = (viewState: ViewState) => {
+        // DL#193: keep the captured parent context live for `$parent` bindings inside
+        // the async/when block.
+        parentContext.update(viewState);
         const newValue = when.promise(viewState);
         if (currentPromise !== newValue) {
             currentPromise = newValue;
@@ -362,14 +366,21 @@ export function forEach<T, Item>(
     getItems: (T) => Array<Item>,
     elemCreator: (Item) => BaseJayElement<Item>,
     matchBy: string,
+    dependsOnParent: boolean = false,
 ): ForEach<T, Item> {
-    return { getItems, elemCreator, trackBy: matchBy };
+    return { getItems, elemCreator, trackBy: matchBy, dependsOnParent };
 }
 
 export interface ForEach<ViewState, Item> {
     getItems: (T) => Array<Item>;
     elemCreator: (Item, String) => BaseJayElement<Item>;
     trackBy: string;
+    /**
+     * DL#193 Capability A: set when the item body binds `{$parent.…}`. Weakens the
+     * collection/per-item reference gates so a parent-only change re-runs item leaves
+     * against the now-live parent context (see mkUpdateCollection).
+     */
+    dependsOnParent?: boolean;
 }
 
 export function withData<ParentViewState, ChildViewState>(
@@ -410,10 +421,14 @@ export function mkUpdateCollection<ViewState, Item>(
     let lastItemsList = new List<Item, BaseJayElement<Item>>([], child.trackBy);
     let mount = () => lastItemsList.forEach((value, attach) => attach.mount);
     let unmount = () => lastItemsList.forEach((value, attach) => attach.unmount);
-    // todo handle data updates of the parent contexts
+    // DL#193: the parent context is made live in place (resolves the former TODO here),
+    // so item leaves binding `{$parent.…}` read fresh parent data.
     let parentContext = currentConstructionContext();
     let savedContext = saveContext();
+    const dependsOnParent = !!child.dependsOnParent;
     const update = (newData: ViewState) => {
+        // Make the captured parent context live *before* any item update reads it.
+        parentContext.update(newData);
         const items = child.getItems(newData) || [];
         let isModified = items !== lastItems;
         lastItems = items;
@@ -425,18 +440,32 @@ export function mkUpdateCollection<ViewState, Item>(
                 (item, id) => {
                     let childContext = parentContext.forItem(item, id);
                     return restoreContext(savedContext, () =>
-                        withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () =>
-                            wrapWithModifiedCheck(
-                                currentConstructionContext().currData,
-                                child.elemCreator(item, id),
-                            ),
-                        ),
+                        withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => {
+                            const created = child.elemCreator(item, id);
+                            // Gate 2 weakened for `$parent` scopes: skip the per-item
+                            // modified-check wrapper so an unchanged item still recomputes
+                            // its leaves against the live parent.
+                            return dependsOnParent
+                                ? created
+                                : wrapWithModifiedCheck(
+                                      currentConstructionContext().currData,
+                                      created,
+                                  );
+                        }),
                     );
                 },
             );
             lastItemsList = itemsList;
             applyListChanges(group, instructions);
             itemsList.forEach((value, elem) => elem.update(value));
+        } else if (dependsOnParent) {
+            // Gate 1 weakened for `$parent`-dependent scopes: the items are structurally
+            // unchanged, but an ancestor may have changed (this scope cannot see how far
+            // up a `$parent`/`$parent.$parent` binding reaches — an intermediate scope is
+            // called with unchanged direct-parent data even when a grandparent changed).
+            // Re-run every item so leaves recompute against the live parent chain; the
+            // leaf DOM-write gate (gate 3) still suppresses no-op writes.
+            lastItemsList.forEach((value, elem) => elem.update(value));
         }
     };
     return [update, mount, unmount];
@@ -488,6 +517,9 @@ function mkUpdateWithData<ParentViewState, ChildViewState>(
     const savedContext = saveContext();
 
     const update = (newData: ParentViewState) => {
+        // DL#193: keep the captured parent context live so a `$parent` binding inside
+        // this scope reads fresh enclosing-scope data.
+        parentContext.update(newData);
         const childData = child.accessor(newData);
         const result = childData != null;
 
@@ -535,16 +567,18 @@ function text<ViewState>(content: string): TextElement<ViewState> {
 }
 
 export function dynamicText<ViewState>(
-    textContent: (vs: ViewState) => string | number | boolean,
+    textContent: (vs: ViewState, ...parents: any[]) => string | number | boolean,
 ): TextElement<ViewState> {
     let context = currentConstructionContext();
-    let content = textContent(context.currData);
+    let content = textContent(context.currData, ...parentDataChain(context));
     // we rely here on the default JS conversion from number abd boolean to string
     let n = document.createTextNode(content as string);
     return {
         dom: n,
         update: (newData: ViewState) => {
-            let newContent = textContent(newData);
+            // parentDataChain reads live parent data (context mutated in place by the
+            // scope-switch update) — DL#193 Capability A.
+            let newContent = textContent(newData, ...parentDataChain(context));
             if (newContent !== content) n.textContent = newContent as string;
             content = newContent;
         },
@@ -555,11 +589,11 @@ export function dynamicText<ViewState>(
 
 export interface HtmlContent<ViewState> {
     __htmlContent: true;
-    htmlAccessor: (vs: ViewState) => string;
+    htmlAccessor: (vs: ViewState, ...parents: any[]) => string;
 }
 
 export function dynamicHtml<ViewState>(
-    htmlContent: (vs: ViewState) => string,
+    htmlContent: (vs: ViewState, ...parents: any[]) => string,
 ): HtmlContent<ViewState> {
     return { __htmlContent: true, htmlAccessor: htmlContent };
 }
@@ -577,12 +611,12 @@ export function applyHtmlContent<ViewState>(
     const accessor = child.htmlAccessor;
     const context = currentConstructionContext();
     const sanitize = context.sanitizeHtml;
-    let content = accessor(context.currData);
+    let content = accessor(context.currData, ...parentDataChain(context));
     if (!skipInitial) {
         parentElement.innerHTML = sanitize ? sanitize(content) : content;
     }
     updates.push((newData: ViewState) => {
-        const newContent = accessor(newData);
+        const newContent = accessor(newData, ...parentDataChain(context));
         if (newContent !== content) {
             parentElement.innerHTML = sanitize ? sanitize(newContent) : newContent;
             content = newContent;

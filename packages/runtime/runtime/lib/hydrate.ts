@@ -4,6 +4,7 @@ import { Kindergarten, KindergartenGroup } from './kindergarden';
 import {
     CONSTRUCTION_CONTEXT_MARKER,
     currentConstructionContext,
+    parentDataChain,
     restoreContext,
     saveContext,
     withContext,
@@ -79,7 +80,7 @@ function getSignificantChild(element: Element, index: number): ChildNode | undef
  */
 export function adoptText<ViewState>(
     coordinate: string,
-    accessor: (vs: ViewState) => string | number | boolean,
+    accessor: (vs: ViewState, ...parents: any[]) => string | number | boolean,
     ref?: PrivateRef<ViewState, BaseJayElement<ViewState>>,
     childIndex?: number,
 ): BaseJayElement<ViewState> {
@@ -110,7 +111,10 @@ export function adoptText<ViewState>(
     const unmounts: MountFunc[] = [];
 
     updates.push((newData: ViewState) => {
-        const newContent = accessor(newData);
+        // DL#193 Capability A: supply the live parent data chain so `{$parent.…}` leaves
+        // (compiled to `(vs, _p1, …) => …`) resolve against ancestor scopes. Mirrors the
+        // element target's dynamicText.
+        const newContent = accessor(newData, ...parentDataChain(context));
         if (newContent !== content) {
             textNode.textContent = String(newContent);
         }
@@ -175,13 +179,21 @@ function adoptBase<ViewState>(
 
     Object.entries(attributes).forEach(([key, value]) => {
         if (typeof value === 'object' && value !== null && 'valueFunc' in value) {
-            const dynAttr = value as { valueFunc: (vs: ViewState) => any; style: number };
-            let attrValue = dynAttr.valueFunc(context.currData as ViewState);
+            const dynAttr = value as {
+                valueFunc: (vs: ViewState, ...parents: any[]) => any;
+                style: number;
+            };
+            // DL#193 Capability A: supply the live parent data chain so `{$parent.…}`
+            // attribute bindings resolve against ancestor scopes (mirrors dynamicAttribute).
+            let attrValue = dynAttr.valueFunc(
+                context.currData as ViewState,
+                ...parentDataChain(context),
+            );
             const isBooleanAttr = dynAttr.style === 3; // BOOLEAN_ATTRIBUTE
 
             if (!(key === STYLE && element instanceof HTMLElement)) {
                 updates.push((newData: ViewState) => {
-                    const newAttrValue = dynAttr.valueFunc(newData);
+                    const newAttrValue = dynAttr.valueFunc(newData, ...parentDataChain(context));
                     if (newAttrValue !== attrValue) {
                         if (isBooleanAttr) {
                             if (newAttrValue) element.setAttribute(key, '');
@@ -463,6 +475,10 @@ export function hydrateForEach<ViewState, Item>(
     // param annotations (`(vs1: ItemVS) => ...`) participate in inference and agree with `accessor`.
     adoptItem: (item: Item) => BaseJayElement<NoInfer<Item>>[],
     createItem: (item: Item, id: string) => BaseJayElement<NoInfer<Item>>,
+    // DL#193 Capability A: set when an item body binds `{$parent.…}`. Mirrors
+    // mkUpdateCollection — weakens the collection/per-item reference gates so a
+    // parent-only change re-runs item leaves against the now-live parent context.
+    dependsOnParent: boolean = false,
 ): DynamicChild<ViewState> {
     const context = currentConstructionContext();
     const savedContext = saveContext();
@@ -539,6 +555,9 @@ export function hydrateForEach<ViewState, Item>(
 
     const update = (newData: ViewState) => {
         if (!group) return;
+        // DL#193: make the captured parent context live *before* any item update reads it,
+        // so item leaves binding `{$parent.…}` read fresh parent data.
+        parentContext.update(newData);
         const items = accessor(newData) || [];
         const isModified = items !== lastItems;
         lastItems = items;
@@ -553,10 +572,15 @@ export function hydrateForEach<ViewState, Item>(
                     const childContext = parentContext.forItem(item, id);
                     return restoreContext(savedContext, () =>
                         withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () =>
-                            wrapWithModifiedCheck(
-                                currentConstructionContext().currData,
-                                createItem(item, id),
-                            ),
+                            // Gate 2 weakened for `$parent` scopes: skip the per-item
+                            // modified-check wrapper so an unchanged item still recomputes
+                            // its leaves against the live parent.
+                            dependsOnParent
+                                ? createItem(item, id)
+                                : wrapWithModifiedCheck(
+                                      currentConstructionContext().currData,
+                                      createItem(item, id),
+                                  ),
                         ),
                     );
                 },
@@ -564,6 +588,11 @@ export function hydrateForEach<ViewState, Item>(
             lastItemsList = itemsList;
             applyListChanges(group, instructions);
             itemsList.forEach((value, elem) => elem.update(value));
+        } else if (dependsOnParent) {
+            // Gate 1 weakened for `$parent`-dependent scopes: items are structurally
+            // unchanged, but an ancestor may have changed. Re-run every item so leaves
+            // recompute against the live parent chain (leaf DOM-write gate still applies).
+            lastItemsList.forEach((value, elem) => elem.update(value));
         }
     };
 

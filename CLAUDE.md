@@ -142,15 +142,19 @@ The project follows a rigorous design log methodology for all significant featur
 
 ### When Creating Design Logs
 
-1. **Structure**: Background → Problem → Questions and Answers → Design → Implementation Plan → Examples → Trade-offs
-2. **Be specific**: Include file paths, type signatures, validation rules
-3. **Show examples**: Use checkmark/cross for good/bad patterns, include realistic code
-4. **Explain why**: Don't just describe what, explain rationale and trade-offs
-5. **Ask Questions (in the file)**: For anything that is not clear, or missing information
-6. **When answering question**: keep the questions, just add answers
-7. **Be brief**: write short explanations and only what most relevant
-8. **Draw Diagrams**: Use mermaid inline diagrams when it makes sense
-9. **Define verification criteria**: how do we know the implementation solves the original problem
+1. **Structure**: Decisions for the Implementer (TL;DR) → Background → Problem → Prior Art / Adjacent Mechanisms → Questions and Answers → Design → Implementation Plan → Examples → Trade-offs
+2. **Lead with a "Decisions for the Implementer" TL;DR**: at the very top, list the settled decisions and the non-obvious constraints (the things a dev would otherwise reconstruct by reading the whole Q&A thread). Thoroughness lives below; navigability lives on top.
+3. **Prior Art / Adjacent Mechanisms section**: before designing, enumerate the existing framework mechanisms in the same area (coordinate system, ConstructContext, existing runtime primitives, related DLs) and state whether each solves or constrains the problem. This is the author's job up front — do not rely on review to surface what already exists.
+4. **Minimize new surface (null hypothesis first)**: for every proposed new mechanism (API, type, syntax, runtime facility), first state why an _existing_ primitive does not already suffice. Prefer subtraction. The simpler model is often also the more correct one — reach for new surface only after the null hypothesis fails.
+5. **Trace it through the real runtime code**: for any design touching the runtime data/update path, walk one concrete change through the actual functions with file:line citations _before_ declaring the design sound. Do not reason about runtime behavior abstractly — update gates, reference checks, and lifecycle order are where designs break.
+6. **Be specific**: Include file paths, type signatures, validation rules
+7. **Show examples**: Use checkmark/cross for good/bad patterns, include realistic code
+8. **Explain why**: Don't just describe what, explain rationale and trade-offs
+9. **Ask Questions (in the file)**: For anything that is not clear, or missing information
+10. **When answering question**: keep the questions, just add answers
+11. **Be brief**: write short explanations and only what most relevant
+12. **Draw Diagrams**: Use mermaid inline diagrams when it makes sense
+13. **Define verification criteria**: how do we know the implementation solves the original problem
 
 ### When Implementing
 

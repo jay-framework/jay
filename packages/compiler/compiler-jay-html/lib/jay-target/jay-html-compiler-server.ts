@@ -15,6 +15,8 @@ import {
     parseClassExpression,
     parseServerCondition,
     parseServerTemplateExpression,
+    UnsupportedServerParentBindingError,
+    UNSUPPORTED_TARGET_PARENT_MESSAGE,
     Variables,
 } from '../expressions/expression-compiler';
 import { camelCase } from '../case-utils';
@@ -1108,12 +1110,22 @@ export function generateServerElementFile(
         new Set(), // No headful component imports in server-element target
         headlessContractNames,
     );
-    const rendered =
-        rootComponentMatch !== null && rootComponentMatch.kind === 'headless-instance'
-            ? renderServerElement(rootElement.val as HTMLElement, context)
-            : renderServerElementContent(rootElement.val as HTMLElement, context, {
-                  isRoot: true,
-              });
+    let rendered: RenderFragment;
+    try {
+        rendered =
+            rootComponentMatch !== null && rootComponentMatch.kind === 'headless-instance'
+                ? renderServerElement(rootElement.val as HTMLElement, context)
+                : renderServerElementContent(rootElement.val as HTMLElement, context, {
+                      isRoot: true,
+                  });
+    } catch (e) {
+        // DL#193: `$parent` bindings are not yet supported in the server target (Phase 4).
+        // The guard throws from the parse choke points to cover all render sites uniformly.
+        if (e instanceof UnsupportedServerParentBindingError) {
+            return new WithValidations('', [UNSUPPORTED_TARGET_PARENT_MESSAGE]);
+        }
+        throw e;
+    }
 
     const viewStateType = jayFile.types.name;
 

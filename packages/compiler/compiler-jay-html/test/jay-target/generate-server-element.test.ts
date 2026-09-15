@@ -127,6 +127,17 @@ describe('generate jay-html server element', () => {
                 await readFixtureServerElementFile(folder),
             );
         });
+
+        // DL#193 Capability A — `$parent` parent-scope bindings are not yet supported in the
+        // server target (SSG/SSR parent plumbing is Phase 4). They would render a bare `_pN`
+        // free variable, so the compile must report a clear error instead.
+        it('reports $parent bindings as unsupported in the server target', async () => {
+            const folder = 'collections/foreach-parent-binding';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([
+                '$parent bindings are not yet supported in the server target',
+            ]);
+        });
     });
 
     describe('headless instances', () => {

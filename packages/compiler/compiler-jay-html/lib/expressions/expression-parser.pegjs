@@ -143,6 +143,22 @@
         };
     }
 
+    // DL#193 Capability A: build a binding closure signature widened with `$parent`
+    // params. A fragment referencing `$parent.` (parentDepth > 0) compiles to a closure
+    // `(vs, _p1, _p2) => …`; the runtime supplies the parent params positionally from the
+    // live parent chain. A plain fragment (parentDepth 0) keeps the single-arg signature,
+    // so existing output is unchanged.
+    function jayParams(renderFragment) {
+        const depth = (renderFragment && renderFragment.parentDepth) || 0;
+        // parentDepth 0 keeps the single, unparenthesized arg (`vs => …`) so existing
+        // output is unchanged; a `$parent` binding needs a parenthesized multi-param
+        // list (`(vs, _p1, _p2) => …`).
+        if (depth === 0) return vars.currentVar;
+        let params = vars.currentVar;
+        for (let i = 1; i <= depth; i++) params += `, _p${i}`;
+        return `(${params})`;
+    }
+
     function applyStartsWith(left, right) {
         if (left.type === 'resolved' && right.type === 'resolved') {
             return { type: 'resolved', value: String(left.value).startsWith(String(right.value)) };
@@ -176,8 +192,8 @@ styleDeclaration
     
     return {
       property: camelProp,
-      valueFragment: isDynamic 
-        ? valueFragment.map(_ => `dp(${vars.currentVar} => ${_})`).plusImport(dp)
+      valueFragment: isDynamic
+        ? valueFragment.map(_ => `dp(${jayParams(valueFragment)} => ${_})`).plusImport(dp)
         : valueFragment,
       isDynamic: isDynamic
     };
@@ -256,7 +272,7 @@ classExpression
     if (isDynamic) {
       // A single dynamic class needs no joining — emit the expression directly.
       if (tail.length === 0)
-        return head.map(_ => `da(${vars.currentVar} => ${_})`);
+        return head.map(_ => `da(${jayParams(head)} => ${_})`);
       // Multiple classes: join via `cx(expr, ...)` so a false conditional class
       // contributes nothing — no stray/double/trailing spaces in the resulting
       // class attribute.
@@ -265,7 +281,7 @@ classExpression
       const arrayContents = elements.reduce(
         (result, fragment) => RenderFragment.merge(result, fragment, ', '),
         RenderFragment.empty());
-      return arrayContents.map(_ => `da(${vars.currentVar} => cx(${_}))`).plusImport(cx);
+      return arrayContents.map(_ => `da(${jayParams(arrayContents)} => cx(${_}))`).plusImport(cx);
     }
     return new RenderFragment(classes.join(' '), none).map(_ => `'${_}'`);
   }
@@ -310,14 +326,14 @@ enum
 
 booleanAttribute
   = cond:condition {
-  return cond.map(_ => `ba(${vars.currentVar} => ${_})`).plusImport(ba)
+  return cond.map(_ => `ba(${jayParams(cond)} => ${_})`).plusImport(ba)
 }
 
 dynamicAttribute
   = template:template {
   let [renderFragment, isDynamic] = template;
   return isDynamic ?
-      renderFragment.map(_ => `da(${vars.currentVar} => ${_})`).plusImport(da):
+      renderFragment.map(_ => `da(${jayParams(renderFragment)} => ${_})`).plusImport(da):
       renderFragment;
 }
 
@@ -334,7 +350,7 @@ dynamicProperty
   = template:template {
   let [renderFragment, isDynamic] = template;
   return isDynamic ?
-      renderFragment.map(_ => `dp(${vars.currentVar} => ${_})`).plusImport(dp):
+      renderFragment.map(_ => `dp(${jayParams(renderFragment)} => ${_})`).plusImport(dp):
       renderFragment;
 }
 
@@ -380,7 +396,7 @@ dynamicText
   = template:template {
   let [renderFragment, isDynamic] = template;
   return isDynamic ?
-      renderFragment.map(_ => `dt(${vars.currentVar} => ${_})`).plusImport(dt):
+      renderFragment.map(_ => `dt(${jayParams(renderFragment)} => ${_})`).plusImport(dt):
       renderFragment;
 }
 
@@ -429,7 +445,7 @@ accessorExpression
 
 conditionFunc
   = cond:condition {
-  return cond.map(_ => `${vars.currentVar} => ${_}`)
+  return cond.map(_ => `${jayParams(cond)} => ${_}`)
 }
 
 // =============================================================================

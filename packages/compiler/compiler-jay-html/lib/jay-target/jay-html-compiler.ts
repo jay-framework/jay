@@ -552,6 +552,8 @@ export function renderNode(node: Node, context: RenderContext): RenderFragment {
             [...attributes.validations, ...children.validations, ...ref.validations],
             mergeRefsTrees(attributes.refs, children.refs, ref.refs),
             [...attributes.recursiveRegions, ...children.recursiveRegions, ...ref.recursiveRegions],
+            // DL#193: carry the deepest `$parent` climb up so scope-switch rules can force it.
+            Math.max(attributes.parentDepth, children.parentDepth, ref.parentDepth),
         );
     }
 
@@ -574,6 +576,8 @@ export function renderNode(node: Node, context: RenderContext): RenderFragment {
             [...attributes.validations, ...children.validations, ...ref.validations],
             mergeRefsTrees(attributes.refs, children.refs, ref.refs),
             [...attributes.recursiveRegions, ...children.recursiveRegions, ...ref.recursiveRegions],
+            // DL#193: carry the deepest `$parent` climb up so scope-switch rules can force it.
+            Math.max(attributes.parentDepth, children.parentDepth, ref.parentDepth),
         );
     }
 
@@ -725,6 +729,7 @@ export function renderNode(node: Node, context: RenderContext): RenderFragment {
                 result.validations,
                 result.refs,
                 [...result.recursiveRegions, recursiveRegion],
+                result.parentDepth,
             );
         }
 
@@ -738,6 +743,9 @@ export function renderNode(node: Node, context: RenderContext): RenderFragment {
             [...renderedCondition.validations, ...childElement.validations],
             mergeRefsTrees(renderedCondition.refs, childElement.refs),
             [...renderedCondition.recursiveRegions, ...childElement.recursiveRegions],
+            // DL#193: `if` is not a data-scope switch — it re-runs its body on every parent
+            // update at runtime, so the residual `$parent` depth passes through unchanged.
+            Math.max(renderedCondition.parentDepth, childElement.parentDepth),
         );
     }
 
@@ -747,13 +755,24 @@ export function renderNode(node: Node, context: RenderContext): RenderFragment {
         trackBy: string,
         childElement: RenderFragment,
     ) {
+        // DL#193 Capability A: if the item body binds `{$parent.…}` (parentDepth > 0), this
+        // forEach is the scope it climbs *out of* — emit `dependsOnParent: true` so the runtime
+        // weakens its keyed gates and re-runs item leaves when the parent changes. The residual
+        // depth for enclosing scopes drops by one (this forEach consumed one climb); the
+        // collection getter runs in the enclosing scope, so its own depth passes through.
+        const dependsOnParent = childElement.parentDepth > 0;
+        const residualParentDepth = Math.max(
+            renderedForEach.parentDepth,
+            Math.max(0, childElement.parentDepth - 1),
+        );
         return new RenderFragment(
             `${indent.firstLine}forEach(${renderedForEach.rendered}, (${collectionVariables.currentVar}: ${collectionVariables.currentType.name}) => {
-${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
+${indent.curr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? ', true' : ''})`,
             childElement.imports.plus(Import.forEach),
             [...renderedForEach.validations, ...childElement.validations],
             childElement.refs,
             [...renderedForEach.recursiveRegions, ...childElement.recursiveRegions],
+            residualParentDepth,
         );
     }
 
@@ -769,6 +788,9 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             [...getPromiseFragment.validations, ...childElement.validations],
             childElement.refs,
             [...getPromiseFragment.recursiveRegions, ...childElement.recursiveRegions],
+            // DL#193: `when`/async is a data-scope switch; it re-runs its body on every parent
+            // update at runtime (no flag needed), and the residual `$parent` depth drops by one.
+            Math.max(getPromiseFragment.parentDepth, Math.max(0, childElement.parentDepth - 1)),
         );
     }
 
@@ -1095,6 +1117,10 @@ const ${componentSymbol} = makeHeadlessInstanceComponent(
                     [...accessorExpr.validations, ...nestedChildElement.validations],
                     nestedChildElement.refs,
                     nestedChildElement.recursiveRegions,
+                    // DL#193: `with-data` is a data-scope switch; it re-runs its body on every
+                    // parent update at runtime (no flag needed), and the residual `$parent`
+                    // depth drops by one.
+                    Math.max(0, nestedChildElement.parentDepth - 1),
                 );
             } else if (isRecurse(htmlElement)) {
                 // Handle <recurse ref="name" accessor="path" /> element

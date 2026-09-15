@@ -1,5 +1,11 @@
-import { createJayContext, withContext, useContext, findContext } from '../../lib';
-import { restoreContext, saveContext } from '../../lib/context';
+import {
+    createJayContext,
+    withContext,
+    useContext,
+    findContext,
+    ConstructContext,
+} from '../../lib';
+import { restoreContext, saveContext, parentDataChain } from '../../lib/context';
 
 describe('context', () => {
     interface TestContext {
@@ -87,5 +93,45 @@ describe('context', () => {
         });
         expect(foundContext).toEqual(CONTEXT_VALUE);
         expect(foundContext_2).toEqual(CONTEXT_VALUE_2);
+    });
+
+    // DL#193 Capability A — ConstructContext as a live per-scope carrier.
+    describe('ConstructContext parent carrier', () => {
+        it('forItem sets parent and update mutates data in place', () => {
+            const root = new ConstructContext({ title: 'root' });
+            const child = root.forItem({ name: 'a' }, 'a');
+            expect(child.parent).toBe(root);
+            expect(child.currData).toEqual({ name: 'a' });
+
+            root.update({ title: 'root-2' });
+            // child reads the parent live through the same object
+            expect(child.parent!.currData).toEqual({ title: 'root-2' });
+        });
+
+        it('forAsync sets parent', () => {
+            const root = new ConstructContext({ title: 'root' });
+            const child = root.forAsync({ value: 1 });
+            expect(child.parent).toBe(root);
+        });
+
+        it('parentDataChain returns ancestor data nearest-first', () => {
+            const root = new ConstructContext({ level: 0 });
+            const row = root.forItem({ level: 1 }, 'r');
+            const cell = row.forItem({ level: 2 }, 'c');
+            expect(parentDataChain(cell)).toEqual([{ level: 1 }, { level: 0 }]);
+        });
+
+        it('parentDataChain reflects live parent updates', () => {
+            const root = new ConstructContext({ title: 'v1' });
+            const child = root.forItem({ name: 'a' }, 'a');
+            expect(parentDataChain(child)).toEqual([{ title: 'v1' }]);
+            root.update({ title: 'v2' });
+            expect(parentDataChain(child)).toEqual([{ title: 'v2' }]);
+        });
+
+        it('parentDataChain is empty for a context with no parent', () => {
+            const root = new ConstructContext({ title: 'root' });
+            expect(parentDataChain(root)).toEqual([]);
+        });
     });
 });

@@ -139,6 +139,23 @@ export function currentConstructionContext() {
     return useContext(CONSTRUCTION_CONTEXT_MARKER);
 }
 
+/**
+ * Collect the live data of a context's ancestor scopes, nearest-first (DL#193,
+ * Capability A). Leaf binding helpers spread this into the binding closure as the
+ * extra params the compiler emits for `$parent` accessors, e.g. `dt((vs, p) => p.x)`
+ * (grandparent → `(vs, p1, p2) => p2.x`). Reads `parent.currData` live because the
+ * scope-switch updates mutate the captured context objects in place.
+ */
+export function parentDataChain(context: ConstructContext<any> | undefined): any[] {
+    const chain: any[] = [];
+    let p = context?.parent;
+    while (p) {
+        chain.push(p.currData);
+        p = p.parent;
+    }
+    return chain;
+}
+
 export function wrapWithModifiedCheck<T extends object>(
     initialData: T,
     baseJayElement: BaseJayElement<T>,
@@ -159,8 +176,24 @@ export class ConstructContext<ViewState> {
     private readonly _dataIds: Coordinate;
     readonly sanitizeHtml?: (html: string) => string;
 
+    /**
+     * Back-pointer to the enclosing scope's context (DL#193, Capability A).
+     * Set for data-scope switches (`forItem`/`forAsync`); undefined at component
+     * boundaries (root / hydration-child contexts), which is what keeps `$parent`
+     * from reaching across a component boundary (DL#84 isolation preserved).
+     */
+    parent?: ConstructContext<any>;
+
+    /**
+     * DL#193: a `forScope` child is a DOM-subtree decorator over the *same* data as its
+     * source — not a data-scope switch. Rather than snapshot the source's data (which would
+     * go stale when the source updates in place), it reads the source's `currData` live. This
+     * keeps `$parent` chains that pass through a forScope (e.g. hydrated forEach items) fresh.
+     */
+    private _liveDataSource?: ConstructContext<any>;
+
     constructor(
-        private readonly data: ViewState,
+        private data: ViewState,
         public readonly forStaticElements: boolean = true,
         private readonly coordinateBase: Coordinate = [],
         coordinateMap?: Map<string, Element[]>,
@@ -175,7 +208,16 @@ export class ConstructContext<ViewState> {
     }
 
     get currData() {
-        return this.data;
+        return this._liveDataSource ? this._liveDataSource.currData : this.data;
+    }
+
+    /**
+     * Make this context live (DL#193, Q7): the scope-switch update writes its own
+     * context in place each cascade, so leaf helpers that captured this context (and
+     * children that captured it as their `.parent`) read fresh data via `currData`.
+     */
+    update(newData: ViewState) {
+        this.data = newData;
     }
 
     /** The accumulated trackBy values from ancestor forEach loops (for __headlessInstances key lookup) */
@@ -198,7 +240,7 @@ export class ConstructContext<ViewState> {
      * coordinate() is used for refs.
      */
     forItem<ChildViewState>(childViewState: ChildViewState, id: string) {
-        return new ConstructContext(
+        const child = new ConstructContext(
             childViewState,
             false,
             [...this.coordinateBase, id],
@@ -207,6 +249,8 @@ export class ConstructContext<ViewState> {
             [...this._dataIds, id],
             this.sanitizeHtml,
         );
+        child.parent = this;
+        return child;
     }
     /**
      * Create a child context scoped to a DOM subtree (DL#126).
@@ -218,7 +262,7 @@ export class ConstructContext<ViewState> {
      */
     forScope(scopeRootElement: Element) {
         const localMap = buildCoordinateMap(scopeRootElement);
-        return new ConstructContext(
+        const child = new ConstructContext(
             this.data,
             false,
             this.coordinateBase,
@@ -227,10 +271,17 @@ export class ConstructContext<ViewState> {
             this._dataIds,
             this.sanitizeHtml,
         );
+        // forScope is a DOM-subtree scope over the *same* data, not a data-scope
+        // switch — make it transparent to `$parent` by passing the chain through.
+        child.parent = this.parent;
+        // Read the source's data live so a parent-in-place update (DL#193) is visible to
+        // `$parent` leaves whose chain runs through this forScope decorator.
+        child._liveDataSource = this;
+        return child;
     }
 
     forAsync<ChildViewState>(childViewState: ChildViewState) {
-        return new ConstructContext(
+        const child = new ConstructContext(
             childViewState,
             false,
             [...this.coordinateBase],
@@ -239,6 +290,8 @@ export class ConstructContext<ViewState> {
             this._dataIds,
             this.sanitizeHtml,
         );
+        child.parent = this;
+        return child;
     }
 
     /** Whether this context is in hydration mode (adopting existing DOM). */

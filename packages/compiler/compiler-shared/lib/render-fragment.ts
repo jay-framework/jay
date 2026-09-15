@@ -76,6 +76,7 @@ export function nestRefs(path: string[], renderFragment: RenderFragment): Render
         renderFragment.validations,
         refs,
         renderFragment.recursiveRegions,
+        renderFragment.parentDepth,
     );
 }
 
@@ -141,6 +142,13 @@ export class RenderFragment {
     validations: JayValidations;
     refs: RefsTree;
     recursiveRegions: RecursiveRegion[];
+    /**
+     * DL#193 Capability A: the deepest `$parent` climb referenced in this fragment
+     * (0 = none, 1 = `$parent.`, 2 = `$parent.$parent.`, …). The closure-emitting
+     * grammar rules read this to widen the binding signature with parent params
+     * (`(vs, _p1, _p2) => …`) that the runtime supplies from the live parent context.
+     */
+    parentDepth: number;
 
     constructor(
         rendered: string,
@@ -148,12 +156,14 @@ export class RenderFragment {
         validations: JayValidations = [],
         refs: RefsTree = mkRefsTree([], {}),
         recursiveRegions: RecursiveRegion[] = [],
+        parentDepth: number = 0,
     ) {
         this.rendered = rendered;
         this.imports = imports;
         this.validations = validations;
         this.refs = refs;
         this.recursiveRegions = recursiveRegions;
+        this.parentDepth = parentDepth;
     }
 
     map(f: (s: string) => string): RenderFragment {
@@ -163,6 +173,7 @@ export class RenderFragment {
             this.validations,
             this.refs,
             this.recursiveRegions,
+            this.parentDepth,
         );
     }
 
@@ -173,6 +184,7 @@ export class RenderFragment {
             this.validations,
             this.refs,
             this.recursiveRegions,
+            this.parentDepth,
         );
     }
 
@@ -198,6 +210,7 @@ export class RenderFragment {
             [...fragment1.validations, ...fragment2.validations],
             newRefsTree,
             [...fragment1.recursiveRegions, ...fragment2.recursiveRegions],
+            Math.max(fragment1.parentDepth, fragment2.parentDepth),
         );
     }
 }
