@@ -1662,3 +1662,67 @@ clean-compile tests, no net count change; the +2 is unrelated); smoke-test 64 pa
 negative "genuinely-absent parent climb" case is covered by the existing `expression-compiler`
 validation path (no new dedicated fixture added — the absent-ancestor branch is untouched and already
 under test).
+
+## Implementation Results — Phase 4 (secure/bridge; React deprecated) (2026-09-16)
+
+**Finding: secure/bridge is resolved-by-architecture — no runtime or codegen change was needed.**
+Phase 4 was planned as "extend Capability A's parent pointer to the secure/bridge code generators."
+Tracing the secure architecture end-to-end showed there is nothing to extend:
+
+- In secure mode the **view renders on the main thread** via the _trusted_ element target.
+  `MainSandbox` and `MainTrusted` share `generateElementFile`
+  (`generate-code-from-structure.ts:66-86`), so the main-sandbox output is the Phase-1-patched
+  client output verbatim — `dt`/`da` receive `...parentDataChain(context)` and `forEach` carries the
+  `dependsOnParent` flag. `$parent` already resolves here.
+- The **worker** runs only the bridge skeleton (`elementBridge` / `sandboxElement` /
+  `sandboxForEach`), which never runs `dt`/`da`. `sandboxForEach` (sandbox-element.ts:127-193) tracks
+  the collection only (3-arg form, no child body, no `parent` field, no validations), so there is no
+  `$parent` binding on the worker side to plumb.
+
+This matches Phase 1's "Bridge/secure needs no guard" note and Phase 2a's "bridge (worker) target
+needs no codegen change." Phase 4 therefore reduces to **verification**, not construction. React is
+**deprecated** and excluded from the acceptance gate (its Phase 1 `guardReactParentBinding`
+validation error stays in place as the surfaced boundary).
+
+**Verification (pragmatic full acceptance gate).** Per the user's constraint — full acceptance gate,
+but validate the complex end-to-end path via a built Jay example + manual test rather than a fragile,
+heavy secure-runtime e2e feature dir — coverage is:
+
+1. **Compiler regression guards (deterministic, cheap):**
+   - _Bridge (worker) target:_ `generate-element-sandbox.test.ts` → new case
+     `$parent binding inside a forEach` for `collections/foreach-parent-binding`, full `toEqual`
+     against a new `generated-element-bridge.ts` fixture. Proves the worker emits only the
+     `sandboxForEach(getItems, 'id', () => [])` skeleton — **no** `dt`/`da`, **no** `$parent`, **no**
+     validations.
+   - _Main-sandbox target:_ `generate-element.test.ts` → new case `$parent binding inside a forEach
+(DL#193)` for the same folder, `validations: []` + full `toEqual` against a new
+     `generated-element-main-sandbox.ts` fixture. Proves the main side renders the full `_p1`
+     closure bindings (`da((vs1, _p1) => _p1.listTitle)`, `dt((vs1, _p1) => _p1.listTitle)`) and the
+     `dependsOnParent` `forEach` flag even when sandboxed — byte-identical to the trusted output.
+   - The existing Phase-2a `override binding to parent scope (DL#193)` main-sandbox test already
+     covers the **structural-instance override** case in secure mode.
+2. **Example secure build (acceptance gate) + manual test:** `examples/jay/parent-binding` builds a
+   dual regular (`lib/` + `index.html`) and secure (`lib-secure/` + `secure.html`) target through the
+   vite plugin. `lib-secure/board.jay-html` exercises exactly the Phase 4 scenario —
+   `{$parent.groupLabel}` inside a keyed `forEach` — with **Relabel** (mutate parent data live) and
+   **Shuffle** (reorder keyed items) buttons for manual verification. `yarn build` succeeds (23
+   modules; the `mainSandbox` transform of `board.jay-html` compiles clean); user manually verified
+   the secure build renders and updates identically to the regular build.
+
+**Deviation from the original acceptance gate.** The Test plan (§"Example (end-to-end) tests") and
+Phase 1 designated a dedicated secure-runtime e2e feature dir (mirroring
+`packages/runtime/secure/test/<feature>/`, with hand-committed `regular` + `secure/main` +
+`secure/worker` compiled files) as the secure-mode gate. That heavy, fragile harness was **not
+built**; the `examples/jay/parent-binding` `lib-secure` build + manual verification serves as the
+acceptance gate instead, per the user's pragmatic-testing instruction. Since the finding is that the
+secure/worker path carries **no** `$parent` binding (the view renders main-side via the trusted
+target, already covered by the byte-identical main-sandbox fixture), the dedicated worker e2e dir
+would only re-assert the trusted path — the cheaper compiler + example gate covers the same surface.
+
+**Test results:** compiler-jay-html `generate-element-sandbox.test.ts` 10 passing (+1),
+`generate-element.test.ts` 76 passing (+1); `examples/jay/parent-binding` `yarn build` succeeds for
+both regular and secure targets.
+
+**Phase 4 status: complete** (secure/bridge resolved-by-architecture + verified; React deprecated).
+Phase 3 (Issue 1 — pure-component ref forwarding) remains the only outstanding DL#193 work and is
+orthogonal.
