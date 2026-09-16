@@ -640,7 +640,12 @@ function renderHydrateHeadlessInstance(
     }
 
     // --- Compile adopt inline template (hydrate APIs) ---
-    const componentVariables = new Variables(headlessImport.rootType);
+    // DL#193 Phase 2a: link the enclosing (page) scope as the component scope's parent so
+    // page-authored `<override>` content — marked `@jay:parent` and resolved via `withParentShift`
+    // — climbs to it as an ordinary `$parent` (`_p1`) access, mirroring the element target
+    // (jay-html-compiler.ts renderHeadlessInstance). The whole enclosing view state is forwarded
+    // as `__parentContext` at the mount site so `_p1.<anyField>` resolves.
+    const componentVariables = new Variables(headlessImport.rootType, renderContext.variables);
     const childNodes = filterContentNodes(element.childNodes);
     if (childNodes.length === 0) {
         return new RenderFragment('', Imports.none(), [
@@ -701,6 +706,10 @@ function renderHydrateHeadlessInstance(
             adoptChildren.imports.plus(Import.adoptElement),
             adoptChildren.validations,
             adoptChildren.refs,
+            adoptChildren.recursiveRegions,
+            // DL#193 Phase 2a: preserve the deepest `$parent` climb so the usage site still
+            // emits `__parentContext` when override content spans multiple root children.
+            adoptChildren.parentDepth,
         );
     }
 
@@ -838,7 +847,23 @@ const ${createComponentSymbol} = makeHeadlessInstanceComponent(
         renderContext,
         headlessImport.contract?.props,
     );
-    const getProps = `(${context.variables.currentVar}: ${context.variables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
+    // DL#193 Phase 2a: when the override content binds outer-scope fields (parentDepth > 0),
+    // forward the whole enclosing view state as the reserved `__parentContext` prop so the
+    // runtime can build a synthetic parent ConstructContext and resolve `_p1.<field>`. Mirrors
+    // the element target (jay-html-compiler.ts renderHeadlessInstance).
+    let getPropsBody = propsGetterAndRefs.rendered;
+    if (adoptInlineBody.parentDepth > 0) {
+        const parentContextEntry = `__parentContext: ${context.variables.currentVar}`;
+        if (getPropsBody.startsWith('({') && getPropsBody.endsWith('})')) {
+            const inner = getPropsBody.slice(2, -2).trim();
+            getPropsBody = inner
+                ? `({ ${inner}, ${parentContextEntry} })`
+                : `({ ${parentContextEntry} })`;
+        } else {
+            getPropsBody = `({ ...${getPropsBody}, ${parentContextEntry} })`;
+        }
+    }
+    const getProps = `(${context.variables.currentVar}: ${context.variables.currentType.name}) => ${getPropsBody}`;
 
     // --- Generate ref ---
     const refOriginalName =
@@ -1054,6 +1079,7 @@ function renderHydrateElementContent(
         let childImports = Imports.none();
         const childValidations: string[] = [];
         const childRefs: RefsTree[] = [];
+        let childParentDepth = 0;
 
         for (const child of childNodes) {
             if (child.nodeType !== NodeType.ELEMENT_NODE) continue;
@@ -1073,6 +1099,7 @@ function renderHydrateElementContent(
                     childImports = childImports.plus(frag.imports);
                     childValidations.push(...frag.validations);
                     if (frag.refs) childRefs.push(frag.refs);
+                    childParentDepth = Math.max(childParentDepth, frag.parentDepth);
                 }
             } else {
                 const htmlChild = child as HTMLElement;
@@ -1105,6 +1132,7 @@ function renderHydrateElementContent(
                     childImports = childImports.plus(frag.imports);
                     childValidations.push(...frag.validations);
                     if (frag.refs) childRefs.push(frag.refs);
+                    childParentDepth = Math.max(childParentDepth, frag.parentDepth);
                 } else {
                     // No hydrate code — emit STATIC sentinel
                     childParts.push(`${indent.firstLine}STATIC`);
@@ -1125,6 +1153,8 @@ function renderHydrateElementContent(
                 .plus(renderedRef.imports),
             [...attributes.validations, ...childValidations, ...renderedRef.validations],
             mergeRefsTrees(...childRefs, renderedRef.refs),
+            [],
+            Math.max(childParentDepth, attributes.parentDepth),
         );
     }
 
@@ -1136,6 +1166,7 @@ function renderHydrateElementContent(
         let childImports = Imports.none();
         const childValidations: string[] = [];
         const childRefs: RefsTree[] = [];
+        let childParentDepth = 0;
         // First pass: elements (including refs)
         childNodes.forEach((child) => {
             if (child.nodeType === NodeType.ELEMENT_NODE) {
@@ -1145,6 +1176,7 @@ function renderHydrateElementContent(
                     childImports = childImports.plus(frag.imports);
                     childValidations.push(...frag.validations);
                     if (frag.refs) childRefs.push(frag.refs);
+                    childParentDepth = Math.max(childParentDepth, frag.parentDepth);
                 }
             }
         });
@@ -1163,6 +1195,7 @@ function renderHydrateElementContent(
                             .plus(Import.adoptText)
                             .plus(rendered.imports.minus(Import.dynamicText));
                         childValidations.push(...rendered.validations);
+                        childParentDepth = Math.max(childParentDepth, rendered.parentDepth);
                     }
                 }
             }
@@ -1177,6 +1210,8 @@ function renderHydrateElementContent(
                 .plus(renderedRef.imports),
             [...attributes.validations, ...childValidations, ...renderedRef.validations],
             mergeRefsTrees(...childRefs, renderedRef.refs),
+            [],
+            childParentDepth,
         );
     }
 
@@ -1192,6 +1227,8 @@ function renderHydrateElementContent(
                 .plus(attributes.imports),
             [...textFragment.validations, ...renderedRef.validations, ...attributes.validations],
             renderedRef.refs,
+            [],
+            textFragment.parentDepth,
         );
     }
 
@@ -1215,6 +1252,10 @@ function renderHydrateElementContent(
                     ...attributes.validations,
                 ],
                 renderedRef.refs,
+                [],
+                // DL#193 Phase 2a: carry the `$parent` climb from the override binding up to the
+                // usage site so `__parentContext` is emitted.
+                textFragment.parentDepth,
             );
         }
         // Simple text adoption: adoptText("coord", accessor)
@@ -1222,6 +1263,9 @@ function renderHydrateElementContent(
             `${indent.firstLine}adoptText("${coordinate}", ${accessor})`,
             Imports.for(Import.adoptText).plus(textFragment.imports.minus(Import.dynamicText)),
             [...textFragment.validations],
+            mkRefsTree([], {}),
+            [],
+            textFragment.parentDepth,
         );
     }
 
@@ -1231,6 +1275,7 @@ function renderHydrateElementContent(
         let childImports = Imports.none();
         let childValidations: string[] = [];
         let childRefs: RefsTree | undefined;
+        let childParentDepth = 0;
 
         if (textFragment) {
             const accessor = textFragment.rendered.replace(/^dt\(/, '').replace(/\)$/, '');
@@ -1239,6 +1284,7 @@ function renderHydrateElementContent(
                 textFragment.imports.minus(Import.dynamicText),
             );
             childValidations = textFragment.validations;
+            childParentDepth = textFragment.parentDepth;
         } else {
             // Recurse into child elements (e.g., <input ref="..."> inside a dynamic-attr parent)
             const children = mergeHydrateFragments(
@@ -1250,6 +1296,7 @@ function renderHydrateElementContent(
                 childImports = children.imports;
                 childValidations = children.validations;
                 childRefs = children.refs;
+                childParentDepth = children.parentDepth;
             }
         }
 
@@ -1263,6 +1310,10 @@ function renderHydrateElementContent(
                 .plus(renderedRef.imports),
             [...attributes.validations, ...childValidations, ...renderedRef.validations],
             mergeRefsTrees(...[childRefs, renderedRef.refs].filter(Boolean)),
+            [],
+            // DL#193 Phase 2a: carry the override binding's `$parent` climb up (attributes may
+            // themselves be `$parent`-bound; a wrapping element adds no scope).
+            Math.max(childParentDepth, attributes.parentDepth),
         );
     }
 
@@ -1279,6 +1330,10 @@ function renderHydrateElementContent(
         Imports.for(Import.adoptElement).plus(childFragments.imports).plus(renderedRef.imports),
         [...childFragments.validations, ...renderedRef.validations],
         mergeRefsTrees(childFragments.refs, renderedRef.refs),
+        [],
+        // DL#193 Phase 2a: a wrapping element adds no scope, so carry children's `$parent`
+        // climb up unchanged so the usage site emits `__parentContext`.
+        childFragments.parentDepth,
     );
 }
 

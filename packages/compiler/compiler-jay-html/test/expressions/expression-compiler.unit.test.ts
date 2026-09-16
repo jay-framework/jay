@@ -162,6 +162,89 @@ describe('expression-compiler', () => {
         });
     });
 
+    // DL#193 §C (Phase 2a) — the parent-scope pragma marks a whole binding value as authored in
+    // the outer scope. `doParse` strips it and resolves the value one scope up (Capability A), so
+    // only genuine field accessors climb — enum values, class names, and literals stay put.
+    describe('parent-scope pragma (DL#193 §C)', () => {
+        const P = '@jay:parent ';
+        // A component instance scope (depth 0, `vs`) whose parent is the page scope — the exact
+        // shape the override merge produces: content authored on the page, spliced into the child.
+        const pageVars = new Variables(
+            new JayObjectType('PageData', {
+                documentName: JayString,
+                status: new JayEnumType('Status', ['active', 'archived']),
+                isPinned: JayBoolean,
+                size: JayNumber,
+            }),
+        );
+        const compVars = new Variables(
+            new JayObjectType('CompData', { ownField: JayString }),
+            pageVars,
+            0,
+        );
+
+        it('without the pragma, resolves against the child scope', () => {
+            expect(parseTextExpression('{ownField}', compVars).rendered).toEqual(
+                'dt(vs => vs.ownField)',
+            );
+        });
+
+        it('marks a text binding to the parent scope', () => {
+            const actual = parseTextExpression(`${P}{documentName}`, compVars);
+            expect(actual.rendered).toEqual('dt((vs, _p1) => _p1.documentName)');
+            expect(actual.imports.has(Import.dynamicText)).toBeTruthy();
+        });
+
+        it('marks an attribute binding to the parent scope', () => {
+            expect(parseAttributeExpression(`${P}{documentName}`, compVars).rendered).toEqual(
+                'da((vs, _p1) => _p1.documentName)',
+            );
+        });
+
+        it('marks a property binding to the parent scope', () => {
+            expect(parsePropertyExpression(`${P}{documentName}`, compVars).rendered).toEqual(
+                'dp((vs, _p1) => _p1.documentName)',
+            );
+        });
+
+        it('marks a boolean attribute (brace-less) to the parent scope', () => {
+            expect(parseBooleanAttributeExpression(`${P}isPinned`, compVars).rendered).toEqual(
+                'ba((vs, _p1) => _p1.isPinned)',
+            );
+        });
+
+        it('marks a condition (if=) to the parent scope', () => {
+            expect(parseCondition(`${P}isPinned`, compVars).rendered).toEqual(
+                '(vs, _p1) => _p1.isPinned',
+            );
+        });
+
+        // The reason a whole-expression mark beats a per-accessor rewrite: the parser tells a field
+        // (`status`, climbs) from an enum value (`active`) and a class name (`primary`, both stay).
+        it('shifts only the field in a compound class ternary, leaving enum value and class name', () => {
+            expect(
+                parseClassExpression(`${P}{status == active ? primary}`, compVars).rendered,
+            ).toEqual("da((vs, _p1) => _p1.status === Status.active?'primary':'')");
+        });
+
+        it('marks a style template value to the parent scope', () => {
+            const result = parseStyleDeclarations(`${P}width: {size}px`, compVars);
+            expect(result.declarations[0].valueFragment.rendered).toEqual(
+                'dp((vs, _p1) => `${_p1.size}px`)',
+            );
+        });
+
+        it('leaves jay.* bindings local (not shifted)', () => {
+            const actual = parseTextExpression(`${P}{jay.foo}`, compVars);
+            expect(actual.rendered).toEqual('dt(vs => vs.__jay?.foo)');
+            expect(actual.parentDepth).toEqual(0);
+        });
+
+        it('strips the pragma from a static value with no shift', () => {
+            expect(parseAttributeExpression(`${P}Static`, compVars).rendered).toEqual("'Static'");
+        });
+    });
+
     describe('parseCondition', () => {
         let defaultVars = new Variables(
             new JayObjectType('data', {

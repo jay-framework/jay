@@ -9,6 +9,8 @@ import {
     RenderElement,
     MountFunc,
     VIEW_STATE_CHANGE_EVENT,
+    ConstructContext,
+    withSyntheticParentContext,
 } from '@jay-framework/runtime';
 import { Getter, mkReactive, Reactive } from '@jay-framework/reactive';
 import { JSONPatch } from '@jay-framework/json-patch';
@@ -16,6 +18,16 @@ import { HTMLElement } from 'node-html-parser';
 import { createSignal } from './hooks';
 import { COMPONENT_CONTEXT, ComponentContext } from './component-contexts';
 import { CONTEXT_REACTIVE_SYMBOL_CONTEXT } from './context-api';
+
+/**
+ * DL#193 Phase 2a: reserved prop carrying the narrow, reactive projection of the outer (page)
+ * scope fields that a component's page-authored `<override>` content binds via `$parent`. The
+ * compiler emits it at the `childComp` mount site (`{ __parentContext: { field: vs.field } }`);
+ * {@link makeJayComponent} intercepts it to build a synthetic parent {@link ConstructContext}.
+ * It never enters the component's own ViewState (so it is never up-serialized in secure), and the
+ * author never writes it — following the `__jay` reserved-key precedent.
+ */
+export const PARENT_CONTEXT_PROP = '__parentContext';
 
 export type Patcher<T> = (...patch: JSONPatch) => void;
 export type hasProps<PropsT> = { props: Getter<PropsT> };
@@ -143,6 +155,15 @@ export function makeJayComponent<
         return withContext(COMPONENT_CONTEXT, componentContext, () => {
             let propsProxy = makePropsProxy(componentContext.reactive, props);
 
+            // DL#193 Phase 2a: if the mount site supplied the reserved `__parentContext` prop,
+            // build a synthetic parent ConstructContext seeded with it. The component's root
+            // adopts it (via withSyntheticParentContext → withRootContext), so `$parent` (`_p1`)
+            // bindings authored in page `<override>` content resolve against the outer scope.
+            const hasParentContext = props != null && PARENT_CONTEXT_PROP in props;
+            const syntheticParent = hasParentContext
+                ? new ConstructContext(props[PARENT_CONTEXT_PROP])
+                : undefined;
+
             let eventWrapper: JayEventHandlerWrapper<any, any, any> = (orig, event) => {
                 return componentContext.reactive.batchReactions(() => orig(event));
             };
@@ -172,11 +193,18 @@ export function makeJayComponent<
                 let viewState = materializeViewState(viewStateValueOrGetters);
                 currentViewState = viewState;
 
+                // DL#193 Phase 2a: keep the synthetic parent live from the `__parentContext` prop.
+                // Reading the prop signal makes this reaction depend on it, so an outer-scope change
+                // re-runs the render; updating the synthetic parent first means the `$parent` leaves
+                // (which read `parentDataChain` on each element.update) recompute against fresh data.
+                // No root gate-weakening is needed: materializeViewState always returns a fresh
+                // object, so wrapWithModifiedCheck at the root never blocks the propagation.
+                if (syntheticParent)
+                    syntheticParent.update((propsProxy as any)[PARENT_CONTEXT_PROP]());
+
                 if (!element)
-                    element = renderWithContexts(
-                        componentContext.provideContexts,
-                        render,
-                        viewState,
+                    element = withSyntheticParentContext(syntheticParent, () =>
+                        renderWithContexts(componentContext.provideContexts, render, viewState),
                     );
                 else element.update(viewState);
 

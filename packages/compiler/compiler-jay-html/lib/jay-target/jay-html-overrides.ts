@@ -1,5 +1,6 @@
-import { parse, type HTMLElement } from 'node-html-parser';
+import { parse, type HTMLElement, type Node, NodeType } from 'node-html-parser';
 import { WithValidations } from '@jay-framework/compiler-shared';
+import { PARENT_SCOPE_PRAGMA } from '../expressions/expression-compiler';
 
 /**
  * Headfull component overrides (DL#181).
@@ -30,6 +31,67 @@ export interface OverrideSpec {
 }
 
 const OVERRIDE_TAG = 'override';
+
+/**
+ * Attributes the jay-html compiler reads literally (never through the expression parser), so their
+ * values must NOT be marked with the parent-scope pragma — doing so would corrupt a ref name, a
+ * trackBy field, or an internal coordinate/scope marker.
+ */
+const LITERAL_ATTRS = new Set(['ref', 'trackby', 'jay-coordinate-base', 'jay-scope']);
+
+/**
+ * Attributes whose whole value is an expression even without `{…}` braces (`forEach="items"`,
+ * `if="isOpen"`). These always funnel through the expression parser, so their value must be marked
+ * regardless of braces. Every other attribute is an expression only when it contains a `{…}`
+ * binding; a brace-less value is emitted verbatim and would leak the pragma if marked.
+ */
+const EXPRESSION_ATTRS = new Set(['if', 'foreach']);
+
+/**
+ * DL#193 §C (Phase 2a) — mark override content as authored in the parent (outer) scope.
+ *
+ * Override content is authored in the OUTER (page) scope but spliced into the target component, so
+ * its bindings must resolve against the page scope, not the child's ViewState. Rather than persist
+ * provenance, the compiler prefixes each binding *location* (every text node and every non-literal
+ * attribute value) with the {@link PARENT_SCOPE_PRAGMA}. A single mark at the start of a value
+ * covers all `{…}` bindings in it; {@link doParse} strips the pragma and resolves the whole value
+ * against a `withParentShift(1)` scope (Capability A). Handing the field-vs-enum/class distinction
+ * to the real expression parser means compound expressions (`{status == active ? cls}`) resolve
+ * correctly — only genuine field accessors climb.
+ *
+ * The author never writes the pragma (that authoring syntax was rejected in Q3); it is injected
+ * here. Because it rides Capability A, override outer-data bindings are client-target only (React
+ * and server targets reject parent bindings, matching Capability A's limits). Overrides that
+ * introduce their own `forEach` scope inside the content are out of Phase 2a scope.
+ */
+export function remapOverrideBindingsToParent(content: string): string {
+    const fragment = parse(content);
+    markParentScope(fragment);
+    return fragment.toString();
+}
+
+/** Recursively prefix text nodes and non-literal attribute values with the parent-scope pragma. */
+function markParentScope(node: Node): void {
+    for (const child of node.childNodes) {
+        if (child.nodeType === NodeType.TEXT_NODE) {
+            // Only mark text that carries a binding — static text has nothing to resolve.
+            if (child.rawText.includes('{')) child.rawText = PARENT_SCOPE_PRAGMA + child.rawText;
+        } else if (child.nodeType === NodeType.ELEMENT_NODE) {
+            const el = child as HTMLElement;
+            for (const [name, value] of Object.entries(el.attributes)) {
+                const lower = name.toLowerCase();
+                if (LITERAL_ATTRS.has(lower)) continue;
+                // Only mark attributes that actually carry a binding: a `{…}` interpolation, or a
+                // brace-less expression attribute (`forEach`/`if`). A static value (no `{…}`) is
+                // emitted verbatim and never passes through the expression parser that strips the
+                // pragma, so marking it would leak `@jay:parent ` into the output.
+                if (!value.includes('{') && !EXPRESSION_ATTRS.has(lower)) continue;
+                el.setAttribute(name, PARENT_SCOPE_PRAGMA + value);
+            }
+            markParentScope(el);
+        }
+    }
+}
 
 /**
  * Collect the `<override>` specs that are *direct* children of a `<jay:Name>` usage tag. Only direct
@@ -155,7 +217,11 @@ export function applyOverrides(
                     target.setAttribute(name, value);
                 }
             }
-            if (override.hasContent) target.set_content(override.content ?? '');
+            if (override.hasContent) {
+                // DL#193 §C: mark the override's bindings as parent-scoped before splicing, so they
+                // resolve against the outer (page) scope where the override was authored.
+                target.set_content(remapOverrideBindingsToParent(override.content ?? ''));
+            }
         }
     }
 

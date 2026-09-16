@@ -20,6 +20,16 @@ import { parse } from './expression-parser.cjs';
 const PARENT_TOKEN = '$parent';
 
 /**
+ * DL#193 §C (Phase 2a): compiler-internal pragma prefixed to a whole binding value (text node,
+ * attribute value, class/style/condition) to mark it as authored in the parent (outer) scope.
+ * Injected by the override merge ({@link remapOverrideBindingsToParent}) and stripped in
+ * {@link doParse}, which then resolves the value against a `withParentShift(1)` scope. The value
+ * is namespaced (`@jay:parent`) so it never collides with authored content; the author never
+ * writes it (that authoring syntax was rejected in DL#193 Q3).
+ */
+export const PARENT_SCOPE_PRAGMA = '@jay:parent ';
+
+/**
  * DL#193 Capability A: the closure parameter name for a `$parent` access climbing
  * `level` scopes. The runtime supplies these positionally from the live parent chain
  * (`parentDataChain`, nearest-first): level 1 → `_p1`, level 2 → `_p2`, …
@@ -79,13 +89,25 @@ export class Variables {
     readonly currentType: JayType;
     readonly currentContext: string;
     readonly parent: Variables;
-    private readonly children: Record<string, Variables> = {};
+    private readonly children: Record<string, Variables>;
     private readonly depth;
+    /**
+     * DL#193 §C (Phase 2a): when > 0, every field accessor resolved through this scope is
+     * transparently prefixed with that many `$parent` tokens, so a whole expression resolves
+     * against an enclosing scope without rewriting the expression text. Used for override content,
+     * which is authored in the outer (page) scope but spliced into a child component's body.
+     */
+    private readonly parentShiftLevels: number;
     constructor(
         currentTypes: JayType,
         parent: Variables = undefined,
         depth: number = 0,
         customVarName?: string,
+        // DL#193 §C: {@link withParentShift} reconstructs a view of the SAME scope; these carry the
+        // shift level and the shared child-scope cache across that reconstruction (defaults keep a
+        // freshly-constructed scope unshifted with its own empty cache).
+        parentShiftLevels: number = 0,
+        children: Record<string, Variables> = {},
     ) {
         this.currentVar = customVarName || (depth === 0 ? 'vs' : 'vs' + depth);
         this.currentContext = depth === 0 ? 'context' : 'cx' + depth;
@@ -93,9 +115,41 @@ export class Variables {
         this.parent = parent;
         this.currentType =
             currentTypes instanceof JayImportedType ? currentTypes.type : currentTypes;
+        this.parentShiftLevels = parentShiftLevels;
+        this.children = children;
+    }
+
+    /**
+     * DL#193 §C (Phase 2a): return a view of this scope that resolves every field accessor
+     * `levels` scopes up. Reuses Capability A — the shift is applied by prefixing `$parent`
+     * tokens inside {@link resolveAccessor}, so `parentLevel`/`parentDepth` (and hence the
+     * `(vs, _p1) => …` closure and the runtime parent chain) all flow automatically. `jay.*`
+     * and explicit `$parent.*` accessors are left untouched.
+     */
+    withParentShift(levels: number): Variables {
+        if (levels <= 0) return this;
+        // Reconstruct an identical view of this scope (same var name, type, depth, parent and the
+        // shared child cache) with only the shift level bumped. `currentVar` is passed as the
+        // custom name and `currentType` is already unwrapped, so the constructor reproduces this
+        // scope exactly — no reliance on field-copying internals.
+        return new Variables(
+            this.currentType,
+            this.parent,
+            this.depth,
+            this.currentVar,
+            this.parentShiftLevels + levels,
+            this.children,
+        );
     }
 
     resolveAccessor(accessor: Array<string>): Accessor {
+        // DL#193 §C (Phase 2a): a parent-shifted scope prefixes `$parent` tokens so the whole
+        // expression climbs, then re-enters the standard `$parent` handling below (the re-entry
+        // is guarded by the `accessor[0] === PARENT_TOKEN` check, so it does not shift again).
+        if (this.parentShiftLevels > 0 && accessor[0] !== 'jay' && accessor[0] !== PARENT_TOKEN) {
+            const prefix = new Array(this.parentShiftLevels).fill(PARENT_TOKEN);
+            return this.resolveAccessor([...prefix, ...accessor]);
+        }
         if (accessor[0] === 'jay') {
             const jayPath = ['__jay', ...accessor.slice(1)];
             return new Accessor(this.currentVar, jayPath, [], JayString);
@@ -345,6 +399,15 @@ function doParse(
     vars?: Variables,
     throwOnError: boolean = false,
 ) {
+    // DL#193 §C (Phase 2a): a value marked with the parent-scope pragma is authored in the outer
+    // scope. Strip the pragma and resolve the (whole) value against a parent-shifted scope, so
+    // every accessor within it climbs one level while enum values / class names / literals — which
+    // never reach `resolveAccessor` — are left untouched. Guarded by `vars` so pragma-free,
+    // varsless rules (importNames, enum, templateParts, slowCondition) are never affected.
+    if (vars && expression.startsWith(PARENT_SCOPE_PRAGMA)) {
+        expression = expression.slice(PARENT_SCOPE_PRAGMA.length);
+        vars = vars.withParentShift(1);
+    }
     try {
         return parse(expression, {
             vars,

@@ -293,3 +293,18 @@ target component's ViewState) is satisfied by construction: override content is 
 component's body before that body's expression compilation, so any `{binding}` compiles in the child's
 scope exactly like the child's own markup; not separately exercised in the smoke test, which uses static
 override content.
+
+---
+
+## Superseded by DL#193 §C (2026-09-16) — override binding scope
+
+**Q6/A6 and VC#5 (override `{bindings}` resolve against the _target_ component's own ViewState) are
+superseded by DL#193 §C.** Under DL#193, an override is treated as page-authored content whose free
+variables resolve against the **outer (page) scope** and are hoisted into a per-site
+`Panel$1ViewState extends PanelViewState` specialization; reaching the target component's _own_ data
+from an override becomes out of scope (a separate slot-props/render-props concern). This is a
+deliberate, user-approved reversal. Breakage risk is low because VC#5 was "satisfied by
+construction" and never exercised by a live-binding test (see note above). All other DL#181
+verification criteria (content replace / attribute / style / remove / override-only ref / missing-ref
+error / contract-required ref path) remain in force. See DL#193 "Phase 2 pre-implementation trace &
+decisions" for the full rationale and the compile-model trace behind it.

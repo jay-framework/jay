@@ -334,10 +334,15 @@ function peg$parse(input, options) {
     peg$c51 = /^[}]/,
     peg$c52 = peg$classExpectation(['}'], false, false),
     peg$c53 = function (acc, classY, classN) {
+      // Propagate acc.parentDepth (6th arg) so a $parent condition widens the class closure to
+      // `(vs, _p1) => …` (DL#193). Without it the body references `_p1` but the closure only takes `vs`.
       return new RenderFragment(
         `${acc.rendered}?'${classY}':'${classN ? classN[3] : ''}'`,
         da,
         acc.validations,
+        undefined,
+        undefined,
+        acc.parentDepth,
       );
     },
     peg$c54 = /^[\-]/,

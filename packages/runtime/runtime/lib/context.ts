@@ -140,6 +140,35 @@ export function currentConstructionContext() {
 }
 
 /**
+ * DL#193 Phase 2a: the synthetic parent context a component's root should adopt, handed off
+ * out-of-band because the generated render signature `(viewState) => withRootContext(...)` has
+ * no slot to thread it. {@link makeJayComponent} wraps its first render in
+ * {@link withSyntheticParentContext} seeding this; {@link ConstructContext.withRootContext}
+ * (and the hydration analog) *consume* it — clearing it immediately so nested `childComp` roots
+ * built during the same render do not inherit it. Mirrors the {@link withContext} stack pattern.
+ */
+let pendingSyntheticParent: ConstructContext<any> | undefined = undefined;
+
+export function withSyntheticParentContext<Returns>(
+    parent: ConstructContext<any> | undefined,
+    callback: () => Returns,
+): Returns {
+    const prev = pendingSyntheticParent;
+    pendingSyntheticParent = parent;
+    try {
+        return callback();
+    } finally {
+        pendingSyntheticParent = prev;
+    }
+}
+
+function consumePendingSyntheticParent(): ConstructContext<any> | undefined {
+    const parent = pendingSyntheticParent;
+    pendingSyntheticParent = undefined;
+    return parent;
+}
+
+/**
  * Collect the live data of a context's ancestor scopes, nearest-first (DL#193,
  * Capability A). Leaf binding helpers spread this into the binding closure as the
  * extra params the compiler emits for `$parent` accessors, e.g. `dt((vs, p) => p.x)`
@@ -341,6 +370,7 @@ export class ConstructContext<ViewState> {
         elementConstructor: () => BaseJayElement<ViewState>,
         sanitizeHtml?: (html: string) => string,
     ): JayElement<ViewState, Refs> {
+        const syntheticParent = consumePendingSyntheticParent();
         let context = new ConstructContext(
             viewState,
             true,
@@ -350,6 +380,10 @@ export class ConstructContext<ViewState> {
             undefined,
             sanitizeHtml,
         );
+        // DL#193 Phase 2a: adopt the synthetic parent so the root's `$parent` (`_p1`) leaves
+        // resolve against the outer scope via `parentDataChain`. The page root stays parent-less
+        // (DL#84 isolation) — only override instances receive a synthetic parent.
+        if (syntheticParent) context.parent = syntheticParent;
         let element = withContext(CONSTRUCTION_CONTEXT_MARKER, context, () =>
             wrapWithModifiedCheck(currentConstructionContext().currData, elementConstructor()),
         );
@@ -374,6 +408,7 @@ export class ConstructContext<ViewState> {
         elementConstructor: () => BaseJayElement<ViewState>,
     ): JayElement<ViewState, Refs> {
         const parentContext = currentConstructionContext();
+        const syntheticParent = consumePendingSyntheticParent();
         const context = new ConstructContext(
             viewState,
             false,
@@ -381,6 +416,8 @@ export class ConstructContext<ViewState> {
             parentContext?._coordinateMap,
             parentContext?._rootElement,
         );
+        // DL#193 Phase 2a: same synthetic-parent adoption as withRootContext, for the hydration path.
+        if (syntheticParent) context.parent = syntheticParent;
         const element = withContext(CONSTRUCTION_CONTEXT_MARKER, context, () =>
             wrapWithModifiedCheck(currentConstructionContext().currData, elementConstructor()),
         );

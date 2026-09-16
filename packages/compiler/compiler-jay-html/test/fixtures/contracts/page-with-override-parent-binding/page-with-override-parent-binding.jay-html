@@ -1,0 +1,20 @@
+<html>
+<head>
+    <script type="application/jay-headfull"
+            src="./card/card"
+            contract="./card/card.jay-contract"
+            names="card"></script>
+    <script type="application/jay-data">
+data:
+    itemName: string
+    </script>
+</head>
+<body>
+<div>
+    <h1>{itemName}</h1>
+    <jay:card heading="Premium">
+        <override ref="cta">Start {itemName} trial</override>
+    </jay:card>
+</div>
+</body>
+</html>

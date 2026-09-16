@@ -406,6 +406,19 @@ describe('generate jay-html element', () => {
                     await readFixtureFile(folder, 'generated-element-main-sandbox'),
                 );
             });
+
+            // DL#193 Phase 2a — the override renders main-side even when the component
+            // is sandboxed, so `__parentContext: vs` and the `_p1.itemName` binding must
+            // appear in the main-sandbox element output (only the contract import suffix
+            // and headless factory differ from the trusted output).
+            it('override binding to parent scope (DL#193)', async () => {
+                const folder = 'contracts/page-with-override-parent-binding';
+                const elementFile = await readFileAndGenerateElementFile(folder, { importerMode });
+                expect(elementFile.validations).toEqual([]);
+                expect(await prettify(elementFile.val)).toEqual(
+                    await readFixtureFile(folder, 'generated-element-main-sandbox'),
+                );
+            });
         });
     });
 
@@ -452,6 +465,17 @@ describe('generate jay-html element', () => {
         // (enum → member, number → literal, boolean → literal).
         it('generate element file with structural (Tier 2) instance — coerced static props (DL#187)', async () => {
             const folder = 'contracts/page-with-structural-badge';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
+        // DL#193 Phase 2a — a page-authored <override> with a dynamic binding
+        // ({itemName}) resolves against the OUTER page scope. The compiler emits
+        // `__parentContext: vs` into the child component props and the override
+        // body reads `_p1.itemName` (parentDepth === 1).
+        it('generate element file with override binding to parent scope (DL#193)', async () => {
+            const folder = 'contracts/page-with-override-parent-binding';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));

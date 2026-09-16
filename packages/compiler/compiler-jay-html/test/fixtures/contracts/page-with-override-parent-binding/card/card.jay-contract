@@ -1,0 +1,10 @@
+name: Card
+props:
+  - name: heading
+    type: string
+    required: true
+tags:
+  - tag: heading
+    type: data
+    dataType: string
+    phase: fast

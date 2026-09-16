@@ -330,16 +330,30 @@ is in the tree.
 
 ### C. Override-introduced refs & data — issue 2
 
+> _Revised during implementation (2026-09-16) — read this first. The **data/binding** half below
+> (capture → hoist into `Panel$1ViewState`, "no runtime back-pointer", the `forEach` sub-case) was
+> reworked to a **merge-time `$parent`-remap** that reuses Capability A, and `forEach` overrides are
+> now **unsupported (validated against)**. See "Phase 2a design revision — merge-time `$parent`-remap
+> (2026-09-16)" near the end of this file. The **ref-forwarding** half (Phase 2b) is unchanged._
+
 **Container** `panel.jay-html` exposes an overridable area; **override** at the usage site
 injects a button and binds **outer** data into it:
 
+> _Syntax clarification (2026-09-16, during Phase 2 implementation): Phase 2 layers the
+> capture / `Panel$1` specialization model onto the **existing DL#181 `<override ref="x">`
+> content-replace splice** — not a new named-area (`<jay:override name>`) slot mechanism. The
+> `<jay:override name="body">` in the example below is illustrative prose; the real, implemented
+> syntax is the ref-targeted override shown immediately after. This is the null-hypothesis-first
+> choice (reuse the existing mechanism; no new surface) and matches §C's own mechanism prose
+> ("How overrides work (DL#181)", "override provenance is dropped from the AST")._
+
 ```html
-<!-- usage: page.jay-html -->
+<!-- usage: page.jay-html — actual implemented syntax (DL#181 override, DL#193 §C scope) -->
 <jay:Panel>
-  <jay:override name="body">
+  <override ref="body">
     <button ref="save">Save {documentName}</button>
     <!-- documentName is OUTER (page) data -->
-  </jay:override>
+  </override>
 </jay:Panel>
 ```
 
@@ -1064,3 +1078,355 @@ target'` when `parentDepth > 0` (React compiler preserves `fragment.validations`
    `...parentDataChain(context)` on both init and update, with signatures widened to
    `(vs, ...parents: any[])`. The original design described the client path; hydrate required the
    same threading explicitly.
+
+---
+
+## Phase 2 pre-implementation trace & decisions (2026-09-16)
+
+Before implementing Issue 2 (overrides), the injection compile model was traced end-to-end and
+three open decisions were settled with the user. This section records the findings and decisions;
+it refines — does not rewrite — the Phase 2 design above.
+
+### Compile-model trace (grounding the runtime cost)
+
+A `<jay:Panel>` headfull-FS usage (Tier 3, has a `.ts`) compiles via `renderHeadlessInstance`
+(`jay-html-compiler.ts:839-1045`):
+
+- The injected/overridden body is compiled **inline** into a per-instance render function
+  (`_headlessPanel0Render`, ~966-985) that builds its **own** `ReferencesManager` from the merged
+  template refs (`mergeContractStubRefs`, `jay-html-compiler-shared.ts:291-333` — keeps **all**
+  template refs), and is mounted at the page as `childComp(_HeadlessPanel0, getProps, ref)`
+  (~1039-1041).
+- The page-side ref handed back is a `ComponentRefsImpl` typed **`PanelRefs`** (contract only,
+  ~1013-1035). The inline instance's refManager public API is passed to **Panel's own component
+  code** as its `refs` param (`headless-instance-context.ts:154-160`) — it is **not** grafted into
+  the page's refs tree.
+- Tier 2 (structural) differs only in swapping `buildStructuralPassthroughComp(tags)` for the real
+  component at the mount; inner body refs still land in the inline instance's refManager (which the
+  passthrough currently ignores).
+
+**Where a spliced `<button ref="save">` ends up today:** inside the **inline instance's**
+refManager (handed to Panel's code), **not** the page refs tree, and **not** discarded. The page's
+`ComponentRefsImpl` forwards `refs.panel.save` via `DELEGATE_REFS_TO_COMP_TRAP`
+(`node-reference.ts:398-401`) only to the comp's **public API** (event-emitters), which has no
+`save`; and the page ref type is `PanelRefs`, which does not declare `save`.
+
+**Correction to the earlier "minimal runtime change" claim (Capability B, Issue 2 runtime note).**
+The claim holds for the **data-binding** half (the body is compiled inline at the page, so
+`{documentName}` and the `Panel$1ViewState` hoist are in reach during page compilation — cheap) but
+is **too optimistic for the ref-forwarding half**. Surfacing `refs.panel.save` needs both:
+
+1. **Type** — emit `Panel$1Refs extends PanelRefs { save: … }` and type the page-side instance ref
+   as `Panel$1Refs` (new `extends` + `$1` naming machinery — neither exists today).
+2. **Runtime** — bridge the page-side `ComponentRefsImpl` to the **inline instance's refManager**
+   (where `save` physically lives), not the comp public API. This is a genuine runtime change,
+   localized to the inline-instance mount (`makeHeadlessInstanceComponent` / the instance public
+   API), not just compiler emission.
+
+### Decisions settled (2026-09-16)
+
+1. **Binding scope — outer-scope only (DL#193 §C), confirmed.** Override `{bindings}` resolve
+   against the **outer (page) scope** and free-vars hoist into `Panel$1ViewState extends
+PanelViewState`. Reaching the target component's **own** data from an override is **out of
+   scope**. This **supersedes DL#181 Q6/VC#5** (which resolved override bindings against the
+   target's own ViewState). Risk is low: DL#181's own Implementation Results note Q6 was "satisfied
+   by construction … not separately exercised" by any live-binding test. A supersession note is
+   added to DL#181.
+2. **Naming/uniquing convention — `Panel$1`, `Panel$2`.** Per-site specialization types are named
+   `<BaseComponentName>$<n>`, where `n` is a per-base-component counter in document order within the
+   compiled page (`Panel$1`, `Panel$2`, `Card$1`, …). `$` is already idiomatic in Jay (`exec$`,
+   `find$`). Reordering override sites renumbers the generated names — acceptable, as these are
+   generated types. (Resolves the "still open" naming item from Q3.)
+3. **Phasing — split Phase 2 into 2a then 2b.**
+   - **Phase 2a — override outer-data binding + ViewState hoist.** Persist override provenance;
+     free-variable scan of the override fragment against the outer scope; emit `Panel$1ViewState
+extends PanelViewState { …captured }`; compile the inline body's bindings against
+     `Panel$1ViewState`; supply captured data via the carrier (Q8-b). Client-inline, cheaper, fully
+     testable on its own.
+   - **Phase 2b — override ref forwarding.** Emit `Panel$1Refs extends PanelRefs { …overrideRefs }`,
+     type the page-side instance ref as `Panel$1Refs`, and add the runtime bridge from the page
+     `ComponentRefsImpl` to the inline instance's refManager. Depends on 2a's provenance +
+     specialization machinery.
+
+### Collision validation (prevention-first, folded into 2a)
+
+An override's captured outer var whose name collides with an existing `PanelViewState` member of a
+**different type** makes `Panel$1ViewState extends PanelViewState` ill-typed. This is a **hard
+compile/validation error** with an exact message (test plan §4), not a silent shadow — added as
+part of Phase 2a.
+
+## Phase 2a design revision — merge-time `$parent`-remap (2026-09-16)
+
+During Phase 2a implementation, the binding half of §C was reworked with the user to reuse
+Capability A instead of building a new capture/hoist path. This **supersedes** the "capture → hoist
+into `Panel$1ViewState`" data-path described in §C (lines ~380–405), decision 3's "Phase 2a" bullet,
+and the "Collision validation" subsection above. The **ref**-forwarding half (Phase 2b) is
+unchanged.
+
+**What changed and why.** §C's data path is now realized by the compiler-internal `$parent`
+primitive it already anticipated ("the same primitive is used, but under the hood", §C ~line 401) —
+which the user confirmed was the intended implementation, not a reversal of Q3. Q3 rejected only the
+**author-facing** `$parent.` syntax; the author still writes plain `{documentName}`. This is **not**
+Q3-option-b.
+
+1. **Merge-time `$parent`-remap.** When an override's content is spliced into the target
+   (`applyOverrides`), the compiler rewrites each binding's free roots to `$parent.` using the
+   **real expression parser** (not string surgery, so `{a ? b : c}` → `{$parent.a ? $parent.b :
+$parent.c}` and `{doc.name}` → `{$parent.doc.name}` are exact). The remapped `{$parent.…}` is
+   **self-describing provenance**, so the `data-jay-override-content` marker is **dropped**.
+2. **No data-hoisting, no `Panel$1ViewState` for the data path.** Captured page data rides the
+   Capability A `parentDataChain`, typed against the page scope where `$parent` resolves. It does
+   **not** become a member of any generated ViewState. `classifyOverrideBindings` and the
+   `Panel$1ViewState extends …` emission are therefore **not built** for bindings (Phase 2b may
+   still emit `Panel$1Refs` for the ref surface).
+3. **No cross-scope collision.** Because `$parent.documentName` and Panel's own `documentName` live
+   in different scopes, the "collision validation" case above **cannot occur** and is dropped.
+4. **`renderHeadlessInstance` parent wiring.** The inline component's `Variables` is given the page
+   scope as its parent so `$parent.*` resolves; at runtime the page data is supplied as the parent
+   source across the `childComp` boundary (the one genuinely new bit of plumbing).
+
+**`forEach` overrides are unsupported (new decision).** An override targeting a ref that sits inside
+the target component's own `forEach` is **not supported**: the outer author has no way to name the
+inner per-item ViewState to bind against, and no way to address specific iterations — a per-item
+override is semantically undefined from the outer scope. This **removes** §C's "Sub-case — override
+region inside Panel's own `forEach`" (lines ~420–424). Per prevention-first, this is a **hard
+compile/validation error** (not a silent no-op): `<override ref="x">` whose target lies within a
+`forEach` in the target template is rejected with a message pointing at the ref.
+
+**Prose correction.** §C line ~382 ("supplied … as extra data — **no runtime back-pointer**") no
+longer holds: the `$parent`/`parentDataChain` route **is** a runtime back-pointer. Treat that clause
+as superseded by this subsection.
+
+### Mechanism refinement — parent-scope pragma (supersedes point 1 above)
+
+Point 1's "rewrite each binding's free roots to `$parent.`" was refined during implementation to a
+**single mark per binding location**, at the user's direction, because a per-accessor `$parent.`
+rewrite requires the merge step to itself parse and classify every sub-expression (field vs. enum
+value vs. class name) — duplicating the real parser's job and getting it wrong for compound
+expressions.
+
+Instead: `applyOverrides` prefixes each **binding location** — every text node and every non-literal
+attribute value — with a compiler-internal pragma `@jay:parent ` (`PARENT_SCOPE_PRAGMA`). A single
+mark at the start of a value covers all `{…}` within it. The pragma is:
+
+- **Injected** in `remapOverrideBindingsToParent` (`jay-html-overrides.ts`) by walking the override
+  HTML fragment. Literal-read attributes (`ref`, `trackBy`, `jay-coordinate-base`, `jay-scope`) are
+  **not** marked — everything else (`if`, `forEach`, `class`, `style`, boolean attributes, component
+  props, text) funnels through the expression parser and is safe to mark.
+- **Stripped** at the single parse choke point `doParse` (`expression-compiler.ts`), which then
+  resolves the value against `vars.withParentShift(1)`.
+- **Resolved** by `Variables.withParentShift(n)`: a view of the scope whose `resolveAccessor`
+  transparently prefixes `n` `$parent` tokens (skipping `jay.*` and explicit `$parent.*`), so the
+  existing Capability A machinery (`parentLevel` → `parentDepth` → `(vs, _p1) => …` closure →
+  runtime parent chain) drives everything. **No grammar change** is needed for the mark itself.
+
+Because the discrimination is handed to the real parser, compound expressions resolve correctly —
+`{status == active ? primary}` climbs only `status`, leaving the enum value `active` and class name
+`primary` untouched. The `data-jay-override-content` marker and any per-accessor rewrite are dropped.
+
+**Incidental grammar fix.** `ternaryClassExpression` dropped `acc.parentDepth`, so a parent-scoped
+class ternary emitted a body referencing `_p1` under a `vs =>` closure. Fixed to propagate
+`parentDepth` (regenerated `expression-parser.cjs`). This also fixes Capability A class ternaries.
+
+**Status (2026-09-16).** Compile-time mark + shift implemented and unit-tested (text, attribute,
+property, boolean, condition, compound class ternary, style, `jay.*` passthrough, static-strip;
+plus the merge-step marking with the literal denylist). Still open: (a) `renderHeadlessInstance`
+parent wiring, (b) runtime parent-chain supply across the `childComp` boundary into the inline
+instance render, (c) the `forEach`-target validation error.
+
+## Phase 2a runtime revision — synthetic parent context from a `__parentContext` prop (2026-09-16)
+
+This **supersedes** open items (a) and (b) above and the earlier "reuse the Capability A carrier /
+supply the page data as the parent source across the `childComp` boundary" note (design revision
+point 4). The **binding compile model is unchanged** — overrides still compile to ordinary
+`$parent` bindings via the pragma → `withParentShift` → `_p1` path already landed. What changes is
+**how `_p1` is supplied at runtime**.
+
+### Why the earlier "back-pointer across `childComp`" route was wrong
+
+Two runtime traces (against the real code) settled it:
+
+1. **The parent chain is deliberately cut at the component boundary, and the cut is only a
+   _policy_.** `withRootContext` (context.ts:344) and `withHydrationChildContext` (context.ts:377)
+   create parent-less roots; the comment attributes this to DL#84 data isolation. The cut is **not**
+   required for coordinates/dataIds/hydration — those are carried by separate fields and are even
+   deliberately _inherited_ across the boundary (`withHydrationChildContext` context.ts:380-382).
+2. **But the Capability A liveness machinery does not cross the boundary, so a back-pointer would be
+   reactively dead.** `parentContext.update()` fires only inside scope-switch updates _within one
+   element tree_ (element.ts:431, 522; hydrate.ts:560), each component has its own `mkReactive`
+   graph (component.ts:136), and the page root context is never updated in place. Setting
+   `child.parent = pageContext` would deliver stale data: page changes would never re-run the
+   child's leaves.
+
+The **props/update channel is the only reactive cross-boundary path** (childComp.update →
+`propsProxy.update` → the child's reaction, element.ts:55, component.ts:187-189, 170-181). So the
+parent data must ride that channel — not a context back-pointer.
+
+**Secure/bridge trace (the double-serialization concern).** Props **never cross the sandbox
+bridge**: `getProps` is computed _locally_ on each side from that side's copy of the parent
+ViewState (sandbox `sandbox-element.ts:39-44`, main `main-child-comp.ts:17-34`). The one stream that
+_is_ serialized up per update is the child's **rendered element ViewState** (`sandbox-refs.ts:414-419`).
+Therefore the parent data must **not** be folded into the child's rendered ViewState (that was the
+flaw in the "inject a `__parent` member inside `makeHeadlessInstanceComponent.render`" idea — that
+render runs in the sandbox and would up-serialize the data). It must be reconstructed on the
+**receiving/DOM side** from the locally-computed prop — "direct forwarding in the component bridge",
+zero wire bytes.
+
+### The mechanism
+
+1. **Usage site (compiler).** `renderHeadlessInstance` free-var-scans the override's
+   `$parent`-marked bindings and emits a **narrow, reactive projection** of only the captured fields
+   as a reserved prop `__parentContext`:
+
+   ```ts
+   // <jay:OverrideCard><override ref="cta">{itemName}</override></jay:OverrideCard>
+   childComp(OverrideCard, (vs) => ({ __parentContext: { itemName: vs.itemName } }), ref());
+   ```
+
+   Narrow (not the whole page VS) → it only re-fires on changes to fields the overrides use, and it
+   keeps the payload small. Emitted **only** when the inline body has parent-scoped bindings
+   (`inlineBody.parentDepth > 0`).
+
+2. **Receiving side (runtime).** The component (and, in secure, the **component bridge** on main)
+   intercepts the `__parentContext` prop and builds a **synthetic `ConstructContext`** seeded with
+   that value, set as the parent of the component's own root context. From there the override
+   bindings are ordinary `$parent` bindings resolved by `parentDataChain` — the existing Capability A
+   primitive. On each cascade the handler calls `synthetic.update(newValue)`.
+
+3. **No double serialization.** `__parentContext` is computed locally by `getProps` on whichever
+   side needs it; the synthetic parent is built on the DOM side; the parent data never enters the
+   child's up-serialized rendered ViewState. In secure, `main-bridge.ts` builds the synthetic parent
+   from the prop it already receives locally (main-child-comp.ts calls `childComp(bridge, getProps,
+ref)`), so no extra wire cost.
+
+### The load-bearing wrinkle — root-boundary gate weakening (Q4a analog)
+
+`wrapWithModifiedCheck` (context.ts:165-168) gates the whole element update on **reference equality
+of the child's own viewState**; the child root is wrapped by it (`withRootContext` context.ts:354).
+So when _only_ `__parentContext` changes and the child's own VS ref is unchanged, the root update is
+**skipped** and the `$parent` leaves never recompute → stale. This is exactly the Q4a problem solved
+for `forEach` via `dependsOnParent` (element.ts:448-453, 461-469). Here we need the **component-root
+analog**: when the synthetic parent's value changed, force the root element update to run even if the
+child's own VS ref is unchanged. The synthetic-parent update handler both `synthetic.update(v)` and
+drives the leaves past the modified-check.
+
+### Implementation pieces
+
+| Layer                 | Change                                                                                                                                                                        |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Compiler — usage site | `renderHeadlessInstance`: free-var scan the override's `$parent`-marked bindings → emit `__parentContext: { …captured }` in `getProps`, only when `parentDepth > 0`           |
+| Compiler — bindings   | **done** — pragma → `$parent` → `(vs, _p1) => _p1.x`                                                                                                                          |
+| Runtime — context     | `withRootContext`/`withHydrationChildContext` gain an explicit optional synthetic-parent (page root stays parent-less); root gate-weakening when the synthetic parent changed |
+| Runtime — component   | detect `__parentContext` prop → build/maintain synthetic `ConstructContext`, wire as root `.parent`, `update()` on change                                                     |
+| Runtime — bridge      | `main-bridge.ts`: same synthetic-parent handling from the locally-computed prop (no wire cost)                                                                                |
+
+### Verification criteria
+
+- A page-authored `<override>{pageField}</override>` renders the page field, and **updates live**
+  when the page field changes — in **client, hydration, and secure** targets.
+- The secure bridge sends **no additional patch** for the parent data (it is not part of the child's
+  rendered ViewState) — asserted on the wire/messages.
+- Panel's own code and template never see `__parentContext`; it is absent from the DL#128 automation
+  snapshot (`instanceData.viewStates`).
+- `forEach`-target override remains a hard compile error (open item (c), unchanged).
+
+**Reserved key.** `__parentContext`, following the `__jay` precedent (reserved, compiler-internal,
+author never writes it).
+
+## Implementation Results — Phase 2a (2026-09-16)
+
+Phase 2a is implemented and green across the client (element), hydration, and secure targets. The
+binding compile model landed in Phase 1 is unchanged (pragma → `withParentShift` → `_p1`). The
+runtime-supply mechanism shipped with **three deviations** from the design above, all simplifications.
+
+### Deviation 1 — `vs => vs` whole-parent model (no field derivation)
+
+The design proposed a **narrow projection** of only the captured fields
+(`__parentContext: { itemName: vs.itemName }`) built from a free-var scan of the override bindings.
+Per user direction this was dropped in favor of emitting the **whole enclosing view state**:
+
+```ts
+childComp(
+  _HeadlessCard0,
+  (vs) => ({ heading: 'Premium', jc: 'card', __parentContext: vs }),
+  refAr0(),
+);
+```
+
+Rationale: view states are immutable, so passing the whole `vs` makes **every** `$parent` expression
+"just work" (`_p1.<anyField>`) with **no** compiler-side derivation of which fields an override uses,
+and no risk of missing a field. There is no double-serialization cost because `__parentContext` is
+computed locally by `getProps` on each side and never enters the child's up-serialized rendered
+ViewState (the secure trace above still holds). The compiler emits the splice **only** when the
+inline body has parent-scoped bindings (`parentDepth > 0`), so pages without overrides are unaffected.
+
+### Deviation 2 — root gate-weakening was **unnecessary**
+
+The design flagged a "load-bearing wrinkle": a component-root analog of `dependsOnParent` to force
+the root element update when only `__parentContext` changed. In practice **no root gate-weakening was
+added.** Trace: `materializeViewState` (component.ts) always returns a **fresh** object each reaction
+run, so `wrapWithModifiedCheck` at the child root (context.ts) never short-circuits. The liveness
+comes entirely from the reaction **reading the `__parentContext` prop signal**
+(component.ts:194-206): that read makes the reaction depend on the prop, so an outer-scope change
+re-runs it → `syntheticParent.update(newValue)` refreshes the parent's `currData` → `element.update`
+(fresh VS ref, gate passes) → the `$parent` leaves recompute against fresh `parentDataChain`
+(element.ts:581). Verified by `runtime/component/test/parent-context.test.ts` ("updates the $parent
+leaf live when __parentContext changes (child prop unchanged)").
+
+### Deviation 3 — bridge (worker) target needs **no** codegen change
+
+The design's implementation table listed a `main-bridge.ts` change. Not needed. The bridge (worker)
+output for a page with an override is a plain stub (`elementBridge(vs, refManager, () => [])`) — the
+override renders **main-side** via the element target compiled in `RuntimeMode.MainSandbox`, whose
+output carries `__parentContext: vs` and `_p1.itemName` identically to the trusted output (only the
+contract import suffix `?jay-mainSandbox` and the `makeHeadlessInstanceComponent` factory differ).
+The single `makeJayComponent` runtime seam (used by both the trusted component and the sandbox
+component-bridge constructor) consumes `__parentContext` for all targets. Verified by the
+`page-with-override-parent-binding` MainSandbox element test (validations `[]`).
+
+### Hydrate target — parentDepth propagation
+
+The hydrate compiler has its own `renderHydrateHeadlessInstance`. Three fixes were required so
+`adoptInlineBody.parentDepth` was non-zero: (1) link `componentVariables` to the parent scope
+(`new Variables(headlessImport.rootType, renderContext.variables)`); (2) splice `__parentContext`
+into `getProps` when `parentDepth > 0`; (3) thread `parentDepth` through **every** child-carrying
+return branch of `renderHydrateElementContent` (it was being dropped, forcing `parentDepth` to 0).
+
+### Runtime seam
+
+- `runtime/lib/context.ts`: `withSyntheticParentContext(parent, cb)` + a module-global handoff
+  consumed inside `withRootContext` and `withHydrationChildContext`, which set `context.parent`.
+- `component/lib/component.ts`: `PARENT_CONTEXT_PROP = '__parentContext'`; builds a synthetic
+  `ConstructContext` from the prop, `synthetic.update(...)` inside the reaction, renders the root
+  under `withSyntheticParentContext`.
+
+### Tests (all green)
+
+- `compiler-jay-html`: `generate-element.test.ts` — element (default) + MainSandbox override tests;
+  `generate-element-hydrate.test.ts` — hydrate override test. Fixture
+  `contracts/page-with-override-parent-binding` (structural card with `heading` prop+tag).
+  Full suite 756 → 758 passing.
+- `runtime/component`: `parent-context.test.ts` — 3 end-to-end tests (initial resolve; parent-only
+  live update with child prop unchanged; both change). Component/runtime/secure suites all pass.
+
+### Open items (unchanged / new)
+
+- **(c)** `forEach`-target override remains a compile error (unchanged, out of Phase 2a scope).
+- **New — empty-contract unwrap latent bug.** A **DL#187 Tier-1** headfull import (empty contract,
+  no `.ts`) is unwrapped to plain HTML with **no scope boundary** (jay-html-parser.ts). A dynamic
+  override binding on such a target produces a **dangling `_p1`** (validation: "$parent used but
+  there is no parent scope 1 level(s) up"). Phase 2a's fixture is deliberately **structural** (has a
+  prop+tag) to exercise the headless-instance path. Prevention-first fix (not yet done): strip the
+  `@jay:parent` pragma on unwrap so the binding resolves at page scope (`vs.itemName`), or emit a
+  targeted validation error.
+
+### Fix — pragma leaked into static attribute values (smoke-test regression)
+
+`markParentScope` (`jay-html-overrides.ts`) originally prefixed the `@jay:parent ` pragma onto
+**every** non-literal override attribute value. But a static value (no `{…}`) is emitted verbatim and
+never passes through the expression parser that strips the pragma, so the smoke-test `/override` page
+rendered `href="@jay:parent /docs"` instead of `href="/docs"`. Fix: mark an attribute only when its
+value contains a `{…}` binding **or** it is a brace-less expression attribute (`forEach`/`if`, which
+are bindings even without braces — `EXPRESSION_ATTRS`). This mirrors the text-node branch, which
+already gated on `{`. Covered by new `remapOverrideBindingsToParent` unit tests (static value
+untouched; brace-less `forEach`/`if` marked) and the `smoke-test` `/override` assertions.

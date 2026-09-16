@@ -871,8 +871,12 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? 
             }
         }
 
-        // Compile inline template children against the component's ViewState
-        const componentVariables = new Variables(headlessImport.rootType);
+        // Compile inline template children against the component's ViewState.
+        // DL#193 Phase 2a: link the enclosing (page) scope as the component scope's parent so
+        // page-authored `<override>` content — marked `@jay:parent` and resolved via `withParentShift`
+        // — climbs to it as an ordinary `$parent` (`_p1`) access. At the mount site the whole
+        // enclosing view state is forwarded as `__parentContext`, so `_p1.<anyField>` resolves.
+        const componentVariables = new Variables(headlessImport.rootType, newContext.variables);
         const childIndent = newContext.indent.child(false);
 
         const childNodes = filterContentNodes(htmlElement.childNodes);
@@ -926,6 +930,9 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? 
                     renderedChildren.validations,
                     renderedChildren.refs,
                     renderedChildren.recursiveRegions,
+                    // DL#193 Phase 2a: preserve the deepest `$parent` climb so the usage site still
+                    // emits `__parentContext` when override content spans multiple root children.
+                    renderedChildren.parentDepth,
                 );
             } else {
                 inlineBody = renderedChildren;
@@ -999,7 +1006,28 @@ const ${componentSymbol} = makeHeadlessInstanceComponent(
             newContext,
             headlessImport.contract?.props,
         );
-        let getProps = `(${newContext.variables.currentVar}: ${newContext.variables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
+        // DL#193 Phase 2a: when the override content binds outer-scope fields (parentDepth > 0),
+        // forward the whole enclosing view state as the reserved `__parentContext` prop. It rides
+        // the normal props/update channel (updating whenever the outer scope changes, since view
+        // states are immutable), and the runtime (makeJayComponent) turns it into a synthetic parent
+        // ConstructContext so `_p1.<field>` resolves. No field derivation is needed — the parent view
+        // state is passed by reference, so it is cheap and never enters the child's rendered ViewState.
+        const outerVar = newContext.variables.currentVar;
+        let getPropsBody = propsGetterAndRefs.rendered;
+        if (inlineBody.parentDepth > 0) {
+            const parentContextEntry = `__parentContext: ${outerVar}`;
+            // propsGetterAndRefs renders as an object literal `({ … })` (or `({})`); splice the
+            // reserved entry into it. The `props="…"` direct-assignment form spreads instead.
+            if (getPropsBody.startsWith('({') && getPropsBody.endsWith('})')) {
+                const inner = getPropsBody.slice(2, -2).trim();
+                getPropsBody = inner
+                    ? `({ ${inner}, ${parentContextEntry} })`
+                    : `({ ${parentContextEntry} })`;
+            } else {
+                getPropsBody = `({ ...${getPropsBody}, ${parentContextEntry} })`;
+            }
+        }
+        let getProps = `(${outerVar}: ${newContext.variables.currentType.name}) => ${getPropsBody}`;
 
         // Generate ref for the headless instance using contract types directly
         const refOriginalName =

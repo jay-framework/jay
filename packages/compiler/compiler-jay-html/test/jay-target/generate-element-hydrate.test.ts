@@ -265,6 +265,19 @@ describe('generate jay-html element hydrate', () => {
             );
         });
 
+        // DL#193 Phase 2a — a page-authored <override> with a dynamic binding
+        // ({itemName}) resolves against the OUTER page scope. The hydrate compiler
+        // emits `__parentContext: vs` into the child component props and the adopted
+        // override text reads `_p1.itemName` (parentDepth === 1).
+        it('for override binding to parent scope (DL#193)', async () => {
+            const folder = 'contracts/page-with-override-parent-binding';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+
         it('for headless instance inside forEach', async () => {
             const folder = 'contracts/page-with-headless-in-foreach';
             const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);

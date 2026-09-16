@@ -20,6 +20,7 @@ export {
     restoreContext,
     ConstructContext,
     currentConstructionContext,
+    withSyntheticParentContext,
     registerGlobalContext,
     useGlobalContext,
     clearGlobalContextRegistry,
