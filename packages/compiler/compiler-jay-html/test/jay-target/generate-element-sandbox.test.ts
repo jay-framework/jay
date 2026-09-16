@@ -64,6 +64,18 @@ describe('generate jay-html element for sandbox', () => {
                     await readFixtureElementBridgeFile(folder),
                 );
             });
+
+            // DL#193: a $parent binding inside a forEach compiles cleanly on the bridge
+            // (worker) target. The worker only tracks the collection skeleton
+            // (sandboxForEach with no child body) — the $parent-bound dt/da render on the
+            // main/trusted side — so the bridge output carries no dt/da and no validations.
+            it('$parent binding inside a forEach', async () => {
+                const folder = 'collections/foreach-parent-binding';
+                const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
+                expect(await prettify(runtimeFile)).toEqual(
+                    await readFixtureElementBridgeFile(folder),
+                );
+            });
         });
 
         describe('linked contract', () => {

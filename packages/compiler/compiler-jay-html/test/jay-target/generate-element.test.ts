@@ -419,6 +419,19 @@ describe('generate jay-html element', () => {
                     await readFixtureFile(folder, 'generated-element-main-sandbox'),
                 );
             });
+
+            // DL#193 Phase 4 — a $parent binding inside a forEach renders main-side even
+            // when sandboxed: the main-sandbox output carries the same `_p1` closure
+            // bindings (`da`/`dt` with `_p1.listTitle`) and the `dependsOnParent` forEach
+            // flag as the trusted output. The worker only tracks the collection skeleton.
+            it('$parent binding inside a forEach (DL#193)', async () => {
+                const folder = 'collections/foreach-parent-binding';
+                const elementFile = await readFileAndGenerateElementFile(folder, { importerMode });
+                expect(elementFile.validations).toEqual([]);
+                expect(await prettify(elementFile.val)).toEqual(
+                    await readFixtureFile(folder, 'generated-element-main-sandbox'),
+                );
+            });
         });
     });
 
