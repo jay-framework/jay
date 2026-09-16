@@ -128,15 +128,17 @@ describe('generate jay-html server element', () => {
             );
         });
 
-        // DL#193 Capability A — `$parent` parent-scope bindings are not yet supported in the
-        // server target (SSG/SSR parent plumbing is Phase 4). They would render a bare `_pN`
-        // free variable, so the compile must report a clear error instead.
-        it('reports $parent bindings as unsupported in the server target', async () => {
+        // DL#193 Phase 2c — a `$parent` binding inside a forEach climbs to the page scope. On the
+        // server the whole tree renders in one `renderToStream`, so `vs` is lexically in scope
+        // inside the loop body: `$parent.listTitle` emits `vs.listTitle` while `name` uses the loop
+        // item var `vs1.name`.
+        it('renders $parent bindings inside a forEach on the server target (DL#193)', async () => {
             const folder = 'collections/foreach-parent-binding';
             const serverFile = await readFileAndGenerateServerElementFile(folder);
-            expect(serverFile.validations).toEqual([
-                '$parent bindings are not yet supported in the server target',
-            ]);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
         });
     });
 
@@ -192,6 +194,31 @@ describe('generate jay-html server element', () => {
         // SSR HTML matches the client's coerced prop getter.
         it('for structural (Tier 2) instance — coerces passthrough props by dataType (DL#187)', async () => {
             const folder = 'contracts/page-with-structural-badge';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
+
+        // DL#193 Phase 2c — an override binding that resolves against the OUTER (page) scope rides
+        // Capability A ($parent). On the server the whole tree renders in one `renderToStream`, so
+        // the page's `vs` is lexically in scope inside the instance body: the binding emits
+        // `vs.itemName` directly while the instance's own bindings use `vs_card0.*`.
+        it('renders an override binding to the parent scope on the server target (DL#193)', async () => {
+            const folder = 'contracts/page-with-override-parent-binding';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
+
+        // DL#193 "Fix — empty-contract unwrap" — when the headfull import is unwrapped into the
+        // page body, the override binding is a current-scope binding (`vs.itemName`, no $parent),
+        // so the server target compiles it cleanly with no validations.
+        it('for override binding on an unwrapped empty-contract import (DL#193)', async () => {
+            const folder = 'contracts/page-with-override-unwrap-parent-binding';
             const serverFile = await readFileAndGenerateServerElementFile(folder);
             expect(serverFile.validations).toEqual([]);
             expect(await prettify(serverFile.val)).toEqual(

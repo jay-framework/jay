@@ -12,6 +12,7 @@ import { capitalCase, pascalCase } from 'change-case';
 import { camelCase } from '../case-utils';
 import pluralize from 'pluralize';
 import {
+    PARENT_SCOPE_PRAGMA,
     parseEnumValues,
     parseImportNames,
     parseIsEnum,
@@ -1231,7 +1232,12 @@ async function parseHeadfullFSImports(
                 (loadedContract.props?.length ?? 0) > 0 || (loadedContract.tags?.length ?? 0) > 0;
             if (!contractHasFields) {
                 for (const jayTag of jayTags) {
-                    jayTag.replaceWith(jayTag.innerHTML);
+                    // DL#193 §"Fix — empty-contract unwrap": unwrapping inlines the content into the
+                    // PAGE scope with no component boundary, so a page-authored override binding here
+                    // is a current-scope binding. Strip the parent-scope pragma (injected by the
+                    // override merge above) so `{itemName}` resolves as `vs.itemName`, not a dangling
+                    // `_p1` climbing out of a scope that no longer exists.
+                    jayTag.replaceWith(jayTag.innerHTML.split(PARENT_SCOPE_PRAGMA).join(''));
                 }
                 continue;
             }

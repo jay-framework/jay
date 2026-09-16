@@ -857,11 +857,15 @@ hoisted member sits at `Panel$1` top level but is read from an item scope, which
   Phase-1-only deliverable.
 - **Phase 2 — Issue 2 (overrides):** persist override provenance; compile against outer scope;
   graft override refs into outer RefsTree; forward override refs at runtime.
+- **Phase 2c — server-target `$parent` (SSR):** make the server compiler resolve override parent
+  bindings lexically (structural-instance case). Pulled out of the original Phase 4 because it
+  completes Phase 2 for full-stack use and is independent of Phase 3. See the "Phase 2c" section near
+  the end of this doc.
 - **Phase 3 — Issue 1 (pure-component ref forwarding):** parser discovers inner refs;
   passthrough forwards them; type-gen composes forwarded (single + collection) sub-trees.
-- **Phase 4 (Q4):** extend Capability A's parent pointer to secure/bridge/server code
-  generators (the runtime `ConstructContext` field lands in Phase 1; this threads it through
-  the remaining emitters).
+- **Phase 4 (Q4):** extend Capability A's parent pointer to secure/bridge code generators (the
+  runtime `ConstructContext` field lands in Phase 1; this threads it through the remaining emitters).
+  **The server target moved to Phase 2c**; Phase 4 is now secure/bridge (and React) only.
 
 Each phase: write/adjust fixtures first (full `toEqual` comparisons, never `toContain`),
 prevention-first (add validation for unsupported target/phase combos before adding syntax).
@@ -1412,13 +1416,7 @@ return branch of `renderHydrateElementContent` (it was being dropped, forcing `p
 ### Open items (unchanged / new)
 
 - **(c)** `forEach`-target override remains a compile error (unchanged, out of Phase 2a scope).
-- **New — empty-contract unwrap latent bug.** A **DL#187 Tier-1** headfull import (empty contract,
-  no `.ts`) is unwrapped to plain HTML with **no scope boundary** (jay-html-parser.ts). A dynamic
-  override binding on such a target produces a **dangling `_p1`** (validation: "$parent used but
-  there is no parent scope 1 level(s) up"). Phase 2a's fixture is deliberately **structural** (has a
-  prop+tag) to exercise the headless-instance path. Prevention-first fix (not yet done): strip the
-  `@jay:parent` pragma on unwrap so the binding resolves at page scope (`vs.itemName`), or emit a
-  targeted validation error.
+- **Resolved — empty-contract unwrap.** See the "Fix — empty-contract unwrap" section below.
 
 ### Fix — pragma leaked into static attribute values (smoke-test regression)
 
@@ -1430,3 +1428,237 @@ value contains a `{…}` binding **or** it is a brace-less expression attribute 
 are bindings even without braces — `EXPRESSION_ATTRS`). This mirrors the text-node branch, which
 already gated on `{`. Covered by new `remapOverrideBindingsToParent` unit tests (static value
 untouched; brace-less `forEach`/`if` marked) and the `smoke-test` `/override` assertions.
+
+### Fix — empty-contract unwrap (Option 1: resolve override bindings at page scope)
+
+**Problem.** A **DL#187** headfull import with an **empty contract** (no props/tags) and no `.ts` is
+a compiler optimization: `parseHeadfullFSImports` **unwraps** the `<jay:Name>` tag into plain HTML
+(`jay-html-parser.ts:1233-1234`, `jayTag.replaceWith(jayTag.innerHTML)`), inlining the content
+directly into the **page body** with no component scope boundary. But the override merge
+(`jay-html-parser.ts:1194`) has already injected the `@jay:parent ` pragma, so a dynamic override
+binding compiled to `_p1.itemName` — climbing out of a scope that no longer exists → dangling `_p1`
+(validation: "$parent used but there is no parent scope 1 level(s) up").
+
+**Decision (Option 1, chosen over dropping the unwrap).** Unwrapping _means_ "inline into the page
+scope", so a page-authored override binding there is a **current-scope** binding — `vs.itemName`, no
+`$parent`. On unwrap, strip the `@jay:parent ` pragma so the content resolves at page scope. This is
+the null-hypothesis-minimal fix: it preserves DL#162/#187's unwrap optimization **and** its
+regression test (criterion #7), adds no runtime instance/coordinate segment, and turns the case from
+an error into correct behavior. (Option 2 — always emit a real empty-VS structural instance so
+`$parent` has a boundary — was rejected: it reverses a committed DL#162/#187 decision, breaks their
+regression test, and adds an instance + coordinate segment to every structural fragment.)
+
+The strip is a single pragma level because override content is always exactly one shift
+(`withParentShift(1)`); overrides that introduce their own `forEach` scope are out of Phase 2a scope.
+The pragma is namespaced (`@jay:parent `) so it never collides with authored content, making the
+literal strip safe.
+
+**Pre-render path is unaffected.** `injectHeadfullFSTemplatesRecursive` (the SSG/slow-render
+best-effort inject, `jay-html-parser.ts:930-943`) never unwraps — it keeps the `<jay:Name>` tag with
+`display: contents` and injects the pragma-marked content. That output is _always_ re-compiled
+through `parseJayFile` (`server-element-compile.ts:126`, `:160`; dev-server; production-build), where
+the empty-contract tag hits this same unwrap branch and the pragma is stripped, and the structural
+tag's `{…}` bindings pass through the expression parser that strips the pragma while resolving
+`_p1`. So the pragma never reaches rendered HTML — confirmed by the `smoke-test` `/override` page
+(62/62 green) and the two new unwrap fixtures below.
+
+**Verification.** New fixture `contracts/page-with-override-unwrap-parent-binding` (empty-contract
+card, `<override ref="cta">Start {itemName} trial</override>`) compiles with `validations: []` and
+emits `dt((vs) => \`Start ${vs.itemName} trial\`)` on the element and hydrate targets, and
+`escapeHtml(String(\`Start ${vs.itemName} trial\`))`on the **server (SSR)** target — page scope, no`_p1`. Covered by `generate-element.test.ts`, `generate-element-hydrate.test.ts`, and
+`generate-server-element.test.ts`.
+
+**SSR rejects `$parent` (structural case) — a phasing deferral, not a fundamental limit.** For the
+_structural_ fixture `contracts/page-with-override-parent-binding` (contract with props/tags → real
+instance, override binding stays `_p1`), the server target currently reports
+`"$parent bindings are not yet supported in the server target"`. This is the Phase 4 deferral
+(`guardServerParentBinding` throws on `parentDepth > 0`), **not** a property of Capability A — SSR
+_can_ resolve the parent binding, it just hasn't been wired yet. Locked in by
+`generate-server-element.test.ts` as the current boundary; superseded by **Phase 2c** below, which
+makes SSR render it.
+
+## Phase 2c — server-target `$parent` (SSR) (2026-09-16)
+
+Status: **IMPLEMENTED.** See "Implementation Results — Phase 2c" below.
+
+### Decisions for the implementer (TL;DR)
+
+1. **Pull the _server_ half of Phase 4 forward; leave secure/bridge in Phase 4.** SSR is what makes
+   the Phase 2a/2b structural-override feature usable on a real full-stack page (see "Why now"
+   below). The secure/bridge half stays deferred — different mechanism (worker plumbing), separate
+   acceptance gate (the `examples/jay` secure build).
+2. **Independent of Phase 3.** Phase 3 (Issue 1, pure-component ref forwarding) shares no code with
+   this and has no ordering dependency. Do this before, after, or interleaved — free choice.
+3. **Emission model: lexical ancestor var, not the client `_pN` closure param.** In SSR the whole
+   tree is inlined into one `renderToStream(vs, ctx)`, so every ancestor scope's variable (`vs`,
+   `vs_card0`, a forEach item var) is **lexically in scope**. `$parent.itemName` must emit
+   `vs.itemName` — the ancestor's `currentVar` — not `_p1`. This is the fundamental difference from
+   the client target (where `_p1` is a closure param the runtime binding helper supplies, because
+   the parent's `currentVar` is _not_ lexically in scope inside the child callback —
+   `Accessor.render()`, `expression-compiler.ts:63-78`).
+4. **Mechanism (chosen): a per-scope boolean gate; reuse the scope's own `currentVar`.** Add a
+   boolean `lexicallyInScope` to `Variables` (default `false`), meaning "this scope's `currentVar` is a
+   real variable that is lexically in scope at every descendant binding site." `resolveAccessor`
+   **already** roots a `$parent` accessor at the landed ancestor's `currentVar`
+   (`expression-compiler.ts:183`); `Accessor.render()` just ignores that and emits `_pN` whenever
+   `parentLevel > 0` (`:67-69`). The change is one line in `resolveAccessor`: when the landed
+   `scope.lexicallyInScope` is set, drop the accumulated `parentLevel` to `resolved.parentLevel` (i.e.
+   `0` here) on the returned `Accessor`. `render()` then takes its normal lexical branch and emits
+   `scope.currentVar + '.' + terms` with **no change to `render()` at all**. Consequences, all
+   desirable:
+   - The fragment's `parentDepth` stays `0` when the gate fires, so `guardServerParentBinding`
+     **passes untouched** — no guard removal, no per-site edits at the ~15 `w(...)` call sites.
+   - Emits `vs.itemName` directly. **Multi-level (`$parent.$parent.x`) falls out for free** — the
+     climb lands on whichever ancestor and emits _its_ `currentVar`.
+   - The existing "`$parent used but there is no parent scope N level(s) up`" validation
+     (`expression-compiler.ts:167-176`) still fires when the ancestor is genuinely absent (the early
+     return keeps its non-zero `parentLevel`) — so a malformed climb is still a clean compile error.
+   - Reusing `currentVar` (rather than a separate name field) keeps the new surface to a single
+     boolean: the scope already knows its own variable name; the gate only says "and it is reachable
+     by name from here." The client leaves the gate `false` → `_pN`, exactly as today.
+5. **Wire the gate on the server scopes; inherit it down the tree.** Every scope the server emits is
+   lexically addressable, so the root sets the gate and every child scope **inherits** it (through
+   `childVariableFor` / `childVariableForWithData` / `withParentShift`), so it only needs setting at
+   the fresh-construction sites:
+   - Page scope in `generateServerElementFile` (`jay-html-compiler-server.ts:1073`): `.asLexical()`.
+   - Instance scope in `renderServerElement` (`:254`), currently
+     `new Variables(headlessImport.rootType, undefined, 0, varName)` with parent `undefined`: set
+     `parent = context.variables` (so the climb has somewhere to go) and `.asLexical()`.
+   - Async resolved scope (`:966`): inherits `variables.lexicallyInScope`.
+   - forEach / with-data item scopes inherit automatically via `childVariableFor` — no server edit
+     needed, so an instance (or plain element) nested in a forEach can bind the forEach item via
+     `$parent`.
+     This is the whole-parent model the client already uses (`__parentContext = vs`), realized
+     **lexically** — no `__parentContext` object is needed on the server because the ancestor variable
+     is already in scope as a function parameter / local.
+6. **Scope: structural (Tier 2) instances only.** The unwrap (empty-contract) case already works on
+   SSR (resolves at page scope after the pragma strip — see the fix above). Phase 2c is exactly the
+   structural-instance case that currently throws.
+7. **React target stays deferred.** `guardReactParentBinding` is unchanged; React is a separate
+   integration, not SSR, and out of scope here.
+
+### Why now (dependency argument)
+
+A jay-stack page with a structural override + parent binding **fails to build** for the server
+target today: `guardServerParentBinding` throws → `generateServerElementFile` returns a validation →
+production build's `checkValidationErrors` throws → the whole page build fails. For a full-stack
+framework, "renders on the client after hydration" is not shippable — the slow/fast (SSR) phases
+must emit the initial paint with the binding resolved. So the server target is a **completion of
+Phase 2**, mis-filed under Phase 4's "remaining emitters." Phase 4's grouping was an economy
+assumption (thread the parent pointer through secure+bridge+server at once); the trace shows the
+server path is self-contained and does not share the worker plumbing that secure/bridge need.
+
+### Trace (grounding the design in real code)
+
+- `generateServerElementFile` builds the page scope: `const variables = new Variables(jayFile.types)`
+  → `context.variables`, `currentVar = 'vs'`, `parent = undefined` (`jay-html-compiler-server.ts:1073`,
+  `:1086`).
+- `renderServerElement` builds the instance scope:
+  `new Variables(headlessImport.rootType, undefined, 0, varName)` and renders the inline body against
+  it (`:254`, `:270-278`). `varName` (e.g. `vs_card0`) is declared in-function from
+  `vs.__headlessInstances[...]` (`:303-319`), so both `vs` and `vs_card0` are lexically live.
+- The override binding rides the `@jay:parent ` pragma (merge-time, target-agnostic) → `doParse`
+  strips it and applies `withParentShift(1)` (`expression-compiler.ts:409`) → `resolveAccessor`
+  prefixes a `$parent` token (`:149-151`) → climbs `Variables.parent` (`:161-188`). Today `parent`
+  is `undefined` → "no parent scope" (or, with parent set, `parentLevel = 1` →
+  `Accessor.render()` emits `_p1` → `parentDepth = 1` → `guardServerParentBinding` throws).
+- With Phase 2c: parent set + ancestor `lexicallyInScope = true` → the climb lands on the page scope,
+  the accumulated `parentLevel` is dropped → `render()` emits `vs.itemName`, `parentDepth = 0`,
+  guard passes.
+
+### Implementation plan
+
+1. `Variables`: add `lexicallyInScope: boolean` (default `false`); thread through the constructor and
+   `withParentShift` (which must preserve it). Add an `asLexical()` helper that returns a view with
+   the gate set (mirrors `withParentShift`'s reconstruction), for readable server call sites.
+2. `resolveAccessor` `$parent` branch (`:161-188`): when the landed `scope.lexicallyInScope` is set,
+   use `resolved.parentLevel` (drop the accumulated `parentLevel`) on the returned `Accessor` so it
+   renders lexically at `scope.currentVar`. Keep the absent-ancestor validation path unchanged.
+3. `childVariableFor` / `childVariableForWithData`: propagate `this.lexicallyInScope` to the child
+   scope, so setting it once at the server root covers forEach / with-data descendants.
+4. `render()` (`:63-84`): **no change** — the parentLevel drop makes it take the existing lexical
+   branch.
+5. Server wiring: `.asLexical()` on the page scope (`generateServerElementFile`), `.asLexical()` +
+   `parent: context.variables` on the instance scope (`renderServerElement`), and inherit on the async
+   resolved scope (`:966`); forEach scopes inherit automatically.
+6. No change to `guardServerParentBinding`, the ~15 `w(...)` sites, or the client/hydrate/React
+   targets (they leave the gate `false` → `_pN`).
+
+### Verification criteria
+
+1. Structural fixture `contracts/page-with-override-parent-binding` on the **server** target now
+   compiles with `validations: []` and emits `escapeHtml(String(\`Start ${vs.itemName} trial\`))`(page scope, no`_p1`). New `generated-server-element.ts`fixture, full`toEqual`— replaces the
+current rejection assertion in`generate-server-element.test.ts`.
+2. Element, hydrate, and secure targets for that fixture are **unchanged** (still emit `_p1` via the
+   client model) — regression-guard the existing fixtures.
+3. Cross-target coordinate alignment for the structural instance still holds (SSR `jay-coordinate`
+   values equal hydrate adoption coordinates), mirroring the existing DL#183 alignment test.
+4. A genuinely-absent parent climb still produces the "no parent scope N level(s) up" validation
+   (negative test), proving the collapse didn't swallow the error path.
+5. `smoke-test` gains (or extends) a page whose structural override binds page data, and asserts the
+   server-rendered initial HTML contains the resolved text — end-to-end proof the page now builds and
+   SSRs.
+
+### Trade-offs
+
+- **New surface:** one boolean field on `Variables` (`lexicallyInScope`) plus an `asLexical()` helper.
+  The scope already stores its own `currentVar`; the gate only adds "and it is reachable by name from
+  here," so no separate name field is needed. The drop-`parentLevel`-at-resolve-time approach collapses
+  `parentDepth` to `0` before it reaches any emit site, so `render()`, `guardServerParentBinding`, and
+  the ~15 `w(...)` sites are all untouched (null-hypothesis-minimal). Multi-level climbs land-and-emit
+  naturally; the client leaves the gate `false` → `_pN`. Rejected alternatives — a target flag threaded
+  into `render()` (reopens the `parentDepth`-vs-guard interaction) and a separate `lexicalName` string
+  (redundant with `currentVar`).
+- **Deferred still-deferred:** secure/bridge parent plumbing and the React target remain Phase 4 /
+  out of scope; this section narrows Phase 4 to those two.
+
+## Implementation Results — Phase 2c (2026-09-16)
+
+Implemented exactly as the (revised) design above — the boolean-gate + reuse-`currentVar` variant.
+
+**Changes:**
+
+- `expression-compiler.ts`:
+  - `Variables`: added `readonly lexicallyInScope` (default `false`) as the 7th constructor param;
+    preserved through `withParentShift`; added `asLexical()` helper.
+  - `resolveAccessor` `$parent` branch: `effectiveParentLevel = scope.lexicallyInScope ?
+resolved.parentLevel : parentLevel + resolved.parentLevel`. When the landed ancestor is lexical the
+    accumulated climb collapses to `0`, so `Accessor.render()` emits `scope.currentVar` — `render()` is
+    unchanged. The absent-ancestor validation (early return with non-zero `parentLevel`) is untouched.
+  - `childVariableFor` / `childVariableForWithData`: propagate `this.lexicallyInScope` to child scopes,
+    so setting the gate once at the server root flows to forEach / with-data descendants.
+- `jay-html-compiler-server.ts`:
+  - Page scope: `new Variables(jayFile.types).asLexical()`.
+  - Instance scope (`renderServerElement`): `new Variables(headlessImport.rootType, context.variables,
+0, varName).asLexical()` — parent now wired to the page scope.
+  - Async resolved scope: inherits `variables.lexicallyInScope`.
+  - `guardServerParentBinding` and all `w(...)` sites unchanged.
+
+**Deviation from the original (pre-revision) design:** the mechanism moved from a `lexicalName?: string`
+field to a `lexicallyInScope` boolean that reuses the scope's existing `currentVar` (per review
+feedback — the name field was redundant with `currentVar`). `render()` needed **no** change (the
+original plan expected a `render()` edit); the `parentLevel` drop makes it take the existing lexical
+branch. forEach-ancestor support required **no** server edit — it inherits through `childVariableFor`.
+
+**Tests:**
+
+- `generate-server-element.test.ts`: the two former rejection tests
+  (`collections/foreach-parent-binding`, `contracts/page-with-override-parent-binding`) are now
+  clean-compile + full `toEqual` assertions against new `generated-server-element.ts` fixtures. The
+  structural fixture emits ``escapeHtml(String(`Start ${vs.itemName} trial`))`` (page scope) alongside
+  the instance's own `vs_card0.heading`; the forEach fixture emits `vs.listTitle` (page scope) inside
+  `for (const vs1 of vs.items)` alongside `vs1.name`.
+- Element / hydrate / secure fixtures for these folders unchanged (still `_p1`) — regression-guarded by
+  the existing passing tests.
+- `smoke-test`: new `/promo` route — structural `promo-card` (non-empty contract, `cta` ref) with a
+  page-scope override binding `Start {pageTitle} trial`. Two smoke assertions (dev SSR + prod SSG)
+  confirm the initial HTML contains `Start Promo Page trial` and `Premium`, not `Buy Now`.
+
+**Test results:** compiler-jay-html 763 passing / 4 skipped (was 761 — the two rejection tests became
+clean-compile tests, no net count change; the +2 is unrelated); smoke-test 64 passing (was 62, +2 for
+`/promo`).
+
+**Not done (still Phase 4 / out of scope):** secure/bridge and React `$parent` remain deferred; the
+negative "genuinely-absent parent climb" case is covered by the existing `expression-compiler`
+validation path (no new dedicated fixture added — the absent-ancestor branch is untouched and already
+under test).

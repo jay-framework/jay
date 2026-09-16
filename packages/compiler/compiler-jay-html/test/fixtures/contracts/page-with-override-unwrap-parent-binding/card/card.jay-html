@@ -1,0 +1,11 @@
+<html>
+<head>
+  <script type="application/jay-data" contract="./card.jay-contract"></script>
+</head>
+<body>
+  <div class="card">
+    <h2>Premium</h2>
+    <button ref="cta">Buy Now</button>
+  </div>
+</body>
+</html>

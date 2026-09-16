@@ -98,6 +98,15 @@ export class Variables {
      * which is authored in the outer (page) scope but spliced into a child component's body.
      */
     private readonly parentShiftLevels: number;
+    /**
+     * DL#193 Phase 2c: when true, this scope's `currentVar` is a real variable that is lexically
+     * in scope at every descendant binding site (the server target inlines the whole tree into one
+     * `renderToStream`, so `vs`, forEach item vars, and instance vars are all reachable by name).
+     * In that world a `$parent` climb that lands on this scope must emit `currentVar` directly, not
+     * a `_pN` closure param (which only exists in the client/hydrate per-binding callbacks). The
+     * flag is inherited by every child scope so setting it once on the server root covers the tree.
+     */
+    readonly lexicallyInScope: boolean;
     constructor(
         currentTypes: JayType,
         parent: Variables = undefined,
@@ -108,6 +117,7 @@ export class Variables {
         // freshly-constructed scope unshifted with its own empty cache).
         parentShiftLevels: number = 0,
         children: Record<string, Variables> = {},
+        lexicallyInScope: boolean = false,
     ) {
         this.currentVar = customVarName || (depth === 0 ? 'vs' : 'vs' + depth);
         this.currentContext = depth === 0 ? 'context' : 'cx' + depth;
@@ -117,6 +127,25 @@ export class Variables {
             currentTypes instanceof JayImportedType ? currentTypes.type : currentTypes;
         this.parentShiftLevels = parentShiftLevels;
         this.children = children;
+        this.lexicallyInScope = lexicallyInScope;
+    }
+
+    /**
+     * DL#193 Phase 2c: return a view of this scope marked lexically-in-scope (see
+     * {@link lexicallyInScope}). Used by the server target on its root scope; child scopes
+     * inherit the flag automatically through {@link childVariableFor} / {@link childVariableForWithData}.
+     */
+    asLexical(): Variables {
+        if (this.lexicallyInScope) return this;
+        return new Variables(
+            this.currentType,
+            this.parent,
+            this.depth,
+            this.currentVar,
+            this.parentShiftLevels,
+            this.children,
+            true,
+        );
     }
 
     /**
@@ -139,6 +168,7 @@ export class Variables {
             this.currentVar,
             this.parentShiftLevels + levels,
             this.children,
+            this.lexicallyInScope,
         );
     }
 
@@ -179,12 +209,21 @@ export class Variables {
                 terms = terms.slice(1);
             }
             const resolved = scope.resolveAccessor(terms);
+            // DL#193 Phase 2c: when the landed ancestor is lexically in scope (server target), emit
+            // its `currentVar` directly instead of a `_pN` closure param. Dropping the accumulated
+            // `parentLevel` (keeping only `resolved.parentLevel`, which is 0 here) makes
+            // {@link Accessor.render} take the normal lexical branch and keeps `parentDepth` at 0, so
+            // the server guard passes untouched. The client/hydrate targets never set the flag, so
+            // they keep climbing via `_pN`.
+            const effectiveParentLevel = scope.lexicallyInScope
+                ? resolved.parentLevel
+                : parentLevel + resolved.parentLevel;
             return new Accessor(
                 scope.currentVar,
                 resolved.terms,
                 resolved.validations,
                 resolved.resolvedType,
-                parentLevel + resolved.parentLevel,
+                effectiveParentLevel,
             );
         }
         let curr: JayType = this.currentType;
@@ -210,7 +249,17 @@ export class Variables {
         if (this.children[path]) return this.children[path];
         else {
             const resolvedForEachType = (accessor.resolvedType as JayArrayType).itemType;
-            const variables = new Variables(resolvedForEachType, this, this.depth + 1);
+            // DL#193 Phase 2c: inherit lexical-in-scope so a forEach item scope on the server is a
+            // valid `$parent` climb target that emits its own item var (client keeps it false).
+            const variables = new Variables(
+                resolvedForEachType,
+                this,
+                this.depth + 1,
+                undefined,
+                0,
+                {},
+                this.lexicallyInScope,
+            );
             this.children[path] = variables;
             return variables;
         }
@@ -229,7 +278,15 @@ export class Variables {
                 depth++;
                 parent = parent.parent;
             }
-            const variables = new Variables(accessor.resolvedType, this, depth);
+            const variables = new Variables(
+                accessor.resolvedType,
+                this,
+                depth,
+                undefined,
+                0,
+                {},
+                this.lexicallyInScope,
+            );
             this.children[path] = variables;
             return variables;
         }

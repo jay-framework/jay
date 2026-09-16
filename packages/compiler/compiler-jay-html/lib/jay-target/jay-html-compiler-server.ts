@@ -251,7 +251,16 @@ function renderServerHeadlessInstance(
 
     // Compile inline template children against the component's ViewState,
     // using the instance variable name so expressions resolve to vs_product_card0.name etc.
-    const componentVariables = new Variables(headlessImport.rootType, undefined, 0, varName);
+    // DL#193 Phase 2c: parent the instance scope to the enclosing (page) scope and mark it lexical,
+    // so an override binding spliced into the instance body (authored in the page scope, carried as a
+    // `$parent` shift) climbs to the page scope and emits its `vs` directly — the server renders the
+    // whole tree in one function, so `vs` is lexically in scope inside the instance template too.
+    const componentVariables = new Variables(
+        headlessImport.rootType,
+        context.variables,
+        0,
+        varName,
+    ).asLexical();
     const childNodes = filterContentNodes(element.childNodes);
 
     if (childNodes.length === 0) {
@@ -954,7 +963,17 @@ function renderServerAsyncGroup(group: AsyncGroup, context: ServerContext): Rend
 
     if (group.resolvedElement) {
         const promiseResolvedType = (asyncAccessor.resolvedType as JayPromiseType).itemType;
-        const resolvedVariables = new Variables(promiseResolvedType, variables, 1);
+        // DL#193 Phase 2c: inherit the server's lexical-in-scope flag so a `$parent` climb out of an
+        // async resolved template lands on an ancestor emitted by name (see generateServerElementFile).
+        const resolvedVariables = new Variables(
+            promiseResolvedType,
+            variables,
+            1,
+            undefined,
+            0,
+            {},
+            variables.lexicallyInScope,
+        );
         const resolvedContext: ServerContext = {
             ...context,
             variables: resolvedVariables,
@@ -972,7 +991,16 @@ function renderServerAsyncGroup(group: AsyncGroup, context: ServerContext): Rend
     }
 
     if (group.rejectedElement) {
-        const rejectedVariables = new Variables(JayErrorType, variables, 1);
+        // DL#193 Phase 2c: inherit the server's lexical-in-scope flag (see resolvedVariables above).
+        const rejectedVariables = new Variables(
+            JayErrorType,
+            variables,
+            1,
+            undefined,
+            0,
+            {},
+            variables.lexicallyInScope,
+        );
         const rejectedContext: ServerContext = {
             ...context,
             variables: rejectedVariables,
@@ -1070,7 +1098,11 @@ export function generateServerElementFile(
     _options?: ServerElementOptions,
 ): WithValidations<string> {
     const types = generateTypes(jayFile.types);
-    const variables = new Variables(jayFile.types);
+    // DL#193 Phase 2c: the server inlines the whole tree into one `renderToStream`, so every scope's
+    // variable (`vs`, forEach item vars, instance vars) is lexically in scope at every binding site.
+    // Marking the root lexical lets a `$parent` override binding emit the ancestor's `currentVar`
+    // directly (and the flag flows to every child scope), instead of a client-only `_pN` param.
+    const variables = new Variables(jayFile.types).asLexical();
     const rootElement = ensureSingleChildElement(jayFile.body);
 
     if (!rootElement.val) {

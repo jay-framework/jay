@@ -1,0 +1,6 @@
+name: Page
+tags:
+  - tag: pageTitle
+    type: data
+    dataType: string
+    phase: slow

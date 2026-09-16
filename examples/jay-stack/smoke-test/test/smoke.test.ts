@@ -520,6 +520,18 @@ describe('Smoke Test', () => {
             expect(body).not.toMatch(/Default link/);
         });
 
+        it('/promo — override binding to the page scope on a structural instance (DL#193 Phase 2c)', async () => {
+            const { status, body } = await fetchPage(server.url, '/promo/');
+            expect(status).toBe(200);
+            expectPage(body);
+            // structural instance renders its own prop (heading)
+            expect(body).toMatch(/Premium/);
+            // override CTA resolves the page-scope binding {pageTitle} — the whole tree renders in
+            // one SSR pass, so the page's vs is lexically in scope inside the instance body
+            expect(body).toMatch(/Start Promo Page trial/);
+            expect(body).not.toMatch(/Buy Now/);
+        });
+
         it('/html-string — string is escaped, html-string is not', async () => {
             const { status, body } = await fetchPage(server.url, '/html-string/');
             expect(status).toBe(200);
@@ -705,6 +717,14 @@ describe('Smoke Test', () => {
             expect(body).not.toMatch(/Default disclaimer text/);
             expect(body).toMatch(/href="\/docs"/);
             expect(body).not.toMatch(/Default link/);
+        });
+
+        it('/promo — override binding to the page scope on a structural instance (DL#193 Phase 2c)', async () => {
+            const { status, body } = await fetchPage(server.url, '/promo/');
+            expect(status).toBe(200);
+            expect(body).toMatch(/Premium/);
+            expect(body).toMatch(/Start Promo Page trial/);
+            expect(body).not.toMatch(/Buy Now/);
         });
 
         it('/html-string — string is escaped, html-string is not', async () => {
