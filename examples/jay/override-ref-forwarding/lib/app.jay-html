@@ -1,0 +1,48 @@
+<html>
+<head>
+    <script type="application/jay-headfull"
+            src="./card/card"
+            contract="./card/card.jay-contract"
+            names="card"></script>
+    <!-- The PAGE imports Counter — the generic card has no idea Counter exists. The page decides
+         what to inject into the card's `slot` via <override>. -->
+    <script type="application/jay-headfull"
+            src="./counter"
+            names="Counter"></script>
+    <script type="application/jay-data">
+data:
+    pageTitle: string
+    cards:
+        - id: string
+          label: string
+    </script>
+</head>
+<body>
+<div class="page">
+    <h1>{pageTitle}</h1>
+
+    <section class="single">
+        <h2>Inject via override — refs.signupCard.cta</h2>
+        <!-- Inject Counter into the card's slot; its `cta` ref is forwarded to the usage site. -->
+        <jay:card heading="Sign up" ref="signupCard">
+            <override ref="slot">
+                <jay:Counter ref="cta" initialValue="0" />
+            </override>
+        </jay:card>
+    </section>
+
+    <section class="list">
+        <h2>Repeated + injected — refs.cards.cards.cta (collection)</h2>
+        <ul class="cards" forEach="cards" trackBy="id">
+            <li>
+                <jay:card heading="{label}" ref="cards">
+                    <override ref="slot">
+                        <jay:Counter ref="cta" initialValue="0" />
+                    </override>
+                </jay:card>
+            </li>
+        </ul>
+    </section>
+</div>
+</body>
+</html>
