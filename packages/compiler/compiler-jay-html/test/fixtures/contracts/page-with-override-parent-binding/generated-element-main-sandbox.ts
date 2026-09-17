@@ -81,7 +81,7 @@ function _headlessCard0Render(options?: RenderElementOptions): _HeadlessCard0Ele
 
 const _HeadlessCard0 = makeHeadlessInstanceComponent(
     _headlessCard0Render,
-    { comp: (_props, _refs) => ({ render: () => _props }) },
+    { comp: (_props, _refs) => ({ render: () => _props, ..._refs }) },
     'S0/0/card:AR0',
 );
 

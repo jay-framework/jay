@@ -1726,3 +1726,113 @@ both regular and secure targets.
 **Phase 4 status: complete** (secure/bridge resolved-by-architecture + verified; React deprecated).
 Phase 3 (Issue 1 — pure-component ref forwarding) remains the only outstanding DL#193 work and is
 orthogonal.
+
+## Implementation Results — Phase 3 (Issue 1 — pure-component ref forwarding) (2026-09-16)
+
+Phase 3 forwards a structural (Tier 2) headfull composite's named inner child-component refs to the
+usage site, typed in the inner (composite) scope, with **no event re-basing**. When the composite is
+repeated at the usage site (`forEach`), the forwarded refs become collections. The design predicted
+"the existing collection machinery covers it once the tree carries the forwarded ref." That was
+**half right** — the machinery existed, but three wiring gaps had to be closed, two in the runtime
+proxy and one in codegen. The secure build surfaced two more, in the rollup/vite plugin.
+
+### Runtime wiring fix 1 — collection `hasForwardedInnerRef` must use property access, not `in`
+
+`ComponentCollectionRefImpl.hasForwardedInnerRef(innerName)` originally tested `innerName in api`
+against the first member's public API. The `in` operator **bypasses the Proxy `get` trap**, so it
+tested the raw `ComponentRefImpl` (which has no forwarded `cta`) and always returned false — the
+collection path `refs.cards.cards.cta` resolved to `undefined`. Fixed to `!!api[innerName]`, which
+routes through the get-trap → `getFromComponent` → the instance's forwarded ref
+(`packages/runtime/runtime/lib/node-reference.ts`).
+
+### Runtime wiring fix 2 — `DELEGATE_COLLECTION_INNER_REF_TRAP` must fall through real impl members
+
+The trap that redirects unknown props to the forwarded aggregate originally used an explicit
+exclusion list. An unbound impl method re-entering the proxy via `this.<member>` (e.g.
+`removeEventListener` reading `this.listeners`, since `EVENT_TRAP` binds only `addEventListener`)
+hit the trap and got a proxy object instead of the real array → `this.listeners.filter is not a
+function`. Replaced the exclusion list with `if (prop in target) return false;` — every genuine
+impl member (listeners, elements, map, find, add/removeEventListener, getPublicAPI, …) falls
+through; only true forwarded inner-ref names (not members of the impl) reach the aggregate. `onXxx`
+is handled by `EVENT_TRAP` first, so it never reaches this trap.
+
+### Codegen fix — file-level dedup of forwarded-ref helper types
+
+Two structural instances of the same composite (`signupCard` single + `cards` collection) each embed
+Counter and each emitted the shared `export type CounterRef<ParentVS> = …` / `CounterRefs<ParentVS>`
+helpers → duplicate-identifier TS error. This **corrects** the design's optimism: the collection
+machinery covered the runtime, but multi-instance helper emission was not deduped. Added a
+file-scoped `emittedForwardedRefHelpers: Set<string>` on `RenderContext`
+(`jay-html-compiler.ts`), threaded into `renderRefsType` via a new `emittedHelpers?` param
+(`jay-html-compile-refs.ts`); each helper identifier emits once per file. When the set is undefined
+(page-level / other callers) the guard is a no-op — backward compatible.
+
+### Secure/bridge plugin fix — contracts imported into a worker were mis-routed
+
+The §5 secure example is the **first** to import an external `contract="…"` file into the worker
+(structural composites require a `.jay-contract`). Such a contract resolves to
+`card.jay-contract?jay-workerTrusted.ts` — a runtime-mode suffix that also matches
+`hasJayModeExtension`. Both the **load** and **transform** hooks checked the mode branch before the
+contract branch, so the contract was loaded as raw YAML by `loadJayFile` (→ esbuild YAML parse
+error) and routed to `transformJayFile` (→ `Unknown Jay format jay-contract`). Fixed both hooks in
+`packages/compiler/rollup-plugin/lib/runtime/runtime-compiler.ts` to check
+`hasJayExtension(id, JAY_CONTRACT_EXTENSION, { withTs: true })` **first** (load: → `loadContractFile`;
+transform: → skip). This makes structural composites usable in secure mode at all.
+
+### Tests / verification (all green)
+
+1. **§2 runtime unit test** (`packages/runtime/runtime/test/lib/ref-forwarding.test.ts`, 5 tests):
+   forwarded ref exposed; delivers the composite (Card) scope viewState with **no re-basing**
+   (`event.viewState === { heading: 'Sign up' }`); collection fans per card; `.find(pred)` reaches
+   one member; `onClick` replays onto a card added after listener registration. All 5 pass; full
+   runtime suite 283 pass / 3 skip.
+2. **Codegen regression fixture**
+   (`compiler-jay-html/test/fixtures/contracts/page-with-forwarded-ref-multi/`): single + `forEach`
+   instances of the same composite; asserts `CounterRef`/`CounterRefs` declared **once** and
+   `validations` `toEqual([])`. Added one multi-instance case each to `generate-element`,
+   `generate-element-hydrate`, `generate-server-element` (146 pass across the three files).
+3. **§5 example** (`examples/jay/ref-forwarding/`): dual regular (`index.html`/`lib`) + secure
+   (`secure.html`/`lib-secure`, `sandbox="true"`). `yarn build` succeeds for **both** targets (21
+   modules; the `workerTrusted` transforms of `card.jay-html`, `counter.jay-html`, and the contract
+   compile clean). Per the Phase 4 precedent, the example secure build is the secure-mode acceptance
+   gate; the rollup-plugin fix is covered by that integration gate (its 47 unit tests still pass).
+
+### Codegen fix 2 — hydrate `forEach` create-variant emitted an undeclared synthetic-ref type
+
+Follow-up bug surfaced by the multi-instance fixture. The hydrate `forEach` needs both an
+**adopt-body** (existing SSR DOM) and a **create-body** (fresh render for post-hydration items). The
+create-body compiles via the **element** target, which increments the shared `headlessInstanceCounter`
+and produces an **extra** instance (e.g. `Card2`) beyond the two the element pass already numbered.
+Its synthetic ref interface (`_HeadlessCard2Refs`) was never declared because the hydrate file simply
+reused the element pass's `renderedRefs` (which only knew `Card0`/`Card1`) — so
+`page-with-forwarded-ref-multi/generated-element-hydrate.ts` referenced an undeclared
+`_HeadlessCard2Refs`. Fixed by (a) threading a shared `emittedForwardedRefHelpers: Set<string>` across
+**both** passes so `CounterRef`/`CounterRefs` are still emitted exactly once, and (b) having
+`renderHydrate` return `{ fragment, syntheticRefsDecls }`; `generateElementHydrateFile` appends the
+hydrate pass's extra synthetic decls after `renderedRefs`. This also fixed the same latent bug in
+`page-with-forwarded-ref-foreach`. Files: `jay-html-compiler-hydrate.ts`, `jay-html-compiler.ts`;
+fixtures regenerated. `tsc` now reports no undeclared-type errors; 778 compiler-jay-html tests pass.
+
+### Runtime fix 3 — `makeHeadlessInstanceComponent` must tolerate an absent `HEADLESS_INSTANCES`
+
+The §5 example renders the structural composite via a **plain client `render()`** with no composite
+wrapper, so `HEADLESS_INSTANCES` is never provided. `wrappedConstructor` read it with
+`useContext(HEADLESS_INSTANCES)`, which **throws** when the marker is absent (`context.ts`:
+`if (!context) throw new Error()`) — the "Uncaught Error at useContext … at wrappedConstructor" the
+user hit. Yet every downstream consumer already tolerated absence (optional chaining
+`instanceData?.viewStates`, `clientDefaults` fallback, "no server data" path) — the throw was the lone
+inconsistency. Fixed by reading the context tolerantly:
+`findContext<HeadlessInstancesData>((_) => _ === HEADLESS_INSTANCES)` (returns `undefined` when
+absent). Also scoped the "no server data and no clientDefaults" warning to fire **only when
+`instanceData` is defined** — when the composite runtime is absent entirely (structural composite
+under plain client render), empty fast ViewState is the expected, non-erroneous case. File:
+`packages/jay-stack/stack-client-runtime/lib/headless-instance-context.ts`. The full-stack path (where
+the composite DOES provide the context) is unchanged: dev-server hydration suite 741/741 pass.
+
+**Deviation from design.** The design's "existing machinery covers it" note is corrected: the runtime
+collection machinery *did* need two proxy-wiring fixes, codegen needed multi-instance helper dedup
+**and** a hydrate create-variant synthetic-ref fix, the client runtime needed tolerant context lookup
+so structural composites work under plain client render, and the secure path needed a plugin
+contract-routing fix. No re-architecture — seven targeted fixes.
+
+**Phase 3 status: complete.** With Phases 2a/2c/3/4 done, DL#193 has no outstanding work.

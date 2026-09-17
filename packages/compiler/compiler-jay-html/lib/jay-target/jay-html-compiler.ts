@@ -1,4 +1,5 @@
 import {
+    GenerateTarget,
     Import,
     Imports,
     ImportsFor,
@@ -54,6 +55,8 @@ import {
     AsyncDirectiveTypes,
     checkAsync,
     ensureSingleChildElement,
+    forEachInsidePureComponentError,
+    hasForEachDescendant,
     isConditional,
     isForEach,
     isRecurse,
@@ -65,9 +68,12 @@ import { generateTypes } from './jay-html-compile-types';
 import { Indent } from './indent';
 import {
     elementNameToJayType,
+    filterToComponentRefs,
+    hasNamedComponentRefs,
     optimizeRefs,
     ReferenceManagerTarget,
     RefNameGenerator,
+    refsToRepeated,
     renderReferenceManager,
     renderRefsType,
 } from './jay-html-compile-refs';
@@ -116,6 +122,13 @@ export interface HeadlessInstanceDefinition {
     pluginComponentName?: string;
     /** Additional imports needed for the inline template */
     imports: Imports;
+    /**
+     * DL#193 Phase 3: synthetic refs type declaration(s) for a structural component that forwards its
+     * named inner child-component refs. Emitted in the shared page-level refs section (renderedRefs) so
+     * ALL targets (element, hydrate, bridge, main-sandbox) that reuse renderedRefs see the type, rather
+     * than burying it in the inline template code (which only the element target emits). Empty otherwise.
+     */
+    syntheticRefsCode?: string;
 }
 
 export interface RenderContext {
@@ -137,6 +150,10 @@ export interface RenderContext {
     headlessInstanceDefs: HeadlessInstanceDefinition[]; // Accumulator for inline template definitions
     headlessInstanceCounter: { count: number }; // Shared counter for unique naming
     coordinateCounters: Map<string, number>;
+    // DL#193 Phase 3: file-level set of forwarded-ref helper identifiers (`CounterRef`,
+    // `CounterRefs`) already emitted, so multiple structural instances embedding the same inner
+    // component declare each helper once (avoids duplicate-identifier errors).
+    emittedForwardedRefHelpers: Set<string>;
 }
 
 function renderFunctionDeclaration(preRenderType: string): string {
@@ -881,6 +898,18 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? 
 
         const childNodes = filterContentNodes(htmlElement.childNodes);
 
+        // DL#193 Phase 3 (§4 validation): a pure (Tier 2) structural component receives only
+        // scalar/enum props (DL#187), so no array can ever drive an internal forEach. Reject it
+        // with a clear diagnostic rather than the generic "resolved forEach type is not an array".
+        if (headlessImport.structural && childNodes.some(hasForEachDescendant)) {
+            return new RenderFragment(
+                '',
+                Imports.none(),
+                [forEachInsidePureComponentError(contractName)],
+                mkRefsTree([], {}),
+            );
+        }
+
         let inlineBody: RenderFragment;
         if (childNodes.length === 0) {
             inlineBody = new RenderFragment(
@@ -909,6 +938,13 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? 
                 recursiveRegions: [],
                 isInsideGuard: false,
                 insideFastForEach: false,
+                // DL#193 Phase 3: an instance's OWN template refs are always single — the instance is
+                // one unit. When the instance is repeated at the usage site (inside a forEach), that
+                // collection-ness is captured by the page-level ref manager collecting the instances,
+                // not by the instance's inner refs. Reset `dynamicRef` so forwarded inner refs (e.g.
+                // `<jay:Counter ref="cta">`) stay single here; contract-declared refs already use the
+                // stub's `repeated` flag via importedRefNameToRef, so they are unaffected.
+                dynamicRef: false,
                 // Pass headless contract names through so nested headless instances
                 // inside headfull FS component templates can be detected (DL#123)
                 headlessContractNames: newContext.headlessContractNames,
@@ -946,6 +982,65 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? 
             ReferenceManagerTarget.element,
         );
 
+        // DL#193 Phase 3: a structural (Tier 2) component forwards its named inner child-component
+        // refs (e.g. `<jay:Counter ref="cta">`). When present, emit a synthetic refs type from the
+        // merged refs so the forwarded refs (`cta: CounterRef<CardViewState>`) surface on BOTH the
+        // inline render fn's public API and the usage-site instance ref — the contract-only
+        // `${pascal}Refs` type does not declare them. The passthrough spreads `_refs` at runtime
+        // (see buildStructuralPassthroughComp), so the runtime object already carries them.
+        //
+        // The inline render fn always uses the SINGLE type — an instance's own template refs are
+        // single (childContext resets `dynamicRef`). When the instance is REPEATED at the usage site
+        // (inside a forEach), the page-side instance ref needs the COLLECTION shape (each forwarded
+        // `cta` becomes `CounterRefs`), captured here as `_Headless${pascal}${idx}RepeatedRefs`. The
+        // collection-ness comes from the page-level ref manager collecting the instances.
+        const syntheticSingleRefsTypeName = `_Headless${pascal}${idx}Refs`;
+        const syntheticRepeatedRefsTypeName = `_Headless${pascal}${idx}RepeatedRefs`;
+        // Q2 = (a) implicit: forward only NAMED child-component refs. Element refs and auto (unnamed)
+        // refs stay private, so the synthetic type is built from the component-refs-only subtree.
+        const forwardedRefs = filterToComponentRefs(mergedRefs);
+        const hasForwardedRefs =
+            headlessImport.structural && hasNamedComponentRefs(mergedRefs);
+        const forwardedRepeated = hasForwardedRefs && newContext.dynamicRef;
+        let syntheticRefsCode = '';
+        let syntheticRefsImports = Imports.none();
+        if (hasForwardedRefs) {
+            // Shared helper identifiers already emitted earlier in the file — the repeated interface
+            // (emitted first) declares `CounterRef`/`CounterRefs`; the companion single interface and
+            // any later structural instance embedding the same inner component then skip them.
+            const emittedHelpers = newContext.emittedForwardedRefHelpers;
+            if (forwardedRepeated) {
+                const repeated = renderRefsType(
+                    refsToRepeated(forwardedRefs),
+                    syntheticRepeatedRefsTypeName,
+                    GenerateTarget.jay,
+                    true,
+                    emittedHelpers,
+                );
+                const single = renderRefsType(
+                    forwardedRefs,
+                    syntheticSingleRefsTypeName,
+                    GenerateTarget.jay,
+                    true,
+                    emittedHelpers,
+                );
+                syntheticRefsCode = `${repeated.renderedRefs}\n${single.renderedRefs}\n`;
+                syntheticRefsImports = repeated.imports.plus(single.imports);
+            } else {
+                const single = renderRefsType(
+                    forwardedRefs,
+                    syntheticSingleRefsTypeName,
+                    GenerateTarget.jay,
+                    true,
+                    emittedHelpers,
+                );
+                syntheticRefsCode = `${single.renderedRefs}\n`;
+                syntheticRefsImports = single.imports;
+            }
+        }
+        // The inline render fn's public API is always the single shape.
+        const effectiveRefsTypeName = hasForwardedRefs ? syntheticSingleRefsTypeName : refsTypeName;
+
         // Build coordinate key: use explicit ref if present, otherwise auto-generate with AR prefix.
         // Must match assignCoordinates' naming (AR0, AR1, ...) so the element target's
         // __headlessInstances keys align with the dev server's discovery pipeline.
@@ -972,9 +1067,9 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? 
         // Generate type aliases and render function code
         const renderFnCode = `
 // Inline template for headless component: ${contractName} #${idx}
-type ${elementType} = JayElement<${interactiveViewStateType}, ${refsTypeName}>;
-type ${renderType} = RenderElement<${interactiveViewStateType}, ${refsTypeName}, ${elementType}>;
-type ${preRenderType} = [${refsTypeName}, ${renderType}];
+type ${elementType} = JayElement<${interactiveViewStateType}, ${effectiveRefsTypeName}>;
+type ${renderType} = RenderElement<${interactiveViewStateType}, ${effectiveRefsTypeName}, ${elementType}>;
+type ${preRenderType} = [${effectiveRefsTypeName}, ${renderType}];
 
 function ${renderFnName}(options?: RenderElementOptions): ${preRenderType} {
     ${renderedRefsManager}
@@ -982,7 +1077,7 @@ function ${renderFnName}(options?: RenderElementOptions): ${preRenderType} {
         ConstructContext.withRootContext(viewState, refManager, () =>
 ${inlineBody.rendered}
         ) as ${elementType};
-    return [refManager.getPublicAPI() as ${refsTypeName}, render];
+    return [refManager.getPublicAPI() as ${effectiveRefsTypeName}, render];
 }
 
 const ${componentSymbol} = makeHeadlessInstanceComponent(
@@ -991,13 +1086,16 @@ const ${componentSymbol} = makeHeadlessInstanceComponent(
     ${isInsideForEach ? `(dataIds) => [...dataIds, '${coordinateSuffix}'].toString()` : `'${coordinateKey}'`},
 );`;
 
-        // Accumulate the definition
+        // Accumulate the definition. The synthetic refs type (if any) is emitted in the shared
+        // page-level refs section (see renderFunctionImplementation), not in the inline template code,
+        // so every target that reuses renderedRefs — element, hydrate, bridge, main-sandbox — sees it.
         newContext.headlessInstanceDefs.push({
             componentSymbol,
             renderFnName,
             renderFnCode,
             pluginComponentName: headlessImport.structural ? undefined : pluginComponentName,
-            imports: inlineBody.imports.plus(refsManagerImport),
+            imports: inlineBody.imports.plus(refsManagerImport).plus(syntheticRefsImports),
+            syntheticRefsCode,
         });
 
         // Generate props getter (from parent ViewState to component props)
@@ -1038,14 +1136,25 @@ const ${componentSymbol} = makeHeadlessInstanceComponent(
             newContext.variables,
         );
         const isRepeated = newContext.dynamicRef;
-        const contractRefType = isRepeated ? `${pascal}RepeatedRefs` : `${pascal}Refs`;
-        // Ensure contract ref type is imported
-        for (const link of headlessImport.contractLinks) {
-            if (!link.names.some((n) => n.name === contractRefType)) {
-                link.names.push({ name: contractRefType, type: JayUnknown });
+        // DL#193 Phase 3: when a structural component forwards inner refs, the usage-site instance
+        // ref is the synthetic type emitted inline in this file (not the contract-only `${pascal}Refs`),
+        // so it declares the forwarded refs. The synthetic type is defined locally — no import needed.
+        const contractRefType = hasForwardedRefs
+            ? isRepeated
+                ? syntheticRepeatedRefsTypeName
+                : syntheticSingleRefsTypeName
+            : isRepeated
+              ? `${pascal}RepeatedRefs`
+              : `${pascal}Refs`;
+        // Ensure contract ref type is imported (synthetic type is local — skip)
+        if (!hasForwardedRefs) {
+            for (const link of headlessImport.contractLinks) {
+                if (!link.names.some((n) => n.name === contractRefType)) {
+                    link.names.push({ name: contractRefType, type: JayUnknown });
+                }
             }
+            newContext.usedComponentImports.add(contractRefType);
         }
-        newContext.usedComponentImports.add(contractRefType);
         const instanceRef = mkRef(
             refRefName,
             refOriginalName,
@@ -1390,6 +1499,10 @@ function renderFunctionImplementation(
     headlessImports: JayHeadlessImports[],
     importerMode: RuntimeMode,
     headLinks: JayHtmlHeadLink[] = [],
+    // DL#193 Phase 3: file-level forwarded-ref helper dedup set. Defaults to a fresh set (element,
+    // bridge, main-sandbox targets each own their file). The hydrate target passes a set shared with
+    // renderHydrate so the create-variant instance does not re-declare `CounterRef`/`CounterRefs`.
+    emittedForwardedRefHelpers: Set<string> = new Set(),
 ): {
     renderedRefs: string;
     renderedElement: string;
@@ -1448,6 +1561,7 @@ function renderFunctionImplementation(
             headlessInstanceDefs, // Accumulator for inline template definitions
             headlessInstanceCounter, // Counter for unique naming
             coordinateCounters: new Map(), // Scope-level counter for unique coordinates
+            emittedForwardedRefHelpers, // DL#193 Phase 3: file-level helper dedup (shared for hydrate)
         });
 
         if (needsWrapper) {
@@ -1481,8 +1595,23 @@ function renderFunctionImplementation(
         imports = imports.plus(Import.injectHeadLinks);
     }
 
-    const { imports: refImports, renderedRefs } = renderRefsType(renderedRoot.refs, refsType);
+    const { imports: refImports, renderedRefs: renderedPageRefs } = renderRefsType(
+        renderedRoot.refs,
+        refsType,
+    );
     imports = imports.plus(refImports);
+
+    // DL#193 Phase 3: append synthetic refs type declarations for structural components that forward
+    // their named inner child-component refs. Emitting them in the shared refs section (rather than the
+    // element target's inline template) makes them visible to every target that reuses renderedRefs —
+    // notably the hydrate and worker-sandbox bridge, which do not emit the element inline templates.
+    const syntheticRefsDecls = headlessInstanceDefs
+        .map((def) => def.syntheticRefsCode)
+        .filter((code): code is string => !!code)
+        .join('');
+    const renderedRefs = syntheticRefsDecls
+        ? `${renderedPageRefs}\n\n${syntheticRefsDecls.trimEnd()}`
+        : renderedPageRefs;
 
     let renderedElement = `export type ${elementType} = JayElement<${viewStateType}, ${refsType}>
 export type ${renderType} = RenderElement<${viewStateType}, ${refsType}, ${elementType}>
@@ -1801,6 +1930,10 @@ export function generateElementHydrateFile(
     const headlessContractNames = new Set(headlessImports.map((h) => h.contractName));
     assignCoordinates(jayFile.body, { headlessContractNames });
 
+    // DL#193 Phase 3: the element pass and the hydrate pass share ONE forwarded-ref helper dedup set,
+    // so the hydrate-only create-variant instance (compiled via the element target) skips
+    // `CounterRef`/`CounterRefs` already declared by the element pass and only its extra interfaces remain.
+    const emittedForwardedRefHelpers = new Set<string>();
     const {
         renderedRefs,
         renderedElement,
@@ -1817,18 +1950,26 @@ export function generateElementHydrateFile(
         jayFile.headlessImports,
         importerMode,
         jayFile.headLinks,
+        emittedForwardedRefHelpers,
     );
     const phaseTypes = generatePhaseSpecificTypes(jayFile);
-    const renderedHydrate = renderHydrate(
-        jayFile.types,
-        jayFile.body,
-        jayFile.imports,
-        elementType,
-        preRenderType,
-        refsType,
-        jayFile.headlessImports,
-        jayFile.contract,
-    );
+    const { fragment: renderedHydrate, syntheticRefsDecls: hydrateSyntheticRefsDecls } =
+        renderHydrate(
+            jayFile.types,
+            jayFile.body,
+            jayFile.imports,
+            elementType,
+            preRenderType,
+            refsType,
+            jayFile.headlessImports,
+            jayFile.contract,
+            emittedForwardedRefHelpers,
+        );
+    // Declare the hydrate-only synthetic ref types (create-variant instances) alongside the shared
+    // refs section so they precede their use in the hydrate function body.
+    const allRenderedRefs = hydrateSyntheticRefsDecls
+        ? `${renderedRefs}\n\n${hydrateSyntheticRefsDecls}`
+        : renderedRefs;
 
     // If we have contract or inline data, replace the 2-parameter JayContract with 5-parameter version
     let finalRenderedElement = renderedElement;
@@ -1852,7 +1993,7 @@ export function generateElementHydrateFile(
     const renderedFile = [
         renderImports(hydrateImports, ImportsFor.implementation, jayFile.imports, importerMode),
         types,
-        renderedRefs,
+        allRenderedRefs,
         phaseTypes,
         finalRenderedElement,
         renderedHydrate.rendered,

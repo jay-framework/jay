@@ -1,0 +1,15 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+  count: number
+    </script>
+</head>
+<body>
+<div class="counter">
+    <button class="dec" ref="subtracter">-</button>
+    <span class="count">{count}</span>
+    <button class="inc" ref="adder">+</button>
+</div>
+</body>
+</html>

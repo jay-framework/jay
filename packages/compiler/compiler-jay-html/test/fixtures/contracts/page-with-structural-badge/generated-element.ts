@@ -106,7 +106,7 @@ function _headlessBadge0Render(options?: RenderElementOptions): _HeadlessBadge0E
 
 const _HeadlessBadge0 = makeHeadlessInstanceComponent(
     _headlessBadge0Render,
-    { comp: (_props, _refs) => ({ render: () => _props }) },
+    { comp: (_props, _refs) => ({ render: () => _props, ..._refs }) },
     'S0/0/badge:AR0',
 );
 

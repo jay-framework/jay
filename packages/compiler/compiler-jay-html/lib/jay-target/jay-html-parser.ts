@@ -951,6 +951,13 @@ interface HeadfullFSParseResult {
     linkedCssFiles: string[];
     /** Absolute paths to headfull component jay-html files (including nested) */
     linkedComponentFiles: string[];
+    /**
+     * DL#193 Phase 3: regular (no-contract) child-component imports discovered in the OWN head of
+     * structural (Tier 2) components, rewritten relative to the page. A structural component inlines
+     * its body into the page, so these must join the page imports for the inlined `<jay:Child>` tags
+     * to resolve (and their forwarded refs to surface). Paths are already page-relative.
+     */
+    componentImports: JayImportLink[];
 }
 
 /**
@@ -975,11 +982,14 @@ async function parseHeadfullFSImports(
     sourceDir?: string,
     /** Resolved CSS file paths already linked by the page — components skip these to avoid duplication. */
     pageLinkedCssPaths?: Set<string>,
+    /** tsconfig resolution options, threaded to parse structural components' regular imports (DL#193 Phase 3). */
+    options: ResolveTsConfigOptions = {},
 ): Promise<HeadfullFSParseResult> {
     const headlessImports: JayHeadlessImports[] = [];
     const cssParts: string[] = [];
     const linkedCssFiles: string[] = [];
     const linkedComponentFiles: string[] = [];
+    const componentImports: JayImportLink[] = [];
 
     for (const element of elements) {
         const src = element.getAttribute('src');
@@ -1174,6 +1184,7 @@ async function parseHeadfullFSImports(
                 visited,
                 undefined,
                 pageLinkedCssPaths,
+                options,
             );
             headlessImports.push(...nestedResult.headlessImports);
             if (nestedResult.css) {
@@ -1181,6 +1192,7 @@ async function parseHeadfullFSImports(
             }
             linkedCssFiles.push(...nestedResult.linkedCssFiles);
             linkedComponentFiles.push(...nestedResult.linkedComponentFiles);
+            componentImports.push(...nestedResult.componentImports);
         }
 
         // Inject template: find matching <jay:Name> tags in parent body
@@ -1242,6 +1254,35 @@ async function parseHeadfullFSImports(
                 continue;
             }
             structural = true;
+        }
+
+        // DL#193 Phase 3: a structural (Tier 2) component inlines its body into the page, so any
+        // regular (no-contract) child-component imports in its OWN head (e.g. `<jay:Button>`) must be
+        // propagated to the page — otherwise the inlined `<jay:Button ref="cta">` tag resolves to
+        // nothing and its forwardable ref is silently dropped. `src` is relative to the component's
+        // dir; rewrite it relative to the page `filePath`, mirroring the nested-FS rewrite above.
+        if (structural) {
+            const componentRegularHeadfull = jayHtmlRoot
+                .querySelectorAll('script[type="application/jay-headfull"]')
+                .filter((el) => !el.getAttribute('contract'));
+            for (const el of componentRegularHeadfull) {
+                const elSrc = el.getAttribute('src');
+                if (elSrc) {
+                    const absoluteSrc = path.resolve(componentDir, elSrc);
+                    let relativeSrc = path.relative(filePath, absoluteSrc);
+                    if (!relativeSrc.startsWith('.')) relativeSrc = './' + relativeSrc;
+                    el.setAttribute('src', relativeSrc);
+                }
+            }
+            componentImports.push(
+                ...parseHeadfullImports(
+                    componentRegularHeadfull,
+                    validations,
+                    filePath,
+                    options,
+                    importResolver,
+                ),
+            );
         }
 
         // Build JayHeadlessImports entry
@@ -1373,6 +1414,7 @@ async function parseHeadfullFSImports(
         css: cssParts.length > 0 ? cssParts.join('\n\n') : undefined,
         linkedCssFiles,
         linkedComponentFiles,
+        componentImports,
     };
 }
 
@@ -1777,6 +1819,7 @@ export async function parseJayFile(
         undefined, // visited
         sourceDir,
         pageLinkedCssPaths,
+        options,
     );
 
     const headlessImports = await parseHeadlessImports(
@@ -1814,6 +1857,9 @@ export async function parseJayFile(
     );
     const imports: JayImportLink[] = [
         ...headfullImports,
+        // DL#193 Phase 3: regular child-component imports propagated from structural (Tier 2)
+        // components whose bodies are inlined into this page.
+        ...headfullFSResult.componentImports,
         ...allHeadlessImports.flatMap((_) => [
             ..._.contractLinks,
             ...(usedAsInstance.has(_.contractName) && !_.structural ? [_.codeLink] : []),

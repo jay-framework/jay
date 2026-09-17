@@ -225,6 +225,39 @@ describe('generate jay-html server element', () => {
                 await readFixtureServerElementFile(folder),
             );
         });
+
+        // DL#193 Phase 3 — refs do not exist on the server target (no interactivity), so forwarding
+        // is a no-op here: the structural component's inline body renders server-side with the
+        // instance's coerced props and no ref plumbing. Locks in that forwarding adds nothing server-side.
+        it('for forwarded inner ref from structural component — refs are a no-op (DL#193 Phase 3)', async () => {
+            const folder = 'contracts/page-with-forwarded-ref';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
+
+        // DL#193 Phase 3 — same, inside a forEach (repeated composite) on the server target.
+        it('for forwarded inner ref from structural component in forEach (DL#193 Phase 3)', async () => {
+            const folder = 'contracts/page-with-forwarded-ref-foreach';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
+
+        // DL#193 Phase 3 — two structural instances of the same composite; server target renders both
+        // inline bodies with no ref plumbing (forwarding is a client-only concern).
+        it('for forwarded inner refs from two structural instances of the same composite (DL#193 Phase 3)', async () => {
+            const folder = 'contracts/page-with-forwarded-ref-multi';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
     });
 
     describe('slowForEach', () => {

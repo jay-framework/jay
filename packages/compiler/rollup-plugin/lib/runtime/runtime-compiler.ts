@@ -90,14 +90,19 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
             return null;
         },
         async load(id: string): Promise<LoadResult> {
+            // Contracts must be checked before the jay-mode branch: a contract imported into a
+            // worker carries a runtime-mode suffix (e.g. `card.jay-contract?jay-workerTrusted.ts`)
+            // which also matches hasJayModeExtension below and would be loaded as raw YAML by
+            // loadJayFile instead of being compiled to TS. (DL#193 Phase 3 secure composites.)
+            if (hasJayExtension(id, JAY_CONTRACT_EXTENSION, { withTs: true })) {
+                return await loadContractFile(this, id);
+            }
             // Use hasJayExtension to handle query params like ?jay-client
             if (
                 hasJayExtension(id, JAY_EXTENSION, { withTs: true }) ||
                 hasJayModeExtension(id, { withTs: true })
             ) {
                 return await loadJayFile(this, id);
-            } else if (hasJayExtension(id, JAY_CONTRACT_EXTENSION, { withTs: true })) {
-                return await loadContractFile(this, id);
             } else if (isResolvedCssFile(id)) {
                 return await loadCssFile(this, jayContext, id, isVite);
             } else if (id === GLOBAL_FUNC_REPOSITORY) {
@@ -108,14 +113,19 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
             return null;
         },
         async transform(code: string, id: string): Promise<TransformResult> {
+            // Contract files are compiled in the load hook (loadContractFile) and need no
+            // jay transform. A contract imported into a worker carries a runtime-mode suffix
+            // (e.g. `card.jay-contract?jay-workerTrusted.ts`) which otherwise matches
+            // hasJayModeExtension below and would be routed to transformJayFile, throwing
+            // "Unknown Jay format jay-contract". Exclude contracts first. (DL#193 Phase 3:
+            // structural composites in secure mode are the first to import a contract into a worker.)
+            if (hasJayExtension(id, JAY_CONTRACT_EXTENSION, { withTs: true })) return null;
             // Use hasJayExtension to handle query params like ?jay-client
             if (
                 hasJayExtension(id, JAY_EXTENSION, { withTs: true }) ||
                 hasJayModeExtension(id, { withTs: true })
             )
                 return await transformJayFile(jayContext, this, code, id);
-            // Contract files are now compiled in the load hook to avoid esbuild issues
-            // No transform needed here
             return null;
         },
         watchChange(id: string, change: { event: 'create' | 'update' | 'delete' }): void {

@@ -13,7 +13,7 @@
 
 import {
     createJayContext,
-    useContext,
+    findContext,
     ContextMarker,
     PreRenderElement,
     JayElement,
@@ -106,8 +106,13 @@ export function makeHeadlessInstanceComponent<
         refs,
         ...pluginResolvedContexts: any[]
     ) => {
-        // Read instance data from the context stack (provided by composite component)
-        const instanceData = useContext(HEADLESS_INSTANCES);
+        // Read instance data from the context stack (provided by the composite component).
+        // Use findContext (returns undefined when absent) rather than useContext (which throws):
+        // a structural (Tier 2) headfull composite can be rendered under a plain client render()
+        // that has no composite wrapper, so HEADLESS_INSTANCES may legitimately be missing. Every
+        // consumer below already tolerates undefined (optional chaining + clientDefaults fallback).
+        // (DL#193 Phase 3.)
+        const instanceData = findContext<HeadlessInstancesData>((_) => _ === HEADLESS_INSTANCES);
 
         // Resolve coordinate key: static string or dynamic factory (for forEach instances)
         const resolvedKey =
@@ -142,10 +147,16 @@ export function makeHeadlessInstanceComponent<
             resolvedFastVS = defaults.viewState;
             resolvedCf = defaults.carryForward ?? {};
         } else {
-            console.warn(
-                `[Jay] Headless instance "${resolvedKey}" has no server data and no clientDefaults. ` +
-                    `Add .withClientDefaults() to the component definition to provide fallback values.`,
-            );
+            // Only warn when the composite runtime IS present (instanceData defined) but this
+            // instance has neither server data nor clientDefaults — a real misconfiguration.
+            // When instanceData is undefined the composite runtime is absent entirely (e.g. a
+            // structural composite under a plain client render()); empty fast ViewState is the
+            // expected, non-erroneous case, so stay silent. (DL#193 Phase 3.)
+            if (instanceData)
+                console.warn(
+                    `[Jay] Headless instance "${resolvedKey}" has no server data and no clientDefaults. ` +
+                        `Add .withClientDefaults() to the component definition to provide fallback values.`,
+                );
             resolvedFastVS = {};
             resolvedCf = {};
         }

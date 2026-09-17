@@ -1,0 +1,18 @@
+<html>
+<head>
+    <script type="application/jay-headfull"
+            src="./card/card"
+            contract="./card/card.jay-contract"
+            names="card"></script>
+    <script type="application/jay-data">
+data:
+    pageTitle: string
+    </script>
+</head>
+<body>
+<div>
+    <h1>{pageTitle}</h1>
+    <jay:card heading="Sign up" ref="signupCard" />
+</div>
+</body>
+</html>

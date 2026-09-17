@@ -84,7 +84,7 @@ function _headlessCard0HydrateRender(
 }
 const _HeadlessCard0 = makeHeadlessInstanceComponent(
     _headlessCard0HydrateRender,
-    { comp: (_props, _refs) => ({ render: () => _props }) },
+    { comp: (_props, _refs) => ({ render: () => _props, ..._refs }) },
     'S0/0/card:AR0',
 );
 

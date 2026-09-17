@@ -113,7 +113,7 @@ function _headlessBadge0HydrateRender(
 }
 const _HeadlessBadge0 = makeHeadlessInstanceComponent(
     _headlessBadge0HydrateRender,
-    { comp: (_props, _refs) => ({ render: () => _props }) },
+    { comp: (_props, _refs) => ({ render: () => _props, ..._refs }) },
     'S0/0/badge:AR0',
 );
 

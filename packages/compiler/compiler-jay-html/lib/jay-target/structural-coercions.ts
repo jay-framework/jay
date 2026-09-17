@@ -64,7 +64,13 @@ export function buildStructuralCoercions(rawVar: string, tags: StructuralTag[]):
  * `{binding}` props carry their source ViewState's type. Re-coercing here would be redundant and, for
  * bindings, ill-typed — `_props.field` is the typed value (or a `Getter`), not a string to `Number()`
  * or index an enum with. `tags` is accepted for call-site symmetry with the server path but unused.
+ *
+ * DL#193 Phase 3 (ref forwarding): the passthrough spreads `_refs` into its render result so the
+ * structural component's named inner child-component refs surface on the usage-site instance's public
+ * API (`refs.signupCard.cta`). `getPublicAPI()` returns a plain object, so spreading is a pure
+ * passthrough — each forwarded ref keeps its original component-ref shape (no event re-basing). When
+ * the structural component has no forwardable refs, `_refs` is `{}` and the spread is a no-op.
  */
 export function buildStructuralPassthroughComp(_tags: StructuralTag[]): string {
-    return `{ comp: (_props, _refs) => ({ render: () => _props }) }`;
+    return `{ comp: (_props, _refs) => ({ render: () => _props, ..._refs }) }`;
 }

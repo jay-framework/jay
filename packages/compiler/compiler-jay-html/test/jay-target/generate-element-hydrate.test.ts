@@ -3,6 +3,7 @@ import {
     readFileAndGenerateElementHydrateFile,
     readFixtureElementHydrateFile,
 } from '../test-utils/file-utils';
+import { forEachInsidePureComponentError } from '../../lib/jay-target/jay-html-helpers';
 
 describe('generate jay-html element hydrate', () => {
     describe('basics', () => {
@@ -276,6 +277,49 @@ describe('generate jay-html element hydrate', () => {
             expect(await prettify(hydrateFile.val)).toEqual(
                 await readFixtureElementHydrateFile(folder),
             );
+        });
+
+        // DL#193 Phase 3 — a structural component's forwarded inner refs on the hydrate target: the
+        // synthetic refs type is declared in the shared refs section and the adopt inline render fn
+        // uses it (`getPublicAPI() as _HeadlessCard0Refs`), matching the element target.
+        it('for forwarded inner ref from structural component (DL#193 Phase 3)', async () => {
+            const folder = 'contracts/page-with-forwarded-ref';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+
+        // DL#193 Phase 3 — repeated forwarding composite (inside a forEach) on the hydrate target:
+        // page-side ref uses the repeated synthetic type; the inline template's own refs stay single.
+        it('for forwarded inner ref from structural component in forEach (DL#193 Phase 3)', async () => {
+            const folder = 'contracts/page-with-forwarded-ref-foreach';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+
+        // DL#193 Phase 3 — two structural instances of the same composite embed the same inner
+        // Counter; the shared helper types are declared once at the file level (dedup) on the hydrate
+        // target too.
+        it('for forwarded inner refs from two structural instances of the same composite (DL#193 Phase 3)', async () => {
+            const folder = 'contracts/page-with-forwarded-ref-multi';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+
+        // DL#193 Phase 3 (§4 validation) — the hydrate target rejects a `forEach` inside a pure
+        // (Tier 2) structural composite with the same exact diagnostic as the element target.
+        it('rejects a forEach inside a pure (Tier 2) structural composite (DL#193 Phase 3)', async () => {
+            const folder = 'contracts/page-with-foreach-in-pure-composite';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([forEachInsidePureComponentError('card')]);
         });
 
         // DL#193 "Fix — empty-contract unwrap": on the hydrate target too, an unwrapped

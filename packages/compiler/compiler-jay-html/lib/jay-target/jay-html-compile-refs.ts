@@ -31,6 +31,56 @@ const isComponentRef = (ref: Ref) => isComponentType(ref.elementType);
 const isCollectionRef = (ref: Ref) => ref.repeated;
 const isComponentCollectionRef = (ref: Ref) => isCollectionRef(ref) && isComponentRef(ref);
 
+/**
+ * DL#193 Phase 3: mark every ref in a tree as repeated, producing the collection shape. Used to
+ * derive the page-side "RepeatedRefs" type for a forwarded structural instance placed in a forEach
+ * (mirrors the contract compiler's `refsToRepeated`).
+ */
+export function refsToRepeated(refsTreeNode: RefsTree): RefsTree {
+    const { refs, children, imported } = refsTreeNode;
+    return mkRefsTree(
+        refs.map((ref) => ({ ...ref, repeated: true })),
+        Object.fromEntries(
+            Object.entries(children).map(([key, value]) => [key, refsToRepeated(value)]),
+        ),
+        true,
+        imported?.refsTypeName,
+        imported?.repeatedRefsTypeName,
+    );
+}
+
+/**
+ * DL#193 Phase 3 (Q2 = (a) implicit): forwarding a structural (Tier 2) component's inner refs is
+ * scoped to NAMED child-component refs. Auto (unnamed) refs and plain element refs stay private.
+ */
+export function hasNamedComponentRefs(tree: RefsTree): boolean {
+    return (
+        tree.refs.some((r) => !r.autoRef && isComponentRef(r)) ||
+        Object.values(tree.children).some(hasNamedComponentRefs)
+    );
+}
+
+/**
+ * DL#193 Phase 3: prune a refs tree to only its component refs (dropping element refs), so the
+ * synthetic forwarded-refs type exposes just the forwarded child-component refs. `renderRefsType`
+ * additionally drops auto (unnamed) refs when generating the interface.
+ */
+export function filterToComponentRefs(tree: RefsTree): RefsTree {
+    const refs = tree.refs.filter((r) => isComponentRef(r));
+    const children: Record<string, RefsTree> = {};
+    for (const [key, child] of Object.entries(tree.children)) {
+        const filtered = filterToComponentRefs(child);
+        if (hasRefs(filtered, false)) children[key] = filtered;
+    }
+    return mkRefsTree(
+        refs,
+        children,
+        tree.repeated,
+        tree.imported?.refsTypeName,
+        tree.imported?.repeatedRefsTypeName,
+    );
+}
+
 enum RefsNeeded {
     REF,
     REF_AND_REFS,
@@ -39,6 +89,21 @@ export function renderRefsType(
     refs: RefsTree,
     refsType: string,
     generateTarget: GenerateTarget = GenerateTarget.jay,
+    /**
+     * DL#193 Phase 3: when false, skip emitting the component-ref helper `export type` declarations
+     * (`XRef<ParentVS>` / `XRefs<ParentVS>`) and emit only the `export interface`. Used when two
+     * interfaces (single + repeated) share the same helpers — the helpers are emitted once by the
+     * companion call and re-emitting them would be a duplicate-identifier error.
+     */
+    emitComponentRefHelpers: boolean = true,
+    /**
+     * DL#193 Phase 3: shared set of helper identifiers (`CounterRef`, `CounterRefs`) already emitted
+     * elsewhere in the file. When provided, a helper whose identifier is already present is skipped
+     * and newly-emitted identifiers are added. This deduplicates the shared helpers across BOTH a
+     * single/repeated pair AND across multiple structural instances that embed the same inner
+     * component (each would otherwise re-declare `CounterRef` → duplicate-identifier error).
+     */
+    emittedHelpers?: Set<string>,
 ) {
     let renderedRefs: string;
     let imports = Imports.none();
@@ -121,25 +186,37 @@ ${indent.lastLine}}`;
 
         const mainType = generateTypeForPath(refs, new Indent('', true, true));
 
-        const renderedComponentRefs = [...componentRefs].map(([componentName, refsNeeded]) => {
-            const elementType =
-                generateTarget === GenerateTarget.jay
-                    ? `ReturnType<typeof ${componentName}>`
-                    : 'any';
-            let refTypes = `export type ${componentName}Ref<ParentVS> = MapEventEmitterViewState<ParentVS, ${elementType}>;`;
-            imports = imports.plus(Import.MapEventEmitterViewState);
-            if (refsNeeded === RefsNeeded.REF_AND_REFS) {
-                refTypes += `
-export type ${componentName}Refs<ParentVS> =
-    ComponentCollectionProxy<ParentVS, ${componentName}Ref<ParentVS>> &
-    OnlyEventEmitters<${componentName}Ref<ParentVS>>
-`;
-                imports = imports
-                    .plus(Import.ComponentCollectionProxy)
-                    .plus(Import.OnlyEventEmitters);
-            }
-            return refTypes;
-        });
+        const renderedComponentRefs = emitComponentRefHelpers
+            ? [...componentRefs]
+                  .map(([componentName, refsNeeded]) => {
+                      const elementType =
+                          generateTarget === GenerateTarget.jay
+                              ? `ReturnType<typeof ${componentName}>`
+                              : 'any';
+                      const refId = `${componentName}Ref`;
+                      const refsId = `${componentName}Refs`;
+                      const parts: string[] = [];
+                      if (!emittedHelpers?.has(refId)) {
+                          parts.push(
+                              `export type ${refId}<ParentVS> = MapEventEmitterViewState<ParentVS, ${elementType}>;`,
+                          );
+                          imports = imports.plus(Import.MapEventEmitterViewState);
+                          emittedHelpers?.add(refId);
+                      }
+                      if (refsNeeded === RefsNeeded.REF_AND_REFS && !emittedHelpers?.has(refsId)) {
+                          parts.push(`export type ${refsId}<ParentVS> =
+    ComponentCollectionProxy<ParentVS, ${refId}<ParentVS>> &
+    OnlyEventEmitters<${refId}<ParentVS>>
+`);
+                          imports = imports
+                              .plus(Import.ComponentCollectionProxy)
+                              .plus(Import.OnlyEventEmitters);
+                          emittedHelpers?.add(refsId);
+                      }
+                      return parts.join('\n');
+                  })
+                  .filter(Boolean)
+            : [];
 
         renderedRefs = `${renderedComponentRefs.join('\n')}
 export interface ${refsType} ${mainType}`;

@@ -5,6 +5,7 @@ import {
 } from '../test-utils/file-utils';
 import { readFileAndGenerateElementFile } from '../test-utils/file-utils';
 import { prettify, RuntimeMode } from '@jay-framework/compiler-shared';
+import { forEachInsidePureComponentError } from '../../lib/jay-target/jay-html-helpers';
 
 describe('generate jay-html element', () => {
     describe('basics', () => {
@@ -432,6 +433,30 @@ describe('generate jay-html element', () => {
                     await readFixtureFile(folder, 'generated-element-main-sandbox'),
                 );
             });
+
+            // DL#193 Phase 3 — a structural component's forwarded inner refs render main-side (the
+            // inline template is inlined into the page), so the synthetic refs type and the
+            // `refs.signupCard.cta` surface appear in the main-sandbox output; only the contract import
+            // suffix (?jay-mainSandbox) and headless factory differ from the trusted output.
+            it('forwarded inner ref from structural component (DL#193 Phase 3)', async () => {
+                const folder = 'contracts/page-with-forwarded-ref';
+                const elementFile = await readFileAndGenerateElementFile(folder, { importerMode });
+                expect(elementFile.validations).toEqual([]);
+                expect(await prettify(elementFile.val)).toEqual(
+                    await readFixtureFile(folder, 'generated-element-main-sandbox'),
+                );
+            });
+
+            // DL#193 Phase 3 — repeated forwarding composite (inside a forEach) in main-sandbox mode:
+            // the page-side instance ref uses the repeated synthetic type (collection refs).
+            it('forwarded inner ref from structural component in forEach (DL#193 Phase 3)', async () => {
+                const folder = 'contracts/page-with-forwarded-ref-foreach';
+                const elementFile = await readFileAndGenerateElementFile(folder, { importerMode });
+                expect(elementFile.validations).toEqual([]);
+                expect(await prettify(elementFile.val)).toEqual(
+                    await readFixtureFile(folder, 'generated-element-main-sandbox'),
+                );
+            });
         });
     });
 
@@ -492,6 +517,48 @@ describe('generate jay-html element', () => {
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
+        // DL#193 Phase 3 — a structural (Tier 2) component forwards its NAMED inner child-component
+        // refs (`<jay:Counter ref="cta">`). The usage-site instance ref is a synthetic type
+        // (`_HeadlessCard0Refs { cta: CounterRef<CardViewState> }`) declared in the shared refs
+        // section, so `refs.signupCard.cta` is typed correctly. Element/plain refs stay private.
+        it('generate element file with forwarded inner ref from structural component (DL#193 Phase 3)', async () => {
+            const folder = 'contracts/page-with-forwarded-ref';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
+        // DL#193 Phase 3 — when the forwarding composite is REPEATED (inside a page forEach), each
+        // forwarded ref becomes a collection: the page-side instance ref uses the repeated synthetic
+        // type (`_HeadlessCard0RepeatedRefs { cta: CounterRefs<CardViewState> }`) while the inline
+        // template's own refs stay single.
+        it('generate element file with forwarded inner ref from structural component in forEach (DL#193 Phase 3)', async () => {
+            const folder = 'contracts/page-with-forwarded-ref-foreach';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
+        // DL#193 Phase 3 — TWO structural instances of the same composite (a single `signupCard` and
+        // a repeated `cards`) both embed the same inner `Counter`. The shared component-ref helpers
+        // (`CounterRef` / `CounterRefs`) must each be declared EXACTLY ONCE at the file level — a
+        // second declaration would be a duplicate-identifier TS error. Full toEqual locks the dedup.
+        it('generate element file with forwarded inner refs from two structural instances of the same composite (DL#193 Phase 3)', async () => {
+            const folder = 'contracts/page-with-forwarded-ref-multi';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
+        // DL#193 Phase 3 (§4 validation) — a `forEach` inside a pure (Tier 2) structural composite
+        // is rejected with a clear diagnostic: a pure component receives only scalar/enum props
+        // (DL#187), so no array can ever drive an internal forEach. Assert the EXACT message.
+        it('rejects a forEach inside a pure (Tier 2) structural composite (DL#193 Phase 3)', async () => {
+            const folder = 'contracts/page-with-foreach-in-pure-composite';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([forEachInsidePureComponentError('card')]);
         });
 
         // DL#193 "Fix — empty-contract unwrap": an empty-contract headfull import (no props/tags,

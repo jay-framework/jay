@@ -15,6 +15,59 @@ export function isForEach(node: Node): boolean {
     return node.nodeType !== NodeType.TEXT_NODE && (node as HTMLElement).hasAttribute('forEach');
 }
 
+/**
+ * DL#193 Phase 3: recursively check whether any descendant (or the node itself) is a `forEach`.
+ * Used to reject a `forEach` inside a pure (Tier 2) composite — a pure component receives only
+ * scalar/enum props (DL#187), so no array can ever drive an internal forEach.
+ */
+export function hasForEachDescendant(node: Node): boolean {
+    if (isForEach(node)) return true;
+    return (node.childNodes ?? []).some(hasForEachDescendant);
+}
+
+/**
+ * DL#193 Phase 3 (§4 validation): exact diagnostic for a `forEach` inside a pure (Tier 2) composite.
+ * Shared by the element and hydrate targets so the message is identical across targets.
+ */
+export function forEachInsidePureComponentError(contractName: string): string {
+    return `forEach is not supported inside a pure (Tier 2) component <jay:${contractName}> — a pure component receives only scalar/enum props (DL#187), so no array can drive an internal forEach`;
+}
+
+/**
+ * DL#193 Phase 3 (§4 validation): scan a parsed body for a pure (Tier 2) structural instance whose
+ * inline template contains a `forEach`. Returns the offending instance's tag name (e.g. `card`) or
+ * null. Must run BEFORE `assignCoordinates`, which extracts/strips forEach template content — after
+ * that pass the inner forEach is no longer visible on the structural body.
+ */
+export function findForEachInsidePureComposite(
+    node: Node,
+    importedSymbols: Set<string>,
+    headlessContractNames: Set<string>,
+    structuralContractNames: Set<string>,
+): string | null {
+    if (node.nodeType !== NodeType.TEXT_NODE) {
+        const el = node as HTMLElement;
+        const match = getComponentName(el.rawTagName, importedSymbols, headlessContractNames);
+        if (
+            match?.kind === 'headless-instance' &&
+            structuralContractNames.has(match.name.toLowerCase()) &&
+            (el.childNodes ?? []).some(hasForEachDescendant)
+        ) {
+            return match.name;
+        }
+    }
+    for (const child of node.childNodes ?? []) {
+        const found = findForEachInsidePureComposite(
+            child,
+            importedSymbols,
+            headlessContractNames,
+            structuralContractNames,
+        );
+        if (found) return found;
+    }
+    return null;
+}
+
 export function isRecurse(node: Node): boolean {
     return (
         node.nodeType !== NodeType.TEXT_NODE &&

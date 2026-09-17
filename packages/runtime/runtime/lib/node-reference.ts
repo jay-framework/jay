@@ -210,6 +210,16 @@ export class ComponentCollectionRefImpl<
     >
     implements ManagedRefs
 {
+    // DL#193 Phase 3: a pure (Tier 2) composite forwards its named inner child-component refs
+    // (e.g. `<jay:Counter ref="cta">`). When the composite itself is repeated at the usage site,
+    // the forwarded ref rides this component collection as `refs.<collection>.<inner>` (e.g.
+    // `refs.cards.cta`). Handlers registered on that aggregate are replayed onto instances added
+    // after registration, keyed by the inner ref name — mirroring PrivateRefs.addEventListener.
+    private forwardedInnerListeners = new Map<
+        string,
+        Array<{ type: string; listener: any; options?: boolean | AddEventListenerOptions }>
+    >();
+
     mkManagedRef(
         currData: any,
         coordinate: Coordinate,
@@ -222,6 +232,92 @@ export class ComponentCollectionRefImpl<
             this,
         );
     }
+
+    addRef(ref: ComponentRefImpl<ViewState, ComponentType>) {
+        const isNew = !this.elements.has(ref);
+        super.addRef(ref);
+        // Replay forwarded inner-ref listeners onto the newly-added instance's inner ref.
+        if (isNew && this.forwardedInnerListeners.size > 0) {
+            const api: any = ref.getPublicAPI();
+            this.forwardedInnerListeners.forEach((listeners, innerName) => {
+                const innerRef = api?.[innerName];
+                if (innerRef)
+                    listeners.forEach(({ type, listener, options }) =>
+                        innerRef.addEventListener(type, listener, options),
+                    );
+            });
+        }
+    }
+
+    /**
+     * DL#193 Phase 3: does the collected component expose an inner ref named `innerName`? Decided
+     * from the first live instance's public API. Used by the collection proxy to distinguish a
+     * forwarded inner ref (`refs.cards.cta`) from a collection method / typo.
+     */
+    hasForwardedInnerRef(innerName: string): boolean {
+        const first = [...this.elements][0];
+        if (!first) return false;
+        // Use property access (goes through the ComponentInCollection get-trap →
+        // getFromComponent → the instance's forwarded ref), NOT the `in` operator, which
+        // bypasses the get-trap and would test the raw ComponentRefImpl (no forwarded ref).
+        const api: any = first.getPublicAPI();
+        return !!api && !!api[innerName];
+    }
+
+    /**
+     * DL#193 Phase 3: aggregate the forwarded inner ref `innerName` across all instances into a
+     * collection proxy (`CounterRefs<CardViewState>`): `onXxx`/`addEventListener` fan out to every
+     * instance's inner ref (carrying that instance's viewState — no re-basing) and are replayed for
+     * instances added later; `find(pred)`/`map(h)` iterate the live instances.
+     */
+    getForwardedInnerRef(innerName: string): any {
+        const currentInnerRefs = () =>
+            [...this.elements]
+                .map((ref) => ({
+                    inner: (ref.getPublicAPI() as any)?.[innerName],
+                    viewState: ref.viewState,
+                    coordinate: ref.coordinate,
+                }))
+                .filter((entry) => entry.inner);
+        const target = {
+            addEventListener: (
+                type: string,
+                listener: any,
+                options?: boolean | AddEventListenerOptions,
+            ) => {
+                const list = this.forwardedInnerListeners.get(innerName) ?? [];
+                list.push({ type, listener, options });
+                this.forwardedInnerListeners.set(innerName, list);
+                currentInnerRefs().forEach(({ inner }) =>
+                    inner.addEventListener(type, listener, options),
+                );
+            },
+            removeEventListener: (
+                type: string,
+                listener: any,
+                options?: boolean | AddEventListenerOptions,
+            ) => {
+                const list = (this.forwardedInnerListeners.get(innerName) ?? []).filter(
+                    (item) => !(item.type === type && item.listener === listener),
+                );
+                this.forwardedInnerListeners.set(innerName, list);
+                currentInnerRefs().forEach(({ inner }) =>
+                    inner.removeEventListener(type, listener, options),
+                );
+            },
+            find: (predicate: (viewState: ViewState, c: Coordinate) => boolean) => {
+                for (const { inner, viewState, coordinate } of currentInnerRefs())
+                    if (predicate(viewState, coordinate)) return inner;
+            },
+            map: (
+                handler: (inner: any, viewState: ViewState, coordinate: Coordinate) => any,
+            ) => currentInnerRefs().map(({ inner, viewState, coordinate }) =>
+                handler(inner, viewState, coordinate),
+            ),
+        };
+        return new Proxy(target, GetTrapProxy([EVENT_TRAP]));
+    }
+
     getPublicAPI(): ComponentCollectionProxy<ViewState, ComponentType> {
         return newComponentCollectionPublicApiProxy<ViewState, ComponentType>(this);
     }
@@ -438,7 +534,25 @@ export function newComponentInCollectionPublicApiProxy<
     return new Proxy(ref, ComponentInCollectionRefProxy);
 }
 
-const ComponentCollectionRefProxy = GetTrapProxy([EVENT_TRAP]);
+// DL#193 Phase 3: delegate a forwarded inner ref name (e.g. `cta`) on a component collection to an
+// aggregate over each instance's inner ref. Runs after EVENT_TRAP so collection-level `onXxx` and
+// the collection's own methods (`find`/`map`/`addEventListener`) fall through to the impl.
+const DELEGATE_COLLECTION_INNER_REF_TRAP = (target: ComponentCollectionRefImpl<any, any>, prop) => {
+    if (typeof prop !== 'string') return false;
+    // Any real member of the collection impl (listeners, elements, map, find,
+    // add/removeEventListener, getPublicAPI, …) must fall through to the target — including when an
+    // unbound method re-enters the proxy via `this.<member>`. Only genuine forwarded inner-ref names
+    // (e.g. `cta`), which are not members of the impl, reach the aggregate. `onXxx` is handled by
+    // EVENT_TRAP first, so it never gets here.
+    if (prop in target) return false;
+    if (!target.hasForwardedInnerRef(prop)) return false;
+    return target.getForwardedInnerRef(prop);
+};
+
+const ComponentCollectionRefProxy = GetTrapProxy([
+    EVENT_TRAP,
+    DELEGATE_COLLECTION_INNER_REF_TRAP,
+]);
 
 export function newComponentCollectionPublicApiProxy<
     ViewState,

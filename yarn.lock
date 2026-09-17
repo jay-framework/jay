@@ -11060,6 +11060,32 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"example-jay-ref-forwarding@workspace:examples/jay/ref-forwarding":
+  version: 0.0.0-use.local
+  resolution: "example-jay-ref-forwarding@workspace:examples/jay/ref-forwarding"
+  dependencies:
+    "@babel/core": "npm:^7.23.7"
+    "@babel/preset-env": "npm:^7.23.8"
+    "@babel/preset-typescript": "npm:^7.23.3"
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/json-patch": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/secure": "workspace:^"
+    "@jay-framework/serialization": "workspace:^"
+    "@jay-framework/vite-plugin": "workspace:^"
+    "@rollup/plugin-node-resolve": "npm:^15.2.3"
+    nodemon: "npm:^3.0.3"
+    rimraf: "npm:^5.0.5"
+    tslib: "npm:^2.6.2"
+    typescript: "npm:^5.3.3"
+    vite: "npm:^5.0.11"
+    vite-plugin-inspect: "npm:^0.8.1"
+  languageName: unknown
+  linkType: soft
+
 "example-jay-scrum-board-with-context@workspace:examples/jay-context/scrum-board-with-context":
   version: 0.0.0-use.local
   resolution: "example-jay-scrum-board-with-context@workspace:examples/jay-context/scrum-board-with-context"
