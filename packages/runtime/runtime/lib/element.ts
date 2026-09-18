@@ -48,7 +48,8 @@ export function childComp<
 >(
     compCreator: JayComponentConstructor<Props>,
     getProps: (t: ParentVS) => Props,
-    ref?: PrivateRef<ParentVS, ChildComp>,
+    ref?: PrivateRef<any, ChildComp>,
+    refViewState?: (vs: ParentVS, ...parents: any[]) => any,
 ): BaseJayElement<ParentVS> {
     let context = currentConstructionContext();
     let childComp = compCreator(getProps(context.currData));
@@ -56,7 +57,20 @@ export function childComp<
     let mounts: MountFunc[] = [childComp.mount];
     let unmounts: MountFunc[] = [childComp.unmount];
     if (ref) {
-        mkRef(ref, childComp, updates, mounts, unmounts);
+        if (refViewState) {
+            // DL#193 Phase 3 refinement: an override-injected child component's ref must carry the
+            // OVERRIDE (outer) scope, not the target composite's own scope — the override author
+            // knows the outer scope, not the component's internals (§C). The compiler emits
+            // `refViewState = (vs, $parent) => $parent`; we read the live parentDataChain so the ref's
+            // viewState reports the outer item for onChange/find/map alike.
+            ref.set(childComp);
+            ref.update(refViewState(context.currData, ...parentDataChain(context)));
+            updates.push((t: ParentVS) => ref.update(refViewState(t, ...parentDataChain(context))));
+            mounts.push(ref.mount);
+            unmounts.push(ref.unmount);
+        } else {
+            mkRef(ref, childComp, updates, mounts, unmounts);
+        }
     }
     return {
         dom: childComp.element.dom,

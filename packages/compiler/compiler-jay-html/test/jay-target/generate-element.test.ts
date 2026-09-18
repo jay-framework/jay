@@ -457,6 +457,19 @@ describe('generate jay-html element', () => {
                     await readFixtureFile(folder, 'generated-element-main-sandbox'),
                 );
             });
+
+            // DL#193 Phase 3 refinement — the injected component is sandboxed (`secureChildComp`), yet
+            // the override-injected forwarded ref still re-bases to the outer scope: the selector
+            // `(vs, _p1) => _p1` and `__parentContext` appear in the main-sandbox output exactly as in
+            // the trusted output (only the childComp variant differs).
+            it('override-injected forwarded ref carrying the outer scope (DL#193 Phase 3)', async () => {
+                const folder = 'contracts/page-with-override-forwarded-ref';
+                const elementFile = await readFileAndGenerateElementFile(folder, { importerMode });
+                expect(elementFile.validations).toEqual([]);
+                expect(await prettify(elementFile.val)).toEqual(
+                    await readFixtureFile(folder, 'generated-element-main-sandbox'),
+                );
+            });
         });
     });
 
@@ -547,6 +560,20 @@ describe('generate jay-html element', () => {
         // second declaration would be a duplicate-identifier TS error. Full toEqual locks the dedup.
         it('generate element file with forwarded inner refs from two structural instances of the same composite (DL#193 Phase 3)', async () => {
             const folder = 'contracts/page-with-forwarded-ref-multi';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
+        // DL#193 Phase 3 refinement — a component INJECTED via `<override>` into a generic slot
+        // composite forwards its ref carrying the OUTER (override authoring) scope, not the composite's
+        // own ViewState (§C). The single instance re-bases to the page scope
+        // (`CounterRef<PageWithOverrideForwardedRefViewState>`), the repeated one to the forEach item
+        // (`CounterRefs<CardOfPageWithOverrideForwardedRefViewState>`); each injected `childComp` gets
+        // the `(vs, _p1) => _p1` selector and its composite mount emits `__parentContext`. Full toEqual
+        // locks the outer-scope type, the selector, and the parentContext plumbing together.
+        it('generate element file with override-injected forwarded ref carrying the outer scope (DL#193 Phase 3)', async () => {
+            const folder = 'contracts/page-with-override-forwarded-ref';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));

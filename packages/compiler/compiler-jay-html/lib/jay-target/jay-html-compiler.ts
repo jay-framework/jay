@@ -50,6 +50,7 @@ import {
     JayHtmlSourceFile,
 } from './jay-html-source-file';
 import { buildStructuralPassthroughComp } from './structural-coercions';
+import { OVERRIDE_INJECTED_MARKER } from './jay-html-overrides';
 import {
     AsyncDirectiveType,
     AsyncDirectiveTypes,
@@ -437,7 +438,10 @@ export function renderChildCompProps(
             attrCanonical === 'foreach' ||
             attrCanonical === 'trackby' ||
             attrCanonical === 'jay-coordinate-base' ||
-            attrCanonical === 'jay-scope'
+            attrCanonical === 'jay-scope' ||
+            // DL#193 Phase 3 refinement: provenance marker on override-injected component tags —
+            // read for ref re-basing, never a prop.
+            attrCanonical === OVERRIDE_INJECTED_MARKER
         )
             return;
         if (attrCanonical === 'props') {
@@ -530,6 +534,14 @@ export function renderChildCompRef(
     let originalName = element.attributes.ref || refNameGenerator.newAutoRefNameGenerator();
     let refName = camelCase(originalName);
     let constName = refNameGenerator.newConstantName(refName, variables);
+    // DL#193 Phase 3 refinement: an override-injected child component's forwarded ref carries the
+    // OUTER (override authoring) scope, not the composite's own ViewState — the override author knows
+    // the outer scope, not the component's internals (§C). The composite's inline body is compiled
+    // in `childContext`, whose `variables.parent` is the outer page/forEach scope. A plain inner ref
+    // (no marker) keeps the composite's own `currentType`.
+    const isOverrideInjected = OVERRIDE_INJECTED_MARKER in element.attributes;
+    const refViewStateType =
+        isOverrideInjected && variables.parent ? variables.parent.currentType : variables.currentType;
     let refs = mkRefsTree(
         [
             mkRef(
@@ -538,7 +550,7 @@ export function renderChildCompRef(
                 constName,
                 dynamicRef,
                 !element.attributes.ref,
-                variables.currentType,
+                refViewStateType,
                 new JayComponentType(componentName, []),
             ),
         ],
@@ -820,23 +832,38 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? 
         let renderedRef = renderChildCompRef(htmlElement, newContext, componentName);
         if (renderedRef.rendered !== '') renderedRef = renderedRef.map((_) => ', ' + _);
         let getProps = `(${newContext.variables.currentVar}: ${newContext.variables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
+        // DL#193 Phase 3 refinement: an override-injected child component with a forwarded ref must
+        // deliver the OUTER (override authoring) scope on that ref — for onChange AND find/map alike
+        // (§C). Emit a ref-viewState selector `(vs, _p1) => _p1` that reads the first parent from the
+        // live parentDataChain, and raise this fragment's parentDepth so the enclosing composite
+        // instance emits `__parentContext` (its synthetic parent = the outer scope) at its mount site.
+        const isOverrideInjected =
+            OVERRIDE_INJECTED_MARKER in htmlElement.attributes && renderedRef.rendered !== '';
+        const refSelectorArg = isOverrideInjected
+            ? `, (${newContext.variables.currentVar}, _p1) => _p1`
+            : '';
+        const nestedParentDepth = isOverrideInjected ? 1 : 0;
         if (importedSandboxedSymbols.has(componentName) || importerMode === RuntimeMode.MainSandbox)
             return new RenderFragment(
-                `${newContext.indent.firstLine}secureChildComp(${componentName}, ${getProps}${renderedRef.rendered})`,
+                `${newContext.indent.firstLine}secureChildComp(${componentName}, ${getProps}${renderedRef.rendered}${refSelectorArg})`,
                 Imports.for(Import.secureChildComp)
                     .plus(propsGetterAndRefs.imports)
                     .plus(renderedRef.imports),
                 propsGetterAndRefs.validations,
                 renderedRef.refs,
+                [],
+                nestedParentDepth,
             );
         else
             return new RenderFragment(
-                `${newContext.indent.firstLine}childComp(${componentName}, ${getProps}${renderedRef.rendered})`,
+                `${newContext.indent.firstLine}childComp(${componentName}, ${getProps}${renderedRef.rendered}${refSelectorArg})`,
                 Imports.for(Import.childComp)
                     .plus(propsGetterAndRefs.imports)
                     .plus(renderedRef.imports),
                 propsGetterAndRefs.validations,
                 renderedRef.refs,
+                [],
+                nestedParentDepth,
             );
     }
 

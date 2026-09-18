@@ -258,6 +258,18 @@ describe('generate jay-html server element', () => {
                 await readFixtureServerElementFile(folder),
             );
         });
+
+        // DL#193 §C — an override-injected `<jay:Counter>` on the server target: refs are a client-only
+        // concern, so forwarding (and the outer-scope re-basing) is a no-op here. The injected component
+        // renders as literal `<jay:Counter>` text just like the plain forwarded-ref fixture.
+        it('for override-injected forwarded ref — refs are a no-op (DL#193 §C)', async () => {
+            const folder = 'contracts/page-with-override-forwarded-ref';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
     });
 
     describe('slowForEach', () => {

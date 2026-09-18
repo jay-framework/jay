@@ -33,6 +33,17 @@ export interface OverrideSpec {
 const OVERRIDE_TAG = 'override';
 
 /**
+ * DL#193 Phase 3 refinement — provenance marker stamped on every child-component (`<jay:…>`) tag
+ * that an override *injects* into a composite's body. The compiler reads it to decide that the
+ * injected component's forwarded ref must carry the OUTER (override authoring) scope rather than the
+ * composite's own ViewState — the override author knows the outer scope, not the component's
+ * internals (§C). A plain inner `<jay:Counter ref="cta">` authored in the composite's OWN template
+ * carries no marker and keeps composite scope. The marker is a static literal attribute, stripped by
+ * codegen (ignored in {@link renderChildCompProps} and never emitted).
+ */
+export const OVERRIDE_INJECTED_MARKER = 'jay-from-override';
+
+/**
  * Attributes the jay-html compiler reads literally (never through the expression parser), so their
  * values must NOT be marked with the parent-scope pragma — doing so would corrupt a ref name, a
  * trackBy field, or an internal coordinate/scope marker.
@@ -78,6 +89,13 @@ function markParentScope(node: Node): void {
             if (child.rawText.includes('{')) child.rawText = PARENT_SCOPE_PRAGMA + child.rawText;
         } else if (child.nodeType === NodeType.ELEMENT_NODE) {
             const el = child as HTMLElement;
+            // DL#193 Phase 3 refinement: stamp injected child-component tags with the provenance
+            // marker so codegen re-bases their forwarded refs to the outer (override) scope. Only
+            // `<jay:…>` component tags forward refs; marking plain HTML elements would leak the
+            // attribute into their generated `e(...)` call, so restrict it to component tags.
+            if ((el.rawTagName ?? '').toLowerCase().startsWith('jay:')) {
+                el.setAttribute(OVERRIDE_INJECTED_MARKER, '');
+            }
             for (const [name, value] of Object.entries(el.attributes)) {
                 const lower = name.toLowerCase();
                 if (LITERAL_ATTRS.has(lower)) continue;

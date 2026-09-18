@@ -314,6 +314,19 @@ describe('generate jay-html element hydrate', () => {
             );
         });
 
+        // DL#193 §C + Phase 3 — an OVERRIDE-injected component (`<jay:Counter>` inside
+        // `<override ref="slot">`) forwards its `cta` ref re-based to the OUTER (page / forEach item)
+        // scope: the adopt-path `childComp(Counter, …)` carries the `(vs, _p1) => _p1` selector and the
+        // composite mount site passes `__parentContext`, matching the element target.
+        it('for override-injected forwarded ref carrying the outer scope (DL#193 §C)', async () => {
+            const folder = 'contracts/page-with-override-forwarded-ref';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+
         // DL#193 Phase 3 (§4 validation) — the hydrate target rejects a `forEach` inside a pure
         // (Tier 2) structural composite with the same exact diagnostic as the element target.
         it('rejects a forEach inside a pure (Tier 2) structural composite (DL#193 Phase 3)', async () => {

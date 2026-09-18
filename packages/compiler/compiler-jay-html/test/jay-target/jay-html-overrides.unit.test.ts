@@ -275,12 +275,15 @@ describe('jay-html overrides (DL#181)', () => {
                 'card',
             );
             expect(result.validations).toEqual([]);
+            // DL#193 Phase 3 refinement: injected `<jay:…>` component tags are stamped with the
+            // `jay-from-override` provenance marker so codegen re-bases their forwarded refs to the
+            // outer (override authoring) scope. The marker is stripped by codegen (never a prop).
             expect(prettifyHtml(result.val!)).toEqual(
                 prettifyHtml(`<div class="card">
                     <button ref="cta-label" class="btn">Buy Now</button>
                     <img ref="hero-image" src="/img/old.png" alt="Old" style="border-radius: 4px; opacity: 1">
                     <p ref="disclaimer">Terms apply</p>
-                    <nav ref="menu-content"><jay:MenuItem label="Home" href="/"></jay:MenuItem><jay:MenuItem label="Docs" href="/docs"></jay:MenuItem></nav>
+                    <nav ref="menu-content"><jay:MenuItem label="Home" href="/" jay-from-override></jay:MenuItem><jay:MenuItem label="Docs" href="/docs" jay-from-override></jay:MenuItem></nav>
                 </div>`),
             );
         });

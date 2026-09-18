@@ -25,16 +25,18 @@ window.onload = function () {
     const instance = render2({ pageTitle: 'Jay Override + Ref Forwarding Demo (secure)', cards });
 
     // Same forwarded-ref wiring as the regular build — the Counter is injected via <override> into a
-    // *sandboxed* card, yet the forwarded `cta` reaches the sandboxed counter identically.
+    // *sandboxed* card, yet the forwarded `cta` reaches the sandboxed counter identically. Per DL#193
+    // §C the injected ref carries the OUTER (override authoring) scope: the page for the single card,
+    // the forEach item for the collection.
     refs.signupCard.cta.onChange(({ event, viewState }) => {
-        write(`[single] "${viewState.heading}" counter → ${event}`);
+        write(`[single] "${viewState.pageTitle}" counter → ${event}`);
     });
 
     refs.cards.cards.cta.onChange(({ event, viewState }) => {
-        write(`[list] "${viewState.heading}" counter → ${event}`);
+        write(`[list] "${viewState.label}" counter → ${event}`);
     });
 
-    const bravoCta = refs.cards.cards.cta.find((vs) => vs.heading === 'Bravo');
+    const bravoCta = refs.cards.cards.cta.find((vs) => vs.label === 'Bravo');
     if (bravoCta)
         bravoCta.onChange(({ event }) => write(`[find:Bravo only] counter → ${event}`));
 

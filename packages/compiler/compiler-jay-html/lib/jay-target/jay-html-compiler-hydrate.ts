@@ -41,6 +41,7 @@ import {
 } from './jay-html-helpers';
 import { Indent } from './indent';
 import { buildStructuralPassthroughComp } from './structural-coercions';
+import { OVERRIDE_INJECTED_MARKER } from './jay-html-overrides';
 import {
     hasNamedComponentRefs,
     optimizeRefs,
@@ -576,13 +577,24 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         const renderedRef = renderChildCompRef(element, renderContext, componentName);
         const refSuffix = renderedRef.rendered !== '' ? `, ${renderedRef.rendered}` : '';
         const getProps = `(${context.variables.currentVar}: ${context.variables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
+        // DL#193 Phase 3 refinement (mirror of the element target's renderNestedComponent): an
+        // override-injected child component's forwarded ref carries the OUTER (override authoring)
+        // scope. Emit the `(vs, _p1) => _p1` ref-viewState selector and raise parentDepth so the
+        // enclosing composite instance emits `__parentContext` at its mount site (§C).
+        const isOverrideInjected =
+            OVERRIDE_INJECTED_MARKER in element.attributes && renderedRef.rendered !== '';
+        const refSelectorArg = isOverrideInjected
+            ? `, (${context.variables.currentVar}, _p1) => _p1`
+            : '';
         return new RenderFragment(
-            `${context.indent.firstLine}childComp(${componentName}, ${getProps}${refSuffix})`,
+            `${context.indent.firstLine}childComp(${componentName}, ${getProps}${refSuffix}${refSelectorArg})`,
             Imports.for(Import.childComp)
                 .plus(propsGetterAndRefs.imports)
                 .plus(renderedRef.imports),
             propsGetterAndRefs.validations,
             renderedRef.refs,
+            [],
+            isOverrideInjected ? 1 : 0,
         );
     }
 
