@@ -11,7 +11,8 @@ It replaces the earlier `hasCodeFile`-only "two cases + suppression" draft with 
 protects coded components from having ref-type assumptions broken by arbitrary overrides, and (b) gives
 the compiler a first-class signal for *which scope a ref belongs to*.
 
-Related: DL#181 (override — its "override any `ref`" is **superseded** here), DL#187 (three-tier
+Related: DL#181 (override — its **content-replace** is subsumed by slots and `remove` is dropped; its
+**attribute/style merge** is retained on any ref), DL#187 (three-tier
 headfull model), DL#162 (structural components), DL#193 (`$parent` binding + Phase-3 ref forwarding).
 
 ## Decisions for the Implementer (TL;DR)
@@ -28,7 +29,7 @@ component's **own** scope. Slots are **compile-time artifacts, not runtime** —
 |--------------------------|----------------------------------------------------------------------------------------------|----------------------------------------------------------------|
 | **What it is:**          | the component's **own** ref                                                                  | a declared **override target**                                 |
 | **Scope of its refs:**   | Tier 3 → **own**; <br> Tier 1/2 → **external**                                               | override fragment → **parent**; <br> default content → **own** | 
-| **Overridable:**         | No                                                                                           | **Yes — the only override target**                             |
+| **Overridable:**         | attribute/style merge only (any ref; presentation-safe)                                     | **content fill — the only content-override target**            |
 | **Exposed to consumer:** | contract-declared → **yes**; <br> internal (jay-html-only) → Tier 3 **no**, Tier 1/2 **yes** | injected refs **yes** <br> (parent scope, keyed by slot name)  |
 
 1. **`slot` is a new `ContractTagType`** (`contract.ts:3`), alongside `data`/`interactive`/`variant`/
@@ -37,11 +38,22 @@ component's **own** scope. Slots are **compile-time artifacts, not runtime** —
    **default content** (rendered when not overridden). Slots work at **all tiers**, carry **no phase**,
    and (v1) take **no type constraint** on injected content.
 
-2. **Overrides target slots only.** `<override ref="X">` is valid **if and only if** `X` is declared
-   `type: slot` in the target's contract. Otherwise → **compile error** (prevention-first). This
-   **supersedes DL#181's "override any `ref` anchor"**. Rationale (the user's): a coded component's `.ts`
-   assumes each ref's element/component type; letting a parent swap an arbitrary ref's type silently
-   breaks those assumptions. A slot is the author's explicit "this location is safe to replace."
+2. **Two `<override>` forms, split by the addressing attribute** (chosen: reuse `<override>`, not a new
+   tag). The form is selected by **`ref=` vs `slot=`**, not by presence of children.
+   - **Attribute form** — `<override ref="X" style=… class=… attr=… />` merges attributes onto the
+     *existing* element, per-key (`style` per-CSS-property via cascade). **Allowed on any `ref`, all
+     tiers.** Safe by construction: element identity and type are preserved, so a coded component's
+     `refs.X` still resolves to the same element of the same type. This is the *only* part of DL#181
+     retained — the efficient "restyle a composite without externalizing design props" model.
+   - **Content form** — `<override slot="X">…children…</override>` fills declared slot `X` (a `type: slot`
+     tag; else **compile error**, prevention-first). Rationale (the user's): a coded component's `.ts`
+     assumes each ref's element/component type; replacing content at an arbitrary ref silently breaks
+     that. A slot is the author's explicit "this location is safe to replace." An **empty**
+     `<override slot="X"></override>` renders the slot with nothing — the clean replacement for DL#181
+     `remove`.
+   - `ref=` addresses a template *element* (the universal anchor, DL#181 A2); `slot=` names a *declared
+     slot*. Keeping `ref` for the template marking and splitting only the usage-site verb keeps one
+     addressing mechanism in templates.
 
 3. **Own-ref exposure & scope, by `hasCodeFile`** (`jay-html-parser.ts:1242`):
    - **Tier 3 (coded).** The component's **contract-declared** `interactive` refs are its **public Refs
@@ -123,8 +135,10 @@ forwarding a no-code component's own `interactive` refs at external scope.
   limit forwarding to component refs. Element-ref forwarding is the missing piece.
 - **`getForwardedInnerRef`** (`node-reference.ts:273`) is ref-kind-agnostic and does **no** re-basing
   (line 270); the collection runtime path needs no change once element refs are exposed and re-based.
-- **DL#181 override anchor** — the ref-anchored `<override>` *syntax* is reused verbatim; only its
-  *target validity* narrows (must be a declared slot).
+- **DL#181 override** — the `<override>` element and `ref` anchoring are reused. Its **attribute/style
+  merge** form is retained verbatim (safe: preserves element type; `style` per-property via cascade,
+  `jay-html-overrides.ts` `applyOverrides`). Its **content-replace** form is subsumed by slots (content
+  now must target a `type: slot` ref); its `remove` operation is dropped.
 - **DL#162 empty-contract unwrap** (`jay-html-parser.ts:1245-1254`) — under this model Tier 1 stays a
   **structural boundary** (no unwrap); its own `interactive` refs forward at external scope; no slots.
 
@@ -148,7 +162,8 @@ tags:
 ```
 
 Template side reuses DL#181's `ref` anchoring: the element whose `ref` matches a `slot` tag **is** the
-slot; its children are the **default content**.
+slot; its children are the **default content**. At the usage site the slot is filled with
+`<override slot="body">…</override>` (§2) — `slot=`, not `ref=`.
 
 ```html
 <!-- card.jay-html -->
@@ -161,16 +176,29 @@ slot; its children are the **default content**.
 ```
 
 Validation (compiler, prevention-first):
-- A `ref` used as an `<override>` target **must** resolve to a `type: slot` tag → else
-  `"<override ref=\"body\"> targets \"body\", which is not a slot. Declare it as type: slot in <contract>."`
-- An `interactive` ref used as an override target → the same error.
-- `required: true` slot with no override at a usage site → compile error.
+- `<override slot="X">` **must** resolve `X` to a `type: slot` tag → else
+  `"<override slot=\"body\"> — no slot \"body\" in <contract>. Declare it as type: slot, or use
+  <override ref=\"body\" …/> to restyle an existing element."`
+- `<override ref="X" … />` (attribute form) is allowed on **any** ref (contract-declared, slot, or
+  override-only) — it never changes element type. Children under a `ref=` override → compile error
+  ("use `slot=` to fill a slot").
+- `required: true` slot with no `<override slot=…>` at a usage site → compile error.
+- `remove` on `<override>` → compile error (dropped; use an empty `<override slot="X"></override>`).
 
-### 2. Override targets slots only (supersedes DL#181 "override any ref")
+### 2. Two `<override>` forms: attribute (any ref) vs content (slots only)
 
-`<override ref="X">` is legal if and only if `X` is a declared slot. Uniform across tiers. Trades
-DL#181's "consumer can override without author cooperation" for author-sanctioned, type-safe extension
-points — the safety choice from the Problem section.
+`<override>` keeps DL#181's two forms, now split by safety:
+
+- **Attribute form** (`<override ref="X" style=… class=… />`, no children): merges attributes onto the
+  existing element — per-key, `style` per-CSS-property via CSS cascade so the component's stylesheet
+  stays a black box (DL#181 A5). Allowed on **any** ref because it preserves element identity/type. Any
+  `{binding}` in a value resolves at the **parent** scope (DL#193 §C), like slot content.
+- **Content form** (`<override slot="X">…children…</override>`): fills declared slot `X` (a `type: slot`
+  tag). The structural, type-changing operation that needs author opt-in. The form is chosen by the
+  **addressing attribute** (`slot=` here vs `ref=` above), not by presence of children — so an **empty**
+  `<override slot="X"></override>` unambiguously means "render the slot with nothing."
+
+DL#181's `remove` is dropped — an empty slot fill (or `if`/variant) replaces it.
 
 ### 3. Scope rules (read from the tag type)
 
@@ -222,8 +250,11 @@ are single-region and prop-less (Q4).
 Phase A — `slot` contract tag + validation (prevention-first, no runtime yet):
 1. Add `ContractTagType.slot`; parse `type: slot`; no `elementType` requirement; phaseless (slow);
    route to Refs (not ViewState).
-2. Validation: `<override ref>` must resolve to a slot; `required` slot must be overridden; interactive
-   refs are not valid override targets. Fixture-based tests with clear error strings.
+2. Validation: `<override slot=…>` must resolve to a slot; the `<override ref=… />` attribute form is
+   allowed on any ref; children under a `ref=` override and `remove` are compile errors; `required` slot
+   must be filled. In `applyOverrides` (`jay-html-overrides.ts`), keep the attribute/style merge (now
+   `ref=`), route content by `slot=` to a slot target, and drop the `remove` branch. Fixture-based tests
+   with clear error strings.
 
 Phase B — Tier 1/2 own-`interactive` forwarding at external scope (fixes `cardCounter`):
 3. Emit the DL#193 ref-viewState selector `(vs, _p1) => _p1` for every forwarded own `interactive` ref
@@ -266,20 +297,28 @@ export interface _CodedCardRefs extends CardRefs {   // CardRefs = declared even
 }
 ```
 
-Override validation (prevention-first):
+Override forms (prevention-first):
 
 ```html
-<!-- ❌ compile error: `title` is a data/interactive ref, not a slot -->
+<!-- ✅ attribute form (ref=): restyle ANY element, identity/type preserved -->
+<jay:Card><override ref="hero" style="border-radius: 16px" class="featured" /></jay:Card>
+
+<!-- ❌ children under a ref= override → compile error (use slot=) -->
 <jay:Card><override ref="title"><h3>Hi</h3></override></jay:Card>
 
-<!-- ✅ `body` is declared `type: slot` -->
-<jay:Card><override ref="body"><jay:Counter ref="cta" /></override></jay:Card>
+<!-- ✅ content form (slot=): fill a declared slot -->
+<jay:Card><override slot="body"><jay:Counter ref="cta" /></override></jay:Card>
+
+<!-- ✅ empty slot fill = the old `remove` -->
+<jay:Card><override slot="body"></override></jay:Card>
 ```
 
 ## Trade-offs
 
-- **Author cooperation required (vs DL#181).** Overrides now need a declared slot — costs "override
-  anything" flexibility, buys type safety and a clear, designer-facing extension surface. Deliberate.
+- **Author cooperation for content overrides (vs DL#181).** *Content* overrides now need a declared
+  slot — costs "replace any content" flexibility, buys type safety and a clear, designer-facing
+  extension surface. *Attribute/style* overrides stay free on any ref (safe), preserving DL#181's
+  efficient restyle-without-design-props model. `remove` is dropped.
 - **New contract surface.** `slot` is genuinely new (null-hypothesis: no existing tag encodes
   "parent-scope, overridable, default-content-bearing region" — `interactive` is own-scope,
   non-overridable, phased). Justified: it *removes* two inferred mechanisms (provenance markers,
@@ -293,7 +332,9 @@ Override validation (prevention-first):
   `onChange`/`find`/`map` payload viewState is the external item.
 - Coded card: Refs extends the contract-derived Refs (own scope); internal refs absent; `body.cta`
   present at external scope, keyed by slot name.
-- `<override>` on a non-slot ref → compile error; `required` slot unfilled → error.
+- `<override ref=…>` (attribute form) merges onto any ref (per-key; `style` per-property), element type
+  unchanged. `<override slot=…>` fills a declared slot (empty = renders nothing). `slot=` on a non-slot,
+  children under a `ref=` override, or `remove` → compile error; `required` slot unfilled → error.
 - Slot with no override renders default content; with an override renders (and forwards refs of) the
   injected fragment keyed by slot name.
 - Tier 1 (no contract) inlines as a structural boundary (no unwrap); own interactive refs external
