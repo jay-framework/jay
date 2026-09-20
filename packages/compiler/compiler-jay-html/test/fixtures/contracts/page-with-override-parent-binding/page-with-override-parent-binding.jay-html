@@ -13,7 +13,7 @@ data:
 <div>
     <h1>{itemName}</h1>
     <jay:card heading="Premium">
-        <override ref="cta">Start {itemName} trial</override>
+        <override slot="cta">Start {itemName} trial</override>
     </jay:card>
 </div>
 </body>

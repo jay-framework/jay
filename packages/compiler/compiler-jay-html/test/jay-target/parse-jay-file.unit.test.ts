@@ -2037,6 +2037,10 @@ describe('compiler', () => {
                     type: [ContractTagType.interactive],
                     elementType: ['HTMLButtonElement'],
                 },
+                {
+                    tag: 'body',
+                    type: [ContractTagType.slot],
+                },
             ],
         };
 
@@ -2053,6 +2057,7 @@ describe('compiler', () => {
         <img src="{logoUrl}" />
         <span>{cartCount}</span>
         <button ref="increment">+</button>
+        <div ref="body">Default</div>
     </header>
 </body>
 </html>`;
@@ -2155,7 +2160,7 @@ describe('compiler', () => {
             expect(jayTag.querySelector('button')).toBeTruthy();
         });
 
-        it('should apply <override> content into the injected component template (DL#181)', async () => {
+        it('should fill a declared slot with <override slot=…> content (DL#194)', async () => {
             const resolver = makeHeadfullFSResolver();
 
             const jayFile = await parseJayFile(
@@ -2166,7 +2171,7 @@ describe('compiler', () => {
                     `<body>
                         |   <h1>{title}</h1>
                         |   <jay:header logoUrl="/logo.png">
-                        |     <override ref="increment">Add to cart</override>
+                        |     <override slot="body">Add to cart</override>
                         |   </jay:header>
                         | </body>`,
                     `<script type="application/jay-headfull"
@@ -2187,12 +2192,12 @@ describe('compiler', () => {
                 .querySelectorAll('*')
                 .find((el) => el.tagName?.toLowerCase() === 'jay:header');
             expect(jayTag).toBeDefined();
-            const button = jayTag.querySelector('button');
-            expect(button.getAttribute('ref')).toEqual('increment');
-            expect(button.innerHTML).toEqual('Add to cart');
+            const slot = jayTag.querySelector('[ref="body"]');
+            expect(slot).toBeTruthy();
+            expect(slot.innerHTML).toEqual('Add to cart');
         });
 
-        it('should report a compile error for an <override> targeting a missing ref (DL#181)', async () => {
+        it('should report a compile error for a <override slot=…> that is not a declared slot (DL#194)', async () => {
             const resolver = makeHeadfullFSResolver();
 
             const jayFile = await parseJayFile(
@@ -2202,7 +2207,40 @@ describe('compiler', () => {
                         |`,
                     `<body>
                         |   <jay:header logoUrl="/logo.png">
-                        |     <override ref="not-a-ref">x</override>
+                        |     <override slot="not-a-slot">x</override>
+                        |   </jay:header>
+                        | </body>`,
+                    `<script type="application/jay-headfull"
+                        |   src="./header/header"
+                        |   contract="./header/header.jay-contract"
+                        |   names="header"
+                        | ></script>`,
+                ),
+                'Page',
+                tempDir,
+                {},
+                resolver,
+                '',
+            );
+
+            expect(jayFile.validations).toEqual([
+                '<override slot="not-a-slot"> — no slot "not-a-slot" in header. ' +
+                    'Declare it as type: slot, or use <override ref="not-a-slot" …/> to ' +
+                    'restyle an existing element.',
+            ]);
+        });
+
+        it('should report a compile error for an attribute <override ref=…> targeting a missing ref (DL#194)', async () => {
+            const resolver = makeHeadfullFSResolver();
+
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |   title: string
+                        |`,
+                    `<body>
+                        |   <jay:header logoUrl="/logo.png">
+                        |     <override ref="not-a-ref" class="x" />
                         |   </jay:header>
                         | </body>`,
                     `<script type="application/jay-headfull"
@@ -2225,9 +2263,9 @@ describe('compiler', () => {
             ]);
         });
 
-        it('should override a ref not required by the contract (override-only anchor, DL#181 Phase 2)', async () => {
-            // `tagline` is a ref in the component jay-html but NOT in headerContract — a pure
-            // override anchor. It must be allowed (no error) and remain overridable.
+        it('should merge attributes onto any ref via the attribute form, even a non-contract ref (DL#194)', async () => {
+            // `tagline` is a ref in the component jay-html but NOT in headerContract. The attribute
+            // form preserves element identity/type, so it is allowed on ANY ref (no slot needed).
             const headerWithOverrideOnlyRef = `<html>
 <head>
     <script type="application/jay-data">
@@ -2264,7 +2302,7 @@ describe('compiler', () => {
                         |`,
                     `<body>
                         |   <jay:header logoUrl="/logo.png">
-                        |     <override ref="tagline">Hi there</override>
+                        |     <override ref="tagline" class="highlight" />
                         |   </jay:header>
                         | </body>`,
                     `<script type="application/jay-headfull"
@@ -2286,7 +2324,9 @@ describe('compiler', () => {
                 .find((el) => el.tagName?.toLowerCase() === 'jay:header');
             const tagline = jayTag.querySelector('[ref="tagline"]');
             expect(tagline).toBeTruthy();
-            expect(tagline.innerHTML).toEqual('Hi there');
+            expect(tagline.getAttribute('class')).toEqual('highlight');
+            // attribute form preserves content — the default text is untouched
+            expect(tagline.innerHTML).toEqual('Welcome');
         });
 
         it('should not treat headfull imports without contract as full-stack', async () => {

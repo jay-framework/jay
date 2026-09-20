@@ -448,6 +448,106 @@ describe('parse contract', () => {
 
     // parse variant enum
 
+    describe('slot tags (DL#194)', () => {
+        it('should parse a slot tag (optional by default)', () => {
+            const contract = `
+            name: card
+            tags:
+              - tag: heading
+                type: data
+                dataType: string
+              - tag: body
+                type: slot
+            `;
+
+            const result = parseContract(contract, 'card.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val).toEqual({
+                name: 'card',
+                tags: [
+                    { tag: 'heading', type: [ContractTagType.data], dataType: JayString },
+                    { tag: 'body', type: [ContractTagType.slot] },
+                ],
+            });
+        });
+
+        it('should parse a required slot tag', () => {
+            const contract = `
+            name: card
+            tags:
+              - tag: body
+                type: slot
+                required: true
+            `;
+
+            const result = parseContract(contract, 'card.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val).toEqual({
+                name: 'card',
+                tags: [{ tag: 'body', type: [ContractTagType.slot], required: true }],
+            });
+        });
+
+        it('should report validation error if slot has a dataType', () => {
+            const contract = `
+            name: card
+            tags:
+              - tag: body
+                type: slot
+                dataType: string
+            `;
+
+            const result = parseContract(contract, 'card.jay-contract');
+            expect(result.validations).toEqual([
+                'Tag [body] of type [slot] cannot have a dataType',
+            ]);
+        });
+
+        it('should report validation error if slot has an elementType', () => {
+            const contract = `
+            name: card
+            tags:
+              - tag: body
+                type: slot
+                elementType: HTMLDivElement
+            `;
+
+            const result = parseContract(contract, 'card.jay-contract');
+            expect(result.validations).toEqual([
+                'Tag [body] of type [slot] cannot have an elementType',
+            ]);
+        });
+
+        it('should report validation error if slot has an explicit phase', () => {
+            const contract = `
+            name: card
+            tags:
+              - tag: body
+                type: slot
+                phase: fast
+            `;
+
+            const result = parseContract(contract, 'card.jay-contract');
+            expect(result.validations).toEqual([
+                'Tag [body] of type [slot] cannot have an explicit phase attribute (slots are compile-time, treated as slow)',
+            ]);
+        });
+
+        it('should report validation error if slot is mixed with other types', () => {
+            const contract = `
+            name: card
+            tags:
+              - tag: body
+                type: [slot, data]
+            `;
+
+            const result = parseContract(contract, 'card.jay-contract');
+            expect(result.validations).toEqual([
+                'Tag [body] cannot be both slot and other types',
+            ]);
+        });
+    });
+
     describe('validations', () => {
         it('should report validation error if type is variant and dataType is not provided', () => {
             const contract = `

@@ -36,7 +36,7 @@ import {
 import { SourceFileFormat } from '@jay-framework/compiler-shared';
 import { JayImportLink, JayImportName } from '@jay-framework/compiler-shared';
 import { JayYamlStructure } from './jay-yaml-structure';
-import { Contract, ContractTag, RenderingPhase } from '../contract';
+import { Contract, ContractTag, ContractTagType, RenderingPhase } from '../contract';
 import { applyHeadfullOverrides, hasOverrides } from './jay-html-overrides';
 
 import {
@@ -1202,9 +1202,20 @@ async function parseHeadfullFSImports(
 
         for (const jayTag of jayTags) {
             if (hasOverrides(jayTag)) {
-                // DL#181: usage tag contains <override> children — inject the component body with
-                // overrides applied, surfacing missing-ref / ambiguous-operation compile errors.
-                const overridden = applyHeadfullOverrides(jayHtmlBody, jayTag, contractName);
+                // DL#181/#194: usage tag contains <override> children — inject the component body
+                // with overrides applied, surfacing missing-ref / non-slot / dropped-op compile
+                // errors. Slot names (DL#194) let the compiler reject `slot=` on a non-slot ref.
+                const slotNames = new Set(
+                    loadedContract.tags
+                        .filter((t) => t.type.includes(ContractTagType.slot))
+                        .map((t) => t.tag),
+                );
+                const overridden = applyHeadfullOverrides(
+                    jayHtmlBody,
+                    jayTag,
+                    contractName,
+                    slotNames,
+                );
                 validations.push(...overridden.validations);
                 jayTag.set_content(overridden.val!);
                 jayTag.setAttribute('jc', contractName);

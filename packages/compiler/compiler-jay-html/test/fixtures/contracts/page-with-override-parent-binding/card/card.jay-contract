@@ -8,3 +8,5 @@ tags:
     type: data
     dataType: string
     phase: fast
+  - tag: cta
+    type: slot

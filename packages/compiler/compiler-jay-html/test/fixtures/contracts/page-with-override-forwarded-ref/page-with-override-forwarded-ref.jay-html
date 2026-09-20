@@ -24,7 +24,7 @@ data:
     <!-- Single injected composite — its `cta` forwards to refs.signupCard.cta. Per DL#193 §C the
          injected ref carries the OUTER (page) scope, not the card's own ViewState. -->
     <jay:card heading="Sign up" ref="signupCard">
-        <override ref="slot">
+        <override slot="slot">
             <jay:Counter ref="cta" initialValue="0" />
         </override>
     </jay:card>
@@ -34,7 +34,7 @@ data:
     <ul forEach="cards" trackBy="id">
         <li>
             <jay:card heading="{label}" ref="cards">
-                <override ref="slot">
+                <override slot="slot">
                     <jay:Counter ref="cta" initialValue="0" />
                 </override>
             </jay:card>

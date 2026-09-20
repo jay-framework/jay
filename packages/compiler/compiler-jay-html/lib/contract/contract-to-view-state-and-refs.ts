@@ -251,6 +251,11 @@ async function traverseTag(
         return { ref, ...(tag.dataType ? { type: tag.dataType } : {}) };
     } else if (tag.type.includes(ContractTagType.variant) && isEnumType(tag.dataType)) {
         return { type: tag.dataType };
+    } else if (tag.type.includes(ContractTagType.slot)) {
+        // DL#194 — a slot is a scopeless compile-time override target. It contributes no ViewState
+        // member and (Phase A) no ref of its own; its injected refs (parent scope, keyed by slot
+        // name) are surfaced from the override content in Phase C/E.
+        return {};
     } else {
         return { type: tag.dataType || JayUnknown };
     }

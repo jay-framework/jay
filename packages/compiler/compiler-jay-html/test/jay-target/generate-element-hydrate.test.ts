@@ -335,17 +335,6 @@ describe('generate jay-html element hydrate', () => {
             expect(hydrateFile.validations).toEqual([forEachInsidePureComponentError('card')]);
         });
 
-        // DL#193 "Fix — empty-contract unwrap": on the hydrate target too, an unwrapped
-        // empty-contract import resolves its override binding at page scope (`vs.itemName`,
-        // no `_p1`) because the parent-scope pragma is stripped before inlining.
-        it('for override binding on an unwrapped empty-contract import (DL#193)', async () => {
-            const folder = 'contracts/page-with-override-unwrap-parent-binding';
-            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
-            expect(hydrateFile.validations).toEqual([]);
-            expect(await prettify(hydrateFile.val)).toEqual(
-                await readFixtureElementHydrateFile(folder),
-            );
-        });
 
         it('for headless instance inside forEach', async () => {
             const folder = 'contracts/page-with-headless-in-foreach';

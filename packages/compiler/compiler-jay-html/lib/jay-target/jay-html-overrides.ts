@@ -3,30 +3,36 @@ import { WithValidations } from '@jay-framework/compiler-shared';
 import { PARENT_SCOPE_PRAGMA } from '../expressions/expression-compiler';
 
 /**
- * Headfull component overrides (DL#181).
+ * Headfull component overrides (DL#181, narrowed by DL#194).
  *
- * An `<override>` element nested inside a `<jay:ComponentName>` usage tag targets a `ref` in that
- * component's own template and customizes part of the injected markup at compile time, during the
- * DL#111 template-injection pass. Four operations, all resolved against the target component's own
- * template (so `{binding}` expressions inside an override resolve to the target's ViewState, not the
- * usage site's — DL#181 Q6):
+ * An `<override>` element nested inside a `<jay:ComponentName>` usage tag customizes part of the
+ * injected markup at compile time, during the DL#111 template-injection pass. DL#194 splits it into
+ * **two forms, selected by the addressing attribute** (`ref=` vs `slot=`), not by presence of children:
  *
- * - content replace  — `<override ref="x">...</override>`      (replaces the target's children)
- * - attribute merge  — `<override ref="x" alt="..." />`        (merges named attributes, others untouched)
- * - style merge      — `<override ref="x" style="..." />`      (merges per CSS property, not whole-string)
- * - remove           — `<override ref="x" remove />`           (removes the target element and subtree)
+ * - **Attribute form** — `<override ref="x" alt="…" style="…" />` merges named attributes onto the
+ *   *existing* element (others untouched; `style` per-CSS-property via cascade). Allowed on **any**
+ *   ref, all tiers — it preserves element identity/type, so a coded component's `refs.x` still
+ *   resolves to the same element. This is the only part of DL#181 retained.
+ * - **Content form** — `<override slot="x">…children…</override>` fills a declared `type: slot` region
+ *   (the slot's template anchor is the element marked `ref="x"`). Its bindings resolve at the **parent
+ *   (usage-site)** scope (DL#193 §C). An empty content form renders the slot with nothing.
+ *
+ * DL#194 dropped DL#181's `remove` operation (use an empty slot fill) and its "content-replace on any
+ * ref" (content now requires a declared slot — prevention-first, so a coded component's ref types are
+ * never silently broken). `remove` is no longer a keyword; if written it is treated as an ordinary
+ * attribute.
  */
 
 export interface OverrideSpec {
-    /** The `ref` this override targets; null when the author omitted it (a compile error). */
+    /** The `ref` this override targets (attribute form); null when addressing by slot or omitted. */
     ref: string | null;
-    /** The `remove` operation — deletes the target element and its subtree. */
-    remove: boolean;
-    /** Attributes to merge onto the target, excluding `ref` and `remove`. Includes `style`. */
+    /** The `slot` this override fills (content form); null when addressing by ref or omitted. */
+    slot: string | null;
+    /** Attributes to merge onto the target, excluding `ref`/`slot`. Includes `style`. */
     attributes: Record<string, string>;
-    /** The override's inner markup (content replace), or null when the override has no content. */
+    /** The override's inner markup (slot content), or null when the override has no content. */
     content: string | null;
-    /** Whether the override carries content to replace the target's children with. */
+    /** Whether the override carries content. */
     hasContent: boolean;
 }
 
@@ -125,13 +131,13 @@ export function parseOverrides(jayTag: HTMLElement): OverrideSpec[] {
 
         const attributes: Record<string, string> = {};
         let ref: string | null = null;
-        let remove = false;
+        let slot: string | null = null;
         for (const [name, value] of Object.entries(el.attributes)) {
             const lower = name.toLowerCase();
             if (lower === 'ref') {
                 ref = value;
-            } else if (lower === 'remove') {
-                remove = true;
+            } else if (lower === 'slot') {
+                slot = value;
             } else {
                 attributes[name] = value;
             }
@@ -141,7 +147,7 @@ export function parseOverrides(jayTag: HTMLElement): OverrideSpec[] {
         const hasContent = inner.trim().length > 0;
         specs.push({
             ref,
-            remove,
+            slot,
             attributes,
             content: hasContent ? inner : null,
             hasContent,
@@ -182,51 +188,101 @@ function mergeStyle(existing: string | undefined, incoming: string): string {
 }
 
 /**
- * Apply a list of overrides against a headfull component's body markup. Pure over strings so it can be
- * unit-tested directly: takes the component body's inner HTML and returns the customized HTML paired with
- * any compile validations (missing ref, ambiguous operation). Resolution happens before ViewState/type
- * generation, so no runtime cost (DL#181).
+ * Apply a list of overrides against a headfull component's body markup (DL#181, narrowed by DL#194).
+ * Pure over strings so it can be unit-tested directly: takes the component body's inner HTML and returns
+ * the customized HTML paired with any compile validations. Resolution happens before ViewState/type
+ * generation, so no runtime cost.
+ *
+ * Two forms, selected by the addressing attribute:
+ * - `<override ref="X" … />` — merge attributes onto the existing element (any ref; no content allowed).
+ * - `<override slot="X">…</override>` — fill declared slot `X` (its template anchor is `ref="X"`).
  *
  * @param childBodyInnerHtml - The injected component's body inner HTML (source of truth).
  * @param overrides          - Overrides collected from the usage-site `<jay:Name>` tag.
  * @param componentName      - The component name, for error messages.
+ * @param slotNames          - Names of the component's declared `type: slot` tags. When provided, a
+ *                             `slot=` that isn't a declared slot is a compile error (prevention-first).
+ *                             Omitted on best-effort paths that don't load the contract.
  */
 export function applyOverrides(
     childBodyInnerHtml: string,
     overrides: OverrideSpec[],
     componentName: string,
+    slotNames?: Set<string>,
 ): WithValidations<string> {
     const validations: string[] = [];
     const fragment = parse(childBodyInnerHtml);
 
     for (const override of overrides) {
-        if (!override.ref) {
-            validations.push(`<override> is missing a "ref" attribute in <jay:${componentName}>.`);
+        // Exactly one addressing attribute — `slot=` (content form) xor `ref=` (attribute form).
+        if (override.slot !== null && override.ref !== null) {
+            validations.push(
+                `<override> in <jay:${componentName}> cannot set both "slot" and "ref" — ` +
+                    `use slot="X" to fill a slot, or ref="X" to merge attributes.`,
+            );
             continue;
         }
-
-        const targets = fragment.querySelectorAll(`[ref="${override.ref}"]`);
-        if (targets.length === 0) {
+        if (override.slot === null && override.ref === null) {
             validations.push(
-                `Cannot resolve override: no element with ref="${override.ref}" found in ` +
-                    `${componentName}. Add ref="${override.ref}" to the target element in that ` +
-                    `component's jay-html, then reference it here.`,
+                `<override> is missing a "slot" or "ref" attribute in <jay:${componentName}>.`,
             );
             continue;
         }
 
-        if (override.remove) {
-            if (override.hasContent || Object.keys(override.attributes).length > 0) {
+        // Content form — `<override slot="X">…</override>` fills a declared slot.
+        if (override.slot !== null) {
+            const slotName = override.slot;
+            if (slotNames && !slotNames.has(slotName)) {
                 validations.push(
-                    `<override ref="${override.ref}" remove> in <jay:${componentName}> cannot also ` +
-                        `set content or attributes — remove is exclusive.`,
+                    `<override slot="${slotName}"> — no slot "${slotName}" in ${componentName}. ` +
+                        `Declare it as type: slot, or use <override ref="${slotName}" …/> to ` +
+                        `restyle an existing element.`,
                 );
                 continue;
             }
-            for (const target of targets) target.remove();
+            if (Object.keys(override.attributes).length > 0) {
+                validations.push(
+                    `<override slot="${slotName}"> in <jay:${componentName}> cannot also set ` +
+                        `attributes — use <override ref="${slotName}" …/> for attribute merges.`,
+                );
+                continue;
+            }
+            const targets = fragment.querySelectorAll(`[ref="${slotName}"]`);
+            if (targets.length === 0) {
+                validations.push(
+                    `Cannot resolve slot override: no element with ref="${slotName}" found in ` +
+                        `${componentName}. Mark the slot's target element with ref="${slotName}" in ` +
+                        `that component's jay-html.`,
+                );
+                continue;
+            }
+            for (const target of targets) {
+                // DL#193 §C: mark the override's bindings as parent-scoped before splicing, so they
+                // resolve against the outer (page) scope where the override was authored. An empty
+                // content form clears the slot (the replacement for DL#181 `remove`).
+                target.set_content(remapOverrideBindingsToParent(override.content ?? ''));
+            }
             continue;
         }
 
+        // Attribute form — `<override ref="X" … />` merges attributes onto the existing element.
+        const refName = override.ref!;
+        if (override.hasContent) {
+            validations.push(
+                `<override ref="${refName}"> in <jay:${componentName}> cannot have content — ` +
+                    `use <override slot="${refName}">…</override> to fill a slot with content.`,
+            );
+            continue;
+        }
+        const targets = fragment.querySelectorAll(`[ref="${refName}"]`);
+        if (targets.length === 0) {
+            validations.push(
+                `Cannot resolve override: no element with ref="${refName}" found in ` +
+                    `${componentName}. Add ref="${refName}" to the target element in that ` +
+                    `component's jay-html, then reference it here.`,
+            );
+            continue;
+        }
         for (const target of targets) {
             for (const [name, value] of Object.entries(override.attributes)) {
                 if (name.toLowerCase() === 'style') {
@@ -234,11 +290,6 @@ export function applyOverrides(
                 } else {
                     target.setAttribute(name, value);
                 }
-            }
-            if (override.hasContent) {
-                // DL#193 §C: mark the override's bindings as parent-scoped before splicing, so they
-                // resolve against the outer (page) scope where the override was authored.
-                target.set_content(remapOverrideBindingsToParent(override.content ?? ''));
             }
         }
     }
@@ -253,12 +304,15 @@ export function applyOverrides(
  * @param componentBody - The parsed component body element (its inner HTML is the source of truth).
  * @param jayTag        - The usage-site tag whose `<override>` children are applied.
  * @param componentName - The component name, for error messages.
+ * @param slotNames     - Declared `type: slot` tag names (see {@link applyOverrides}); optional on
+ *                        best-effort paths that don't load the contract.
  */
 export function applyHeadfullOverrides(
     componentBody: HTMLElement,
     jayTag: HTMLElement,
     componentName: string,
+    slotNames?: Set<string>,
 ): WithValidations<string> {
     const overrides = parseOverrides(jayTag);
-    return applyOverrides(componentBody.innerHTML, overrides, componentName);
+    return applyOverrides(componentBody.innerHTML, overrides, componentName, slotNames);
 }

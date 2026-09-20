@@ -59,6 +59,12 @@ export function isTagInPhase(
         return false;
     }
 
+    // DL#194 — slots are compile-time override targets. They never appear in ViewState; their
+    // injected refs (parent scope, keyed by slot name) are wired on the Refs side (Phase C/E).
+    if (tag.type.includes(ContractTagType.slot)) {
+        return false;
+    }
+
     const effectivePhase = getEffectivePhase(tag, parentPhase);
     // Include only if effective phase exactly matches target phase
     return effectivePhase === targetPhase;

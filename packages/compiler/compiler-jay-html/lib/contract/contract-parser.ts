@@ -120,6 +120,7 @@ function parseType(
     else if (type === 'variant') return new WithValidations([ContractTagType.variant]);
     else if (type === 'interactive') return new WithValidations([ContractTagType.interactive]);
     else if (type === 'sub-contract') return new WithValidations([ContractTagType.subContract]);
+    else if (type === 'slot') return new WithValidations([ContractTagType.slot]);
     else return new WithValidations([], [`Tag [${tagName}] has an unknown tag type [${type}]`]);
 }
 
@@ -151,6 +152,15 @@ function parsePhase(
         return new WithValidations(undefined, validations);
     }
 
+    // DL#194 — slots are compile-time override targets, not runtime data, so they carry no phase
+    // (treated as slow). Reject an explicit phase to keep the "phaseless" contract clear.
+    if (tagTypes.includes(ContractTagType.slot)) {
+        validations.push(
+            `Tag [${tagName}] of type [slot] cannot have an explicit phase attribute (slots are compile-time, treated as slow)`,
+        );
+        return new WithValidations(undefined, validations);
+    }
+
     return new WithValidations(phase as RenderingPhase, validations);
 }
 
@@ -163,6 +173,21 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
     // Validate that subcontract type is not mixed with other types
     if (types.val.includes(ContractTagType.subContract) && types.val.length > 1) {
         validations.push(`Tag [${tag.tag}] cannot be both sub-contract and other types`);
+    }
+
+    // DL#194 — a slot is its own kind (override target), not combinable with data/variant/etc.
+    if (types.val.includes(ContractTagType.slot) && types.val.length > 1) {
+        validations.push(`Tag [${tag.tag}] cannot be both slot and other types`);
+    }
+
+    // DL#194 — slots carry no data and no elementType (v1 has no type constraint on injected content)
+    if (types.val.includes(ContractTagType.slot)) {
+        if (tag.dataType) {
+            validations.push(`Tag [${tag.tag}] of type [slot] cannot have a dataType`);
+        }
+        if (tag.elementType) {
+            validations.push(`Tag [${tag.tag}] of type [slot] cannot have an elementType`);
+        }
     }
 
     // Default dataType to string for data tags if not specified

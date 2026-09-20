@@ -5,8 +5,8 @@
 <body>
 <!--
   Generic (Tier 2) structural card: jay-html + jay-contract, no .ts. It knows nothing about Counter.
-  `<div ref="slot">` is an override-only anchor (DL#181) — a ref present in the jay-html but NOT in the
-  contract — so the page can inject content into it via `<override ref="slot">…</override>`.
+  `<div ref="slot">` is the template anchor for the contract's `slot` (a `type: slot` tag, DL#194) —
+  so the page can inject content into it via `<override slot="slot">…</override>`.
 -->
 <div class="card">
     <h3>{heading}</h3>

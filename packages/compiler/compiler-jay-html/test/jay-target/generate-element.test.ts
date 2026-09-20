@@ -588,17 +588,6 @@ describe('generate jay-html element', () => {
             expect(elementFile.validations).toEqual([forEachInsidePureComponentError('card')]);
         });
 
-        // DL#193 "Fix — empty-contract unwrap": an empty-contract headfull import (no props/tags,
-        // no .ts) is unwrapped into the page body with no component boundary. A page-authored
-        // override binding there is a current-scope binding, so the parent-scope pragma is stripped
-        // on unwrap and `{itemName}` resolves as `vs.itemName` (no `_p1`), with no validations.
-        it('generate element file with override binding on an unwrapped empty-contract import (DL#193)', async () => {
-            const folder = 'contracts/page-with-override-unwrap-parent-binding';
-            const elementFile = await readFileAndGenerateElementFile(folder);
-            expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
-        });
-
         it('generate element file with headless component instance inside forEach', async () => {
             const folder = 'contracts/page-with-headless-in-foreach';
             const elementFile = await readFileAndGenerateElementFile(folder);

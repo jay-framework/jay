@@ -14,31 +14,31 @@ function jayTag(inner: string) {
     return root.querySelector('jay\\:card')!;
 }
 
-describe('jay-html overrides (DL#181)', () => {
+describe('jay-html overrides (DL#181, narrowed by DL#194)', () => {
     describe('parseOverrides', () => {
-        it('collects a content override', () => {
+        it('collects a slot content override', () => {
             const specs = parseOverrides(
-                jayTag(`<override ref="cta-label">Start free trial</override>`),
+                jayTag(`<override slot="body"><p>New body</p></override>`),
             );
             expect(specs).toEqual<OverrideSpec[]>([
                 {
-                    ref: 'cta-label',
-                    remove: false,
+                    ref: null,
+                    slot: 'body',
                     attributes: {},
-                    content: 'Start free trial',
+                    content: '<p>New body</p>',
                     hasContent: true,
                 },
             ]);
         });
 
-        it('collects an attribute override, excluding ref and remove', () => {
+        it('collects an attribute override, excluding ref', () => {
             const specs = parseOverrides(
                 jayTag(`<override ref="hero-image" src="/img/new.png" alt="New hero" />`),
             );
             expect(specs).toEqual<OverrideSpec[]>([
                 {
                     ref: 'hero-image',
-                    remove: false,
+                    slot: null,
                     attributes: { src: '/img/new.png', alt: 'New hero' },
                     content: null,
                     hasContent: false,
@@ -46,25 +46,12 @@ describe('jay-html overrides (DL#181)', () => {
             ]);
         });
 
-        it('collects a remove override', () => {
-            const specs = parseOverrides(jayTag(`<override ref="disclaimer" remove />`));
-            expect(specs).toEqual<OverrideSpec[]>([
-                {
-                    ref: 'disclaimer',
-                    remove: true,
-                    attributes: {},
-                    content: null,
-                    hasContent: false,
-                },
-            ]);
-        });
-
-        it('captures a missing ref as null', () => {
+        it('captures a missing slot/ref as null', () => {
             const specs = parseOverrides(jayTag(`<override>orphan</override>`));
             expect(specs).toEqual<OverrideSpec[]>([
                 {
                     ref: null,
-                    remove: false,
+                    slot: null,
                     attributes: {},
                     content: 'orphan',
                     hasContent: true,
@@ -74,26 +61,32 @@ describe('jay-html overrides (DL#181)', () => {
 
         it('ignores non-override element children and whitespace', () => {
             const specs = parseOverrides(
-                jayTag(`\n  <div>not an override</div>\n  <override ref="a">x</override>\n`),
+                jayTag(`\n  <div>not an override</div>\n  <override slot="a">x</override>\n`),
             );
             expect(specs).toEqual<OverrideSpec[]>([
-                { ref: 'a', remove: false, attributes: {}, content: 'x', hasContent: true },
+                {
+                    ref: null,
+                    slot: 'a',
+                    attributes: {},
+                    content: 'x',
+                    hasContent: true,
+                },
             ]);
         });
 
         it('collects multiple overrides in document order', () => {
             const specs = parseOverrides(
                 jayTag(
-                    `<override ref="a">one</override><override ref="b" remove /><override ref="c" title="t" />`,
+                    `<override slot="a">one</override><override ref="b" title="t2" /><override ref="c" title="t" />`,
                 ),
             );
-            expect(specs.map((s) => s.ref)).toEqual(['a', 'b', 'c']);
+            expect(specs.map((s) => s.slot ?? s.ref)).toEqual(['a', 'b', 'c']);
         });
     });
 
     describe('hasOverrides', () => {
         it('is true when the tag has an <override> child', () => {
-            expect(hasOverrides(jayTag(`<override ref="a">x</override>`))).toBe(true);
+            expect(hasOverrides(jayTag(`<override slot="a">x</override>`))).toBe(true);
         });
 
         it('is false for an empty tag', () => {
@@ -184,25 +177,46 @@ describe('jay-html overrides (DL#181)', () => {
     });
 
     describe('applyOverrides', () => {
+        // `body` and `menu-content` are declared slots; `cta-label` and `hero-image` are plain refs.
         const body = `<div class="card">
             <button ref="cta-label" class="btn">Buy Now</button>
             <img ref="hero-image" src="/img/old.png" alt="Old" style="border-radius: 4px; opacity: 1">
-            <p ref="disclaimer">Terms apply</p>
+            <div ref="body"><p>Default body</p></div>
             <nav ref="menu-content"><a href="/">Old</a></nav>
         </div>`;
+        const slots = new Set(['body', 'menu-content']);
 
-        it('content override replaces the target children, keeping element and attributes', () => {
+        it('slot content fill replaces the slot children, keeping element and attributes', () => {
             const result = applyOverrides(
                 body,
-                parseOverrides(jayTag(`<override ref="cta-label">Start free trial</override>`)),
+                parseOverrides(jayTag(`<override slot="body"><p>Custom body</p></override>`)),
                 'card',
+                slots,
             );
             expect(result.validations).toEqual([]);
             expect(prettifyHtml(result.val!)).toEqual(
                 prettifyHtml(`<div class="card">
-                    <button ref="cta-label" class="btn">Start free trial</button>
+                    <button ref="cta-label" class="btn">Buy Now</button>
                     <img ref="hero-image" src="/img/old.png" alt="Old" style="border-radius: 4px; opacity: 1">
-                    <p ref="disclaimer">Terms apply</p>
+                    <div ref="body"><p>Custom body</p></div>
+                    <nav ref="menu-content"><a href="/">Old</a></nav>
+                </div>`),
+            );
+        });
+
+        it('empty slot fill renders the slot with nothing (replaces DL#181 remove)', () => {
+            const result = applyOverrides(
+                body,
+                parseOverrides(jayTag(`<override slot="body"></override>`)),
+                'card',
+                slots,
+            );
+            expect(result.validations).toEqual([]);
+            expect(prettifyHtml(result.val!)).toEqual(
+                prettifyHtml(`<div class="card">
+                    <button ref="cta-label" class="btn">Buy Now</button>
+                    <img ref="hero-image" src="/img/old.png" alt="Old" style="border-radius: 4px; opacity: 1">
+                    <div ref="body"></div>
                     <nav ref="menu-content"><a href="/">Old</a></nav>
                 </div>`),
             );
@@ -215,13 +229,14 @@ describe('jay-html overrides (DL#181)', () => {
                     jayTag(`<override ref="hero-image" src="/img/new.png" alt="New hero" />`),
                 ),
                 'card',
+                slots,
             );
             expect(result.validations).toEqual([]);
             expect(prettifyHtml(result.val!)).toEqual(
                 prettifyHtml(`<div class="card">
                     <button ref="cta-label" class="btn">Buy Now</button>
                     <img ref="hero-image" src="/img/new.png" alt="New hero" style="border-radius: 4px; opacity: 1">
-                    <p ref="disclaimer">Terms apply</p>
+                    <div ref="body"><p>Default body</p></div>
                     <nav ref="menu-content"><a href="/">Old</a></nav>
                 </div>`),
             );
@@ -236,43 +251,29 @@ describe('jay-html overrides (DL#181)', () => {
                     ),
                 ),
                 'card',
+                slots,
             );
             expect(result.validations).toEqual([]);
             expect(prettifyHtml(result.val!)).toEqual(
                 prettifyHtml(`<div class="card">
                     <button ref="cta-label" class="btn">Buy Now</button>
                     <img ref="hero-image" src="/img/old.png" alt="Old" style="border-radius: 16px; opacity: 1; box-shadow: none">
-                    <p ref="disclaimer">Terms apply</p>
+                    <div ref="body"><p>Default body</p></div>
                     <nav ref="menu-content"><a href="/">Old</a></nav>
                 </div>`),
             );
         });
 
-        it('remove override deletes the target element and its subtree', () => {
-            const result = applyOverrides(
-                body,
-                parseOverrides(jayTag(`<override ref="disclaimer" remove />`)),
-                'card',
-            );
-            expect(result.validations).toEqual([]);
-            expect(prettifyHtml(result.val!)).toEqual(
-                prettifyHtml(`<div class="card">
-                    <button ref="cta-label" class="btn">Buy Now</button>
-                    <img ref="hero-image" src="/img/old.png" alt="Old" style="border-radius: 4px; opacity: 1">
-                    <nav ref="menu-content"><a href="/">Old</a></nav>
-                </div>`),
-            );
-        });
-
-        it('replaces a container ref content with nested jay component tags', () => {
+        it('fills a slot with nested jay component tags (parent-scope marker on injected tags)', () => {
             const result = applyOverrides(
                 body,
                 parseOverrides(
                     jayTag(
-                        `<override ref="menu-content"><jay:MenuItem label="Home" href="/" /><jay:MenuItem label="Docs" href="/docs" /></override>`,
+                        `<override slot="menu-content"><jay:MenuItem label="Home" href="/" /><jay:MenuItem label="Docs" href="/docs" /></override>`,
                     ),
                 ),
                 'card',
+                slots,
             );
             expect(result.validations).toEqual([]);
             // DL#193 Phase 3 refinement: injected `<jay:…>` component tags are stamped with the
@@ -282,17 +283,18 @@ describe('jay-html overrides (DL#181)', () => {
                 prettifyHtml(`<div class="card">
                     <button ref="cta-label" class="btn">Buy Now</button>
                     <img ref="hero-image" src="/img/old.png" alt="Old" style="border-radius: 4px; opacity: 1">
-                    <p ref="disclaimer">Terms apply</p>
+                    <div ref="body"><p>Default body</p></div>
                     <nav ref="menu-content"><jay:MenuItem label="Home" href="/" jay-from-override></jay:MenuItem><jay:MenuItem label="Docs" href="/docs" jay-from-override></jay:MenuItem></nav>
                 </div>`),
             );
         });
 
-        it('marks override content bindings as parent-scoped (DL#193 §C)', () => {
+        it('marks slot content bindings as parent-scoped (DL#193 §C)', () => {
             const result = applyOverrides(
                 `<span ref="label">{oldLabel}</span>`,
-                parseOverrides(jayTag(`<override ref="label">{itemCount} items</override>`)),
+                parseOverrides(jayTag(`<override slot="label">{itemCount} items</override>`)),
                 'card',
+                new Set(['label']),
             );
             expect(result.validations).toEqual([]);
             expect(prettifyHtml(result.val!)).toEqual(
@@ -300,31 +302,34 @@ describe('jay-html overrides (DL#181)', () => {
             );
         });
 
-        it('applies multiple overrides in one pass', () => {
+        it('applies multiple overrides in one pass (slot fill + attribute merges)', () => {
             const result = applyOverrides(
                 body,
                 parseOverrides(
                     jayTag(
-                        `<override ref="cta-label">Go</override><override ref="disclaimer" remove /><override ref="hero-image" alt="Alt" />`,
+                        `<override slot="body"><p>Go</p></override><override ref="hero-image" alt="Alt" /><override ref="cta-label" class="btn primary" />`,
                     ),
                 ),
                 'card',
+                slots,
             );
             expect(result.validations).toEqual([]);
             expect(prettifyHtml(result.val!)).toEqual(
                 prettifyHtml(`<div class="card">
-                    <button ref="cta-label" class="btn">Go</button>
+                    <button ref="cta-label" class="btn primary">Buy Now</button>
                     <img ref="hero-image" src="/img/old.png" alt="Alt" style="border-radius: 4px; opacity: 1">
+                    <div ref="body"><p>Go</p></div>
                     <nav ref="menu-content"><a href="/">Old</a></nav>
                 </div>`),
             );
         });
 
-        it('reports a missing ref and leaves the body unchanged', () => {
+        it('reports a missing ref for an attribute override and leaves the body unchanged', () => {
             const result = applyOverrides(
                 body,
-                parseOverrides(jayTag(`<override ref="does-not-exist">x</override>`)),
+                parseOverrides(jayTag(`<override ref="does-not-exist" alt="x" />`)),
                 'card',
+                slots,
             );
             expect(result.validations).toEqual([
                 'Cannot resolve override: no element with ref="does-not-exist" found in card. ' +
@@ -334,26 +339,67 @@ describe('jay-html overrides (DL#181)', () => {
             expect(prettifyHtml(result.val!)).toEqual(prettifyHtml(body));
         });
 
-        it('reports an override missing its ref attribute', () => {
+        it('reports a slot= that is not a declared slot', () => {
+            const result = applyOverrides(
+                body,
+                parseOverrides(jayTag(`<override slot="ghost"><p>x</p></override>`)),
+                'card',
+                slots,
+            );
+            expect(result.validations).toEqual([
+                '<override slot="ghost"> — no slot "ghost" in card. Declare it as type: slot, or ' +
+                    'use <override ref="ghost" …/> to restyle an existing element.',
+            ]);
+        });
+
+        it('reports content under a ref= override (attribute form takes no content)', () => {
+            const result = applyOverrides(
+                body,
+                parseOverrides(jayTag(`<override ref="cta-label">Start free trial</override>`)),
+                'card',
+                slots,
+            );
+            expect(result.validations).toEqual([
+                '<override ref="cta-label"> in <jay:card> cannot have content — ' +
+                    'use <override slot="cta-label">…</override> to fill a slot with content.',
+            ]);
+        });
+
+        it('reports an override missing its slot/ref attribute', () => {
             const result = applyOverrides(
                 body,
                 parseOverrides(jayTag(`<override>orphan</override>`)),
                 'card',
+                slots,
             );
             expect(result.validations).toEqual([
-                '<override> is missing a "ref" attribute in <jay:card>.',
+                '<override> is missing a "slot" or "ref" attribute in <jay:card>.',
             ]);
         });
 
-        it('reports remove combined with content as an ambiguous operation', () => {
+        it('treats a bare remove as an ordinary attribute, rejected on the slot form', () => {
             const result = applyOverrides(
                 body,
-                parseOverrides(jayTag(`<override ref="disclaimer" remove>oops</override>`)),
+                parseOverrides(jayTag(`<override slot="body" remove />`)),
                 'card',
+                slots,
             );
             expect(result.validations).toEqual([
-                '<override ref="disclaimer" remove> in <jay:card> cannot also set content or ' +
-                    'attributes — remove is exclusive.',
+                '<override slot="body"> in <jay:card> cannot also set ' +
+                    'attributes — use <override ref="body" …/> for attribute merges.',
+            ]);
+        });
+
+        it('reports an override addressing both slot and ref', () => {
+            const result = applyOverrides(
+                body,
+                parseOverrides(jayTag(`<override slot="body" ref="body"><p>x</p></override>`)),
+                'card',
+                slots,
+            );
+            expect(result.validations).toEqual([
+                '<override> in <jay:card> cannot set both "slot" and "ref" — ' +
+                    'use slot="X" to fill a slot, or ref="X" to merge attributes.',
             ]);
         });
     });

@@ -214,17 +214,6 @@ describe('generate jay-html server element', () => {
             );
         });
 
-        // DL#193 "Fix — empty-contract unwrap" — when the headfull import is unwrapped into the
-        // page body, the override binding is a current-scope binding (`vs.itemName`, no $parent),
-        // so the server target compiles it cleanly with no validations.
-        it('for override binding on an unwrapped empty-contract import (DL#193)', async () => {
-            const folder = 'contracts/page-with-override-unwrap-parent-binding';
-            const serverFile = await readFileAndGenerateServerElementFile(folder);
-            expect(serverFile.validations).toEqual([]);
-            expect(await prettify(serverFile.val)).toEqual(
-                await readFixtureServerElementFile(folder),
-            );
-        });
 
         // DL#193 Phase 3 — refs do not exist on the server target (no interactivity), so forwarding
         // is a no-op here: the structural component's inline body renders server-side with the

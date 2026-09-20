@@ -5,6 +5,12 @@ export enum ContractTagType {
     interactive,
     variant,
     subContract,
+    /**
+     * DL#194 — a named, parent-overridable region ("slot"). A slot is a scopeless, phaseless
+     * compile-time hole: it contributes no ViewState, carries no explicit phase (treated as slow),
+     * and needs no elementType. Its override target is marked in the template with a matching `ref`.
+     */
+    slot,
 }
 
 export type RenderingPhase = 'slow' | 'fast' | 'fast+interactive';
