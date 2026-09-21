@@ -727,3 +727,35 @@ No `__parentContext`, no `(vs,_p1)=>_p1` identity, no `filterToComponentRefs` fo
   page-with-forwarded-ref, page-with-forwarded-ref-foreach, page-with-forwarded-ref-multi,
   page-with-override-forwarded-ref.
 - **Verification** — full package suite green (798 passed, 4 skipped) and `yarn build:check-types` clean.
+
+**Step 4 — recursion validation (complete).** A no-code (Tier 2) composite that references itself
+directly or transitively via `<jay:X>` is a cycle in the inlined-component graph, caught during the
+compile-time inline expansion in `parseHeadfullFSImports` (jay-html-parser.ts).
+
+- **Ancestry, not global-visited.** The prior DL#123 guard used one global `visited` set and reported
+  *any* re-encounter as "circular", which conflates a true cycle with a **diamond** (a shared no-code
+  dependency reached via two independent paths). Split into two sets: `ancestry` (the sources on the
+  current DFS path — a hit is a real cycle → `headfullRecursionError(name)`) and `visited` (cross-path
+  dedup — a hit is a diamond → silently skip re-expansion, no error). `ancestry` is extended
+  (`new Set(ancestry).add(resolvedSrc)`) only on the nested-expansion call, so it unwinds per branch.
+- **Tier-scoped by construction.** Tier 3 recursion uses the `<recurse>` tag, never a `<jay:X>`
+  self-import, so a `<jay:X>` cycle is unambiguously a Tier 2 mistake. The message
+  (jay-html-helpers.ts `headfullRecursionError`) directs the author to add an `X.ts` (promote to Tier 3,
+  a real boundary that can recurse at runtime).
+
+**Step 4b — root-level `$parent` validation (complete).** This was already a compile error *by
+construction* — `Variables.forInlinedComponent` sets `parent: undefined`, so any `$parent` climb from an
+inlined composite's own template fails regardless of where the composite is used (page root or nested).
+The only gap was the message. `resolveAccessor` (expression-compiler.ts) now emits
+`rootParentInInlinedCompositeError()` (directing the author to add a `.ts`) instead of the generic
+"no parent scope" text **when the exhausted scope is an `inlinedRoot`**; non-composite pages keep the
+generic diagnostic. Because a Tier 2 composite has no card-internal nested scopes (forEach is banned,
+conditionals reuse the current scope), *every* `$parent` in its template is root-level — so this catches
+all of them.
+
+- **Fixtures** — `page-tier2-recursion` (card self-imports card) and `page-tier2-root-parent` (card
+  template uses `{$parent.pageTitle}`).
+- **Tests** — `generate-element.test.ts`: recursion asserts `readAndParseJayFile(...).validations` equals
+  `[headfullRecursionError('card')]` (parse-time); root-parent asserts the element file `.validations`
+  equals `[rootParentInInlinedCompositeError()]` (codegen-time).
+- **Verification** — full package suite green (800 passed, 4 skipped) and `yarn build:check-types` clean.

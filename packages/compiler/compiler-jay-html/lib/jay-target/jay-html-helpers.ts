@@ -68,6 +68,16 @@ export function findForEachInsidePureComposite(
     return null;
 }
 
+/**
+ * DL#194 §4 (recursion validation): exact diagnostic for a no-code (Tier 2) composite that
+ * references itself directly or transitively (a cycle in the inlined-component graph). Tier 3
+ * recursion uses the `<recurse>` tag; a `<jay:X>` cycle is always a Tier 2 mistake — promote to
+ * Tier 3 (add an `X.ts`) so the component becomes a real boundary that can recurse at runtime.
+ */
+export function headfullRecursionError(componentName: string): string {
+    return `<jay:${componentName}> recurses (references itself directly or transitively); add ${componentName}.ts to make it Tier 3 (a real component boundary)`;
+}
+
 export function isRecurse(node: Node): boolean {
     return (
         node.nodeType !== NodeType.TEXT_NODE &&

@@ -3,9 +3,13 @@ import {
     readFixtureFile,
     readFixtureFileRaw,
 } from '../test-utils/file-utils';
-import { readFileAndGenerateElementFile } from '../test-utils/file-utils';
+import { readAndParseJayFile, readFileAndGenerateElementFile } from '../test-utils/file-utils';
 import { prettify, RuntimeMode } from '@jay-framework/compiler-shared';
-import { forEachInsidePureComponentError } from '../../lib/jay-target/jay-html-helpers';
+import {
+    forEachInsidePureComponentError,
+    headfullRecursionError,
+} from '../../lib/jay-target/jay-html-helpers';
+import { rootParentInInlinedCompositeError } from '../../lib/expressions/expression-compiler';
 
 describe('generate jay-html element', () => {
     describe('basics', () => {
@@ -586,6 +590,25 @@ describe('generate jay-html element', () => {
             const folder = 'contracts/page-with-foreach-in-pure-composite';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([forEachInsidePureComponentError('card')]);
+        });
+
+        // DL#194 §4 (recursion validation) — a no-code (Tier 2) composite that references itself
+        // (directly or transitively via `<jay:X>`) is a cycle in the inlined-component graph, caught
+        // during compile-time inline expansion. Tier 3 recursion uses `<recurse>`, so a `<jay:X>`
+        // cycle is always a Tier 2 mistake — the message directs the author to add a `.ts`.
+        it('rejects a no-code (Tier 2) composite that recurses (DL#194 §4)', async () => {
+            const parsed = await readAndParseJayFile('contracts/page-tier2-recursion');
+            expect(parsed.validations).toEqual([headfullRecursionError('card')]);
+        });
+
+        // DL#194 §4b (root-level $parent validation) — a Tier 2 template using a root-level `$parent`
+        // reaches past the composite into its consumer (a downward depth shift aliasing can't express
+        // in v1). The composite scope has no parent (Variables.forInlinedComponent), so the climb is a
+        // compile error directing the author to add a `.ts` (Tier 3). Assert the EXACT message.
+        it('rejects a root-level $parent inside a no-code (Tier 2) composite (DL#194 §4b)', async () => {
+            const folder = 'contracts/page-tier2-root-parent';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([rootParentInInlinedCompositeError()]);
         });
 
         it('generate element file with headless component instance inside forEach', async () => {

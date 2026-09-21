@@ -20,6 +20,16 @@ import { parse } from './expression-parser.cjs';
 const PARENT_TOKEN = '$parent';
 
 /**
+ * DL#194 §4b (root-level `$parent` validation): exact diagnostic for a `$parent` that climbs above
+ * the root of an inlined (Tier 2) composite. Such a climb reaches past the composite into its
+ * consumer — a downward depth shift aliasing can't express in v1 — so the author must promote the
+ * component to Tier 3 (add a `.ts`), which introduces a real boundary the parent chain can climb.
+ */
+export function rootParentInInlinedCompositeError(): string {
+    return `$parent used at the root of an inlined (Tier 2) component reaches past it into its consumer, which is not supported — add a .ts next to the component to make it Tier 3 (a real component boundary)`;
+}
+
+/**
  * DL#193 §C (Phase 2a): compiler-internal pragma prefixed to a whole binding value (text node,
  * attribute value, class/style/condition) to mark it as authored in the parent (outer) scope.
  * Injected by the override merge ({@link remapOverrideBindingsToParent}) and stripped in
@@ -277,12 +287,16 @@ export class Variables {
             while (terms[0] === PARENT_TOKEN) {
                 parentLevel++;
                 if (!scope.parent) {
+                    // DL#194 §4b: climbing above an inlined (Tier 2) composite's root reaches past
+                    // the composite into its consumer — direct the author to add a `.ts` (Tier 3).
+                    // Outside an inlined composite, keep the generic missing-parent diagnostic.
+                    const message = scope.inlinedRoot
+                        ? rootParentInInlinedCompositeError()
+                        : `${'$parent'.repeat(parentLevel)} used but there is no parent scope ${parentLevel} level(s) up`;
                     return new Accessor(
                         this.currentVar,
                         terms.slice(1),
-                        [
-                            `${'$parent'.repeat(parentLevel)} used but there is no parent scope ${parentLevel} level(s) up`,
-                        ],
+                        [message],
                         JayUnknown,
                         parentLevel,
                     );
@@ -323,13 +337,16 @@ export class Variables {
             let curr: JayType = alias.resolvedType;
             const validations = [...alias.validations];
             remaining.forEach((member) => {
-                if (member === '.') return; // do not advance curr
+                if (member === '.')
+                    return; // do not advance curr
                 else if (isObjectType(curr) && curr.props[member]) {
                     curr = curr.props[member];
                     if (isImportedType(curr)) curr = curr.type;
                     if (isRecursiveType(curr) && curr.resolvedType) curr = curr.resolvedType;
                 } else {
-                    validations.push(`the data field [${accessor.join('.')}] not found in Jay data`);
+                    validations.push(
+                        `the data field [${accessor.join('.')}] not found in Jay data`,
+                    );
                     curr = JayUnknown;
                 }
             });

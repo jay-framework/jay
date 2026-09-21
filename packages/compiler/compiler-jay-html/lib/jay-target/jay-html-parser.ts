@@ -38,6 +38,7 @@ import { JayImportLink, JayImportName } from '@jay-framework/compiler-shared';
 import { JayYamlStructure } from './jay-yaml-structure';
 import { Contract, ContractTag, ContractTagType, RenderingPhase } from '../contract';
 import { applyHeadfullOverrides, hasOverrides } from './jay-html-overrides';
+import { headfullRecursionError } from './jay-html-helpers';
 
 import {
     JayHeadlessImports,
@@ -984,6 +985,13 @@ async function parseHeadfullFSImports(
     pageLinkedCssPaths?: Set<string>,
     /** tsconfig resolution options, threaded to parse structural components' regular imports (DL#193 Phase 3). */
     options: ResolveTsConfigOptions = {},
+    /**
+     * DL#194 §4: the chain of component sources currently being expanded on this DFS path (resolved
+     * absolute paths). A `<jay:X>` whose source is already on the path is a true cycle (X references
+     * itself directly or transitively) → Tier 2 recursion error. Distinct from {@link visited}, which
+     * dedups a shared no-code dependency reached via two independent paths (a diamond, not a cycle).
+     */
+    ancestry: Set<string> = new Set(),
 ): Promise<HeadfullFSParseResult> {
     const headlessImports: JayHeadlessImports[] = [];
     const cssParts: string[] = [];
@@ -1020,12 +1028,18 @@ async function parseHeadfullFSImports(
         const componentExportName = names[0].name;
         const contractName = (names[0].as || componentExportName).toLowerCase();
 
-        // Circular import detection (DL#123 Scenario B)
+        // Recursion / circular import detection (DL#123 Scenario B, DL#194 §4)
         const resolvedSrc = path.resolve(filePath, src);
+        if (ancestry.has(resolvedSrc)) {
+            // A source already on the current expansion path → a true cycle: this component
+            // references itself directly or transitively. Tier 3 recursion uses `<recurse>`, so a
+            // `<jay:X>` cycle is always a Tier 2 mistake — promote to Tier 3 (add an `X.ts`).
+            validations.push(headfullRecursionError(componentExportName));
+            continue;
+        }
         if (visited.has(resolvedSrc)) {
-            validations.push(
-                `Circular headfull FS import detected: ${src} has already been processed`,
-            );
+            // Already expanded on a different path (a shared no-code dependency / diamond, not a
+            // cycle). Its `<jay:>` templates were injected on the first pass; skip re-expansion.
             continue;
         }
         visited.add(resolvedSrc);
@@ -1185,6 +1199,9 @@ async function parseHeadfullFSImports(
                 undefined,
                 pageLinkedCssPaths,
                 options,
+                // Extend the DFS path with this component so a nested `<jay:X>` that re-enters it
+                // (self or transitive) is caught as recursion (DL#194 §4).
+                new Set(ancestry).add(resolvedSrc),
             );
             headlessImports.push(...nestedResult.headlessImports);
             if (nestedResult.css) {
