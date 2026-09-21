@@ -8,26 +8,17 @@ import {
     conditional as c,
     dynamicElement as de,
     ConstructContext,
-    childComp,
     RenderElementOptions,
     JayContract,
     classNames as cx,
 } from '@jay-framework/runtime';
-import { makeHeadlessInstanceComponent } from '@jay-framework/stack-client-runtime';
-import {
-    BadgeViewState,
-    BadgeRefs,
-    Status,
-    BadgeInteractiveViewState,
-} from './badge/badge.jay-contract';
+import { Status } from './badge/badge.jay-contract';
 
 export interface PageWithStructuralBadgeViewState {
     pageTitle: string;
 }
 
-export interface PageWithStructuralBadgeElementRefs {
-    ar0: BadgeRefs;
-}
+export interface PageWithStructuralBadgeElementRefs {}
 
 export type PageWithStructuralBadgeSlowViewState = {};
 export type PageWithStructuralBadgeFastViewState = PageWithStructuralBadgeViewState;
@@ -54,78 +45,48 @@ export type PageWithStructuralBadgeContract = JayContract<
     PageWithStructuralBadgeInteractiveViewState
 >;
 
-// Inline template for headless component: badge #0
-type _HeadlessBadge0Element = JayElement<BadgeInteractiveViewState, BadgeRefs>;
-type _HeadlessBadge0ElementRender = RenderElement<
-    BadgeInteractiveViewState,
-    BadgeRefs,
-    _HeadlessBadge0Element
->;
-type _HeadlessBadge0ElementPreRender = [BadgeRefs, _HeadlessBadge0ElementRender];
-
-function _headlessBadge0Render(options?: RenderElementOptions): _HeadlessBadge0ElementPreRender {
-    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
-    const render = (viewState) =>
-        ConstructContext.withRootContext(viewState, refManager, () =>
-            de(
-                'span',
-                {
-                    class: da((vs) =>
-                        cx(
-                            'badge',
-                            vs.status === Status.success ? 'badge--success' : '',
-                            vs.status === Status.warning ? 'badge--warning' : '',
-                            vs.status === Status.error ? 'badge--error' : '',
-                        ),
-                    ),
-                },
-                [
-                    c(
-                        (vs) => vs.status === Status.success,
-                        () => e('span', { class: 'badge-icon badge-icon--success' }, ['[OK]']),
-                    ),
-                    c(
-                        (vs) => vs.status === Status.warning,
-                        () => e('span', { class: 'badge-icon badge-icon--warning' }, ['[!]']),
-                    ),
-                    c(
-                        (vs) => vs.status === Status.error,
-                        () => e('span', { class: 'badge-icon badge-icon--error' }, ['[X]']),
-                    ),
-                    e('span', { class: 'badge-label' }, [dt((vs) => vs.label)]),
-                    e('span', { class: 'badge-count' }, [dt((vs) => `Count: ${vs.count}`)]),
-                    c(
-                        (vs) => vs.featured,
-                        () => e('span', { class: 'badge-star' }, ['FEATURED']),
-                    ),
-                ],
-            ),
-        ) as _HeadlessBadge0Element;
-    return [refManager.getPublicAPI() as BadgeRefs, render];
-}
-
-const _HeadlessBadge0 = makeHeadlessInstanceComponent(
-    _headlessBadge0Render,
-    { comp: (_props, _refs) => ({ render: () => _props, ..._refs }) },
-    'S0/0/badge:AR0',
-);
-
 export function render(options?: RenderElementOptions): PageWithStructuralBadgeElementPreRender {
-    const [refManager, [refAr0]] = ReferencesManager.for(options, [], [], ['ar0'], []);
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
     const render = (viewState: PageWithStructuralBadgeViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
                 e('h1', {}, [dt((vs) => vs.pageTitle)]),
-                childComp(
-                    _HeadlessBadge0,
-                    (vs: PageWithStructuralBadgeViewState) => ({
-                        label: 'Live Status',
-                        status: Status.success,
-                        count: 42,
-                        featured: true,
-                        jc: 'badge',
-                    }),
-                    refAr0(),
+                de(
+                    'span',
+                    {
+                        class: da((vs) =>
+                            cx(
+                                'badge',
+                                (Status.success as Status) === Status.success
+                                    ? 'badge--success'
+                                    : '',
+                                (Status.success as Status) === Status.warning
+                                    ? 'badge--warning'
+                                    : '',
+                                (Status.success as Status) === Status.error ? 'badge--error' : '',
+                            ),
+                        ),
+                    },
+                    [
+                        c(
+                            (vs) => (Status.success as Status) === Status.success,
+                            () => e('span', { class: 'badge-icon badge-icon--success' }, ['[OK]']),
+                        ),
+                        c(
+                            (vs) => (Status.success as Status) === Status.warning,
+                            () => e('span', { class: 'badge-icon badge-icon--warning' }, ['[!]']),
+                        ),
+                        c(
+                            (vs) => (Status.success as Status) === Status.error,
+                            () => e('span', { class: 'badge-icon badge-icon--error' }, ['[X]']),
+                        ),
+                        e('span', { class: 'badge-label' }, [dt((vs) => 'Live Status')]),
+                        e('span', { class: 'badge-count' }, [dt((vs) => `Count: ${42}`)]),
+                        c(
+                            (vs) => true,
+                            () => e('span', { class: 'badge-star' }, ['FEATURED']),
+                        ),
+                    ],
                 ),
             ]),
         ) as PageWithStructuralBadgeElement;

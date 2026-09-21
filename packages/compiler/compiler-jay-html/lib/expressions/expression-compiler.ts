@@ -45,6 +45,16 @@ export class Accessor {
     readonly resolvedType: JayType;
     /** DL#193: how many scopes a `$parent` access climbs (0 = current scope). */
     readonly parentLevel: number;
+    /**
+     * DL#194 (Tier 2 inlining): when set, this accessor renders to this literal string verbatim
+     * instead of a `rootVar.terms` field path. Used to alias a card contract field to a *static*
+     * usage-site prop (`label="Live Status"` → `'Live Status'`, `status="success"` → `Status.success`).
+     * The literal is scope-independent, so {@link render} emits it regardless of `parentLevel` and a
+     * `$parent` climb landing on it keeps it unchanged. `resolvedType` still carries the declared prop
+     * type so card-internal type-directed grammar (e.g. an enum comparison) resolves correctly.
+     */
+    readonly literalRender?: string;
+    readonly literalImports: Imports;
 
     constructor(
         rootVar: string,
@@ -52,15 +62,23 @@ export class Accessor {
         validations: JayValidations,
         resolvedType: JayType,
         parentLevel: number = 0,
+        literalRender?: string,
+        literalImports: Imports = Imports.none(),
     ) {
         this.rootVar = rootVar;
         this.terms = terms;
         this.validations = validations;
         this.resolvedType = resolvedType;
         this.parentLevel = parentLevel;
+        this.literalRender = literalRender;
+        this.literalImports = literalImports;
     }
 
     render() {
+        // DL#194 (Tier 2 inlining): a literal alias renders its value verbatim, independent of scope.
+        if (this.literalRender !== undefined) {
+            return new RenderFragment(this.literalRender, this.literalImports, this.validations);
+        }
         // DL#193 Capability A: a `$parent` access does NOT root at the parent scope's
         // `currentVar` (not lexically in scope inside the child callback). It roots at an
         // extra closure param the binding helper supplies from its retained context.
@@ -107,6 +125,25 @@ export class Variables {
      * flag is inherited by every child scope so setting it once on the server root covers the tree.
      */
     readonly lexicallyInScope: boolean;
+    /**
+     * DL#194 (Tier 2 inlining): a no-code composite is spliced into the usage site, so its
+     * contract-ViewState fields are not a real runtime scope — each one is a compile-time
+     * projection of the usage-site expression bound to it. This map, seeded on the card's root
+     * scope by resolving each usage-site prop expression against the parent scope, redirects a
+     * contract-field accessor (`heading`) to that usage-site accessor (`item.title`). Resolution
+     * happens in {@link resolveAccessor}, parallel to the `$parent` climb, so no grammar change is
+     * needed and card-internal `$parent` to a card-root field composes automatically. Child scopes
+     * (forEach/withData) do NOT inherit aliases — only card-contract fields are projected.
+     */
+    private readonly aliases: Record<string, Accessor>;
+    /**
+     * DL#194 (Tier 2 inlining): true for the root scope of an inlined no-code composite. In that
+     * scope a `@jay:parent` pragma (override content authored in the enclosing scope) must resolve
+     * *in place*: the content is spliced directly into the enclosing scope, so there is no boundary
+     * to climb. {@link withParentShift} therefore returns the scope unchanged. An explicit `$parent`
+     * token still errors (parent is undefined), enforcing the v1 root-level-`$parent` restriction.
+     */
+    private readonly inlinedRoot: boolean;
     constructor(
         currentTypes: JayType,
         parent: Variables = undefined,
@@ -118,6 +155,8 @@ export class Variables {
         parentShiftLevels: number = 0,
         children: Record<string, Variables> = {},
         lexicallyInScope: boolean = false,
+        aliases: Record<string, Accessor> = {},
+        inlinedRoot: boolean = false,
     ) {
         this.currentVar = customVarName || (depth === 0 ? 'vs' : 'vs' + depth);
         this.currentContext = depth === 0 ? 'context' : 'cx' + depth;
@@ -128,6 +167,8 @@ export class Variables {
         this.parentShiftLevels = parentShiftLevels;
         this.children = children;
         this.lexicallyInScope = lexicallyInScope;
+        this.aliases = aliases;
+        this.inlinedRoot = inlinedRoot;
     }
 
     /**
@@ -145,6 +186,8 @@ export class Variables {
             this.parentShiftLevels,
             this.children,
             true,
+            this.aliases,
+            this.inlinedRoot,
         );
     }
 
@@ -157,6 +200,9 @@ export class Variables {
      */
     withParentShift(levels: number): Variables {
         if (levels <= 0) return this;
+        // DL#194 (Tier 2 inlining): override content marked `@jay:parent` is spliced straight into
+        // the enclosing scope, so it resolves in place — no climb, no `_pN`, no `__parentContext`.
+        if (this.inlinedRoot) return this;
         // Reconstruct an identical view of this scope (same var name, type, depth, parent and the
         // shared child cache) with only the shift level bumped. `currentVar` is passed as the
         // custom name and `currentType` is already unwrapped, so the constructor reproduces this
@@ -169,6 +215,42 @@ export class Variables {
             this.parentShiftLevels + levels,
             this.children,
             this.lexicallyInScope,
+            this.aliases,
+            this.inlinedRoot,
+        );
+    }
+
+    /**
+     * DL#194 (Tier 2 inlining): build the root scope for a no-code composite spliced into
+     * `parentScope`. The composite has no runtime scope of its own — it is inlined into the usage
+     * site, so its scope IS the parent scope (`currentType`/`currentVar`/`depth`/`lexicallyInScope`
+     * inherited verbatim) plus an alias overlay: each contract-ViewState field is a compile-time
+     * projection of the usage-site expression bound to it ({@link aliases}). Consequences:
+     *  - a card-root field resolves through the alias to the usage-site accessor it projects
+     *    (`heading` → `item.title`); a well-formed Tier 2 aliases every root field it references,
+     *  - a card-internal `forEach`/`withData` scope (built by {@link childVariableFor}) uses the real
+     *    usage-site item type and shares the parent's coordinate space, so nested refs and closures
+     *    line up with the surrounding page,
+     *  - inner real-component refs (`<jay:Counter ref="cta">`) get the *parent* ViewState as their
+     *    parent type (external by construction), since `currentType` is the parent's,
+     *  - `parent` is left undefined so a root-level `$parent` climb (above the card root) is a compile
+     *    error (v1 restriction); a card-internal `$parent` to a card-root field still composes because
+     *    {@link childVariableFor} links child scopes back to this one.
+     */
+    static forInlinedComponent(
+        parentScope: Variables,
+        aliases: Record<string, Accessor>,
+    ): Variables {
+        return new Variables(
+            parentScope.currentType,
+            undefined,
+            parentScope.depth,
+            parentScope.currentVar,
+            0,
+            {},
+            parentScope.lexicallyInScope,
+            aliases,
+            true,
         );
     }
 
@@ -209,6 +291,9 @@ export class Variables {
                 terms = terms.slice(1);
             }
             const resolved = scope.resolveAccessor(terms);
+            // DL#194 (Tier 2 inlining): a literal alias is scope-independent — a climb that lands on
+            // it returns the literal unchanged (no `_pN` wrapping).
+            if (resolved.literalRender !== undefined) return resolved;
             // DL#193 Phase 2c: when the landed ancestor is lexically in scope (server target), emit
             // its `currentVar` directly instead of a `_pN` closure param. Dropping the accumulated
             // `parentLevel` (keeping only `resolved.parentLevel`, which is 0 here) makes
@@ -224,6 +309,36 @@ export class Variables {
                 resolved.validations,
                 resolved.resolvedType,
                 effectiveParentLevel,
+            );
+        }
+        // DL#194 (Tier 2 inlining): a contract-field accessor on the card's root scope resolves
+        // through the alias map to the usage-site accessor it projects (`heading` → `item.title`).
+        // Any remaining terms (`heading.length`) walk the alias's resolved type; the alias's own
+        // `rootVar`/`parentLevel` are preserved, so a `$parent` climb landing here composes: the
+        // climb wraps this result's `parentLevel` and the usage-site terms flow through unchanged.
+        if (accessor[0] !== '.' && this.aliases[accessor[0]]) {
+            const alias = this.aliases[accessor[0]];
+            const remaining = accessor.slice(1);
+            if (remaining.length === 0) return alias;
+            let curr: JayType = alias.resolvedType;
+            const validations = [...alias.validations];
+            remaining.forEach((member) => {
+                if (member === '.') return; // do not advance curr
+                else if (isObjectType(curr) && curr.props[member]) {
+                    curr = curr.props[member];
+                    if (isImportedType(curr)) curr = curr.type;
+                    if (isRecursiveType(curr) && curr.resolvedType) curr = curr.resolvedType;
+                } else {
+                    validations.push(`the data field [${accessor.join('.')}] not found in Jay data`);
+                    curr = JayUnknown;
+                }
+            });
+            return new Accessor(
+                alias.rootVar,
+                [...alias.terms, ...remaining],
+                validations,
+                curr,
+                alias.parentLevel,
             );
         }
         let curr: JayType = this.currentType;

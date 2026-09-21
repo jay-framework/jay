@@ -3,6 +3,7 @@
 import {
     Import,
     Imports,
+    isEnumType,
     JayErrorType,
     JayPromiseType,
     RenderFragment,
@@ -25,10 +26,13 @@ import {
     AsyncDirectiveTypes,
     checkAsync,
     ensureSingleChildElement,
+    forEachInsidePureComponentError,
     getComponentName,
+    hasForEachDescendant,
     isConditional,
     isForEach,
 } from './jay-html-helpers';
+import { buildInlineAliases } from './jay-html-compiler';
 import { generateTypes } from './jay-html-compile-types';
 import { Indent } from './indent';
 import { assignCoordinates } from './assign-coordinates';
@@ -201,6 +205,89 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
 }
 
 /**
+ * DL#194 Phase B (Tier 2 inlining): render a no-code composite instance for the server target by
+ * splicing its template into the usage site — no `vs.__headlessInstances[...]` lookup and no
+ * `if (vs_xxx)` guard. Each contract-ViewState field is projected onto the usage-site expression
+ * bound to it via an alias overlay ({@link Variables.forInlinedComponent} + {@link buildInlineAliases}),
+ * mirroring the element/hydrate targets so all three emit the same coordinates and HTML. An `if=` on
+ * the `<jay:xxx>` tag becomes a page-level condition; override content (spliced in during
+ * pre-processing) resolves in place because the inlined root scope short-circuits `$parent` climbs.
+ */
+function renderServerInlinedStructuralInstance(
+    element: HTMLElement,
+    context: ServerContext,
+    contractName: string,
+    headlessImport: JayHeadlessImports,
+): RenderFragment {
+    const { indent } = context;
+
+    const childNodes = filterContentNodes(element.childNodes);
+    if (childNodes.length === 0) {
+        return new RenderFragment('', Imports.none(), [
+            `Headless component instance <jay:${contractName}> must have inline template content`,
+        ]);
+    }
+    // DL#194 v1: a card-internal forEach over an aliased array needs depth-correct nested scopes;
+    // deferred to a follow-up. Keep the clear diagnostic (DL#193 §4) rather than mis-compiling.
+    if (childNodes.some(hasForEachDescendant)) {
+        return new RenderFragment('', Imports.none(), [
+            forEachInsidePureComponentError(contractName),
+        ]);
+    }
+
+    // Seed the alias overlay from the usage-site prop attributes, then build the inlined scope: the
+    // parent scope's type/var/depth (and lexical-in-scope flag) plus that overlay.
+    const { aliases, validations: aliasValidations } = buildInlineAliases(
+        element,
+        context.variables,
+        headlessImport.contract?.props,
+    );
+    const componentVariables = Variables.forInlinedComponent(context.variables, aliases);
+
+    // `if=` on the <jay:xxx> tag uses the page ViewState (not the instance's).
+    const ifCondition = element.attributes.if;
+    const bodyIndent = ifCondition ? new Indent(indent.curr + '    ') : indent;
+    const instanceContext: ServerContext = {
+        ...context,
+        variables: componentVariables,
+        indent: bodyIndent,
+        interactivePaths: buildInteractivePaths(headlessImport.contract),
+    };
+
+    // Render inline template children directly. The root child must always emit jay-coordinate so the
+    // hydrate target's adoptElement can find it (isRoot: true), matching the element/hydrate output.
+    const renderedChildren = mergeServerFragments(
+        childNodes.map((child) => {
+            if (child.nodeType === NodeType.ELEMENT_NODE) {
+                const el = child as HTMLElement;
+                if (isForEach(el) || isConditional(el)) {
+                    return renderServerElement(el, instanceContext);
+                }
+                return renderServerElementContent(el, instanceContext, { isRoot: true });
+            }
+            return renderServerNode(child, instanceContext);
+        }),
+    );
+
+    if (!ifCondition)
+        return new RenderFragment(renderedChildren.rendered, renderedChildren.imports, [
+            ...aliasValidations,
+            ...renderedChildren.validations,
+        ]);
+
+    const renderedCondition = parseServerCondition(ifCondition, context.variables);
+    return new RenderFragment(
+        [
+            `${indent.firstLine}if (${renderedCondition.rendered}) {`,
+            renderedChildren.rendered,
+            `${indent.firstLine}}`,
+        ].join('\n'),
+        renderedChildren.imports,
+        [...aliasValidations, ...renderedCondition.validations, ...renderedChildren.validations],
+    );
+}
+
+/**
  * Render a headless component instance for the server-element target.
  * The inline template children are rendered directly (no wrapper element for <jay:xxx>)
  * using the instance's ViewState from `vs.__headlessInstances[coordinateKey]`.
@@ -216,6 +303,13 @@ function renderServerHeadlessInstance(
     const headlessResult = resolveHeadlessImport(contractName, context.headlessImports);
     if (isValidationError(headlessResult)) return headlessResult;
     const headlessImport = headlessResult;
+
+    // DL#194 Phase B: a Tier 2 (no-code) composite has no runtime boundary — splice its template
+    // into the usage site instead of reading a `vs.__headlessInstances[...]` instance. Contract
+    // fields are projected onto usage-site expressions via an alias overlay, so the SSR HTML matches
+    // the inlined element/hydrate targets (which no longer emit a boundary either).
+    if (headlessImport.structural)
+        return renderServerInlinedStructuralInstance(element, context, contractName, headlessImport);
 
     // Generate unique variable name for this instance's ViewState
     const idx = context.headlessInstanceCounter.count++;
@@ -1179,11 +1273,18 @@ export function generateServerElementFile(
     const usedTypeNames = new Set<string>();
     const headlessModules = new Set<string>();
     for (const headless of jayFile.headlessImports) {
-        usedTypeNames.add(headless.rootType.name);
+        // DL#194: a Tier 2 (structural) composite is inlined — its ViewState type never appears in the
+        // SSR output (no `as BadgeViewState` cast, no instance lookup), so don't force-keep it. Enum
+        // types from its contract may still be referenced by inlined bindings, so keep those.
+        if (!headless.structural) {
+            usedTypeNames.add(headless.rootType.name);
+        }
         for (const link of headless.contractLinks) {
             headlessModules.add(link.module);
             for (const name of link.names) {
-                if (!name.name.endsWith('Refs')) {
+                if (isEnumType(name.type)) {
+                    usedTypeNames.add(name.name);
+                } else if (!headless.structural && !name.name.endsWith('Refs')) {
                     usedTypeNames.add(name.name);
                 }
             }

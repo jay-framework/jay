@@ -36,6 +36,7 @@ import {
     findForEachInsidePureComposite,
     forEachInsidePureComponentError,
     getComponentName,
+    hasForEachDescendant,
     isConditional,
     isForEach,
 } from './jay-html-helpers';
@@ -72,6 +73,7 @@ import {
 import {
     type HeadlessInstanceDefinition,
     type RenderContext,
+    buildInlineAliases,
     processImportedHeadless,
     renderAttributes,
     renderChildCompProps,
@@ -99,6 +101,12 @@ interface HydrateContext {
     insideFastForEach: boolean;
     /** Property paths whose phase is 'fast+interactive' — only these need client adoption */
     interactivePaths: Set<string>;
+    /**
+     * DL#194 Phase B (Tier 2 inlining): true while rendering the spliced body of a no-code composite.
+     * Suppresses the `<override>` re-basing machinery (`__parentContext` / `(vs,_p1)=>_p1`) — inlined
+     * bindings already resolve against the parent scope via the alias overlay, so no re-basing applies.
+     */
+    insideInlinedComposite?: boolean;
     /**
      * DL#193 Phase 3: file-level dedup of forwarded-ref helper types (`CounterRef`/`CounterRefs`).
      * Shared with the element pass so the hydrate-only create-variant instance (generated via the
@@ -581,8 +589,13 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         // override-injected child component's forwarded ref carries the OUTER (override authoring)
         // scope. Emit the `(vs, _p1) => _p1` ref-viewState selector and raise parentDepth so the
         // enclosing composite instance emits `__parentContext` at its mount site (§C).
+        // DL#194 Phase B: inside an inlined Tier 2 composite the body already renders at the parent
+        // scope, so an override-injected child needs no `(vs,_p1)=>_p1` re-basing (there is no child
+        // boundary to re-base across) — suppress it.
         const isOverrideInjected =
-            OVERRIDE_INJECTED_MARKER in element.attributes && renderedRef.rendered !== '';
+            OVERRIDE_INJECTED_MARKER in element.attributes &&
+            renderedRef.rendered !== '' &&
+            !context.insideInlinedComposite;
         const refSelectorArg = isOverrideInjected
             ? `, (${context.variables.currentVar}, _p1) => _p1`
             : '';
@@ -609,6 +622,99 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
  *
  * For forEach context, generates TWO separate definitions (adopt + create).
  */
+/**
+ * DL#194 Phase B — Tier 2 (no-code composite) inlining for the hydrate target.
+ *
+ * Mirror of {@link renderInlinedStructuralInstance} (element target): compile the composite body
+ * against an alias overlay of the parent scope ({@link Variables.forInlinedComponent}) and splice the
+ * resulting adopt calls directly into the parent hydrate render — no `makeHeadlessInstanceComponent`,
+ * no `childCompHydrate`, no `withHydrationChildContext`, no `__parentContext`. Coordinates stay on the
+ * spliced nodes (DL#126 fully-qualified) and resolve via the shared flat coordinate map
+ * (context.ts `resolveCoordinate`), so no child coordinate context is needed. Inner refs bubble into
+ * the PARENT ref tree, nested under the usage-site ref name.
+ */
+function renderInlinedStructuralInstanceHydrate(
+    element: HTMLElement,
+    context: HydrateContext,
+    contractName: string,
+    headlessImport: JayHeadlessImports,
+): RenderFragment {
+    const childNodes = filterContentNodes(element.childNodes);
+    if (childNodes.length === 0) {
+        return new RenderFragment(
+            '',
+            Imports.none(),
+            [`Headless component instance <jay:${contractName}> must have inline template content`],
+            mkRefsTree([], {}),
+        );
+    }
+    // DL#194 v1: a card-internal forEach over an aliased array needs depth-correct nested scopes;
+    // deferred. Keep the clear diagnostic (DL#193 §4) rather than mis-compiling.
+    if (childNodes.some(hasForEachDescendant)) {
+        return new RenderFragment(
+            '',
+            Imports.none(),
+            [forEachInsidePureComponentError(contractName)],
+            mkRefsTree([], {}),
+        );
+    }
+
+    // Seed the alias overlay from the usage-site prop attributes, then build the inlined scope.
+    const { aliases, validations: aliasValidations } = buildInlineAliases(
+        element,
+        context.variables,
+        headlessImport.contract?.props,
+    );
+    const componentVariables = Variables.forInlinedComponent(context.variables, aliases);
+    const instanceRefMap = buildContractRefMap(headlessImport.refs);
+
+    const childContext: HydrateContext = {
+        ...context,
+        variables: componentVariables,
+        importedRefNameToRef: instanceRefMap,
+        dynamicRef: context.dynamicRef,
+        insideInlinedComposite: true,
+        // The composite's own contract fields drive which of ITS bindings are interactive; after alias
+        // resolution the accessors render against the parent `vs`, but the interactive/static split
+        // (conditionals, texts) is still keyed on the composite's contract paths.
+        interactivePaths: buildInteractivePaths(headlessImport.contract),
+    };
+    const childRenderContext = buildRenderContext(childContext);
+
+    // Render the composite body with the hydrate APIs. A single non-directive root child is forced to
+    // adopt (it is the composition point); a directive root goes through the node dispatcher; multiple
+    // roots splice as comma-separated adopt calls (the parent joins children with commas).
+    let inlineBody: RenderFragment;
+    if (childNodes.length === 1 && !isForEach(childNodes[0]) && !isConditional(childNodes[0])) {
+        inlineBody = renderHydrateElementContent(
+            childNodes[0] as HTMLElement,
+            childContext,
+            childRenderContext,
+            null,
+            true, // forceAdopt
+        );
+    } else if (childNodes.length === 1) {
+        inlineBody = renderHydrateNode(childNodes[0], childContext);
+    } else {
+        inlineBody = mergeHydrateFragments(
+            childNodes.map((child) => renderHydrateNode(child, childContext)),
+            ',\n',
+        );
+    }
+
+    // Nest the body's refs under the usage-site ref name (`refs.signupCard.cta`) when present.
+    const usageRefName = element.attributes.ref;
+    const nested = usageRefName ? nestRefs([camelCase(usageRefName)], inlineBody) : inlineBody;
+
+    return new RenderFragment(
+        `${context.indent.firstLine}${nested.rendered}`,
+        nested.imports,
+        [...aliasValidations, ...nested.validations],
+        nested.refs,
+        nested.recursiveRegions,
+    );
+}
+
 function renderHydrateHeadlessInstance(
     element: HTMLElement,
     context: HydrateContext,
@@ -618,6 +724,11 @@ function renderHydrateHeadlessInstance(
     const headlessResult = resolveHeadlessImport(contractName, context.headlessImports);
     if (isValidationError(headlessResult)) return headlessResult;
     const headlessImport = headlessResult;
+
+    // DL#194 Phase B — a Tier 2 (no-code) composite has no `.ts` to run: splice its template into the
+    // parent hydrate render instead of emitting a `makeHeadlessInstanceComponent` boundary.
+    if (headlessImport.structural)
+        return renderInlinedStructuralInstanceHydrate(element, context, contractName, headlessImport);
 
     // Generate unique names
     const idx = context.headlessInstanceCounter.count++;

@@ -25,7 +25,7 @@ data:
         <h2>Inject via override — refs.signupCard.cta</h2>
         <!-- Inject Counter into the card's slot; its `cta` ref is forwarded to the usage site. -->
         <jay:card heading="Sign up" ref="signupCard">
-            <override ref="slot">
+            <override slot="slot">
                 <jay:Counter ref="cta" initialValue="0" />
             </override>
         </jay:card>
@@ -36,7 +36,7 @@ data:
         <ul class="cards" forEach="cards" trackBy="id">
             <li>
                 <jay:card heading="{label}" ref="cards">
-                    <override ref="slot">
+                    <override slot="slot">
                         <jay:Counter ref="cta" initialValue="0" />
                     </override>
                 </jay:card>

@@ -1,6 +1,7 @@
 # 194 - Ref exposure and scoping across composition boundaries (slot model)
 
-Status: **DESIGN — for review, not yet implemented.**
+Status: **Phase A implemented** (slot contract tag + validation). Phases B–C pending. See
+Implementation Results.
 
 Extracted from DL#193 (which grew to cover binding + Phases 1–4 + two ref refinements). This log owns
 the **single question**: when component A composes/overrides component B, *which* of B's refs become
@@ -10,6 +11,17 @@ It replaces the earlier `hasCodeFile`-only "two cases + suppression" draft with 
 `slot` tag** model. The `slot` tag makes override targets **explicit** instead of inferred, which (a)
 protects coded components from having ref-type assumptions broken by arbitrary overrides, and (b) gives
 the compiler a first-class signal for *which scope a ref belongs to*.
+
+**Central simplification (this revision): a Tier 2 composite is *fully inlined* into the parent scope.**
+A no-code component has no independent reactivity — its ViewState is a pure compile-time projection of
+usage-site data. So instead of giving it a runtime boundary and *bridging* refs back to the parent (the
+DL#193 `__parentContext` / `parentDataChain` / `(vs,_p1)=>_p1` machinery), the compiler splices the
+component's template into the usage site, **substitutes contract-ViewState bindings with the usage-site
+prop expressions**, and constructs its refs in the **parent's** `ReferencesManager`. Refs are then
+external-scope *by construction* — no forwarding, no re-basing, no `__parentContext`. Tier 2 slots become
+plain compile-time template composition (default content and override fragment both inline in parent
+scope). The parent-bound render-function injection (higher-order constructor) is needed **only for
+Tier 3**, whose `.ts` is a genuine boundary you must inject across.
 
 Related: DL#181 (override — its **content-replace** is subsumed by slots and `remove` is dropped; its
 **attribute/style merge** is retained on any ref), DL#187 (three-tier
@@ -28,13 +40,13 @@ component's **own** scope. Slots are **compile-time artifacts, not runtime** —
 | What                     | `interactive` (existing)                                                                     | `slot` (**new**)                                               |
 |--------------------------|----------------------------------------------------------------------------------------------|----------------------------------------------------------------|
 | **What it is:**          | the component's **own** ref                                                                  | a declared **override target**                                 |
-| **Scope of its refs:**   | Tier 3 → **own**; <br> Tier 1/2 → **external**                                               | override fragment → **parent**; <br> default content → **own** | 
+| **Scope of its refs:**   | Tier 3 → **own**; <br> Tier 2 → **external** (inlined)                                        | override fragment → **parent**; <br> default content → **own** | 
 | **Overridable:**         | attribute/style merge only (any ref; presentation-safe)                                     | **content fill — the only content-override target**            |
-| **Exposed to consumer:** | contract-declared → **yes**; <br> internal (jay-html-only) → Tier 3 **no**, Tier 1/2 **yes** | injected refs **yes** <br> (parent scope, keyed by slot name)  |
+| **Exposed to consumer:** | contract-declared → **yes**; <br> internal (jay-html-only) → Tier 3 **no**, Tier 2 **yes**   | injected refs **yes** <br> (parent scope, keyed by slot name)  |
 
 1. **`slot` is a new `ContractTagType`** (`contract.ts:3`), alongside `data`/`interactive`/`variant`/
-   `subContract`. It declares a named region a **parent may override**; the parent's injected refs are
-   forwarded to the parent, keyed under the slot name, in the parent's (external) scope. Slots may carry
+   `subContract`. It declares a named region a **parent may override**; the injected refs are
+   surfaced on the parent, keyed under the slot name, in the parent's (external) scope. Slots may carry
    **default content** (rendered when not overridden). Slots work at **all tiers**, carry **no phase**,
    and (v1) take **no type constraint** on injected content.
 
@@ -60,8 +72,14 @@ component's **own** scope. Slots are **compile-time artifacts, not runtime** —
      API** — exposed, in the component's **own** scope (the component computes/emits them). Its
      **internal** (jay-html-only, not in contract) refs are **encapsulated**. Override-content refs are
      **added** to this Refs type (see 4).
-   - **Tier 1/2 (no-code design composites).** No `.ts` to handle any ref, so **all** own `interactive`
-     refs (contract-declared *and* jay-html-only) **forward** to the consumer in the **external** scope.
+   - **Tier 2 (no-code design composite).** No `.ts`, no independent reactivity → the composite is
+     **fully inlined** into the parent scope. Contract-ViewState bindings are substituted with the
+     usage-site prop expressions at compile time; **all** own `interactive` refs (contract-declared *and*
+     jay-html-only) are constructed in the **parent** `ReferencesManager`, so they are **external** scope
+     *by construction* — no forwarding, no `__parentContext`, no `(vs,_p1)=>_p1` re-basing. A no-code
+     component that references **itself** (directly or transitively) can't be inlined → **compile error:
+     add a `.ts` (make it Tier 3)**. Inlining is the **Tier 2-only** concern (it replaces the earlier
+     "forwarding" phase and subsumes the Tier-1 removal).
 
 4. **Tier 3 Refs type extends the original component Refs.** The generated Refs for a coded component
    with slots **extends** its contract-derived Refs (declared events/functions, own scope) and **adds**
@@ -73,24 +91,33 @@ component's **own** scope. Slots are **compile-time artifacts, not runtime** —
    tag type, so DL#193's `OVERRIDE_INJECTED_MARKER` and the earlier "suppress the overridden ref" rule
    are both **gone**.
 
+**Two tiers only (Tier 1 removed).** A `<jay:X>` whose component has no contract is treated as **Tier 2
+with an empty contract** — the DL#162 no-contract/empty unwrap is deleted, no structural special-case,
+no warning machinery (Q5).
+
 **Parent-facing exposed set, per tier:**
 
-- **Tier 1 (jay-html only, no contract):** own `interactive` refs (external scope). **No slots**
-  (can't declare them without a contract) → **cannot be overridden**. Structural boundary (no unwrap).
-  Build warning suggests adding a contract (see Q5).
-- **Tier 2 (jay-html + contract, no `.ts`):** own `interactive` refs (contract-declared + jay-html),
-  external scope; + slot-injected refs (parent scope, keyed by slot name).
-- **Tier 3 (jay-html + contract + `.ts`):** contract-declared Refs (own scope) + slot-injected refs
-  (parent scope, keyed by slot name). Internal jay-html refs encapsulated.
+- **Tier 2 (jay-html + contract, no `.ts`) — inlined:** own `interactive` refs (contract-declared +
+  jay-html) at external scope; + slot refs at external scope, keyed by slot name. All refs are just the
+  parent's own refs (the composite has no boundary); grouping under the usage-site key is a naming
+  convenience, not a scope boundary.
+- **Tier 3 (jay-html + contract + `.ts`) — real boundary:** contract-declared Refs (own scope) +
+  slot-injected refs (parent scope, keyed by slot name). Internal jay-html refs encapsulated. Own refs
+  are **not** forwarded — the `.ts` owns them.
 
 Non-obvious constraints:
 
 - "External scope" = the ViewState at the composite's **usage site** — page scope for a root instance,
-  `forEach`-item scope for a repeated instance. Delivered by DL#193's `__parentContext` / `$parent`
-  wiring; the ref selector reads `parentDataChain(context)`.
+  `forEach`-item scope for a repeated instance. **Tier 2 refs** reach external scope *by construction*:
+  the composite is inlined and its refs register in the parent `ReferencesManager` — no re-basing
+  selector, no `__parentContext`. **Tier 3 slot-injected refs** (§5) also get external scope
+  structurally — their render function is built in and bound to the parent `ReferencesManager`. Neither
+  path uses the DL#193 `(vs,_p1)=>_p1` re-basing selector; DL#194 no longer needs `__parentContext` for
+  ref scoping (its general handler-offset role in DL#193 is out of this log's scope).
 - **Two independent axes — do not conflate.** (1) **Template data bindings** (`<h3>{heading}</h3>`)
-  resolve against the component's **own** ViewState. (2) **Exposed refs** re-base per the table above.
-  Scope rules here govern (2) only, never (1).
+  resolve against the component's **own** ViewState — for Tier 2 that ViewState is the compile-time
+  projection substituted from the usage site; for Tier 3 it is computed by the `.ts`. (2) **Exposed refs**
+  scope per the table above. Scope rules here govern (2) only, never (1).
 
 ## Background
 
@@ -116,7 +143,8 @@ Two defects in the pre-slot model:
    **external** scope (`AppViewState`), not `CardViewState`.
 
 The slot model fixes (1) by making override an explicit, author-declared extension point, and (2) by
-forwarding a no-code component's own `interactive` refs at external scope.
+**inlining** a no-code component so its own `interactive` refs are the parent's, at external scope, by
+construction.
 
 ## Prior Art / Adjacent Mechanisms
 
@@ -127,20 +155,26 @@ forwarding a no-code component's own `interactive` refs at external scope.
   (`contract-phase-validator.ts:57`). `slot` reuses "Refs, not ViewState" but is **phaseless/slow** and
   requires **no** `elementType`.
 - **`hasCodeFile`** (`jay-html-parser.ts:1242`) — the existing discriminator for own-ref encapsulation
-  (Tier 3) vs forwarding (Tier 1/2).
-- **DL#193 `__parentContext` / `$parent` / `parentDataChain`** — delivers external scope into an inlined
-  composite. Refinement 1's optional `childComp` ref-viewState selector `(vs, _p1) => _p1` already
-  re-bases a forwarded ref; generalizing = apply it to all external-scope refs.
-- **`filterToComponentRefs` / `hasNamedComponentRefs`** (`jay-html-compile-refs.ts:56,68`) currently
-  limit forwarding to component refs. Element-ref forwarding is the missing piece.
+  (Tier 3) vs inlining (Tier 2).
+- **DL#193 `__parentContext` / `$parent` / `parentDataChain`** — delivered external scope into a composite
+  *while keeping a runtime boundary*. This revision removes the Tier 2 boundary entirely, so the bridge is
+  unnecessary for Tier 2 and the `(vs,_p1)=>_p1` re-basing selector is **not emitted**. Tier 3 slots are
+  parent-bound via a render function (§5), not this selector. DL#194 therefore needs neither `__parentContext`
+  nor `parentDataChain` for ref scoping.
+- **`filterToComponentRefs` / `hasNamedComponentRefs`** (`jay-html-compile-refs.ts:56,68`) limited
+  forwarding to component refs. With Tier 2 inlined, element refs are parent-native — no ref-kind filtering
+  is needed for exposure.
 - **`getForwardedInnerRef`** (`node-reference.ts:273`) is ref-kind-agnostic and does **no** re-basing
-  (line 270); the collection runtime path needs no change once element refs are exposed and re-based.
+  (line 270); it stays on the collection path but is no longer the DL#194 exposure mechanism.
 - **DL#181 override** — the `<override>` element and `ref` anchoring are reused. Its **attribute/style
   merge** form is retained verbatim (safe: preserves element type; `style` per-property via cascade,
   `jay-html-overrides.ts` `applyOverrides`). Its **content-replace** form is subsumed by slots (content
   now must target a `type: slot` ref); its `remove` operation is dropped.
-- **DL#162 empty-contract unwrap** (`jay-html-parser.ts:1245-1254`) — under this model Tier 1 stays a
-  **structural boundary** (no unwrap); its own `interactive` refs forward at external scope; no slots.
+- **DL#162 empty-contract unwrap** (`jay-html-parser.ts:1245-1254`) — **deleted** under this model. A
+  no-contract `<jay:X>` becomes **Tier 2 with an empty contract** (empty ViewState, own `interactive`
+  refs parent-native via inlining, no slots) — no unwrap, no structural special-case. Inlining a Tier 2
+  *is* the modern form of DL#162 force-inline, now restricted to the no-code tier (Tier 3 keeps its
+  boundary).
 
 ## Design
 
@@ -183,7 +217,9 @@ Validation (compiler, prevention-first):
   override-only) — it never changes element type. Children under a `ref=` override → compile error
   ("use `slot=` to fill a slot").
 - `required: true` slot with no `<override slot=…>` at a usage site → compile error.
-- `remove` on `<override>` → compile error (dropped; use an empty `<override slot="X"></override>`).
+- `remove` is no longer a keyword — it is not recognized specially and is treated as an ordinary
+  attribute. Dropped; use an empty `<override slot="X"></override>`. (On the attribute form it would
+  merge as a `remove` attribute; on the slot form any attributes are already a compile error.)
 
 ### 2. Two `<override>` forms: attribute (any ref) vs content (slots only)
 
@@ -203,30 +239,163 @@ DL#181's `remove` is dropped — an empty slot fill (or `if`/variant) replaces i
 ### 3. Scope rules (read from the tag type)
 
 - **Slot is scopeless.** The **override fragment** the parent places carries the **parent (external)**
-  scope for both ViewState bindings and refs (DL#193 §C). **Default content** (author-placed) carries
-  the component's **own** scope.
-- **`interactive` ref scope by `hasCodeFile`:** Tier 3 → own scope, handled by `.ts`; Tier 1/2 →
-  external scope, handled by the consumer.
+  scope for both ViewState bindings and refs. For **Tier 2** this is automatic — the whole composite is
+  inlined into the parent, so the fragment is already parent-scope template. For **Tier 3** it is achieved
+  structurally (§5): the fragment's render function is built in the parent scope and bound to the parent
+  `ReferencesManager` + `eventWrapper`, so its refs are parent-owned by construction (no re-basing
+  selector). **Default content** (author-placed) carries the component's **own** scope (Tier 3) / the
+  substituted projection scope (Tier 2, inlined).
+- **`interactive` ref scope by `hasCodeFile`:** Tier 3 → own scope, handled by `.ts`; Tier 2 →
+  external scope, parent-native via inlining (Phase B) — the consumer wires them like its own refs.
 
 ### 4. Default content
 
 A slot renders its template children when the usage site gives no `<override>`; an override **replaces**
-them. Default content compiles in the component's own scope (Tier 3 handles it; Tier 1/2 forwards it);
-an override compiles in the parent scope and is spliced/passed in place of the default when present.
+them. Default content compiles in the component's own scope; an override compiles in the parent scope. For
+**Tier 2** both are inlined directly (compile-time template composition); for **Tier 3** the override is a
+parent-bound render function passed in place of the default when present (§5).
 
-### 5. Tier 3 Refs type & the slot channel
+### 5. How slots are filled — inline (Tier 2) vs render-function injection (Tier 3)
 
-Because a coded component is imported (`childComp(Import, props, ref)`), a declared slot becomes a
-two-way channel generated from the contract:
+The two tiers fill slots by fundamentally different mechanisms, because only Tier 3 has a runtime boundary
+to inject across.
 
-- **In:** the component's generated props gain an optional `slots` entry — a render function bound to
-  the **external** scope — that the parent fills with the override fragment. The coded component renders
-  it at the slot anchor (falling back to default content when absent).
-- **Out:** the injected fragment's refs are surfaced back on the instance ref, **keyed by slot name**
-  (`refs.card.body.cta`), at **external** scope.
+#### 5a. Tier 2 — inline (no boundary, no injection)
 
-The generated Refs **extends** the component's contract-derived Refs and **adds** the slot-keyed
-override refs:
+A no-code composite is spliced into the parent at compile time. The component's template becomes parent
+template; its contract-ViewState bindings are **substituted** with the usage-site prop expressions; the
+slot's default content and any `<override slot="X">` fragment are placed inline at the `[ref="X"]` anchor.
+Everything ends up in parent scope, so refs — the component's own `interactive` refs *and* any override
+refs — register in the parent `ReferencesManager` directly.
+
+```html
+<!-- usage site: card is Tier 2 (no .ts); body slot filled with a Counter -->
+<jay:Card heading={item.title}>
+  <override slot="body"><jay:Counter ref="cta" /></override>
+</jay:Card>
+```
+
+compiles (conceptually) to the card body inlined into the parent render, with `{heading}` → `{item.title}`:
+
+```js
+// parent render, item scope — NO childComp for the card, NO makeHeadlessInstanceComponent
+e('div', { class: 'card' }, [
+  e('h3', {}, [dt((vs) => vs.item.title)]),                 // {heading} substituted → item.title
+  e('div', { class: 'card-body' }, [
+    childComp(Counter, () => ({ initialValue: 0 }), refCta()),  // refCta ∈ PARENT ref manager
+  ], refBody()),
+], refCard())
+```
+
+- No `childComp(makeCardWithSlots(…))`, no `__parentContext`, no `(vs,_p1)=>_p1`. The card's refs
+  (`refCard`, `refBody`) and the override's (`refCta`) are all the parent's.
+- **Recursion guard:** a Tier 2 that references itself directly or transitively can't be inlined →
+  compile error asking the author to add a `.ts` (promote to Tier 3, which introduces a real boundary).
+
+**Why substitution is forced (not one option among several).** A ref captures its `viewState` and
+`coordinate` from the **single** live `currentConstructionContext().currData` at construction
+(references-manager.ts:57-68, node-reference.ts:335-342); template bindings read that *same* `currData`
+(element.ts:583-602). One scope, one `currData` — refs and bindings can't sit in different scopes within
+one fragment. The only thing that ever split them was the child boundary + `__parentContext` forwarding.
+So the fragment must render at **one** scope, and since refs must be **external** (the DL's core
+requirement), that scope is the parent's — which forces the card's own bindings to be rewritten to
+parent-scope expressions. Scope-switching to the projection instead (e.g. via the existing `withData`
+primitive, element.ts:400-410 / context.ts `forAsync`) would make bindings trivial but push refs into the
+projection scope, re-requiring the very re-basing machinery we are removing. Dead end. Substitution is the
+price of deleting the boundary, not a stylistic choice.
+
+**What "substitution" concretely is (and is not).** It is **not** textual find-replace. The mapping
+`heading := item.title` is exactly the `getProps` projection the compiler **already emits** for today's
+`childComp` (element.ts:42-56) — inlining relocates it from a runtime child-prop into the binding
+accessors. Bindings compile to coordinate-free `(vs) => …` accessors (`dt`/`da`/`dp`/`ba`, element.ts:94-97),
+so the transform is: **in each card binding accessor, replace every reference that resolves to a card
+*root* ViewState field with that field's usage-site prop expression** (`root.heading` → `root.item.title`;
+chained access keeps the suffix — `root.heading.length` → `root.item.title.length`). **Implementation seam — an alias map on `Variables`, resolved in `resolveAccessor` (no grammar change).**
+Every accessor in the PEG grammar funnels through the single method `Variables.resolveAccessor`
+(expression-parser.pegjs:528,547,649,672,685,691), which *already* hosts two "resolve against a remapped
+scope without rewriting the text" mechanisms: `$parent` climbing and `withParentShift`
+(expression-compiler.ts:175-245). DL#193 already uses that seam for override content
+(`remapOverrideBindingsToParent` + `PARENT_SCOPE_PRAGMA` → `withParentShift(1)`,
+jay-html-overrides.ts:84, expression-compiler.ts:464). Tier-2 substitution is the same idea generalized
+from "shift up N levels" to "map each root field to an arbitrary parent accessor":
+1. Resolve each usage-site prop expression against the **parent** `Variables`
+   (`parseAccessor("item.title", parentVars)`) → an `Accessor` (its `rootVar`/`terms`/`parentLevel` are
+   already correct for the inlining site).
+2. Build a card-root `Variables` seeded with the card contract type **and** `aliases: Record<string, Accessor>`
+   (one per contract data field, from step 1). Seed one for every contract field; a missing usage-site prop
+   is the existing "required prop not passed" validation.
+3. In `resolveAccessor`, before the default field walk, if `accessor[0]` matches an alias, return the alias
+   `Accessor` with the remaining terms appended (and its `resolvedType` walked for those terms) — exactly
+   parallel to the `$parent` branch. Compile the whole card template against this scope.
+
+**Static/literal props (refinement, found in implementation).** A usage-site prop is not always a
+dynamic `{expr}` — it is frequently a **static literal** (`label="Live Status"`, `status="success"`,
+`count="42"`, bare `featured`). Under `childComp` these were coerced to the declared dataType
+(`coerceStaticComponentProp`: `Status.success` / `42` / `true` / quoted string) and passed as props;
+inlined, the same coercion must reach the card bindings. So the alias value covers **two** shapes:
+(a) **dynamic** — a single-accessor prop (`{item.title}`), seeded via `parseAccessor` against the parent
+scope (DL#187 restricts a structural component to scalar/enum props, so a dynamic prop is always a single
+accessor, never a template); (b) **static** — a **literal `Accessor`** carrying the coerced literal as a
+render override plus the declared prop type as `resolvedType` (so a card-internal enum comparison
+`status == success` still renders `Status.success` on the RHS). `Accessor.render()` returns the literal
+directly when present, and a literal is scope-independent so a `$parent` climb that lands on it is returned
+as-is (no `_pN` wrapping). This keeps a single seam (`aliases` on `Variables`) for both prop kinds.
+
+Because it lives in `resolveAccessor`, it inherits the machinery DL#193 already built
+(`lexicallyInScope` / `parentDepth`, expression-compiler.ts:108-149,503-517) and is **unit-testable in
+isolation** (expression-compiler.unit.test.ts): construct a `Variables` with aliases, parse a binding,
+assert the rendered accessor string — no element/DOM codegen needed.
+- **Card-internal nested scopes** (a `forEach`/`if`/`withData` *inside* the card template) are respected
+  for free: child scopes are built from the *resolved* (aliased) accessor's type via `childVariableFor`,
+  so an inner loop var resolves in the item scope (not aliased), while `$parent` from inside climbing to a
+  card-root field still hits the alias through the preserved `.parent` chain.
+- **Usage-site depth is automatic.** The prop expressions (`item.title`) are resolved against the parent
+  scope, so the aliased accessor already sits at the correct depth — inlining is in-place, no extra `_pN`
+  plumbing.
+- **`$parent` climbing to/above the card *root*** (a Tier 2 reaching *past* itself into its consumer)
+  is the one case aliasing can't express in v1 — it needs a *downward* depth shift the current
+  `withParentShift` (upward only) doesn't provide. **v1 restriction (prevention-first): a Tier 2 template
+  may not use a root-level `$parent`** — compile error directing the author to add a `.ts`. (Card-*internal*
+  `$parent` to card-root fields is fine — it resolves via the aliased parent chain.) Lifting the root-level
+  case is future work.
+
+#### 5b. Tier 3 — parent-bound render-function injection
+
+A coded component is a real runtime boundary (its `.ts` owns render + scope), so the slot content can't be
+inlined — it must be **injected** as a render function *created in the parent scope* and handed to the
+component. No new runtime primitive: it uses `saveContext`/`restoreContext` (context.ts:119-136) plus the
+existing `ReferencesManager` `eventWrapper` (references-manager.ts:135).
+
+```js
+childComp(
+  makeCardWithSlots({                                  // higher-order constructor: slot fns → child ctor
+    body: withParentContext(parentCtx, () =>
+      childComp(Counter, () => ({ initialValue: 0 }), refCta())   // refCta ∈ PARENT ref manager
+    ),
+  }),
+  (vs) => ({ heading: 'Sign up' }),                   // props only — no __parentContext needed
+  refSignupCard(),
+)
+
+function makeCardWithSlots(slots) {
+  return makeJayStackComponent(                        // Tier 3 inner ctor: .ts-owned render
+    (options) => cardRender(options, slots),           // render factory receives the slot fns
+    cardComponentDef, coordinateKey,
+  );
+}
+// inside the .ts-owned cardRender, at the slot anchor:
+e('div', { class: 'card-body' }, [ slots.body ? slots.body() : /* default content, own scope */ ], refBody())
+```
+
+- **In:** the parent builds `slots.body` as a render function bound to itself — closing over the parent
+  ref constructors + the parent's `eventWrapper`, wrapped by `withParentContext` so its refs register
+  with the parent manager and capture parent data/coordinates at invocation. The child invokes it at the
+  `[ref="body"]` anchor; absent → the component's own default content (own scope).
+- **Out:** the injected fragment's refs are **already** the parent's, surfaced **keyed by slot name** —
+  `refs.card.body.cta` — at parent scope, with **no `(vs,_p1)=>_p1` re-basing**.
+
+For Tier 3 the generated Refs **extends** the component's contract-derived Refs and **adds** the
+slot-keyed override refs:
 
 ```ts
 interface _CodedCardRefs extends CardRefs {          // CardRefs = declared events/functions, own scope
@@ -234,8 +403,10 @@ interface _CodedCardRefs extends CardRefs {          // CardRefs = declared even
 }
 ```
 
-This is the clean replacement for "force-inline the coded body" — the slot declaration gives an
-explicit, typed prop + ref channel, so the coded component stays imported. Exact generated shape is Q1.
+The coded component stays imported (`.ts`-owned render); the slot fns are the only thing the parent
+injects. This answers Q1: the "slots prop" is a set of parent-bound render functions, and the ref-return
+channel falls out for free because the refs were never the child's to begin with. The higher-order
+constructor + `withParentContext` are **Tier-3-only** — Tier 2 needs none of it (5a).
 
 ### 6. Future: slot props (phase 2)
 
@@ -251,40 +422,68 @@ Phase A — `slot` contract tag + validation (prevention-first, no runtime yet):
 1. Add `ContractTagType.slot`; parse `type: slot`; no `elementType` requirement; phaseless (slow);
    route to Refs (not ViewState).
 2. Validation: `<override slot=…>` must resolve to a slot; the `<override ref=… />` attribute form is
-   allowed on any ref; children under a `ref=` override and `remove` are compile errors; `required` slot
+   allowed on any ref; children under a `ref=` override are a compile error; `required` slot
    must be filled. In `applyOverrides` (`jay-html-overrides.ts`), keep the attribute/style merge (now
-   `ref=`), route content by `slot=` to a slot target, and drop the `remove` branch. Fixture-based tests
-   with clear error strings.
+   `ref=`), route content by `slot=` to a slot target, and drop the `remove` branch entirely (`remove`
+   is no longer a keyword). Fixture-based tests with clear error strings.
 
-Phase B — Tier 1/2 own-`interactive` forwarding at external scope (fixes `cardCounter`):
-3. Emit the DL#193 ref-viewState selector `(vs, _p1) => _p1` for every forwarded own `interactive` ref
-   of a no-code composite (element target + hydrate); extend forwarding beyond `filterToComponentRefs`
-   to include element refs (`HTMLElementProxy<ExternalVS, …>`).
-4. Regenerate the `override-ref-forwarding` example: `cardCounter` → `CounterRef<AppViewState>`.
+Phase B — Tier 2 inlining (fixes `cardCounter`; subsumes Tier-1 removal):
+3. For a **Tier 2** (no-code) composite, **stop emitting a `childComp` boundary**. Instead splice the
+   component template into the parent render: (a) **binding substitution via an alias map** — add
+   `aliases: Record<string, Accessor>` to `Variables`; seed it by resolving each usage-site prop expression
+   against the parent scope; handle it in `resolveAccessor` (before the default field walk) exactly like the
+   existing `$parent`/`withParentShift` branches, so card-root field accessors resolve to the parent
+   expression and card-internal scopes are respected for free (§5a). No PEG grammar change. (b) construct
+   the component's own `interactive` refs (contract-declared + jay-html-only) in the **parent**
+   `ReferencesManager`, so they are external scope by construction — **no** `__parentContext`, **no**
+   `(vs,_p1)=>_p1`, **no** `filterToComponentRefs` forwarding. Element and hydrate targets both. Slots on a
+   Tier 2 are inlined the same way (default content + `<override slot="X">` fragment placed at the
+   `[ref="X"]` anchor, §5a).
+   **Unit tests first** (expression-compiler.unit.test.ts): alias resolution for a plain field
+   (`heading` → `vs.item.title`), chained access (`heading.length`), a card-internal `forEach` whose inner
+   var is *not* aliased, and a card-internal `$parent` to a card-root field that *is* aliased — asserting
+   rendered accessor strings, no element codegen.
+4. **Recursion validation** (prevention-first): a no-code component that references itself directly or
+   transitively → compile error ("`<jay:X>` recurses; add an `X.ts` to make it Tier 3"). Detect during
+   the compile-time inline expansion (cycle in the inlined-component graph).
+4b. **Root-level `$parent` validation** (prevention-first): a Tier 2 template using a **root-level**
+   `$parent` (reaching past the composite into its consumer) needs a downward depth shift aliasing can't
+   express in v1 → compile error directing the author to add a `.ts` (Tier 3). Card-*internal* `$parent`
+   to card-root fields is allowed. Lifting the root-level case is future work.
+5. **Remove Tier 1**: a `<jay:X>` with no contract is Tier 2 with an empty contract → inlined by the same
+   path; delete the DL#162 empty/no-contract unwrap and its structural special-case, no warning machinery.
+   Update DL#162/#187/#193 tests.
+6. Regenerate the `override-ref-forwarding` example: `cardCounter` → `CounterRef<AppViewState>` (now via
+   inlining, not forwarding). Fixtures: Tier 2 card with own ref + slot (default + overridden, single +
+   forEach) showing distinct external vs projection scopes.
 
-Phase C — slot content forwarding + default content (Tier 1/2):
-5. Compile slot default content in composite scope; forward slot-injected refs at external scope, keyed
-   by slot name; splice an override fragment (external scope) in place of the default when present.
-   Fixture: no-code card with a slot (default + overridden usage sites).
-
-Phase D — Collapse Tier 1 into a structural boundary (no unwrap) + missing-contract warning:
-6. Remove the DL#162 empty/no-contract unwrap; route Tier 1 through the structural path (empty
-   ViewState, own `interactive` refs external scope, no slots). Emit a suppressible warning pointing at
-   the agent-kit contract guide. Update DL#162/#187/#193 tests.
-
-Phase E — Tier 3 slot channel (pending Q1):
-7. Generate the `slots` prop + ref-return channel keyed by slot name; Refs extends contract-derived
-   Refs; own scope for declared refs, external scope for slot-injected refs; internal refs encapsulated.
+Phase C — Tier 3 slot injection via a parent-bound render function + default content:
+7. For a **Tier 3** (coded) composite only, compile each `<override slot="X">` fragment into a **render
+   function created in the parent scope**, closing over the parent ref constructors + the parent's
+   `eventWrapper`, wrapped with a compiler helper `withParentContext` (`saveContext()` at creation /
+   `restoreContext()` at invocation, context.ts:119-136) so its refs register with the **parent**
+   `ReferencesManager` and capture parent data/coordinates even though the child invokes it. Pass the slot
+   fns to a **higher-order component constructor** —
+   `makeCardWithSlots(slots) → makeJayStackComponent((options) => render(options, slots), …)`. The child
+   render invokes `slots.X()` at the `[ref="X"]` anchor, falling back to the component's own default
+   content (own scope) when absent. Surface injected refs on the parent, keyed by slot name
+   (`refs.card.X.cta`). **No `(vs,_p1)=>_p1` re-basing for slot refs** — they are parent-owned by
+   construction *and* on update. Validate the update path: the slot fragment updates from the **parent's**
+   reaction (parent context read live, element.ts:593-595), never fed child viewState (the child positions
+   the slot DOM + mount/unmount; the parent owns the slot data update). Fixtures: Tier 3 card with a slot
+   (default + overridden, single + forEach).
 
 ## Examples
 
-No-code card (Tier 2) — contract declares a `body` slot; card owns `cardCounter`:
+No-code card (Tier 2, **inlined**) — contract declares a `body` slot; card owns `cardCounter`. The card is
+spliced into the page render, so both refs are the page's own refs at external scope (grouped under the
+usage-site key for naming only — no runtime boundary):
 
 ```ts
 // app.jay-html.d.ts (generated at the usage site)
 export interface _HeadlessCard0Refs {
-  cardCounter: CounterRef<AppViewState>,   // own interactive ref, no code → external scope
-  body: { cta: CounterRef<AppViewState> }  // injected into `body` slot → external scope, keyed by slot
+  cardCounter: CounterRef<AppViewState>,   // own interactive ref, inlined → parent-native, external scope
+  body: { cta: CounterRef<AppViewState> }  // slot content inlined at [ref="body"] → external scope
 }
 ```
 
@@ -322,25 +521,37 @@ Override forms (prevention-first):
 - **New contract surface.** `slot` is genuinely new (null-hypothesis: no existing tag encodes
   "parent-scope, overridable, default-content-bearing region" — `interactive` is own-scope,
   non-overridable, phased). Justified: it *removes* two inferred mechanisms (provenance markers,
-  overridden-ref suppression) and makes Tier 3 override tractable without force-inlining.
-- **Breaking:** narrows DL#181 override targets and removes the DL#162 unwrap; existing outputs/tests
-  change. Acceptable per the project's "no backward compatibility" stance.
+  overridden-ref suppression) and makes Tier 3 override tractable via render-function injection.
+- **Tier 2 inlining removes runtime surface (net subtraction).** No `childComp` boundary, no
+  `__parentContext`, no `parentDataChain`, no `(vs,_p1)=>_p1` re-basing, no element-ref forwarding for the
+  no-code tier. The ViewState projection becomes a compile-time binding substitution. Cost: a Tier 2 can't
+  recurse (must add a `.ts`) — a rare case, caught at compile time with a clear message.
+- **Breaking:** narrows DL#181 override targets, removes the DL#162 unwrap, and drops the Tier 2 component
+  boundary; existing outputs/tests change. Acceptable per the project's "no backward compatibility" stance.
 
 ## Verification Criteria
 
-- No-code card: `cardCounter` (own interactive) and `body.cta` (slot-injected) both external scope;
-  `onChange`/`find`/`map` payload viewState is the external item.
+- No-code card (inlined): `cardCounter` (own interactive) and `body.cta` (slot content) both external
+  scope; `onChange`/`find`/`map` payload viewState is the external item; generated output has **no**
+  `childComp(makeCard…)` boundary, `__parentContext`, or `(vs,_p1)=>_p1` for the card.
+- A no-code card that references itself → compile error asking for a `.ts` (recursion guard).
+- A no-code card whose template uses a **root-level** `$parent` → compile error asking for a `.ts` (v1
+  restriction). Card-internal `$parent` to card-root fields resolves via the aliased parent chain.
+- Binding substitution (alias map in `resolveAccessor`) respects card-internal `forEach`/`if` scopes: an
+  inner-scope var is not aliased; only card-root ViewState fields resolve to the usage-site prop
+  expressions. Covered by `expression-compiler.unit.test.ts` alias-resolution unit tests.
 - Coded card: Refs extends the contract-derived Refs (own scope); internal refs absent; `body.cta`
-  present at external scope, keyed by slot name.
+  present at external scope, keyed by slot name; injected via the higher-order constructor.
 - `<override ref=…>` (attribute form) merges onto any ref (per-key; `style` per-property), element type
   unchanged. `<override slot=…>` fills a declared slot (empty = renders nothing). `slot=` on a non-slot,
-  children under a `ref=` override, or `remove` → compile error; `required` slot unfilled → error.
-- Slot with no override renders default content; with an override renders (and forwards refs of) the
-  injected fragment keyed by slot name.
-- Tier 1 (no contract) inlines as a structural boundary (no unwrap); own interactive refs external
-  scope; not overridable; missing-contract warning emitted (suppressible).
+  children under a `ref=` override, or content on a `ref=` override → compile error; `required` slot
+  unfilled → error. (`remove` is no longer a keyword — treated as an ordinary attribute.)
+- Slot with no override renders default content; with an override renders (and surfaces refs of) the
+  fragment keyed by slot name (Tier 2: inlined; Tier 3: injected render function).
+- No-contract `<jay:X>` compiles as Tier 2 with an empty contract (inlined, own interactive refs external
+  scope, no slots so not content-overridable); the DL#162 unwrap is gone and no warning is emitted.
 - All four targets consistent (element, main-sandbox, hydrate; server = ref no-op). Fixtures use
-  distinct external vs composite viewStates so a regression to composite scope fails.
+  distinct external vs projection viewStates so a regression to composite scope fails.
 
 ## Questions and Answers
 
@@ -348,9 +559,15 @@ Override forms (prevention-first):
 ref-return typing that surfaces injected refs (keyed by slot name) at external scope. Requires a trace
 of `childComp` construction + the override compile path (`applyHeadfullOverrides`,
 `parseHeadfullFSImports`) and the coded-component ref boundary before committing.
-*Answer: OK — proceed with an optional `slots` prop of external-scope render functions keyed by slot
-name, plus a ref-return channel surfacing injected refs on the instance ref (keyed by slot name).
-Confirm exact signatures during the Phase-E trace.*
+*Answer (finalized — see §5b): **Tier 3 only.** The "slots prop" is a set of **parent-bound render
+functions** keyed by slot name, injected via a compiler-generated **higher-order component constructor**
+(`makeCardWithSlots(slots) → makeJayStackComponent((options) => render(options, slots), …)`). Each slot fn
+is built in the parent scope and bound (via `withParentContext` = `saveContext`/`restoreContext`) to the
+parent `ReferencesManager` + `eventWrapper`, so the ref-return channel needs no explicit wiring — the
+injected refs are the parent's by construction and surface keyed by slot name. No new runtime primitive;
+the update path is validated by having the parent own the slot fragment's update (child positions the DOM
+only). **Tier 2 does not use this** — it is inlined (§5a), so slot content is plain compile-time template
+composition in parent scope.*
 
 **Q2. Type constraint on a slot?** *Answer: not required. No `elementType` on slots in v1. (Future
 slot props — §6 — may add typed inputs, but not a constraint on injected content.)*
@@ -363,7 +580,150 @@ name colliding with a declared ref name → compile error.*
 the item data is passed to the slot-content render function — so they land in phase 2, together with
 slot props. This also resolves the earlier slots-under-`forEach` constraint.*
 
-**Q5. Tier 1 overridability.** *Answer: confirmed — a no-contract component cannot be overridden (no
-slot declaration possible); it may still have jay-html `interactive` refs. Emit a **suppressible build
-warning** for a Tier-1 (no-contract) component explaining what a contract enables (slots, typed refs)
-and/or pointing at the agent-kit contract guide.*
+**Q5. Tier 1 (no-contract) handling.** *Answer (revised): **Tier 1 is removed.** A `<jay:X>` whose
+component has no contract is treated as **Tier 2 with an empty contract** — same compile path, empty
+ViewState, own `interactive` refs parent-native via inlining. The DL#162 empty/no-contract unwrap is
+deleted; no structural special-case, no build warning. (An empty contract simply declares no slots, so
+such a component still can't be content-overridden — but that falls out of the Tier 2 rules, not a
+separate tier.)*
+
+**Q6. Why inline Tier 2 instead of keeping a boundary + forwarding?** *Answer (this revision): a no-code
+component has no independent reactivity — its ViewState is a pure projection of usage-site data, so the
+runtime boundary buys nothing and forces a bridge (`__parentContext` / `parentDataChain` / `(vs,_p1)=>_p1`)
+to pull refs back to external scope. Inlining makes the projection a compile-time binding substitution and
+lands refs in the parent `ReferencesManager` directly — strictly less machinery (null-hypothesis: the
+boundary was never needed for the no-code tier). Confirmed safe: (1) jay-html is never sandboxed, so
+inlining can't defeat isolation; (2) there is no need to keep a usage-site ref to the Tier 2 instance;
+(3) recursion is disallowed for no-code components (add a `.ts` → Tier 3). Tier 3 keeps its boundary
+because its `.ts` is real code that can't be inlined.*
+
+**Q7. Is the `{heading} → {item.title}` binding substitution tractable, or is it a fragile rewrite?**
+*Answer (traced — see §5a): tractable, and it is **forced**, not a fragile textual rewrite. (a) Refs and
+bindings read the same single `currentConstructionContext().currData` (references-manager.ts:57-68,
+element.ts:583-602), so a fragment can't split "bindings at projection scope, refs at external scope"
+without the boundary+forwarding we're deleting — the fragment must render at parent scope, forcing binding
+substitution. (b) The mapping is exactly the `getProps` projection the compiler already emits for
+`childComp` (element.ts:42-56) — inlining relocates it into the binding accessors, it is not new. (c)
+Bindings are coordinate-free `(vs)=>…` accessors (element.ts:94-97), so substitution is done as an
+**alias map on `Variables`, resolved in `resolveAccessor`** — the single seam every grammar accessor
+funnels through (expression-parser.pegjs:528,547,649,672,685,691), which already hosts `$parent` and
+`withParentShift`. DL#193 already uses that seam for override content
+(`remapOverrideBindingsToParent`/`PARENT_SCOPE_PRAGMA`); Tier-2 aliasing generalizes it. This makes the
+transform **unit-testable in isolation** (parse a binding against an aliased `Variables`, assert the
+rendered accessor — no element codegen). Card-internal `forEach`/`if` scopes are respected automatically
+via `childVariableFor`. (d) `withData` (element.ts:400-410) can render a fragment against a derived view
+state without a boundary, but it scope-switches refs too → would re-require forwarding, so it is **not**
+used here. Two v1 restrictions keep it bounded: no self-recursion and no root-level `$parent` in a Tier 2
+template (both → "add a `.ts`").*
+
+## Implementation Results
+
+### Phase A — `slot` contract tag + validation (complete)
+
+Prevention-first, no runtime changes. All work is in `compiler-jay-html`; 788 tests pass
+(4 pre-existing skips).
+
+**1. `slot` contract tag.**
+- `contract.ts` — added `ContractTagType.slot` (5th member): scopeless, phaseless (treated as
+  slow), no `elementType`, no `dataType`, contributes no ViewState.
+- `contract-parser.ts` — `parseType` maps `type: slot`; `parsePhase` rejects an explicit phase on a
+  slot; `parseTag` rejects slot mixed with other types, and rejects `dataType`/`elementType` on a slot.
+- `contract-phase-validator.ts` — `isTagInPhase` returns `false` for slots (never in ViewState).
+- `contract-to-view-state-and-refs.ts` — `traverseTag` returns `{}` for a slot (no ViewState member,
+  no ref of its own in Phase A; injected refs surface in Phase C/E).
+
+**2. Two `<override>` forms + validation** (`jay-html-overrides.ts`):
+- `OverrideSpec` fields: `ref`, `slot`, `attributes`, `content`, `hasContent`. Addressing attribute
+  (`ref=` vs `slot=`) selects the form.
+- **Attribute form** (`ref=`): merges attributes/style onto any ref (contract, slot, or override-only);
+  content on this form → compile error.
+- **Content form** (`slot=`): fills a declared `type: slot` region; `slot=` on a non-slot → compile
+  error; attributes on this form → compile error; slot target resolved via `[ref="slotName"]`.
+- Neither/both addressing attributes → compile error.
+- `applyOverrides`/`applyHeadfullOverrides` take a `slotNames?: Set<string>`; `jay-html-parser.ts`
+  builds it from the loaded contract's slot tags at the compile call site.
+
+### Deviations from the plan
+
+- **`remove` fully removed as a keyword** (per user request — no backward compat, still in a branch).
+  The plan said "`remove` → compile error"; instead `remove` is not recognized at all and is treated as
+  an ordinary attribute. On the attribute form it would merge as a `remove` attribute; on the slot form,
+  attributes are already a compile error, so `<override slot="X" remove>` still errors (via the
+  "cannot also set attributes" path). Design-log §1/§2, Implementation Plan, and Verification Criteria
+  updated to match.
+- **Deleted the `page-with-override-unwrap-parent-binding` fixture + its 3 tests** (element/server/
+  hydrate). Under the DL#194 model an `<override>` on an empty-contract (Tier 1) component is rejected,
+  which is the correct new behavior; the old unwrap fixture exercised the dropped path. (No-contract →
+  Tier 2 empty contract, inlined, is folded into Phase B.)
+
+### Fixture migrations (zero output change)
+
+- `page-with-override-parent-binding` and `page-with-override-forwarded-ref`: added `type: slot` tags to
+  the card contracts and switched `<override ref=…>` content forms to `<override slot=…>`. Slot content
+  splicing (`set_content` on `[ref="slot"]`) is byte-identical to the old ref-content path, so the
+  generate-* outputs are unchanged.
+
+### Tests
+
+- `contract-parser.test.ts` — 6 new slot-tag tests (parse optional/required, reject
+  dataType/elementType/phase/mixed).
+- `jay-html-overrides.unit.test.ts` — rewritten to the two-form model (parse + apply, error strings).
+- `parse-jay-file.unit.test.ts` — `header` contract/jay-html gained a `body` slot; 3 override tests
+  rewritten to the slot / attribute forms.
+
+### Phase B — Tier 2 inlining (in progress)
+
+**Step 3a — alias substitution mechanism (complete).** The binding-substitution seam the whole tier
+depends on, built first and unit-tested in isolation (no codegen yet), per the plan.
+- `expression-compiler.ts` — `Variables` gained a private `aliases: Record<string, Accessor>` (8th
+  constructor param, defaults `{}`). `resolveAccessor` resolves a contract-field accessor through the
+  alias map *before* the default field walk: `heading` → the seeded usage-site accessor `item.title`;
+  chained access (`author.name`) appends the remaining terms onto the alias and walks its resolved
+  type; the alias's own `rootVar`/`parentLevel` are preserved so a card-internal `$parent` climb that
+  lands on the card-root scope composes automatically (climb wraps the alias result's `parentLevel`).
+  Aliases are preserved across `asLexical`/`withParentShift` (same-scope reconstructions) but **not**
+  propagated to `childVariableFor`/`childVariableForWithData` child scopes — only card-root contract
+  fields are projected, so a card-internal `forEach` item var resolves against the (aliased) array's
+  real usage-site item type and is never itself aliased. No PEG grammar change.
+- `expression-compiler.unit.test.ts` — new `Tier 2 alias substitution (DL#194)` describe block:
+  `resolveAccessor` (plain field → usage-site accessor; chained access; forEach item not aliased;
+  `$parent` climb composes with alias at parentLevel 1) + codegen (`{heading}` → `dt(vs => vs.item?.title)`,
+  chained, and a card-internal `{$parent.heading}` → `dt((vs1, _p1) => _p1.item?.title)`). 226/226 pass.
+
+**Step 3b — inline codegen across all four targets (complete).** A Tier 2 composite (jay-html +
+contract, no `.ts`; `structural: true` on `JayHeadlessImports`) no longer emits a
+`childComp`/`__headlessInstances` boundary. Its template is spliced directly into the parent render:
+bindings resolve through the alias overlay (step 3a), and the composite's own refs are constructed in
+the **parent** `ReferencesManager`, nested under the usage-site ref name (`nestRefs([camelCase(refName)], …)`).
+No `__parentContext`, no `(vs,_p1)=>_p1` identity, no `filterToComponentRefs` forwarding.
+
+- **Alias build** — `buildInlineAliases(element, parentVariables, contractProps)` (jay-html-compiler.ts)
+  maps each usage-site attribute to an `Accessor`: dynamic `{expr}` → `parseAccessor(stripped, parentVariables)`;
+  static → `coerceStaticComponentProp` (DL#187 enum/number/boolean coercion) wrapped in a literal
+  `Accessor`. Static enum members are **widened** to the base enum type (`(Status.success as Status)`)
+  only in this inline path — the value is substituted directly into the composite's
+  `alias === Status.warning` comparisons, and a narrowed `Status.success` literal makes `tsc` flag every
+  other branch as a no-overlap error (TS2367). The real-boundary child-comp prop path
+  (`coerceStaticComponentProp` via `renderChildCompProps`) is left unwidened.
+- **Element + hydrate** — `renderInlinedStructuralInstance` (jay-html-compiler.ts). Direct DOM splicing
+  is coordinate-safe under the DL#126 flat-map model (pre-assigned `jay-coordinate` attributes; no
+  re-indexing on splice). `inlinedRoot` (Variables) + `insideInlinedComposite` (RenderContext/HydrateContext)
+  suppress DL#193 override-injected re-basing at the spliced root.
+- **Server** — `renderServerInlinedStructuralInstance` (jay-html-compiler-server.ts), added this step to
+  reach the four-target consistency the design requires. Same alias/coordinate model; static text emitted
+  literally; `if=` on the composite tag wrapped via `parseServerCondition`. Import collection filters out
+  the composite's own root/refs type names (`!headless.structural`), keeping only enum types actually
+  referenced by inlined bindings.
+- **Sandbox/bridge** — `emittedForwardedRefHelpers: new Set()` added to both context literals in
+  jay-html-compiler-bridge.ts (RenderContext gained the field this branch).
+
+  _Fixture note:_ the inlined `?jay-mainSandbox` component import is unresolvable to `tsc`; the
+  `// @ts-expect-error Cannot find module` line above it is added manually to fixtures (matching the
+  existing component-in-component sandbox fixtures) and is stripped by `prettify`'s `removeComments` on
+  fixture read, so comparison tests are unaffected while `build:check-types` compiles the raw file.
+
+- **Fixtures** — 6 contract fixtures cover element/hydrate/server (+ main-sandbox where applicable):
+  page-with-structural-badge (static props incl. widened enum), page-with-override-parent-binding,
+  page-with-forwarded-ref, page-with-forwarded-ref-foreach, page-with-forwarded-ref-multi,
+  page-with-override-forwarded-ref.
+- **Verification** — full package suite green (798 passed, 4 skipped) and `yarn build:check-types` clean.

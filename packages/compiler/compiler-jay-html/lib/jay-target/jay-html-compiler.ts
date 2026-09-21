@@ -29,6 +29,7 @@ import { ContractProp } from '../contract';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
 import {
+    Accessor,
     parseAccessor,
     parseAttributeExpression,
     parseBooleanAttributeExpression,
@@ -155,6 +156,11 @@ export interface RenderContext {
     // `CounterRefs`) already emitted, so multiple structural instances embedding the same inner
     // component declare each helper once (avoids duplicate-identifier errors).
     emittedForwardedRefHelpers: Set<string>;
+    // DL#194 (Tier 2 inlining): true while compiling the spliced body of an inlined no-code
+    // composite. In that world the composite has no runtime boundary, so the DL#193
+    // override-injected re-basing (`(vs,_p1)=>_p1` selector + `__parentContext`) is a no-op — the
+    // injected component is already in the enclosing scope. Propagates to nested scopes via spread.
+    insideInlinedComposite?: boolean;
 }
 
 function renderFunctionDeclaration(preRenderType: string): string {
@@ -494,9 +500,85 @@ export function renderChildCompProps(
     }
 }
 
+/**
+ * DL#194 (Tier 2 inlining): seed the alias map that redirects each of a no-code composite's
+ * contract-ViewState fields to the usage-site expression bound to it. Mirrors the attribute walk of
+ * {@link renderChildCompProps}, but produces `Record<contractFieldName, Accessor>` (consumed by
+ * {@link Variables.forInlinedComponent}) instead of a props object. Two alias shapes:
+ *  - dynamic `{expr}` prop → the single accessor it parses to, rooted in the parent scope so it
+ *    renders against the surrounding `vs` (DL#187 restricts structural props to scalar/enum, so a
+ *    structural prop is always a single accessor);
+ *  - static prop → a literal {@link Accessor} carrying the coerced value (enum member / number /
+ *    boolean / quoted string, per {@link coerceStaticComponentProp}) and the declared type, so
+ *    card-internal type-directed grammar (e.g. an enum comparison) still resolves.
+ * `if`/`foreach`/`ref`/coordinate/scope/override-marker attributes are not props — skipped.
+ */
+export function buildInlineAliases(
+    element: HTMLElement,
+    parentVariables: Variables,
+    contractProps?: ContractProp[],
+): { aliases: Record<string, Accessor>; validations: string[] } {
+    const attributes = element.attributes;
+    const aliases: Record<string, Accessor> = {};
+    const validations: string[] = [];
+    const propTypeMap = contractProps
+        ? new Map(contractProps.map((p) => [p.name, p.dataType]))
+        : undefined;
+    Object.keys(attributes).forEach((attrName) => {
+        const attrCanonical = attrName.toLowerCase();
+        if (
+            attrCanonical === 'if' ||
+            attrCanonical === 'foreach' ||
+            attrCanonical === 'trackby' ||
+            attrCanonical === 'jay-coordinate-base' ||
+            attrCanonical === 'jay-scope' ||
+            attrCanonical === 'ref' ||
+            attrCanonical === 'props' ||
+            attrCanonical === OVERRIDE_INJECTED_MARKER
+        )
+            return;
+        const rawValue = attributes[attrName];
+        const outputKey =
+            contractProps?.find((p) => p.name.toLowerCase() === attrCanonical)?.name ?? attrName;
+        const expectedType = propTypeMap?.get(attrName) ?? propTypeMap?.get(outputKey);
+        const isStatic = !rawValue.includes('{');
+        if (isStatic) {
+            const coerced = coerceStaticComponentProp(rawValue.trim(), expectedType);
+            // A non-coerced static value is a plain string: reuse the grammar's quoted-string output.
+            // For a static enum member, widen to the base enum type: inlining substitutes the value
+            // directly into the composite's `alias === Status.warning` comparisons, and a narrowed
+            // `Status.success` literal would make tsc flag every other branch as a no-overlap error.
+            const literalRender =
+                coerced !== undefined && expectedType && isEnumType(expectedType)
+                    ? `(${coerced} as ${expectedType.alias ?? expectedType.name})`
+                    : (coerced ?? parseComponentPropExpression(rawValue, parentVariables).rendered);
+            aliases[outputKey] = new Accessor(
+                '',
+                [],
+                [],
+                expectedType ?? JayUnknown,
+                0,
+                literalRender,
+            );
+        } else {
+            // Dynamic `{expr}` — strip the braces and resolve the single accessor against the
+            // parent scope so it renders rooted in the surrounding `vs`.
+            const stripped = rawValue.trim().replace(/^\{/, '').replace(/\}$/, '');
+            aliases[outputKey] = parseAccessor(stripped, parentVariables);
+        }
+    });
+    return { aliases, validations };
+}
+
 export function renderChildCompRef(
     element: HTMLElement,
-    { dynamicRef, variables, refNameGenerator, importedRefNameToRef }: RenderContext,
+    {
+        dynamicRef,
+        variables,
+        refNameGenerator,
+        importedRefNameToRef,
+        insideInlinedComposite,
+    }: RenderContext,
     componentName: string,
 ): RenderFragment {
     if (importedRefNameToRef.has(element.attributes.ref)) {
@@ -539,9 +621,14 @@ export function renderChildCompRef(
     // the outer scope, not the component's internals (§C). The composite's inline body is compiled
     // in `childContext`, whose `variables.parent` is the outer page/forEach scope. A plain inner ref
     // (no marker) keeps the composite's own `currentType`.
-    const isOverrideInjected = OVERRIDE_INJECTED_MARKER in element.attributes;
+    // DL#194: inside an inlined Tier 2 composite the injected ref already carries the enclosing
+    // scope (the composite has no boundary), so the DL#193 outer-scope re-basing does not apply.
+    const isOverrideInjected =
+        OVERRIDE_INJECTED_MARKER in element.attributes && !insideInlinedComposite;
     const refViewStateType =
-        isOverrideInjected && variables.parent ? variables.parent.currentType : variables.currentType;
+        isOverrideInjected && variables.parent
+            ? variables.parent.currentType
+            : variables.currentType;
     let refs = mkRefsTree(
         [
             mkRef(
@@ -838,7 +925,11 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? 
         // live parentDataChain, and raise this fragment's parentDepth so the enclosing composite
         // instance emits `__parentContext` (its synthetic parent = the outer scope) at its mount site.
         const isOverrideInjected =
-            OVERRIDE_INJECTED_MARKER in htmlElement.attributes && renderedRef.rendered !== '';
+            OVERRIDE_INJECTED_MARKER in htmlElement.attributes &&
+            renderedRef.rendered !== '' &&
+            // DL#194: inside an inlined Tier 2 composite there is no boundary to re-base across —
+            // the injected component already resolves in the enclosing scope.
+            !newContext.insideInlinedComposite;
         const refSelectorArg = isOverrideInjected
             ? `, (${newContext.variables.currentVar}, _p1) => _p1`
             : '';
@@ -880,6 +971,106 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? 
      * generates a render function + makeJayComponent definition (accumulated in context),
      * and returns a childComp() call for the page render function.
      */
+    /**
+     * DL#194 Phase B — Tier 2 (no-code composite) inlining.
+     *
+     * A structural `<jay:X>` has jay-html + contract but no `.ts`, so there is nothing to run: its
+     * template is spliced into the usage site (the parser already merged the component body into the
+     * tag's innerHTML). We compile that body against an *alias overlay* of the parent scope
+     * ({@link Variables.forInlinedComponent}) so each contract field renders as the usage-site
+     * expression bound to it, and return the body fragment directly — no `childComp`, no synthetic
+     * render fn, no `makeHeadlessInstanceComponent`, no `__parentContext` forwarding. Inner refs
+     * (real child components / named elements in the body) bubble into the PAGE ref manager, nested
+     * under the usage-site ref name so they read as `refs.<usageName>.<inner>` and carry the parent
+     * ViewState as their parent type (external by construction).
+     */
+    function renderInlinedStructuralInstance(
+        htmlElement: HTMLElement,
+        newContext: RenderContext,
+        contractName: string,
+        headlessImport: JayHeadlessImports,
+    ): RenderFragment {
+        const childNodes = filterContentNodes(htmlElement.childNodes);
+        if (childNodes.length === 0) {
+            return new RenderFragment(
+                '',
+                Imports.none(),
+                [
+                    `Headless component instance <jay:${contractName}> must have inline template content`,
+                ],
+                mkRefsTree([], {}),
+            );
+        }
+        // DL#194 v1: a card-internal forEach over an aliased array needs depth-correct nested scopes;
+        // deferred to a follow-up. Keep the clear diagnostic (DL#193 §4) rather than mis-compiling.
+        if (childNodes.some(hasForEachDescendant)) {
+            return new RenderFragment(
+                '',
+                Imports.none(),
+                [forEachInsidePureComponentError(contractName)],
+                mkRefsTree([], {}),
+            );
+        }
+
+        // Seed the alias overlay from the usage-site prop attributes, then build the inlined scope:
+        // the parent scope's type/var/depth plus that overlay (see Variables.forInlinedComponent).
+        const { aliases, validations: aliasValidations } = buildInlineAliases(
+            htmlElement,
+            newContext.variables,
+            headlessImport.contract?.props,
+        );
+        const componentVariables = Variables.forInlinedComponent(newContext.variables, aliases);
+
+        // Compile the body. Exclude the component's own code-link name from importedSymbols so HTML
+        // tags aren't mistaken for the component import; drive nested refs off the contract ref map.
+        const instanceRefMap = buildContractRefMap(headlessImport.refs);
+        const pluginComponentName = headlessImport.codeLink.names[0].name;
+        const childImportedSymbols = new Set(newContext.importedSymbols);
+        childImportedSymbols.delete(pluginComponentName);
+        const childContext: RenderContext = {
+            ...newContext,
+            variables: componentVariables,
+            importedSymbols: childImportedSymbols,
+            importedRefNameToRef: instanceRefMap,
+            headlessContractNames: newContext.headlessContractNames,
+            insideInlinedComposite: true,
+        };
+
+        const renderedChildren = childNodes
+            .map((_) => renderNode(_, childContext))
+            .reduce(
+                (prev, current) => RenderFragment.merge(prev, current, ',\n'),
+                RenderFragment.empty(),
+            );
+
+        // Multiple root children need a wrapping element so the spliced expression is a single node.
+        let inlineBody: RenderFragment;
+        if (childNodes.length > 1) {
+            inlineBody = new RenderFragment(
+                `de('div', {}, [\n${renderedChildren.rendered}\n])`,
+                renderedChildren.imports.plus(Import.dynamicElement),
+                renderedChildren.validations,
+                renderedChildren.refs,
+                renderedChildren.recursiveRegions,
+            );
+        } else {
+            inlineBody = renderedChildren;
+        }
+
+        // Nest the body's refs under the usage-site ref name (`refs.signupCard.cta`) when present;
+        // otherwise they bubble up flat. The existing ref-manager machinery renders the nested group.
+        const usageRefName = htmlElement.attributes.ref;
+        const nested = usageRefName ? nestRefs([camelCase(usageRefName)], inlineBody) : inlineBody;
+
+        return new RenderFragment(
+            `${newContext.indent.firstLine}${nested.rendered}`,
+            nested.imports,
+            [...aliasValidations, ...nested.validations],
+            nested.refs,
+            nested.recursiveRegions,
+        );
+    }
+
     function renderHeadlessInstance(
         htmlElement: HTMLElement,
         newContext: RenderContext,
@@ -889,6 +1080,17 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? 
         const headlessResult = resolveHeadlessImport(contractName, newContext.headlessImports);
         if (isValidationError(headlessResult)) return headlessResult;
         const headlessImport = headlessResult;
+
+        // DL#194 Phase B: a Tier 2 (no-code) composite has no runtime boundary — splice its template
+        // into the usage site instead of wrapping it in a `childComp`. Contract fields are projected
+        // onto usage-site expressions via an alias overlay; inner refs surface in the PAGE ref manager.
+        if (headlessImport.structural)
+            return renderInlinedStructuralInstance(
+                htmlElement,
+                newContext,
+                contractName,
+                headlessImport,
+            );
 
         // Generate unique names for this instance
         const idx = newContext.headlessInstanceCounter.count++;
@@ -1026,8 +1228,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? 
         // Q2 = (a) implicit: forward only NAMED child-component refs. Element refs and auto (unnamed)
         // refs stay private, so the synthetic type is built from the component-refs-only subtree.
         const forwardedRefs = filterToComponentRefs(mergedRefs);
-        const hasForwardedRefs =
-            headlessImport.structural && hasNamedComponentRefs(mergedRefs);
+        const hasForwardedRefs = headlessImport.structural && hasNamedComponentRefs(mergedRefs);
         const forwardedRepeated = hasForwardedRefs && newContext.dynamicRef;
         let syntheticRefsCode = '';
         let syntheticRefsImports = Imports.none();
@@ -1837,13 +2038,19 @@ export function generateElementFile(
     // These come from headless imports and are used in ViewState/Refs interfaces
     const headlessModules = new Set<string>();
     for (const headless of jayFile.headlessImports) {
-        // The main ViewState and Refs types are always used when a headless import exists
-        usedHeadlessTypeNames.add(headless.rootType.name);
+        // DL#194: a Tier 2 (structural) composite is inlined — its ViewState/Refs types never appear
+        // in the output, so don't force-keep them. Enum types from its contract may still be
+        // referenced by inlined bindings (the grammar doesn't self-import enums), so keep those.
+        if (!headless.structural) {
+            // The main ViewState and Refs types are always used when a real headless import exists
+            usedHeadlessTypeNames.add(headless.rootType.name);
+        }
         for (const link of headless.contractLinks) {
             headlessModules.add(link.module);
             for (const name of link.names) {
-                // Add the Refs types and enum types (they're always needed)
-                if (name.name.endsWith('Refs') || isEnumType(name.type)) {
+                if (isEnumType(name.type)) {
+                    usedHeadlessTypeNames.add(name.name);
+                } else if (!headless.structural && name.name.endsWith('Refs')) {
                     usedHeadlessTypeNames.add(name.name);
                 }
             }
@@ -2017,8 +2224,46 @@ export function generateElementHydrateFile(
         .minus(Import.forEach);
     const hydrateImports = typeOnlyImports.plus(Import.jayElement).plus(renderedHydrate.imports);
 
+    // DL#194 Phase B: a Tier 2 (structural) composite is inlined, so its contract ViewState/Refs types
+    // no longer appear in the hydrate output — drop them to avoid dead imports (mirrors the element
+    // target's `usedHeadlessTypeNames` filter). Enum types stay (inlined bindings still reference them),
+    // and any name a non-structural headless still needs is preserved.
+    const structuralHeadless = (jayFile.headlessImports ?? []).filter((h) => h.structural);
+    let filteredHydrateImports = jayFile.imports;
+    if (structuralHeadless.length > 0) {
+        const structuralModules = new Set(
+            structuralHeadless.flatMap((h) => h.contractLinks.map((l) => l.module)),
+        );
+        const dropNames = new Set<string>();
+        for (const headless of structuralHeadless) {
+            dropNames.add(headless.rootType.name);
+            for (const link of headless.contractLinks)
+                for (const name of link.names)
+                    if (!isEnumType(name.type) && name.name.endsWith('Refs'))
+                        dropNames.add(name.name);
+        }
+        // Never drop a name a non-structural headless import still relies on.
+        for (const headless of (jayFile.headlessImports ?? []).filter((h) => !h.structural)) {
+            dropNames.delete(headless.rootType.name);
+            for (const link of headless.contractLinks)
+                for (const name of link.names) dropNames.delete(name.name);
+        }
+        filteredHydrateImports = jayFile.imports
+            .map((importLink) => {
+                if (!structuralModules.has(importLink.module)) return importLink;
+                const names = importLink.names.filter((n) => !dropNames.has(n.as || n.name));
+                return names.length === 0 ? null : { ...importLink, names };
+            })
+            .filter((imp): imp is JayImportLink => imp !== null);
+    }
+
     const renderedFile = [
-        renderImports(hydrateImports, ImportsFor.implementation, jayFile.imports, importerMode),
+        renderImports(
+            hydrateImports,
+            ImportsFor.implementation,
+            filteredHydrateImports,
+            importerMode,
+        ),
         types,
         allRenderedRefs,
         phaseTypes,

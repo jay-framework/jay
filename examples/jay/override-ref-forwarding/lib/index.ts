@@ -34,7 +34,7 @@ window.onload = function () {
     });
 
     refs.cards.cards.cardCounter.onChange(({ event, viewState }) => {
-        write(`[list - internal] "${viewState}" counter → ${event}`);
+        write(`[list - internal] "${viewState.label}" counter → ${event}`);
     })
 
     // find(pred) reaches exactly one injected card in the collection by its OUTER-scope viewState.

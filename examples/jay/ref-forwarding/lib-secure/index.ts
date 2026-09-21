@@ -24,17 +24,18 @@ window.onload = function () {
     const [refs, render2] = render();
     const instance = render2({ pageTitle: 'Jay Ref Forwarding Demo (secure)', cards });
 
-    // Same forwarded-ref wiring as the regular build — the secure-mode acceptance gate for DL#193
-    // Phase 3: the forwarded `cta` reaches the sandboxed counter identically.
+    // Same forwarded-ref wiring as the regular build — the secure-mode acceptance gate for DL#194:
+    // the forwarded `cta` reaches the sandboxed counter identically. The Tier 2 card is inlined, so the
+    // event carries the *external* (page / forEach-item) viewState, not the card's own `heading`.
     refs.signupCard.cta.onChange(({ event, viewState }) => {
-        write(`[single] "${viewState.heading}" counter → ${event}`);
+        write(`[single] "${viewState.pageTitle}" counter → ${event}`);
     });
 
     refs.cards.cards.cta.onChange(({ event, viewState }) => {
-        write(`[list] "${viewState.heading}" counter → ${event}`);
+        write(`[list] "${viewState.label}" counter → ${event}`);
     });
 
-    const bravoCta = refs.cards.cards.cta.find((vs) => vs.heading === 'Bravo');
+    const bravoCta = refs.cards.cards.cta.find((vs) => vs.label === 'Bravo');
     if (bravoCta)
         bravoCta.onChange(({ event }) => write(`[find:Bravo only] counter → ${event}`));
 

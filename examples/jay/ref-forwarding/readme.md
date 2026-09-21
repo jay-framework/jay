@@ -1,4 +1,4 @@
-# Ref Forwarding Example (DL#193 Phase 3)
+# Ref Forwarding Example (DL#194 — Tier 2 inlining)
 
 Demonstrates **pure (Tier 2) composite inner-ref forwarding**: a structural composite
 (`card` — `.jay-html` + `.jay-contract`, no `.ts`) exposes its named inner child-component ref
@@ -9,8 +9,10 @@ Demonstrates **pure (Tier 2) composite inner-ref forwarding**: a structural comp
   `refs.cards.cards.cta.onChange(...)` fans to every card; `refs.cards.cards.cta.find(pred)`
   reaches exactly one.
 
-No event re-basing (DL#193 §B): each forwarded event carries the composite's own (Card) viewState
-(`heading`), not the page scope.
+The Tier 2 card is **inlined** — there is no component boundary. Its inner refs are parent-owned
+(external scope), so each forwarded event carries the **usage-site** viewState: the page
+(`pageTitle`) for the single card, the `forEach` item (`label`) for the collection — **not** the
+card's own `heading`.
 
 ## Run
 
@@ -21,8 +23,8 @@ yarn build:watch    # dev server
 
 - `lib/` + `index.html` — regular/trusted build.
 - `lib-secure/` + `secure.html` — sandboxed build (the composite import carries `sandbox="true"`);
-  the secure-mode acceptance gate for Phase 3. The forwarded `cta` reaches the sandboxed counter
-  identically to the regular build.
+  the secure-mode acceptance gate. The forwarded `cta` reaches the sandboxed counter identically to
+  the regular build.
 
-Click a counter's `+`/`-` and watch the event log; the forwarded handler reports which card
-(by `heading`) fired.
+Click a counter's `+`/`-` and watch the event log; the forwarded handler reports which card fired
+by its usage-site viewState (`pageTitle` for the single card, `label` for each list card).

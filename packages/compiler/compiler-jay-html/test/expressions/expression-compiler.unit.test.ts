@@ -245,6 +245,137 @@ describe('expression-compiler', () => {
         });
     });
 
+    // DL#194 (Tier 2 inlining) — a no-code composite is spliced into the usage site, so each
+    // contract-ViewState field is a compile-time projection of the usage-site expression bound to
+    // it. The card's root scope carries an alias map (`heading` → the usage-site accessor
+    // `item.title`) resolved in `resolveAccessor`, so binding substitution needs no grammar change.
+    describe('Tier 2 alias substitution (DL#194)', () => {
+        // The usage site (parent scope) where the card is placed.
+        const usageVars = new Variables(
+            new JayObjectType('UsageData', {
+                item: new JayObjectType('Item', {
+                    title: JayString,
+                    author: new JayObjectType('Author', { name: JayString }),
+                }),
+                items: new JayArrayType(new JayObjectType('Row', { label: JayString })),
+            }),
+        );
+        // Each usage-site prop expression, resolved against the parent scope, seeds one alias.
+        const headingAlias = usageVars.resolveAccessor(['item', 'title']);
+        const authorAlias = usageVars.resolveAccessor(['item', 'author']);
+        const rowsAlias = usageVars.resolveAccessor(['items']);
+
+        // The card's own root scope: its type is the card contract, but every contract field it
+        // binds is projected through the alias map onto the usage-site scope it was inlined into.
+        const cardVars = new Variables(
+            new JayObjectType('CardData', {
+                heading: JayString,
+                author: new JayObjectType('Author', { name: JayString }),
+                rows: new JayArrayType(new JayObjectType('CardRow', { text: JayString })),
+            }),
+            undefined,
+            0,
+            undefined,
+            0,
+            {},
+            false,
+            { heading: headingAlias, author: authorAlias, rows: rowsAlias },
+        );
+        // A card-internal forEach over an (aliased) contract array field.
+        const cardRowVars = cardVars.childVariableFor(cardVars.resolveAccessor(['rows']));
+
+        describe('resolveAccessor', () => {
+            it('resolves a contract field to its usage-site accessor', () => {
+                expect(cardVars.resolveAccessor(['heading'])).toEqual(
+                    new Accessor('vs', ['item', 'title'], [], JayString),
+                );
+            });
+
+            it('appends chained access onto the alias and walks its type', () => {
+                expect(cardVars.resolveAccessor(['author', 'name'])).toEqual(
+                    new Accessor('vs', ['item', 'author', 'name'], [], JayString),
+                );
+            });
+
+            it('does not alias a card-internal forEach item field', () => {
+                // The forEach iterates the aliased usage-site array (`items`: Row{label}), so its
+                // item scope resolves the real usage-site item type and carries no aliases itself.
+                expect(cardRowVars.resolveAccessor(['label'])).toEqual(
+                    new Accessor('vs1', ['label'], [], JayString),
+                );
+            });
+
+            it('composes a card-internal $parent climb with the alias (parentLevel 1)', () => {
+                expect(cardRowVars.resolveAccessor(['$parent', 'heading'])).toEqual(
+                    new Accessor('vs', ['item', 'title'], [], JayString, 1),
+                );
+            });
+        });
+
+        describe('codegen', () => {
+            it('renders a contract-field text binding as the usage-site accessor', () => {
+                expect(parseTextExpression('{heading}', cardVars).rendered).toEqual(
+                    'dt(vs => vs.item?.title)',
+                );
+            });
+
+            it('renders chained contract access as the usage-site accessor', () => {
+                expect(parseTextExpression('{author.name}', cardVars).rendered).toEqual(
+                    'dt(vs => vs.item?.author?.name)',
+                );
+            });
+
+            it('renders a card-internal $parent binding with the parent param', () => {
+                expect(parseTextExpression('{$parent.heading}', cardRowVars).rendered).toEqual(
+                    'dt((vs1, _p1) => _p1.item?.title)',
+                );
+            });
+        });
+
+        // A structural component is often placed with STATIC props (`label="Live Status"`,
+        // `status="success"`), coerced to the declared dataType. Those seed *literal* aliases —
+        // an Accessor that renders its value verbatim, carrying the declared type for grammar.
+        describe('literal (static) prop aliases', () => {
+            const Status = new JayEnumType('Status', ['success', 'warning', 'error']);
+            const litVars = new Variables(
+                new JayObjectType('BadgeData', {
+                    label: JayString,
+                    status: Status,
+                    count: JayNumber,
+                }),
+                undefined,
+                0,
+                undefined,
+                0,
+                {},
+                false,
+                {
+                    label: new Accessor('', [], [], JayString, 0, "'Live Status'"),
+                    status: new Accessor('', [], [], Status, 0, 'Status.success'),
+                    count: new Accessor('', [], [], JayNumber, 0, '42'),
+                },
+            );
+
+            it('renders a static string prop as its literal', () => {
+                expect(parseTextExpression('{label}', litVars).rendered).toEqual(
+                    "dt(vs => 'Live Status')",
+                );
+            });
+
+            it('renders a static number prop as its literal', () => {
+                expect(parseTextExpression('Count: {count}', litVars).rendered).toEqual(
+                    'dt(vs => `Count: ${42}`)',
+                );
+            });
+
+            it('renders an enum comparison against the static literal', () => {
+                expect(
+                    parseClassExpression('{status == success ? badge--success}', litVars).rendered,
+                ).toEqual("da(vs => Status.success === Status.success?'badge--success':'')");
+            });
+        });
+    });
+
     describe('parseCondition', () => {
         let defaultVars = new Variables(
             new JayObjectType('data', {
