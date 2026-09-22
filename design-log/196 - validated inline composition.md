@@ -129,20 +129,20 @@ page owns and the validator checks.
 
 Before proposing anything, what already exists?
 
-| Mechanism                                          | Location                                                                                                          | Does it suffice?                                                                                                                                                             |
-| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Headless component + inline template** (DL#84)   | `jay-html-compiler.ts:1093` `renderHeadlessInstance`, `mergeContractStubRefs` (`jay-html-compiler-shared.ts:294`) | **Yes — the single compile path for every composed component.** Usage site supplies the UI (the flattened body), component supplies the ViewState and consumes contract refs. |
-| **`makePassthroughInstanceComponent`** (DL#187)    | `stack-server-runtime/lib/passthrough-component.ts:42`                                                            | **Yes — the no-code runtime.** Identity component: ViewState = props, split per phase. Already used by dev server, production build, and server. Makes no-code a real instance. |
-| `jc="<contract>"` region marker                    | `jay-html-parser.ts:878`                                                                                          | **Yes — the flatten boundary, compiler-injected.** Re-derived from the tag at parse; the author never writes it. Delimits each component's region for per-region validation.  |
-| `application/jay-headless` script tag               | `jay-html-parser.ts:687,1271`; stripped at `:1587`                                                               | **Yes — the single provenance home (Q4).** Carries `contract`/`src`; add `template=`. `application/jay-headfull` is deprecated — one declaration for all composed components.  |
-| Component CSS collection                            | `jay-html-parser.ts:1257-1264` (`extractCss` → `cssParts`)                                                        | **Yes — the CSS materialisation point (Q5).** Already merges component CSS into the page; wrap the copied block in `@scope` so it cannot poison the page and can be validated. |
-| Headless props channel (per-phase, coerced)        | DL#189, DL#190; `normalizeAndResolveInstanceProps`                                                                | **Yes — how page data reaches a region.** Props on the `<jay:X>` tag fill the component's ViewState; the passthrough echoes them per phase. Retained (V4).                     |
-| Tier 2 alias overlay / inlining (DL#194 Phase B)   | `expression-compiler.ts:148`, `jay-html-compiler.ts:523,1006`                                                     | **No longer needed.** It existed to splice a no-code body _without_ a boundary. No-code now uses the passthrough instance + props channel, so the inlining is deleted.        |
-| `<override>` (DL#181/#194)                          | `jay-html-overrides.ts`                                                                                           | **Superseded.** You edit the copy and mark the node `override`.                                                                                                          |
-| `slot` contract tag (DL#194)                        | `contract.ts:13`                                                                                                  | **Superseded.** The whole body is editable; no need to declare which region is.                                                                                              |
-| `$parent` carrier (DL#193 Capability A)            | `context.ts:178,214,222`; `element.ts:468`                                                                        | **Independent — kept** (Q8).                                                                                                                                                 |
-| `checkHeadlessInstanceProps` + validation host     | `stack-cli/lib/validate.ts`                                                                                       | **Yes, the home for the drift rule** — the validator is already the prevention-first surface (DL#145/#147/#166/#167).                                                        |
-| `prettifyHtml`                                     | `compiler-shared`                                                                                                 | **Only for output** — the differ works on the parsed tree, not on strings (Q3).                                                                                             |
+| Mechanism                                        | Location                                                                                                          | Does it suffice?                                                                                                                                                                |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Headless component + inline template** (DL#84) | `jay-html-compiler.ts:1093` `renderHeadlessInstance`, `mergeContractStubRefs` (`jay-html-compiler-shared.ts:294`) | **Yes — the single compile path for every composed component.** Usage site supplies the UI (the flattened body), component supplies the ViewState and consumes contract refs.   |
+| **`makePassthroughInstanceComponent`** (DL#187)  | `stack-server-runtime/lib/passthrough-component.ts:42`                                                            | **Yes — the no-code runtime.** Identity component: ViewState = props, split per phase. Already used by dev server, production build, and server. Makes no-code a real instance. |
+| `jc="<contract>"` region marker                  | `jay-html-parser.ts:878`                                                                                          | **Yes — the flatten boundary, compiler-injected.** Re-derived from the tag at parse; the author never writes it. Delimits each component's region for per-region validation.    |
+| `application/jay-headless` script tag            | `jay-html-parser.ts:687,1271`; stripped at `:1587`                                                                | **Yes — the single provenance home (Q4).** Carries `contract`/`src`; add `template=`. `application/jay-headfull` is deprecated — one declaration for all composed components.   |
+| Component CSS collection                         | `jay-html-parser.ts:1257-1264` (`extractCss` → `cssParts`)                                                        | **Yes — the CSS materialisation point (Q5).** Already merges component CSS into the page; wrap the copied block in `@scope` so it cannot poison the page and can be validated.  |
+| Headless props channel (per-phase, coerced)      | DL#189, DL#190; `normalizeAndResolveInstanceProps`                                                                | **Yes — how page data reaches a region.** Props on the `<jay:X>` tag fill the component's ViewState; the passthrough echoes them per phase. Retained (V4).                      |
+| Tier 2 alias overlay / inlining (DL#194 Phase B) | `expression-compiler.ts:148`, `jay-html-compiler.ts:523,1006`                                                     | **No longer needed.** It existed to splice a no-code body _without_ a boundary. No-code now uses the passthrough instance + props channel, so the inlining is deleted.          |
+| `<override>` (DL#181/#194)                       | `jay-html-overrides.ts`                                                                                           | **Superseded.** You edit the copy and mark the node `override`.                                                                                                                 |
+| `slot` contract tag (DL#194)                     | `contract.ts:13`                                                                                                  | **Superseded.** The whole body is editable; no need to declare which region is.                                                                                                 |
+| `$parent` carrier (DL#193 Capability A)          | `context.ts:178,214,222`; `element.ts:468`                                                                        | **Independent — kept** (Q8).                                                                                                                                                    |
+| `checkHeadlessInstanceProps` + validation host   | `stack-cli/lib/validate.ts`                                                                                       | **Yes, the home for the drift rule** — the validator is already the prevention-first surface (DL#145/#147/#166/#167).                                                           |
+| `prettifyHtml`                                   | `compiler-shared`                                                                                                 | **Only for output** — the differ works on the parsed tree, not on strings (Q3).                                                                                                 |
 
 **Net new surface proposed: a DOM differ, a materialiser/flattener, a re-flatten `sync`, an `@scope`
 CSS wrap, and one marker (`override`).** All in `stack-cli` / the validator. **No runtime
@@ -364,20 +364,20 @@ reported as drift nor touched by `sync` (§5) — whether the page changed, adde
 whole-node suppression remains, but is the coarse option, used only when the node was rewritten
 wholesale.
 
-| Marker on a node                                  | What the page owns (survives sync, not reported)          |
-| ------------------------------------------------- | -------------------------------------------------------- |
-| `override` or `override="*"`            | the whole node — every attribute and the subtree          |
-| `override="class"` (any attribute name)      | that one attribute (added, changed, or removed)           |
-| `override="style.color"`                     | one inline-style declaration; other declarations reconcile |
-| `override="children"`                         | the element's child nodes (its subtree)                   |
-| `override="class style.margin children"`      | each listed facet; unlisted facets still reconcile        |
+| Marker on a node                         | What the page owns (survives sync, not reported)           |
+| ---------------------------------------- | ---------------------------------------------------------- |
+| `override` or `override="*"`             | the whole node — every attribute and the subtree           |
+| `override="class"` (any attribute name)  | that one attribute (added, changed, or removed)            |
+| `override="style.color"`                 | one inline-style declaration; other declarations reconcile |
+| `override="children"`                    | the element's child nodes (its subtree)                    |
+| `override="class style.margin children"` | each listed facet; unlisted facets still reconcile         |
 
 CSS (inside the copied `@scope` block, §5/Q5) uses a comment pragma immediately before a rule:
 
-| Pragma before a rule                    | What the page owns                                        |
-| --------------------------------------- | -------------------------------------------------------- |
-| `/* jay:override */`                    | that whole rule — selector and all declarations           |
-| `/* jay:override: color, margin */`     | only those declarations in the rule; the rest reconcile   |
+| Pragma before a rule                | What the page owns                                      |
+| ----------------------------------- | ------------------------------------------------------- |
+| `/* jay:override */`                | that whole rule — selector and all declarations         |
+| `/* jay:override: color, margin */` | only those declarations in the rule; the rest reconcile |
 
 ```html
 <!-- only the class is page-owned; text, other attributes and subtree still reconcile -->
@@ -392,10 +392,15 @@ CSS (inside the copied `@scope` block, §5/Q5) uses a comment pragma immediately
 ```css
 @scope (.signupCard) {
   /* jay:override */
-  .card { border: 2px solid gold; } /* whole rule is page-owned */
+  .card {
+    border: 2px solid gold;
+  } /* whole rule is page-owned */
 
   /* jay:override: color */
-  .card h3 { color: #b00; font: inherit; } /* only color survives; font syncs */
+  .card h3 {
+    color: #b00;
+    font: inherit;
+  } /* only color survives; font syncs */
 }
 ```
 
@@ -407,8 +412,8 @@ own region and validates against its own source (Q2).
 `jay-stack sync [<target>] [--all]`:
 
 - Re-flatten the region(s) from the **current** source template. An **empty** region (a bare `<jay:X>`
-  + `template=`) is the degenerate case — no override facets to preserve — so `sync` is also the
-  first-fill / materialisation command (Q9); there is no separate `add`.
+  - `template=`) is the degenerate case — no override facets to preserve — so `sync` is also the
+    first-fill / materialisation command (Q9); there is no separate `add`.
 - Keep every `override` **facet** verbatim (a whole node, one attribute, one style declaration, a
   subtree, or a CSS rule/declaration); re-flatten everything else. Facet matching rides on the same
   node matching the differ already performs (§3).
@@ -424,18 +429,18 @@ it replaces the non-overridden part outright.
 
 In dependency order (Phase 4). "Surgery" rows are branches _inside_ surviving functions.
 
-| Removed                                                                                                                                             | Kind    | Source DL        |
-| --------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------- |
-| `jay-html-overrides.ts` in full — both `<override>` forms, pragma, markers                                                                          | file    | #181, #193, #194 |
-| `slot` contract tag, slot validation, slot fill paths                                                                                               | file+   | #194             |
-| Fork C: `foreignChild`, `childComp`'s `slots` param, slot ref managers + two traps, `slotPreambles`                                                 | mixed   | #194             |
-| Fork-C slot block **and** the `structural` branch inside `renderHeadlessInstance` (`:1106,:1254-1288`) and its hydrate/server twins — collapse to one path | surgery | #194             |
+| Removed                                                                                                                                                       | Kind    | Source DL        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------- | ---------------- |
+| `jay-html-overrides.ts` in full — both `<override>` forms, pragma, markers                                                                                    | file    | #181, #193, #194 |
+| `slot` contract tag, slot validation, slot fill paths                                                                                                         | file+   | #194             |
+| Fork C: `foreignChild`, `childComp`'s `slots` param, slot ref managers + two traps, `slotPreambles`                                                           | mixed   | #194             |
+| Fork-C slot block **and** the `structural` branch inside `renderHeadlessInstance` (`:1106,:1254-1288`) and its hydrate/server twins — collapse to one path    | surgery | #194             |
 | Tier 2 **inlining**: `renderInlinedStructuralInstance` + server/hydrate twins, `aliases`/`inlinedRoot`/`withRootVarName` on `Variables`, `buildInlineAliases` | mixed   | #194             |
-| Ref forwarding: `getForwardedInnerRef`, `hasForwardedInnerRef`, collection trap, `childComp`'s `refViewState`, `emittedForwardedRefHelpers`         | mixed   | #193             |
-| `__parentContext` / `withSyntheticParentContext` / `PARENT_CONTEXT_PROP`                                                                            | mixed   | #193             |
-| `withParentShift` / `PARENT_SCOPE_PRAGMA` / `lexicallyInScope` / `asLexical`                                                                        | mixed   | #193             |
-| `application/jay-headfull` declaration + its parser paths (`:953,1033,1085,1288,1411,1921,2080`); compile-time headfull template injection          | mixed   | #111, #187       |
-| Tier 2 restrictions: recursion guard, root-`$parent` guard, `forEachInsidePureComponentError`                                                       | mixed   | #194             |
+| Ref forwarding: `getForwardedInnerRef`, `hasForwardedInnerRef`, collection trap, `childComp`'s `refViewState`, `emittedForwardedRefHelpers`                   | mixed   | #193             |
+| `__parentContext` / `withSyntheticParentContext` / `PARENT_CONTEXT_PROP`                                                                                      | mixed   | #193             |
+| `withParentShift` / `PARENT_SCOPE_PRAGMA` / `lexicallyInScope` / `asLexical`                                                                                  | mixed   | #193             |
+| `application/jay-headfull` declaration + its parser paths (`:953,1033,1085,1288,1411,1921,2080`); compile-time headfull template injection                    | mixed   | #111, #187       |
+| Tier 2 restrictions: recursion guard, root-`$parent` guard, `forEachInsidePureComponentError`                                                                 | mixed   | #194             |
 
 **Retained** (unchanged): DL#189, #190, #192, the class-names utility, the headless props channel
 (V4), `<recurse>` (DL#46/#47), Capability A (Q8), and — now load-bearing —
@@ -455,9 +460,9 @@ The gap (Q12): a region's body binds the component's ViewState, so it cannot hos
 _refs_ (page data is covered by props). The direction, kept minimal by inverting each choice that made
 Fork C costly:
 
-| Dimension     | Fork C (retired)                                 | Pass-through (§7)                                          |
+| Dimension     | Fork C (retired)                                 | Pass-through (§7)                                         |
 | ------------- | ------------------------------------------------ | --------------------------------------------------------- |
-| Who declares  | the **component contract** (`slot` tag)          | the **page** (`page-scope` on a subtree)             |
+| Who declares  | the **component contract** (`slot` tag)          | the **page** (`page-scope` on a subtree)                  |
 | Addressing    | named slots + provenance markers                 | position (the marker's place in the body)                 |
 | Binding scope | mixed, decided by a ref-scope rule table (L6)    | always **page** scope — no table                          |
 | Refs          | provenance-keyed forwarding + two Proxy traps    | ordinary page refs, nested under the wrapper (`nestRefs`) |
@@ -583,13 +588,13 @@ facet (`override="href"`, `override="style.color"`), leaving siblings to reconci
 
 ## Trade-offs
 
-| Approach                                                         | Pro                                                                                                                                                                                                                                                                                                          | Con                                                                                                                                  |
-| ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Approach                                                             | Pro                                                                                                                                                                                                                                                                                                                                              | Con                                                                                                                                                                               |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Flatten + validate + re-flatten sync, one instance path (chosen)** | Removes the seam and everything downstream (DL#195 root cause); **one** compile path, **one** differ rule, one four-target derivation; sync is deterministic overwrite-with-holes (no silent mis-merge); no-code reuses the existing passthrough runtime, so no new runtime; concept count collapses to "headless instances you own the body of" | The DOM differ + flattener are real work; copies duplicate source; page files grow; page-owned refs need §7 (Q12); plugin UI upgrades flow through `sync`, not automatically (Q1) |
-| No-code erases to page markup (Round 1)                         | No-code refs/bindings are page-native and free                                                                                                                                                                                                                                                                | A second compile path and a **split differ rule**; two four-target derivations. Rejected for uniformity (Q13).                       |
-| Reference-based composition (#181/#187/#193/#194, being retired) | Single source of truth; no duplication                                                                                                                                                                                                                                                                       | The entire crossing apparatus; ten silent-render defects; four-target re-derivation; a ref-scope rule table                          |
-| Three-way merge sync (Round 1 draft)                            | Handles copies that diverge arbitrarily                                                                                                                                                                                                                                                                       | A structural 3-way merge can mis-merge silently — DL#195's wrong-pixel class in the tool. Rejected for equal-unless-override.        |
-| Materialise but keep `<override>` for small edits               | Familiar                                                                                                                                                                                                                                                                                                      | Two ways to express one edit, and `<override>` is exactly what needs the crossing machinery. Rejected.                              |
+| No-code erases to page markup (Round 1)                              | No-code refs/bindings are page-native and free                                                                                                                                                                                                                                                                                                   | A second compile path and a **split differ rule**; two four-target derivations. Rejected for uniformity (Q13).                                                                    |
+| Reference-based composition (#181/#187/#193/#194, being retired)     | Single source of truth; no duplication                                                                                                                                                                                                                                                                                                           | The entire crossing apparatus; ten silent-render defects; four-target re-derivation; a ref-scope rule table                                                                       |
+| Three-way merge sync (Round 1 draft)                                 | Handles copies that diverge arbitrarily                                                                                                                                                                                                                                                                                                          | A structural 3-way merge can mis-merge silently — DL#195's wrong-pixel class in the tool. Rejected for equal-unless-override.                                                     |
+| Materialise but keep `<override>` for small edits                    | Familiar                                                                                                                                                                                                                                                                                                                                         | Two ways to express one edit, and `<override>` is exactly what needs the crossing machinery. Rejected.                                                                            |
 
 **Note on DL#181's rejection of this approach.** Its trade-off table dismissed "materialized/copied
 instance with drift reconciliation" as "a 3-way-merge-shaped reconciliation problem and file
@@ -612,10 +617,10 @@ equal-to-source-unless-override, with no merge base and no ambiguous resolution.
 4. `jay-stack sync` re-flattens from current source, preserves `override` **facets**, overwrites
    the rest — no merge base, no conflict prompt. A synced region validates clean.
 5. `sync --all` updates N sites of one component in one run; sites with `override` facets keep them.
-5b. Facet-scoped suppression is exact: `override="class"` (attribute), `="style.color"` (one
-    inline-style declaration), `="children"` (subtree), and the CSS `/* jay:override */` /
-    `/* jay:override: <prop> */` pragmas each suppress **only** the named facet; an unlisted sibling
-    change in the same node/rule still warns; `sync` preserves the named facet and re-flattens the rest.
+   5b. Facet-scoped suppression is exact: `override="class"` (attribute), `="style.color"` (one
+   inline-style declaration), `="children"` (subtree), and the CSS `/* jay:override */` /
+   `/* jay:override: <prop> */` pragmas each suppress **only** the named facet; an unlisted sibling
+   change in the same node/rule still warns; `sync` preserves the named facet and re-flattens the rest.
 6. A `template=` that does not resolve is a hard error; a bare `<jay:X>` with no flattened body is a
    hard error (contrast criterion 3).
 7. Component CSS is copied and `@scope`-wrapped so it does not alter page selectors; the validator flags
@@ -635,3 +640,52 @@ equal-to-source-unless-override, with no merge base and no ambiguous resolution.
 **Predecessors:** DL#195 (retrospective), DL#181, #187, #193, #194.
 **Resolved blockers:** Q1 (coded → headless) — yes. Q13 (no-code → passthrough instance) — yes.
 **Open:** Q11 (traced in Phase 5); Q12 (page-owned refs — v1 detects-and-errors, §7 deferred).
+
+---
+
+## Implementation Results
+
+### Phase 1 — differ (complete)
+
+Built as a standalone compiler package `@jay-framework/compiler-inline-composition`
+(`packages/compiler/compiler-inline-composition`), dependency-light: `node-html-parser` (the same tree
+the compiler walks) for markup and `postcss` for CSS. No runtime, no codegen dependency — exercised
+entirely by unit tests, matching verification criterion 10 and the "unit-test the logic before wiring to
+stack-cli" acceptance item.
+
+**Modules (`lib/`):**
+
+- `facet.ts` — the single addressing scheme. `Facet` union
+  (`attribute` | `style-declaration` | `children` | `css-rule` | `css-declaration`), `NodePath`,
+  `DiffEntry`, `facetKey` (stable id), `facetLabel` (human-readable), and `overrideSpecFor` — which
+  round-trips any facet back to the `override` marker (or CSS pragma) that would suppress exactly it.
+- `override.ts` — `META_ATTRS = ['jc','override','page-scope']` (compiler-injected / directive, never
+  drift), `parseOverride` (bare/`*` → whole node; `children` → subtree; `style.<prop>` / `<attr>`
+  tokens → named facets), `isPageScope`, `isRegionTag`.
+- `normalize.ts` — binding/whitespace normalization so formatting-only differences are never drift.
+- `style.ts` — inline-style parser that respects `()` and `{...}` depth (no false splits on `:`/`;`
+  inside `url()` or a binding).
+- `diff-markup.ts` — `diffMarkup(source, region)` / `diffBodies(parent, parent)`. Facet-granular:
+  a diverged child sequence emits one `children` facet on the parent and does **not** descend; an
+  aligned sequence descends and compares attributes + style declarations per matched element; nested
+  `<jay:X>` regions are never descended into (Q2); `page-scope` subtrees are excluded (§7); `override`
+  markers suppress exactly their named facet.
+- `diff-css.ts` — `diffCss(source, region)`. Selector-keyed, facet-granular at rule and declaration
+  level. Parses with **postcss** — the same parser the `design-system-validator` cascade resolver uses
+  (`css-cascade.ts`), so this package reuses a vetted, in-tree CSS parser rather than depending on that
+  plugin (or adding css-tree). `@scope` wrappers are transparent (a wrapped region aligns with unwrapped
+  source); other at-rule context (`@media`, `@supports`) is folded into the reported selector so like
+  compares with like and facet keys stay unique. The `/* jay:override */` and `/* jay:override: <prop> */`
+  pragmas (before or inside a rule) own the whole rule / one declaration respectively. v1 limitation:
+  a whole-rule _removal_ is reported but not independently ownable (there is no region rule to carry a
+  pragma) — the page keeps such a rule by re-adding it, or owns it at sync.
+
+**Tests:** 50/50 passing across 5 files (`diff-markup` 16, `diff-css` 14, `override` 8, `facet` 7,
+`style` 5). Fixture strings serve as the differ's own oracle; full `toEqual` comparisons (no `toContain`).
+`yarn confirm` in-package: clean build, type-check, and tests green; repo `yarn format` clean.
+
+**Deviations from design:** none. Facet-scoped suppression, bare `override` directive, and the removal
+of the invented `jay-stack add` (folded into `sync`) are all reflected above and in §3–§5.
+
+**Not yet wired:** the differ is not connected to `stack-cli/lib/validate.ts` — that is Phase 2, which
+loads regions via the existing `parseJayFile` and feeds `diffBodies`.

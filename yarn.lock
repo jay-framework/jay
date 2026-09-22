@@ -3482,6 +3482,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@jay-framework/compiler-inline-composition@workspace:packages/compiler/compiler-inline-composition":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/compiler-inline-composition@workspace:packages/compiler/compiler-inline-composition"
+  dependencies:
+    "@jay-framework/dev-environment": "workspace:^"
+    "@types/node": "npm:^20.11.5"
+    node-html-parser: "npm:^6.1.12"
+    postcss: "npm:^8.5.6"
+    rimraf: "npm:^5.0.5"
+    tsup: "npm:^8.0.1"
+    typescript: "npm:^5.3.3"
+    vite: "npm:^5.0.11"
+    vitest: "npm:^1.2.1"
+  languageName: unknown
+  linkType: soft
+
 "@jay-framework/compiler-jay-html@workspace:^, @jay-framework/compiler-jay-html@workspace:packages/compiler/compiler-jay-html":
   version: 0.0.0-use.local
   resolution: "@jay-framework/compiler-jay-html@workspace:packages/compiler/compiler-jay-html"
