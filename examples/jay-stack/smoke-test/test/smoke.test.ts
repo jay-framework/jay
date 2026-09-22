@@ -502,34 +502,32 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Block B/);
         });
 
-        it('/override — headfull component with <override> customizations (DL#181)', async () => {
-            const { status, body } = await fetchPage(server.url, '/override/');
+        it('/combined — Tier 3 (Fork C) + Tier 2 slots + full override vocabulary (DL#194 Phase C)', async () => {
+            const { status, body } = await fetchPage(server.url, '/combined/');
             expect(status).toBe(200);
             expectPage(body);
-            expect(body).toMatch(/Override Test/);
+            expect(body).toMatch(/Combined Page/);
+            // Tier 3 richCard: real component boundary; its `body` slot is parent-owned (foreignChild)
+            // and resolves the page-scope {pageTitle} binding.
+            expect(body).toMatch(/Rich Heading/);
+            expect(body).toMatch(/Body for Combined Page/);
+            expect(body).not.toMatch(/Default body/);
+            // Tier 2 promoCard: inlined; its own prop (heading) renders and its `cta` slot override
+            // resolves the page-scope {pageTitle} binding in the same SSR pass.
+            expect(body).toMatch(/Premium/);
+            expect(body).toMatch(/Start Combined Page trial/);
+            // Tier 2 overrideCard: the full override vocabulary (DL#181).
             // content replace
             expect(body).toMatch(/Start free trial/);
             expect(body).not.toMatch(/Buy Now/);
-            // attribute + style merge
+            // attribute + style merge on an element ref
             expect(body).toMatch(/\/images\/new-hero\.png/);
             expect(body).toMatch(/border-radius: 16px/);
-            // remove
+            // slot removal (empty override)
             expect(body).not.toMatch(/Default disclaimer text/);
             // container content replace
             expect(body).toMatch(/href="\/docs"/);
             expect(body).not.toMatch(/Default link/);
-        });
-
-        it('/promo — override binding to the page scope on a structural instance (DL#193 Phase 2c)', async () => {
-            const { status, body } = await fetchPage(server.url, '/promo/');
-            expect(status).toBe(200);
-            expectPage(body);
-            // structural instance renders its own prop (heading)
-            expect(body).toMatch(/Premium/);
-            // override CTA resolves the page-scope binding {pageTitle} — the whole tree renders in
-            // one SSR pass, so the page's vs is lexically in scope inside the instance body
-            expect(body).toMatch(/Start Promo Page trial/);
-            expect(body).not.toMatch(/Buy Now/);
         });
 
         it('/html-string — string is escaped, html-string is not', async () => {
@@ -706,10 +704,15 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Block B/);
         });
 
-        it('/override — headfull component with <override> customizations (DL#181)', async () => {
-            const { status, body } = await fetchPage(server.url, '/override/');
+        it('/combined — Tier 3 (Fork C) + Tier 2 slots + full override vocabulary (DL#194 Phase C)', async () => {
+            const { status, body } = await fetchPage(server.url, '/combined/');
             expect(status).toBe(200);
-            expect(body).toMatch(/Override Test/);
+            expect(body).toMatch(/Combined Page/);
+            expect(body).toMatch(/Rich Heading/);
+            expect(body).toMatch(/Body for Combined Page/);
+            expect(body).not.toMatch(/Default body/);
+            expect(body).toMatch(/Premium/);
+            expect(body).toMatch(/Start Combined Page trial/);
             expect(body).toMatch(/Start free trial/);
             expect(body).not.toMatch(/Buy Now/);
             expect(body).toMatch(/\/images\/new-hero\.png/);
@@ -717,14 +720,6 @@ describe('Smoke Test', () => {
             expect(body).not.toMatch(/Default disclaimer text/);
             expect(body).toMatch(/href="\/docs"/);
             expect(body).not.toMatch(/Default link/);
-        });
-
-        it('/promo — override binding to the page scope on a structural instance (DL#193 Phase 2c)', async () => {
-            const { status, body } = await fetchPage(server.url, '/promo/');
-            expect(status).toBe(200);
-            expect(body).toMatch(/Premium/);
-            expect(body).toMatch(/Start Promo Page trial/);
-            expect(body).not.toMatch(/Buy Now/);
         });
 
         it('/html-string — string is escaped, html-string is not', async () => {

@@ -1,77 +1,77 @@
 body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    margin: 24px;
-    color: #1a1a1a;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  margin: 24px;
+  color: #1a1a1a;
 }
 
 .title {
-    font-size: 20px;
-    font-weight: 600;
-    margin-bottom: 16px;
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 16px;
 }
 
 .page h1 {
-    font-size: 22px;
+  font-size: 22px;
 }
 
 .page h2 {
-    font-size: 15px;
-    color: #555;
-    margin-bottom: 8px;
+  font-size: 15px;
+  color: #555;
+  margin-bottom: 8px;
 }
 
 .card {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 12px 16px;
-    margin: 8px 0;
-    background: #fafafa;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 8px 0;
+  background: #fafafa;
 }
 
 .card h3 {
-    margin: 0 0 8px;
-    font-size: 16px;
+  margin: 0 0 8px;
+  font-size: 16px;
 }
 
 .counter {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .counter button {
-    width: 28px;
-    height: 28px;
-    font-size: 16px;
-    cursor: pointer;
+  width: 28px;
+  height: 28px;
+  font-size: 16px;
+  cursor: pointer;
 }
 
 .counter .count {
-    min-width: 24px;
-    text-align: center;
-    font-variant-numeric: tabular-nums;
+  min-width: 24px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 ul.cards {
-    list-style: none;
-    padding: 0;
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
+  list-style: none;
+  padding: 0;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 ul.cards li {
-    min-width: 160px;
+  min-width: 160px;
 }
 
 #log {
-    margin-top: 20px;
-    padding: 12px;
-    background: #111;
-    color: #0f0;
-    font-family: monospace;
-    font-size: 12px;
-    white-space: pre-wrap;
-    border-radius: 6px;
-    min-height: 80px;
+  margin-top: 20px;
+  padding: 12px;
+  background: #111;
+  color: #0f0;
+  font-family: monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  border-radius: 6px;
+  min-height: 80px;
 }

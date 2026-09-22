@@ -60,6 +60,18 @@ export abstract class BaseReferencesManager {
     ): PrivateRefConstructor<ViewState>[] {
         return refNames.map((refName) => {
             const managedRef = this.mkManagedRef(refType, refName);
+            // DL#194 Fork C: a Tier 3 instance ref name may collide with a pre-seeded slot ref
+            // manager (passed via childRefManagers) — the instance carries both its component refs
+            // and its `<override slot>` content's parent-owned refs. Attach the slot manager to the
+            // component ref so `refs.<instance>.<slot>.<ref>` resolves alongside the child's own refs.
+            const existing = this.refs[refName];
+            if (
+                refType === ManagedRefType.component &&
+                existing instanceof BaseReferencesManager &&
+                managedRef instanceof ComponentRefsImpl
+            ) {
+                managedRef.setSlotRefManager(existing);
+            }
             this.refs[refName] = managedRef;
             return () => {
                 let { currData, coordinate } = this.currentContext();

@@ -115,6 +115,13 @@ function walkChildren(
         const element = child as HTMLElement;
         const tagName = element.tagName?.toLowerCase();
 
+        // --- Override slot fragment (<override slot="X">) ---
+        // DL#194 §C (Tier 3, Fork C): `<override>` fragments hang off a `<jay:…>` tag as siblings of the
+        // injected template. They are owned by the PARENT (page) render, so `assignHeadlessInstance`
+        // assigns their content page-scope coordinates separately — skip them here (they would otherwise
+        // get child-scope coordinates from this walk).
+        if ((element.rawTagName ?? '').toLowerCase() === 'override') continue;
+
         // --- Headless instance (<jay:xxx>) ---
         // Creates a new scope. The jay-scope attribute marks the boundary.
         if (tagName?.startsWith('jay:')) {
@@ -197,24 +204,52 @@ function assignHeadlessInstance(
     // Multi-child wrapping normalization (for non-slow pages).
     // For slow-rendered pages, wrapping already happened in resolveHeadlessInstances.
     // For non-slow pages, wrap here before assigning child coordinates.
-    const significantChildren = element.childNodes.filter(
+    //
+    // DL#194 §C (Tier 3, Fork C): a coded composite keeps its `<override slot>` content as a SEPARATE
+    // top-level child of the `<jay:…>` tag (the compiler splits template body from override fragments,
+    // compiling each in a different scope). Exclude override nodes from the wrap so they are not bundled
+    // into the template's `display: contents` div — that would hide them from the split and compile the
+    // override content in the child scope, breaking parent-scoped bindings.
+    const isOverride = (n: any) =>
+        n.nodeType === NodeType.ELEMENT_NODE &&
+        ((n as HTMLElement).rawTagName ?? '').toLowerCase() === 'override';
+    const significantTemplateChildren = element.childNodes.filter(
         (n) =>
-            n.nodeType === NodeType.ELEMENT_NODE ||
-            (n.nodeType === NodeType.TEXT_NODE && (n.innerText || '').trim() !== ''),
+            !isOverride(n) &&
+            (n.nodeType === NodeType.ELEMENT_NODE ||
+                (n.nodeType === NodeType.TEXT_NODE && (n.innerText || '').trim() !== '')),
     );
-    if (significantChildren.length > 1) {
+    if (significantTemplateChildren.length > 1) {
         const wrapper = parse('<div></div>').querySelector('div')!;
         wrapper.setAttribute('style', 'display: contents');
-        const children = [...element.childNodes];
+        const overrideChildren = element.childNodes.filter(isOverride);
+        const children = element.childNodes.filter((n) => !isOverride(n));
         element.innerHTML = '';
         children.forEach((child) => wrapper.appendChild(child as any));
         element.appendChild(wrapper as any);
+        overrideChildren.forEach((child) => element.appendChild(child as any));
     }
 
     // Walk inline template children in the new scope.
     // The first child element starts a new coordinate path within the child scope.
     // We use a synthetic root coord for the scope — children get S<n>/0, S<n>/0/0, etc.
+    // (walkChildren skips `<override>` siblings — those are page-scoped below.)
     walkChildren(element, childScopeId, childScopeId, options, counter);
+
+    // DL#194 §C (Tier 3, Fork C): assign PAGE-scope coordinates to each `<override slot="X">` fragment's
+    // content. The fragment is built by the parent render and mounted at the child's `foreignChild`
+    // anchor, so its coordinates must resolve in the PAGE coordinate map — rooted at a unique per-slot
+    // path `${instanceCoord}/${slotName}` (instanceCoord is unique; slot name is unique per instance).
+    const overrideNodes = element.childNodes.filter(
+        (n) =>
+            n.nodeType === NodeType.ELEMENT_NODE &&
+            ((n as HTMLElement).rawTagName ?? '').toLowerCase() === 'override',
+    ) as HTMLElement[];
+    for (const overrideNode of overrideNodes) {
+        const slotName = overrideNode.getAttribute('slot');
+        if (!slotName) continue;
+        walkChildren(overrideNode, `${instanceCoord}/${slotName}`, parentScopeId, options, counter);
+    }
 }
 
 /**

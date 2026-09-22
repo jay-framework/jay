@@ -6,14 +6,17 @@
             names="card"></script>
     <script type="application/jay-data">
 data:
-    itemName: string
+    pageTitle: string
     </script>
 </head>
 <body>
 <div>
-    <h1>{itemName}</h1>
-    <jay:card ref="card" heading="Premium">
-        <override slot="cta">Start {itemName} trial</override>
+    <h1>{pageTitle}</h1>
+    <jay:card ref="plainCard" heading="Plain"></jay:card>
+    <jay:card ref="richCard" heading="Rich">
+        <override slot="body">
+            <button ref="cta">{pageTitle}</button>
+        </override>
     </jay:card>
 </div>
 </body>

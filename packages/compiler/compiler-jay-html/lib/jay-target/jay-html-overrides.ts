@@ -50,6 +50,16 @@ const OVERRIDE_TAG = 'override';
 export const OVERRIDE_INJECTED_MARKER = 'jay-from-override';
 
 /**
+ * DL#194 §C (Tier 3, Fork C) — provenance marker stamped by the parser on a coded composite's slot
+ * anchor when that slot is FILLED by an `<override slot="X">`. It replaces the anchor's `ref` (a slot
+ * has no ref) and clears its default content. Codegen reads it to emit `foreignChild(slots.X)` at the
+ * anchor — the slot's content is a parent-owned fragment mounted into the child DOM, updated by the
+ * parent (never the child). An unfilled slot carries no marker: its default content renders inline
+ * with the `ref` simply removed.
+ */
+export const FOREIGN_SLOT_MARKER = 'jay-foreign-slot';
+
+/**
  * Attributes the jay-html compiler reads literally (never through the expression parser), so their
  * values must NOT be marked with the parent-scope pragma — doing so would corrupt a ref name, a
  * trackBy field, or an internal coordinate/scope marker.

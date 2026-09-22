@@ -1830,7 +1830,7 @@ under plain client render), empty fast ViewState is the expected, non-erroneous 
 the composite DOES provide the context) is unchanged: dev-server hydration suite 741/741 pass.
 
 **Deviation from design.** The design's "existing machinery covers it" note is corrected: the runtime
-collection machinery *did* need two proxy-wiring fixes, codegen needed multi-instance helper dedup
+collection machinery _did_ need two proxy-wiring fixes, codegen needed multi-instance helper dedup
 **and** a hydrate create-variant synthetic-ref fix, the client runtime needed tolerant context lookup
 so structural composites work under plain client render, and the secure path needed a plugin
 contract-routing fix. No re-architecture — seven targeted fixes.
@@ -1840,7 +1840,7 @@ contract-routing fix. No re-architecture — seven targeted fixes.
 ## Phase 3 refinement — override-injected forwarded refs carry the override (outer) scope (2026-09-17)
 
 **Status: IMPLEMENTED (2026-09-17), but the scope RULE is SUPERSEDED by [DL#194](194%20-%20ref%20exposure%20and%20scoping%20across%20composition%20boundaries.md).**
-This refinement re-based only *override-injected* refs and kept *owned* refs at composite scope. DL#194
+This refinement re-based only _override-injected_ refs and kept _owned_ refs at composite scope. DL#194
 replaces that provenance-based rule with a `hasCodeFile`-based one: a no-code component exposes **all** its
 refs at external scope. The `childComp` ref-viewState selector added here is reused by DL#194.
 See "Implementation Results — Phase 3 refinement" below for the mechanism.
@@ -1920,14 +1920,14 @@ no selector it keeps the current behavior (composite scope) for plain Phase 3.
 ### Verification criteria
 
 - Override example: `onChange` payload viewState is the outer item (`{id,label}`); `find((vs) => vs.label
-  === 'Bravo')` returns the Bravo card's counter and only it fires.
+=== 'Bravo')` returns the Bravo card's counter and only it fires.
 - Plain `ref-forwarding` example + its unit test: **unchanged** (composite scope).
 - New runtime/codegen test with **distinct** outer vs composite viewStates (the existing unit test uses
   `{heading}` for both, which masked the bug).
 
 ### Open questions
 
-1. Confirm plain Phase 3 stays composite scope (only override re-bases). *(recommended)*
+1. Confirm plain Phase 3 stays composite scope (only override re-bases). _(recommended)_
    **Answer (confirmed):** Yes — plain Phase 3 keeps composite scope; only override-injected refs re-base.
 2. Runtime surface: optional `childComp` ref-viewState selector vs a dedicated `childCompOverride` helper?
    **Answer (confirmed):** Optional `childComp` ref-viewState selector (smallest runtime surface, no new helper).
@@ -2006,7 +2006,7 @@ element + component, external scope"). Kept below for the prior-art/runtime find
 Review question on refinement 1: the `childComp` `refViewState` selector re-bases only override-injected
 **child components** (`<jay:Counter>`). What about an override that injects a **plain interactive
 element** — `<override ref="slot"><button ref="cta" onclick=…></button></override>`? And does the
-selector accidentally re-base the composite's *own* refs?
+selector accidentally re-base the composite's _own_ refs?
 
 ### What refinement 1 got right (no change needed)
 
@@ -2014,9 +2014,19 @@ Re-basing is **per forwarded ref**, not per component. The `refViewState` select
 single `childComp(...)` call, and each forwarded ref is its own call. Proof (generated card body):
 
 ```ts
-e('div', {class: 'slot'}, [
-  childComp(Counter, (vs) => ({initialValue: 0}), refCta(), (vs, _p1) => _p1)  // selector: injected
-], refSlot())                                                                    // refSlot: no selector
+e(
+  'div',
+  { class: 'slot' },
+  [
+    childComp(
+      Counter,
+      (vs) => ({ initialValue: 0 }),
+      refCta(),
+      (vs, _p1) => _p1,
+    ), // selector: injected
+  ],
+  refSlot(),
+); // refSlot: no selector
 ```
 
 The provenance marker (`jay-from-override`) is stamped only on the injected tag, so a composite-**owned**
@@ -2029,9 +2039,9 @@ The marker is stamped only on `<jay:…>` component tags (`jay-html-overrides.ts
 `childComp` codegen path. An override-injected **plain element** ref is therefore **not** re-based — its
 event `viewState` resolves against the composite `ConstructContext` (composite scope), violating §C.
 
-| Injected via `<override>` | Re-based to outer scope? |
-|---|---|
-| `<jay:Counter ref="cta">` (child component) | ✅ yes (refinement 1) |
+| Injected via `<override>`                      | Re-based to outer scope?      |
+| ---------------------------------------------- | ----------------------------- |
+| `<jay:Counter ref="cta">` (child component)    | ✅ yes (refinement 1)         |
 | `<button ref="cta" onclick=…>` (plain element) | ❌ no — still composite scope |
 
 ### Prior-art / adjacent-mechanism check (null hypothesis)
@@ -2070,7 +2080,7 @@ that one property, uniformly for element and component refs:
   override-**injected** element refs, matching the existing "injected → outer scope" principle.
 
 Why option 2 over "extend the marker" (option 1): both need the same element-forwarding + re-basing work;
-option 2's *extra* cost is only threading one `Ref` property through the ref model and its consumers, and
+option 2's _extra_ cost is only threading one `Ref` property through the ref model and its consumers, and
 in return it removes the tag-attribute-string mechanism and makes element+component handling a single
 code path. Moderately larger, materially cleaner. **Recommended.**
 
@@ -2079,8 +2089,9 @@ code path. Moderately larger, materially cleaner. **Recommended.**
 This is bigger than refinement 1 (which was a single optional param): it introduces the first
 **typed element-ref forwarding** for pure composites. Estimated touch set — `jay-html-compile-refs.ts`
 (forwarding filter + element ref types), `jay-html-compiler.ts` + `-hydrate.ts` (element render selector
-+ provenance from the `Ref`), `element.ts` (element render ref-viewState selector), the override splice
-(set `Ref.overrideInjected`), plus fixtures/tests.
+
+- provenance from the `Ref`), `element.ts` (element render ref-viewState selector), the override splice
+  (set `Ref.overrideInjected`), plus fixtures/tests.
 
 ### Verification criteria
 
@@ -2093,7 +2104,7 @@ This is bigger than refinement 1 (which was a single optional param): it introdu
 
 ### Open questions
 
-1. `Ref.overrideInjected: boolean` vs `refScope: 'composite' | 'outer'`? *(boolean recommended — the
-   only two states are "injected → outer" and "owned → composite")*
+1. `Ref.overrideInjected: boolean` vs `refScope: 'composite' | 'outer'`? _(boolean recommended — the
+   only two states are "injected → outer" and "owned → composite")_
 2. Collection case for injected **element** refs — confirm `getForwardedInnerRef`'s generic path needs
    no change once the element ref is exposed + re-based (expected: no change).

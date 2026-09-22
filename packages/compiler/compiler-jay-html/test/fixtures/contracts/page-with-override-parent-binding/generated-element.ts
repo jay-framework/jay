@@ -15,7 +15,7 @@ export interface PageWithOverrideParentBindingViewState {
 }
 
 export interface PageWithOverrideParentBindingElementRefs {
-    ar0: {
+    card: {
         cta: HTMLElementProxy<PageWithOverrideParentBindingViewState, HTMLButtonElement>;
         disclaimer: HTMLElementProxy<PageWithOverrideParentBindingViewState, HTMLParagraphElement>;
     };
@@ -50,7 +50,7 @@ export type PageWithOverrideParentBindingContract = JayContract<
 export function render(
     options?: RenderElementOptions,
 ): PageWithOverrideParentBindingElementPreRender {
-    const [ar0RefManager, [refCta, refDisclaimer]] = ReferencesManager.for(
+    const [cardRefManager, [refCta, refDisclaimer]] = ReferencesManager.for(
         options,
         ['cta', 'disclaimer'],
         [],
@@ -58,7 +58,7 @@ export function render(
         [],
     );
     const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
-        ar0: ar0RefManager,
+        card: cardRefManager,
     });
     const render = (viewState: PageWithOverrideParentBindingViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>

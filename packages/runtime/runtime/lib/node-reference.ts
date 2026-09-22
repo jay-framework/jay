@@ -177,6 +177,22 @@ export class ComponentRefsImpl<ViewState, ComponentType extends JayComponent<any
     extends PrivateRefs<ViewState, ComponentType, ComponentRefImpl<ViewState, ComponentType>>
     implements ManagedRefs
 {
+    // DL#194 Fork C: a Tier 3 instance filled with `<override slot="X">` content exposes the slot
+    // content's (parent-owned) refs at `refs.<instance>.<slot>.<ref>` alongside the child component's
+    // own refs at `refs.<instance>.<childRef>`. When the instance ref name collides with a pre-seeded
+    // slot ref manager (see BaseReferencesManager.mkRefsOfType), that manager is attached here.
+    private slotRefManager?: { getPublicAPI(): any };
+
+    setSlotRefManager(slotRefManager: { getPublicAPI(): any }) {
+        this.slotRefManager = slotRefManager;
+    }
+
+    getSlotRef(slotName: string): any {
+        if (!this.slotRefManager) return undefined;
+        const api = this.slotRefManager.getPublicAPI();
+        return api ? api[slotName] : undefined;
+    }
+
     getInstance() {
         return [...this.elements][0]?.getPublicAPI();
     }
@@ -309,11 +325,10 @@ export class ComponentCollectionRefImpl<
                 for (const { inner, viewState, coordinate } of currentInnerRefs())
                     if (predicate(viewState, coordinate)) return inner;
             },
-            map: (
-                handler: (inner: any, viewState: ViewState, coordinate: Coordinate) => any,
-            ) => currentInnerRefs().map(({ inner, viewState, coordinate }) =>
-                handler(inner, viewState, coordinate),
-            ),
+            map: (handler: (inner: any, viewState: ViewState, coordinate: Coordinate) => any) =>
+                currentInnerRefs().map(({ inner, viewState, coordinate }) =>
+                    handler(inner, viewState, coordinate),
+                ),
         };
         return new Proxy(target, GetTrapProxy([EVENT_TRAP]));
     }
@@ -496,6 +511,16 @@ const DELEGATE_REFS_TO_COMP_TRAP = (target: ComponentRefsImpl<any, any>, prop) =
     return instance ? instance[prop] : undefined;
 };
 
+// DL#194 Fork C: delegate a slot name (e.g. `body`) on a Tier 3 instance's refs to the parent-owned
+// slot ref manager, so `refs.<instance>.<slot>.<ref>` resolves. Runs before the comp delegation so a
+// slot name is served from the parent-owned fragment; real impl members and the child component's own
+// refs fall through. `onXxx` is handled by EVENT_TRAP first, so it never reaches here.
+const DELEGATE_SLOT_REF_TRAP = (target: ComponentRefsImpl<any, any>, prop) => {
+    if (typeof prop !== 'string') return false;
+    if (prop in target) return false;
+    return target.getSlotRef(prop);
+};
+
 export const GetTrapProxy = (
     getTraps: Array<(target: any, p: string | symbol, receiver: any) => any>,
 ) => {
@@ -517,7 +542,11 @@ export function newHTMLElementPublicApiProxy<ViewState, T>(ref: T): T & GlobalJa
     return new Proxy(ref, HTMLElementRefProxy);
 }
 
-const ComponentRefProxy = GetTrapProxy([EVENT_TRAP, DELEGATE_REFS_TO_COMP_TRAP]);
+const ComponentRefProxy = GetTrapProxy([
+    EVENT_TRAP,
+    DELEGATE_SLOT_REF_TRAP,
+    DELEGATE_REFS_TO_COMP_TRAP,
+]);
 
 export function newComponentPublicApiProxy<ViewState, C extends JayComponent<any, ViewState, any>>(
     ref: ComponentRefsImpl<ViewState, C>,
@@ -549,10 +578,7 @@ const DELEGATE_COLLECTION_INNER_REF_TRAP = (target: ComponentCollectionRefImpl<a
     return target.getForwardedInnerRef(prop);
 };
 
-const ComponentCollectionRefProxy = GetTrapProxy([
-    EVENT_TRAP,
-    DELEGATE_COLLECTION_INNER_REF_TRAP,
-]);
+const ComponentCollectionRefProxy = GetTrapProxy([EVENT_TRAP, DELEGATE_COLLECTION_INNER_REF_TRAP]);
 
 export function newComponentCollectionPublicApiProxy<
     ViewState,

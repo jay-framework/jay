@@ -8,6 +8,7 @@ import { prettify, RuntimeMode } from '@jay-framework/compiler-shared';
 import {
     forEachInsidePureComponentError,
     headfullRecursionError,
+    overrideRequiresExplicitRefError,
 } from '../../lib/jay-target/jay-html-helpers';
 import { rootParentInInlinedCompositeError } from '../../lib/expressions/expression-compiler';
 
@@ -601,6 +602,14 @@ describe('generate jay-html element', () => {
             expect(parsed.validations).toEqual([headfullRecursionError('card')]);
         });
 
+        // DL#194 (issue 1) — a `<jay:X>` usage that carries `<override>` children customizes the
+        // component and exposes nested refs; without an explicit `ref` the instance is auto-named
+        // (`AR0` → `refs.ar0.cta`), which is unstable and opaque. Require an author-controlled ref.
+        it('rejects a component usage with overrides but no ref (DL#194 issue 1)', async () => {
+            const parsed = await readAndParseJayFile('contracts/page-override-no-ref');
+            expect(parsed.validations).toEqual([overrideRequiresExplicitRefError('card')]);
+        });
+
         // DL#194 §4b (root-level $parent validation) — a Tier 2 template using a root-level `$parent`
         // reaches past the composite into its consumer (a downward depth shift aliasing can't express
         // in v1). The composite scope has no parent (Variables.forInlinedComponent), so the climb is a
@@ -609,6 +618,19 @@ describe('generate jay-html element', () => {
             const folder = 'contracts/page-tier2-root-parent';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([rootParentInInlinedCompositeError()]);
+        });
+
+        // DL#194 Phase C (Fork C) — a Tier 3 (coded) composite with a `body` slot. The un-overridden
+        // instance (`plainCard`) renders the slot's default content inline in the child render; the
+        // overridden instance (`richCard`) mounts the parent-built override fragment at the `[ref="body"]`
+        // anchor via `foreignChild(slots.body)` and the parent drives the fragment's update via
+        // `childComp(..., slots)`. The override's ref surfaces at `refs.richCard.body.cta` (parent scope,
+        // keyed by slot name) alongside the child's own `refs.richCard.cardAction`.
+        it('generate element file with Tier 3 slot injection (DL#194 Phase C)', async () => {
+            const folder = 'contracts/page-with-tier3-slot';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
         it('generate element file with headless component instance inside forEach', async () => {

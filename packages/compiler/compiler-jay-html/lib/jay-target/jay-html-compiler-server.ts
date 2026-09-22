@@ -36,6 +36,7 @@ import { buildInlineAliases } from './jay-html-compiler';
 import { generateTypes } from './jay-html-compile-types';
 import { Indent } from './indent';
 import { assignCoordinates } from './assign-coordinates';
+import { FOREIGN_SLOT_MARKER } from './jay-html-overrides';
 import {
     BOOLEAN_ATTRIBUTE,
     COORD_ATTR,
@@ -76,6 +77,13 @@ interface ServerContext {
     interactivePaths: Set<string>;
     /** Parent has interactive children (conditionals/forEach) — siblings need jay-coordinate for Kindergarten */
     parentHasInteractiveChildren: boolean;
+    /** DL#194 §C (Tier 3, Fork C): filled slot content, keyed by slot name. When rendering a Tier 3
+     *  child's template and reaching a `jay-foreign-slot="X"` anchor, the anchor is replaced by this
+     *  fragment rendered in {@link slotPageContext} (PAGE scope) — matching the browser DOM where
+     *  `foreignChild` mounts the parent-owned fragment at the anchor. */
+    slotOverrides?: Map<string, HTMLElement>;
+    /** The enclosing PAGE context used to render slot override content (page `vs`, page coordinates). */
+    slotPageContext?: ServerContext;
 }
 
 /** Helper: create a single-line w() statement as a RenderFragment */
@@ -114,6 +122,23 @@ function renderServerNode(node: Node, context: ServerContext): RenderFragment {
 
 function renderServerElement(element: HTMLElement, context: ServerContext): RenderFragment {
     const { variables, indent } = context;
+
+    // --- DL#194 §C (Tier 3, Fork C): filled slot anchor ---
+    // A `jay-foreign-slot="X"` anchor is REPLACED by the parent-owned override fragment (matching the
+    // browser DOM, where `foreignChild` mounts the fragment in place of the anchor). Render the matching
+    // `<override slot="X">` content in the PAGE context (page `vs`, page coordinates) — never the anchor
+    // element itself, and never the `<override>` sibling.
+    const foreignSlotName = element.getAttribute(FOREIGN_SLOT_MARKER);
+    if (foreignSlotName && context.slotOverrides && context.slotPageContext) {
+        const overrideNode = context.slotOverrides.get(foreignSlotName);
+        if (!overrideNode) return RenderFragment.empty();
+        const pageContext: ServerContext = { ...context.slotPageContext, indent: context.indent };
+        return mergeServerFragments(
+            filterContentNodes(overrideNode.childNodes).map((child) =>
+                renderServerNode(child, pageContext),
+            ),
+        );
+    }
 
     // --- Headless component instance (<jay:contract-name>) ---
     // Must be checked BEFORE conditional, since a headless instance may have if= attribute
@@ -309,7 +334,12 @@ function renderServerHeadlessInstance(
     // fields are projected onto usage-site expressions via an alias overlay, so the SSR HTML matches
     // the inlined element/hydrate targets (which no longer emit a boundary either).
     if (headlessImport.structural)
-        return renderServerInlinedStructuralInstance(element, context, contractName, headlessImport);
+        return renderServerInlinedStructuralInstance(
+            element,
+            context,
+            contractName,
+            headlessImport,
+        );
 
     // Generate unique variable name for this instance's ViewState
     const idx = context.headlessInstanceCounter.count++;
@@ -355,7 +385,20 @@ function renderServerHeadlessInstance(
         0,
         varName,
     ).asLexical();
-    const childNodes = filterContentNodes(element.childNodes);
+    const allChildNodes = filterContentNodes(element.childNodes);
+    // DL#194 §C (Tier 3, Fork C): split the injected template from the `<override slot>` fragments.
+    // Template nodes render in the CHILD (instance) scope; each filled slot anchor reached inside them
+    // is replaced by its override content, rendered in the PAGE scope (see renderServerElement).
+    const isOverrideNode = (n: Node) =>
+        n.nodeType === NodeType.ELEMENT_NODE &&
+        ((n as HTMLElement).rawTagName ?? '').toLowerCase() === 'override';
+    const overrideNodes = allChildNodes.filter(isOverrideNode) as HTMLElement[];
+    const childNodes = allChildNodes.filter((n) => !isOverrideNode(n));
+    const slotOverrides = new Map<string, HTMLElement>();
+    for (const o of overrideNodes) {
+        const slotName = o.getAttribute('slot');
+        if (slotName) slotOverrides.set(slotName, o);
+    }
 
     if (childNodes.length === 0) {
         return new RenderFragment('', Imports.none(), [
@@ -378,6 +421,11 @@ function renderServerHeadlessInstance(
         // inside headfull FS component templates can be detected (DL#123)
         headlessContractNames: context.headlessContractNames,
         interactivePaths: buildInteractivePaths(headlessImport.contract),
+        // DL#194 §C (Tier 3, Fork C): make the split-out slot content + the enclosing PAGE context
+        // available so a `jay-foreign-slot` anchor reached inside the template renders the override
+        // content in page scope (page `vs`, page coordinates).
+        slotOverrides: slotOverrides.size > 0 ? slotOverrides : undefined,
+        slotPageContext: slotOverrides.size > 0 ? context : undefined,
     };
 
     // Render inline template children.

@@ -161,6 +161,20 @@ describe('generate jay-html server element', () => {
             );
         });
 
+        // DL#194 Phase C (Fork C) — a Tier 3 (coded) composite with a `body` slot. SSR renders the
+        // overridden instance (`richCard`) by REPLACING the `foreignChild` anchor with the parent-built
+        // override content, emitted at a PAGE-scope coordinate (`S0/0/card:richCard/body/0`) so it lands
+        // in the page coordinate map even though physically nested in the child DOM. The override reads
+        // page-scope view state (`vs.pageTitle`); no `<override>` sibling is rendered.
+        it('for Tier 3 slot injection (DL#194 Phase C)', async () => {
+            const folder = 'contracts/page-with-tier3-slot';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
+
         it('for headless instance with forEach in template', async () => {
             const folder = 'contracts/page-with-headless-foreach-template';
             const serverFile = await readFileAndGenerateServerElementFile(folder);
@@ -213,7 +227,6 @@ describe('generate jay-html server element', () => {
                 await readFixtureServerElementFile(folder),
             );
         });
-
 
         // DL#193 Phase 3 — refs do not exist on the server target (no interactivity), so forwarding
         // is a no-op here: the structural component's inline body renders server-side with the

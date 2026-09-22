@@ -78,6 +78,15 @@ export function headfullRecursionError(componentName: string): string {
     return `<jay:${componentName}> recurses (references itself directly or transitively); add ${componentName}.ts to make it Tier 3 (a real component boundary)`;
 }
 
+/**
+ * DL#194 (issue 1): a component usage that carries `<override>` children customizes the component and
+ * typically exposes nested refs (e.g. `refs.<name>.cta`). Without an explicit `ref` the instance is
+ * auto-named (`AR0` → `refs.ar0.cta`), which is unstable and opaque. Require the author to name it.
+ */
+export function overrideRequiresExplicitRefError(componentName: string): string {
+    return `<jay:${componentName}> has <override> children but no ref; add ref="..." to the usage so its refs get a stable, author-controlled path (e.g. refs.myName.cta) instead of an auto-generated one`;
+}
+
 export function isRecurse(node: Node): boolean {
     return (
         node.nodeType !== NodeType.TEXT_NODE &&

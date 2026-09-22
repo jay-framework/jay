@@ -51,7 +51,7 @@ import {
     JayHtmlSourceFile,
 } from './jay-html-source-file';
 import { buildStructuralPassthroughComp } from './structural-coercions';
-import { OVERRIDE_INJECTED_MARKER } from './jay-html-overrides';
+import { OVERRIDE_INJECTED_MARKER, FOREIGN_SLOT_MARKER } from './jay-html-overrides';
 import {
     AsyncDirectiveType,
     AsyncDirectiveTypes,
@@ -152,6 +152,13 @@ export interface RenderContext {
     headlessInstanceDefs: HeadlessInstanceDefinition[]; // Accumulator for inline template definitions
     headlessInstanceCounter: { count: number }; // Shared counter for unique naming
     coordinateCounters: Map<string, number>;
+    // DL#194 §C (Tier 3, Fork C): `const <name> = { <slot>: <fragment> }` declarations for slot
+    // content that must be materialized once inside the page render's `withRootContext` body, before
+    // the returned element expression. Each is referenced twice — by the child's higher-order
+    // constructor closure and by `childComp`'s `slots` argument — so it must be a shared const. When
+    // non-empty, the page render body is emitted as a block. Shared mutable array (like
+    // `headlessInstanceDefs`); propagates to nested scopes via spread.
+    slotPreambles: string[];
     // DL#193 Phase 3: file-level set of forwarded-ref helper identifiers (`CounterRef`,
     // `CounterRefs`) already emitted, so multiple structural instances embedding the same inner
     // component declare each helper once (avoids duplicate-identifier errors).
@@ -534,6 +541,8 @@ export function buildInlineAliases(
             attrCanonical === 'jay-scope' ||
             attrCanonical === 'ref' ||
             attrCanonical === 'props' ||
+            // Component provenance marker (DL#123) — stamped by the parser, never a prop.
+            attrCanonical === 'jc' ||
             attrCanonical === OVERRIDE_INJECTED_MARKER
         )
             return;
@@ -645,6 +654,10 @@ export function renderChildCompRef(
     );
     return new RenderFragment(`${constName}()`, Imports.for(), [], refs);
 }
+
+const isOverrideNode = (n: Node) =>
+    n.nodeType === NodeType.ELEMENT_NODE &&
+    ((n as HTMLElement).rawTagName ?? '').toLowerCase() === 'override';
 
 export function renderNode(node: Node, context: RenderContext): RenderFragment {
     let { variables, importedSandboxedSymbols, indent, importerMode } = context;
@@ -1125,7 +1138,15 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? 
         const componentVariables = new Variables(headlessImport.rootType, newContext.variables);
         const childIndent = newContext.indent.child(false);
 
-        const childNodes = filterContentNodes(htmlElement.childNodes);
+        const allChildNodes = filterContentNodes(htmlElement.childNodes);
+        // DL#194 §C (Tier 3, Fork C): a Tier 3 composite keeps its default template SEPARATE from
+        // the `<override slot>` content. The parser injects the default body (slot anchors marked
+        // `jay-foreign-slot` when filled) and appends the `<override>` elements verbatim. Split them:
+        // template nodes compile in CHILD scope (the inline render fn); override content compiles in
+        // PARENT scope (the page render) into slot fragments the parent owns.
+        const overrideNodes = allChildNodes.filter(isOverrideNode) as HTMLElement[];
+        const childNodes = allChildNodes.filter((n) => !isOverrideNode(n));
+        const hasSlots = overrideNodes.length > 0;
 
         // DL#193 Phase 3 (§4 validation): a pure (Tier 2) structural component receives only
         // scalar/enum props (DL#187), so no array can ever drive an internal forEach. Reject it
@@ -1167,6 +1188,11 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? 
                 recursiveRegions: [],
                 isInsideGuard: false,
                 insideFastForEach: false,
+                // Each inline template compiles into its OWN `_headless…Render` function, so its ref
+                // const names (`refCardAction`) are function-local. Give it a fresh generator so two
+                // instances of the same contract don't dedup across the boundary (`refCardAction` in
+                // both, not `refCardAction` / `refCardAction2`).
+                refNameGenerator: new RefNameGenerator(),
                 // DL#193 Phase 3: an instance's OWN template refs are always single — the instance is
                 // one unit. When the instance is repeated at the usage site (inside a forEach), that
                 // collection-ness is captured by the page-level ref manager collecting the instances,
@@ -1201,6 +1227,57 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? 
                 );
             } else {
                 inlineBody = renderedChildren;
+            }
+        }
+
+        // DL#194 §C (Tier 3, Fork C): compile each `<override slot="X">` fragment. Unlike DL#193, the
+        // content is authored AND resolved in the PARENT (page) scope — it is built in the page render
+        // and mounted into the child DOM at the anchor (`foreignChild`). Its refs are parent-owned,
+        // surfaced keyed by slot name under the instance (`refs.<instance>.<slot>.<ref>`).
+        const pageVSType = newContext.variables.currentType.name;
+        const refOriginalName =
+            htmlElement.attributes.ref || newContext.refNameGenerator.newAutoRefNameGenerator();
+        const refRefName = camelCase(refOriginalName);
+        const slotsTypeName = `_Headless${pascal}${idx}Slots`;
+        const slotsConstName = `${refRefName}Slots`;
+        const slotObjectMembers: string[] = [];
+        const slotTypeMembers: string[] = [];
+        const slotRefsChildren: Record<string, RefsTree> = {};
+        let slotImports = Imports.none();
+        const slotValidations: string[] = [];
+        if (hasSlots) {
+            const slotContext: RenderContext = {
+                ...newContext,
+                indent: newContext.indent.child(false),
+                recursiveRegions: [],
+                isInsideGuard: false,
+            };
+            for (const overrideNode of overrideNodes) {
+                const slotName = camelCase(overrideNode.getAttribute('slot')!);
+                const overrideChildren = filterContentNodes(overrideNode.childNodes);
+                const renderedSlot = overrideChildren
+                    .map((_) => renderNode(_, slotContext))
+                    .reduce(
+                        (prev, current) => RenderFragment.merge(prev, current, ',\n'),
+                        RenderFragment.empty(),
+                    );
+                let slotBody: RenderFragment;
+                if (overrideChildren.length > 1) {
+                    slotBody = new RenderFragment(
+                        `de('div', {}, [\n${renderedSlot.rendered}\n])`,
+                        renderedSlot.imports.plus(Import.dynamicElement),
+                        renderedSlot.validations,
+                        renderedSlot.refs,
+                        renderedSlot.recursiveRegions,
+                    );
+                } else {
+                    slotBody = renderedSlot;
+                }
+                slotObjectMembers.push(`${slotName}: ${slotBody.rendered.trim()}`);
+                slotTypeMembers.push(`    ${slotName}: BaseJayElement<${pageVSType}>;`);
+                slotRefsChildren[slotName] = slotBody.refs;
+                slotImports = slotImports.plus(slotBody.imports);
+                slotValidations.push(...slotBody.validations);
             }
         }
 
@@ -1266,8 +1343,41 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? 
                 syntheticRefsImports = single.imports;
             }
         }
-        // The inline render fn's public API is always the single shape.
-        const effectiveRefsTypeName = hasForwardedRefs ? syntheticSingleRefsTypeName : refsTypeName;
+        // DL#194 §C (Tier 3, Fork C): a slotted instance surfaces its parent-owned slot refs on the
+        // usage-site instance ref, keyed by slot name (`refs.<instance>.<slot>.<ref>`). Emit a
+        // synthetic instance-ref interface that EXTENDS the contract Refs (the child's own refs) with
+        // the slot refs subtree, plus the `_Headless…Slots` shape the render fn / childComp consume.
+        if (hasSlots) {
+            const slotRefsTree = mkRefsTree([], slotRefsChildren);
+            const rendered = renderRefsType(
+                slotRefsTree,
+                syntheticSingleRefsTypeName,
+                GenerateTarget.jay,
+                true,
+                newContext.emittedForwardedRefHelpers,
+            );
+            const slotRefsInterface = rendered.renderedRefs.replace(
+                `export interface ${syntheticSingleRefsTypeName} {`,
+                `interface ${syntheticSingleRefsTypeName} extends ${refsTypeName} {`,
+            );
+            // The index signature makes the slots interface assignable to the runtime's
+            // `slots?: Record<string, BaseJayElement<ParentVS>>` param (childComp/childCompHydrate)
+            // while keeping the named per-slot members for author-facing type checks.
+            const slotsTypeCode = `interface ${slotsTypeName} {\n    [slot: string]: BaseJayElement<${pageVSType}>;\n${slotTypeMembers.join('\n')}\n}`;
+            syntheticRefsCode = `${slotRefsInterface}\n${slotsTypeCode}\n`;
+            syntheticRefsImports = rendered.imports.plus(Import.baseJayElement);
+            // The synthetic interface extends the contract Refs type — ensure it is imported.
+            for (const link of headlessImport.contractLinks) {
+                if (!link.names.some((n) => n.name === refsTypeName))
+                    link.names.push({ name: refsTypeName, type: JayUnknown });
+            }
+            newContext.usedComponentImports.add(refsTypeName);
+        }
+
+        // The inline render fn's public API is always the single shape. Slotted instances keep the
+        // CONTRACT Refs on the render fn (slot refs are parent-owned, not part of the child API).
+        const effectiveRefsTypeName =
+            hasForwardedRefs && !hasSlots ? syntheticSingleRefsTypeName : refsTypeName;
 
         // Build coordinate key: use explicit ref if present, otherwise auto-generate with AR prefix.
         // Must match assignCoordinates' naming (AR0, AR1, ...) so the element target's
@@ -1292,6 +1402,32 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? 
             ? undefined // will use factory
             : instanceCoordBase || coordinateSuffix;
 
+        // DL#194 §C (Tier 3, Fork C): a slotted render fn takes the parent-built `slots` and mounts
+        // them at the `foreignChild` anchors. The instance is created via a higher-order constructor
+        // that closes over `slots`, so `childComp` can drive the slot fragments' updates separately.
+        const makeFnName = `_makeHeadless${pascal}${idx}`;
+        const renderFnSignature = hasSlots
+            ? `options: RenderElementOptions | undefined, slots: ${slotsTypeName}`
+            : `options?: RenderElementOptions`;
+        const componentInner = headlessImport.structural
+            ? buildStructuralPassthroughComp(headlessImport.contract?.tags ?? [])
+            : pluginComponentName;
+        const coordinateArg = isInsideForEach
+            ? `(dataIds) => [...dataIds, '${coordinateSuffix}'].toString()`
+            : `'${coordinateKey}'`;
+        const componentDefCode = hasSlots
+            ? `const ${makeFnName} = (slots: ${slotsTypeName}) =>
+    makeHeadlessInstanceComponent(
+        (options?: RenderElementOptions) => ${renderFnName}(options, slots),
+        ${componentInner},
+        ${coordinateArg},
+    );`
+            : `const ${componentSymbol} = makeHeadlessInstanceComponent(
+    ${renderFnName},
+    ${componentInner},
+    ${coordinateArg},
+);`;
+
         // Generate type aliases and render function code
         const renderFnCode = `
 // Inline template for headless component: ${contractName} #${idx}
@@ -1299,7 +1435,7 @@ type ${elementType} = JayElement<${interactiveViewStateType}, ${effectiveRefsTyp
 type ${renderType} = RenderElement<${interactiveViewStateType}, ${effectiveRefsTypeName}, ${elementType}>;
 type ${preRenderType} = [${effectiveRefsTypeName}, ${renderType}];
 
-function ${renderFnName}(options?: RenderElementOptions): ${preRenderType} {
+function ${renderFnName}(${renderFnSignature}): ${preRenderType} {
     ${renderedRefsManager}
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
@@ -1308,11 +1444,7 @@ ${inlineBody.rendered}
     return [refManager.getPublicAPI() as ${effectiveRefsTypeName}, render];
 }
 
-const ${componentSymbol} = makeHeadlessInstanceComponent(
-    ${renderFnName},
-    ${headlessImport.structural ? buildStructuralPassthroughComp(headlessImport.contract?.tags ?? []) : pluginComponentName},
-    ${isInsideForEach ? `(dataIds) => [...dataIds, '${coordinateSuffix}'].toString()` : `'${coordinateKey}'`},
-);`;
+${componentDefCode}`;
 
         // Accumulate the definition. The synthetic refs type (if any) is emitted in the shared
         // page-level refs section (see renderFunctionImplementation), not in the inline template code,
@@ -1355,27 +1487,27 @@ const ${componentSymbol} = makeHeadlessInstanceComponent(
         }
         let getProps = `(${outerVar}: ${newContext.variables.currentType.name}) => ${getPropsBody}`;
 
-        // Generate ref for the headless instance using contract types directly
-        const refOriginalName =
-            htmlElement.attributes.ref || newContext.refNameGenerator.newAutoRefNameGenerator();
-        const refRefName = camelCase(refOriginalName);
+        // Generate ref for the headless instance using contract types directly (refOriginalName /
+        // refRefName were computed above so the slot const name could reuse them).
         const refConstName = newContext.refNameGenerator.newConstantName(
             refRefName,
             newContext.variables,
         );
         const isRepeated = newContext.dynamicRef;
-        // DL#193 Phase 3: when a structural component forwards inner refs, the usage-site instance
-        // ref is the synthetic type emitted inline in this file (not the contract-only `${pascal}Refs`),
-        // so it declares the forwarded refs. The synthetic type is defined locally — no import needed.
-        const contractRefType = hasForwardedRefs
-            ? isRepeated
-                ? syntheticRepeatedRefsTypeName
-                : syntheticSingleRefsTypeName
-            : isRepeated
-              ? `${pascal}RepeatedRefs`
-              : `${pascal}Refs`;
+        // DL#193 Phase 3 / DL#194 §C: when a structural component forwards inner refs OR a Tier 3
+        // instance carries slot refs, the usage-site instance ref is the synthetic type emitted inline
+        // in this file (not the contract-only `${pascal}Refs`). The synthetic type is defined locally —
+        // no import needed. Slots always yield a single instance ref (a slot never repeats the child).
+        const contractRefType =
+            hasForwardedRefs || hasSlots
+                ? isRepeated && !hasSlots
+                    ? syntheticRepeatedRefsTypeName
+                    : syntheticSingleRefsTypeName
+                : isRepeated
+                  ? `${pascal}RepeatedRefs`
+                  : `${pascal}Refs`;
         // Ensure contract ref type is imported (synthetic type is local — skip)
-        if (!hasForwardedRefs) {
+        if (!hasForwardedRefs && !hasSlots) {
             for (const link of headlessImport.contractLinks) {
                 if (!link.names.some((n) => n.name === contractRefType)) {
                     link.names.push({ name: contractRefType, type: JayUnknown });
@@ -1392,26 +1524,49 @@ const ${componentSymbol} = makeHeadlessInstanceComponent(
             newContext.variables.currentType,
             new JayTypeAlias(contractRefType),
         );
+        // DL#194 §C: the instance ref carries the parent-owned slot refs as nested managers, keyed
+        // by the instance ref name then slot name (`refs.<instance>.<slot>.<ref>`). The instance name
+        // is BOTH a component ref (leaf) and a child-manager key — the runtime merges them via
+        // `setSlotRefManager` / `DELEGATE_SLOT_REF_TRAP`.
+        const instanceRefsTree = hasSlots
+            ? mkRefsTree([instanceRef], { [refRefName]: mkRefsTree([], slotRefsChildren) })
+            : mkRefsTree([instanceRef], {});
         let renderedRef = new RenderFragment(
             `${refConstName}()`,
             Imports.for(),
             [],
-            mkRefsTree([instanceRef], {}),
+            instanceRefsTree,
         );
         if (renderedRef.rendered !== '') renderedRef = renderedRef.map((_) => ', ' + _);
 
+        // DL#194 §C (Tier 3, Fork C): materialize the slot content fragments once as a shared const
+        // inside the page render's root context (see renderFunctionImplementation), then pass it both
+        // to the higher-order constructor (so the render fn can mount it) and to `childComp` (so the
+        // parent drives its updates).
+        let componentCreatorExpr = componentSymbol;
+        let slotsArg = '';
+        if (hasSlots) {
+            newContext.slotPreambles.push(
+                `        const ${slotsConstName}: ${slotsTypeName} = { ${slotObjectMembers.join(', ')} };`,
+            );
+            componentCreatorExpr = `${makeFnName}(${slotsConstName})`;
+            slotsArg = `, undefined, ${slotsConstName}`;
+        }
+
         // Return childComp call for the page render function
         return new RenderFragment(
-            `${newContext.indent.firstLine}childComp(${componentSymbol}, ${getProps}${renderedRef.rendered})`,
+            `${newContext.indent.firstLine}childComp(${componentCreatorExpr}, ${getProps}${renderedRef.rendered}${slotsArg})`,
             Imports.for(Import.childComp)
                 .plus(propsGetterAndRefs.imports)
                 .plus(renderedRef.imports)
                 .plus(Import.ConstructContext)
-                .plus(Import.makeHeadlessInstanceComponent),
+                .plus(Import.makeHeadlessInstanceComponent)
+                .plus(slotImports),
             [
                 ...propsGetterAndRefs.validations,
                 ...inlineBody.validations,
                 ...renderedRef.validations,
+                ...slotValidations,
             ],
             renderedRef.refs,
         );
@@ -1432,6 +1587,17 @@ const ${componentSymbol} = makeHeadlessInstanceComponent(
         case NodeType.ELEMENT_NODE:
             let htmlElement = node as HTMLElement;
             // if (isForEach(htmlElement)) dynamicRef = true;
+
+            // DL#194 §C (Tier 3, Fork C): a FILLED slot anchor marked by the parser renders as a
+            // `foreignChild(slots.X)` placeholder inside the child render fn — the parent builds and
+            // owns the slot fragment; the child only mounts it at the anchor (no-op update).
+            const foreignSlotName = htmlElement.getAttribute(FOREIGN_SLOT_MARKER);
+            if (foreignSlotName) {
+                return new RenderFragment(
+                    `${indent.firstLine}foreignChild(slots.${camelCase(foreignSlotName)})`,
+                    Imports.for(Import.foreignChild),
+                );
+            }
 
             if (isWithData(htmlElement)) {
                 // Handle <with-data accessor="expression"> element
@@ -1759,6 +1925,7 @@ function renderFunctionImplementation(
     const usedComponentImports = new Set<string>(); // Track used component types
     const headlessInstanceDefs: HeadlessInstanceDefinition[] = [];
     const headlessInstanceCounter = { count: 0 };
+    const slotPreambles: string[] = []; // DL#194 §C: page-render slot content declarations
     if (rootElement.val) {
         // Check if the root element is a directive that needs wrapping
         const needsWrapper =
@@ -1790,6 +1957,7 @@ function renderFunctionImplementation(
             headlessInstanceCounter, // Counter for unique naming
             coordinateCounters: new Map(), // Scope-level counter for unique coordinates
             emittedForwardedRefHelpers, // DL#193 Phase 3: file-level helper dedup (shared for hydrate)
+            slotPreambles, // DL#194 §C: Tier 3 slot content declarations for the page render body
         });
 
         if (needsWrapper) {
@@ -1885,11 +2053,22 @@ ${Indent.forceIndent(code, 4)},
         imports = imports.plus(def.imports);
     }
 
+    // DL#194 §C (Tier 3, Fork C): materialize slot content fragments once inside the root context,
+    // before the returned element — each is shared by the child constructor closure and `childComp`'s
+    // `slots` argument. When present, the callback becomes a block with `const` declarations + `return`.
+    const rootCallback =
+        slotPreambles.length > 0
+            ? `() => {
+${slotPreambles.join('\n')}
+        return ${renderedRoot.rendered.trim()};
+    }`
+            : `() => ${renderedRoot.rendered.trim()}`;
+
     const body = `${headlessDefsCode}export function render(options?: RenderElementOptions): ${preRenderType} {
-${renderedRefsManager}    
+${renderedRefsManager}
 ${headLinksInjection}${recursiveFunctionsSection}    const render = (viewState: ${viewStateType}) => ConstructContext.withRootContext(
         viewState, refManager,
-        () => ${renderedRoot.rendered.trim()}
+        ${rootCallback}
     ) as ${elementType};
     return [refManager.getPublicAPI() as ${refsType}, render];
 }`;

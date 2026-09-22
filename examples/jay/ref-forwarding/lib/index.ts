@@ -33,8 +33,7 @@ window.onload = function () {
 
     // find(pred) reaches exactly one card in the collection by its external viewState.
     const bravoCta = refs.cards.cards.cta.find((vs) => vs.label === 'Bravo');
-    if (bravoCta)
-        bravoCta.onChange(({ event }) => write(`[find:Bravo only] counter → ${event}`));
+    if (bravoCta) bravoCta.onChange(({ event }) => write(`[find:Bravo only] counter → ${event}`));
 
     target.innerHTML = '';
     target.appendChild(instance.dom);

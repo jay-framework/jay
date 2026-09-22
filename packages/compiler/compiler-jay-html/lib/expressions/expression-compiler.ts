@@ -202,6 +202,28 @@ export class Variables {
     }
 
     /**
+     * DL#194 (Tier 2 inlining): return a view of this scope whose field accessors root at `name`
+     * instead of the default `vs`/`vsN`, preserving the alias overlay and `inlinedRoot` flag. The
+     * hydrate target uses this to evaluate a non-interactive conditional guard against the render
+     * function's `viewState` param while an inlined composite's contract-field aliases (e.g. a
+     * static `featured` → literal `true`) still resolve — a plain `new Variables(...)` would drop
+     * the aliases and the guard would fail with "data field not found".
+     */
+    withRootVarName(name: string): Variables {
+        return new Variables(
+            this.currentType,
+            this.parent,
+            this.depth,
+            name,
+            this.parentShiftLevels,
+            this.children,
+            this.lexicallyInScope,
+            this.aliases,
+            this.inlinedRoot,
+        );
+    }
+
+    /**
      * DL#193 §C (Phase 2a): return a view of this scope that resolves every field accessor
      * `levels` scopes up. Reuses Capability A — the shift is applied by prefixing `$parent`
      * tokens inside {@link resolveAccessor}, so `parentLevel`/`parentDepth` (and hence the

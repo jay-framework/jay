@@ -148,6 +148,7 @@ export const Import = {
         ImportsFor.elementSandbox,
     ),
     childComp: importStatementFragment(JAY_RUNTIME, 'childComp', ImportsFor.implementation),
+    foreignChild: importStatementFragment(JAY_RUNTIME, 'foreignChild', ImportsFor.implementation),
     elemRef: importStatementFragment(JAY_RUNTIME, 'elemRef as er', ImportsFor.implementation),
     elemCollectionRef: importStatementFragment(
         JAY_RUNTIME,

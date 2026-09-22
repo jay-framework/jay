@@ -50,10 +50,20 @@ export function childComp<
     getProps: (t: ParentVS) => Props,
     ref?: PrivateRef<any, ChildComp>,
     refViewState?: (vs: ParentVS, ...parents: any[]) => any,
+    slots?: Record<string, BaseJayElement<ParentVS>>,
 ): BaseJayElement<ParentVS> {
     let context = currentConstructionContext();
     let childComp = compCreator(getProps(context.currData));
     let updates: updateFunc<ParentVS>[] = [(t: ParentVS) => childComp.update(getProps(t))];
+    // DL#194 Fork C: slot content fragments (from `<override slot="X">`) are parent-owned. The child
+    // mounts their DOM at the slot anchor (via `foreignChild`, whose update is a no-op) but never
+    // feeds them its own view state; the parent drives their update here from the parent view state.
+    if (slots) {
+        for (const slotName of Object.keys(slots)) {
+            const slot = slots[slotName];
+            updates.push((t: ParentVS) => slot.update(t));
+        }
+    }
     let mounts: MountFunc[] = [childComp.mount];
     let unmounts: MountFunc[] = [childComp.unmount];
     if (ref) {
@@ -77,6 +87,22 @@ export function childComp<
         update: normalizeUpdates(updates),
         mount: normalizeMount(mounts),
         unmount: normalizeMount(unmounts),
+    };
+}
+
+/**
+ * DL#194 Fork C: wrap a parent-owned slot content fragment for mounting inside a Tier 3 child's DOM.
+ * The child's render tree mounts this at the slot anchor — it forwards the fragment's DOM, mount and
+ * unmount, but its `update` is a NO-OP so the child's update cascade never feeds the parent-owned
+ * fragment the child's view state. The parent drives the fragment's real update via `childComp`'s
+ * `slots` argument.
+ */
+export function foreignChild<ParentVS>(child: BaseJayElement<any>): BaseJayElement<ParentVS> {
+    return {
+        dom: child.dom,
+        update: noopUpdate,
+        mount: child.mount,
+        unmount: child.unmount,
     };
 }
 

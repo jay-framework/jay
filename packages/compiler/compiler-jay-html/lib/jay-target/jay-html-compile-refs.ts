@@ -156,8 +156,15 @@ export function renderRefsType(
                 })
                 .join(',\n');
 
+            // DL#194 §C (Tier 3, Fork C): a Tier 3 slotted instance surfaces its instance name as BOTH
+            // a component-ref leaf (`richCard: _HeadlessCard1Refs`) AND a child-manager key (so the
+            // nested slot ref managers exist at runtime). The leaf's synthetic type already encodes the
+            // slot refs (`extends CardRefs { body: { cta } }`), so skip the child expansion for a name
+            // that is also a leaf ref — emitting both would be a duplicate key.
+            const leafRefNames = new Set(refsTree.refs.map((r) => r.ref));
             const childTypes = Object.entries(refsTree.children)
-                .filter(([_, childRefNode]) => {
+                .filter(([childName, childRefNode]) => {
+                    if (leafRefNames.has(childName)) return false;
                     return childRefNode.imported || hasRefs(childRefNode, false);
                 })
                 .map(([childName, childRefNode]) => {

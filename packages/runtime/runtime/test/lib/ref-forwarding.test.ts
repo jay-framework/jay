@@ -27,8 +27,11 @@ interface CounterVS {
 interface CounterProps {
     initialValue: number;
 }
-interface CounterComponent<ParentVS>
-    extends JayComponent<CounterProps, CounterVS, JayElement<CounterVS, object>> {
+interface CounterComponent<ParentVS> extends JayComponent<
+    CounterProps,
+    CounterVS,
+    JayElement<CounterVS, object>
+> {
     onClick: EventEmitter<number, ParentVS>;
 }
 
@@ -83,7 +86,11 @@ function Card(props: CardProps) {
     const element = ConstructContext.withRootContext(vs, refManager, () =>
         e('div', { class: 'card' }, [
             e('h3', {}, [dt((s: CardVS) => s.heading)]),
-            childComp((p: CounterProps) => Counter<CardVS>(p), () => ({ initialValue: 0 }), refCta()),
+            childComp(
+                (p: CounterProps) => Counter<CardVS>(p),
+                () => ({ initialValue: 0 }),
+                refCta(),
+            ),
         ]),
     ) as JayElement<CardVS, { cta: CounterComponent<CardVS> }>;
     return {
@@ -94,6 +101,8 @@ function Card(props: CardProps) {
         },
         mount: () => element.mount(),
         unmount: () => element.unmount(),
+        addEventListener: () => {},
+        removeEventListener: () => {},
         ...element.refs,
         get viewState() {
             return vs;
@@ -273,6 +282,8 @@ function OverrideCard<Outer>(props: CardProps & { __parentContext: Outer }) {
         },
         mount: () => element.mount(),
         unmount: () => element.unmount(),
+        addEventListener: () => {},
+        removeEventListener: () => {},
         ...element.refs,
         get viewState() {
             return vs;
@@ -387,7 +398,9 @@ describe('DL#193 Phase 3 refinement — override-injected forwarded refs carry t
                 ],
             });
             const handler = vi.fn();
-            const oneCta = page.refs.cards.cards.cta.find((vs: OuterItemVS) => vs.label === 'Bravo');
+            const oneCta = page.refs.cards.cards.cta.find(
+                (vs: OuterItemVS) => vs.label === 'Bravo',
+            );
             oneCta.onClick(handler);
 
             const buttons = [

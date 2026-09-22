@@ -12,7 +12,7 @@ data:
 <body>
 <div>
     <h1>{itemName}</h1>
-    <jay:card ref="card" heading="Premium">
+    <jay:card heading="Premium">
         <override slot="cta">Start {itemName} trial</override>
     </jay:card>
 </div>

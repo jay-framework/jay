@@ -542,9 +542,7 @@ describe('parse contract', () => {
             `;
 
             const result = parseContract(contract, 'card.jay-contract');
-            expect(result.validations).toEqual([
-                'Tag [body] cannot be both slot and other types',
-            ]);
+            expect(result.validations).toEqual(['Tag [body] cannot be both slot and other types']);
         });
     });
 

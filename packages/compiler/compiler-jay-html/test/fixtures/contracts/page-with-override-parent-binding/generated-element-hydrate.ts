@@ -15,7 +15,7 @@ export interface PageWithOverrideParentBindingViewState {
 }
 
 export interface PageWithOverrideParentBindingElementRefs {
-    ar0: {
+    card: {
         cta: HTMLElementProxy<PageWithOverrideParentBindingViewState, HTMLButtonElement>;
         disclaimer: HTMLElementProxy<PageWithOverrideParentBindingViewState, HTMLParagraphElement>;
     };
@@ -51,7 +51,7 @@ export function hydrate(
     rootElement: Element,
     options?: RenderElementOptions,
 ): PageWithOverrideParentBindingElementPreRender {
-    const [ar0RefManager, [refCta, refDisclaimer]] = ReferencesManager.for(
+    const [cardRefManager, [refCta, refDisclaimer]] = ReferencesManager.for(
         options,
         ['cta', 'disclaimer'],
         [],
@@ -59,7 +59,7 @@ export function hydrate(
         [],
     );
     const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
-        ar0: ar0RefManager,
+        card: cardRefManager,
     });
     const render = (viewState: PageWithOverrideParentBindingViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>

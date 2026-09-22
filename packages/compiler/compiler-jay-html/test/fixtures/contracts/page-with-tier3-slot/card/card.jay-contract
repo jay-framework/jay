@@ -1,4 +1,4 @@
-name: PromoCard
+name: Card
 props:
   - name: heading
     type: string
@@ -7,6 +7,9 @@ tags:
   - tag: heading
     type: data
     dataType: string
-    phase: slow
-  - tag: cta
+    phase: fast+interactive
+  - tag: cardAction
+    type: interactive
+    elementType: HTMLButtonElement
+  - tag: body
     type: slot

@@ -37,8 +37,7 @@ window.onload = function () {
     });
 
     const bravoCta = refs.cards.cards.cta.find((vs) => vs.label === 'Bravo');
-    if (bravoCta)
-        bravoCta.onChange(({ event }) => write(`[find:Bravo only] counter → ${event}`));
+    if (bravoCta) bravoCta.onChange(({ event }) => write(`[find:Bravo only] counter → ${event}`));
 
     target.innerHTML = '';
     target.appendChild(instance.dom);

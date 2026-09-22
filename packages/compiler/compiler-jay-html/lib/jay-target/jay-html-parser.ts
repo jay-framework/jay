@@ -37,8 +37,13 @@ import { SourceFileFormat } from '@jay-framework/compiler-shared';
 import { JayImportLink, JayImportName } from '@jay-framework/compiler-shared';
 import { JayYamlStructure } from './jay-yaml-structure';
 import { Contract, ContractTag, ContractTagType, RenderingPhase } from '../contract';
-import { applyHeadfullOverrides, hasOverrides } from './jay-html-overrides';
-import { headfullRecursionError } from './jay-html-helpers';
+import {
+    applyHeadfullOverrides,
+    hasOverrides,
+    parseOverrides,
+    FOREIGN_SLOT_MARKER,
+} from './jay-html-overrides';
+import { headfullRecursionError, overrideRequiresExplicitRefError } from './jay-html-helpers';
 
 import {
     JayHeadlessImports,
@@ -841,6 +846,91 @@ async function parseHeadlessImports(
 }
 
 /**
+ * Inject a headfull component's template into a single matching `<jay:Name>` usage tag,
+ * branching by tier (DL#194). Single source of truth shared by the compile path
+ * ({@link parseHeadfullFSImports}) and the dev-server pre-render path
+ * ({@link injectHeadfullFSTemplatesRecursive}) so both agree on Tier 3 slot shape.
+ *
+ * - **Tier 3 (`hasCodeFile`, Fork C §C):** inject the DEFAULT template body, then re-mark each
+ *   declared slot anchor (`ref="X"`): a FILLED slot becomes a `jay-foreign-slot` placeholder (default
+ *   content dropped, mounts a parent-owned fragment); an unfilled slot keeps its default content.
+ *   Either way the slot's `ref` is removed (a slot contributes no ref). Attribute-form overrides
+ *   (`<override ref="X" .../>`) still merge via `applyHeadfullOverrides`. The `<override slot>`
+ *   elements are appended verbatim so codegen compiles their content in PARENT scope.
+ * - **Tier 2 (no `.ts`):** splice overrides into the body (DL#181/#194 §B).
+ *
+ * @param setDisplayContents - when true (pre-render), stamp `style="display: contents"` on injected
+ *   tags (the compile path adds this elsewhere).
+ */
+function injectComposableTemplateIntoTag(
+    jayTag: HTMLElement,
+    childBody: HTMLElement,
+    contractName: string,
+    slotNames: Set<string>,
+    hasCodeFile: boolean,
+    validations: string[],
+    setDisplayContents: boolean = false,
+): void {
+    const markInjected = () => {
+        // Order matters: the injected attributes become props in insertion order, and the
+        // dev-server hydrate fixtures encode `style` before `jc`. Preserve that ordering.
+        if (setDisplayContents) jayTag.setAttribute('style', 'display: contents');
+        jayTag.setAttribute('jc', contractName);
+    };
+    const tagHasOverrides = hasOverrides(jayTag);
+
+    if (hasCodeFile) {
+        let injectedBody = childBody.innerHTML;
+        if (tagHasOverrides) {
+            const overridden = applyHeadfullOverrides(childBody, jayTag, contractName, slotNames);
+            validations.push(...overridden.validations);
+            injectedBody = overridden.val!;
+        } else if (jayTag.innerHTML.trim()) {
+            return;
+        }
+
+        const filledSlots = new Set(
+            parseOverrides(jayTag)
+                .map((o) => o.slot)
+                .filter((s): s is string => s !== null),
+        );
+        const overrideEls = jayTag.childNodes.filter(
+            (n) =>
+                n.nodeType === 1 &&
+                ((n as HTMLElement).rawTagName ?? '').toLowerCase() === 'override',
+        );
+        const overrideHtml = overrideEls.map((n) => n.toString()).join('\n');
+
+        jayTag.set_content(injectedBody);
+        for (const slotName of slotNames) {
+            for (const anchor of jayTag.querySelectorAll(`[ref="${slotName}"]`)) {
+                anchor.removeAttribute('ref');
+                if (filledSlots.has(slotName)) {
+                    anchor.setAttribute(FOREIGN_SLOT_MARKER, slotName);
+                    anchor.set_content('');
+                }
+            }
+        }
+        if (overrideHtml) jayTag.set_content(jayTag.innerHTML + '\n' + overrideHtml);
+        markInjected();
+        return;
+    }
+
+    // Tier 2 (no .ts): splice overrides into the body (DL#181/#194 §B). Slot names let the
+    // compiler reject `slot=` on a non-slot ref.
+    if (tagHasOverrides) {
+        const overridden = applyHeadfullOverrides(childBody, jayTag, contractName, slotNames);
+        validations.push(...overridden.validations);
+        jayTag.set_content(overridden.val!);
+        markInjected();
+        return;
+    }
+    if (jayTag.innerHTML.trim()) return;
+    jayTag.set_content(childBody.innerHTML);
+    markInjected();
+}
+
+/**
  * Inject headfull full-stack component templates into jay-html.
  * Finds <script type="application/jay-headfull" contract="..."> tags,
  * reads each component's jay-html file, and injects the body content
@@ -901,6 +991,36 @@ function injectHeadfullFSTemplatesRecursive(
         if (visited.has(resolvedSrc)) continue;
         visited.add(resolvedSrc);
 
+        // Tier discrimination (DL#194): a coded composite (`.ts`/`.js` next to `src`) keeps its
+        // `<override slot>` content SEPARATE (Fork C) instead of splicing it into the child body.
+        // Computed the same way as the compile path (parseHeadfullFSImports) so both agree.
+        const hasCodeFile =
+            fsSync.existsSync(resolvedSrc + '.ts') ||
+            fsSync.existsSync(resolvedSrc + '.js') ||
+            fsSync.existsSync(path.join(resolvedSrc, 'index.ts')) ||
+            fsSync.existsSync(path.join(resolvedSrc, 'index.js'));
+
+        // Declared `type: slot` tag names — needed to place `jay-foreign-slot` anchors (Tier 3) and
+        // to reject `slot=` on a non-slot ref (Tier 2). Best-effort: no contract → no slots.
+        let slotNames = new Set<string>();
+        const contractAttr = element.getAttribute('contract');
+        if (contractAttr) {
+            try {
+                const contractResult = importResolver.loadContract(
+                    path.resolve(sourceDir, contractAttr),
+                );
+                if (contractResult.val) {
+                    slotNames = new Set(
+                        contractResult.val.tags
+                            .filter((t) => t.type.includes(ContractTagType.slot))
+                            .map((t) => t.tag),
+                    );
+                }
+            } catch {
+                // Best-effort pre-render: fall back to no slots.
+            }
+        }
+
         const jayHtmlResult = importResolver.readJayHtml(sourceDir, src);
         if (!jayHtmlResult) continue;
 
@@ -923,25 +1043,25 @@ function injectHeadfullFSTemplatesRecursive(
             );
         }
 
-        // Inject into matching <jay:Name> tags
+        // Inject into matching <jay:Name> tags. Tier-aware via the shared helper so a Tier 3 coded
+        // composite keeps its Fork C slot shape here too — otherwise the SSR server-element (compiled
+        // from this pre-rendered content) would emit physical slot coords that the client hydrate
+        // (compiled from the raw original, Fork C) cannot adopt. Errors are best-effort in this path.
         const jayTags = body
             .querySelectorAll('*')
             .filter((el) => el.tagName?.toLowerCase() === `jay:${contractName}`);
 
+        const bestEffortValidations: string[] = [];
         for (const jayTag of jayTags) {
-            if (hasOverrides(jayTag)) {
-                // DL#181: usage tag contains <override> children — inject the component body with
-                // overrides applied. Errors are surfaced by the compile path (parseHeadfullFSImports);
-                // this pre-render path applies best-effort.
-                const overridden = applyHeadfullOverrides(jayHtmlBody, jayTag, contractName);
-                jayTag.set_content(overridden.val!);
-                jayTag.setAttribute('style', 'display: contents');
-                jayTag.setAttribute('jc', contractName);
-            } else if (!jayTag.innerHTML.trim()) {
-                jayTag.set_content(jayHtmlBody.innerHTML);
-                jayTag.setAttribute('style', 'display: contents');
-                jayTag.setAttribute('jc', contractName);
-            }
+            injectComposableTemplateIntoTag(
+                jayTag,
+                jayHtmlBody,
+                contractName,
+                slotNames,
+                hasCodeFile,
+                bestEffortValidations,
+                true,
+            );
         }
     }
 }
@@ -1212,41 +1332,10 @@ async function parseHeadfullFSImports(
             componentImports.push(...nestedResult.componentImports);
         }
 
-        // Inject template: find matching <jay:Name> tags in parent body
-        const jayTags = body
-            .querySelectorAll('*')
-            .filter((el) => el.tagName?.toLowerCase() === `jay:${contractName}`);
-
-        for (const jayTag of jayTags) {
-            if (hasOverrides(jayTag)) {
-                // DL#181/#194: usage tag contains <override> children — inject the component body
-                // with overrides applied, surfacing missing-ref / non-slot / dropped-op compile
-                // errors. Slot names (DL#194) let the compiler reject `slot=` on a non-slot ref.
-                const slotNames = new Set(
-                    loadedContract.tags
-                        .filter((t) => t.type.includes(ContractTagType.slot))
-                        .map((t) => t.tag),
-                );
-                const overridden = applyHeadfullOverrides(
-                    jayHtmlBody,
-                    jayTag,
-                    contractName,
-                    slotNames,
-                );
-                validations.push(...overridden.validations);
-                jayTag.set_content(overridden.val!);
-                jayTag.setAttribute('jc', contractName);
-                continue;
-            }
-            const existingContent = jayTag.innerHTML.trim();
-            if (existingContent) {
-                continue;
-            }
-            jayTag.set_content(jayHtmlBody.innerHTML);
-            jayTag.setAttribute('jc', contractName);
-        }
-
-        // Check if .ts code file exists (DL#162 structural headfull).
+        // Check if .ts code file exists (DL#162 structural headfull / DL#194 Tier 3). Computed
+        // BEFORE template injection so the injection can branch by tier: a Tier 3 (coded) composite
+        // keeps its `<override slot>` content SEPARATE from the default template (parent-scope slot
+        // injection, DL#194 §C "Fork C") instead of splicing it into the child body like Tier 2.
         let resolvedSrcPath: string;
         try {
             resolvedSrcPath = importResolver.resolveLink(moduleResolveDir, src);
@@ -1258,6 +1347,34 @@ async function parseHeadfullFSImports(
             fsSync.existsSync(resolvedSrcPath + '.js') ||
             fsSync.existsSync(path.join(resolvedSrcPath, 'index.ts')) ||
             fsSync.existsSync(path.join(resolvedSrcPath, 'index.js'));
+
+        // Names of the component's declared `type: slot` tags (DL#194).
+        const slotNames = new Set(
+            loadedContract.tags
+                .filter((t) => t.type.includes(ContractTagType.slot))
+                .map((t) => t.tag),
+        );
+
+        // Inject template: find matching <jay:Name> tags in parent body
+        const jayTags = body
+            .querySelectorAll('*')
+            .filter((el) => el.tagName?.toLowerCase() === `jay:${contractName}`);
+
+        for (const jayTag of jayTags) {
+            // DL#194 (issue 1): a customized instance (has <override> children) must be explicitly
+            // named so its exposed refs get a stable path instead of an auto-generated `AR<n>`.
+            if (hasOverrides(jayTag) && !jayTag.getAttribute('ref')?.trim()) {
+                validations.push(overrideRequiresExplicitRefError(contractName));
+            }
+            injectComposableTemplateIntoTag(
+                jayTag,
+                jayHtmlBody,
+                contractName,
+                slotNames,
+                hasCodeFile,
+                validations,
+            );
+        }
 
         // Tier detection (DL#187) — purely file-presence based (contract present, no .ts →
         // Tier 2 pure headfull component). Split by contract contents into two sub-cases:

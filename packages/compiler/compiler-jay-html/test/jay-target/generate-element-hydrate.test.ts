@@ -254,6 +254,20 @@ describe('generate jay-html element hydrate', () => {
             );
         });
 
+        // DL#194 Phase C (Fork C) — a Tier 3 (coded) composite with a `body` slot hydrates by adopting
+        // the SSR fragment the server rendered at the anchor. The overridden instance (`richCard`) mounts
+        // the parent-built override fragment via `foreignChild(slots.body)`; the fragment adopts page-scope
+        // coordinates (`S0/0/card:richCard/body/0`) and the parent drives its update via
+        // `childCompHydrate(..., slots)`. The override's ref surfaces at `refs.richCard.body.cta`.
+        it('for Tier 3 slot injection (DL#194 Phase C)', async () => {
+            const folder = 'contracts/page-with-tier3-slot';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+
         // DL#187 — a structural (Tier 2) headfull component hydrates via the inline
         // identity passthrough and the prop getter carries the coerced static prop
         // values (enum member, number literal, boolean literal), matching the SSR.
@@ -334,7 +348,6 @@ describe('generate jay-html element hydrate', () => {
             const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
             expect(hydrateFile.validations).toEqual([forEachInsidePureComponentError('card')]);
         });
-
 
         it('for headless instance inside forEach', async () => {
             const folder = 'contracts/page-with-headless-in-foreach';

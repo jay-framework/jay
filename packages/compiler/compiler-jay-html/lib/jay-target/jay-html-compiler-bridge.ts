@@ -214,6 +214,7 @@ export function renderBridge(
         headlessInstanceCounter: { count: 0 },
         coordinateCounters: new Map(),
         emittedForwardedRefHelpers: new Set<string>(), // Not used for bridge/sandbox
+        slotPreambles: [], // DL#194 §C: not used for bridge/sandbox (headless instances unsupported)
     });
     renderedBridge = optimizeRefs(renderedBridge, headlessImports);
 
@@ -269,6 +270,7 @@ export function renderSandboxRoot(
         headlessInstanceCounter: { count: 0 },
         coordinateCounters: new Map(),
         emittedForwardedRefHelpers: new Set<string>(), // Not used for bridge/sandbox
+        slotPreambles: [], // DL#194 §C: not used for bridge/sandbox (headless instances unsupported)
     });
     let refsPart =
         renderedBridge.rendered.length > 0

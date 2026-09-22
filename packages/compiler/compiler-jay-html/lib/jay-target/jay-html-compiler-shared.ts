@@ -125,6 +125,9 @@ const DIRECTIVE_ATTRIBUTES = new Set([
     'slow',
     'jay-coordinate-base',
     'jay-scope',
+    // Component provenance marker stamped by the parser on `<jay:Name>` usage tags (DL#123 discovery).
+    // Read by the coordinate/discovery pipeline, never a component prop or a rendered attribute.
+    'jc',
     AsyncDirectiveTypes.loading.directive,
     AsyncDirectiveTypes.resolved.directive,
     AsyncDirectiveTypes.rejected.directive,

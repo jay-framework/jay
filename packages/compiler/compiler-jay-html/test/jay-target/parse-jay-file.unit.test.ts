@@ -2170,7 +2170,7 @@ describe('compiler', () => {
                         |`,
                     `<body>
                         |   <h1>{title}</h1>
-                        |   <jay:header logoUrl="/logo.png">
+                        |   <jay:header ref="header" logoUrl="/logo.png">
                         |     <override slot="body">Add to cart</override>
                         |   </jay:header>
                         | </body>`,
@@ -2192,9 +2192,22 @@ describe('compiler', () => {
                 .querySelectorAll('*')
                 .find((el) => el.tagName?.toLowerCase() === 'jay:header');
             expect(jayTag).toBeDefined();
-            const slot = jayTag.querySelector('[ref="body"]');
-            expect(slot).toBeTruthy();
-            expect(slot.innerHTML).toEqual('Add to cart');
+            // DL#194 Fork C (Tier 3): the filled slot anchor is marked as a foreign-slot
+            // placeholder, its `ref` removed and its default content cleared. The parent-owned
+            // fragment is mounted here at runtime via `foreignChild`.
+            const anchor = jayTag.querySelector('[jay-foreign-slot="body"]');
+            expect(anchor).toBeTruthy();
+            expect(anchor.getAttribute('ref')).toBeFalsy();
+            expect(anchor.innerHTML.trim()).toEqual('');
+            expect(jayTag.querySelector('[ref="body"]')).toBeFalsy();
+            // The <override slot="body"> element is preserved so codegen can compile its content
+            // in PARENT scope.
+            const override = jayTag.childNodes.find(
+                (n: any) => (n.rawTagName ?? '').toLowerCase() === 'override',
+            ) as any;
+            expect(override).toBeTruthy();
+            expect(override.getAttribute('slot')).toEqual('body');
+            expect(override.innerHTML).toEqual('Add to cart');
         });
 
         it('should report a compile error for a <override slot=…> that is not a declared slot (DL#194)', async () => {
@@ -2206,7 +2219,7 @@ describe('compiler', () => {
                         |   title: string
                         |`,
                     `<body>
-                        |   <jay:header logoUrl="/logo.png">
+                        |   <jay:header ref="header" logoUrl="/logo.png">
                         |     <override slot="not-a-slot">x</override>
                         |   </jay:header>
                         | </body>`,
@@ -2239,7 +2252,7 @@ describe('compiler', () => {
                         |   title: string
                         |`,
                     `<body>
-                        |   <jay:header logoUrl="/logo.png">
+                        |   <jay:header ref="header" logoUrl="/logo.png">
                         |     <override ref="not-a-ref" class="x" />
                         |   </jay:header>
                         | </body>`,
@@ -2301,7 +2314,7 @@ describe('compiler', () => {
                         |   title: string
                         |`,
                     `<body>
-                        |   <jay:header logoUrl="/logo.png">
+                        |   <jay:header ref="header" logoUrl="/logo.png">
                         |     <override ref="tagline" class="highlight" />
                         |   </jay:header>
                         | </body>`,
@@ -2447,7 +2460,7 @@ describe('compiler', () => {
                         |   title: string
                         |`,
                     `<body>
-                        |   <jay:header logoUrl="/logo.png">
+                        |   <jay:header ref="header" logoUrl="/logo.png">
                         |       <div>existing content</div>
                         |   </jay:header>
                         | </body>`,

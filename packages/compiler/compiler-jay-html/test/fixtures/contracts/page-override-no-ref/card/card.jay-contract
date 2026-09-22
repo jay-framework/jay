@@ -1,4 +1,4 @@
-name: PromoCard
+name: Card
 props:
   - name: heading
     type: string
@@ -7,6 +7,6 @@ tags:
   - tag: heading
     type: data
     dataType: string
-    phase: slow
+    phase: fast
   - tag: cta
     type: slot
