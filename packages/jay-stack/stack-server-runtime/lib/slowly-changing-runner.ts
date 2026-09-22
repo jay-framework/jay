@@ -10,6 +10,7 @@ import { resolveServices } from './services';
 import type { DiscoveredHeadlessInstance } from './types';
 import type { InstancePhaseData, InstanceSlowRenderResult } from './instance-slow-render';
 import {
+    enclosingInstanceViewState,
     normalizeAndResolveInstanceProps,
     normalizeInstancePropNames,
 } from './resolve-instance-props';
@@ -96,10 +97,20 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
 
                 const coordKey = instance.coordinate.join('/');
 
+                // Nested instances resolve against their enclosing instance's resolved slow
+                // ViewState; top-level instances against the page ViewState (DL#194).
                 const normalizedProps = normalizeAndResolveInstanceProps(
                     instance.props,
                     comp.contract?.props,
-                    { pageViewState: slowlyViewState, pageParams, pageProps },
+                    {
+                        pageViewState: enclosingInstanceViewState(
+                            instance.parentCoordinate,
+                            instanceSlowViewStates,
+                            slowlyViewState,
+                        ),
+                        pageParams,
+                        pageProps,
+                    },
                 );
 
                 // Always add to discovered (enables fast phase for all instances).
@@ -109,6 +120,7 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
                     contractName: instance.contractName,
                     props: normalizeInstancePropNames(instance.props, comp.contract?.props),
                     coordinate: instance.coordinate,
+                    parentCoordinate: instance.parentCoordinate,
                 });
 
                 // Run slow render if the component has it

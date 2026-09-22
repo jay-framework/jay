@@ -1,5 +1,5 @@
 import type { PageProps } from '@jay-framework/fullstack-component';
-import type { RuntimeContract } from './types';
+import type { Coordinate, RuntimeContract } from './types';
 
 /**
  * Scope for resolving static headless instance prop bindings like `{p.categorySlug}`.
@@ -78,6 +78,28 @@ export function coerceInstancePropValue(
     if (dataType.name === 'number') return Number(value);
     if (dataType.name === 'boolean') return value === 'true';
     return value;
+}
+
+/**
+ * DL#194 — pick the ViewState a headless instance resolves its prop bindings against.
+ *
+ * A **nested** instance (one with an enclosing headless instance) resolves against its enclosing
+ * instance's already-resolved ViewState — so `<jay:card heading="{title}">` inside `section` reads
+ * `section.title`, and `<jay:button label="{heading}">` inside `card` reads `card.heading`. This holds
+ * whether the enclosing field was threaded from the page or computed in the enclosing component's `.ts`
+ * (the value is its resolved ViewState either way), and it works across a Tier 2 intermediate because a
+ * Tier 2 passthrough component is itself a resolved instance whose ViewState echoes its props.
+ *
+ * A **top-level** instance (no enclosing instance) resolves against the page ViewState — unchanged
+ * behavior. Requires parent-before-child resolution order (discovery is depth-first parent-first).
+ */
+export function enclosingInstanceViewState(
+    parentCoordinate: Coordinate | undefined,
+    resolvedViewStatesByCoordinate: Record<string, object>,
+    pageViewState: object,
+): object {
+    if (!parentCoordinate) return pageViewState;
+    return resolvedViewStatesByCoordinate[parentCoordinate.join('/')] ?? {};
 }
 
 /**

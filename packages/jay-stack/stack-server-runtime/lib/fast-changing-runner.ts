@@ -96,9 +96,21 @@ export async function renderFastChangingData(
                 const services = resolveServices(comp.compDefinition.services);
                 const cf = instancePhaseData.carryForwards[coordKey];
 
+                // Nested instances resolve against their enclosing instance's resolved
+                // (slow+fast) ViewState; top-level instances against the page (DL#194).
+                // The enclosing instance was rendered earlier this loop (parent-first order),
+                // so its fast ViewState is already in instanceViewStates.
+                const parentKey = instance.parentCoordinate?.join('/');
+                const enclosingViewState = parentKey
+                    ? {
+                          ...(instancePhaseData.slowViewStates?.[parentKey] || {}),
+                          ...(instanceViewStates[parentKey] || {}),
+                      }
+                    : { ...(mergedSlowViewState || {}), ...fastViewState };
+
                 const instanceProps = {
                     ...normalizeAndResolveInstanceProps(instance.props, comp.contract?.props, {
-                        pageViewState: { ...(mergedSlowViewState || {}), ...fastViewState },
+                        pageViewState: enclosingViewState,
                         pageParams,
                         pageProps,
                     }),

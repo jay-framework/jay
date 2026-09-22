@@ -517,6 +517,12 @@ export interface DiscoveredHeadlessInstance {
      * Built from ancestor slowForEach jayTrackBy values + "contractName:localIndex".
      */
     coordinate: Coordinate;
+    /**
+     * Coordinate of the nearest enclosing headless instance (DL#194). A nested instance's
+     * prop bindings resolve against this enclosing instance's resolved ViewState rather than
+     * the page ViewState. `undefined` for top-level instances (enclosing scope is the page).
+     */
+    parentCoordinate?: Coordinate;
 }
 
 /**
@@ -679,6 +685,7 @@ export function discoverHeadlessInstances(
         element: HTMLElement,
         insidePreservedForEach: boolean,
         forEachContexts: ForEachContext[],
+        parentCoordinate: Coordinate | undefined,
     ) {
         const tagName = element.tagName?.toLowerCase();
 
@@ -698,6 +705,11 @@ export function discoverHeadlessInstances(
                     props[toCamelCase(key)] = value;
                 }
             }
+
+            // Coordinate passed to this instance's descendants as their enclosing instance.
+            // Defaults to our own parent (e.g. inside a forEach, where we have no static
+            // coordinate); the static branch below overrides it with this instance's coordinate.
+            let childParentCoordinate = parentCoordinate;
 
             if (!insidePreservedForEach) {
                 // Static instance (outside forEach).
@@ -725,7 +737,12 @@ export function discoverHeadlessInstances(
                     contractName,
                     props,
                     coordinate,
+                    parentCoordinate,
                 });
+
+                // Descendants of this instance resolve their bindings against this
+                // instance's resolved ViewState (DL#194 enclosing-instance scope).
+                childParentCoordinate = coordinate;
             } else {
                 // Instance inside preserved forEach — collect for server-time validation
                 // Use the innermost forEach context for path/trackBy
@@ -754,7 +771,12 @@ export function discoverHeadlessInstances(
             // inside headfull FS component templates (DL#123 Scenario C).
             for (const child of element.childNodes) {
                 if (child.nodeType === NodeType.ELEMENT_NODE) {
-                    walk(child as HTMLElement, insidePreservedForEach, forEachContexts);
+                    walk(
+                        child as HTMLElement,
+                        insidePreservedForEach,
+                        forEachContexts,
+                        childParentCoordinate,
+                    );
                 }
             }
             return;
@@ -766,13 +788,14 @@ export function discoverHeadlessInstances(
                 ? [...forEachContexts, { forEachPath: forEachAttr, trackBy: trackByAttr }]
                 : forEachContexts;
 
-        // Recurse into children
+        // Recurse into children (plain HTML — carry the enclosing instance coordinate through)
         for (const child of element.childNodes) {
             if (child.nodeType === NodeType.ELEMENT_NODE) {
                 walk(
                     child as HTMLElement,
                     insidePreservedForEach || hasForEach,
                     updatedForEachContexts,
+                    parentCoordinate,
                 );
             }
         }
@@ -780,7 +803,7 @@ export function discoverHeadlessInstances(
 
     const body = root.querySelector('body');
     if (body) {
-        walk(body, false, []);
+        walk(body, false, [], undefined);
     }
 
     return { instances, forEachInstances, preRenderedJayHtml: root.toString() };

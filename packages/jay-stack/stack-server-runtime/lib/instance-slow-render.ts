@@ -17,6 +17,7 @@ export type { ForEachHeadlessInstance } from './types';
 import { resolveServices } from './services';
 import {
     type InstanceBindingContext,
+    enclosingInstanceViewState,
     normalizeAndResolveInstanceProps,
     normalizeInstancePropNames,
 } from './resolve-instance-props';
@@ -33,6 +34,8 @@ export interface InstancePhaseData {
         contractName: string;
         props: Record<string, string>;
         coordinate: Coordinate;
+        /** Enclosing instance coordinate for enclosing-instance-scope resolution (DL#194). */
+        parentCoordinate?: Coordinate;
     }>;
     /** CarryForward per instance (keyed by coordinate path, e.g. "p1/product-card:0") */
     carryForwards: Record<string, object>;
@@ -84,12 +87,22 @@ export async function slowRenderInstances(
         if (!comp) continue;
 
         // Resolve `{key.field}` bindings against the slow scope for this instance's own
-        // slow render. Fast / fast+interactive props are not resolvable here and collapse
-        // to '' — which is correct: a slow-only component must not read them (DL#189).
+        // slow render. A nested instance resolves against its enclosing instance's resolved
+        // slow ViewState (DL#194); a top-level instance against the page. Fast / fast+interactive
+        // props are not resolvable here and collapse to '' — which is correct: a slow-only
+        // component must not read them (DL#189).
+        const instanceBindingContext: InstanceBindingContext = {
+            ...bindingContext,
+            pageViewState: enclosingInstanceViewState(
+                instance.parentCoordinate,
+                slowViewStates,
+                bindingContext?.pageViewState ?? {},
+            ),
+        };
         const normalizedProps = normalizeAndResolveInstanceProps(
             instance.props,
             comp.contract?.props,
-            bindingContext,
+            instanceBindingContext,
         );
 
         // Always add to discovered so the fast phase sees all instances — even those
@@ -100,6 +113,7 @@ export async function slowRenderInstances(
             contractName: instance.contractName,
             props: normalizeInstancePropNames(instance.props, comp.contract?.props),
             coordinate: instance.coordinate,
+            parentCoordinate: instance.parentCoordinate,
         });
 
         if (comp.compDefinition.slowlyRender) {

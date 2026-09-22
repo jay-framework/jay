@@ -40,6 +40,12 @@ export interface DiscoveredHeadlessInstance {
     contractName: string;
     props: Record<string, string>;
     coordinate: Coordinate;
+    /**
+     * Coordinate of the nearest enclosing headless instance (DL#194). A nested instance's
+     * prop bindings resolve against this enclosing instance's resolved ViewState rather than
+     * the page ViewState. `undefined` for top-level instances (enclosing scope is the page).
+     */
+    parentCoordinate?: Coordinate;
 }
 
 export interface ForEachHeadlessInstance {

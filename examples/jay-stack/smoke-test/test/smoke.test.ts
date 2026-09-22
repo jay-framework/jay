@@ -562,17 +562,13 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/class="btn"/);
         });
 
-        // Known SSR bug (DL#194): a dynamic prop binding from an INLINED Tier 2 component (card) to a
-        // nested Tier 3 child (button) is not alias-substituted on the server target, so the button's
-        // label comes through empty at SSR. Client/hydrate resolve it correctly. `it.fails` documents
-        // the expected-eventual behavior and flips to a real failure (prompting removal) once fixed.
-        it.fails(
-            '/nested-composition — SSR resolves the nested Tier 3 button label (KNOWN BUG, DL#194)',
-            async () => {
-                const { body } = await fetchPage(server.url, '/nested-composition/');
-                expect(body).toMatch(/Button: Featured/);
-            },
-        );
+        // DL#194 enclosing-instance scope: a dynamic prop binding that threads through an inlined
+        // Tier 2 component (card) to a nested Tier 3 child (button) now resolves at SSR — each nested
+        // instance resolves its bindings against its enclosing instance's ViewState.
+        it('/nested-composition — SSR resolves the nested Tier 3 button label (DL#194)', async () => {
+            const { body } = await fetchPage(server.url, '/nested-composition/');
+            expect(body).toMatch(/Button: Featured/);
+        });
 
         it('/html-string — string is escaped, html-string is not', async () => {
             const { status, body } = await fetchPage(server.url, '/html-string/');
@@ -788,15 +784,12 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/class="btn"/);
         });
 
-        // Known SSR bug (DL#194) — see the dev-mode block for details. `it.fails` keeps the suite green
-        // and flips to a real failure once the inlined-Tier2 → nested-Tier3 prop binding is fixed.
-        it.fails(
-            '/nested-composition — SSR resolves the nested Tier 3 button label (KNOWN BUG, DL#194)',
-            async () => {
-                const { body } = await fetchPage(server.url, '/nested-composition/');
-                expect(body).toMatch(/Button: Featured/);
-            },
-        );
+        // DL#194 enclosing-instance scope — see the dev-mode block for details. The inlined-Tier2 →
+        // nested-Tier3 prop binding now resolves at SSR.
+        it('/nested-composition — SSR resolves the nested Tier 3 button label (DL#194)', async () => {
+            const { body } = await fetchPage(server.url, '/nested-composition/');
+            expect(body).toMatch(/Button: Featured/);
+        });
 
         it('/html-string — string is escaped, html-string is not', async () => {
             const { status, body } = await fetchPage(server.url, '/html-string/');

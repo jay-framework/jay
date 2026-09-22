@@ -1144,3 +1144,134 @@ those inside nested child usages). It is **SSR-only**; client/hydrate are correc
 The `/nested-composition` page is kept as the regression repro; its SSR button-label assertion is marked
 `it.fails` (self-flips green when the bug is fixed). Section/card rendering and the page structure are
 asserted normally.
+
+**Runtime-path trace (completed) — ground truth from the built artifacts.** Traced one concrete
+`{heading}`/`{label}` through the real SSR pipeline using the smoke-test build output
+(`examples/jay-stack/smoke-test/build/dev/pre-rendered/nested-composition/`):
+
+- `page.jay-html` (pre-rendered, feeds _both_ consumers): the Tier 2 bodies are spliced in **with the
+  `<jay:card>`/`<jay:button>` wrapper tags kept** (`jc`/`style` added), and every binding copied verbatim
+  — `<jay:card heading="{title}">`, `<jay:button label="{heading}">`, text `Card: {heading}`,
+  `Button: {label}`.
+- `page.cache.json` discovered instances: `section {title:"Featured"}` ✓, but `card {heading:""}` and
+  `button {label:""}` — both empty.
+- `page.server-element.ts` (the codegen consumer): emits `Section: ${vs_section0.title}` **and
+  `Card: ${vs_section0.title}`** — i.e. the codegen alias overlay _does_ resolve the card's own text
+  through the enclosing `section` ViewState. The button routes to
+  `vs_button1 = vs.__headlessInstances['S2/0/button:action']` → `Button: ${vs_button1.label}`, and
+  `label` is `""`.
+
+**Correction to the root-cause note above:** `Card: Featured` is correct because the **codegen overlay**
+resolves it to `vs_section0.title`, _not_ because of the discovered `card` instance (whose `heading` is in
+fact empty and unused). The **only** broken output is the nested Tier 3 `button`'s **prop binding**. The
+pre-rendered HTML has two independent consumers: (i) `discoverHeadlessInstances` (a **string-only** walk)
+→ `__headlessInstances`; (ii) the server-element codegen (has the overlay). Text bindings ride (ii) and
+are correct; the nested instance's `label` prop rides (i) and is dropped.
+
+**Candidate (b) — rejected after the trace.** `discoverHeadlessInstances(preRenderedJayHtml: string)`
+(`slow-render-transform.ts:658-660`) takes **only a string** — no `importResolver`, no contract. It copies
+prop attributes verbatim (`:693-700` / `:743-749`) and recurses into `<jay:card>` treating the nested
+`<jay:button>` as a top-level instance. The value is later resolved by
+`resolvePropBinding(binding, scope)` (`resolve-instance-props.ts:32-42`) against
+`buildInstanceBindingScope` (`:88-101`) — a **flat page scope** with no notion of `card`'s fields, so
+`{heading}` → `''` (confirmed at `fast-changing-runner.ts:154-160`: `matchProp` is against the _button_
+contract, and `resolvePropBinding` against the item/page scope). Making the alias fire here would require
+re-implementing Tier 2 alias building (contract load + `buildInlineAliases` + rewrite) **inside the
+runtime discovery path** — a second home for the compile-time logic. That is _more_ surface, not less;
+it fails the subtract-first test.
+
+**Candidate (a) — recommended, but scoped.** Extend the **existing** splice
+`injectComposableTemplateIntoTag` (`jay-html-parser.ts:865-931`) to rewrite **only nested `<jay:child>`
+prop attributes** (skip `ref`/`jay*`; **do not touch text or regular bindings**), using the parent
+`jayTag`'s own usage attributes as the projection map (`heading="{title}"` ⇒ `{heading}` → `{title}`).
+Rationale from the trace:
+
+- **Not a new pass.** `injectComposableTemplateIntoTag` already rewrites the subtree (`set_content`,
+  `applyHeadfullOverrides`, slot-marker `removeAttribute`/`set_content`). This is one more targeted
+  rewrite at a site that already holds both the child body and the usage attributes.
+- **Chains across levels for free.** Injection is bottom-up recursive
+  (`injectHeadfullFSTemplatesRecursive`, `:1031-1044`): `card`→`section` rewrites
+  `label="{heading}"`→`label="{title}"`, then `section`→page (`title="Featured"`) rewrites
+  `{title}`→`Featured`. Ground truth confirms every value in this example is page-rootable, so the
+  discovered `button` would carry `label="Featured"` → resolves → `Button: Featured`.
+- **No double-application.** The compiler targets parse their own source and apply the overlay
+  themselves; (a) only rewrites the **pre-render string** that feeds discovery. The server-element reads
+  the button `label` from `__headlessInstances` (not from the attribute), so rewriting the attribute
+  changes _only_ what discovery records — the codegen overlay output is untouched.
+- **Must preserve bindings, not bake literals.** Map `{field}` → the usage RHS **verbatim** (binding RHS
+  stays a binding for fast/interactive re-resolution; literal RHS becomes a literal; `$parent`/chained
+  RHS copied unchanged). Baking a literal for a fast/interactive-phase prop would break per-request
+  re-resolution.
+
+**Second trace (completed) — (a)/(b) both superseded by an enclosing-instance-scope fix.** The
+"residual limitation" I first flagged for (a) — an enclosing component's prop being **computed in its own
+`.ts`** rather than threaded from the page — is not an edge case; it is the _mainstream_ composition
+pattern (a component fetches/derives data and hands it to its children). Re-tracing the runtime with that
+case in mind found (a) is insufficient and the true fix is smaller.
+
+_The value is not lost — it is stored per-coordinate, just out of scope._ `section`'s computed ViewState
+ships in `slowViewStates[sectionCoord]` / `__headlessInstances['S0/0/section:section']`
+(`slowly-changing-runner.ts:122`, `instance-slow-render.ts:118`, `fast-changing-runner.ts:113`). What is
+wrong is only the **resolution scope**: `buildInstanceBindingScope` (`resolve-instance-props.ts:88-101`)
+assembles the **page** scope for _every_ instance, at all three call sites
+(`slowly-changing-runner.ts:99-103`, `instance-slow-render.ts:89-93`, `fast-changing-runner.ts:99-107`),
+so a nested child's `{title}`/`{heading}` looks for a page field, misses, and collapses to `''`
+(`resolve-instance-props.ts:38-40`).
+
+_Tier 2 intermediates already carry the alias as runtime data flow._ A Tier 2 pure headfull component is
+resolved through a **synthesized passthrough** (`passthrough-component.ts:42-58`): its ViewState is exactly
+its props, echoed per phase. So `card`'s passthrough emits `heading = <resolved {heading} prop>` — which
+**is** the `heading ← title` alias projection, performed as data flow, not expression rewriting. This is
+why the cache shows `card {heading:""}` (the passthrough ran; only its input scope was wrong). No
+compile-time alias rewrite (candidate a) is needed to "cross" a Tier 2 layer — the passthrough already
+does it, _if it resolves against the enclosing ViewState_.
+
+**Fix — resolve each discovered instance's prop bindings against its enclosing instance's resolved
+ViewState (page ViewState for top-level instances).** Trace of the full chain under this scope:
+
+- `section` (Tier 3, top-level) → scope = page VS → `title="Featured"` (or `{pageField}`) resolves →
+  `slowViewStates[S0] = {title:"Featured"}`.
+- `card` (Tier 2 passthrough) → scope = `slowViewStates[S0]` → `{title}` → `"Featured"` →
+  `slowViewStates[S1] = {heading:"Featured"}`.
+- `button` (Tier 3) → scope = `slowViewStates[S1]` → `{heading}` → `"Featured"` →
+  `__headlessInstances[S2] = {label:"Featured"}` → server-element emits `Button: Featured`. ✓
+
+This resolves **both** user questions: an all-Tier-3 stack works (each child resolves against its parent's
+VS), and a page-bound `title="{expr}"` flows all the way down (section resolves it at page scope; card/
+button resolve against the parent VS above them) — including when `title` is **computed in `section.ts`**,
+because the scope is the parent's _resolved_ VS regardless of how the field was produced.
+
+**Feasibility (verified against the runtime).**
+
+- **Ordering is parent-first already.** Discovery pushes an instance before recursing into its children
+  (`slow-render-transform.ts:724` then `:755`), so `discovered` is depth-first parent-first (cache order:
+  `section, card, button`). All three resolution loops iterate that order, so a parent's VS is stored
+  before its children resolve.
+- **Parentage must be recorded (only genuinely new surface).** Discovery pushes
+  `{contractName, props, coordinate}` (`slow-render-transform.ts:724-728`) with **no** parent link. Add
+  `parentCoordinate?: Coordinate`, threaded through `walk` (set to the current instance's coordinate when
+  recursing into a `jay:` tag's children at `:755`; passed through unchanged for non-`jay:` elements at
+  `:770-778`). `parentCoordinate.join('/')` then keys straight into the stored `slowViewStates` /
+  `instanceViewStates`.
+- **Scope swap at the three call sites.** When an instance has a `parentCoordinate`, pass
+  `pageViewState: <parent's resolved VS>` (merged slow+fast at the fast site) instead of the page VS;
+  keep `pageParams`/`pageProps` so `jay.*` built-ins still resolve. Top-level instances (no parent) are
+  unchanged → **no regression** for the single-level case that covers nearly all existing fixtures.
+
+**Why this beats (a) and (b).** It reuses ViewStates already computed and stored by coordinate
+(subtract-first); it needs no parser rewrite, no compile-time alias in the runtime, and no second home for
+the alias logic. It is **SSR-runtime-only** — the client/hydrate paths already propagate nested props
+(childComp wiring / alias overlay). Candidates (a) and (b) above are **superseded** and kept only as
+rejected alternatives.
+
+**Constraints / follow-ups.** (1) Phase ordering (DL#189) still governs: a child reading a field its
+parent only produces at a later phase correctly collapses to `''`. (2) forEach-nested instances resolve
+against the forEach item today (`fast-changing-runner.ts:138-160`); a nested instance _inside_ a forEach
+needs the item as its enclosing scope — verify when implementing, not required for `/nested-composition`.
+(3) `resolveHeadlessInstances` Pass 2 (`slow-render-transform.ts:808+`) is orthogonal here — the button
+label flows through `__headlessInstances` → server-element codegen (confirmed in the generated
+`page.server-element.ts`), which the runner scope fix populates correctly.
+
+**Decision: proceed with the enclosing-instance-scope fix** (record `parentCoordinate` in discovery;
+resolve each instance against its enclosing instance's resolved ViewState at the three runner call sites).
+Not implemented yet.
