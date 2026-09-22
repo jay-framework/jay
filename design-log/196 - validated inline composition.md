@@ -46,12 +46,13 @@ _validated against_ — compiling, in every case, through the existing headless-
    each materialised region against its source _as it is now_ (no recorded base) with a **DOM-level
    diff** (Q3). Because the body is copied verbatim, the rule is uniform: any structural or
    binding-expression change is drift. Unmarked drift is a **warning**; the page still builds. Resolve
-   by (a) `jay-stack sync`, or (b) marking the node `@jay:override` — after which it survives sync and
-   is not reported.
+   by (a) `jay-stack sync`, or (b) marking the affected **facet** `override` — an attribute, one
+   inline-style declaration, the subtree, or a CSS rule/declaration (§4). Suppression is per-facet,
+   not per-node: unlisted facets of the same node still reconcile.
 
 4. **Sync is re-flatten, not merge.** `jay-stack sync` re-flattens from the current source and keeps
-   `@jay:override` nodes. **No merge base, no hash, no conflict resolution** — a materialised copy is
-   by definition equal to its source except at `@jay:override` islands. "All instances equal the
+   `override` **facets**. **No merge base, no hash, no conflict resolution** — a materialised copy
+   is by definition equal to its source except at `override` facets. "All instances equal the
    source unless explicitly overridden."
 
 5. **Multiple source templates per component are just multiple files.** Provenance (`template=`) names
@@ -59,7 +60,7 @@ _validated against_ — compiling, in every case, through the existing headless-
 
 6. **`<override>`, `slot`, Tier 2 _inlining_, ref forwarding, `__parentContext`, and the
    `application/jay-headfull` declaration are all deleted.** You do not override a copy through a
-   separate vocabulary — you edit it and mark the node `@jay:override`. See "What is removed". The
+   separate vocabulary — you edit it and mark the node `override`. See "What is removed". The
    passthrough component is **retained** (it is now the no-code runtime).
 
 **Non-obvious constraints:**
@@ -72,14 +73,21 @@ _validated against_ — compiling, in every case, through the existing headless-
 - **`jc` is compiler-injected, never authored.** The author writes `<jay:card ref="signupCard">`; the
   parser resolves it to its contract and stamps `jc` (`:878`, DL#186 added it to the validator skip
   list). Region boundaries in the page file are the `<jay:X>` tags themselves.
+- **`override` and `page-scope` are bare directives, not prefixed.** They follow the existing
+  attribute convention (`if`, `forEach`, `trackBy`, `ref`, `slot` — all bare, `assign-coordinates.ts:154`),
+  so no `@`/`jay:` prefix. Both must be added to the parser/validator skip-list (as `jc` was, `:878`)
+  so they are neither bound nor rendered. The **CSS** marker keeps a `jay:` sentinel
+  (`/* jay:override */`) because a raw CSS comment has no element namespace to disambiguate it from an
+  ordinary note.
 - **The differ is DOM-level and the only genuinely new hard problem — but now with one uniform rule.**
   Both sides parse to an HTMLElement tree; the body is verbatim, so a node is drift iff its tag,
   attributes, static text, or binding expression differ. No coded/no-code split. Build it first
   (Phase 1).
 - **An un-materialised `<jay:X>` is a hard error.** A bare provenance tag with no flattened body
   cannot compile — `renderHeadlessInstance` already errors on an empty inline body (`:1170-1178`,
-  "must have inline template content"). Direct the author to `jay-stack add`; never auto-materialise
-  silently.
+  "must have inline template content"). Direct the author to `jay-stack sync` (filling an empty region
+  is the degenerate, no-override case of re-flatten — §5) or the design tool; never auto-materialise
+  silently at build time.
 - **Deletion collapses `renderHeadlessInstance` to a single path.** The `structural` branch (`:1106`)
   and the Fork-C slot block (`:1254-1288`) are removed, leaving the one inline-template path that both
   real and passthrough components share.
@@ -130,14 +138,14 @@ Before proposing anything, what already exists?
 | Component CSS collection                            | `jay-html-parser.ts:1257-1264` (`extractCss` → `cssParts`)                                                        | **Yes — the CSS materialisation point (Q5).** Already merges component CSS into the page; wrap the copied block in `@scope` so it cannot poison the page and can be validated. |
 | Headless props channel (per-phase, coerced)        | DL#189, DL#190; `normalizeAndResolveInstanceProps`                                                                | **Yes — how page data reaches a region.** Props on the `<jay:X>` tag fill the component's ViewState; the passthrough echoes them per phase. Retained (V4).                     |
 | Tier 2 alias overlay / inlining (DL#194 Phase B)   | `expression-compiler.ts:148`, `jay-html-compiler.ts:523,1006`                                                     | **No longer needed.** It existed to splice a no-code body _without_ a boundary. No-code now uses the passthrough instance + props channel, so the inlining is deleted.        |
-| `<override>` (DL#181/#194)                          | `jay-html-overrides.ts`                                                                                           | **Superseded.** You edit the copy and mark the node `@jay:override`.                                                                                                          |
+| `<override>` (DL#181/#194)                          | `jay-html-overrides.ts`                                                                                           | **Superseded.** You edit the copy and mark the node `override`.                                                                                                          |
 | `slot` contract tag (DL#194)                        | `contract.ts:13`                                                                                                  | **Superseded.** The whole body is editable; no need to declare which region is.                                                                                              |
 | `$parent` carrier (DL#193 Capability A)            | `context.ts:178,214,222`; `element.ts:468`                                                                        | **Independent — kept** (Q8).                                                                                                                                                 |
 | `checkHeadlessInstanceProps` + validation host     | `stack-cli/lib/validate.ts`                                                                                       | **Yes, the home for the drift rule** — the validator is already the prevention-first surface (DL#145/#147/#166/#167).                                                        |
 | `prettifyHtml`                                     | `compiler-shared`                                                                                                 | **Only for output** — the differ works on the parsed tree, not on strings (Q3).                                                                                             |
 
 **Net new surface proposed: a DOM differ, a materialiser/flattener, a re-flatten `sync`, an `@scope`
-CSS wrap, and one marker (`@jay:override`).** All in `stack-cli` / the validator. **No runtime
+CSS wrap, and one marker (`override`).** All in `stack-cli` / the validator. **No runtime
 change, no codegen change, no per-target derivation** — no-code reuses the passthrough runtime that
 already ships.
 
@@ -217,9 +225,13 @@ grammar (~51 grep hits).
 component's source template **and** its `@scope`-wrapped CSS transitively into the page, keeping the
 `<jay:X>` tags as boundaries and recording `template=` on the `application/jay-headless` marker. The
 flattened body is the component's inline template (binds its ViewState); page data is wired as props on
-the tag. Triggered by **all three surfaces over one library function**: the CLI (`jay-stack add`), the
-editor/design-tool (DL#42), and the Designer agent-kit. One implementation of "flatten and stamp
-provenance".
+the tag. It is **one library function** (the materialiser: "flatten and stamp provenance"), called by
+three surfaces: the **editor/design-tool** (DL#42, the primary authoring path — you place a component
+in a layout), the **Designer agent-kit** (generates the flattened markup), and the **CLI via
+`jay-stack sync`** — first-fill of an empty region is the degenerate, no-override case of re-flatten
+(§5), so **no separate `add` command is introduced**. Choosing the component and writing the `<jay:X>`
+tag + script marker (`template=`) is _scaffolding_, done by the editor or agent; `sync` fills and
+re-fills it.
 
 **Q10. Is unmarked drift an error or a warning? — ANSWERED: warning.** The page builds. The **error**
 case is a `template=` that does not resolve.
@@ -238,14 +250,14 @@ instances whose body binds the component's ViewState). Precisely:
   and goes to the backing component (consumed by a real `.ts`, ignored by a passthrough) — never to the
   page. This is the part props cannot cover.
 
-_Direction (deferred — Design §7): a page-declared `@jay:page-scope` subtree that compiles in **page**
+_Direction (deferred — Design §7): a page-declared `page-scope` subtree that compiles in **page**
 scope, whose refs nest under the wrapper ref, mounted into the region's DOM via a minimal one-direction
 pass-through. The Fork-C lesson (why it stays cheap): **page-declared, position-based, un-typed by
 contract** — the opposite of slots and of provenance-keyed ref-forwarding. The component neither
 declares nor sees it._
 _**Deferred. v1 ships without pass-through and detects the gap** — a page-scoped binding or page-owned
-ref inside a region (not passed as a prop, not in a `@jay:page-scope` subtree) is a **compile error**
-naming `@jay:page-scope` (prevention-first: a clear diagnostic, not a silent wrong-render — DL#195
+ref inside a region (not passed as a prop, not in a `page-scope` subtree) is a **compile error**
+naming `page-scope` (prevention-first: a clear diagnostic, not a silent wrong-render — DL#195
 L4)._
 
 **Q13. Does a no-code component erase to page markup, or stay a (passthrough) instance? — ANSWERED:
@@ -328,8 +340,11 @@ inlining, no alias overlay, no `__parentContext`, no re-basing.
 
 For each region (bounded by its `<jay:X>` tag): load the source template (`template=`), parse both
 sides, walk them structurally. The flattened body is verbatim, so a node is **drift** iff its tag,
-attributes, static text, or binding expression differ from source. Nested `<jay:X>` regions are not
-descended into (validated against their own source). No substitution map, no coded/no-code split.
+attributes, static text, or binding expression differ from source. The comparison is
+**facet-granular** — per attribute, per inline-style declaration, and per child subtree — so every
+deviation is attributable to a specific facet and an override can be scoped to exactly that facet
+(§4). Nested `<jay:X>` regions are not descended into (validated against their own source). No
+substitution map, no coded/no-code split.
 
 ### 4. Drift validation
 
@@ -340,25 +355,67 @@ run the §3 differ against the current source and report per deviating node:
 warning  page.jay-html:14  <jay:card> region differs from ../components/card/card.jay-html
   · <h3> text changed        "{heading}" → "on sale"
   · <p ref="disclaimer">     removed
-  Run `jay-stack sync page.jay-html#signupCard`, or mark the node @jay:override.
+  Run `jay-stack sync page.jay-html#signupCard`, or mark the node override.
 ```
 
-Suppression, per node — the node's value survives and is no longer reported or synced:
+**Suppression is per-facet, not per-node.** `override` names exactly which parts of a node the
+page owns; everything else in the node still reconciles against source. A named facet is neither
+reported as drift nor touched by `sync` (§5) — whether the page changed, added, or removed it. Bare
+whole-node suppression remains, but is the coarse option, used only when the node was rewritten
+wholesale.
+
+| Marker on a node                                  | What the page owns (survives sync, not reported)          |
+| ------------------------------------------------- | -------------------------------------------------------- |
+| `override` or `override="*"`            | the whole node — every attribute and the subtree          |
+| `override="class"` (any attribute name)      | that one attribute (added, changed, or removed)           |
+| `override="style.color"`                     | one inline-style declaration; other declarations reconcile |
+| `override="children"`                         | the element's child nodes (its subtree)                   |
+| `override="class style.margin children"`      | each listed facet; unlisted facets still reconcile        |
+
+CSS (inside the copied `@scope` block, §5/Q5) uses a comment pragma immediately before a rule:
+
+| Pragma before a rule                    | What the page owns                                        |
+| --------------------------------------- | -------------------------------------------------------- |
+| `/* jay:override */`                    | that whole rule — selector and all declarations           |
+| `/* jay:override: color, margin */`     | only those declarations in the rule; the rest reconcile   |
 
 ```html
-<h3 @jay:override="page-specific headline">on sale</h3>
+<!-- only the class is page-owned; text, other attributes and subtree still reconcile -->
+<div class="card featured" override="class">
+  <!-- keep our color; margin and everything else sync from source -->
+  <h3 style="color:#b00; margin:0" override="style.color">{heading}</h3>
+  <!-- we rewrote the body; this element's own attributes still reconcile -->
+  <div class="card-body" override="children">…page content…</div>
+</div>
 ```
+
+```css
+@scope (.signupCard) {
+  /* jay:override */
+  .card { border: 2px solid gold; } /* whole rule is page-owned */
+
+  /* jay:override: color */
+  .card h3 { color: #b00; font: inherit; } /* only color survives; font syncs */
+}
+```
+
+A `children` override marks the subtree page-owned; any nested `<jay:X>` region inside it is still its
+own region and validates against its own source (Q2).
 
 ### 5. Sync — re-flatten, not merge
 
 `jay-stack sync [<target>] [--all]`:
 
-- Re-flatten the region(s) from the **current** source template.
-- Keep every `@jay:override` node verbatim; overwrite everything else.
+- Re-flatten the region(s) from the **current** source template. An **empty** region (a bare `<jay:X>`
+  + `template=`) is the degenerate case — no override facets to preserve — so `sync` is also the
+  first-fill / materialisation command (Q9); there is no separate `add`.
+- Keep every `override` **facet** verbatim (a whole node, one attribute, one style declaration, a
+  subtree, or a CSS rule/declaration); re-flatten everything else. Facet matching rides on the same
+  node matching the differ already performs (§3).
 - No merge base, no hash, no conflict resolution — a region is by definition equal to its source
-  except at `@jay:override` islands, so sync is deterministic overwrite-with-holes.
+  except at `override` facets, so sync is deterministic overwrite-with-holes.
 - `--all` applies across every site of a component in one run: they are all identical to source, so one
-  command updates them all; the only per-site variation is the override islands, preserved.
+  command updates them all; the only per-site variation is the override facets, preserved.
 
 No ambiguous auto-merge can silently produce wrong markup — sync never _combines_ two edited versions,
 it replaces the non-overridden part outright.
@@ -400,7 +457,7 @@ Fork C costly:
 
 | Dimension     | Fork C (retired)                                 | Pass-through (§7)                                          |
 | ------------- | ------------------------------------------------ | --------------------------------------------------------- |
-| Who declares  | the **component contract** (`slot` tag)          | the **page** (`@jay:page-scope` on a subtree)             |
+| Who declares  | the **component contract** (`slot` tag)          | the **page** (`page-scope` on a subtree)             |
 | Addressing    | named slots + provenance markers                 | position (the marker's place in the body)                 |
 | Binding scope | mixed, decided by a ref-scope rule table (L6)    | always **page** scope — no table                          |
 | Refs          | provenance-keyed forwarding + two Proxy traps    | ordinary page refs, nested under the wrapper (`nestRefs`) |
@@ -414,7 +471,7 @@ Sketch:
   <div class="card">
     <h3>{heading}</h3>
     <!-- component ViewState -->
-    <div @jay:page-scope>
+    <div page-scope>
       <span>{promoCode}</span>
       <!-- page ViewState -->
       <button ref="claim">Claim</button>
@@ -424,7 +481,7 @@ Sketch:
 </jay:card>
 ```
 
-The `@jay:page-scope` subtree compiles in the page render (page `currData`, page ref manager) and is
+The `page-scope` subtree compiles in the page render (page `currData`, page ref manager) and is
 mounted into the region's DOM at its position via the retained `foreignChild` anchor. The component
 does not declare or see it. Applies identically to coded and passthrough-backed regions.
 
@@ -433,7 +490,7 @@ does not declare or see it. Applies identically to coded and passthrough-backed 
 - **V2 — cross-target fixtures.** A runtime crossing, so element/hydrate/server/main-sandbox each get a
   `toEqual` fixture; DL#194 defects 3/5/10 were target drift on this path.
 - **V5 — compile-time failure.** Page-declared, so the validator checks it: a page binding/ref outside a
-  `@jay:page-scope` subtree (and not a prop) is a compile error; a `@jay:page-scope` subtree binding
+  `page-scope` subtree (and not a prop) is a compile error; a `page-scope` subtree binding
   _component_ data is a compile error. No runtime scope guessing.
 - **V3 — stable coordinates.** The anchor participates in `assign-coordinates.ts` / DL#126's flat map.
 
@@ -443,28 +500,45 @@ irreducible core and made explicit and checkable rather than implicit and silent
 ## Implementation Plan
 
 **Phase 1 — the DOM differ (de-risk first, delete nothing).** Build the structural + expression diff
-and `@jay:override` suppression as a standalone `stack-cli` library, unit-tested against **fixture
+and `override` suppression as a standalone `stack-cli` library, unit-tested against **fixture
 triples** (source template, flattened region, expected diagnostics) — the differ's own oracle.
+
+_Acceptance for Phase 1 — the diff must be **facet-addressable**, not node-granular._ Sync (§5) is
+built on the same output, so a diff entry must name the exact facet, not merely "node changed":
+
+- **attribute** — element + attribute name (present / added / removed / value-or-binding changed);
+- **inline-style declaration** — element + style property (within the `style` attribute);
+- **child subtree** — element whose child-node list differs;
+- **CSS** — selector for a rule, and property for a declaration within a rule.
+
+Each entry must round-trip to the `override` facet spec that suppresses it (`override="class"`,
+`="style.color"`, `="children"`; `/* jay:override */`, `/* jay:override: <prop> */`) and to the sync
+operation that preserves it — so suppression, reporting, and sync all consume one addressing scheme.
+A node-level "changed / unchanged" verdict is **not** sufficient and fails this phase.
+
 _Separately_, the existing Tier 2 usage sites are the **compile** oracle for criteria 1–2 (a flattened
 no-code region must compile to the same output the passthrough path produces); do not conflate them.
 Nothing else starts until both are green.
 
 **Phase 2 — provenance + materialiser.** Read `template=` on the `application/jay-headless` tag (parser
 support present, `:687,1271`; verify the read path). Implement transitive flatten (parser injects `jc`)
-and `@scope` CSS copy (Q5). One library function, exposed as `jay-stack add`; editor and agent-kit call
-it (Q9). Wire the validation rule into `stack-cli/lib/validate.ts`, surfaced through
+and `@scope` CSS copy (Q5) as **one library function** (the materialiser); the editor (DL#42) and
+agent-kit call it directly, and the CLI reaches it through `jay-stack sync` (Phase 3) — first-fill is
+the no-override case, so no separate `add` command (Q9). Wire the validation rule into
+`stack-cli/lib/validate.ts`, surfaced through
 `stack-cli/lib/run-validate.ts:36` `surfaceValidationIssues` — reuse DL#189's shape and its Rollup
 dead-code gotcha (return a boolean; `process.exit(1)` stays at `run-production.ts:73-78`). Bare tag with
 no body is a hard error (`jay-html-compiler.ts:1170`).
 
-**Phase 3 — sync (re-flatten).** Per-site and `--all`. Deterministic overwrite-with-`@jay:override`-holes
-(§5). No three-way merge. Exact CLI messages tested by string equality (per CLAUDE.md).
+**Phase 3 — sync (re-flatten).** Per-site and `--all`. Deterministic overwrite-with-`override`-holes
+(§5), and first-fill of an empty region (the materialiser's CLI surface — no separate `add`, Q9). No
+three-way merge. Exact CLI messages tested by string equality (per CLAUDE.md).
 
 **Phase 4 — deletion.** In table order, each a labelled commit so the diff documents the model. The
 surgery collapses `renderHeadlessInstance` (and its hydrate/server twins) to the single inline-template
 path shared by real and passthrough components; do it under full `toEqual` fixtures on
 element/hydrate/server. As the crossing machinery goes, add the **Q12 gap diagnostic** in its place
-(page-scoped binding/ref inside a region → compile error naming `@jay:page-scope`) so the capability is
+(page-scoped binding/ref inside a region → compile error naming `page-scope`) so the capability is
 _refused clearly_, not silently mis-compiled. Run `yarn confirm` between groups (803 compiler / 291
 runtime / 741 dev-server / 66 smoke tests).
 
@@ -474,28 +548,31 @@ runtime / 741 dev-server / 66 smoke tests).
 should pass or the page cease to exist.
 
 **Phase 6 — agent-kit.** Designer guide: how to materialise, what drift warnings mean, when to mark
-`@jay:override` vs `sync`. Plugin guide: your component ships a contract, code (optional), and a
+`override` vs `sync`. Plugin guide: your component ships a contract, code (optional), and a
 template — not a running UI (Q1); upgrades flow through `sync`.
 
 Per CLAUDE.md: fixtures first, full `toEqual`, never `toContain` on code.
 
 ## Examples
 
-**✅ Materialise, then edit freely** — no `<override>` vocabulary, edited nodes marked:
+**✅ Materialise, then edit freely** — no `<override>` vocabulary, each edited facet marked:
 
 ```html
 <jay:card ref="promo" heading="{item.title}">
-  <div class="card featured">
-    <!-- class edited → mark it, or sync restores it -->
-    <h3 @jay:override="promo headline">Half price this week</h3>
+  <div class="card featured" override="class">
+    <!-- class is page-owned; the rest of this div still reconciles -->
+    <h3 override="children">Half price this week</h3>
+    <!-- text rewritten -->
     <div class="card-body"><jay:Counter ref="cta"> … </jay:Counter></div>
   </div>
 </jay:card>
 ```
 
-**✅ The old `remove`** — delete the node and mark the parent `@jay:override`, or sync restores it.
+**✅ The old `remove`** — delete the child and mark the parent `override="children"`, or sync
+restores it.
 
-**✅ The old attribute/style merge** — edit the attribute in your copy; mark the node.
+**✅ The old attribute/style merge** — edit the attribute or style declaration in your copy; mark that
+facet (`override="href"`, `override="style.color"`), leaving siblings to reconcile.
 
 **❌ Provenance that does not resolve** — hard error, not a warning (Q10):
 
@@ -531,10 +608,14 @@ equal-to-source-unless-override, with no merge base and no ambiguous resolution.
    equivalent hand-written inline template — proving no new codegen, and that coded/no-code differ only
    by the backing component.
 3. An unedited copy validates clean. An edited node (structural or binding-expression) produces a
-   warning naming the node and the change, and the page still builds.
-4. `jay-stack sync` re-flattens from current source, preserves `@jay:override` nodes, overwrites the
-   rest — no merge base, no conflict prompt. A synced region validates clean.
-5. `sync --all` updates N sites of one component in one run; sites with `@jay:override` nodes keep them.
+   warning naming the node, the **facet**, and the change, and the page still builds.
+4. `jay-stack sync` re-flattens from current source, preserves `override` **facets**, overwrites
+   the rest — no merge base, no conflict prompt. A synced region validates clean.
+5. `sync --all` updates N sites of one component in one run; sites with `override` facets keep them.
+5b. Facet-scoped suppression is exact: `override="class"` (attribute), `="style.color"` (one
+    inline-style declaration), `="children"` (subtree), and the CSS `/* jay:override */` /
+    `/* jay:override: <prop> */` pragmas each suppress **only** the named facet; an unlisted sibling
+    change in the same node/rule still warns; `sync` preserves the named facet and re-flattens the rest.
 6. A `template=` that does not resolve is a hard error; a bare `<jay:X>` with no flattened body is a
    hard error (contrast criterion 3).
 7. Component CSS is copied and `@scope`-wrapped so it does not alter page selectors; the validator flags
@@ -545,8 +626,8 @@ equal-to-source-unless-override, with no merge base and no ambiguous resolution.
    behaviourally unchanged: their tests pass without modification.
 10. The differ has no runtime and no codegen dependency — exercised entirely by `stack-cli` unit tests
     plus the validation path.
-11. In v1 (no §7), a page-scoped binding/ref inside a region (not a prop, not in `@jay:page-scope`) is a
-    **compile error** naming `@jay:page-scope` — not a silent wrong-render (Q12), uniform across coded
+11. In v1 (no §7), a page-scoped binding/ref inside a region (not a prop, not in `page-scope`) is a
+    **compile error** naming `page-scope` — not a silent wrong-render (Q12), uniform across coded
     and no-code.
 
 ---
