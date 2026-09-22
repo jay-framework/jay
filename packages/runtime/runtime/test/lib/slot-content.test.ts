@@ -2,9 +2,12 @@ import {
     BaseJayElement,
     childComp,
     ConstructContext,
+    dynamicElement as de,
     dynamicText as dt,
     element as e,
+    forEach,
     foreignChild,
+    HTMLElementCollectionProxy,
     HTMLElementProxy,
     JayComponent,
     JayElement,
@@ -147,5 +150,115 @@ describe('DL#194 Fork C — Tier 3 slot content', () => {
         const ctaButton = page.dom.querySelector('.card [data-id="cta"]') as HTMLButtonElement;
         ctaButton.click();
         expect(handler.mock.calls.length).toBe(1);
+    });
+});
+
+// DL#194 Fork C, under repetition: the same Tier 3 + `<override slot>` instance placed under a
+// parent forEach. The instance ref becomes a component collection, and the parent-owned slot refs
+// ride alongside it at `refs.<collection>.<slot>.<ref>` — aggregated as element collections. Mirrors
+// the generated foreach-composite page: `refs.cards.richCards.body.cta`.
+interface RepeatedItemVS {
+    id: string;
+    title: string;
+}
+interface RepeatedPageVS {
+    cards: RepeatedItemVS[];
+}
+interface RepeatedPageRefs {
+    cards: {
+        richCards: CardRefs & {
+            body: { cta: HTMLElementCollectionProxy<RepeatedItemVS, HTMLButtonElement> };
+        };
+    };
+}
+
+function renderRepeatedPage(viewState: RepeatedPageVS) {
+    const [bodyRefManager, [cta]] = ReferencesManager.for({}, [], ['cta'], [], []);
+    const [richCardsSlotsManager] = ReferencesManager.for({}, [], [], [], [], {
+        body: bodyRefManager,
+    });
+    const [cardsRefManager, [refRichCards]] = ReferencesManager.for(
+        {},
+        [],
+        [],
+        [],
+        ['richCards'],
+        { richCards: richCardsSlotsManager },
+    );
+    const [refManager] = ReferencesManager.for({}, [], [], [], [], { cards: cardsRefManager });
+    const element = ConstructContext.withRootContext(viewState, refManager, () =>
+        de('div', {}, [
+            forEach(
+                (s: RepeatedPageVS) => s.cards,
+                (item: RepeatedItemVS) => {
+                    const slots: CardSlots = {
+                        body: e(
+                            'button',
+                            { 'data-id': 'cta' },
+                            [dt((vs: RepeatedItemVS) => vs.title)],
+                            cta(),
+                        ),
+                    };
+                    return e('div', { class: 'cards' }, [
+                        childComp(
+                            (props: CardProps) => Card(props, slots),
+                            (it: RepeatedItemVS) => ({ heading: it.title }),
+                            refRichCards(),
+                            undefined,
+                            slots,
+                        ),
+                    ]);
+                },
+                'id',
+            ),
+        ]),
+    ) as JayElement<RepeatedPageVS, RepeatedPageRefs>;
+    return { element, refs: refManager.getPublicAPI() as RepeatedPageRefs };
+}
+
+describe('DL#194 Fork C — Tier 3 slot content under a parent forEach', () => {
+    const items: RepeatedItemVS[] = [
+        { id: 'a', title: 'Alpha' },
+        { id: 'b', title: 'Beta' },
+    ];
+
+    it('resolves the nested slot ref group on the collection (refs.cards.richCards.body)', () => {
+        const page = renderRepeatedPage({ cards: items });
+        page.element.mount();
+        // Regression: previously the component collection overwrote the slot ref manager, so `.body`
+        // was undefined and reading `.cta` threw a TypeError.
+        expect(page.refs.cards.richCards.body).toBeDefined();
+        expect(page.refs.cards.richCards.body.cta).toBeDefined();
+    });
+
+    it('fans the slot ref onclick to every repeated item, each carrying its item viewState', () => {
+        const page = renderRepeatedPage({ cards: items });
+        page.element.mount();
+        const handler = vi.fn();
+        page.refs.cards.richCards.body.cta.onclick(handler);
+
+        const buttons = [
+            ...page.element.dom.querySelectorAll('.card [data-id="cta"]'),
+        ] as HTMLButtonElement[];
+        expect(buttons.length).toBe(2);
+        buttons.forEach((b) => b.click());
+
+        expect(handler.mock.calls.length).toBe(2);
+        expect(handler.mock.calls.map((c) => c[0].viewState)).toEqual(items);
+    });
+
+    it('still exposes the child component own ref across the collection (refs.cards.richCards.cardAction)', () => {
+        const page = renderRepeatedPage({ cards: items });
+        page.element.mount();
+        const handler = vi.fn();
+        page.refs.cards.richCards.cardAction.onclick(handler);
+
+        const actionButtons = [
+            ...page.element.dom.querySelectorAll('.card [data-id="action"]'),
+        ] as HTMLButtonElement[];
+        expect(actionButtons.length).toBe(2);
+        actionButtons.forEach((b) => b.click());
+
+        expect(handler.mock.calls.length).toBe(2);
     });
 });

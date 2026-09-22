@@ -236,6 +236,23 @@ export class ComponentCollectionRefImpl<
         Array<{ type: string; listener: any; options?: boolean | AddEventListenerOptions }>
     >();
 
+    // DL#194 Fork C, under repetition: when a Tier 3 instance filled with `<override slot="X">` is
+    // itself placed under a parent forEach, the instance ref becomes a component collection. The
+    // parent-owned slot content's refs still ride at `refs.<collection>.<slot>.<ref>` (aggregated as
+    // element collections). The pre-seeded slot ref manager (see BaseReferencesManager.mkRefsOfType)
+    // is attached here — mirroring ComponentRefsImpl.setSlotRefManager for the non-repeated case.
+    private slotRefManager?: { getPublicAPI(): any };
+
+    setSlotRefManager(slotRefManager: { getPublicAPI(): any }) {
+        this.slotRefManager = slotRefManager;
+    }
+
+    getSlotRef(slotName: string): any {
+        if (!this.slotRefManager) return undefined;
+        const api = this.slotRefManager.getPublicAPI();
+        return api ? api[slotName] : undefined;
+    }
+
     mkManagedRef(
         currData: any,
         coordinate: Coordinate,
@@ -578,7 +595,24 @@ const DELEGATE_COLLECTION_INNER_REF_TRAP = (target: ComponentCollectionRefImpl<a
     return target.getForwardedInnerRef(prop);
 };
 
-const ComponentCollectionRefProxy = GetTrapProxy([EVENT_TRAP, DELEGATE_COLLECTION_INNER_REF_TRAP]);
+// DL#194 Fork C, under repetition: delegate a slot name (e.g. `body`) on a Tier 3 instance's
+// component collection to the parent-owned slot ref manager, so `refs.<collection>.<slot>.<ref>`
+// resolves. Mirrors DELEGATE_SLOT_REF_TRAP for the non-repeated (ComponentRefsImpl) case. Runs
+// before the forwarded-inner-ref trap; real impl members and `onXxx` (EVENT_TRAP) fall through.
+const DELEGATE_COLLECTION_SLOT_REF_TRAP = (
+    target: ComponentCollectionRefImpl<any, any>,
+    prop,
+) => {
+    if (typeof prop !== 'string') return false;
+    if (prop in target) return false;
+    return target.getSlotRef(prop);
+};
+
+const ComponentCollectionRefProxy = GetTrapProxy([
+    EVENT_TRAP,
+    DELEGATE_COLLECTION_SLOT_REF_TRAP,
+    DELEGATE_COLLECTION_INNER_REF_TRAP,
+]);
 
 export function newComponentCollectionPublicApiProxy<
     ViewState,
