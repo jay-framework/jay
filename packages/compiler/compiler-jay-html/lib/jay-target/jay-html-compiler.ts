@@ -883,6 +883,7 @@ export function renderNode(node: Node, context: RenderContext): RenderFragment {
         collectionVariables: Variables,
         trackBy: string,
         childElement: RenderFragment,
+        slotPreambles: string[] = [],
     ) {
         // DL#193 Capability A: if the item body binds `{$parent.…}` (parentDepth > 0), this
         // forEach is the scope it climbs *out of* — emit `dependsOnParent: true` so the runtime
@@ -894,9 +895,14 @@ export function renderNode(node: Node, context: RenderContext): RenderFragment {
             renderedForEach.parentDepth,
             Math.max(0, childElement.parentDepth - 1),
         );
+        // DL#194 §C (Tier 3, Fork C) under a parent forEach: flush any per-item slot content consts into
+        // the item callback body so each repeated item builds its OWN slot fragment (own element + ref) —
+        // not a single hoisted const shared across items (which would wire only the first item's ref).
+        const slotPreamblesStr =
+            slotPreambles.length > 0 ? `${slotPreambles.join('\n')}\n${indent.curr}` : '';
         return new RenderFragment(
             `${indent.firstLine}forEach(${renderedForEach.rendered}, (${collectionVariables.currentVar}: ${collectionVariables.currentType.name}) => {
-${indent.curr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? ', true' : ''})`,
+${indent.curr}${slotPreamblesStr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? ', true' : ''})`,
             childElement.imports.plus(Import.forEach),
             [...renderedForEach.validations, ...childElement.validations],
             childElement.refs,
@@ -1751,13 +1757,22 @@ ${componentDefCode}`;
                     indent: indent.child().noFirstLineBreak().withLastLineBreak(),
                     dynamicRef: true,
                     isInsideGuard: true, // Mark that we're inside a guard
-                    insideFastForEach: true, // Fast-phase forEach — headless instances not supported
+                    insideFastForEach: true,
+                    // DL#194 §C: per-item sink for Tier 3 slot content consts — flushed into the forEach
+                    // item callback (not the hoisted root) so each repeated item builds its own slot.
+                    slotPreambles: [],
                 };
 
                 let childElement = renderHtmlElement(htmlElement, newContext);
                 return nestRefs(
                     forEachAccessPath,
-                    renderForEach(forEachFragment, forEachVariables, trackBy, childElement),
+                    renderForEach(
+                        forEachFragment,
+                        forEachVariables,
+                        trackBy,
+                        childElement,
+                        newContext.slotPreambles,
+                    ),
                 );
             } else if (checkAsync(htmlElement).isAsync) {
                 const asyncDirective = checkAsync(htmlElement);

@@ -268,6 +268,20 @@ describe('generate jay-html element hydrate', () => {
             );
         });
 
+        // DL#194 §C, under repetition: the parent repeats a Tier 3 slotted instance via forEach.
+        // The slot const (`richCardsSlots` with its `adoptElement`/`refCta()`) must be materialized
+        // PER ITEM inside both the adopt and create callback bodies — not hoisted to the page-render
+        // root — so every repeated item adopts its own slot DOM (within its local scope map) and wires
+        // its own collection ref. Hoisting only wired the first item's "Body for {}" button.
+        it('for Tier 3 slot injection under a parent forEach (DL#194 §C)', async () => {
+            const folder = 'contracts/page-with-tier3-slot-foreach';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+
         // DL#187 — a structural (Tier 2) headfull component hydrates via the inline
         // identity passthrough and the prop getter carries the coerced static prop
         // values (enum member, number literal, boolean literal), matching the SSR.

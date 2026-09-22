@@ -530,6 +530,50 @@ describe('Smoke Test', () => {
             expect(body).not.toMatch(/Default link/);
         });
 
+        it('/foreach-composite — Tier 2 + Tier 3 composed under a parent forEach (DL#194)', async () => {
+            const { status, body } = await fetchPage(server.url, '/foreach-composite/');
+            expect(status).toBe(200);
+            expectPage(body);
+            expect(body).toMatch(/ForEach Composite/);
+            // Each repeated item carries its OWN scope: heading="{title}" and both overrides bind
+            // the item's {title}, proving repeated coordinates + per-item view state across tiers.
+            // Tier 3 richCard (real boundary), body slot override per item:
+            expect(body).toMatch(/Body for Alpha/);
+            expect(body).toMatch(/Body for Beta/);
+            expect(body).not.toMatch(/Default body/); // parent-owned slot clears the default
+            // Tier 2 promoCard (inlined), cta slot override per item:
+            expect(body).toMatch(/CTA for Alpha/);
+            expect(body).toMatch(/CTA for Beta/);
+            // Both components' own heading prop resolves the item title:
+            expect(body).toMatch(/Alpha/);
+            expect(body).toMatch(/Beta/);
+        });
+
+        it('/nested-composition — Tier 3 > Tier 2 > Tier 3 nesting renders the outer levels (DL#194)', async () => {
+            const { status, body } = await fetchPage(server.url, '/nested-composition/');
+            expect(status).toBe(200);
+            expectPage(body);
+            expect(body).toMatch(/Nested Composition/);
+            // section (Tier 3) title threads down and renders, and the inlined card (Tier 2) resolves
+            // its heading from section's title binding:
+            expect(body).toMatch(/Section: Featured/);
+            expect(body).toMatch(/Card: Featured/);
+            // the innermost button (Tier 3) is present as a real boundary:
+            expect(body).toMatch(/class="btn"/);
+        });
+
+        // Known SSR bug (DL#194): a dynamic prop binding from an INLINED Tier 2 component (card) to a
+        // nested Tier 3 child (button) is not alias-substituted on the server target, so the button's
+        // label comes through empty at SSR. Client/hydrate resolve it correctly. `it.fails` documents
+        // the expected-eventual behavior and flips to a real failure (prompting removal) once fixed.
+        it.fails(
+            '/nested-composition — SSR resolves the nested Tier 3 button label (KNOWN BUG, DL#194)',
+            async () => {
+                const { body } = await fetchPage(server.url, '/nested-composition/');
+                expect(body).toMatch(/Button: Featured/);
+            },
+        );
+
         it('/html-string — string is escaped, html-string is not', async () => {
             const { status, body } = await fetchPage(server.url, '/html-string/');
             expect(status).toBe(200);
@@ -721,6 +765,38 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/href="\/docs"/);
             expect(body).not.toMatch(/Default link/);
         });
+
+        it('/foreach-composite — Tier 2 + Tier 3 composed under a parent forEach (DL#194)', async () => {
+            const { status, body } = await fetchPage(server.url, '/foreach-composite/');
+            expect(status).toBe(200);
+            expect(body).toMatch(/ForEach Composite/);
+            expect(body).toMatch(/Body for Alpha/);
+            expect(body).toMatch(/Body for Beta/);
+            expect(body).not.toMatch(/Default body/);
+            expect(body).toMatch(/CTA for Alpha/);
+            expect(body).toMatch(/CTA for Beta/);
+            expect(body).toMatch(/Alpha/);
+            expect(body).toMatch(/Beta/);
+        });
+
+        it('/nested-composition — Tier 3 > Tier 2 > Tier 3 nesting renders the outer levels (DL#194)', async () => {
+            const { status, body } = await fetchPage(server.url, '/nested-composition/');
+            expect(status).toBe(200);
+            expect(body).toMatch(/Nested Composition/);
+            expect(body).toMatch(/Section: Featured/);
+            expect(body).toMatch(/Card: Featured/);
+            expect(body).toMatch(/class="btn"/);
+        });
+
+        // Known SSR bug (DL#194) — see the dev-mode block for details. `it.fails` keeps the suite green
+        // and flips to a real failure once the inlined-Tier2 → nested-Tier3 prop binding is fixed.
+        it.fails(
+            '/nested-composition — SSR resolves the nested Tier 3 button label (KNOWN BUG, DL#194)',
+            async () => {
+                const { body } = await fetchPage(server.url, '/nested-composition/');
+                expect(body).toMatch(/Button: Featured/);
+            },
+        );
 
         it('/html-string — string is escaped, html-string is not', async () => {
             const { status, body } = await fetchPage(server.url, '/html-string/');

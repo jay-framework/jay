@@ -1023,3 +1023,124 @@ page-scope binding), a Tier 2 `promoCard` (binding-in-override + own prop), and 
 slot removal, container replace). `combined/page.ts` wires interactive handlers through the stable
 refs (`refs.richCard.body.cta`, `refs.promoCard.cta`, `refs.overrideCard.cta`). Both smoke-test
 blocks (SSR + hydrate) updated; all 62 smoke tests pass.
+
+### Additional coverage — composition under repetition and deep nesting
+
+Two more smoke-test pages were added to stress coordinates + view state + scoping across the two-tier
+model in the two situations the earlier pages did not cover: **repetition** and **deep alternating
+nesting**.
+
+**`/foreach-composite` (works; exposed + fixed a client-runtime ref bug).** A Tier 3 `richCard` and a
+Tier 2 `promoCard` placed under a parent `forEach="cards" trackBy="id"`, each with a per-item override
+(`Body for {title}`, `CTA for {title}`). Verified: every repeated instance resolves its **own** item —
+Tier 3 body-slot override (`Body for Alpha`/`Body for Beta`), Tier 2 cta-slot override
+(`CTA for Alpha`/`CTA for Beta`), and each component's own `heading="{title}"`
+(`<h2>Alpha</h2>` / `<h2>Beta</h2>`). The refs surface is collection-typed under the item scope:
+`refs.cards.richCards.body.cta` and `refs.cards.promoCards.cta` are
+`HTMLElementCollectionProxy<CardOfPageViewState, HTMLButtonElement>`. Repeated coordinates
+(`S2/0/0`, `S3/0/0`) + per-item view state + item scoping are all correct across both tiers.
+
+> **Client-runtime bug — Fork C slot refs were dropped when the Tier 3 instance is repeated (fixed).**
+> `refs.cards.richCards.body.cta.onclick(...)` type-checked but threw at runtime
+> (`TypeError: Cannot read properties of undefined (reading 'cta')` — `.body` was `undefined`). Root
+> cause: the Fork C slot ref manager is pre-seeded into the parent manager's `refs[instanceName]` via
+> `childRefManagers` and then merged onto the component ref in `BaseReferencesManager.mkRefsOfType`
+> (`references-manager.ts`). That merge was gated on `ManagedRefType.component` + `ComponentRefsImpl`
+> only — the **non-repeated** case. Under a parent `forEach` the instance ref is a **component
+> collection** (`ManagedRefType.componentCollection` / `ComponentCollectionRefImpl`), so the merge was
+> skipped and the freshly-built collection **overwrote** the slot ref manager, discarding the `body`
+> group. (Tier 2 `promoCards` was unaffected — it is never in any of the four ref lists, so its
+> pre-seeded manager is never overwritten.) **Fix** mirrors the static path for the collection:
+> `ComponentCollectionRefImpl` gains `setSlotRefManager`/`getSlotRef`, a `DELEGATE_COLLECTION_SLOT_REF_TRAP`
+> exposes the slot group on the collection proxy (before the DL#193 forwarded-inner-ref trap), and the
+> `mkRefsOfType` merge now also covers `componentCollection` + `ComponentCollectionRefImpl`. This
+> completes the DL#194 ref contract under repetition — the compiler already emitted the correct type;
+> only the runtime was incomplete. Covered by `runtime/test/lib/slot-content.test.ts`
+> ("Tier 3 slot content under a parent forEach": `.body` resolves, onclick fans out to every item with
+> its item viewState, and the child's own `cardAction` still resolves across the collection).
+
+> **Codegen bug — the per-item slot fragment was hoisted, so only the first repeated item wired its
+> slot ref (fixed).** After the ref-resolution fix above, `refs.cards.richCards.body.cta.onclick(...)`
+> resolved, but on the client only the **first** repeated item's `Body for {}` button actually received
+> the DOM event handler — Beta/Gamma got none. Root cause: the compiler materializes a Tier 3 instance's
+> `<override slot>` content as a shared const (`richCardsSlots = { body: adoptElement(...refCta()) }`) and
+> passes it both to the child constructor closure and to `childCompHydrate(..., slots)`. Both targets
+> collect these const declarations in a `context.slotPreambles` side-channel that escapes any `forEach`
+> wrapping and is flushed **once, hoisted** at the top of the render body. That is correct for a
+> non-repeated instance, but under a parent `forEach` the parent **repeats the child-with-slot** — so the
+> slot fragment (its own `adoptElement`/`refCta()`) must be built **per item**. A single hoisted const
+> calls `refCta()` once, wiring only the first item; the coordinate `S1/card:richCards/body/0` is identical
+> across items but resolves per-item within each item's local scope map, so moving the const into the item
+> callback is sufficient — no coordinate reassignment. **Fix** (`jay-html-compiler-hydrate.ts`): the
+> `forEach` branch gives its `itemContext` (adopt path) and `createRenderContext` (create/new-item path)
+> each their **own** `slotPreambles: []` sink, and flushes it into the corresponding per-item callback
+> block — the adopt callback becomes `(item) => { const richCardsSlots = {…refCta()…}; return […]; }` and
+> the create callback likewise. The root-context flush is untouched (still handles the non-repeated case).
+> The standard element target (client-only interactive) had the identical hoist — its forEach
+> `newContext` spread the parent's `slotPreambles` array, so the const flushed at the root. Same fix in
+> `jay-html-compiler.ts`: the forEach `newContext` gets its own `slotPreambles: []` and `renderForEach`
+> emits them inside the item callback before `return` (empty-preamble output is byte-identical to before,
+> so no other forEach fixture changed). The server (SSR) target already emits the override inside the
+> item `for..of` loop, so it needed no change. Covered by fixture `contracts/page-with-tier3-slot-foreach`
+> across all three targets (hydrate/element/server) and the runtime `slot-content.test.ts`
+> onclick-fan-out test.
+
+> **Limitation confirmed (not new): `$parent` inside an override is unsupported on SSR.** The page was
+> first authored with `Body for {title} on {$parent.pageTitle}`. Two validations fire: (1) `$parent` at
+> the root of a Tier 2 inlined override reaches past the composite into its consumer (the documented v1
+> Tier 2 limitation, §4b); (2) `[SSR] $parent bindings are not yet supported in the server target`. The
+> page binds only item scope (`{title}`) as a result.
+
+**`/nested-composition` (exposed an SSR bug).** A realistic three-level nest with alternating tiers:
+Tier 3 `section` > Tier 2 `card` > Tier 3 `button` (`section` internally composes `<jay:card>`, which
+internally composes `<jay:button>`). `section.title` threads down as the card heading and then as the
+button label. Renders `Section: Featured` and `Card: Featured` correctly, **but the innermost button
+renders `Button: ` (empty label)**.
+
+**Root cause — the Tier 2 alias substitution is not applied to a nested child's prop bindings on the
+SSR target.** The substitution is _not_ a template rewrite; it is an expression-parse-time overlay:
+`buildInlineAliases` (`jay-html-compiler.ts:523-580`) → `Variables.forInlinedComponent`
+(`expression-compiler.ts:272-287`) → the alias branch of `Variables.resolveAccessor`
+(`expression-compiler.ts:355-382`). An alias only fires for an expression that is (a) fed through the
+expression compiler and (b) parsed against the alias-carrying `Variables`.
+
+- **Parser splices the Tier 2 body as raw HTML** — `injectComposableTemplateIntoTag`
+  (`jay-html-parser.ts:919-929`, `set_content(childBody.innerHTML)`). A nested
+  `<jay:button label="{heading}" />` is inserted verbatim; `{heading}` is never rewritten.
+- **Client + hydrate targets recover it** by threading the alias-carrying `Variables` into the nested
+  child's prop expressions: `renderInlinedStructuralInstance` (`jay-html-compiler.ts:1000`) →
+  `renderNestedComponent` → `renderChildCompProps` → `parseComponentPropExpression` against
+  alias-carrying variables. So the interactive path is correct.
+- **SSR target never parses the nested child's prop bindings.** `renderServerInlinedStructuralInstance`
+  (`jay-html-compiler-server.ts:241`) renders the card's own text with aliases (hence `Card: Featured`),
+  but the nested `<jay:button>` routes to `renderServerHeadlessInstance`
+  (`jay-html-compiler-server.ts:320,454-471`), which reads props from `vs.__headlessInstances` — there
+  is **no `renderChildCompProps`** on the server target. `__headlessInstances` is populated by
+  `discoverHeadlessInstances` (`slow-render-transform.ts:693-700`, copies `"{heading}"` verbatim) and
+  `resolveHeadlessInstances` (`:833-858`, **skips** any `<jay:>` whose attributes still contain `{…}`
+  and otherwise resolves only against the child's own contract) — **no Tier 2 alias overlay**. So
+  `{heading}` is dropped and the child receives an empty prop. Static props survive (copied as literal
+  strings by both paths); only dynamic `{contractField}` bindings need the projection the SSR path omits.
+
+This is a deviation from the stated design (§TL;DR lines 19-20 / axis-1 note: Tier 2 inlining
+"substitutes contract-ViewState bindings with the usage-site prop expressions" — all of them, including
+those inside nested child usages). It is **SSR-only**; client/hydrate are correct.
+
+**Candidate fixes (decision pending — not implemented).**
+
+- **(a) Parser-level splice rewrite** — in `injectComposableTemplateIntoTag` (`jay-html-parser.ts:919-929`),
+  rewrite nested `<jay:child>` prop bindings to their aliased consumer expressions at splice time, so the
+  inlined HTML is self-consistent for _all_ targets. Uniform, but introduces a new **rewrite pass** at the
+  parser — which contradicts the design note that substitution is expression-parse-time, not a tree-walk —
+  and must be traced for double-application against the client/hydrate alias overlay and for multi-level
+  nesting (Tier 3 > Tier 2 > Tier 3).
+- **(b) Extend the existing alias overlay to the SSR discovery path** — carry the enclosing composite's
+  usage-site prop projection into `discoverHeadlessInstances`/`resolveHeadlessInstances`
+  (`slow-render-transform.ts:693-700` / `:833-858`) so a nested child's `{contractField}` resolves through
+  the parent's alias→consumer-expression chain before hitting runtime ViewState. Reuses the existing
+  mechanism (subtract-first) rather than adding a rewrite pass, but threads a compile-time alias concept
+  into the slow-render runtime pipeline — needs a runtime-path trace before it is declared sound.
+
+The `/nested-composition` page is kept as the regression repro; its SSR button-label assertion is marked
+`it.fails` (self-flips green when the bug is fixed). Section/card rendering and the page structure are
+asserted normally.

@@ -1,0 +1,10 @@
+name: Section
+props:
+  - name: title
+    type: string
+    required: true
+tags:
+  - tag: title
+    type: data
+    dataType: string
+    phase: slow

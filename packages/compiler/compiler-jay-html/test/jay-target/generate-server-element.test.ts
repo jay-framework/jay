@@ -175,6 +175,18 @@ describe('generate jay-html server element', () => {
             );
         });
 
+        // DL#194 §C, under repetition: SSR emits the per-item override content inside the `for..of`
+        // item loop, each bound to the item view state (`Body for ${vs1.title}`) at the child-scope
+        // coordinate `S1/card:richCards/body/0`.
+        it('for Tier 3 slot injection under a parent forEach (DL#194 §C)', async () => {
+            const folder = 'contracts/page-with-tier3-slot-foreach';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
+
         it('for headless instance with forEach in template', async () => {
             const folder = 'contracts/page-with-headless-foreach-template';
             const serverFile = await readFileAndGenerateServerElementFile(folder);

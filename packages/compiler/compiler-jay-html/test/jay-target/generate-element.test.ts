@@ -633,6 +633,16 @@ describe('generate jay-html element', () => {
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
+        // DL#194 §C, under repetition: parent repeats a Tier 3 slotted instance via forEach. The
+        // per-item slot const must live inside the forEach item callback so each item builds its own
+        // slot fragment and collection ref, matching the hydrate target.
+        it('generate element file with Tier 3 slot injection under a parent forEach (DL#194 §C)', async () => {
+            const folder = 'contracts/page-with-tier3-slot-foreach';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
         it('generate element file with headless component instance inside forEach', async () => {
             const folder = 'contracts/page-with-headless-in-foreach';
             const elementFile = await readFileAndGenerateElementFile(folder);

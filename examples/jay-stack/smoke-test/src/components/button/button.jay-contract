@@ -1,0 +1,13 @@
+name: Button
+props:
+  - name: label
+    type: string
+    required: true
+tags:
+  - tag: label
+    type: data
+    dataType: string
+    phase: slow
+  - tag: clickAction
+    type: interactive
+    elementType: HTMLButtonElement

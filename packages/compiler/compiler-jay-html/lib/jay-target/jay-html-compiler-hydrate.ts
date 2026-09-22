@@ -379,12 +379,18 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         // Adopt callback: render item children and return as an array.
         // hydrateForEach combines them into a single BaseJayElement internally.
         const itemChildNodes = filterContentNodes(element.childNodes);
+        // DL#194 §C (Tier 3, Fork C) under a parent forEach: a slotted instance's slot const must be
+        // materialized PER ITEM (own `adoptElement`/`refCta()`), not hoisted to the page root — the
+        // parent repeats the child-with-slot, so each item adopts its own slot DOM within its local
+        // scope map and gets its own (collection) ref. Give the item its own slotPreambles sink and
+        // flush it into the adopt callback block below.
         const itemContext: HydrateContext = {
             ...context,
             variables: forEachVariables,
             indent: indent.child().child(),
             dynamicRef: true, // Refs inside forEach are collection refs
             insideFastForEach: true,
+            slotPreambles: [],
         };
         // Check if forEach item element itself needs adoption (dynamic attrs or ref)
         const itemRenderCtx = buildRenderContext(itemContext);
@@ -504,6 +510,17 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
             }
         }
 
+        // DL#194 §C (Tier 3, Fork C) under a parent forEach: flush per-item slot consts into the adopt
+        // callback body so each item builds its own slot fragment (own `adoptElement`/`refCta()`),
+        // resolved within its local scope map. All adoptBody forms are `(param) => <arrayExpr>`.
+        if (itemContext.slotPreambles.length > 0) {
+            const arrowPrefix = `(${adoptItemParam}) => `;
+            const bodyExpr = adoptBody.startsWith(arrowPrefix)
+                ? adoptBody.slice(arrowPrefix.length)
+                : adoptBody;
+            adoptBody = `(${adoptItemParam}) => {\n${itemContext.slotPreambles.join('\n')}\n${indent.firstLine}    return ${bodyExpr};\n${indent.firstLine}}`;
+        }
+
         // Create callback: render the item element using the standard element target.
         // Use the pre-adopt snapshot of the RefNameGenerator so the create callback
         // generates the same ref names as the adopt callback. A fresh generator would
@@ -522,6 +539,10 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
             insideFastForEach: true,
             refNameGenerator: preAdoptRefNameGenerator,
             coordinateCounters: new Map(),
+            // DL#194 §C: per-item slot consts for the create (new-item) path, flushed into the create
+            // callback block below — mirrors the adopt path so client-added items also build their own
+            // slot fragment instead of sharing a hoisted one.
+            slotPreambles: [],
         };
         const createChildNodes = filterContentNodes(element.childNodes);
         let createChildren =
@@ -552,7 +573,11 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         // Render ref on the forEach item element for the create callback
         const createItemRef = renderElementRef(element, createRenderContext);
         const createRefSuffix = createItemRef.rendered ? `, ${createItemRef.rendered}` : '';
-        const createBody = `(${forEachVariables.currentVar}: ${forEachVariables.currentType.name}) => {\n${indent.firstLine}    return ${forEachElementFunc}('${element.rawTagName}', ${createAttributes.rendered}, [${createChildren.rendered}]${createRefSuffix});\n${indent.firstLine}    }`;
+        const createSlotPreamblesStr =
+            createRenderContext.slotPreambles.length > 0
+                ? `${createRenderContext.slotPreambles.join('\n')}\n`
+                : '';
+        const createBody = `(${forEachVariables.currentVar}: ${forEachVariables.currentType.name}) => {\n${createSlotPreamblesStr}${indent.firstLine}    return ${forEachElementFunc}('${element.rawTagName}', ${createAttributes.rendered}, [${createChildren.rendered}]${createRefSuffix});\n${indent.firstLine}    }`;
 
         let allImports = Imports.for(Import.hydrateForEach)
             .plus(forEachElementImport)

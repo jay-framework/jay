@@ -1,0 +1,27 @@
+<html>
+<head>
+    <script type="application/jay-headfull"
+            src="./card/card"
+            contract="./card/card.jay-contract"
+            names="card"></script>
+    <script type="application/jay-data">
+data:
+    pageTitle: string
+    cards:
+        - id: string
+          title: string
+    </script>
+</head>
+<body>
+<div>
+    <h1>{pageTitle}</h1>
+    <div class="cards" forEach="cards" trackBy="id">
+        <jay:card ref="richCards" heading="{title}">
+            <override slot="body">
+                <button ref="cta">Body for {title}</button>
+            </override>
+        </jay:card>
+    </div>
+</div>
+</body>
+</html>

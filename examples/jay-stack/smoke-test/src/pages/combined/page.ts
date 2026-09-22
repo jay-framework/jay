@@ -8,10 +8,14 @@ export const page = makeJayStackComponent<PageContract>()
     )
     .withInteractive((props, refs) => {
         // Tier 3 (Fork C): the override's nested ref is keyed by slot name in the parent scope.
-        refs.richCard.body.cta.onclick(({viewState}) => console.log('rich card body cta clicked', viewState));
+        refs.richCard.body.cta.onclick(({ viewState }) =>
+            console.log('rich card body cta clicked', viewState),
+        );
         // Tier 2: the inlined instance forwards its slot-anchor ref under the author-given name.
-        refs.promoCard.cta.onclick(({viewState}) => console.log('promo cta clicked', viewState));
-        refs.overrideCard.cta.onclick(({viewState}) => console.log('override cta clicked', viewState));
+        refs.promoCard.cta.onclick(({ viewState }) => console.log('promo cta clicked', viewState));
+        refs.overrideCard.cta.onclick(({ viewState }) =>
+            console.log('override cta clicked', viewState),
+        );
         return {
             render: () => ({}),
         };

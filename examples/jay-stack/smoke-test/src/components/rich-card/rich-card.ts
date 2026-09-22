@@ -48,8 +48,8 @@ export const richCard = makeJayStackComponent<RichCardContract>()
         ) => {
             const [heading] = fastVS.heading;
 
-            refs.cardAction.onclick(({viewState}) => {
-                console.log('rich card action clicked', viewState)
+            refs.cardAction.onclick(({ viewState }) => {
+                console.log('rich card action clicked', viewState);
             });
 
             return {

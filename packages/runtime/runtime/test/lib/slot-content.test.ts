@@ -177,14 +177,9 @@ function renderRepeatedPage(viewState: RepeatedPageVS) {
     const [richCardsSlotsManager] = ReferencesManager.for({}, [], [], [], [], {
         body: bodyRefManager,
     });
-    const [cardsRefManager, [refRichCards]] = ReferencesManager.for(
-        {},
-        [],
-        [],
-        [],
-        ['richCards'],
-        { richCards: richCardsSlotsManager },
-    );
+    const [cardsRefManager, [refRichCards]] = ReferencesManager.for({}, [], [], [], ['richCards'], {
+        richCards: richCardsSlotsManager,
+    });
     const [refManager] = ReferencesManager.for({}, [], [], [], [], { cards: cardsRefManager });
     const element = ConstructContext.withRootContext(viewState, refManager, () =>
         de('div', {}, [

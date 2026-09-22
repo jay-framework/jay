@@ -599,10 +599,7 @@ const DELEGATE_COLLECTION_INNER_REF_TRAP = (target: ComponentCollectionRefImpl<a
 // component collection to the parent-owned slot ref manager, so `refs.<collection>.<slot>.<ref>`
 // resolves. Mirrors DELEGATE_SLOT_REF_TRAP for the non-repeated (ComponentRefsImpl) case. Runs
 // before the forwarded-inner-ref trap; real impl members and `onXxx` (EVENT_TRAP) fall through.
-const DELEGATE_COLLECTION_SLOT_REF_TRAP = (
-    target: ComponentCollectionRefImpl<any, any>,
-    prop,
-) => {
+const DELEGATE_COLLECTION_SLOT_REF_TRAP = (target: ComponentCollectionRefImpl<any, any>, prop) => {
     if (typeof prop !== 'string') return false;
     if (prop in target) return false;
     return target.getSlotRef(prop);
