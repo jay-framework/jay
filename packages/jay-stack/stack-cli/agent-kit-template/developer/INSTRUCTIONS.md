@@ -32,4 +32,7 @@ The developer sets up the project, configures plugins, creates page-level compon
 | [render-results.md](render-results.md)            | phaseOutput, RenderPipeline, errors, redirects                       |
 | [seo-guide.md](seo-guide.md)                      | SEO head tags: title, meta, OG, canonical via phaseOutput            |
 | [cli-commands.md](cli-commands.md)                | CLI commands: setup, validate, dev, agent-kit                        |
+| [project-headfull-components.md](project-headfull-components.md) | Shared UI under `src/components/`, Add Menu discovery, lifecycle |
 | `../references/<plugin>/`                         | Plugin reference data                                                |
+
+For reusable site chrome (headers, footers, nav), read [project-headfull-components.md](project-headfull-components.md) before creating duplicate markup on every page.

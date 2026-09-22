@@ -23,6 +23,10 @@ Your job is to create `.jay-html` pages that bind to the data and interactions d
 
 There is no standalone "interactive" phase. Any tag with `type: interactive` (refs/interactions) is automatically `fast+interactive`. Tags without an explicit phase are available in all phases.
 
+## Project headfull components
+
+Prefer **reusing** shared UI from `src/components/` (headers, footers, nav) instead of copying the same markup into every page. In AIditor, users attach these from **+ Add → Project → Headfull components**. See `agent-kit/developer/project-headfull-components.md` for layout and lifecycle.
+
 ## Workflow
 
 1. **Read this file** for overview and workflow
