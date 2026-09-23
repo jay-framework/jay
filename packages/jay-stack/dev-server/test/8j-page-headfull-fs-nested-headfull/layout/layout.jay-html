@@ -1,9 +1,8 @@
 <html>
 <head>
-    <script type="application/jay-headfull"
+    <script type="application/jay-headless"
             src="../header/header"
-            contract="../header/header.jay-contract"
-            names="header"></script>
+            contract="../header/header.jay-contract"></script>
     <script type="application/jay-data">
         data:
             sidebarLabel: string
@@ -11,7 +10,13 @@
 </head>
 <body>
     <div class="layout">
-        <jay:header logoUrl="/logo.png" />
+        <jay:header logoUrl="/logo.png">
+            <header>
+                <img src="{logoUrl}" style="width: 36px; height: 36px" />
+                <span class="cart-count">{cartCount}</span>
+                <button ref="increment">+</button>
+            </header>
+        </jay:header>
         <aside class="sidebar">{sidebarLabel}</aside>
     </div>
 </body>
