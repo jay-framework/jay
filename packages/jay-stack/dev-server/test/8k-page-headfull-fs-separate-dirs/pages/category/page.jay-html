@@ -1,17 +1,22 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <script type="application/jay-headfull"
+    <script type="application/jay-headless"
             src="../../components/header/header"
-            contract="../../components/header/header.jay-contract"
-            names="TestHeader"></script>
+            contract="../../components/header/header.jay-contract"></script>
     <script type="application/jay-data" contract="./page.jay-contract">
     </script>
 </head>
 <body>
     <div>
         <h1>{pageTitle}</h1>
-        <jay:TestHeader logoUrl="/logo.png" />
+        <jay:header logoUrl="/logo.png">
+            <header>
+                <img src="{logoUrl}" style="width: 36px; height: 36px" />
+                <span class="cart-count">{cartCount}</span>
+                <button ref="increment">+</button>
+            </header>
+        </jay:header>
     </div>
 </body>
 </html>

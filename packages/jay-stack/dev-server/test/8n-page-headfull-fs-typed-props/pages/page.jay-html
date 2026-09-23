@@ -1,18 +1,34 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <script type="application/jay-headfull"
-            src="../components/badge/badge"
-            contract="../components/badge/badge.jay-contract"
-            names="badge"></script>
+    <script type="application/jay-headless"
+            contract="../components/badge/badge.jay-contract"></script>
     <script type="application/jay-data" contract="./page.jay-contract">
     </script>
 </head>
 <body>
     <div>
         <h1>{pageTitle}</h1>
-        <jay:badge label="Live Status" status="success" count="42" featured="true" />
-        <jay:badge label="Dynamic Status" status="{currentStatus}" count="{liveCount}" featured="false" />
+        <jay:badge label="Live Status" status="success" count="42" featured="true">
+            <span class="badge {status === success ? badge--success} {status === warning ? badge--warning} {status === error ? badge--error}">
+                <span if="status == success" class="badge-icon badge-icon--success">[OK]</span>
+                <span if="status == warning" class="badge-icon badge-icon--warning">[!]</span>
+                <span if="status == error" class="badge-icon badge-icon--error">[X]</span>
+                <span class="badge-label">{label}</span>
+                <span class="badge-count">Count: {count}</span>
+                <span if="featured" class="badge-star">FEATURED</span>
+            </span>
+        </jay:badge>
+        <jay:badge label="Dynamic Status" status="{currentStatus}" count="{liveCount}" featured="false">
+            <span class="badge {status === success ? badge--success} {status === warning ? badge--warning} {status === error ? badge--error}">
+                <span if="status == success" class="badge-icon badge-icon--success">[OK]</span>
+                <span if="status == warning" class="badge-icon badge-icon--warning">[!]</span>
+                <span if="status == error" class="badge-icon badge-icon--error">[X]</span>
+                <span class="badge-label">{label}</span>
+                <span class="badge-count">Count: {count}</span>
+                <span if="featured" class="badge-star">FEATURED</span>
+            </span>
+        </jay:badge>
         <button ref="cycleButton">Cycle status</button>
     </div>
 </body>
