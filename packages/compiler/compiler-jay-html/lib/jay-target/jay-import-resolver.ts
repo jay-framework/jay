@@ -70,8 +70,13 @@ export const JAY_IMPORT_RESOLVER: JayImportResolver = {
         return parseContract(content, fullPath);
     },
     resolveLink(importingModuleDir: string, link: string): string {
+        // Relative link ("./x") — resolve against the importing dir.
         if (link?.[0] === '.') return path.resolve(importingModuleDir, link);
-        else return require.resolve(link, { paths: require.resolve.paths(importingModuleDir) });
+        // Absolute file path ("/abs/x") — used after pre-render absolutizes headless src=.
+        // Return as-is (extensionless); analyzeExportedTypes' autoAddExtension appends .ts.
+        if (link?.[0] === '/') return link;
+        // Bare module specifier ("pkg/component") — resolve through node.
+        return require.resolve(link, { paths: require.resolve.paths(importingModuleDir) });
     },
     resolvePluginComponent(
         pluginName: string,

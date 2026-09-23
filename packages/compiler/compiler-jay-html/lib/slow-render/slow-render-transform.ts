@@ -400,12 +400,19 @@ function resolveRelativePaths(root: HTMLElement, sourceDir: string): void {
     }
 
     // Resolve headless component paths
-    // e.g., <script type="application/jay-headless" src="./header.ts">
+    // e.g., <script type="application/jay-headless" src="./header" contract="./header.jay-contract">
+    // Both src (coded component .ts) and contract (local file-path contract) are made absolute so
+    // the pre-rendered file — parsed from build/dev/pre-rendered/ — still resolves them. Plugin
+    // contracts (bare names like "spotlight") are not relative paths, so they are left untouched.
     const headlessScripts = root.querySelectorAll('script[type="application/jay-headless"]');
     for (const script of headlessScripts) {
         const src = script.getAttribute('src');
         if (src && isRelativePath(src)) {
             script.setAttribute('src', path.resolve(sourceDir, src));
+        }
+        const contract = script.getAttribute('contract');
+        if (contract && isRelativePath(contract)) {
+            script.setAttribute('contract', path.resolve(sourceDir, contract));
         }
     }
 

@@ -16,6 +16,7 @@ const {
     isInterfaceDeclaration,
     isNamedImports,
     isTypeAliasDeclaration,
+    isVariableDeclaration,
     isVariableStatement,
     parseConfigFileTextToJson,
 } = tsBridge;
@@ -151,6 +152,46 @@ function findRootCallIdentifier(node: ts.CallExpression): ts.Identifier | undefi
     return undefined;
 }
 
+/**
+ * Determines whether a call-expression chain ultimately roots at `makeJayStackComponent`.
+ * Handles both the single-chain form:
+ *     export const x = makeJayStackComponent().withProps()...withInteractive(...)
+ * and the two-step-builder form, where the chain is split across variables:
+ *     const builder = makeJayStackComponent().withProps()...withFastRender();
+ *     export const x = builder.withInteractive(...);
+ * In the latter case the chain's root identifier is the local `builder` variable, so we
+ * follow its initializer transitively until we hit `makeJayStackComponent` (or give up).
+ */
+function chainRootsAtMakeJayStackComponent(
+    initializer: ts.Expression,
+    tsTypeChecker: ts.TypeChecker,
+    makeJayStackSymbol: ts.Symbol,
+    seen: Set<ts.Symbol> = new Set(),
+): boolean {
+    if (!isCallExpression(initializer)) return false;
+    const rootIdentifier = findRootCallIdentifier(initializer);
+    if (!rootIdentifier) return false;
+
+    const rootType = tsTypeChecker.getTypeAtLocation(rootIdentifier);
+    if (rootType.symbol === makeJayStackSymbol) return true;
+
+    // Follow an intermediate builder variable's initializer.
+    const symbol = tsTypeChecker.getSymbolAtLocation(rootIdentifier);
+    if (!symbol || seen.has(symbol)) return false;
+    seen.add(symbol);
+
+    const declaration = symbol.valueDeclaration;
+    if (declaration && isVariableDeclaration(declaration) && declaration.initializer) {
+        return chainRootsAtMakeJayStackComponent(
+            declaration.initializer,
+            tsTypeChecker,
+            makeJayStackSymbol,
+            seen,
+        );
+    }
+    return false;
+}
+
 function isExportedStatement(statement: ts.Statement) {
     return Boolean(
         (statement as any).modifiers &&
@@ -271,16 +312,18 @@ export function analyzeExportedTypes(
                         return;
                     }
 
-                    // Check for makeJayStackComponent() builder chains
-                    if (MAKE_JAY_STACK_COMPONENT.symbol) {
-                        const rootIdentifier = findRootCallIdentifier(declaration.initializer);
-                        if (rootIdentifier) {
-                            const rootType = tsTypeChecker.getTypeAtLocation(rootIdentifier);
-                            if (rootType.symbol === MAKE_JAY_STACK_COMPONENT.symbol) {
-                                types.push(new JayComponentType(name, [], true));
-                                return;
-                            }
-                        }
+                    // Check for makeJayStackComponent() builder chains (single-chain or
+                    // split across an intermediate builder variable).
+                    if (
+                        MAKE_JAY_STACK_COMPONENT.symbol &&
+                        chainRootsAtMakeJayStackComponent(
+                            declaration.initializer,
+                            tsTypeChecker,
+                            MAKE_JAY_STACK_COMPONENT.symbol,
+                        )
+                    ) {
+                        types.push(new JayComponentType(name, [], true));
+                        return;
                     }
                 }
             });

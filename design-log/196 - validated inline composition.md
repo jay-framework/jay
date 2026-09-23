@@ -953,3 +953,47 @@ Result: `compiler-jay-html` 783 pass / 4 skip; workspace `build:check-types` cle
 `forEachInsidePureComponentError` / `rootParentInInlinedCompositeError` / `headfullRecursionError` helpers)
 is now dead for fixtures and can be deleted as its own increment (design-owner decision: **separate
 increment**). Recursion detection remains owed to `jay-stack validate` (Phase 2).
+
+### Phase 4g — coded `src=` regions wired through the dev-server pre-render (Increment, green)
+
+Migrating the first dev-server fixture (`8a-page-headfull-fs-static`) from the legacy
+`application/jay-headfull … names="header"` form to a DL#196 coded region
+(`application/jay-headless src="./header/header" contract="./header/header.jay-contract"`, header body
+flattened inline) exposed that the **local coded `src=` path had never run through the dev-server
+pre-render pipeline** — only plugin-based headless imports (e.g. `14a`, `plugin="test-spotlight"`) and
+compiler-only unit fixtures (`card`) had. Three gaps, each fixed by extending an existing mechanism (no
+new surface):
+
+1. **Two-step builders undetectable.** `analyzeExportedTypes` recognised `makeJayStackComponent` only
+   when the exported call's root identifier *was* `makeJayStackComponent`. Real components split the
+   chain across a variable (`const builder = makeJayStackComponent()…; export const header =
+   builder.withInteractive(…)`), whose root identifier is `builder`. The old headfull path never
+   analysed (it trusted `names=`); the coded `src=` path resolves the single exported component, so it
+   hit this. Fix: `chainRootsAtMakeJayStackComponent` follows an intermediate builder variable's
+   initializer transitively (`compiler-analyze-exported-types/lib/analyze-exported-types.ts`). New unit
+   fixture `stack-header-two-step` + test.
+2. **Pre-render left the headless `contract=` relative.** `resolveRelativePaths` (pre-render) already
+   absolutizes jay-data `contract`, jay-headless `src`, links, and plain scripts — but not jay-headless
+   `contract`. So the pre-rendered file (parsed from `build/dev/pre-rendered/`) resolved `./header/…`
+   against the wrong dir → ENOENT. Fix: absolutize jay-headless `contract` alongside `src`
+   (`compiler-jay-html/lib/slow-render/slow-render-transform.ts`). Plugin contracts (bare names like
+   `spotlight`) are not relative paths, so they are untouched. **This is the absolutize-during-pre-render
+   strategy, deliberately chosen over threading `sourceDir` into `parseHeadlessImports` — the latter is
+   the legacy-headfull mechanism being deleted.**
+3. **`resolveLink` couldn't resolve the now-absolute `src`.** After (2), `src` reaches the parser as an
+   absolute, extensionless path (`/abs/header/header`); `resolveLink` sent anything non-`.` to
+   `require.resolve`, which fails without an extension. Fix: return absolute paths (`link[0] === '/'`)
+   as-is so `analyzeExportedTypes`' `autoAddExtension` appends `.ts`; reserve `require.resolve` for bare
+   module specifiers (`compiler-jay-html/lib/jay-target/jay-import-resolver.ts`).
+
+**Constraint reaffirmed (design-owner, 2026-09-24):** *no templates from plugins.* "We do not support
+headfull components from plugins" now reads as "we do not support a template from a plugin" — plugins
+ship contract + code only; the template is always page-owned (flattened inline). Local coded components
+keep a reference `.jay-html` (e.g. `header/header.jay-html`) as the materialiser's re-flatten source,
+matching the `card` fixture.
+
+Fixture `8a` re-authored + snapshots regenerated (`UPDATE_FIXTURES=1`). The hydrate diff is the DL#196
+win: `childCompHydrate` props dropped the old wrapper cruft (`style: 'display: contents'`, `jc: 'header'`)
+to just the real prop `{ logoUrl: '/logo.png' }`, and the SSR `<header>` is the region root with no
+wrapper element. Result: dev-server `709 + 32` pass (0 regressions), analyzer `6` pass, `compiler-jay-html`
+`783 / 4 skip`. Remaining dev-server `8b–8n` fixtures migrate next by the same recipe.

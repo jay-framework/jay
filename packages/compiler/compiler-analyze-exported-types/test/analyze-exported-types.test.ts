@@ -181,6 +181,17 @@ describe('typescript-compiler', () => {
             expect(types).toEqual([new JayComponentType('StackHeader', [], true)]);
         });
 
+        it('component using a two-step makeJayStackComponent builder', () => {
+            let types = analyzeExportedTypes(
+                FIXTURES + '/components/stack-header-two-step/stack-header-two-step',
+                {
+                    relativePath: TSCONFIG,
+                },
+            );
+
+            expect(types).toEqual([new JayComponentType('StackHeaderTwoStep', [], true)]);
+        });
+
         it('recursive component', () => {
             let types = analyzeExportedTypes(
                 FIXTURES + '/components/recursive-components/tree-node',
