@@ -62,26 +62,14 @@ export function hydrate(rootElement, options) {
                     (vs1) => [
                         childCompHydrate(
                             _HeadlessHeader0Adopt,
-                            (vs12) => ({
-                                itemId: vs12._id,
-                                style: 'display: contents',
-                                jc: 'header',
-                            }),
+                            (vs12) => ({ itemId: vs12._id }),
                             'S2/0',
                             refAr0(),
                         ),
                     ],
                     (vs1) => {
                         return e('div', { class: 'list' }, [
-                            childComp(
-                                _HeadlessHeader1,
-                                (vs12) => ({
-                                    itemId: vs12._id,
-                                    style: 'display: contents',
-                                    jc: 'header',
-                                }),
-                                refAr0(),
-                            ),
+                            childComp(_HeadlessHeader1, (vs12) => ({ itemId: vs12._id }), refAr0()),
                         ]);
                     },
                 ),

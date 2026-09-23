@@ -65,16 +65,11 @@ export function hydrate(rootElement, options) {
                     () =>
                         childCompHydrate(
                             _HeadlessHeader0,
-                            (vs) => ({ itemId: '1', style: 'display: contents', jc: 'header' }),
+                            (vs) => ({ itemId: '1' }),
                             'S1/0',
                             refAr0(),
                         ),
-                    () =>
-                        childComp(
-                            _HeadlessHeader0Create,
-                            (vs) => ({ itemId: '1', style: 'display: contents', jc: 'header' }),
-                            refAr0(),
-                        ),
+                    () => childComp(_HeadlessHeader0Create, (vs) => ({ itemId: '1' }), refAr0()),
                 ),
                 hydrateConditional(
                     (vs) => !vs.showWidget,
