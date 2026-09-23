@@ -896,7 +896,7 @@ Result: `compiler-jay-html` 787 pass / 4 skip; workspace `build:check-types` cle
 ### Phase 4e — Tier-2 validation fixtures removed; recursion moves to `validate` (Increment, green)
 
 Design-owner decisions (2026-09-23) on the DL#194 Tier-2 validation family, all of which existed only
-because of Tier-2 *inlining* constraints the passthrough model removes:
+because of Tier-2 _inlining_ constraints the passthrough model removes:
 
 - **`page-with-foreach-in-pure-composite` + `page-tier2-root-parent` — deleted.** With a no-code region
   backed by the passthrough (its ViewState = props), there is no inlining scope to constrain: neither a
@@ -906,7 +906,7 @@ because of Tier-2 *inlining* constraints the passthrough model removes:
   `rootParentInInlinedCompositeError` imports in the tests. **The helper functions stay in `lib`** —
   still referenced by `parseHeadfullFSImports` / the inlining path until the legacy path is deleted.
 - **`page-tier2-recursion` — recursion detection moves to `jay-stack validate`.** A `<jay:X>` self-cycle
-  is a cycle in the *flatten* graph, not the (now-deleted) compile-time inline-expansion graph, so it is
+  is a cycle in the _flatten_ graph, not the (now-deleted) compile-time inline-expansion graph, so it is
   no longer a parser concern. Removed the parse-time test (`readAndParseJayFile` +
   `headfullRecursionError`) from `compiler-jay-html`. **Debt owed by the validate engine (Phase 2):**
   region/flatten-graph validation must detect a materialised region whose source transitively contains
@@ -965,9 +965,9 @@ compiler-only unit fixtures (`card`) had. Three gaps, each fixed by extending an
 new surface):
 
 1. **Two-step builders undetectable.** `analyzeExportedTypes` recognised `makeJayStackComponent` only
-   when the exported call's root identifier *was* `makeJayStackComponent`. Real components split the
+   when the exported call's root identifier _was_ `makeJayStackComponent`. Real components split the
    chain across a variable (`const builder = makeJayStackComponent()…; export const header =
-   builder.withInteractive(…)`), whose root identifier is `builder`. The old headfull path never
+builder.withInteractive(…)`), whose root identifier is `builder`. The old headfull path never
    analysed (it trusted `names=`); the coded `src=` path resolves the single exported component, so it
    hit this. Fix: `chainRootsAtMakeJayStackComponent` follows an intermediate builder variable's
    initializer transitively (`compiler-analyze-exported-types/lib/analyze-exported-types.ts`). New unit
@@ -986,7 +986,7 @@ new surface):
    as-is so `analyzeExportedTypes`' `autoAddExtension` appends `.ts`; reserve `require.resolve` for bare
    module specifiers (`compiler-jay-html/lib/jay-target/jay-import-resolver.ts`).
 
-**Constraint reaffirmed (design-owner, 2026-09-24):** *no templates from plugins.* "We do not support
+**Constraint reaffirmed (design-owner, 2026-09-24):** _no templates from plugins._ "We do not support
 headfull components from plugins" now reads as "we do not support a template from a plugin" — plugins
 ship contract + code only; the template is always page-owned (flattened inline). Local coded components
 keep a reference `.jay-html` (e.g. `header/header.jay-html`) as the materialiser's re-flatten source,
@@ -997,3 +997,53 @@ win: `childCompHydrate` props dropped the old wrapper cruft (`style: 'display: c
 to just the real prop `{ logoUrl: '/logo.png' }`, and the SSR `<header>` is the region root with no
 wrapper element. Result: dev-server `709 + 32` pass (0 regressions), analyzer `6` pass, `compiler-jay-html`
 `783 / 4 skip`. Remaining dev-server `8b–8n` fixtures migrate next by the same recipe.
+
+### Phase 4h — remaining dev-server fixtures `8b–8n` migrated (Increment, green)
+
+All fourteen `8x` dev-server fixtures now use the flattened headless form; snapshots regenerated with
+`UPDATE_FIXTURES=1` then `yarn format` (regeneration writes unformatted output — the committed form is
+prettier-normalised, so the format pass reverts the whitespace-only churn across the untouched fixtures
+and leaves only the genuinely-changed `8x` expected files). Migrated in three commits by shape:
+
+- **Batch 1 — simple single-header (`8b`–`8g`, `8l`).** One `<jay:header>` region, body flattened inline;
+  `if=`/`forEach=`/`trackBy=` stay on the page wrappers, two instances keep distinct props. Every
+  `childCompHydrate` reduced from `{ itemId, style: 'display: contents', jc: 'header' }` to just the real
+  prop(s).
+- **Batch 2 — special forms (`8h`, `8k`, `8n`).**
+  - `8h` (component CSS): body flattened; the component's `<style>` moved into the page `<head>` (the page
+    now owns it). Note: dev-server snapshots do **not** capture CSS, and the `@scope`-wrapped materialiser
+    output (Q5) needs a wrapper-ref selector these bare fixtures lack — that is a `stack-cli`/validator
+    concern, not exercised here.
+  - `8k` (separate dirs / tag rename): `names="TestHeader"` dropped; the region tag now derives from the
+    **contract name** (`Header` → `<jay:header>`), so coordinates rename `testheader` → `header` while the
+    imported symbol keeps its export name (`TestHeader`).
+  - `8n` (passthrough, no `badge.ts`): `application/jay-headless contract=…` **without `src=`**; badge body
+    flattened into both `<jay:badge>` instances. Codegen emits `makePassthroughHeadlessInstanceComponent`
+    with correctly typed props (`Status` enum, numbers, booleans). Added an `expected-hydrate.ts` (`8n`
+    previously had SSR-only coverage; the hydrate comparison only runs when the fixture file exists).
+- **Batch 3 — nested regions (`8i`, `8m`, `8j`).** The parser no longer reads component templates
+  (post-DL#196 it imports logic + templates only), so a nested `<jay:X>` inside a flattened region must
+  have its import declared in the **page** head:
+  - `8i` / `8m`: coded header nesting a plugin `<jay:widget>` — page declares **both** the header `src=`
+    import and the plugin widget import; `8m` additionally has a two-root-child header body and a
+    multi-child conditional widget slot.
+  - `8j`: headfull-in-headfull (page → Layout → header) — page declares **both** headless imports (the
+    header path rebased `../header` → `./header`); produces `_HeadlessHeader` nested inside
+    `_HeadlessLayout` with clean `layout:AR0` → `header:AR0` coordinates. The Layout component's own
+    `layout.jay-html` was also migrated to the flattened form so it is a valid re-flatten source (not
+    parsed by the dev-server — coded components import types from `.jay-contract`, not templates).
+
+Result: full dev-server `711` hydration tests pass (the count rose from 709 because `8n` gained a hydrate
+fixture) + `32` dev-server/action-router. (Vitest intermittently marks the hydration *file* "failed" while
+all 711 tests pass — a pre-existing dev-server teardown race, orthogonal to these fixture-only changes; a
+clean re-run of any subset is green.)
+
+**Not yet migrated (deliberately deferred to pair with the legacy-path deletion):** the two remaining
+`application/jay-headfull contract=` pages outside dev-server —
+`production-build/.../basic-project/.../featured/page.jay-html` and the identical `production-server`
+copy (both: coded `siteHeader` nesting a plugin `cart-badge`, structurally like `8i`). Their tests are
+**behavioural** (route/instance counts, `page-parts.json` config shape) and currently pass **via the
+still-present legacy inlining path** (`production-build` `build.test.ts` 33/33 green). Migrating them now,
+before the legacy path is deleted, would be premature — the instance-count/config assertions must change
+in the *same* commit that removes inlining. So these two fixtures + their assertions move together with
+the Phase 4 legacy-`contract=` deletion.
