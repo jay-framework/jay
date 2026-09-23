@@ -10,9 +10,9 @@ import {
 // @ts-ignore
 import { makeHeadlessInstanceComponent } from '/@fs{{ROOT}}/packages/jay-stack/stack-client-runtime/dist/index.js';
 // @ts-ignore
-import { header } from '/header/header';
-// @ts-ignore
 import { Layout } from '/layout/layout';
+// @ts-ignore
+import { header } from '/header/header';
 function _headlessHeader1HydrateRender(options) {
     const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
     const render = (viewState) =>
@@ -37,7 +37,7 @@ function _headlessLayout0HydrateRender(options) {
             adoptElement('S1/0', {}, [
                 childCompHydrate(
                     _HeadlessHeader1,
-                    (vs) => ({ logoUrl: '/logo.png', style: 'display: contents', jc: 'header' }),
+                    (vs) => ({ logoUrl: '/logo.png' }),
                     'S2/0',
                     refAr0(),
                 ),
@@ -56,12 +56,7 @@ export function hydrate(rootElement, options) {
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('S0/0', {}, [
-                childCompHydrate(
-                    _HeadlessLayout0,
-                    (vs) => ({ style: 'display: contents', jc: 'layout' }),
-                    'S1/0',
-                    refAr02(),
-                ),
+                childCompHydrate(_HeadlessLayout0, (vs) => ({}), 'S1/0', refAr02()),
             ]),
         );
     return [refManager.getPublicAPI(), render];

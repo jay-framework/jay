@@ -14,9 +14,9 @@ import {
 // @ts-ignore
 import { makeHeadlessInstanceComponent } from '/@fs{{ROOT}}/packages/jay-stack/stack-client-runtime/dist/index.js';
 // @ts-ignore
-import { widget } from '/widget';
-// @ts-ignore
 import { header } from '/header/header';
+// @ts-ignore
+import { widget } from '/widget';
 function _headlessWidget1HydrateRender(options) {
     const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
     const render = (viewState) =>
@@ -76,7 +76,7 @@ export function hydrate(rootElement, options) {
             adoptElement('S0/0', {}, [
                 childCompHydrate(
                     _HeadlessHeader0,
-                    (vs) => ({ logoUrl: '/logo.png', style: 'display: contents', jc: 'header' }),
+                    (vs) => ({ logoUrl: '/logo.png' }),
                     'S1/0',
                     refAr02(),
                 ),
