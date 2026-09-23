@@ -11,5 +11,3 @@ tags:
   - tag: cardAction
     type: interactive
     elementType: HTMLButtonElement
-  - tag: body
-    type: slot

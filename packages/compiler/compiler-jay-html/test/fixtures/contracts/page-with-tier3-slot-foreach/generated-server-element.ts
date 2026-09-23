@@ -41,10 +41,10 @@ export function renderToStream(
             w(' jay-coordinate="S2/0/1">');
             w('Action');
             w('</button>');
-            w('<button');
-            w(' jay-coordinate="S1/card:richCards/body/0">');
-            w(escapeHtml(String(`Body for ${vs1.title}`)));
-            w('</button>');
+            w('<div');
+            w('>');
+            w('Default body');
+            w('</div>');
             w('</div>');
         }
         w('</div>');

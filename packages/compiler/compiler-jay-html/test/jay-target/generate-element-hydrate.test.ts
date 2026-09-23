@@ -3,8 +3,6 @@ import {
     readFileAndGenerateElementHydrateFile,
     readFixtureElementHydrateFile,
 } from '../test-utils/file-utils';
-import { forEachInsidePureComponentError } from '../../lib/jay-target/jay-html-helpers';
-
 describe('generate jay-html element hydrate', () => {
     describe('basics', () => {
         it('for simple file with dynamic text', async () => {
@@ -254,12 +252,10 @@ describe('generate jay-html element hydrate', () => {
             );
         });
 
-        // DL#194 Phase C (Fork C) — a Tier 3 (coded) composite with a `body` slot hydrates by adopting
-        // the SSR fragment the server rendered at the anchor. The overridden instance (`richCard`) mounts
-        // the parent-built override fragment via `foreignChild(slots.body)`; the fragment adopts page-scope
-        // coordinates (`S0/0/card:richCard/body/0`) and the parent drives its update via
-        // `childCompHydrate(..., slots)`. The override's ref surfaces at `refs.richCard.body.cta`.
-        it('for Tier 3 slot injection (DL#194 Phase C)', async () => {
+        // DL#196 — a coded (`src=`) headless region flattens the card template into the page and hydrates
+        // it via `makeHeadlessInstanceComponent(renderFn, card, coord)`. The two `<jay:card>` regions carry
+        // the card body as source-owned markup (no slots/overrides); each hydrates its own `childComp`.
+        it('for Tier 3 coded region (DL#196)', async () => {
             const folder = 'contracts/page-with-tier3-slot';
             const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
             expect(hydrateFile.validations).toEqual([]);
@@ -268,12 +264,10 @@ describe('generate jay-html element hydrate', () => {
             );
         });
 
-        // DL#194 §C, under repetition: the parent repeats a Tier 3 slotted instance via forEach.
-        // The slot const (`richCardsSlots` with its `adoptElement`/`refCta()`) must be materialized
-        // PER ITEM inside both the adopt and create callback bodies — not hoisted to the page-render
-        // root — so every repeated item adopts its own slot DOM (within its local scope map) and wires
-        // its own collection ref. Hoisting only wired the first item's "Body for {}" button.
-        it('for Tier 3 slot injection under a parent forEach (DL#194 §C)', async () => {
+        // DL#196 under repetition: the parent repeats a coded card region via forEach. The flattened
+        // render fn is hoisted once; each item mounts its own `childComp(_HeadlessCard0, …, refRichCards())`
+        // with a keyed coordinate function, wiring its own collection ref.
+        it('for Tier 3 coded region under a parent forEach (DL#196)', async () => {
             const folder = 'contracts/page-with-tier3-slot-foreach';
             const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
             expect(hydrateFile.validations).toEqual([]);
@@ -292,75 +286,6 @@ describe('generate jay-html element hydrate', () => {
             expect(await prettify(hydrateFile.val)).toEqual(
                 await readFixtureElementHydrateFile(folder),
             );
-        });
-
-        // DL#193 Phase 2a — a page-authored <override> with a dynamic binding
-        // ({itemName}) resolves against the OUTER page scope. The hydrate compiler
-        // emits `__parentContext: vs` into the child component props and the adopted
-        // override text reads `_p1.itemName` (parentDepth === 1).
-        it('for override binding to parent scope (DL#193)', async () => {
-            const folder = 'contracts/page-with-override-parent-binding';
-            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
-            expect(hydrateFile.validations).toEqual([]);
-            expect(await prettify(hydrateFile.val)).toEqual(
-                await readFixtureElementHydrateFile(folder),
-            );
-        });
-
-        // DL#193 Phase 3 — a structural component's forwarded inner refs on the hydrate target: the
-        // synthetic refs type is declared in the shared refs section and the adopt inline render fn
-        // uses it (`getPublicAPI() as _HeadlessCard0Refs`), matching the element target.
-        it('for forwarded inner ref from structural component (DL#193 Phase 3)', async () => {
-            const folder = 'contracts/page-with-forwarded-ref';
-            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
-            expect(hydrateFile.validations).toEqual([]);
-            expect(await prettify(hydrateFile.val)).toEqual(
-                await readFixtureElementHydrateFile(folder),
-            );
-        });
-
-        // DL#193 Phase 3 — repeated forwarding composite (inside a forEach) on the hydrate target:
-        // page-side ref uses the repeated synthetic type; the inline template's own refs stay single.
-        it('for forwarded inner ref from structural component in forEach (DL#193 Phase 3)', async () => {
-            const folder = 'contracts/page-with-forwarded-ref-foreach';
-            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
-            expect(hydrateFile.validations).toEqual([]);
-            expect(await prettify(hydrateFile.val)).toEqual(
-                await readFixtureElementHydrateFile(folder),
-            );
-        });
-
-        // DL#193 Phase 3 — two structural instances of the same composite embed the same inner
-        // Counter; the shared helper types are declared once at the file level (dedup) on the hydrate
-        // target too.
-        it('for forwarded inner refs from two structural instances of the same composite (DL#193 Phase 3)', async () => {
-            const folder = 'contracts/page-with-forwarded-ref-multi';
-            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
-            expect(hydrateFile.validations).toEqual([]);
-            expect(await prettify(hydrateFile.val)).toEqual(
-                await readFixtureElementHydrateFile(folder),
-            );
-        });
-
-        // DL#193 §C + Phase 3 — an OVERRIDE-injected component (`<jay:Counter>` inside
-        // `<override ref="slot">`) forwards its `cta` ref re-based to the OUTER (page / forEach item)
-        // scope: the adopt-path `childComp(Counter, …)` carries the `(vs, _p1) => _p1` selector and the
-        // composite mount site passes `__parentContext`, matching the element target.
-        it('for override-injected forwarded ref carrying the outer scope (DL#193 §C)', async () => {
-            const folder = 'contracts/page-with-override-forwarded-ref';
-            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
-            expect(hydrateFile.validations).toEqual([]);
-            expect(await prettify(hydrateFile.val)).toEqual(
-                await readFixtureElementHydrateFile(folder),
-            );
-        });
-
-        // DL#193 Phase 3 (§4 validation) — the hydrate target rejects a `forEach` inside a pure
-        // (Tier 2) structural composite with the same exact diagnostic as the element target.
-        it('rejects a forEach inside a pure (Tier 2) structural composite (DL#193 Phase 3)', async () => {
-            const folder = 'contracts/page-with-foreach-in-pure-composite';
-            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
-            expect(hydrateFile.validations).toEqual([forEachInsidePureComponentError('card')]);
         });
 
         it('for headless instance inside forEach', async () => {

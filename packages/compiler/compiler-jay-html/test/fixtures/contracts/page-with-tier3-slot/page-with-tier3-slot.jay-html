@@ -1,9 +1,8 @@
 <html>
 <head>
-    <script type="application/jay-headfull"
+    <script type="application/jay-headless"
             src="./card/card"
-            contract="./card/card.jay-contract"
-            names="card"></script>
+            contract="./card/card.jay-contract"></script>
     <script type="application/jay-data">
 data:
     pageTitle: string
@@ -12,11 +11,19 @@ data:
 <body>
 <div>
     <h1>{pageTitle}</h1>
-    <jay:card ref="plainCard" heading="Plain"></jay:card>
+    <jay:card ref="plainCard" heading="Plain">
+        <div class="card">
+            <h2>{heading}</h2>
+            <button ref="cardAction">Action</button>
+            <div>Default body</div>
+        </div>
+    </jay:card>
     <jay:card ref="richCard" heading="Rich">
-        <override slot="body">
-            <button ref="cta">{pageTitle}</button>
-        </override>
+        <div class="card">
+            <h2>{heading}</h2>
+            <button ref="cardAction">Action</button>
+            <div>Default body</div>
+        </div>
     </jay:card>
 </div>
 </body>

@@ -295,6 +295,11 @@ export const Import = {
         'makeHeadlessInstanceComponent',
         ImportsFor.implementation,
     ),
+    makePassthroughHeadlessInstanceComponent: importStatementFragment(
+        JAY_STACK_CLIENT_RUNTIME,
+        'makePassthroughHeadlessInstanceComponent',
+        ImportsFor.implementation,
+    ),
     HEADLESS_INSTANCES: importStatementFragment(
         JAY_STACK_CLIENT_RUNTIME,
         'HEADLESS_INSTANCES',

@@ -50,7 +50,6 @@ import {
     JayHtmlNamespace,
     JayHtmlSourceFile,
 } from './jay-html-source-file';
-import { buildStructuralPassthroughComp } from './structural-coercions';
 import { OVERRIDE_INJECTED_MARKER, FOREIGN_SLOT_MARKER } from './jay-html-overrides';
 import {
     AsyncDirectiveType,
@@ -1100,10 +1099,12 @@ ${indent.curr}${slotPreamblesStr}return ${childElement.rendered}}, '${trackBy}'$
         if (isValidationError(headlessResult)) return headlessResult;
         const headlessImport = headlessResult;
 
-        // DL#194 Phase B: a Tier 2 (no-code) composite has no runtime boundary — splice its template
-        // into the usage site instead of wrapping it in a `childComp`. Contract fields are projected
-        // onto usage-site expressions via an alias overlay; inner refs surface in the PAGE ref manager.
-        if (headlessImport.structural)
+        // DL#194 Phase B (being deleted, DL#196): the legacy Tier-2 headfull-FS composite splices its
+        // template into the usage site instead of wrapping it in a `childComp`. Concept-A no-code
+        // (`application/jay-headless`, `structural` but not `legacyInlined`) now flows through the single
+        // headless-instance path below, backed by a passthrough (DL#196). Only concept-B (headfull-FS)
+        // still inlines, until its fixtures migrate.
+        if (headlessImport.structural && headlessImport.legacyInlined)
             return renderInlinedStructuralInstance(
                 htmlElement,
                 newContext,
@@ -1415,22 +1416,27 @@ ${indent.curr}${slotPreamblesStr}return ${childElement.rendered}}, '${trackBy}'$
         const renderFnSignature = hasSlots
             ? `options: RenderElementOptions | undefined, slots: ${slotsTypeName}`
             : `options?: RenderElementOptions`;
-        const componentInner = headlessImport.structural
-            ? buildStructuralPassthroughComp(headlessImport.contract?.tags ?? [])
-            : pluginComponentName;
         const coordinateArg = isInsideForEach
             ? `(dataIds) => [...dataIds, '${coordinateSuffix}'].toString()`
             : `'${coordinateKey}'`;
-        const componentDefCode = hasSlots
-            ? `const ${makeFnName} = (slots: ${slotsTypeName}) =>
+        // DL#196: a no-code (structural) region is backed by the synthesized passthrough — no imported
+        // logic module, so it uses `makePassthroughHeadlessInstanceComponent(render, coord)` (2 args).
+        // A coded region uses `makeHeadlessInstanceComponent(render, logic, coord)`.
+        const componentDefCode = headlessImport.structural
+            ? `const ${componentSymbol} = makePassthroughHeadlessInstanceComponent(
+    ${renderFnName},
+    ${coordinateArg},
+);`
+            : hasSlots
+              ? `const ${makeFnName} = (slots: ${slotsTypeName}) =>
     makeHeadlessInstanceComponent(
         (options?: RenderElementOptions) => ${renderFnName}(options, slots),
-        ${componentInner},
+        ${pluginComponentName},
         ${coordinateArg},
     );`
-            : `const ${componentSymbol} = makeHeadlessInstanceComponent(
+              : `const ${componentSymbol} = makeHeadlessInstanceComponent(
     ${renderFnName},
-    ${componentInner},
+    ${pluginComponentName},
     ${coordinateArg},
 );`;
 
@@ -1566,7 +1572,11 @@ ${componentDefCode}`;
                 .plus(propsGetterAndRefs.imports)
                 .plus(renderedRef.imports)
                 .plus(Import.ConstructContext)
-                .plus(Import.makeHeadlessInstanceComponent)
+                .plus(
+                    headlessImport.structural
+                        ? Import.makePassthroughHeadlessInstanceComponent
+                        : Import.makeHeadlessInstanceComponent,
+                )
                 .plus(slotImports),
             [
                 ...propsGetterAndRefs.validations,
@@ -2418,10 +2428,13 @@ export function generateElementHydrateFile(
         .minus(Import.forEach);
     const hydrateImports = typeOnlyImports.plus(Import.jayElement).plus(renderedHydrate.imports);
 
-    // DL#194 Phase B: a Tier 2 (structural) composite is inlined, so its contract ViewState/Refs types
-    // no longer appear in the hydrate output — drop them to avoid dead imports (mirrors the element
-    // target's `usedHeadlessTypeNames` filter). Enum types stay (inlined bindings still reference them),
-    // and any name a non-structural headless still needs is preserved.
+    // DL#194 Phase B: a legacy-inlined Tier 2 (structural) composite is inlined, so its contract
+    // ViewState/Refs types no longer appear in the hydrate output — drop them to avoid dead imports
+    // (mirrors the element target's `usedHeadlessTypeNames` filter). Enum types stay (inlined bindings
+    // still reference them), and any name a non-structural headless still needs is preserved.
+    // DL#196: a no-code (structural, non-legacy) region is a childComp that DOES reference the contract
+    // Refs (`<instance>: <Contract>Refs`) and InteractiveViewState — keep those; only its bare
+    // rootType ViewState (`<Contract>ViewState`) stays unused in the hydrate output, so drop it.
     const structuralHeadless = (jayFile.headlessImports ?? []).filter((h) => h.structural);
     let filteredHydrateImports = jayFile.imports;
     if (structuralHeadless.length > 0) {
@@ -2430,11 +2443,15 @@ export function generateElementHydrateFile(
         );
         const dropNames = new Set<string>();
         for (const headless of structuralHeadless) {
+            // The bare contract ViewState is never referenced in the hydrate output for either the
+            // legacy-inlined body or the concept-A childComp (which uses InteractiveViewState).
             dropNames.add(headless.rootType.name);
-            for (const link of headless.contractLinks)
-                for (const name of link.names)
-                    if (!isEnumType(name.type) && name.name.endsWith('Refs'))
-                        dropNames.add(name.name);
+            // Refs types are unused only for the legacy-inlined body; the concept-A childComp needs them.
+            if (headless.legacyInlined)
+                for (const link of headless.contractLinks)
+                    for (const name of link.names)
+                        if (!isEnumType(name.type) && name.name.endsWith('Refs'))
+                            dropNames.add(name.name);
         }
         // Never drop a name a non-structural headless import still relies on.
         for (const headless of (jayFile.headlessImports ?? []).filter((h) => !h.structural)) {

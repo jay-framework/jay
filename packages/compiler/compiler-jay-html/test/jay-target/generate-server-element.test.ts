@@ -161,12 +161,10 @@ describe('generate jay-html server element', () => {
             );
         });
 
-        // DL#194 Phase C (Fork C) — a Tier 3 (coded) composite with a `body` slot. SSR renders the
-        // overridden instance (`richCard`) by REPLACING the `foreignChild` anchor with the parent-built
-        // override content, emitted at a PAGE-scope coordinate (`S0/0/card:richCard/body/0`) so it lands
-        // in the page coordinate map even though physically nested in the child DOM. The override reads
-        // page-scope view state (`vs.pageTitle`); no `<override>` sibling is rendered.
-        it('for Tier 3 slot injection (DL#194 Phase C)', async () => {
+        // DL#196 — a coded (`src=`) headless region: SSR renders each `<jay:card>` region from the
+        // flattened, source-owned card template (no slot/override anchors). Card view state is cast
+        // as `CardViewState` at the region boundary.
+        it('for Tier 3 coded region (DL#196)', async () => {
             const folder = 'contracts/page-with-tier3-slot';
             const serverFile = await readFileAndGenerateServerElementFile(folder);
             expect(serverFile.validations).toEqual([]);
@@ -175,10 +173,9 @@ describe('generate jay-html server element', () => {
             );
         });
 
-        // DL#194 §C, under repetition: SSR emits the per-item override content inside the `for..of`
-        // item loop, each bound to the item view state (`Body for ${vs1.title}`) at the child-scope
-        // coordinate `S1/card:richCards/body/0`.
-        it('for Tier 3 slot injection under a parent forEach (DL#194 §C)', async () => {
+        // DL#196 under repetition: SSR emits each repeated coded card region inside the `for..of`
+        // item loop, bound to the item view state (`heading: vs1.title`).
+        it('for Tier 3 coded region under a parent forEach (DL#196)', async () => {
             const folder = 'contracts/page-with-tier3-slot-foreach';
             const serverFile = await readFileAndGenerateServerElementFile(folder);
             expect(serverFile.validations).toEqual([]);
@@ -220,64 +217,6 @@ describe('generate jay-html server element', () => {
         // SSR HTML matches the client's coerced prop getter.
         it('for structural (Tier 2) instance — coerces passthrough props by dataType (DL#187)', async () => {
             const folder = 'contracts/page-with-structural-badge';
-            const serverFile = await readFileAndGenerateServerElementFile(folder);
-            expect(serverFile.validations).toEqual([]);
-            expect(await prettify(serverFile.val)).toEqual(
-                await readFixtureServerElementFile(folder),
-            );
-        });
-
-        // DL#193 Phase 2c — an override binding that resolves against the OUTER (page) scope rides
-        // Capability A ($parent). On the server the whole tree renders in one `renderToStream`, so
-        // the page's `vs` is lexically in scope inside the instance body: the binding emits
-        // `vs.itemName` directly while the instance's own bindings use `vs_card0.*`.
-        it('renders an override binding to the parent scope on the server target (DL#193)', async () => {
-            const folder = 'contracts/page-with-override-parent-binding';
-            const serverFile = await readFileAndGenerateServerElementFile(folder);
-            expect(serverFile.validations).toEqual([]);
-            expect(await prettify(serverFile.val)).toEqual(
-                await readFixtureServerElementFile(folder),
-            );
-        });
-
-        // DL#193 Phase 3 — refs do not exist on the server target (no interactivity), so forwarding
-        // is a no-op here: the structural component's inline body renders server-side with the
-        // instance's coerced props and no ref plumbing. Locks in that forwarding adds nothing server-side.
-        it('for forwarded inner ref from structural component — refs are a no-op (DL#193 Phase 3)', async () => {
-            const folder = 'contracts/page-with-forwarded-ref';
-            const serverFile = await readFileAndGenerateServerElementFile(folder);
-            expect(serverFile.validations).toEqual([]);
-            expect(await prettify(serverFile.val)).toEqual(
-                await readFixtureServerElementFile(folder),
-            );
-        });
-
-        // DL#193 Phase 3 — same, inside a forEach (repeated composite) on the server target.
-        it('for forwarded inner ref from structural component in forEach (DL#193 Phase 3)', async () => {
-            const folder = 'contracts/page-with-forwarded-ref-foreach';
-            const serverFile = await readFileAndGenerateServerElementFile(folder);
-            expect(serverFile.validations).toEqual([]);
-            expect(await prettify(serverFile.val)).toEqual(
-                await readFixtureServerElementFile(folder),
-            );
-        });
-
-        // DL#193 Phase 3 — two structural instances of the same composite; server target renders both
-        // inline bodies with no ref plumbing (forwarding is a client-only concern).
-        it('for forwarded inner refs from two structural instances of the same composite (DL#193 Phase 3)', async () => {
-            const folder = 'contracts/page-with-forwarded-ref-multi';
-            const serverFile = await readFileAndGenerateServerElementFile(folder);
-            expect(serverFile.validations).toEqual([]);
-            expect(await prettify(serverFile.val)).toEqual(
-                await readFixtureServerElementFile(folder),
-            );
-        });
-
-        // DL#193 §C — an override-injected `<jay:Counter>` on the server target: refs are a client-only
-        // concern, so forwarding (and the outer-scope re-basing) is a no-op here. The injected component
-        // renders as literal `<jay:Counter>` text just like the plain forwarded-ref fixture.
-        it('for override-injected forwarded ref — refs are a no-op (DL#193 §C)', async () => {
-            const folder = 'contracts/page-with-override-forwarded-ref';
             const serverFile = await readFileAndGenerateServerElementFile(folder);
             expect(serverFile.validations).toEqual([]);
             expect(await prettify(serverFile.val)).toEqual(

@@ -19,6 +19,13 @@ export {
     isSuppressed,
 } from './override';
 export { normalizeExpr, expressionsEqual } from './normalize';
-export { parseInlineStyle } from './style';
+export { parseInlineStyle, serializeInlineStyle } from './style';
 export { diffMarkup, diffBodies } from './diff-markup';
 export { diffCss } from './diff-css';
+export {
+    type LoadedTemplate,
+    type MaterialiseOptions,
+    type MaterialiseResult,
+    materialise,
+    mergeOverrides,
+} from './materialise';

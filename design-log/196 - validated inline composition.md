@@ -689,3 +689,267 @@ of the invented `jay-stack add` (folded into `sync`) are all reflected above and
 
 **Not yet wired:** the differ is not connected to `stack-cli/lib/validate.ts` — that is Phase 2, which
 loads regions via the existing `parseJayFile` and feeds `diffBodies`.
+
+### Phase 2/3 — materialiser engine (complete); wiring blocked on a parser gap
+
+The **materialiser** — the single source-to-source engine behind first-fill and sync (§5) — is built
+and unit-tested in the same package (`lib/materialise.ts`, 13 tests; package total 63/63 green):
+
+- `materialise(pageHtml, opts) → { html, css, errors }` flattens every resolvable `<jay:X>` region
+  transitively, wraps each component's CSS in `@scope (.<ref>)` (Q5), detects template-inclusion cycles,
+  and hard-errors on an unresolvable `template=` (criterion 6). Dependency-light and pure: template
+  loading, the contract→template map, the scope selector, and the prettifier are all injected, so the
+  editor (DL#42), agent-kit, and the CLI share one engine.
+- `preserveOverrides: true` is the sync path: `mergeOverrides(templateBody, existingBody)` re-flattens
+  from source but carries every `override` facet the page owns — attribute, `style.<prop>`, `children`,
+  and whole-node — re-attaching the markers so holes persist across future syncs. Node matching rides on
+  the differ's content-child **alignment**; unmarked structural divergence re-flattens (template wins),
+  matching §5's "deterministic overwrite-with-holes, no merge base."
+
+**Correction to Phase 2's parser-state assumption (verified against source).** Phase 2 above says "Read
+`template=` on the `application/jay-headless` tag (parser support present, `:687,1271`; verify the read
+path)." Verified — that citation is wrong and `template=` is not read anywhere. The accurate map of the
+current parser (`jay-html-parser.ts`):
+
+- **Headless is plugin-only, logic-only.** `parseHeadlessImports` (`:640`) requires `plugin=` (`:663`)
+  and `contract=` (`:668`), resolves via `importResolver.resolvePluginComponent` (`:693`), reads **no**
+  `src` and **no** `template`. (`:687` is only a YAML-parse error string mentioning `contract=`.)
+- **Local components go through `application/jay-headfull`, not headless.** With a `contract=` attribute
+  they route to `parseHeadfullFSImports` (`:1092`), resolved by file path (`readJayHtml`/`resolveLink`),
+  and this is the path that **inlines** the component body into the page: `injectComposableTemplateIntoTag`
+  (`:865`) / `injectHeadfullFSTemplates(Recursive)` (`:947`,`:972`), Tier 2 vs Tier 3 by `hasCodeFile`
+  (`:1345`). The element/hydrate/server inlining consumers are `renderInlinedStructuralInstance`
+  (`jay-html-compiler.ts:1006`) + its hydrate (`…-hydrate.ts:687`) / server mirrors,
+  `structural-coercions.ts`, and `Variables.forInlinedComponent`.
+- So §2's single plugin-less `application/jay-headless` carrying file-path `contract=` + optional `src=`
+  - `template=` is a **target shape, not the current one.**
+
+**Approved direction (design owner, 2026-09-23).** Resolve the gap by the Phase-4 collapse rather than by
+adding a parallel path: post-DL the parser **stops inlining components** and imports only (a) component
+**logic** — from a plugin **or** the local components folder — and (b) **templates** from the components
+folder. Local components unify onto logic-only `application/jay-headless` (gaining a local file-path
+branch alongside the plugin branch; `src=` present ⇒ coded, absent ⇒ passthrough; `template=` names the
+source to flatten). `application/jay-headfull`'s template-**inlining** apparatus
+(`injectComposableTemplateIntoTag`, `injectHeadfullFSTemplates*`, `renderInlinedStructuralInstance` +
+mirrors, `structural-coercions`, `forInlinedComponent`) is removed — flattening is now the materialiser's
+job at build/sync time, and the page already contains the flattened body at compile time.
+
+**Consequence for sequencing.** The engine (differ + materialiser) is complete in isolation. Wiring
+`validate` + `sync` and reaching Phase 5 SSR now folds the parser change forward: extend headless to the
+local file-path/passthrough branch + `template=` provenance, and delete the inlining apparatus, under the
+Phase-4 acceptance (labelled commits, full `toEqual` on element/hydrate/server, `yarn confirm`).
+
+**The collapse is mostly subtraction — the passthrough already exists at load time.** Tracing the real
+runtime path (per CLAUDE.md): `load-page-parts.ts:176-185` (and the production twins
+`production-{build,server}/lib/builder/load-production-parts.ts`) already synthesize
+`makePassthroughInstanceComponent(contract.tags)` for any `headlessImport` flagged `structural` (no
+`.ts`), keyed off `codeLink`/`contract`. So a no-code region does **not** need a new runtime — criterion
+1's backing already ships. The collapse is therefore:
+
+1. **Parser (add):** a local, plugin-less headless branch in `parseHeadlessImports` — file-path
+   `contract=` via `importResolver.loadContract` (reusing `parseHeadfullFSImports`'s resolution,
+   `:1202-1248`), `src=` present ⇒ coded `codeLink` via `resolveLink`, absent ⇒ `structural: true`
+   (loader supplies the passthrough). `template=` recorded on the import for validate/sync; the region
+   **body is already inline in the page**, so compile needs no template read.
+2. **Compiler (remove, ×3 targets):** delete the `if (headlessImport.structural) return
+renderInlinedStructuralInstance(...)` branch (`jay-html-compiler.ts:1106`, + hydrate/server mirrors)
+   so **every** headless instance — coded or passthrough-backed — compiles through the one real-instance
+   path. No-code and coded then differ only by the backing component (criteria 1–2).
+3. **Parser + codegen (delete):** the inlining apparatus —
+   `injectComposableTemplateIntoTag`/`injectHeadfullFSTemplates*` (`jay-html-parser.ts:865,947,972`),
+   `parseHeadfullFSImports`' injection loop, `renderInlinedStructuralInstance` +
+   hydrate/server mirrors, `structural-coercions.ts`, and `Variables.forInlinedComponent`.
+
+This keeps the null-hypothesis discipline (§Prior Art): no new runtime, no new codegen — the design is a
+net removal plus one additive parser branch.
+
+### Phase 4a — parser local-headless branch (landed, additive)
+
+`parseHeadlessImports` (`jay-html-parser.ts`) now resolves a `<script type="application/jay-headless">`
+**without** `plugin=` as a local component: file-path `contract=` via `importResolver.loadContract`;
+`src=` present ⇒ coded (resolve the single exported `JayComponentType` via `resolveLink` +
+`analyzeExportedTypes`, error on 0 or >1); `src=` absent ⇒ `structural: true`; `template=` recorded on
+the import (`JayHeadlessImports.template`) for validate/sync. `options: ResolveTsConfigOptions` is threaded
+into `parseHeadlessImports` (+ both call sites). The plugin branch is unchanged. Type-check clean;
+`parse-jay-file.unit.test.ts` 78/78 green. **This is additive only** — no deletion, no compiler change
+yet, so the tree stays green.
+
+**Scope reckoning (inventory).** A full sweep found the removal's real blast radius is much larger than
+"manageable": 12 contract-bearing-headfull compiler fixtures (~26 generated snapshots) + 4 error
+fixtures; 8 test files across compiler / stack-cli / dev-server / runtime; 14 dev-server fixture dirs
+(`8a`–`8n`); 5 smoke pages + ~12 components + 4 `examples/jay` apps (lib + lib-secure); 8 external source
+files (dev-server, production-build ×2, production-server, stack-server-build, stack-cli) plus the runtime
+half (`resolve-instance-props.ts` `coerceInstancePropValue`, `passthrough-component.ts`). Two entanglements
+change the plan: (a) the inlining removal reaches the **dev-server / production-build pre-render pipeline**
+(`injectHeadfullFSTemplates` is called there — that pre-render step exists _because_ components were
+inlined at build; post-DL the body is already materialised into the page, so the step is removed, not just
+the codegen); (b) the no-code client path needs a **client passthrough constructor** that does not exist
+(server has `makePassthroughInstanceComponent`; the client twin is a small **new runtime primitive**,
+contradicting this DL's "no new runtime"). Because of the size + the DL-contradicting primitive, the
+remaining collapse is being staged as reviewable, always-green increments rather than one push.
+
+**Decisions (2026-09-23):** (1) add the client passthrough primitive and record the deviation here
+(chosen over forbidding no-code on the client); (2) land the collapse as always-green increments,
+each ending on a passing build/tests.
+
+### Phase 4b — client passthrough primitive (landed, additive) — DL deviation
+
+**Deviation from §Prior Art ("no new runtime").** The server had `makePassthroughInstanceComponent`
+(load-time synthesis) so no-code regions render transparently server-side. The client/hydrate target
+imports each instance's logic and calls `makeHeadlessInstanceComponent(render, logic, coord)` — there
+was **no** passthrough path, so a no-code (structural) region had no way to compile as a real instance
+on the client. The "no new runtime" claim did not hold for the client target.
+
+**Resolution (minimal).** Added `makePassthroughHeadlessInstanceComponent(preRender, coordinateKey)`
+in `stack-client-runtime/lib/headless-instance-context.ts` (auto-exported via `lib/index.ts`'s `*`).
+It is a thin wrapper over the existing `makeHeadlessInstanceComponent`: an identity `comp`
+(`render: () => ({})`, so the merged render output is exactly the fast ViewState resolved from the
+`HEADLESS_INSTANCES` context by coordinate) plus `clientDefaults: (props) => ({ viewState: props })`
+echoing props when no server data is present — mirroring the server passthrough's per-phase echo. All
+coordinate lookup, suffix fallback, and hydration gating are inherited unchanged. No new context, no
+new codegen contract; type-check clean, existing tests green. Codegen for a no-code region on the
+client/hydrate target will call this instead of `makeHeadlessInstanceComponent` (no logic import).
+
+**Settled design details (design owner, 2026-09-23) that scope the blast radius.**
+
+1. **`application/jay-headfull` is kept for regular (client-only) jay, forbidden in jay-stack.** Regular
+   headfull — `application/jay-headfull` **without** `contract=`, resolved by `parseHeadfullImports` with
+   `names=`, rendered as a real nested component (`renderNestedComponent`) — is a `makeJayComponent`
+   (template+logic) construct and is **untouched**. What is removed is the **contract-bearing** headfull
+   path (`parseHeadfullFSImports`) — this is the jay-stack Tier 2/3 **inlining** path, and it is exactly
+   what the new model replaces. So: a `<script type="application/jay-headfull" contract="…">` is now a
+   **validation error** directing the author to `application/jay-headless`. The `contract=` attribute
+   already discriminates the two, so no new stack-vs-regular flag is needed. This keeps the deletion's
+   blast radius to the jay-stack composition path only.
+2. **jay-stack local components use plugin-less `application/jay-headless`, no `names=`.** `src=` present ⇒
+   coded: the parser resolves the single exported Jay(Stack) component from `src=` (via `resolveLink` +
+   `analyzeExportedTypes`; 0 or >1 exported component ⇒ error) and builds the instance **inline** —
+   the inline page body is compiled to the render function and bound to the imported logic (the same
+   `renderHeadlessInstance` real-instance path coded plugin headless already uses). `makeJayStackComponent`
+   separates template from logic, so no `makeJayComponent` const and no `names=` is authored. `src=`
+   absent ⇒ `structural: true` (loader supplies the passthrough).
+3. **Every component region requires a `ref`; the framework generates one when absent** (reusing today's
+   ref-generation) so the materialiser's `@scope (.<ref>)` always has an anchor — the "emit unscoped"
+   fallback in the current engine is replaced. Component CSS is therefore always `@scope`-isolated
+   (criterion 7).
+
+### Phase 4c — first concept-A codegen path proven (Increment 2, green)
+
+The strangler-fig split (temporary `legacyInlined?: boolean` on `JayHeadlessImports`, set only by
+`parseHeadfullFSImports`) is in on all three targets. A no-code (structural, **non**-legacy) region now
+compiles through the DL#196 model — flattened body → inline render fn → `childComp` mount — while
+concept-B (`legacyInlined`) still inlines unchanged.
+
+Proof fixture: `contracts/page-with-structural-badge` migrated from `application/jay-headfull` to
+plugin-less `application/jay-headless` (`contract=` + `template=`, no `src=` ⇒ `structural`). Generated
+output across targets:
+
+- **element:** `const _HeadlessBadge0 = makePassthroughHeadlessInstanceComponent(_headlessBadge0Render, 'S0/0/badge:AR0');`
+  then `childComp(_HeadlessBadge0, propsGetter, refAr0())`. Static props coerced to declared types
+  (enum→member, number/boolean→literal). Region now surfaces a ref (`ar0: BadgeRefs`) where the old
+  inlined model exposed none.
+- **hydrate:** same const via `makePassthroughHeadlessInstanceComponent`, mounted with `childCompHydrate`.
+- **server:** the existing concept-A coercion branch (reads `vs.__headlessInstances['S0/0/badge:AR0']`,
+  casts `as BadgeViewState`) — no early-return inlining.
+
+**Codegen fixes required to reach green (all three targets had DL#194-era import filters that assumed
+structural ⇒ inlined):**
+
+- **hydrate `generateElementHydrateFile`** — the Phase-B drop of structural contract `…Refs` /
+  ViewState imports was gated to `legacyInlined`; concept-A keeps `…Refs` + `InteractiveViewState`
+  (referenced by the `childComp` ref type) and drops only the unused bare `…ViewState`.
+- **hydrate ref block** — was gated to `legacyInlined` for the early-return; the passthrough const +
+  `Import.makePassthroughHeadlessInstanceComponent` path is additive for concept-A.
+- **server `generateServerElementFile`** — the `usedTypeNames` skip of the structural rootType
+  ViewState was gated to `legacyInlined`; concept-A keeps `…ViewState` (the coercion cast imports it).
+- **parser** — the local (plugin-less) branch stores `contractName = paramCase(loadedContract.name)`
+  (the `<jay:tag>` name) rather than the `contract=` file path, so `resolveHeadlessImport` matches.
+  (`change-case` in this workspace exports `paramCase`, not `kebabCase`.)
+
+Result: `compiler-jay-html` 807 pass / 4 skip; workspace `build:check-types` clean (generated fixtures
+type-check as real TS). Remaining concept-B fixtures still migrate family-by-family before the legacy
+path (`parseHeadfullFSImports`, `renderInlinedStructuralInstance` + mirrors, `structural-coercions`,
+`legacyInlined`) is deleted.
+
+### Phase 4d — forwarded-ref / override family removed (Increment, green)
+
+Per §6 ("`<override>`, `slot`, ref forwarding, `__parentContext` are all deleted") and the design-owner
+decision (2026-09-23) that the DL#193/#194 ref-forwarding & override-injection patterns do not survive
+the collapse, these six concept-B fixtures were **deleted** (design owner chose deletion over
+converting each to an error fixture — the eventual parser deletion of `parseHeadfullFSImports` removes
+the code paths that would raise such errors anyway):
+
+- `page-with-forwarded-ref`, `page-with-forwarded-ref-foreach`, `page-with-forwarded-ref-multi`
+- `page-with-override-forwarded-ref`, `page-with-override-parent-binding`, `page-override-no-ref`
+
+Removed their `it(...)` blocks across `generate-element` (trusted + main-sandbox), `generate-element-
+hydrate`, and `generate-server-element` tests, plus the now-orphaned `overrideRequiresExplicitRefError`
+import in the element test (the helper itself stays — still referenced by `parseHeadfullFSImports` until
+the legacy path is deleted).
+
+Still on the legacy (`legacyInlined`) path, retained until their own increments: the Tier-2 validation
+fixtures (`page-with-foreach-in-pure-composite`, `page-tier2-recursion`, `page-tier2-root-parent`) and
+the Tier-3 slot fixtures (`page-with-tier3-slot`, `page-with-tier3-slot-foreach`).
+
+Result: `compiler-jay-html` 787 pass / 4 skip; workspace `build:check-types` clean.
+
+### Phase 4e — Tier-2 validation fixtures removed; recursion moves to `validate` (Increment, green)
+
+Design-owner decisions (2026-09-23) on the DL#194 Tier-2 validation family, all of which existed only
+because of Tier-2 *inlining* constraints the passthrough model removes:
+
+- **`page-with-foreach-in-pure-composite` + `page-tier2-root-parent` — deleted.** With a no-code region
+  backed by the passthrough (its ViewState = props), there is no inlining scope to constrain: neither a
+  `forEach` inside the region nor a root-level `$parent` is a special compile-time case anymore.
+  Removed both fixtures and their `it(...)` blocks (element trusted + hydrate for the forEach case,
+  element for the root-parent case), plus the now-orphaned `forEachInsidePureComponentError` /
+  `rootParentInInlinedCompositeError` imports in the tests. **The helper functions stay in `lib`** —
+  still referenced by `parseHeadfullFSImports` / the inlining path until the legacy path is deleted.
+- **`page-tier2-recursion` — recursion detection moves to `jay-stack validate`.** A `<jay:X>` self-cycle
+  is a cycle in the *flatten* graph, not the (now-deleted) compile-time inline-expansion graph, so it is
+  no longer a parser concern. Removed the parse-time test (`readAndParseJayFile` +
+  `headfullRecursionError`) from `compiler-jay-html`. **Debt owed by the validate engine (Phase 2):**
+  region/flatten-graph validation must detect a materialised region whose source transitively contains
+  its own `<jay:X>` and report it (the un-materialised `<jay:X>` degenerate case is already a hard error
+  in `renderHeadlessInstance`). `headfullRecursionError` stays in `lib` until then.
+
+Result: `compiler-jay-html` 783 pass / 4 skip; workspace `build:check-types` clean.
+
+**Remaining concept-B fixtures:** only the Tier-3 slot family (`page-with-tier3-slot`,
+`page-with-tier3-slot-foreach`). Decision (2026-09-23): **migrate to `src=` coded regions** — the parser
+local branch already resolves `src=` to a single exported component (`jay-html-parser.ts:758-771`). This
+is the last migration before `parseHeadfullFSImports` + the inlining path + `legacyInlined` can be
+deleted; because `slot` vocabulary is removed (§6), the migration re-authors slot content inline in the
+region body rather than via `<override slot>`.
+
+### Phase 4f — Tier-3 slot family migrated to coded `src=` regions (Increment, green)
+
+Both Tier-3 fixtures re-authored (2026-09-23) as DL#196 coded regions; this retires the last concept-B
+fixture family. No new framework code — the parser local `src=` branch and `makeHeadlessInstanceComponent`
+codegen (proven in 4c/4a) already handle it. Per-fixture:
+
+- **`page-with-tier3-slot`** (two static instances) and **`page-with-tier3-slot-foreach`** (one instance
+  repeated under `forEach`/`trackBy`): script tag `application/jay-headfull … names="card"` →
+  `application/jay-headless src="./card/card" contract="./card/card.jay-contract"` (no `names=`). Each
+  `<jay:card>` now carries the card body as source-owned markup inline; `<override slot="body">` removed.
+- **`card.jay-contract`** (both fixtures): dropped the `- tag: body / type: slot` entry — the card body is
+  ordinary owned markup, so there is no slot tag. `card.jay-html` lost `ref="body"` on its body `<div>`.
+  `card.ts` / `card.jay-contract.d.ts` were already slot-free (no `body` ref) — unchanged.
+
+Regenerated all 6 snapshots (element / hydrate / server × 2 fixtures), 0 validation errors. Verified
+codegen: element imports `{card}` + `makeHeadlessInstanceComponent`, emits one flattened `renderFn` per
+distinct region and `makeHeadlessInstanceComponent(renderFn, card, coord)` + `childComp(...)`. Under
+`forEach` the render fn is hoisted once and the `childComp(_HeadlessCard0, …, refRichCards())` + keyed
+coordinate function `(dataIds) => [...dataIds, 'card:richCards'].toString()` live inside the item callback.
+The bare `CardViewState` import is unused in element/hydrate (used only in server casts) — this matches the
+pre-existing coded-instance convention (`page-with-headless-instance` imports `ProductCardViewState`
+identically) and there is no `noUnusedLocals` in the workspace, so it is left as-is, not special-cased.
+Test `it(...)` descriptions across the three targets rewritten from DL#194 slot semantics to DL#196.
+
+Result: `compiler-jay-html` 783 pass / 4 skip; workspace `build:check-types` clean.
+
+**No remaining concept-B fixtures.** The inlining path (`parseHeadfullFSImports`, `legacyInlined`, the
+`renderInlined*` mirrors, Fork-C slot codegen, `jay-html-overrides.ts`, and the now-orphaned
+`forEachInsidePureComponentError` / `rootParentInInlinedCompositeError` / `headfullRecursionError` helpers)
+is now dead for fixtures and can be deleted as its own increment (design-owner decision: **separate
+increment**). Recursion detection remains owed to `jay-stack validate` (Phase 2).

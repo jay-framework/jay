@@ -22,6 +22,10 @@ export interface JayHeadlessImports {
     metadata?: Record<string, unknown>; // Optional metadata from dynamic contract generator
     headlessProps?: Record<string, string>; // Static props from YAML body in the script tag
     structural?: boolean; // True when no .ts code file exists — passthrough component (DL#162)
+    template?: string; // DL#196: source-template provenance (the `template=` attribute) for validate/sync re-flatten
+    legacyInlined?: boolean; // DL#196 transition: set only by parseHeadfullFSImports (concept B) — routes to the
+    // to-be-deleted Tier-2 inlining path. Concept-A no-code (structural, not legacyInlined) routes to the new
+    // passthrough-childComp path. Removed once all concept-B fixtures migrate off inlining.
 }
 
 export interface JayHtmlHeadLink {

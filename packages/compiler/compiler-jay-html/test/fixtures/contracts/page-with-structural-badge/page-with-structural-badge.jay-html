@@ -1,9 +1,8 @@
 <html>
 <head>
-    <script type="application/jay-headfull"
-            src="./badge/badge"
+    <script type="application/jay-headless"
             contract="./badge/badge.jay-contract"
-            names="badge"></script>
+            template="./badge/badge.jay-html"></script>
     <script type="application/jay-data">
 data:
     pageTitle: string
@@ -12,7 +11,16 @@ data:
 <body>
 <div>
     <h1>{pageTitle}</h1>
-    <jay:badge label="Live Status" status="success" count="42" featured="true" />
+    <jay:badge label="Live Status" status="success" count="42" featured="true">
+        <span class="badge {status === success ? badge--success} {status === warning ? badge--warning} {status === error ? badge--error}">
+            <span if="status == success" class="badge-icon badge-icon--success">[OK]</span>
+            <span if="status == warning" class="badge-icon badge-icon--warning">[!]</span>
+            <span if="status == error" class="badge-icon badge-icon--error">[X]</span>
+            <span class="badge-label">{label}</span>
+            <span class="badge-count">Count: {count}</span>
+            <span if="featured" class="badge-star">FEATURED</span>
+        </span>
+    </jay:badge>
 </div>
 </body>
 </html>

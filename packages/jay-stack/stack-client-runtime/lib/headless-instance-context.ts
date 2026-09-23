@@ -219,3 +219,43 @@ export function makeHeadlessInstanceComponent<
     // Only pass plugin context markers — HEADLESS_INSTANCES is accessed via useContext directly
     return makeJayComponent(preRender, wrappedConstructor, ...resolvedContexts);
 }
+
+/**
+ * DL#196 — client/hydrate twin of the server's `makePassthroughInstanceComponent`.
+ *
+ * A no-code (structural) region has a materialised template but no author `.ts` logic module, so
+ * there is nothing to import as the interactive constructor. This synthesises an identity instance:
+ * the interactive phase contributes no properties (`render: () => ({})`), so the merged output is
+ * exactly the fast ViewState resolved from the HEADLESS_INSTANCES context by coordinate; when no
+ * server data is present, `clientDefaults` echoes the incoming props — mirroring the server
+ * passthrough's per-phase prop echo. All the coordinate lookup, suffix fallback, and hydration
+ * gating is inherited from `makeHeadlessInstanceComponent`.
+ *
+ * DL deviation: DL#196 §Prior Art claimed "no new runtime". The server passthrough exists at load
+ * time, but the client/hydrate target imports each instance's logic and had no passthrough path — a
+ * no-code region needs this identity constructor to compile as a real instance. Kept minimal (a thin
+ * wrapper over the existing instance machinery). See DL#196 Implementation Results.
+ */
+export function makePassthroughHeadlessInstanceComponent<
+    PropsT extends object,
+    ViewState extends object,
+    Refs extends object,
+    JayElementT extends JayElement<ViewState, Refs>,
+    CompCore extends JayComponentCore<PropsT, ViewState>,
+>(
+    preRender: PreRenderElement<ViewState, Refs, JayElementT>,
+    coordinateKey: string | ((dataIds: string[]) => string),
+): (props: PropsT) => ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT> {
+    const passthroughDef: HeadlessComponentDef = {
+        // Identity interactive constructor: no interactive-phase properties. The merged render
+        // output ({ ...resolvedFastVS, ...{} }) is the context-sourced fast ViewState.
+        comp: () => ({ render: () => ({}) }),
+        // Echo props as ViewState when the region has no server data (mirrors the server passthrough).
+        clientDefaults: (props) => ({ viewState: props }),
+    };
+    return makeHeadlessInstanceComponent<PropsT, ViewState, Refs, JayElementT, CompCore>(
+        preRender,
+        passthroughDef,
+        coordinateKey,
+    );
+}

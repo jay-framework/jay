@@ -1,5 +1,4 @@
 import {
-    BaseJayElement,
     JayElement,
     element as e,
     dynamicText as dt,
@@ -8,14 +7,17 @@ import {
     dynamicElement as de,
     forEach,
     ConstructContext,
-    HTMLElementCollectionProxy,
     childComp,
-    foreignChild,
     RenderElementOptions,
     JayContract,
 } from '@jay-framework/runtime';
 import { makeHeadlessInstanceComponent } from '@jay-framework/stack-client-runtime';
-import { CardViewState, CardRefs, CardInteractiveViewState } from './card/card.jay-contract';
+import {
+    CardViewState,
+    CardRefs,
+    CardInteractiveViewState,
+    CardRepeatedRefs,
+} from './card/card.jay-contract';
 import { card } from './card/card';
 
 export interface CardOfPageWithTier3SlotForeachViewState {
@@ -30,18 +32,8 @@ export interface PageWithTier3SlotForeachViewState {
 
 export interface PageWithTier3SlotForeachElementRefs {
     cards: {
-        richCards: _HeadlessCard0Refs;
+        richCards: CardRepeatedRefs;
     };
-}
-
-interface _HeadlessCard0Refs extends CardRefs {
-    body: {
-        cta: HTMLElementCollectionProxy<CardOfPageWithTier3SlotForeachViewState, HTMLButtonElement>;
-    };
-}
-interface _HeadlessCard0Slots {
-    [slot: string]: BaseJayElement<CardOfPageWithTier3SlotForeachViewState>;
-    body: BaseJayElement<CardOfPageWithTier3SlotForeachViewState>;
 }
 
 export type PageWithTier3SlotForeachSlowViewState = {};
@@ -78,10 +70,7 @@ type _HeadlessCard0ElementRender = RenderElement<
 >;
 type _HeadlessCard0ElementPreRender = [CardRefs, _HeadlessCard0ElementRender];
 
-function _headlessCard0Render(
-    options: RenderElementOptions | undefined,
-    slots: _HeadlessCard0Slots,
-): _HeadlessCard0ElementPreRender {
+function _headlessCard0Render(options?: RenderElementOptions): _HeadlessCard0ElementPreRender {
     const [refManager, [refCardAction]] = ReferencesManager.for(
         options,
         ['cardAction'],
@@ -94,33 +83,23 @@ function _headlessCard0Render(
             e('div', { class: 'card' }, [
                 e('h2', {}, [dt((vs) => vs.heading)]),
                 e('button', {}, ['Action'], refCardAction()),
-                foreignChild(slots.body),
+                e('div', {}, ['Default body']),
             ]),
         ) as _HeadlessCard0Element;
     return [refManager.getPublicAPI() as CardRefs, render];
 }
 
-const _makeHeadlessCard0 = (slots: _HeadlessCard0Slots) =>
-    makeHeadlessInstanceComponent(
-        (options?: RenderElementOptions) => _headlessCard0Render(options, slots),
-        card,
-        (dataIds) => [...dataIds, 'card:richCards'].toString(),
-    );
+const _HeadlessCard0 = makeHeadlessInstanceComponent(_headlessCard0Render, card, (dataIds) =>
+    [...dataIds, 'card:richCards'].toString(),
+);
 
 export function render(options?: RenderElementOptions): PageWithTier3SlotForeachElementPreRender {
-    const [bodyRefManager, [refCta]] = ReferencesManager.for(options, [], ['cta'], [], []);
-    const [richCardsRefManager, []] = ReferencesManager.for(options, [], [], [], [], {
-        body: bodyRefManager,
-    });
     const [cardsRefManager, [refRichCards]] = ReferencesManager.for(
         options,
         [],
         [],
         [],
         ['richCards'],
-        {
-            richCards: richCardsRefManager,
-        },
     );
     const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
         cards: cardsRefManager,
@@ -132,19 +111,13 @@ export function render(options?: RenderElementOptions): PageWithTier3SlotForeach
                 forEach(
                     (vs: PageWithTier3SlotForeachViewState) => vs.cards,
                     (vs1: CardOfPageWithTier3SlotForeachViewState) => {
-                        const richCardsSlots: _HeadlessCard0Slots = {
-                            body: e('button', {}, [dt((vs1) => `Body for ${vs1.title}`)], refCta()),
-                        };
                         return e('div', { class: 'cards' }, [
                             childComp(
-                                _makeHeadlessCard0(richCardsSlots),
+                                _HeadlessCard0,
                                 (vs1: CardOfPageWithTier3SlotForeachViewState) => ({
                                     heading: vs1.title,
-                                    jc: 'card',
                                 }),
                                 refRichCards(),
-                                undefined,
-                                richCardsSlots,
                             ),
                         ]);
                     },

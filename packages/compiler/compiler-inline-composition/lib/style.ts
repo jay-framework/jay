@@ -19,6 +19,11 @@ export function parseInlineStyle(style: string | undefined): Map<string, string>
     return out;
 }
 
+/** Serialize an ordered property→value map back to an inline `style` string. */
+export function serializeInlineStyle(decls: Map<string, string>): string {
+    return [...decls].map(([property, value]) => `${property}: ${value}`).join('; ');
+}
+
 function splitDeclarations(style: string): string[] {
     const parts: string[] = [];
     let depthParen = 0;

@@ -8,7 +8,7 @@ import {
     type TemplatePart,
 } from '@jay-framework/compiler-shared';
 import yaml from 'js-yaml';
-import { capitalCase, pascalCase } from 'change-case';
+import { capitalCase, paramCase, pascalCase } from 'change-case';
 import { camelCase } from '../case-utils';
 import pluralize from 'pluralize';
 import {
@@ -643,6 +643,7 @@ async function parseHeadlessImports(
     filePath: string,
     importResolver: JayImportResolver,
     projectRoot: string,
+    options: ResolveTsConfigOptions,
 ): Promise<JayHeadlessImports[]> {
     const result: JayHeadlessImports[] = [];
 
@@ -659,11 +660,12 @@ async function parseHeadlessImports(
             continue;
         }
 
-        // Validate required attributes
-        if (!pluginAttr) {
-            validations.push('headless import must specify plugin attribute');
-            continue;
-        }
+        // DL#196: a headless import resolves from a plugin (plugin=) or the local components
+        // folder (no plugin=, file-path contract=). `src=` present ⇒ coded (resolve the single
+        // exported component); absent ⇒ passthrough. `template=` records source provenance for
+        // validate/sync re-flatten.
+        const srcAttr = element.getAttribute('src') ?? undefined;
+        const templateAttr = element.getAttribute('template') ?? undefined;
 
         if (!contractAttr) {
             validations.push('headless import must specify contract attribute');
@@ -689,53 +691,91 @@ async function parseHeadlessImports(
             }
         }
 
-        // Resolve plugin to actual paths using the resolver
-        const resolveResult = importResolver.resolvePluginComponent(
-            pluginAttr,
-            contractAttr,
-            projectRoot,
-        );
-
-        // Add any validation messages from resolution
-        validations.push(...resolveResult.validations);
-
-        if (!resolveResult.val) {
-            // Resolution failed - validation messages already added above
-            continue;
-        }
-
-        const absoluteComponentPath = resolveResult.val.componentPath;
-        const name = resolveResult.val.componentName;
-        const isNpmPackage = resolveResult.val.isNpmPackage;
-        const packageName = resolveResult.val.packageName;
-
-        // For NPM packages, use the package name; for local plugins, use relative path
+        let loadedContract: Contract;
+        let contractFile: string;
+        let contractMetadata: Record<string, unknown> | undefined = undefined;
         let module: string;
-        if (isNpmPackage && packageName) {
-            module = packageName; // Import from npm package (e.g., "example-jay-mood-tracker-plugin")
-        } else {
-            // Make component path relative to the jay-html file for imports
-            module = path.relative(filePath, absoluteComponentPath);
-            // Ensure the path starts with ./ or ../ for proper module resolution
-            if (!module.startsWith('.')) {
-                module = './' + module;
-            }
-        }
+        let name: string;
+        let structural = false;
+        // The `<jay:X>` region tag name this import backs. For a plugin, `contract=` is already the
+        // (kebab) contract name; for a local component `contract=` is a file path, so derive the tag
+        // name from the loaded contract's name (DL#196).
+        let contractTagName: string = contractAttr;
 
         try {
-            // Load contract - resolver handles both static and dynamic (materialized) contracts
-            const contractResult = importResolver.loadPluginContract(
-                pluginAttr,
-                contractAttr,
-                projectRoot,
-            );
-            validations.push(...contractResult.validations);
-            if (!contractResult.val) {
-                continue;
+            if (pluginAttr) {
+                // Resolve plugin to actual paths using the resolver
+                const resolveResult = importResolver.resolvePluginComponent(
+                    pluginAttr,
+                    contractAttr,
+                    projectRoot,
+                );
+                validations.push(...resolveResult.validations);
+                if (!resolveResult.val) {
+                    // Resolution failed - validation messages already added above
+                    continue;
+                }
+
+                const absoluteComponentPath = resolveResult.val.componentPath;
+                name = resolveResult.val.componentName;
+                const isNpmPackage = resolveResult.val.isNpmPackage;
+                const packageName = resolveResult.val.packageName;
+
+                // For NPM packages, use the package name; for local plugins, use relative path
+                if (isNpmPackage && packageName) {
+                    module = packageName; // e.g. "example-jay-mood-tracker-plugin"
+                } else {
+                    module = path.relative(filePath, absoluteComponentPath);
+                    if (!module.startsWith('.')) module = './' + module;
+                }
+
+                // Load contract - resolver handles both static and dynamic (materialized) contracts
+                const contractResult = importResolver.loadPluginContract(
+                    pluginAttr,
+                    contractAttr,
+                    projectRoot,
+                );
+                validations.push(...contractResult.validations);
+                if (!contractResult.val) {
+                    continue;
+                }
+                loadedContract = contractResult.val.contract;
+                contractFile = contractResult.val.contractPath;
+                contractMetadata = contractResult.val.metadata;
+            } else {
+                // DL#196 — local (plugin-less) component from the components folder. `contract=` is a
+                // file path; `src=` present ⇒ coded (resolve the single exported component); absent ⇒
+                // passthrough (structural — the loader synthesizes makePassthroughInstanceComponent).
+                const contractPath = path.resolve(filePath, contractAttr);
+                const contractResult = importResolver.loadContract(contractPath);
+                validations.push(...contractResult.validations);
+                if (!contractResult.val) {
+                    continue;
+                }
+                loadedContract = contractResult.val;
+                contractFile = contractPath;
+
+                if (srcAttr) {
+                    const importedFile = importResolver.resolveLink(filePath, srcAttr);
+                    const exportedComponents = importResolver
+                        .analyzeExportedTypes(importedFile, options)
+                        .filter((t): t is JayComponentType => t instanceof JayComponentType);
+                    if (exportedComponents.length !== 1) {
+                        validations.push(
+                            `headless import src="${srcAttr}" must export exactly one Jay component (found ${exportedComponents.length})`,
+                        );
+                        continue;
+                    }
+                    name = exportedComponents[0].name;
+                    module = path.relative(filePath, importedFile);
+                    if (!module.startsWith('.')) module = './' + module;
+                } else {
+                    structural = true;
+                    name = pascalCase(loadedContract.name);
+                    module = '';
+                }
+                contractTagName = paramCase(loadedContract.name);
             }
-            const loadedContract = contractResult.val.contract;
-            const contractFile = contractResult.val.contractPath;
-            const contractMetadata = contractResult.val.metadata;
 
             const contractTypes = await contractToImportsViewStateAndRefs(
                 loadedContract,
@@ -827,7 +867,7 @@ async function parseHeadlessImports(
                 };
                 result.push({
                     ...(key && { key }),
-                    contractName: contractAttr,
+                    contractName: contractTagName,
                     refs,
                     rootType: type,
                     contractLinks,
@@ -836,6 +876,8 @@ async function parseHeadlessImports(
                     contractPath: contractFile,
                     metadata: contractMetadata,
                     headlessProps,
+                    ...(structural && { structural }),
+                    ...(templateAttr && { template: templateAttr }),
                 });
             });
         } catch (e) {
@@ -1277,6 +1319,7 @@ async function parseHeadfullFSImports(
                 filePath,
                 importResolver,
                 projectRoot,
+                options,
             );
             headlessImports.push(...nestedHeadless);
         }
@@ -1545,6 +1588,9 @@ async function parseHeadfullFSImports(
                     contract: loadedContract,
                     contractPath,
                     structural,
+                    // DL#196 transition: concept-B (headfull-FS) structural imports keep the Tier-2
+                    // inlining path until their fixtures migrate to application/jay-headless.
+                    ...(structural && { legacyInlined: true }),
                 });
             });
         } catch (e) {
@@ -1973,6 +2019,7 @@ export async function parseJayFile(
         filePath,
         linkedContractResolver,
         projectRoot,
+        options,
     );
 
     // Merge headfull FS imports with headless imports

@@ -329,11 +329,11 @@ function renderServerHeadlessInstance(
     if (isValidationError(headlessResult)) return headlessResult;
     const headlessImport = headlessResult;
 
-    // DL#194 Phase B: a Tier 2 (no-code) composite has no runtime boundary — splice its template
-    // into the usage site instead of reading a `vs.__headlessInstances[...]` instance. Contract
-    // fields are projected onto usage-site expressions via an alias overlay, so the SSR HTML matches
-    // the inlined element/hydrate targets (which no longer emit a boundary either).
-    if (headlessImport.structural)
+    // DL#194 Phase B (being deleted, DL#196): the legacy Tier-2 headfull-FS composite splices its
+    // template into the usage site. Concept-A no-code (`structural`, not `legacyInlined`) reads its
+    // ViewState from `vs.__headlessInstances[...]` (populated by the synthesized passthrough) through
+    // the single server path below — the coercions branch handles the passthrough's raw props.
+    if (headlessImport.structural && headlessImport.legacyInlined)
         return renderServerInlinedStructuralInstance(
             element,
             context,
@@ -1321,10 +1321,13 @@ export function generateServerElementFile(
     const usedTypeNames = new Set<string>();
     const headlessModules = new Set<string>();
     for (const headless of jayFile.headlessImports) {
-        // DL#194: a Tier 2 (structural) composite is inlined — its ViewState type never appears in the
-        // SSR output (no `as BadgeViewState` cast, no instance lookup), so don't force-keep it. Enum
-        // types from its contract may still be referenced by inlined bindings, so keep those.
-        if (!headless.structural) {
+        // DL#194: a legacy-inlined Tier 2 (structural) composite is inlined — its ViewState type never
+        // appears in the SSR output (no `as BadgeViewState` cast, no instance lookup), so don't
+        // force-keep it. Enum types from its contract may still be referenced by inlined bindings, so
+        // keep those. DL#196: a no-code (structural, non-legacy) region reads its ViewState from
+        // `vs.__headlessInstances[...]` and casts `as <Contract>ViewState`, so keep the rootType.
+        const isLegacyInlined = headless.structural && headless.legacyInlined;
+        if (!isLegacyInlined) {
             usedTypeNames.add(headless.rootType.name);
         }
         for (const link of headless.contractLinks) {
@@ -1332,7 +1335,7 @@ export function generateServerElementFile(
             for (const name of link.names) {
                 if (isEnumType(name.type)) {
                     usedTypeNames.add(name.name);
-                } else if (!headless.structural && !name.name.endsWith('Refs')) {
+                } else if (!isLegacyInlined && !name.name.endsWith('Refs')) {
                     usedTypeNames.add(name.name);
                 }
             }

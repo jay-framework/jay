@@ -41,7 +41,6 @@ import {
     isForEach,
 } from './jay-html-helpers';
 import { Indent } from './indent';
-import { buildStructuralPassthroughComp } from './structural-coercions';
 import { OVERRIDE_INJECTED_MARKER, FOREIGN_SLOT_MARKER } from './jay-html-overrides';
 import {
     hasNamedComponentRefs,
@@ -776,9 +775,10 @@ function renderHydrateHeadlessInstance(
     if (isValidationError(headlessResult)) return headlessResult;
     const headlessImport = headlessResult;
 
-    // DL#194 Phase B — a Tier 2 (no-code) composite has no `.ts` to run: splice its template into the
-    // parent hydrate render instead of emitting a `makeHeadlessInstanceComponent` boundary.
-    if (headlessImport.structural)
+    // DL#194 Phase B (being deleted, DL#196): the legacy Tier-2 headfull-FS composite splices its
+    // template into the parent hydrate render. Concept-A no-code (`structural`, not `legacyInlined`)
+    // now emits a passthrough-backed instance boundary through the single path below.
+    if (headlessImport.structural && headlessImport.legacyInlined)
         return renderInlinedStructuralInstanceHydrate(
             element,
             context,
@@ -790,15 +790,9 @@ function renderHydrateHeadlessInstance(
     const idx = context.headlessInstanceCounter.count++;
     const pascal = pascalCase(contractName);
     const renderFnName = `_headless${pascal}${idx}HydrateRender`;
+    // A coded region imports its logic; a no-code (structural) region is backed by the passthrough,
+    // so it has no imported component symbol (DL#196).
     const pluginComponentName = headlessImport.codeLink.names[0].name;
-    // Tier 2 pure headfull components (DL#187) have no .ts to import — inline an identity
-    // passthrough definition instead of referencing an imported plugin component symbol. The
-    // passthrough coerces its raw string props to the contract dataTypes so the client adopt/
-    // update matches the coerced SSR HTML (DL#189) — without this the bootstrap `featured: "false"`
-    // reads truthy and the client seeks a node the SSR omitted (adoptBase coordinate not found).
-    const componentDefExpr = headlessImport.structural
-        ? buildStructuralPassthroughComp(headlessImport.contract?.tags ?? [])
-        : pluginComponentName;
 
     // Type names
     const interactiveViewStateType = `${pascal}InteractiveViewState`;
@@ -1014,28 +1008,37 @@ ${adoptInlineBody.rendered}
     const coordinateArg = isInsideForEach
         ? `(dataIds) => [...dataIds, '${coordinateSuffix}'].toString()`
         : `'${coordinateKey}'`;
-    if (hasSlots) {
+    if (headlessImport.structural) {
+        // DL#196: no-code region — passthrough backing, no imported logic. `makePassthrough…` takes
+        // (render, coord) only. Passthrough regions have no slots.
+        adoptComponentSymbol = `_Headless${pascal}${idx}`;
+        adoptComponentDef = `const ${adoptComponentSymbol} = makePassthroughHeadlessInstanceComponent(\n    ${renderFnName},\n    ${coordinateArg},\n);`;
+    } else if (hasSlots) {
         adoptComponentSymbol = makeFnName;
         adoptComponentDef = `const ${makeFnName} = (slots: ${slotsTypeName}) =>
     makeHeadlessInstanceComponent(
         (options?: RenderElementOptions) => ${renderFnName}(options, slots),
-        ${componentDefExpr},
+        ${pluginComponentName},
         ${coordinateArg},
     );`;
     } else if (isInsideForEach) {
         adoptComponentSymbol = `_Headless${pascal}${idx}Adopt`;
-        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${componentDefExpr},\n    (dataIds) => [...dataIds, '${coordinateSuffix}'].toString(),\n);`;
+        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName},\n    (dataIds) => [...dataIds, '${coordinateSuffix}'].toString(),\n);`;
     } else {
         adoptComponentSymbol = `_Headless${pascal}${idx}`;
         // Use the __headlessInstances key (not full DOM coordinate) for data lookup.
         // Static: 'widget:0'
-        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${componentDefExpr},\n    '${coordinateKey}',\n);`;
+        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName},\n    '${coordinateKey}',\n);`;
     }
 
     let adoptImports = adoptInlineBody.imports
         .plus(refsManagerImport)
         .plus(Import.ConstructContext)
-        .plus(Import.makeHeadlessInstanceComponent);
+        .plus(
+            headlessImport.structural
+                ? Import.makePassthroughHeadlessInstanceComponent
+                : Import.makeHeadlessInstanceComponent,
+        );
 
     // --- For fast conditionals: also generate create inline template (element APIs) ---
     // forEach doesn't need a create version here — the forEach handler's create callback
@@ -1100,9 +1103,8 @@ ${createInlineBody.rendered}
     return [refManager.getPublicAPI() as ${effectiveRefsTypeName}, render];
 }
 
-const ${createComponentSymbol} = makeHeadlessInstanceComponent(
-    ${createRenderFnName},
-    ${componentDefExpr},
+const ${createComponentSymbol} = ${headlessImport.structural ? 'makePassthroughHeadlessInstanceComponent' : 'makeHeadlessInstanceComponent'}(
+    ${createRenderFnName},${headlessImport.structural ? '' : `\n    ${pluginComponentName},`}
     ${isInsideForEach ? `(dataIds) => [...dataIds, '${coordinateSuffix}'].toString()` : `'${coordinateKey}'`},
 );`;
         createImports = createInlineBody.imports.plus(createRefsImport);

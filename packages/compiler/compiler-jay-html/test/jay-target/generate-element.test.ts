@@ -3,14 +3,8 @@ import {
     readFixtureFile,
     readFixtureFileRaw,
 } from '../test-utils/file-utils';
-import { readAndParseJayFile, readFileAndGenerateElementFile } from '../test-utils/file-utils';
+import { readFileAndGenerateElementFile } from '../test-utils/file-utils';
 import { prettify, RuntimeMode } from '@jay-framework/compiler-shared';
-import {
-    forEachInsidePureComponentError,
-    headfullRecursionError,
-    overrideRequiresExplicitRefError,
-} from '../../lib/jay-target/jay-html-helpers';
-import { rootParentInInlinedCompositeError } from '../../lib/expressions/expression-compiler';
 
 describe('generate jay-html element', () => {
     describe('basics', () => {
@@ -413,62 +407,12 @@ describe('generate jay-html element', () => {
                 );
             });
 
-            // DL#193 Phase 2a — the override renders main-side even when the component
-            // is sandboxed, so `__parentContext: vs` and the `_p1.itemName` binding must
-            // appear in the main-sandbox element output (only the contract import suffix
-            // and headless factory differ from the trusted output).
-            it('override binding to parent scope (DL#193)', async () => {
-                const folder = 'contracts/page-with-override-parent-binding';
-                const elementFile = await readFileAndGenerateElementFile(folder, { importerMode });
-                expect(elementFile.validations).toEqual([]);
-                expect(await prettify(elementFile.val)).toEqual(
-                    await readFixtureFile(folder, 'generated-element-main-sandbox'),
-                );
-            });
-
             // DL#193 Phase 4 — a $parent binding inside a forEach renders main-side even
             // when sandboxed: the main-sandbox output carries the same `_p1` closure
             // bindings (`da`/`dt` with `_p1.listTitle`) and the `dependsOnParent` forEach
             // flag as the trusted output. The worker only tracks the collection skeleton.
             it('$parent binding inside a forEach (DL#193)', async () => {
                 const folder = 'collections/foreach-parent-binding';
-                const elementFile = await readFileAndGenerateElementFile(folder, { importerMode });
-                expect(elementFile.validations).toEqual([]);
-                expect(await prettify(elementFile.val)).toEqual(
-                    await readFixtureFile(folder, 'generated-element-main-sandbox'),
-                );
-            });
-
-            // DL#193 Phase 3 — a structural component's forwarded inner refs render main-side (the
-            // inline template is inlined into the page), so the synthetic refs type and the
-            // `refs.signupCard.cta` surface appear in the main-sandbox output; only the contract import
-            // suffix (?jay-mainSandbox) and headless factory differ from the trusted output.
-            it('forwarded inner ref from structural component (DL#193 Phase 3)', async () => {
-                const folder = 'contracts/page-with-forwarded-ref';
-                const elementFile = await readFileAndGenerateElementFile(folder, { importerMode });
-                expect(elementFile.validations).toEqual([]);
-                expect(await prettify(elementFile.val)).toEqual(
-                    await readFixtureFile(folder, 'generated-element-main-sandbox'),
-                );
-            });
-
-            // DL#193 Phase 3 — repeated forwarding composite (inside a forEach) in main-sandbox mode:
-            // the page-side instance ref uses the repeated synthetic type (collection refs).
-            it('forwarded inner ref from structural component in forEach (DL#193 Phase 3)', async () => {
-                const folder = 'contracts/page-with-forwarded-ref-foreach';
-                const elementFile = await readFileAndGenerateElementFile(folder, { importerMode });
-                expect(elementFile.validations).toEqual([]);
-                expect(await prettify(elementFile.val)).toEqual(
-                    await readFixtureFile(folder, 'generated-element-main-sandbox'),
-                );
-            });
-
-            // DL#193 Phase 3 refinement — the injected component is sandboxed (`secureChildComp`), yet
-            // the override-injected forwarded ref still re-bases to the outer scope: the selector
-            // `(vs, _p1) => _p1` and `__parentContext` appear in the main-sandbox output exactly as in
-            // the trusted output (only the childComp variant differs).
-            it('override-injected forwarded ref carrying the outer scope (DL#193 Phase 3)', async () => {
-                const folder = 'contracts/page-with-override-forwarded-ref';
                 const elementFile = await readFileAndGenerateElementFile(folder, { importerMode });
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
@@ -515,128 +459,31 @@ describe('generate jay-html element', () => {
             );
         });
 
-        // DL#187 — a structural (Tier 2) headfull component uses the inline identity
-        // passthrough `{ comp: (_props, _refs) => ({ render: () => _props }) }` and the
-        // prop getter coerces static attribute values to the declared prop types
-        // (enum → member, number → literal, boolean → literal).
-        it('generate element file with structural (Tier 2) instance — coerced static props (DL#187)', async () => {
+        // DL#196 — a no-code (structural) region flattens the component template into the page as a
+        // source-owned region backed by `makePassthroughHeadlessInstanceComponent`. The page mounts it
+        // via `childComp(_HeadlessBadge0, propsGetter, ref)`; the prop getter coerces static attribute
+        // values to the declared prop types (enum → member, number → literal, boolean → literal).
+        it('generate element file with structural (Tier 2) no-code region — passthrough childComp + coerced static props (DL#196)', async () => {
             const folder = 'contracts/page-with-structural-badge';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
-        // DL#193 Phase 2a — a page-authored <override> with a dynamic binding
-        // ({itemName}) resolves against the OUTER page scope. The compiler emits
-        // `__parentContext: vs` into the child component props and the override
-        // body reads `_p1.itemName` (parentDepth === 1).
-        it('generate element file with override binding to parent scope (DL#193)', async () => {
-            const folder = 'contracts/page-with-override-parent-binding';
-            const elementFile = await readFileAndGenerateElementFile(folder);
-            expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
-        });
-
-        // DL#193 Phase 3 — a structural (Tier 2) component forwards its NAMED inner child-component
-        // refs (`<jay:Counter ref="cta">`). The usage-site instance ref is a synthetic type
-        // (`_HeadlessCard0Refs { cta: CounterRef<CardViewState> }`) declared in the shared refs
-        // section, so `refs.signupCard.cta` is typed correctly. Element/plain refs stay private.
-        it('generate element file with forwarded inner ref from structural component (DL#193 Phase 3)', async () => {
-            const folder = 'contracts/page-with-forwarded-ref';
-            const elementFile = await readFileAndGenerateElementFile(folder);
-            expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
-        });
-
-        // DL#193 Phase 3 — when the forwarding composite is REPEATED (inside a page forEach), each
-        // forwarded ref becomes a collection: the page-side instance ref uses the repeated synthetic
-        // type (`_HeadlessCard0RepeatedRefs { cta: CounterRefs<CardViewState> }`) while the inline
-        // template's own refs stay single.
-        it('generate element file with forwarded inner ref from structural component in forEach (DL#193 Phase 3)', async () => {
-            const folder = 'contracts/page-with-forwarded-ref-foreach';
-            const elementFile = await readFileAndGenerateElementFile(folder);
-            expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
-        });
-
-        // DL#193 Phase 3 — TWO structural instances of the same composite (a single `signupCard` and
-        // a repeated `cards`) both embed the same inner `Counter`. The shared component-ref helpers
-        // (`CounterRef` / `CounterRefs`) must each be declared EXACTLY ONCE at the file level — a
-        // second declaration would be a duplicate-identifier TS error. Full toEqual locks the dedup.
-        it('generate element file with forwarded inner refs from two structural instances of the same composite (DL#193 Phase 3)', async () => {
-            const folder = 'contracts/page-with-forwarded-ref-multi';
-            const elementFile = await readFileAndGenerateElementFile(folder);
-            expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
-        });
-
-        // DL#193 Phase 3 refinement — a component INJECTED via `<override>` into a generic slot
-        // composite forwards its ref carrying the OUTER (override authoring) scope, not the composite's
-        // own ViewState (§C). The single instance re-bases to the page scope
-        // (`CounterRef<PageWithOverrideForwardedRefViewState>`), the repeated one to the forEach item
-        // (`CounterRefs<CardOfPageWithOverrideForwardedRefViewState>`); each injected `childComp` gets
-        // the `(vs, _p1) => _p1` selector and its composite mount emits `__parentContext`. Full toEqual
-        // locks the outer-scope type, the selector, and the parentContext plumbing together.
-        it('generate element file with override-injected forwarded ref carrying the outer scope (DL#193 Phase 3)', async () => {
-            const folder = 'contracts/page-with-override-forwarded-ref';
-            const elementFile = await readFileAndGenerateElementFile(folder);
-            expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
-        });
-
-        // DL#193 Phase 3 (§4 validation) — a `forEach` inside a pure (Tier 2) structural composite
-        // is rejected with a clear diagnostic: a pure component receives only scalar/enum props
-        // (DL#187), so no array can ever drive an internal forEach. Assert the EXACT message.
-        it('rejects a forEach inside a pure (Tier 2) structural composite (DL#193 Phase 3)', async () => {
-            const folder = 'contracts/page-with-foreach-in-pure-composite';
-            const elementFile = await readFileAndGenerateElementFile(folder);
-            expect(elementFile.validations).toEqual([forEachInsidePureComponentError('card')]);
-        });
-
-        // DL#194 §4 (recursion validation) — a no-code (Tier 2) composite that references itself
-        // (directly or transitively via `<jay:X>`) is a cycle in the inlined-component graph, caught
-        // during compile-time inline expansion. Tier 3 recursion uses `<recurse>`, so a `<jay:X>`
-        // cycle is always a Tier 2 mistake — the message directs the author to add a `.ts`.
-        it('rejects a no-code (Tier 2) composite that recurses (DL#194 §4)', async () => {
-            const parsed = await readAndParseJayFile('contracts/page-tier2-recursion');
-            expect(parsed.validations).toEqual([headfullRecursionError('card')]);
-        });
-
-        // DL#194 (issue 1) — a `<jay:X>` usage that carries `<override>` children customizes the
-        // component and exposes nested refs; without an explicit `ref` the instance is auto-named
-        // (`AR0` → `refs.ar0.cta`), which is unstable and opaque. Require an author-controlled ref.
-        it('rejects a component usage with overrides but no ref (DL#194 issue 1)', async () => {
-            const parsed = await readAndParseJayFile('contracts/page-override-no-ref');
-            expect(parsed.validations).toEqual([overrideRequiresExplicitRefError('card')]);
-        });
-
-        // DL#194 §4b (root-level $parent validation) — a Tier 2 template using a root-level `$parent`
-        // reaches past the composite into its consumer (a downward depth shift aliasing can't express
-        // in v1). The composite scope has no parent (Variables.forInlinedComponent), so the climb is a
-        // compile error directing the author to add a `.ts` (Tier 3). Assert the EXACT message.
-        it('rejects a root-level $parent inside a no-code (Tier 2) composite (DL#194 §4b)', async () => {
-            const folder = 'contracts/page-tier2-root-parent';
-            const elementFile = await readFileAndGenerateElementFile(folder);
-            expect(elementFile.validations).toEqual([rootParentInInlinedCompositeError()]);
-        });
-
-        // DL#194 Phase C (Fork C) — a Tier 3 (coded) composite with a `body` slot. The un-overridden
-        // instance (`plainCard`) renders the slot's default content inline in the child render; the
-        // overridden instance (`richCard`) mounts the parent-built override fragment at the `[ref="body"]`
-        // anchor via `foreignChild(slots.body)` and the parent drives the fragment's update via
-        // `childComp(..., slots)`. The override's ref surfaces at `refs.richCard.body.cta` (parent scope,
-        // keyed by slot name) alongside the child's own `refs.richCard.cardAction`.
-        it('generate element file with Tier 3 slot injection (DL#194 Phase C)', async () => {
+        // DL#196 — a coded (`src=`) headless region: the card template is flattened into the page as
+        // source-owned markup and compiled to `makeHeadlessInstanceComponent(renderFn, card, coord)`.
+        // Both `<jay:card>` regions share the single `card` logic import; each mounts its own `childComp`.
+        it('generate element file with Tier 3 coded region (DL#196)', async () => {
             const folder = 'contracts/page-with-tier3-slot';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
-        // DL#194 §C, under repetition: parent repeats a Tier 3 slotted instance via forEach. The
-        // per-item slot const must live inside the forEach item callback so each item builds its own
-        // slot fragment and collection ref, matching the hydrate target.
-        it('generate element file with Tier 3 slot injection under a parent forEach (DL#194 §C)', async () => {
+        // DL#196 under repetition: parent repeats a coded card region via forEach. The flattened render
+        // fn is hoisted once; the `childComp` and its collection ref (`refRichCards()`) live inside the
+        // forEach item callback, with a keyed coordinate function.
+        it('generate element file with Tier 3 coded region under a parent forEach (DL#196)', async () => {
             const folder = 'contracts/page-with-tier3-slot-foreach';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
