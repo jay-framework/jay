@@ -260,6 +260,14 @@ ref inside a region (not passed as a prop, not in a `page-scope` subtree) is a *
 naming `page-scope` (prevention-first: a clear diagnostic, not a silent wrong-render — DL#195
 L4)._
 
+_**Update (post-review, 2026-09-27): the ref half of Q12 is now resolved, not merely detected** — see §8
+below and **[DL#198](<198 - free refs as boundary event sources.md>)** (the design of record). A free ref
+(element ref in a region body not declared by the contract) is automatically exposed as a boundary **event
+source** (`refs.<regionRef>.<freeRef>.<domEvent>`), carrying the region's `viewState` + accumulated
+`coordinate` as event data. This reuses `createEvent`-shaped surface, is secure-mode-native, and handles the
+`forEach`-in-region case §7 could not. §7's page-scope DOM injection stays deferred/possibly dropped; the
+page-**binding** half is still covered by props (or a future diagnostic)._
+
 **Q13. Does a no-code component erase to page markup, or stay a (passthrough) instance? — ANSWERED:
 stay an instance.** A no-code component keeps its `<jay:X>` tag and is backed by
 `makePassthroughInstanceComponent` (props → ViewState, per phase). Its flattened body is its inline
@@ -501,6 +509,23 @@ does not declare or see it. Applies identically to coded and passthrough-backed 
 
 This is intentionally the _only_ place the retired boundary-crossing survives, reduced to its
 irreducible core and made explicit and checkable rather than implicit and silent.
+
+> **Superseded for the ref case by §8 (post-review, 2026-09-27).** The ref half of Q12 is resolved by
+> exposing free refs as boundary **event sources**, not by injecting page-owned DOM into a region. §7's
+> DOM-injection ambition has no current use case and stays deferred/possibly dropped. Read §8.
+
+### 8. Free refs as boundary event sources — chosen Q12 resolution (moved to DL#198)
+
+_Decided post-review with yoav, 2026-09-27._ The ref half of Q12 is resolved by exposing an un-contracted
+region-body ref (a "free ref") as an automatic, typed **event source** on the region boundary —
+`refs.<regionRef>.<freeRef>.<domEvent>` — carrying the region's `viewState` and an accumulated `coordinate`
+path. It reuses `createEvent`-shaped surface, is secure-mode-native, and handles the forEach-in-region case
+§7 could not. §7's page-scope DOM injection stays deferred/possibly dropped.
+
+**This grew into its own feature with its own implementation plan — see [DL#198 — Free refs as boundary
+event sources](<198 - free refs as boundary event sources.md>).** DL#198 is the design of record; it
+carries the grounding, the two settled decisions (composed-array coordinate; `makeHeadlessInstanceComponent`
++ passthrough-forward attach point), the nested-region deferral, and Phases A–E.
 
 ## Implementation Plan
 
