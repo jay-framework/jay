@@ -26,6 +26,7 @@ export interface PrivateRef<ViewState, PublicRefAPI> {
     viewState: ViewState;
     coordinate: Coordinate;
     getPublicAPI(): PublicRefAPI;
+    getBoundElement(): ReferenceTarget<ViewState>;
     set(referenced: ReferenceTarget<ViewState>): void;
     addEventListener<E extends Event>(
         type: string,
@@ -70,6 +71,18 @@ export abstract class PrivateRefs<
         this.listeners.forEach((listener) =>
             ref.removeEventListener(listener.type, listener.listener, listener.options),
         );
+    }
+
+    // DL#198 Design D — the region's free refs are inert carriers: nobody subscribes region-side (free
+    // refs are not in the region's contract), they just hold the bound DOM node, the region viewState and
+    // the region-relative coordinate. The page-side FreeReferenceManager reads these to mint a
+    // page-context RefImpl per node at region mount.
+    getCarriers(): Array<{ element: ReferenceTarget<ViewState>; viewState: ViewState; coordinate: Coordinate }> {
+        return [...this.elements].map((ref) => ({
+            element: ref.getBoundElement(),
+            viewState: ref.viewState,
+            coordinate: ref.coordinate,
+        }));
     }
 
     removeEventListener<E extends Event>(
@@ -177,8 +190,36 @@ export class ComponentRefsImpl<ViewState, ComponentType extends JayComponent<any
     extends PrivateRefs<ViewState, ComponentType, ComponentRefImpl<ViewState, ComponentType>>
     implements ManagedRefs
 {
+    // DL#198 Design D — the page creates a FreeReferenceManager per region (page scope → page
+    // eventWrapper baked in) and registers it here before the region renders. Its public API is the
+    // overlay for free-ref members: a page subscription made in the page constructor (before the region
+    // mounts) lands on this manager's aggregate and is replayed onto the page-context RefImpl the driver
+    // mints at region mount. See `BaseReferencesManager.driveFreeRefsFrom`.
+    private freeRefManager?: { getPublicAPI(): any };
+
+    setFreeRefManager(freeRefManager: { getPublicAPI(): any }) {
+        this.freeRefManager = freeRefManager;
+    }
+
     getInstance() {
         return [...this.elements][0]?.getPublicAPI();
+    }
+
+    // DL#198 Design D — overlay lookup. A component member (contract ref / method / event) resolves
+    // against the region instance and wins. Anything the instance does not define falls through to the
+    // page FreeReferenceManager's public API (the free refs). An unknown member resolves to undefined so
+    // existence checks stay honest — a pre-render typo is not a truthy deferring proxy.
+    member(prop: string | symbol) {
+        const instance = this.getInstance();
+        if (instance) {
+            const value = instance[prop];
+            if (value !== undefined) return value;
+        }
+        if (typeof prop === 'string' && this.freeRefManager) {
+            const freeApi = this.freeRefManager.getPublicAPI();
+            if (prop in freeApi) return freeApi[prop];
+        }
+        return undefined;
     }
 
     mkManagedRef(
@@ -247,6 +288,12 @@ export abstract class RefImpl<
     }
 
     abstract getPublicAPI(): PublicRefAPI;
+
+    // DL#198 Design D — the page-side FreeReferenceManager driver reaches the DOM node (or component
+    // instance) a region free ref is bound to, so it can mint a page-context RefImpl over the same node.
+    getBoundElement(): ElementType {
+        return this.element;
+    }
 
     set(referenced: ElementType | JayComponent<any, ViewState, any>): void {
         this.element = referenced as ElementType;
@@ -393,12 +440,15 @@ const EVENT$_TRAP = (target, prop) => {
 // };
 
 const DELEGATE_REF_TO_COMP_TRAP = (target: ComponentRefImpl<any, any>, prop) => {
+    // Delegate a member read to the underlying region component instance. Returns undefined for a genuine
+    // non-member (GetTrapProxy then reads target[prop]).
     return target.getFromComponent(prop);
 };
 
 const DELEGATE_REFS_TO_COMP_TRAP = (target: ComponentRefsImpl<any, any>, prop) => {
-    const instance = target.getInstance();
-    return instance ? instance[prop] : undefined;
+    // DL#198 Design D — overlay lookup: region instance members first, then the page FreeReferenceManager's
+    // public API (free refs). See ComponentRefsImpl.member.
+    return target.member(prop);
 };
 
 export const GetTrapProxy = (

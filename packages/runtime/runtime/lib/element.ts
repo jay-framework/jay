@@ -3,6 +3,7 @@ import { ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult } from '@jay-framewo
 import { RandomAccessLinkedList as List } from '@jay-framework/list-compare';
 import {
     BaseJayElement,
+    Coordinate,
     JayComponent,
     JayComponentConstructor,
     jayLog,
@@ -25,6 +26,13 @@ import {
 import { PrivateRef } from './node-reference';
 
 const STYLE = 'style';
+
+// DL#198 Design D — the subset of a page-side FreeReferenceManager that `childComp` needs to drive a
+// region's free refs at mount. Kept as a local structural type to avoid coupling element.ts to the
+// ReferencesManager implementation.
+interface FreeRefDriver {
+    driveFreeRefsFrom(regionFreeManager: any, regionCoordinate: Coordinate): () => void;
+}
 
 function mkRef<ViewState>(
     ref: PrivateRef<ViewState, any>,
@@ -49,6 +57,7 @@ export function childComp<
     compCreator: JayComponentConstructor<Props>,
     getProps: (t: ParentVS) => Props,
     ref?: PrivateRef<any, ChildComp>,
+    freeRefManager?: FreeRefDriver,
 ): BaseJayElement<ParentVS> {
     let context = currentConstructionContext();
     let childComp = compCreator(getProps(context.currData));
@@ -57,6 +66,26 @@ export function childComp<
     let unmounts: MountFunc[] = [childComp.unmount];
     if (ref) {
         mkRef(ref, childComp, updates, mounts, unmounts);
+    }
+    // DL#198 Design D — if the page handed a FreeReferenceManager for this region, drive it at mount: the
+    // page manager reaches into the region's free refs (`childComp.freeRefs`) and mints page-context refs
+    // over their DOM nodes, using the region's coordinate (from the region ref). Teardown at unmount.
+    if (freeRefManager && ref) {
+        let teardown: (() => void) | undefined;
+        mounts.push(() => {
+            // Idempotent: a jay component element is mounted twice — once by `withRootContext` at
+            // construction, once by the component's mounted-signal reaction (mkMounts). DOM/ref mounts
+            // tolerate that; the driver mints a fresh RefImpl per call, so guard against re-driving.
+            if (teardown) return;
+            teardown = freeRefManager.driveFreeRefsFrom(
+                (childComp as any).freeRefs,
+                ref.coordinate,
+            );
+        });
+        unmounts.push(() => {
+            teardown?.();
+            teardown = undefined;
+        });
     }
     return {
         dom: childComp.element.dom,
