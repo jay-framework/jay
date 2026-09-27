@@ -16,7 +16,7 @@ import {
 export const page = makeJayStackComponent<PageContract>()
     .withProps<{}>()
     .withSlowlyRender(async () =>
-        phaseOutput<PageSlowViewState, {}>({ pageTitle: 'Headfull Test' }, {}),
+        phaseOutput<PageSlowViewState, {}>({ pageTitle: 'Inline Composition' }, {}),
     )
     .withFastRender(async () => {
         const Pipeline = RenderPipeline.for<PageFastViewState, {}>();

@@ -363,16 +363,16 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Widget alpha/);
         });
 
-        it('/headfull — headfull component with banner and structural info-box', async () => {
+        it('/headfull — headfull page composing a coded banner and a structural info-box', async () => {
             const { status, body } = await fetchPage(server.url, '/headfull/');
             expect(status).toBe(200);
             expectPage(body);
-            expect(body).toMatch(/Headfull Test/);
+            expect(body).toMatch(/Inline Composition/);
             expect(body).toMatch(/Hello from banner/);
             expect(body).toMatch(/Structural Component Works/);
         });
 
-        it('/headfull — Tier 2 pure headfull component (Badge) passthrough (DL#187)', async () => {
+        it('/headfull — no-code structural passthrough region (Badge), ViewState = props (DL#196)', async () => {
             const { status, body } = await fetchPage(server.url, '/headfull/');
             expect(status).toBe(200);
             // Slow data tag baked at build; fast data/variant tags resolved at request time.
@@ -384,7 +384,7 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/FEATURED/); // featured boolean `if` — static boolean coercion
         });
 
-        it('/headfull — Tier 2 badge fed by a dynamic prop binding (vs -> prop -> vs, DL#187)', async () => {
+        it('/headfull — structural passthrough badge fed by a dynamic prop binding (vs -> prop -> vs, DL#196)', async () => {
             const { status, body } = await fetchPage(server.url, '/headfull/');
             expect(status).toBe(200);
             // Two page tags flow through dynamic prop bindings into the badge at SSR (DL#189):
@@ -609,15 +609,15 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Widget alpha/);
         });
 
-        it('/headfull — headfull component with banner and structural info-box', async () => {
+        it('/headfull — headfull page composing a coded banner and a structural info-box', async () => {
             const { status, body } = await fetchPage(server.url, '/headfull/');
             expect(status).toBe(200);
-            expect(body).toMatch(/Headfull Test/);
+            expect(body).toMatch(/Inline Composition/);
             expect(body).toMatch(/Hello from banner/);
             expect(body).toMatch(/Structural Component Works/);
         });
 
-        it('/headfull — Tier 2 pure headfull component (Badge) passthrough (DL#187)', async () => {
+        it('/headfull — no-code structural passthrough region (Badge), ViewState = props (DL#196)', async () => {
             const { status, body } = await fetchPage(server.url, '/headfull/');
             expect(status).toBe(200);
             expect(body).toMatch(/Live Status/); // label (string, slow)
@@ -628,7 +628,7 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/FEATURED/); // featured boolean `if` — static boolean coercion
         });
 
-        it('/headfull — Tier 2 badge fed by a dynamic prop binding (vs -> prop -> vs, DL#187)', async () => {
+        it('/headfull — structural passthrough badge fed by a dynamic prop binding (vs -> prop -> vs, DL#196)', async () => {
             const { status, body } = await fetchPage(server.url, '/headfull/');
             expect(status).toBe(200);
             expect(body).toMatch(/Dynamic Status/);

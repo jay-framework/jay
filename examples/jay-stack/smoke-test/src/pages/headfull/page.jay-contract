@@ -13,8 +13,8 @@ tags:
     phase: fast
     description: Request-time count fed into the dynamic badge's fast `count` prop
 
-  # DL#187/#189 — drives a fast+interactive prop binding into a structural (Tier 2) badge
-  # instance, proving page ViewState -> child prop -> child ViewState (vs -> prop -> vs).
+  # DL#196/#189 — drives a fast+interactive prop binding into a no-code structural passthrough
+  # badge region, proving page ViewState -> child prop -> child ViewState (vs -> prop -> vs).
   - tag: currentStatus
     type: variant
     dataType: enum (success | warning | error)
