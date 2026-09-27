@@ -85,6 +85,28 @@ export abstract class PrivateRefs<
         }));
     }
 
+    // DL#198 Design D — a page-side FreeReferenceManager registered on this region ref aggregate (page
+    // scope → page eventWrapper baked in). Its public API is the overlay for free-ref members. Lifted to
+    // the shared base so BOTH a single region (ComponentRefsImpl) and a collection of regions
+    // (ComponentCollectionRefImpl) expose `refs.<regionRef>.<freeRef>` — the driver mints onto the same
+    // free manager's aggregate for every region instance, so one page subscription hears them all.
+    protected freeRefManager?: { getPublicAPI(): any };
+
+    setFreeRefManager(freeRefManager: { getPublicAPI(): any }) {
+        this.freeRefManager = freeRefManager;
+    }
+
+    // Resolve a free-ref member against the page FreeReferenceManager's public API. Returns undefined for
+    // a non-free-ref member so callers (the ComponentRefsImpl overlay / the collection proxy trap) fall
+    // through honestly to the region instance / collection methods (`map`/`find`).
+    freeMember(prop: string | symbol) {
+        if (typeof prop === 'string' && this.freeRefManager) {
+            const freeApi = this.freeRefManager.getPublicAPI();
+            if (prop in freeApi) return freeApi[prop];
+        }
+        return undefined;
+    }
+
     removeEventListener<E extends Event>(
         type: string,
         listener: JayEventHandler<E, ViewState, any>,
@@ -191,16 +213,11 @@ export class ComponentRefsImpl<ViewState, ComponentType extends JayComponent<any
     implements ManagedRefs
 {
     // DL#198 Design D — the page creates a FreeReferenceManager per region (page scope → page
-    // eventWrapper baked in) and registers it here before the region renders. Its public API is the
-    // overlay for free-ref members: a page subscription made in the page constructor (before the region
-    // mounts) lands on this manager's aggregate and is replayed onto the page-context RefImpl the driver
-    // mints at region mount. See `BaseReferencesManager.driveFreeRefsFrom`.
-    private freeRefManager?: { getPublicAPI(): any };
-
-    setFreeRefManager(freeRefManager: { getPublicAPI(): any }) {
-        this.freeRefManager = freeRefManager;
-    }
-
+    // eventWrapper baked in) and registers it here before the region renders (via the lifted
+    // `setFreeRefManager` on PrivateRefs). Its public API is the overlay for free-ref members: a page
+    // subscription made in the page constructor (before the region mounts) lands on this manager's
+    // aggregate and is replayed onto the page-context RefImpl the driver mints at region mount. See
+    // `BaseReferencesManager.driveFreeRefsFrom`.
     getInstance() {
         return [...this.elements][0]?.getPublicAPI();
     }
@@ -215,11 +232,7 @@ export class ComponentRefsImpl<ViewState, ComponentType extends JayComponent<any
             const value = instance[prop];
             if (value !== undefined) return value;
         }
-        if (typeof prop === 'string' && this.freeRefManager) {
-            const freeApi = this.freeRefManager.getPublicAPI();
-            if (prop in freeApi) return freeApi[prop];
-        }
-        return undefined;
+        return this.freeMember(prop);
     }
 
     mkManagedRef(
@@ -451,6 +464,13 @@ const DELEGATE_REFS_TO_COMP_TRAP = (target: ComponentRefsImpl<any, any>, prop) =
     return target.member(prop);
 };
 
+const DELEGATE_COLLECTION_TO_FREE_TRAP = (target: ComponentCollectionRefImpl<any, any>, prop) => {
+    // DL#198 Design D (collection of regions) — a free-ref name resolves to the page FreeReferenceManager's
+    // public API (the aggregate over every region instance's free ref). A non-free-ref (e.g. `map`/`find`)
+    // returns undefined here so GetTrapProxy falls through to the collection's own methods.
+    return target.freeMember(prop);
+};
+
 export const GetTrapProxy = (
     getTraps: Array<(target: any, p: string | symbol, receiver: any) => any>,
 ) => {
@@ -489,7 +509,7 @@ export function newComponentInCollectionPublicApiProxy<
     return new Proxy(ref, ComponentInCollectionRefProxy);
 }
 
-const ComponentCollectionRefProxy = GetTrapProxy([EVENT_TRAP]);
+const ComponentCollectionRefProxy = GetTrapProxy([EVENT_TRAP, DELEGATE_COLLECTION_TO_FREE_TRAP]);
 
 export function newComponentCollectionPublicApiProxy<
     ViewState,
