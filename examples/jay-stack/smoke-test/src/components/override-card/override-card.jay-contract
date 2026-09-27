@@ -1,8 +1,0 @@
-name: OverrideCard
-tags:
-  - tag: cta
-    type: slot
-  - tag: menu
-    type: slot
-  - tag: disclaimer
-    type: slot

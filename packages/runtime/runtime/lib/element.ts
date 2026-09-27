@@ -49,60 +49,20 @@ export function childComp<
     compCreator: JayComponentConstructor<Props>,
     getProps: (t: ParentVS) => Props,
     ref?: PrivateRef<any, ChildComp>,
-    refViewState?: (vs: ParentVS, ...parents: any[]) => any,
-    slots?: Record<string, BaseJayElement<ParentVS>>,
 ): BaseJayElement<ParentVS> {
     let context = currentConstructionContext();
     let childComp = compCreator(getProps(context.currData));
     let updates: updateFunc<ParentVS>[] = [(t: ParentVS) => childComp.update(getProps(t))];
-    // DL#194 Fork C: slot content fragments (from `<override slot="X">`) are parent-owned. The child
-    // mounts their DOM at the slot anchor (via `foreignChild`, whose update is a no-op) but never
-    // feeds them its own view state; the parent drives their update here from the parent view state.
-    if (slots) {
-        for (const slotName of Object.keys(slots)) {
-            const slot = slots[slotName];
-            updates.push((t: ParentVS) => slot.update(t));
-        }
-    }
     let mounts: MountFunc[] = [childComp.mount];
     let unmounts: MountFunc[] = [childComp.unmount];
     if (ref) {
-        if (refViewState) {
-            // DL#193 Phase 3 refinement: an override-injected child component's ref must carry the
-            // OVERRIDE (outer) scope, not the target composite's own scope — the override author
-            // knows the outer scope, not the component's internals (§C). The compiler emits
-            // `refViewState = (vs, $parent) => $parent`; we read the live parentDataChain so the ref's
-            // viewState reports the outer item for onChange/find/map alike.
-            ref.set(childComp);
-            ref.update(refViewState(context.currData, ...parentDataChain(context)));
-            updates.push((t: ParentVS) => ref.update(refViewState(t, ...parentDataChain(context))));
-            mounts.push(ref.mount);
-            unmounts.push(ref.unmount);
-        } else {
-            mkRef(ref, childComp, updates, mounts, unmounts);
-        }
+        mkRef(ref, childComp, updates, mounts, unmounts);
     }
     return {
         dom: childComp.element.dom,
         update: normalizeUpdates(updates),
         mount: normalizeMount(mounts),
         unmount: normalizeMount(unmounts),
-    };
-}
-
-/**
- * DL#194 Fork C: wrap a parent-owned slot content fragment for mounting inside a Tier 3 child's DOM.
- * The child's render tree mounts this at the slot anchor — it forwards the fragment's DOM, mount and
- * unmount, but its `update` is a NO-OP so the child's update cascade never feeds the parent-owned
- * fragment the child's view state. The parent drives the fragment's real update via `childComp`'s
- * `slots` argument.
- */
-export function foreignChild<ParentVS>(child: BaseJayElement<any>): BaseJayElement<ParentVS> {
-    return {
-        dom: child.dom,
-        update: noopUpdate,
-        mount: child.mount,
-        unmount: child.unmount,
     };
 }
 

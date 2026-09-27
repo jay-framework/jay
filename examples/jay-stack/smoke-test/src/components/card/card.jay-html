@@ -1,18 +1,20 @@
 <html>
 <head>
-  <!-- Card is Tier 2 (no .ts) — it is inlined into its consumer. It internally composes the
-       Tier 3 <jay:button>, so an inlined component that itself contains a real component boundary
-       is exercised (button in card). -->
-  <script type="application/jay-headfull"
+  <!-- Card is a no-code component (no .ts) — a passthrough backs it and its source template is
+       flattened into the consumer (DL#196). It composes the coded button, declared with
+       application/jay-headless (src + contract); the flattened button body below is card's own
+       materialised region. -->
+  <script type="application/jay-headless"
           src="../button/button"
-          contract="../button/button.jay-contract"
-          names="button"></script>
+          contract="../button/button.jay-contract"></script>
   <script type="application/jay-data" contract="./card.jay-contract"></script>
 </head>
 <body>
   <div class="card">
     <h3>Card: {heading}</h3>
-    <jay:button ref="action" label="{heading}" />
+    <jay:button label="{heading}">
+      <button ref="clickAction" class="btn">Button: {label}</button>
+    </jay:button>
   </div>
 </body>
 </html>

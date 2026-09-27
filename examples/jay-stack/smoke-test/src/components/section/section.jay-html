@@ -1,18 +1,27 @@
 <html>
 <head>
-  <!-- Section is Tier 3 (has .ts) — a real component boundary. It internally composes the Tier 2
-       <jay:card>, which in turn composes the Tier 3 <jay:button>. This gives an alternating
-       Tier 3 > Tier 2 > Tier 3 nest (section > card > button). -->
-  <script type="application/jay-headfull"
-          src="../card/card"
-          contract="../card/card.jay-contract"
-          names="card"></script>
+  <!-- Section is a coded component (has .ts). It composes the no-code card, which in turn composes
+       the coded button. Under DL#196 every composed component is declared with
+       application/jay-headless and its source template is flattened in transitively: the no-code
+       card carries only a contract (a passthrough backs it), while the coded button also carries a
+       src. The flattened card > button body below is section's own materialised region. -->
+  <script type="application/jay-headless" contract="../card/card.jay-contract"></script>
+  <script type="application/jay-headless"
+          src="../button/button"
+          contract="../button/button.jay-contract"></script>
   <script type="application/jay-data" contract="./section.jay-contract"></script>
 </head>
 <body>
   <section class="section">
     <h2>Section: {title}</h2>
-    <jay:card ref="card" heading="{title}" />
+    <jay:card heading="{title}">
+      <div class="card">
+        <h3>Card: {heading}</h3>
+        <jay:button label="{heading}">
+          <button ref="clickAction" class="btn">Button: {label}</button>
+        </jay:button>
+      </div>
+    </jay:card>
   </section>
 </body>
 </html>

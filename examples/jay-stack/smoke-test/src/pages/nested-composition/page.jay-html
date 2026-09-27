@@ -1,19 +1,34 @@
 <html>
 <head>
-  <script type="application/jay-headfull"
+  <script type="application/jay-headless"
           src="../../components/section/section"
-          contract="../../components/section/section.jay-contract"
-          names="section"></script>
+          contract="../../components/section/section.jay-contract"></script>
+  <script type="application/jay-headless"
+          contract="../../components/card/card.jay-contract"></script>
+  <script type="application/jay-headless"
+          src="../../components/button/button"
+          contract="../../components/button/button.jay-contract"></script>
   <script type="application/jay-data" contract="./page.jay-contract"></script>
 </head>
 <body>
   <div>
     <h1>{pageTitle}</h1>
-    <!-- Realistic nested composition: a Tier 3 button inside a Tier 2 card inside a Tier 3 section.
-         The page only composes <jay:section>; card and button are encapsulated inside it. The
-         section's title threads down as the card heading and then the button label, proving data
-         and coordinates flow correctly through alternating Tier 3 / Tier 2 / Tier 3 boundaries. -->
-    <jay:section ref="section" title="Featured" />
+    <!-- Realistic nested composition flattened into the page (DL#196): a coded button inside a
+         passthrough card inside a coded section. The section's title threads down as the card
+         heading and then the button label, proving data flows through nested flattened regions. -->
+    <jay:section ref="section" title="Featured">
+      <section class="section">
+        <h2>Section: {title}</h2>
+        <jay:card heading="{title}">
+          <div class="card">
+            <h3>Card: {heading}</h3>
+            <jay:button label="{heading}">
+              <button ref="clickAction" class="btn">Button: {label}</button>
+            </jay:button>
+          </div>
+        </jay:card>
+      </section>
+    </jay:section>
   </div>
 </body>
 </html>

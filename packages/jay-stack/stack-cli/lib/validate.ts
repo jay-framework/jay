@@ -31,8 +31,14 @@ import {
     type JayHtmlSourceFile,
 } from '@jay-framework/compiler-jay-html';
 import { getLogger } from '@jay-framework/logger';
-import { parse as parseHtml } from 'node-html-parser';
-import YAML from 'yaml';
+import {
+    diffBodies,
+    isRegionTag,
+    facetLabel,
+    overrideSpecFor,
+    type DiffEntry,
+} from '@jay-framework/compiler-inline-composition';
+import { parse as parseHtml, HTMLElement, NodeType } from 'node-html-parser';
 import { loadConfig, getConfigWithDefaults } from './config';
 
 export interface ValidateOptions {
@@ -710,7 +716,7 @@ const HEADLESS_SKIP_ATTRS = new Set([
     'key',
     'jay-coordinate-base',
     'jay-scope',
-    'jc', // compiler-injected marker (parseHeadfullFSImports, jay-html-parser.ts:1180)
+    'jc', // component-provenance marker stamped on a flattened <jay:X> region (DL#196)
 ]);
 
 const PHASE_ORDER: Record<string, number> = {
@@ -766,6 +772,95 @@ function resolveBindingDataType(
 /** Human-readable label for a prop/tag data type, used in validation messages (DL#192). */
 function typeLabel(t: JayType): string {
     return isEnumType(t) ? `enum(${t.values.join(' | ')})` : t.name;
+}
+
+/** Collect every `<jay:X>` region element in a body subtree, including nested regions. */
+function collectRegionElements(root: HTMLElement): HTMLElement[] {
+    const out: HTMLElement[] = [];
+    const visit = (el: HTMLElement) => {
+        for (const child of el.childNodes) {
+            if (child.nodeType !== NodeType.ELEMENT_NODE) continue;
+            const childEl = child as HTMLElement;
+            if (isRegionTag(childEl)) out.push(childEl);
+            visit(childEl);
+        }
+    };
+    visit(root);
+    return out;
+}
+
+/** Format one facet drift entry as a validation warning (DL#196 §4). */
+function formatRegionDrift(contractName: string, template: string, entry: DiffEntry): string {
+    const label = facetLabel(entry.facet);
+    const values =
+        entry.change === 'added'
+            ? ` (now ${entry.regionValue ?? ''})`
+            : entry.change === 'removed'
+              ? ` (was ${entry.sourceValue ?? ''})`
+              : ` (${entry.sourceValue ?? ''} → ${entry.regionValue ?? ''})`;
+    const spec = overrideSpecFor(entry.facet);
+    const suggestion =
+        spec.target === 'markup-attribute'
+            ? `mark the node override="${spec.value}"`
+            : spec.value
+              ? `mark the CSS rule /* jay:override: ${spec.value} */`
+              : 'mark the CSS rule /* jay:override */';
+    return (
+        `<jay:${contractName}> region differs from source template "${template}": ` +
+        `${label} ${entry.change}${values}. ` +
+        `To keep the page's version, ${suggestion}; to discard it and re-flatten from source, run \`jay-stack sync\`.`
+    );
+}
+
+/**
+ * DL#196 §4 — report drift between a flattened `<jay:X>` region's inline body and its source template.
+ *
+ * A headless import carrying `template=` provenance is diffed, facet-granular, against the current
+ * source template (`diffBodies`). Unmarked deviations are warnings; the author resolves each by marking
+ * the drifted node `override="<facet>"` (the page owns that facet, so it is neither reported nor touched
+ * by sync) or by running `jay-stack sync` to re-flatten from source. A region without `template=` has no
+ * provenance and is not drift-checked.
+ *
+ * Template loading is injected so this stays pure and unit-testable; the CLI supplies a filesystem
+ * reader resolving `template=` relative to the page directory.
+ *
+ * @internal Exported for testing
+ */
+export function checkRegionDrift(
+    jayHtml: JayHtmlSourceFile,
+    loadTemplate: (relativeTemplatePath: string) => string | undefined,
+): string[] {
+    const importsWithTemplate = jayHtml.headlessImports.filter((imp) => imp.template);
+    if (importsWithTemplate.length === 0) return [];
+
+    const warnings: string[] = [];
+    // A page may flatten the same source template into several regions — parse each template once.
+    const templateBodyCache = new Map<string, HTMLElement | null>();
+
+    for (const region of collectRegionElements(jayHtml.body)) {
+        const contractName = (region.rawTagName ?? '').toLowerCase().substring(4);
+        const imp = importsWithTemplate.find((i) => i.contractName === contractName);
+        if (!imp?.template) continue;
+
+        let templateBody = templateBodyCache.get(imp.template);
+        if (templateBody === undefined) {
+            const content = loadTemplate(imp.template);
+            templateBody = (content ? parseHtml(content).querySelector('body') : null) ?? null;
+            templateBodyCache.set(imp.template, templateBody);
+            if (!templateBody) {
+                warnings.push(
+                    `<jay:${contractName}> declares template="${imp.template}" but its source template ` +
+                        `could not be read. Fix the path or remove the attribute.`,
+                );
+            }
+        }
+        if (!templateBody) continue;
+
+        for (const entry of diffBodies(templateBody, region)) {
+            warnings.push(formatRegionDrift(contractName, imp.template, entry));
+        }
+    }
+    return warnings;
 }
 
 /**
@@ -1252,6 +1347,18 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                 } else {
                     warnings.push({ file: relativePath, message: msg });
                 }
+            }
+
+            // Check flattened region bodies against their source templates (DL#196 drift validation)
+            const driftWarnings = checkRegionDrift(parsedFile.val!, (templatePath) => {
+                try {
+                    return fs.readFileSync(path.resolve(dirname, templatePath), 'utf-8');
+                } catch {
+                    return undefined;
+                }
+            });
+            for (const msg of driftWarnings) {
+                warnings.push({ file: relativePath, message: msg });
             }
 
             // Analyze tag coverage for headless imports

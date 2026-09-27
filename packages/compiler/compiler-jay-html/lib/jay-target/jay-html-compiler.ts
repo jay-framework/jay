@@ -1,5 +1,4 @@
 import {
-    GenerateTarget,
     Import,
     Imports,
     ImportsFor,
@@ -50,14 +49,11 @@ import {
     JayHtmlNamespace,
     JayHtmlSourceFile,
 } from './jay-html-source-file';
-import { OVERRIDE_INJECTED_MARKER, FOREIGN_SLOT_MARKER } from './jay-html-overrides';
 import {
     AsyncDirectiveType,
     AsyncDirectiveTypes,
     checkAsync,
     ensureSingleChildElement,
-    forEachInsidePureComponentError,
-    hasForEachDescendant,
     isConditional,
     isForEach,
     isRecurse,
@@ -69,12 +65,9 @@ import { generateTypes } from './jay-html-compile-types';
 import { Indent } from './indent';
 import {
     elementNameToJayType,
-    filterToComponentRefs,
-    hasNamedComponentRefs,
     optimizeRefs,
     ReferenceManagerTarget,
     RefNameGenerator,
-    refsToRepeated,
     renderReferenceManager,
     renderRefsType,
 } from './jay-html-compile-refs';
@@ -123,13 +116,6 @@ export interface HeadlessInstanceDefinition {
     pluginComponentName?: string;
     /** Additional imports needed for the inline template */
     imports: Imports;
-    /**
-     * DL#193 Phase 3: synthetic refs type declaration(s) for a structural component that forwards its
-     * named inner child-component refs. Emitted in the shared page-level refs section (renderedRefs) so
-     * ALL targets (element, hydrate, bridge, main-sandbox) that reuse renderedRefs see the type, rather
-     * than burying it in the inline template code (which only the element target emits). Empty otherwise.
-     */
-    syntheticRefsCode?: string;
 }
 
 export interface RenderContext {
@@ -151,22 +137,6 @@ export interface RenderContext {
     headlessInstanceDefs: HeadlessInstanceDefinition[]; // Accumulator for inline template definitions
     headlessInstanceCounter: { count: number }; // Shared counter for unique naming
     coordinateCounters: Map<string, number>;
-    // DL#194 §C (Tier 3, Fork C): `const <name> = { <slot>: <fragment> }` declarations for slot
-    // content that must be materialized once inside the page render's `withRootContext` body, before
-    // the returned element expression. Each is referenced twice — by the child's higher-order
-    // constructor closure and by `childComp`'s `slots` argument — so it must be a shared const. When
-    // non-empty, the page render body is emitted as a block. Shared mutable array (like
-    // `headlessInstanceDefs`); propagates to nested scopes via spread.
-    slotPreambles: string[];
-    // DL#193 Phase 3: file-level set of forwarded-ref helper identifiers (`CounterRef`,
-    // `CounterRefs`) already emitted, so multiple structural instances embedding the same inner
-    // component declare each helper once (avoids duplicate-identifier errors).
-    emittedForwardedRefHelpers: Set<string>;
-    // DL#194 (Tier 2 inlining): true while compiling the spliced body of an inlined no-code
-    // composite. In that world the composite has no runtime boundary, so the DL#193
-    // override-injected re-basing (`(vs,_p1)=>_p1` selector + `__parentContext`) is a no-op — the
-    // injected component is already in the enclosing scope. Propagates to nested scopes via spread.
-    insideInlinedComposite?: boolean;
 }
 
 function renderFunctionDeclaration(preRenderType: string): string {
@@ -450,10 +420,7 @@ export function renderChildCompProps(
             attrCanonical === 'foreach' ||
             attrCanonical === 'trackby' ||
             attrCanonical === 'jay-coordinate-base' ||
-            attrCanonical === 'jay-scope' ||
-            // DL#193 Phase 3 refinement: provenance marker on override-injected component tags —
-            // read for ref re-basing, never a prop.
-            attrCanonical === OVERRIDE_INJECTED_MARKER
+            attrCanonical === 'jay-scope'
         )
             return;
         if (attrCanonical === 'props') {
@@ -506,87 +473,9 @@ export function renderChildCompProps(
     }
 }
 
-/**
- * DL#194 (Tier 2 inlining): seed the alias map that redirects each of a no-code composite's
- * contract-ViewState fields to the usage-site expression bound to it. Mirrors the attribute walk of
- * {@link renderChildCompProps}, but produces `Record<contractFieldName, Accessor>` (consumed by
- * {@link Variables.forInlinedComponent}) instead of a props object. Two alias shapes:
- *  - dynamic `{expr}` prop → the single accessor it parses to, rooted in the parent scope so it
- *    renders against the surrounding `vs` (DL#187 restricts structural props to scalar/enum, so a
- *    structural prop is always a single accessor);
- *  - static prop → a literal {@link Accessor} carrying the coerced value (enum member / number /
- *    boolean / quoted string, per {@link coerceStaticComponentProp}) and the declared type, so
- *    card-internal type-directed grammar (e.g. an enum comparison) still resolves.
- * `if`/`foreach`/`ref`/coordinate/scope/override-marker attributes are not props — skipped.
- */
-export function buildInlineAliases(
-    element: HTMLElement,
-    parentVariables: Variables,
-    contractProps?: ContractProp[],
-): { aliases: Record<string, Accessor>; validations: string[] } {
-    const attributes = element.attributes;
-    const aliases: Record<string, Accessor> = {};
-    const validations: string[] = [];
-    const propTypeMap = contractProps
-        ? new Map(contractProps.map((p) => [p.name, p.dataType]))
-        : undefined;
-    Object.keys(attributes).forEach((attrName) => {
-        const attrCanonical = attrName.toLowerCase();
-        if (
-            attrCanonical === 'if' ||
-            attrCanonical === 'foreach' ||
-            attrCanonical === 'trackby' ||
-            attrCanonical === 'jay-coordinate-base' ||
-            attrCanonical === 'jay-scope' ||
-            attrCanonical === 'ref' ||
-            attrCanonical === 'props' ||
-            // Component provenance marker (DL#123) — stamped by the parser, never a prop.
-            attrCanonical === 'jc' ||
-            attrCanonical === OVERRIDE_INJECTED_MARKER
-        )
-            return;
-        const rawValue = attributes[attrName];
-        const outputKey =
-            contractProps?.find((p) => p.name.toLowerCase() === attrCanonical)?.name ?? attrName;
-        const expectedType = propTypeMap?.get(attrName) ?? propTypeMap?.get(outputKey);
-        const isStatic = !rawValue.includes('{');
-        if (isStatic) {
-            const coerced = coerceStaticComponentProp(rawValue.trim(), expectedType);
-            // A non-coerced static value is a plain string: reuse the grammar's quoted-string output.
-            // For a static enum member, widen to the base enum type: inlining substitutes the value
-            // directly into the composite's `alias === Status.warning` comparisons, and a narrowed
-            // `Status.success` literal would make tsc flag every other branch as a no-overlap error.
-            const literalRender =
-                coerced !== undefined && expectedType && isEnumType(expectedType)
-                    ? `(${coerced} as ${expectedType.alias ?? expectedType.name})`
-                    : (coerced ?? parseComponentPropExpression(rawValue, parentVariables).rendered);
-            aliases[outputKey] = new Accessor(
-                '',
-                [],
-                [],
-                expectedType ?? JayUnknown,
-                0,
-                literalRender,
-            );
-        } else {
-            // Dynamic `{expr}` — strip the braces and resolve the single accessor against the
-            // parent scope so it renders rooted in the surrounding `vs`.
-            const stripped = rawValue.trim().replace(/^\{/, '').replace(/\}$/, '');
-            aliases[outputKey] = parseAccessor(stripped, parentVariables);
-        }
-    });
-    return { aliases, validations };
-}
-
 export function renderChildCompRef(
     element: HTMLElement,
-    {
-        dynamicRef,
-        variables,
-        refNameGenerator,
-        importedRefNameToRef,
-        insideInlinedComposite,
-    }: RenderContext,
+    { dynamicRef, variables, refNameGenerator, importedRefNameToRef }: RenderContext,
     componentName: string,
 ): RenderFragment {
     if (importedRefNameToRef.has(element.attributes.ref)) {
@@ -624,19 +513,6 @@ export function renderChildCompRef(
     let originalName = element.attributes.ref || refNameGenerator.newAutoRefNameGenerator();
     let refName = camelCase(originalName);
     let constName = refNameGenerator.newConstantName(refName, variables);
-    // DL#193 Phase 3 refinement: an override-injected child component's forwarded ref carries the
-    // OUTER (override authoring) scope, not the composite's own ViewState — the override author knows
-    // the outer scope, not the component's internals (§C). The composite's inline body is compiled
-    // in `childContext`, whose `variables.parent` is the outer page/forEach scope. A plain inner ref
-    // (no marker) keeps the composite's own `currentType`.
-    // DL#194: inside an inlined Tier 2 composite the injected ref already carries the enclosing
-    // scope (the composite has no boundary), so the DL#193 outer-scope re-basing does not apply.
-    const isOverrideInjected =
-        OVERRIDE_INJECTED_MARKER in element.attributes && !insideInlinedComposite;
-    const refViewStateType =
-        isOverrideInjected && variables.parent
-            ? variables.parent.currentType
-            : variables.currentType;
     let refs = mkRefsTree(
         [
             mkRef(
@@ -645,7 +521,7 @@ export function renderChildCompRef(
                 constName,
                 dynamicRef,
                 !element.attributes.ref,
-                refViewStateType,
+                variables.currentType,
                 new JayComponentType(componentName, []),
             ),
         ],
@@ -653,10 +529,6 @@ export function renderChildCompRef(
     );
     return new RenderFragment(`${constName}()`, Imports.for(), [], refs);
 }
-
-const isOverrideNode = (n: Node) =>
-    n.nodeType === NodeType.ELEMENT_NODE &&
-    ((n as HTMLElement).rawTagName ?? '').toLowerCase() === 'override';
 
 export function renderNode(node: Node, context: RenderContext): RenderFragment {
     let { variables, importedSandboxedSymbols, indent, importerMode } = context;
@@ -882,7 +754,6 @@ export function renderNode(node: Node, context: RenderContext): RenderFragment {
         collectionVariables: Variables,
         trackBy: string,
         childElement: RenderFragment,
-        slotPreambles: string[] = [],
     ) {
         // DL#193 Capability A: if the item body binds `{$parent.…}` (parentDepth > 0), this
         // forEach is the scope it climbs *out of* — emit `dependsOnParent: true` so the runtime
@@ -894,14 +765,9 @@ export function renderNode(node: Node, context: RenderContext): RenderFragment {
             renderedForEach.parentDepth,
             Math.max(0, childElement.parentDepth - 1),
         );
-        // DL#194 §C (Tier 3, Fork C) under a parent forEach: flush any per-item slot content consts into
-        // the item callback body so each repeated item builds its OWN slot fragment (own element + ref) —
-        // not a single hoisted const shared across items (which would wire only the first item's ref).
-        const slotPreamblesStr =
-            slotPreambles.length > 0 ? `${slotPreambles.join('\n')}\n${indent.curr}` : '';
         return new RenderFragment(
             `${indent.firstLine}forEach(${renderedForEach.rendered}, (${collectionVariables.currentVar}: ${collectionVariables.currentType.name}) => {
-${indent.curr}${slotPreamblesStr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? ', true' : ''})`,
+${indent.curr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? ', true' : ''})`,
             childElement.imports.plus(Import.forEach),
             [...renderedForEach.validations, ...childElement.validations],
             childElement.refs,
@@ -937,156 +803,24 @@ ${indent.curr}${slotPreamblesStr}return ${childElement.rendered}}, '${trackBy}'$
         let renderedRef = renderChildCompRef(htmlElement, newContext, componentName);
         if (renderedRef.rendered !== '') renderedRef = renderedRef.map((_) => ', ' + _);
         let getProps = `(${newContext.variables.currentVar}: ${newContext.variables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
-        // DL#193 Phase 3 refinement: an override-injected child component with a forwarded ref must
-        // deliver the OUTER (override authoring) scope on that ref — for onChange AND find/map alike
-        // (§C). Emit a ref-viewState selector `(vs, _p1) => _p1` that reads the first parent from the
-        // live parentDataChain, and raise this fragment's parentDepth so the enclosing composite
-        // instance emits `__parentContext` (its synthetic parent = the outer scope) at its mount site.
-        const isOverrideInjected =
-            OVERRIDE_INJECTED_MARKER in htmlElement.attributes &&
-            renderedRef.rendered !== '' &&
-            // DL#194: inside an inlined Tier 2 composite there is no boundary to re-base across —
-            // the injected component already resolves in the enclosing scope.
-            !newContext.insideInlinedComposite;
-        const refSelectorArg = isOverrideInjected
-            ? `, (${newContext.variables.currentVar}, _p1) => _p1`
-            : '';
-        const nestedParentDepth = isOverrideInjected ? 1 : 0;
         if (importedSandboxedSymbols.has(componentName) || importerMode === RuntimeMode.MainSandbox)
             return new RenderFragment(
-                `${newContext.indent.firstLine}secureChildComp(${componentName}, ${getProps}${renderedRef.rendered}${refSelectorArg})`,
+                `${newContext.indent.firstLine}secureChildComp(${componentName}, ${getProps}${renderedRef.rendered})`,
                 Imports.for(Import.secureChildComp)
                     .plus(propsGetterAndRefs.imports)
                     .plus(renderedRef.imports),
                 propsGetterAndRefs.validations,
                 renderedRef.refs,
-                [],
-                nestedParentDepth,
             );
         else
             return new RenderFragment(
-                `${newContext.indent.firstLine}childComp(${componentName}, ${getProps}${renderedRef.rendered}${refSelectorArg})`,
+                `${newContext.indent.firstLine}childComp(${componentName}, ${getProps}${renderedRef.rendered})`,
                 Imports.for(Import.childComp)
                     .plus(propsGetterAndRefs.imports)
                     .plus(renderedRef.imports),
                 propsGetterAndRefs.validations,
                 renderedRef.refs,
-                [],
-                nestedParentDepth,
             );
-    }
-
-    /**
-     * Render a headless component instance with inline template.
-     *
-     * <jay:product-card productId="prod-hero">
-     *   <article class="hero-card">
-     *     <h2>{name}</h2>
-     *   </article>
-     * </jay:product-card>
-     *
-     * Compiles the inline template children against the component's ViewState,
-     * generates a render function + makeJayComponent definition (accumulated in context),
-     * and returns a childComp() call for the page render function.
-     */
-    /**
-     * DL#194 Phase B — Tier 2 (no-code composite) inlining.
-     *
-     * A structural `<jay:X>` has jay-html + contract but no `.ts`, so there is nothing to run: its
-     * template is spliced into the usage site (the parser already merged the component body into the
-     * tag's innerHTML). We compile that body against an *alias overlay* of the parent scope
-     * ({@link Variables.forInlinedComponent}) so each contract field renders as the usage-site
-     * expression bound to it, and return the body fragment directly — no `childComp`, no synthetic
-     * render fn, no `makeHeadlessInstanceComponent`, no `__parentContext` forwarding. Inner refs
-     * (real child components / named elements in the body) bubble into the PAGE ref manager, nested
-     * under the usage-site ref name so they read as `refs.<usageName>.<inner>` and carry the parent
-     * ViewState as their parent type (external by construction).
-     */
-    function renderInlinedStructuralInstance(
-        htmlElement: HTMLElement,
-        newContext: RenderContext,
-        contractName: string,
-        headlessImport: JayHeadlessImports,
-    ): RenderFragment {
-        const childNodes = filterContentNodes(htmlElement.childNodes);
-        if (childNodes.length === 0) {
-            return new RenderFragment(
-                '',
-                Imports.none(),
-                [
-                    `Headless component instance <jay:${contractName}> must have inline template content`,
-                ],
-                mkRefsTree([], {}),
-            );
-        }
-        // DL#194 v1: a card-internal forEach over an aliased array needs depth-correct nested scopes;
-        // deferred to a follow-up. Keep the clear diagnostic (DL#193 §4) rather than mis-compiling.
-        if (childNodes.some(hasForEachDescendant)) {
-            return new RenderFragment(
-                '',
-                Imports.none(),
-                [forEachInsidePureComponentError(contractName)],
-                mkRefsTree([], {}),
-            );
-        }
-
-        // Seed the alias overlay from the usage-site prop attributes, then build the inlined scope:
-        // the parent scope's type/var/depth plus that overlay (see Variables.forInlinedComponent).
-        const { aliases, validations: aliasValidations } = buildInlineAliases(
-            htmlElement,
-            newContext.variables,
-            headlessImport.contract?.props,
-        );
-        const componentVariables = Variables.forInlinedComponent(newContext.variables, aliases);
-
-        // Compile the body. Exclude the component's own code-link name from importedSymbols so HTML
-        // tags aren't mistaken for the component import; drive nested refs off the contract ref map.
-        const instanceRefMap = buildContractRefMap(headlessImport.refs);
-        const pluginComponentName = headlessImport.codeLink.names[0].name;
-        const childImportedSymbols = new Set(newContext.importedSymbols);
-        childImportedSymbols.delete(pluginComponentName);
-        const childContext: RenderContext = {
-            ...newContext,
-            variables: componentVariables,
-            importedSymbols: childImportedSymbols,
-            importedRefNameToRef: instanceRefMap,
-            headlessContractNames: newContext.headlessContractNames,
-            insideInlinedComposite: true,
-        };
-
-        const renderedChildren = childNodes
-            .map((_) => renderNode(_, childContext))
-            .reduce(
-                (prev, current) => RenderFragment.merge(prev, current, ',\n'),
-                RenderFragment.empty(),
-            );
-
-        // Multiple root children need a wrapping element so the spliced expression is a single node.
-        let inlineBody: RenderFragment;
-        if (childNodes.length > 1) {
-            inlineBody = new RenderFragment(
-                `de('div', {}, [\n${renderedChildren.rendered}\n])`,
-                renderedChildren.imports.plus(Import.dynamicElement),
-                renderedChildren.validations,
-                renderedChildren.refs,
-                renderedChildren.recursiveRegions,
-            );
-        } else {
-            inlineBody = renderedChildren;
-        }
-
-        // Nest the body's refs under the usage-site ref name (`refs.signupCard.cta`) when present;
-        // otherwise they bubble up flat. The existing ref-manager machinery renders the nested group.
-        const usageRefName = htmlElement.attributes.ref;
-        const nested = usageRefName ? nestRefs([camelCase(usageRefName)], inlineBody) : inlineBody;
-
-        return new RenderFragment(
-            `${newContext.indent.firstLine}${nested.rendered}`,
-            nested.imports,
-            [...aliasValidations, ...nested.validations],
-            nested.refs,
-            nested.recursiveRegions,
-        );
     }
 
     function renderHeadlessInstance(
@@ -1098,19 +832,6 @@ ${indent.curr}${slotPreamblesStr}return ${childElement.rendered}}, '${trackBy}'$
         const headlessResult = resolveHeadlessImport(contractName, newContext.headlessImports);
         if (isValidationError(headlessResult)) return headlessResult;
         const headlessImport = headlessResult;
-
-        // DL#194 Phase B (being deleted, DL#196): the legacy Tier-2 headfull-FS composite splices its
-        // template into the usage site instead of wrapping it in a `childComp`. Concept-A no-code
-        // (`application/jay-headless`, `structural` but not `legacyInlined`) now flows through the single
-        // headless-instance path below, backed by a passthrough (DL#196). Only concept-B (headfull-FS)
-        // still inlines, until its fixtures migrate.
-        if (headlessImport.structural && headlessImport.legacyInlined)
-            return renderInlinedStructuralInstance(
-                htmlElement,
-                newContext,
-                contractName,
-                headlessImport,
-            );
 
         // Generate unique names for this instance
         const idx = newContext.headlessInstanceCounter.count++;
@@ -1138,34 +859,10 @@ ${indent.curr}${slotPreamblesStr}return ${childElement.rendered}}, '${trackBy}'$
         }
 
         // Compile inline template children against the component's ViewState.
-        // DL#193 Phase 2a: link the enclosing (page) scope as the component scope's parent so
-        // page-authored `<override>` content — marked `@jay:parent` and resolved via `withParentShift`
-        // — climbs to it as an ordinary `$parent` (`_p1`) access. At the mount site the whole
-        // enclosing view state is forwarded as `__parentContext`, so `_p1.<anyField>` resolves.
         const componentVariables = new Variables(headlessImport.rootType, newContext.variables);
         const childIndent = newContext.indent.child(false);
 
-        const allChildNodes = filterContentNodes(htmlElement.childNodes);
-        // DL#194 §C (Tier 3, Fork C): a Tier 3 composite keeps its default template SEPARATE from
-        // the `<override slot>` content. The parser injects the default body (slot anchors marked
-        // `jay-foreign-slot` when filled) and appends the `<override>` elements verbatim. Split them:
-        // template nodes compile in CHILD scope (the inline render fn); override content compiles in
-        // PARENT scope (the page render) into slot fragments the parent owns.
-        const overrideNodes = allChildNodes.filter(isOverrideNode) as HTMLElement[];
-        const childNodes = allChildNodes.filter((n) => !isOverrideNode(n));
-        const hasSlots = overrideNodes.length > 0;
-
-        // DL#193 Phase 3 (§4 validation): a pure (Tier 2) structural component receives only
-        // scalar/enum props (DL#187), so no array can ever drive an internal forEach. Reject it
-        // with a clear diagnostic rather than the generic "resolved forEach type is not an array".
-        if (headlessImport.structural && childNodes.some(hasForEachDescendant)) {
-            return new RenderFragment(
-                '',
-                Imports.none(),
-                [forEachInsidePureComponentError(contractName)],
-                mkRefsTree([], {}),
-            );
-        }
+        const childNodes = filterContentNodes(htmlElement.childNodes);
 
         let inlineBody: RenderFragment;
         if (childNodes.length === 0) {
@@ -1228,8 +925,8 @@ ${indent.curr}${slotPreamblesStr}return ${childElement.rendered}}, '${trackBy}'$
                     renderedChildren.validations,
                     renderedChildren.refs,
                     renderedChildren.recursiveRegions,
-                    // DL#193 Phase 2a: preserve the deepest `$parent` climb so the usage site still
-                    // emits `__parentContext` when override content spans multiple root children.
+                    // DL#193 Capability A: preserve the deepest `$parent` climb so the usage site
+                    // still weakens gates when instance content spans multiple root children.
                     renderedChildren.parentDepth,
                 );
             } else {
@@ -1237,56 +934,9 @@ ${indent.curr}${slotPreamblesStr}return ${childElement.rendered}}, '${trackBy}'$
             }
         }
 
-        // DL#194 §C (Tier 3, Fork C): compile each `<override slot="X">` fragment. Unlike DL#193, the
-        // content is authored AND resolved in the PARENT (page) scope — it is built in the page render
-        // and mounted into the child DOM at the anchor (`foreignChild`). Its refs are parent-owned,
-        // surfaced keyed by slot name under the instance (`refs.<instance>.<slot>.<ref>`).
-        const pageVSType = newContext.variables.currentType.name;
         const refOriginalName =
             htmlElement.attributes.ref || newContext.refNameGenerator.newAutoRefNameGenerator();
         const refRefName = camelCase(refOriginalName);
-        const slotsTypeName = `_Headless${pascal}${idx}Slots`;
-        const slotsConstName = `${refRefName}Slots`;
-        const slotObjectMembers: string[] = [];
-        const slotTypeMembers: string[] = [];
-        const slotRefsChildren: Record<string, RefsTree> = {};
-        let slotImports = Imports.none();
-        const slotValidations: string[] = [];
-        if (hasSlots) {
-            const slotContext: RenderContext = {
-                ...newContext,
-                indent: newContext.indent.child(false),
-                recursiveRegions: [],
-                isInsideGuard: false,
-            };
-            for (const overrideNode of overrideNodes) {
-                const slotName = camelCase(overrideNode.getAttribute('slot')!);
-                const overrideChildren = filterContentNodes(overrideNode.childNodes);
-                const renderedSlot = overrideChildren
-                    .map((_) => renderNode(_, slotContext))
-                    .reduce(
-                        (prev, current) => RenderFragment.merge(prev, current, ',\n'),
-                        RenderFragment.empty(),
-                    );
-                let slotBody: RenderFragment;
-                if (overrideChildren.length > 1) {
-                    slotBody = new RenderFragment(
-                        `de('div', {}, [\n${renderedSlot.rendered}\n])`,
-                        renderedSlot.imports.plus(Import.dynamicElement),
-                        renderedSlot.validations,
-                        renderedSlot.refs,
-                        renderedSlot.recursiveRegions,
-                    );
-                } else {
-                    slotBody = renderedSlot;
-                }
-                slotObjectMembers.push(`${slotName}: ${slotBody.rendered.trim()}`);
-                slotTypeMembers.push(`    ${slotName}: BaseJayElement<${pageVSType}>;`);
-                slotRefsChildren[slotName] = slotBody.refs;
-                slotImports = slotImports.plus(slotBody.imports);
-                slotValidations.push(...slotBody.validations);
-            }
-        }
 
         // Merge contract ref stubs into inline template refs (DL#138)
         const mergedRefs = mergeContractStubRefs(inlineBody.refs, headlessImport.refs);
@@ -1294,97 +944,6 @@ ${indent.curr}${slotPreamblesStr}return ${childElement.rendered}}, '${trackBy}'$
             mergedRefs,
             ReferenceManagerTarget.element,
         );
-
-        // DL#193 Phase 3: a structural (Tier 2) component forwards its named inner child-component
-        // refs (e.g. `<jay:Counter ref="cta">`). When present, emit a synthetic refs type from the
-        // merged refs so the forwarded refs (`cta: CounterRef<CardViewState>`) surface on BOTH the
-        // inline render fn's public API and the usage-site instance ref — the contract-only
-        // `${pascal}Refs` type does not declare them. The passthrough spreads `_refs` at runtime
-        // (see buildStructuralPassthroughComp), so the runtime object already carries them.
-        //
-        // The inline render fn always uses the SINGLE type — an instance's own template refs are
-        // single (childContext resets `dynamicRef`). When the instance is REPEATED at the usage site
-        // (inside a forEach), the page-side instance ref needs the COLLECTION shape (each forwarded
-        // `cta` becomes `CounterRefs`), captured here as `_Headless${pascal}${idx}RepeatedRefs`. The
-        // collection-ness comes from the page-level ref manager collecting the instances.
-        const syntheticSingleRefsTypeName = `_Headless${pascal}${idx}Refs`;
-        const syntheticRepeatedRefsTypeName = `_Headless${pascal}${idx}RepeatedRefs`;
-        // Q2 = (a) implicit: forward only NAMED child-component refs. Element refs and auto (unnamed)
-        // refs stay private, so the synthetic type is built from the component-refs-only subtree.
-        const forwardedRefs = filterToComponentRefs(mergedRefs);
-        const hasForwardedRefs = headlessImport.structural && hasNamedComponentRefs(mergedRefs);
-        const forwardedRepeated = hasForwardedRefs && newContext.dynamicRef;
-        let syntheticRefsCode = '';
-        let syntheticRefsImports = Imports.none();
-        if (hasForwardedRefs) {
-            // Shared helper identifiers already emitted earlier in the file — the repeated interface
-            // (emitted first) declares `CounterRef`/`CounterRefs`; the companion single interface and
-            // any later structural instance embedding the same inner component then skip them.
-            const emittedHelpers = newContext.emittedForwardedRefHelpers;
-            if (forwardedRepeated) {
-                const repeated = renderRefsType(
-                    refsToRepeated(forwardedRefs),
-                    syntheticRepeatedRefsTypeName,
-                    GenerateTarget.jay,
-                    true,
-                    emittedHelpers,
-                );
-                const single = renderRefsType(
-                    forwardedRefs,
-                    syntheticSingleRefsTypeName,
-                    GenerateTarget.jay,
-                    true,
-                    emittedHelpers,
-                );
-                syntheticRefsCode = `${repeated.renderedRefs}\n${single.renderedRefs}\n`;
-                syntheticRefsImports = repeated.imports.plus(single.imports);
-            } else {
-                const single = renderRefsType(
-                    forwardedRefs,
-                    syntheticSingleRefsTypeName,
-                    GenerateTarget.jay,
-                    true,
-                    emittedHelpers,
-                );
-                syntheticRefsCode = `${single.renderedRefs}\n`;
-                syntheticRefsImports = single.imports;
-            }
-        }
-        // DL#194 §C (Tier 3, Fork C): a slotted instance surfaces its parent-owned slot refs on the
-        // usage-site instance ref, keyed by slot name (`refs.<instance>.<slot>.<ref>`). Emit a
-        // synthetic instance-ref interface that EXTENDS the contract Refs (the child's own refs) with
-        // the slot refs subtree, plus the `_Headless…Slots` shape the render fn / childComp consume.
-        if (hasSlots) {
-            const slotRefsTree = mkRefsTree([], slotRefsChildren);
-            const rendered = renderRefsType(
-                slotRefsTree,
-                syntheticSingleRefsTypeName,
-                GenerateTarget.jay,
-                true,
-                newContext.emittedForwardedRefHelpers,
-            );
-            const slotRefsInterface = rendered.renderedRefs.replace(
-                `export interface ${syntheticSingleRefsTypeName} {`,
-                `interface ${syntheticSingleRefsTypeName} extends ${refsTypeName} {`,
-            );
-            // The index signature makes the slots interface assignable to the runtime's
-            // `slots?: Record<string, BaseJayElement<ParentVS>>` param (childComp/childCompHydrate)
-            // while keeping the named per-slot members for author-facing type checks.
-            const slotsTypeCode = `interface ${slotsTypeName} {\n    [slot: string]: BaseJayElement<${pageVSType}>;\n${slotTypeMembers.join('\n')}\n}`;
-            syntheticRefsCode = `${slotRefsInterface}\n${slotsTypeCode}\n`;
-            syntheticRefsImports = rendered.imports.plus(Import.baseJayElement);
-            // The synthetic interface extends the contract Refs type — ensure it is imported.
-            for (const link of headlessImport.contractLinks) {
-                if (!link.names.some((n) => n.name === refsTypeName))
-                    link.names.push({ name: refsTypeName, type: JayUnknown });
-            }
-            newContext.usedComponentImports.add(refsTypeName);
-        }
-
-        // The inline render fn's public API is always the single shape. Slotted instances keep the
-        // CONTRACT Refs on the render fn (slot refs are parent-owned, not part of the child API).
-        const effectiveRefsTypeName =
-            hasForwardedRefs && !hasSlots ? syntheticSingleRefsTypeName : refsTypeName;
 
         // Build coordinate key: use explicit ref if present, otherwise auto-generate with AR prefix.
         // Must match assignCoordinates' naming (AR0, AR1, ...) so the element target's
@@ -1409,13 +968,6 @@ ${indent.curr}${slotPreamblesStr}return ${childElement.rendered}}, '${trackBy}'$
             ? undefined // will use factory
             : instanceCoordBase || coordinateSuffix;
 
-        // DL#194 §C (Tier 3, Fork C): a slotted render fn takes the parent-built `slots` and mounts
-        // them at the `foreignChild` anchors. The instance is created via a higher-order constructor
-        // that closes over `slots`, so `childComp` can drive the slot fragments' updates separately.
-        const makeFnName = `_makeHeadless${pascal}${idx}`;
-        const renderFnSignature = hasSlots
-            ? `options: RenderElementOptions | undefined, slots: ${slotsTypeName}`
-            : `options?: RenderElementOptions`;
         const coordinateArg = isInsideForEach
             ? `(dataIds) => [...dataIds, '${coordinateSuffix}'].toString()`
             : `'${coordinateKey}'`;
@@ -1427,14 +979,7 @@ ${indent.curr}${slotPreamblesStr}return ${childElement.rendered}}, '${trackBy}'$
     ${renderFnName},
     ${coordinateArg},
 );`
-            : hasSlots
-              ? `const ${makeFnName} = (slots: ${slotsTypeName}) =>
-    makeHeadlessInstanceComponent(
-        (options?: RenderElementOptions) => ${renderFnName}(options, slots),
-        ${pluginComponentName},
-        ${coordinateArg},
-    );`
-              : `const ${componentSymbol} = makeHeadlessInstanceComponent(
+            : `const ${componentSymbol} = makeHeadlessInstanceComponent(
     ${renderFnName},
     ${pluginComponentName},
     ${coordinateArg},
@@ -1443,31 +988,28 @@ ${indent.curr}${slotPreamblesStr}return ${childElement.rendered}}, '${trackBy}'$
         // Generate type aliases and render function code
         const renderFnCode = `
 // Inline template for headless component: ${contractName} #${idx}
-type ${elementType} = JayElement<${interactiveViewStateType}, ${effectiveRefsTypeName}>;
-type ${renderType} = RenderElement<${interactiveViewStateType}, ${effectiveRefsTypeName}, ${elementType}>;
-type ${preRenderType} = [${effectiveRefsTypeName}, ${renderType}];
+type ${elementType} = JayElement<${interactiveViewStateType}, ${refsTypeName}>;
+type ${renderType} = RenderElement<${interactiveViewStateType}, ${refsTypeName}, ${elementType}>;
+type ${preRenderType} = [${refsTypeName}, ${renderType}];
 
-function ${renderFnName}(${renderFnSignature}): ${preRenderType} {
+function ${renderFnName}(options?: RenderElementOptions): ${preRenderType} {
     ${renderedRefsManager}
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
 ${inlineBody.rendered}
         ) as ${elementType};
-    return [refManager.getPublicAPI() as ${effectiveRefsTypeName}, render];
+    return [refManager.getPublicAPI() as ${refsTypeName}, render];
 }
 
 ${componentDefCode}`;
 
-        // Accumulate the definition. The synthetic refs type (if any) is emitted in the shared
-        // page-level refs section (see renderFunctionImplementation), not in the inline template code,
-        // so every target that reuses renderedRefs — element, hydrate, bridge, main-sandbox — sees it.
+        // Accumulate the definition.
         newContext.headlessInstanceDefs.push({
             componentSymbol,
             renderFnName,
             renderFnCode,
             pluginComponentName: headlessImport.structural ? undefined : pluginComponentName,
-            imports: inlineBody.imports.plus(refsManagerImport).plus(syntheticRefsImports),
-            syntheticRefsCode,
+            imports: inlineBody.imports.plus(refsManagerImport),
         });
 
         // Generate props getter (from parent ViewState to component props)
@@ -1476,57 +1018,23 @@ ${componentDefCode}`;
             newContext,
             headlessImport.contract?.props,
         );
-        // DL#193 Phase 2a: when the override content binds outer-scope fields (parentDepth > 0),
-        // forward the whole enclosing view state as the reserved `__parentContext` prop. It rides
-        // the normal props/update channel (updating whenever the outer scope changes, since view
-        // states are immutable), and the runtime (makeJayComponent) turns it into a synthetic parent
-        // ConstructContext so `_p1.<field>` resolves. No field derivation is needed — the parent view
-        // state is passed by reference, so it is cheap and never enters the child's rendered ViewState.
         const outerVar = newContext.variables.currentVar;
-        let getPropsBody = propsGetterAndRefs.rendered;
-        if (inlineBody.parentDepth > 0) {
-            const parentContextEntry = `__parentContext: ${outerVar}`;
-            // propsGetterAndRefs renders as an object literal `({ … })` (or `({})`); splice the
-            // reserved entry into it. The `props="…"` direct-assignment form spreads instead.
-            if (getPropsBody.startsWith('({') && getPropsBody.endsWith('})')) {
-                const inner = getPropsBody.slice(2, -2).trim();
-                getPropsBody = inner
-                    ? `({ ${inner}, ${parentContextEntry} })`
-                    : `({ ${parentContextEntry} })`;
-            } else {
-                getPropsBody = `({ ...${getPropsBody}, ${parentContextEntry} })`;
-            }
-        }
-        let getProps = `(${outerVar}: ${newContext.variables.currentType.name}) => ${getPropsBody}`;
+        let getProps = `(${outerVar}: ${newContext.variables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
 
-        // Generate ref for the headless instance using contract types directly (refOriginalName /
-        // refRefName were computed above so the slot const name could reuse them).
+        // Generate ref for the headless instance using contract types directly.
         const refConstName = newContext.refNameGenerator.newConstantName(
             refRefName,
             newContext.variables,
         );
         const isRepeated = newContext.dynamicRef;
-        // DL#193 Phase 3 / DL#194 §C: when a structural component forwards inner refs OR a Tier 3
-        // instance carries slot refs, the usage-site instance ref is the synthetic type emitted inline
-        // in this file (not the contract-only `${pascal}Refs`). The synthetic type is defined locally —
-        // no import needed. Slots always yield a single instance ref (a slot never repeats the child).
-        const contractRefType =
-            hasForwardedRefs || hasSlots
-                ? isRepeated && !hasSlots
-                    ? syntheticRepeatedRefsTypeName
-                    : syntheticSingleRefsTypeName
-                : isRepeated
-                  ? `${pascal}RepeatedRefs`
-                  : `${pascal}Refs`;
-        // Ensure contract ref type is imported (synthetic type is local — skip)
-        if (!hasForwardedRefs && !hasSlots) {
-            for (const link of headlessImport.contractLinks) {
-                if (!link.names.some((n) => n.name === contractRefType)) {
-                    link.names.push({ name: contractRefType, type: JayUnknown });
-                }
+        const contractRefType = isRepeated ? `${pascal}RepeatedRefs` : `${pascal}Refs`;
+        // Ensure contract ref type is imported
+        for (const link of headlessImport.contractLinks) {
+            if (!link.names.some((n) => n.name === contractRefType)) {
+                link.names.push({ name: contractRefType, type: JayUnknown });
             }
-            newContext.usedComponentImports.add(contractRefType);
         }
+        newContext.usedComponentImports.add(contractRefType);
         const instanceRef = mkRef(
             refRefName,
             refOriginalName,
@@ -1536,13 +1044,7 @@ ${componentDefCode}`;
             newContext.variables.currentType,
             new JayTypeAlias(contractRefType),
         );
-        // DL#194 §C: the instance ref carries the parent-owned slot refs as nested managers, keyed
-        // by the instance ref name then slot name (`refs.<instance>.<slot>.<ref>`). The instance name
-        // is BOTH a component ref (leaf) and a child-manager key — the runtime merges them via
-        // `setSlotRefManager` / `DELEGATE_SLOT_REF_TRAP`.
-        const instanceRefsTree = hasSlots
-            ? mkRefsTree([instanceRef], { [refRefName]: mkRefsTree([], slotRefsChildren) })
-            : mkRefsTree([instanceRef], {});
+        const instanceRefsTree = mkRefsTree([instanceRef], {});
         let renderedRef = new RenderFragment(
             `${refConstName}()`,
             Imports.for(),
@@ -1551,23 +1053,9 @@ ${componentDefCode}`;
         );
         if (renderedRef.rendered !== '') renderedRef = renderedRef.map((_) => ', ' + _);
 
-        // DL#194 §C (Tier 3, Fork C): materialize the slot content fragments once as a shared const
-        // inside the page render's root context (see renderFunctionImplementation), then pass it both
-        // to the higher-order constructor (so the render fn can mount it) and to `childComp` (so the
-        // parent drives its updates).
-        let componentCreatorExpr = componentSymbol;
-        let slotsArg = '';
-        if (hasSlots) {
-            newContext.slotPreambles.push(
-                `        const ${slotsConstName}: ${slotsTypeName} = { ${slotObjectMembers.join(', ')} };`,
-            );
-            componentCreatorExpr = `${makeFnName}(${slotsConstName})`;
-            slotsArg = `, undefined, ${slotsConstName}`;
-        }
-
         // Return childComp call for the page render function
         return new RenderFragment(
-            `${newContext.indent.firstLine}childComp(${componentCreatorExpr}, ${getProps}${renderedRef.rendered}${slotsArg})`,
+            `${newContext.indent.firstLine}childComp(${componentSymbol}, ${getProps}${renderedRef.rendered})`,
             Imports.for(Import.childComp)
                 .plus(propsGetterAndRefs.imports)
                 .plus(renderedRef.imports)
@@ -1576,13 +1064,11 @@ ${componentDefCode}`;
                     headlessImport.structural
                         ? Import.makePassthroughHeadlessInstanceComponent
                         : Import.makeHeadlessInstanceComponent,
-                )
-                .plus(slotImports),
+                ),
             [
                 ...propsGetterAndRefs.validations,
                 ...inlineBody.validations,
                 ...renderedRef.validations,
-                ...slotValidations,
             ],
             renderedRef.refs,
         );
@@ -1603,17 +1089,6 @@ ${componentDefCode}`;
         case NodeType.ELEMENT_NODE:
             let htmlElement = node as HTMLElement;
             // if (isForEach(htmlElement)) dynamicRef = true;
-
-            // DL#194 §C (Tier 3, Fork C): a FILLED slot anchor marked by the parser renders as a
-            // `foreignChild(slots.X)` placeholder inside the child render fn — the parent builds and
-            // owns the slot fragment; the child only mounts it at the anchor (no-op update).
-            const foreignSlotName = htmlElement.getAttribute(FOREIGN_SLOT_MARKER);
-            if (foreignSlotName) {
-                return new RenderFragment(
-                    `${indent.firstLine}foreignChild(slots.${camelCase(foreignSlotName)})`,
-                    Imports.for(Import.foreignChild),
-                );
-            }
 
             if (isWithData(htmlElement)) {
                 // Handle <with-data accessor="expression"> element
@@ -1768,21 +1243,12 @@ ${componentDefCode}`;
                     dynamicRef: true,
                     isInsideGuard: true, // Mark that we're inside a guard
                     insideFastForEach: true,
-                    // DL#194 §C: per-item sink for Tier 3 slot content consts — flushed into the forEach
-                    // item callback (not the hoisted root) so each repeated item builds its own slot.
-                    slotPreambles: [],
                 };
 
                 let childElement = renderHtmlElement(htmlElement, newContext);
                 return nestRefs(
                     forEachAccessPath,
-                    renderForEach(
-                        forEachFragment,
-                        forEachVariables,
-                        trackBy,
-                        childElement,
-                        newContext.slotPreambles,
-                    ),
+                    renderForEach(forEachFragment, forEachVariables, trackBy, childElement),
                 );
             } else if (checkAsync(htmlElement).isAsync) {
                 const asyncDirective = checkAsync(htmlElement);
@@ -1918,10 +1384,6 @@ function renderFunctionImplementation(
     headlessImports: JayHeadlessImports[],
     importerMode: RuntimeMode,
     headLinks: JayHtmlHeadLink[] = [],
-    // DL#193 Phase 3: file-level forwarded-ref helper dedup set. Defaults to a fresh set (element,
-    // bridge, main-sandbox targets each own their file). The hydrate target passes a set shared with
-    // renderHydrate so the create-variant instance does not re-declare `CounterRef`/`CounterRefs`.
-    emittedForwardedRefHelpers: Set<string> = new Set(),
 ): {
     renderedRefs: string;
     renderedElement: string;
@@ -1950,7 +1412,6 @@ function renderFunctionImplementation(
     const usedComponentImports = new Set<string>(); // Track used component types
     const headlessInstanceDefs: HeadlessInstanceDefinition[] = [];
     const headlessInstanceCounter = { count: 0 };
-    const slotPreambles: string[] = []; // DL#194 §C: page-render slot content declarations
     if (rootElement.val) {
         // Check if the root element is a directive that needs wrapping
         const needsWrapper =
@@ -1981,8 +1442,6 @@ function renderFunctionImplementation(
             headlessInstanceDefs, // Accumulator for inline template definitions
             headlessInstanceCounter, // Counter for unique naming
             coordinateCounters: new Map(), // Scope-level counter for unique coordinates
-            emittedForwardedRefHelpers, // DL#193 Phase 3: file-level helper dedup (shared for hydrate)
-            slotPreambles, // DL#194 §C: Tier 3 slot content declarations for the page render body
         });
 
         if (needsWrapper) {
@@ -2022,17 +1481,7 @@ function renderFunctionImplementation(
     );
     imports = imports.plus(refImports);
 
-    // DL#193 Phase 3: append synthetic refs type declarations for structural components that forward
-    // their named inner child-component refs. Emitting them in the shared refs section (rather than the
-    // element target's inline template) makes them visible to every target that reuses renderedRefs —
-    // notably the hydrate and worker-sandbox bridge, which do not emit the element inline templates.
-    const syntheticRefsDecls = headlessInstanceDefs
-        .map((def) => def.syntheticRefsCode)
-        .filter((code): code is string => !!code)
-        .join('');
-    const renderedRefs = syntheticRefsDecls
-        ? `${renderedPageRefs}\n\n${syntheticRefsDecls.trimEnd()}`
-        : renderedPageRefs;
+    const renderedRefs = renderedPageRefs;
 
     let renderedElement = `export type ${elementType} = JayElement<${viewStateType}, ${refsType}>
 export type ${renderType} = RenderElement<${viewStateType}, ${refsType}, ${elementType}>
@@ -2078,16 +1527,7 @@ ${Indent.forceIndent(code, 4)},
         imports = imports.plus(def.imports);
     }
 
-    // DL#194 §C (Tier 3, Fork C): materialize slot content fragments once inside the root context,
-    // before the returned element — each is shared by the child constructor closure and `childComp`'s
-    // `slots` argument. When present, the callback becomes a block with `const` declarations + `return`.
-    const rootCallback =
-        slotPreambles.length > 0
-            ? `() => {
-${slotPreambles.join('\n')}
-        return ${renderedRoot.rendered.trim()};
-    }`
-            : `() => ${renderedRoot.rendered.trim()}`;
+    const rootCallback = `() => ${renderedRoot.rendered.trim()}`;
 
     const body = `${headlessDefsCode}export function render(options?: RenderElementOptions): ${preRenderType} {
 ${renderedRefsManager}
@@ -2368,10 +1808,6 @@ export function generateElementHydrateFile(
     const headlessContractNames = new Set(headlessImports.map((h) => h.contractName));
     assignCoordinates(jayFile.body, { headlessContractNames });
 
-    // DL#193 Phase 3: the element pass and the hydrate pass share ONE forwarded-ref helper dedup set,
-    // so the hydrate-only create-variant instance (compiled via the element target) skips
-    // `CounterRef`/`CounterRefs` already declared by the element pass and only its extra interfaces remain.
-    const emittedForwardedRefHelpers = new Set<string>();
     const {
         renderedRefs,
         renderedElement,
@@ -2388,26 +1824,19 @@ export function generateElementHydrateFile(
         jayFile.headlessImports,
         importerMode,
         jayFile.headLinks,
-        emittedForwardedRefHelpers,
     );
     const phaseTypes = generatePhaseSpecificTypes(jayFile);
-    const { fragment: renderedHydrate, syntheticRefsDecls: hydrateSyntheticRefsDecls } =
-        renderHydrate(
-            jayFile.types,
-            jayFile.body,
-            jayFile.imports,
-            elementType,
-            preRenderType,
-            refsType,
-            jayFile.headlessImports,
-            jayFile.contract,
-            emittedForwardedRefHelpers,
-        );
-    // Declare the hydrate-only synthetic ref types (create-variant instances) alongside the shared
-    // refs section so they precede their use in the hydrate function body.
-    const allRenderedRefs = hydrateSyntheticRefsDecls
-        ? `${renderedRefs}\n\n${hydrateSyntheticRefsDecls}`
-        : renderedRefs;
+    const { fragment: renderedHydrate } = renderHydrate(
+        jayFile.types,
+        jayFile.body,
+        jayFile.imports,
+        elementType,
+        preRenderType,
+        refsType,
+        jayFile.headlessImports,
+        jayFile.contract,
+    );
+    const allRenderedRefs = renderedRefs;
 
     // If we have contract or inline data, replace the 2-parameter JayContract with 5-parameter version
     let finalRenderedElement = renderedElement;
@@ -2428,13 +1857,9 @@ export function generateElementHydrateFile(
         .minus(Import.forEach);
     const hydrateImports = typeOnlyImports.plus(Import.jayElement).plus(renderedHydrate.imports);
 
-    // DL#194 Phase B: a legacy-inlined Tier 2 (structural) composite is inlined, so its contract
-    // ViewState/Refs types no longer appear in the hydrate output — drop them to avoid dead imports
-    // (mirrors the element target's `usedHeadlessTypeNames` filter). Enum types stay (inlined bindings
-    // still reference them), and any name a non-structural headless still needs is preserved.
-    // DL#196: a no-code (structural, non-legacy) region is a childComp that DOES reference the contract
-    // Refs (`<instance>: <Contract>Refs`) and InteractiveViewState — keep those; only its bare
-    // rootType ViewState (`<Contract>ViewState`) stays unused in the hydrate output, so drop it.
+    // DL#196: a no-code (structural) region is a childComp that DOES reference the contract Refs
+    // (`<instance>: <Contract>Refs`) and InteractiveViewState — keep those; only its bare rootType
+    // ViewState (`<Contract>ViewState`) stays unused in the hydrate output, so drop it.
     const structuralHeadless = (jayFile.headlessImports ?? []).filter((h) => h.structural);
     let filteredHydrateImports = jayFile.imports;
     if (structuralHeadless.length > 0) {
@@ -2443,15 +1868,9 @@ export function generateElementHydrateFile(
         );
         const dropNames = new Set<string>();
         for (const headless of structuralHeadless) {
-            // The bare contract ViewState is never referenced in the hydrate output for either the
-            // legacy-inlined body or the concept-A childComp (which uses InteractiveViewState).
+            // The bare contract ViewState is never referenced in the hydrate output; the childComp
+            // uses InteractiveViewState instead.
             dropNames.add(headless.rootType.name);
-            // Refs types are unused only for the legacy-inlined body; the concept-A childComp needs them.
-            if (headless.legacyInlined)
-                for (const link of headless.contractLinks)
-                    for (const name of link.names)
-                        if (!isEnumType(name.type) && name.name.endsWith('Refs'))
-                            dropNames.add(name.name);
         }
         // Never drop a name a non-structural headless import still relies on.
         for (const headless of (jayFile.headlessImports ?? []).filter((h) => !h.structural)) {

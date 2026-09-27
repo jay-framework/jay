@@ -24,8 +24,6 @@
         <li><a href="/foreach/">ForEach</a> — forEach and slowForEach</li>
         <li><a href="/nested/">Nested</a> — nested headfull components</li>
         <li><a href="/nested-composition/">Nested Composition</a> — 4 levels nested headfull components</li>
-        <li><a href="/combined/">Combined</a> — override vocabulary + binding-in-overrides across Tier 2 (inlined) and Tier 3 (coded) components</li>
-        <li><a href="/foreach-composite/">ForEach composite</a> — forEach with override vocabulary + binding-in-overrides across Tier 2 (inlined) and Tier 3 (coded) components</li>
         <li><a href="/html-string/">HTML String</a> — html-string dataType escaping</li>
         <li><a href="/headless-props/">Headless Props</a> — keyed headless component with YAML body props</li>
         <li><a href="/markdown/hello/">Markdown</a> — markdown-pages component rendering .md files</li>

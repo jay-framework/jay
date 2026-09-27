@@ -9,7 +9,6 @@ import {
     HeadlessContractInfo,
     Contract,
     discoverHeadlessInstances,
-    injectHeadfullFSTemplates,
     assignCoordinatesToJayHtml,
     type DiscoveredHeadlessInstance,
     type ForEachHeadlessInstance,
@@ -252,13 +251,7 @@ export async function loadPageParts(
 
         // Discover headless instances in the jay-html (DL#109).
         // For pre-rendered HTML, this finds instances after slow bindings are resolved.
-        // For original jay-html, inject headfull FS templates first so nested headless
-        // instances inside headfull components are discoverable (DL#123).
-        const jayHtmlForDiscovery = injectHeadfullFSTemplates(
-            jayHtmlSource,
-            dirName,
-            JAY_IMPORT_RESOLVER,
-        );
+        const jayHtmlForDiscovery = jayHtmlSource;
         // Discovery first (assigns ref attributes), then coordinate assignment (DL#126).
         // Re-discover after coordinates are assigned so keys use jay-coordinate-base.
         let discoveryResult: ReturnType<typeof discoverHeadlessInstances>;

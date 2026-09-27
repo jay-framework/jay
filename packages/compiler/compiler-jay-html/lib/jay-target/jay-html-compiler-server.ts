@@ -26,17 +26,13 @@ import {
     AsyncDirectiveTypes,
     checkAsync,
     ensureSingleChildElement,
-    forEachInsidePureComponentError,
     getComponentName,
-    hasForEachDescendant,
     isConditional,
     isForEach,
 } from './jay-html-helpers';
-import { buildInlineAliases } from './jay-html-compiler';
 import { generateTypes } from './jay-html-compile-types';
 import { Indent } from './indent';
 import { assignCoordinates } from './assign-coordinates';
-import { FOREIGN_SLOT_MARKER } from './jay-html-overrides';
 import {
     BOOLEAN_ATTRIBUTE,
     COORD_ATTR,
@@ -77,13 +73,6 @@ interface ServerContext {
     interactivePaths: Set<string>;
     /** Parent has interactive children (conditionals/forEach) — siblings need jay-coordinate for Kindergarten */
     parentHasInteractiveChildren: boolean;
-    /** DL#194 §C (Tier 3, Fork C): filled slot content, keyed by slot name. When rendering a Tier 3
-     *  child's template and reaching a `jay-foreign-slot="X"` anchor, the anchor is replaced by this
-     *  fragment rendered in {@link slotPageContext} (PAGE scope) — matching the browser DOM where
-     *  `foreignChild` mounts the parent-owned fragment at the anchor. */
-    slotOverrides?: Map<string, HTMLElement>;
-    /** The enclosing PAGE context used to render slot override content (page `vs`, page coordinates). */
-    slotPageContext?: ServerContext;
 }
 
 /** Helper: create a single-line w() statement as a RenderFragment */
@@ -122,23 +111,6 @@ function renderServerNode(node: Node, context: ServerContext): RenderFragment {
 
 function renderServerElement(element: HTMLElement, context: ServerContext): RenderFragment {
     const { variables, indent } = context;
-
-    // --- DL#194 §C (Tier 3, Fork C): filled slot anchor ---
-    // A `jay-foreign-slot="X"` anchor is REPLACED by the parent-owned override fragment (matching the
-    // browser DOM, where `foreignChild` mounts the fragment in place of the anchor). Render the matching
-    // `<override slot="X">` content in the PAGE context (page `vs`, page coordinates) — never the anchor
-    // element itself, and never the `<override>` sibling.
-    const foreignSlotName = element.getAttribute(FOREIGN_SLOT_MARKER);
-    if (foreignSlotName && context.slotOverrides && context.slotPageContext) {
-        const overrideNode = context.slotOverrides.get(foreignSlotName);
-        if (!overrideNode) return RenderFragment.empty();
-        const pageContext: ServerContext = { ...context.slotPageContext, indent: context.indent };
-        return mergeServerFragments(
-            filterContentNodes(overrideNode.childNodes).map((child) =>
-                renderServerNode(child, pageContext),
-            ),
-        );
-    }
 
     // --- Headless component instance (<jay:contract-name>) ---
     // Must be checked BEFORE conditional, since a headless instance may have if= attribute
@@ -230,89 +202,6 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
 }
 
 /**
- * DL#194 Phase B (Tier 2 inlining): render a no-code composite instance for the server target by
- * splicing its template into the usage site — no `vs.__headlessInstances[...]` lookup and no
- * `if (vs_xxx)` guard. Each contract-ViewState field is projected onto the usage-site expression
- * bound to it via an alias overlay ({@link Variables.forInlinedComponent} + {@link buildInlineAliases}),
- * mirroring the element/hydrate targets so all three emit the same coordinates and HTML. An `if=` on
- * the `<jay:xxx>` tag becomes a page-level condition; override content (spliced in during
- * pre-processing) resolves in place because the inlined root scope short-circuits `$parent` climbs.
- */
-function renderServerInlinedStructuralInstance(
-    element: HTMLElement,
-    context: ServerContext,
-    contractName: string,
-    headlessImport: JayHeadlessImports,
-): RenderFragment {
-    const { indent } = context;
-
-    const childNodes = filterContentNodes(element.childNodes);
-    if (childNodes.length === 0) {
-        return new RenderFragment('', Imports.none(), [
-            `Headless component instance <jay:${contractName}> must have inline template content`,
-        ]);
-    }
-    // DL#194 v1: a card-internal forEach over an aliased array needs depth-correct nested scopes;
-    // deferred to a follow-up. Keep the clear diagnostic (DL#193 §4) rather than mis-compiling.
-    if (childNodes.some(hasForEachDescendant)) {
-        return new RenderFragment('', Imports.none(), [
-            forEachInsidePureComponentError(contractName),
-        ]);
-    }
-
-    // Seed the alias overlay from the usage-site prop attributes, then build the inlined scope: the
-    // parent scope's type/var/depth (and lexical-in-scope flag) plus that overlay.
-    const { aliases, validations: aliasValidations } = buildInlineAliases(
-        element,
-        context.variables,
-        headlessImport.contract?.props,
-    );
-    const componentVariables = Variables.forInlinedComponent(context.variables, aliases);
-
-    // `if=` on the <jay:xxx> tag uses the page ViewState (not the instance's).
-    const ifCondition = element.attributes.if;
-    const bodyIndent = ifCondition ? new Indent(indent.curr + '    ') : indent;
-    const instanceContext: ServerContext = {
-        ...context,
-        variables: componentVariables,
-        indent: bodyIndent,
-        interactivePaths: buildInteractivePaths(headlessImport.contract),
-    };
-
-    // Render inline template children directly. The root child must always emit jay-coordinate so the
-    // hydrate target's adoptElement can find it (isRoot: true), matching the element/hydrate output.
-    const renderedChildren = mergeServerFragments(
-        childNodes.map((child) => {
-            if (child.nodeType === NodeType.ELEMENT_NODE) {
-                const el = child as HTMLElement;
-                if (isForEach(el) || isConditional(el)) {
-                    return renderServerElement(el, instanceContext);
-                }
-                return renderServerElementContent(el, instanceContext, { isRoot: true });
-            }
-            return renderServerNode(child, instanceContext);
-        }),
-    );
-
-    if (!ifCondition)
-        return new RenderFragment(renderedChildren.rendered, renderedChildren.imports, [
-            ...aliasValidations,
-            ...renderedChildren.validations,
-        ]);
-
-    const renderedCondition = parseServerCondition(ifCondition, context.variables);
-    return new RenderFragment(
-        [
-            `${indent.firstLine}if (${renderedCondition.rendered}) {`,
-            renderedChildren.rendered,
-            `${indent.firstLine}}`,
-        ].join('\n'),
-        renderedChildren.imports,
-        [...aliasValidations, ...renderedCondition.validations, ...renderedChildren.validations],
-    );
-}
-
-/**
  * Render a headless component instance for the server-element target.
  * The inline template children are rendered directly (no wrapper element for <jay:xxx>)
  * using the instance's ViewState from `vs.__headlessInstances[coordinateKey]`.
@@ -328,18 +217,6 @@ function renderServerHeadlessInstance(
     const headlessResult = resolveHeadlessImport(contractName, context.headlessImports);
     if (isValidationError(headlessResult)) return headlessResult;
     const headlessImport = headlessResult;
-
-    // DL#194 Phase B (being deleted, DL#196): the legacy Tier-2 headfull-FS composite splices its
-    // template into the usage site. Concept-A no-code (`structural`, not `legacyInlined`) reads its
-    // ViewState from `vs.__headlessInstances[...]` (populated by the synthesized passthrough) through
-    // the single server path below — the coercions branch handles the passthrough's raw props.
-    if (headlessImport.structural && headlessImport.legacyInlined)
-        return renderServerInlinedStructuralInstance(
-            element,
-            context,
-            contractName,
-            headlessImport,
-        );
 
     // Generate unique variable name for this instance's ViewState
     const idx = context.headlessInstanceCounter.count++;
@@ -385,20 +262,7 @@ function renderServerHeadlessInstance(
         0,
         varName,
     ).asLexical();
-    const allChildNodes = filterContentNodes(element.childNodes);
-    // DL#194 §C (Tier 3, Fork C): split the injected template from the `<override slot>` fragments.
-    // Template nodes render in the CHILD (instance) scope; each filled slot anchor reached inside them
-    // is replaced by its override content, rendered in the PAGE scope (see renderServerElement).
-    const isOverrideNode = (n: Node) =>
-        n.nodeType === NodeType.ELEMENT_NODE &&
-        ((n as HTMLElement).rawTagName ?? '').toLowerCase() === 'override';
-    const overrideNodes = allChildNodes.filter(isOverrideNode) as HTMLElement[];
-    const childNodes = allChildNodes.filter((n) => !isOverrideNode(n));
-    const slotOverrides = new Map<string, HTMLElement>();
-    for (const o of overrideNodes) {
-        const slotName = o.getAttribute('slot');
-        if (slotName) slotOverrides.set(slotName, o);
-    }
+    const childNodes = filterContentNodes(element.childNodes);
 
     if (childNodes.length === 0) {
         return new RenderFragment('', Imports.none(), [
@@ -421,11 +285,6 @@ function renderServerHeadlessInstance(
         // inside headfull FS component templates can be detected (DL#123)
         headlessContractNames: context.headlessContractNames,
         interactivePaths: buildInteractivePaths(headlessImport.contract),
-        // DL#194 §C (Tier 3, Fork C): make the split-out slot content + the enclosing PAGE context
-        // available so a `jay-foreign-slot` anchor reached inside the template renders the override
-        // content in page scope (page `vs`, page coordinates).
-        slotOverrides: slotOverrides.size > 0 ? slotOverrides : undefined,
-        slotPageContext: slotOverrides.size > 0 ? context : undefined,
     };
 
     // Render inline template children.
@@ -1112,7 +971,6 @@ function renderServerAsyncGroup(group: AsyncGroup, context: ServerContext): Rend
             variables,
             1,
             undefined,
-            0,
             {},
             variables.lexicallyInScope,
         );
@@ -1139,7 +997,6 @@ function renderServerAsyncGroup(group: AsyncGroup, context: ServerContext): Rend
             variables,
             1,
             undefined,
-            0,
             {},
             variables.lexicallyInScope,
         );
@@ -1321,21 +1178,16 @@ export function generateServerElementFile(
     const usedTypeNames = new Set<string>();
     const headlessModules = new Set<string>();
     for (const headless of jayFile.headlessImports) {
-        // DL#194: a legacy-inlined Tier 2 (structural) composite is inlined — its ViewState type never
-        // appears in the SSR output (no `as BadgeViewState` cast, no instance lookup), so don't
-        // force-keep it. Enum types from its contract may still be referenced by inlined bindings, so
-        // keep those. DL#196: a no-code (structural, non-legacy) region reads its ViewState from
-        // `vs.__headlessInstances[...]` and casts `as <Contract>ViewState`, so keep the rootType.
-        const isLegacyInlined = headless.structural && headless.legacyInlined;
-        if (!isLegacyInlined) {
-            usedTypeNames.add(headless.rootType.name);
-        }
+        // DL#196: a no-code (structural) region reads its ViewState from `vs.__headlessInstances[...]`
+        // and casts `as <Contract>ViewState`, so keep the rootType. Refs types are excluded (SSR has no
+        // refs); enum types are kept (bindings reference them).
+        usedTypeNames.add(headless.rootType.name);
         for (const link of headless.contractLinks) {
             headlessModules.add(link.module);
             for (const name of link.names) {
                 if (isEnumType(name.type)) {
                     usedTypeNames.add(name.name);
-                } else if (!isLegacyInlined && !name.name.endsWith('Refs')) {
+                } else if (!name.name.endsWith('Refs')) {
                     usedTypeNames.add(name.name);
                 }
             }

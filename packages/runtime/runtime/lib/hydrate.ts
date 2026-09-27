@@ -643,7 +643,6 @@ export function childCompHydrate<
     getProps: (t: ParentVS) => Props,
     scopeRootCoordinate?: string,
     ref?: PrivateRef<ParentVS, ChildComp>,
-    slots?: Record<string, BaseJayElement<ParentVS>>,
 ): BaseJayElement<ParentVS> {
     const context = currentConstructionContext();
 
@@ -656,14 +655,6 @@ export function childCompHydrate<
     return withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => {
         const childComp = compCreator(getProps(context.currData as ParentVS));
         const updates: updateFunc<ParentVS>[] = [(t: ParentVS) => childComp.update(getProps(t))];
-        // DL#194 Fork C: parent-owned slot fragments (built in the page hydrate render and mounted at
-        // the child's `foreignChild` anchor) are driven by the PARENT view state — mirror childComp.
-        if (slots) {
-            for (const slotName of Object.keys(slots)) {
-                const slot = slots[slotName];
-                updates.push((t: ParentVS) => slot.update(t));
-            }
-        }
         const mounts: MountFunc[] = [childComp.mount];
         const unmounts: MountFunc[] = [childComp.unmount];
         if (ref) {

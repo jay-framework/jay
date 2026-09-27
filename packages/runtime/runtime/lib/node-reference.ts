@@ -177,22 +177,6 @@ export class ComponentRefsImpl<ViewState, ComponentType extends JayComponent<any
     extends PrivateRefs<ViewState, ComponentType, ComponentRefImpl<ViewState, ComponentType>>
     implements ManagedRefs
 {
-    // DL#194 Fork C: a Tier 3 instance filled with `<override slot="X">` content exposes the slot
-    // content's (parent-owned) refs at `refs.<instance>.<slot>.<ref>` alongside the child component's
-    // own refs at `refs.<instance>.<childRef>`. When the instance ref name collides with a pre-seeded
-    // slot ref manager (see BaseReferencesManager.mkRefsOfType), that manager is attached here.
-    private slotRefManager?: { getPublicAPI(): any };
-
-    setSlotRefManager(slotRefManager: { getPublicAPI(): any }) {
-        this.slotRefManager = slotRefManager;
-    }
-
-    getSlotRef(slotName: string): any {
-        if (!this.slotRefManager) return undefined;
-        const api = this.slotRefManager.getPublicAPI();
-        return api ? api[slotName] : undefined;
-    }
-
     getInstance() {
         return [...this.elements][0]?.getPublicAPI();
     }
@@ -226,33 +210,6 @@ export class ComponentCollectionRefImpl<
     >
     implements ManagedRefs
 {
-    // DL#193 Phase 3: a pure (Tier 2) composite forwards its named inner child-component refs
-    // (e.g. `<jay:Counter ref="cta">`). When the composite itself is repeated at the usage site,
-    // the forwarded ref rides this component collection as `refs.<collection>.<inner>` (e.g.
-    // `refs.cards.cta`). Handlers registered on that aggregate are replayed onto instances added
-    // after registration, keyed by the inner ref name — mirroring PrivateRefs.addEventListener.
-    private forwardedInnerListeners = new Map<
-        string,
-        Array<{ type: string; listener: any; options?: boolean | AddEventListenerOptions }>
-    >();
-
-    // DL#194 Fork C, under repetition: when a Tier 3 instance filled with `<override slot="X">` is
-    // itself placed under a parent forEach, the instance ref becomes a component collection. The
-    // parent-owned slot content's refs still ride at `refs.<collection>.<slot>.<ref>` (aggregated as
-    // element collections). The pre-seeded slot ref manager (see BaseReferencesManager.mkRefsOfType)
-    // is attached here — mirroring ComponentRefsImpl.setSlotRefManager for the non-repeated case.
-    private slotRefManager?: { getPublicAPI(): any };
-
-    setSlotRefManager(slotRefManager: { getPublicAPI(): any }) {
-        this.slotRefManager = slotRefManager;
-    }
-
-    getSlotRef(slotName: string): any {
-        if (!this.slotRefManager) return undefined;
-        const api = this.slotRefManager.getPublicAPI();
-        return api ? api[slotName] : undefined;
-    }
-
     mkManagedRef(
         currData: any,
         coordinate: Coordinate,
@@ -264,90 +221,6 @@ export class ComponentCollectionRefImpl<
             eventWrapper,
             this,
         );
-    }
-
-    addRef(ref: ComponentRefImpl<ViewState, ComponentType>) {
-        const isNew = !this.elements.has(ref);
-        super.addRef(ref);
-        // Replay forwarded inner-ref listeners onto the newly-added instance's inner ref.
-        if (isNew && this.forwardedInnerListeners.size > 0) {
-            const api: any = ref.getPublicAPI();
-            this.forwardedInnerListeners.forEach((listeners, innerName) => {
-                const innerRef = api?.[innerName];
-                if (innerRef)
-                    listeners.forEach(({ type, listener, options }) =>
-                        innerRef.addEventListener(type, listener, options),
-                    );
-            });
-        }
-    }
-
-    /**
-     * DL#193 Phase 3: does the collected component expose an inner ref named `innerName`? Decided
-     * from the first live instance's public API. Used by the collection proxy to distinguish a
-     * forwarded inner ref (`refs.cards.cta`) from a collection method / typo.
-     */
-    hasForwardedInnerRef(innerName: string): boolean {
-        const first = [...this.elements][0];
-        if (!first) return false;
-        // Use property access (goes through the ComponentInCollection get-trap →
-        // getFromComponent → the instance's forwarded ref), NOT the `in` operator, which
-        // bypasses the get-trap and would test the raw ComponentRefImpl (no forwarded ref).
-        const api: any = first.getPublicAPI();
-        return !!api && !!api[innerName];
-    }
-
-    /**
-     * DL#193 Phase 3: aggregate the forwarded inner ref `innerName` across all instances into a
-     * collection proxy (`CounterRefs<CardViewState>`): `onXxx`/`addEventListener` fan out to every
-     * instance's inner ref (carrying that instance's viewState — no re-basing) and are replayed for
-     * instances added later; `find(pred)`/`map(h)` iterate the live instances.
-     */
-    getForwardedInnerRef(innerName: string): any {
-        const currentInnerRefs = () =>
-            [...this.elements]
-                .map((ref) => ({
-                    inner: (ref.getPublicAPI() as any)?.[innerName],
-                    viewState: ref.viewState,
-                    coordinate: ref.coordinate,
-                }))
-                .filter((entry) => entry.inner);
-        const target = {
-            addEventListener: (
-                type: string,
-                listener: any,
-                options?: boolean | AddEventListenerOptions,
-            ) => {
-                const list = this.forwardedInnerListeners.get(innerName) ?? [];
-                list.push({ type, listener, options });
-                this.forwardedInnerListeners.set(innerName, list);
-                currentInnerRefs().forEach(({ inner }) =>
-                    inner.addEventListener(type, listener, options),
-                );
-            },
-            removeEventListener: (
-                type: string,
-                listener: any,
-                options?: boolean | AddEventListenerOptions,
-            ) => {
-                const list = (this.forwardedInnerListeners.get(innerName) ?? []).filter(
-                    (item) => !(item.type === type && item.listener === listener),
-                );
-                this.forwardedInnerListeners.set(innerName, list);
-                currentInnerRefs().forEach(({ inner }) =>
-                    inner.removeEventListener(type, listener, options),
-                );
-            },
-            find: (predicate: (viewState: ViewState, c: Coordinate) => boolean) => {
-                for (const { inner, viewState, coordinate } of currentInnerRefs())
-                    if (predicate(viewState, coordinate)) return inner;
-            },
-            map: (handler: (inner: any, viewState: ViewState, coordinate: Coordinate) => any) =>
-                currentInnerRefs().map(({ inner, viewState, coordinate }) =>
-                    handler(inner, viewState, coordinate),
-                ),
-        };
-        return new Proxy(target, GetTrapProxy([EVENT_TRAP]));
     }
 
     getPublicAPI(): ComponentCollectionProxy<ViewState, ComponentType> {
@@ -528,16 +401,6 @@ const DELEGATE_REFS_TO_COMP_TRAP = (target: ComponentRefsImpl<any, any>, prop) =
     return instance ? instance[prop] : undefined;
 };
 
-// DL#194 Fork C: delegate a slot name (e.g. `body`) on a Tier 3 instance's refs to the parent-owned
-// slot ref manager, so `refs.<instance>.<slot>.<ref>` resolves. Runs before the comp delegation so a
-// slot name is served from the parent-owned fragment; real impl members and the child component's own
-// refs fall through. `onXxx` is handled by EVENT_TRAP first, so it never reaches here.
-const DELEGATE_SLOT_REF_TRAP = (target: ComponentRefsImpl<any, any>, prop) => {
-    if (typeof prop !== 'string') return false;
-    if (prop in target) return false;
-    return target.getSlotRef(prop);
-};
-
 export const GetTrapProxy = (
     getTraps: Array<(target: any, p: string | symbol, receiver: any) => any>,
 ) => {
@@ -559,11 +422,7 @@ export function newHTMLElementPublicApiProxy<ViewState, T>(ref: T): T & GlobalJa
     return new Proxy(ref, HTMLElementRefProxy);
 }
 
-const ComponentRefProxy = GetTrapProxy([
-    EVENT_TRAP,
-    DELEGATE_SLOT_REF_TRAP,
-    DELEGATE_REFS_TO_COMP_TRAP,
-]);
+const ComponentRefProxy = GetTrapProxy([EVENT_TRAP, DELEGATE_REFS_TO_COMP_TRAP]);
 
 export function newComponentPublicApiProxy<ViewState, C extends JayComponent<any, ViewState, any>>(
     ref: ComponentRefsImpl<ViewState, C>,
@@ -580,36 +439,7 @@ export function newComponentInCollectionPublicApiProxy<
     return new Proxy(ref, ComponentInCollectionRefProxy);
 }
 
-// DL#193 Phase 3: delegate a forwarded inner ref name (e.g. `cta`) on a component collection to an
-// aggregate over each instance's inner ref. Runs after EVENT_TRAP so collection-level `onXxx` and
-// the collection's own methods (`find`/`map`/`addEventListener`) fall through to the impl.
-const DELEGATE_COLLECTION_INNER_REF_TRAP = (target: ComponentCollectionRefImpl<any, any>, prop) => {
-    if (typeof prop !== 'string') return false;
-    // Any real member of the collection impl (listeners, elements, map, find,
-    // add/removeEventListener, getPublicAPI, …) must fall through to the target — including when an
-    // unbound method re-enters the proxy via `this.<member>`. Only genuine forwarded inner-ref names
-    // (e.g. `cta`), which are not members of the impl, reach the aggregate. `onXxx` is handled by
-    // EVENT_TRAP first, so it never gets here.
-    if (prop in target) return false;
-    if (!target.hasForwardedInnerRef(prop)) return false;
-    return target.getForwardedInnerRef(prop);
-};
-
-// DL#194 Fork C, under repetition: delegate a slot name (e.g. `body`) on a Tier 3 instance's
-// component collection to the parent-owned slot ref manager, so `refs.<collection>.<slot>.<ref>`
-// resolves. Mirrors DELEGATE_SLOT_REF_TRAP for the non-repeated (ComponentRefsImpl) case. Runs
-// before the forwarded-inner-ref trap; real impl members and `onXxx` (EVENT_TRAP) fall through.
-const DELEGATE_COLLECTION_SLOT_REF_TRAP = (target: ComponentCollectionRefImpl<any, any>, prop) => {
-    if (typeof prop !== 'string') return false;
-    if (prop in target) return false;
-    return target.getSlotRef(prop);
-};
-
-const ComponentCollectionRefProxy = GetTrapProxy([
-    EVENT_TRAP,
-    DELEGATE_COLLECTION_SLOT_REF_TRAP,
-    DELEGATE_COLLECTION_INNER_REF_TRAP,
-]);
+const ComponentCollectionRefProxy = GetTrapProxy([EVENT_TRAP]);
 
 export function newComponentCollectionPublicApiProxy<
     ViewState,

@@ -1,16 +1,27 @@
 <html>
 <head>
-  <script type="application/jay-headfull"
+  <script type="application/jay-headless"
           src="../../components/inner-block/inner-block"
-          contract="../../components/inner-block/inner-block.jay-contract"
-          names="innerBlock"></script>
+          contract="../../components/inner-block/inner-block.jay-contract"></script>
   <script type="application/jay-data" contract="./page.jay-contract"></script>
 </head>
 <body>
   <div>
     <h1>{pageTitle}</h1>
-    <jay:innerBlock label="Block A" />
-    <jay:innerBlock label="Block B" />
+    <jay:inner-block label="Block A">
+      <div class="inner-block">
+        <h3 class="block-label">{blockLabel}</h3>
+        <span class="block-value">{widgetValue}</span>
+        <button ref="widgetIncrement">+1</button>
+      </div>
+    </jay:inner-block>
+    <jay:inner-block label="Block B">
+      <div class="inner-block">
+        <h3 class="block-label">{blockLabel}</h3>
+        <span class="block-value">{widgetValue}</span>
+        <button ref="widgetIncrement">+1</button>
+      </div>
+    </jay:inner-block>
   </div>
 </body>
 </html>

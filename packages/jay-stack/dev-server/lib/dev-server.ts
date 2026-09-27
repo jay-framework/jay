@@ -53,7 +53,6 @@ import {
     Contract,
     JAY_IMPORT_RESOLVER,
     discoverHeadlessInstances,
-    injectHeadfullFSTemplates,
     assignCoordinatesToJayHtml,
     type JayHtmlScript,
 } from '@jay-framework/compiler-jay-html';
@@ -959,8 +958,7 @@ async function sendResponse(
     try {
         // SSR: compile from original jay-html with merged ViewState (DL#144)
         const jayHtmlDir = path.dirname(jayHtmlPath);
-        let jayHtmlContent = preLoadedContent ?? (await fs.readFile(jayHtmlPath, 'utf-8'));
-        jayHtmlContent = injectHeadfullFSTemplates(jayHtmlContent, jayHtmlDir, JAY_IMPORT_RESOLVER);
+        const jayHtmlContent = preLoadedContent ?? (await fs.readFile(jayHtmlPath, 'utf-8'));
 
         pageHtml = await generateSSRPageHtml(
             vite,
@@ -1077,17 +1075,10 @@ async function handleFrozenRequest(
         const jayHtmlDir = path.dirname(jayHtmlPath);
         const sourceDir = path.dirname(route.jayHtmlPath);
 
-        // Inject headfull FS templates (component jay-html)
-        const fullJayHtml = injectHeadfullFSTemplates(
-            jayHtmlContent,
-            sourceDir,
-            JAY_IMPORT_RESOLVER,
-        );
-
         const injectDevHmr = format === 'page';
         const html = await generateFrozenPageHtml(
             vite,
-            fullJayHtml,
+            jayHtmlContent,
             jayHtmlFilename,
             jayHtmlDir,
             entry.viewState,
@@ -1153,13 +1144,8 @@ async function preRenderJayHtml(
     pageParams: Record<string, string> = {},
     pageProps: PageProps = { language: 'en', url: '' },
 ): Promise<PreRenderResult | undefined> {
-    const jayHtmlContent = await fs.readFile(route.jayHtmlPath, 'utf-8');
+    const jayHtmlWithTemplates = await fs.readFile(route.jayHtmlPath, 'utf-8');
     const sourceDir = path.dirname(route.jayHtmlPath);
-    const jayHtmlWithTemplates = injectHeadfullFSTemplates(
-        jayHtmlContent,
-        sourceDir,
-        JAY_IMPORT_RESOLVER,
-    );
 
     // slowRenderTransform still runs for the dev server's slow render cache.
     // It resolves slow text bindings and conditionals in the cached HTML file.

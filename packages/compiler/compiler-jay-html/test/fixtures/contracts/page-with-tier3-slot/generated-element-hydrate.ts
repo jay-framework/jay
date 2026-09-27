@@ -1,25 +1,45 @@
-import {JayElement, RenderElement, ReferencesManager, ConstructContext, childComp, RenderElementOptions, JayContract, adoptText, adoptElement, childCompHydrate} from "@jay-framework/runtime";
-import {makeHeadlessInstanceComponent} from "@jay-framework/stack-client-runtime";
-import {CardViewState, CardRefs, CardInteractiveViewState} from "./card/card.jay-contract";
-import {card} from "./card/card";
+import {
+    JayElement,
+    RenderElement,
+    ReferencesManager,
+    ConstructContext,
+    childComp,
+    RenderElementOptions,
+    JayContract,
+    adoptText,
+    adoptElement,
+    childCompHydrate,
+} from '@jay-framework/runtime';
+import { makeHeadlessInstanceComponent } from '@jay-framework/stack-client-runtime';
+import { CardViewState, CardRefs, CardInteractiveViewState } from './card/card.jay-contract';
+import { card } from './card/card';
 
 export interface PageWithTier3SlotViewState {
-  pageTitle: string
+    pageTitle: string;
 }
 
-
 export interface PageWithTier3SlotElementRefs {
-  plainCard: CardRefs,
-  richCard: CardRefs
+    plainCard: CardRefs;
+    richCard: CardRefs;
 }
 
 export type PageWithTier3SlotSlowViewState = {};
 export type PageWithTier3SlotFastViewState = PageWithTier3SlotViewState;
 export type PageWithTier3SlotInteractiveViewState = PageWithTier3SlotViewState;
 
-export type PageWithTier3SlotElement = JayElement<PageWithTier3SlotViewState, PageWithTier3SlotElementRefs>
-export type PageWithTier3SlotElementRender = RenderElement<PageWithTier3SlotViewState, PageWithTier3SlotElementRefs, PageWithTier3SlotElement>
-export type PageWithTier3SlotElementPreRender = [PageWithTier3SlotElementRefs, PageWithTier3SlotElementRender]
+export type PageWithTier3SlotElement = JayElement<
+    PageWithTier3SlotViewState,
+    PageWithTier3SlotElementRefs
+>;
+export type PageWithTier3SlotElementRender = RenderElement<
+    PageWithTier3SlotViewState,
+    PageWithTier3SlotElementRefs,
+    PageWithTier3SlotElement
+>;
+export type PageWithTier3SlotElementPreRender = [
+    PageWithTier3SlotElementRefs,
+    PageWithTier3SlotElementRender,
+];
 export type PageWithTier3SlotContract = JayContract<
     PageWithTier3SlotViewState,
     PageWithTier3SlotElementRefs,
@@ -28,20 +48,31 @@ export type PageWithTier3SlotContract = JayContract<
     PageWithTier3SlotInteractiveViewState
 >;
 
-
-
 // Hydrate inline template for headless component: card #0
 type _HeadlessCard0Element = JayElement<CardInteractiveViewState, CardRefs>;
-type _HeadlessCard0ElementRender = RenderElement<CardInteractiveViewState, CardRefs, _HeadlessCard0Element>;
+type _HeadlessCard0ElementRender = RenderElement<
+    CardInteractiveViewState,
+    CardRefs,
+    _HeadlessCard0Element
+>;
 type _HeadlessCard0ElementPreRender = [CardRefs, _HeadlessCard0ElementRender];
 
-function _headlessCard0HydrateRender(options?: RenderElementOptions): _HeadlessCard0ElementPreRender {
-        const [refManager, [refCardAction]] =
-        ReferencesManager.for(options, ['cardAction'], [], [], []);
+function _headlessCard0HydrateRender(
+    options?: RenderElementOptions,
+): _HeadlessCard0ElementPreRender {
+    const [refManager, [refCardAction]] = ReferencesManager.for(
+        options,
+        ['cardAction'],
+        [],
+        [],
+        [],
+    );
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement("S1/0", {}, [            adoptText("S1/0/0", vs => vs.heading),
-            adoptElement("S1/0/1", {}, [], refCardAction())])
+            adoptElement('S1/0', {}, [
+                adoptText('S1/0/0', (vs) => vs.heading),
+                adoptElement('S1/0/1', {}, [], refCardAction()),
+            ]),
         ) as _HeadlessCard0Element;
     return [refManager.getPublicAPI() as CardRefs, render];
 }
@@ -53,16 +84,29 @@ const _HeadlessCard0 = makeHeadlessInstanceComponent(
 
 // Hydrate inline template for headless component: card #1
 type _HeadlessCard1Element = JayElement<CardInteractiveViewState, CardRefs>;
-type _HeadlessCard1ElementRender = RenderElement<CardInteractiveViewState, CardRefs, _HeadlessCard1Element>;
+type _HeadlessCard1ElementRender = RenderElement<
+    CardInteractiveViewState,
+    CardRefs,
+    _HeadlessCard1Element
+>;
 type _HeadlessCard1ElementPreRender = [CardRefs, _HeadlessCard1ElementRender];
 
-function _headlessCard1HydrateRender(options?: RenderElementOptions): _HeadlessCard1ElementPreRender {
-        const [refManager, [refCardAction2]] =
-        ReferencesManager.for(options, ['cardAction'], [], [], []);
+function _headlessCard1HydrateRender(
+    options?: RenderElementOptions,
+): _HeadlessCard1ElementPreRender {
+    const [refManager, [refCardAction2]] = ReferencesManager.for(
+        options,
+        ['cardAction'],
+        [],
+        [],
+        [],
+    );
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement("S2/0", {}, [            adoptText("S2/0/0", vs => vs.heading),
-            adoptElement("S2/0/1", {}, [], refCardAction2())])
+            adoptElement('S2/0', {}, [
+                adoptText('S2/0/0', (vs) => vs.heading),
+                adoptElement('S2/0/1', {}, [], refCardAction2()),
+            ]),
         ) as _HeadlessCard1Element;
     return [refManager.getPublicAPI() as CardRefs, render];
 }
@@ -72,13 +116,34 @@ const _HeadlessCard1 = makeHeadlessInstanceComponent(
     'S0/0/card:richCard',
 );
 
-export function hydrate(rootElement: Element, options?: RenderElementOptions): PageWithTier3SlotElementPreRender {
-    const [refManager, [refPlainCard, refRichCard]] =
-        ReferencesManager.for(options, [], [], ['plainCard', 'richCard'], []);
+export function hydrate(
+    rootElement: Element,
+    options?: RenderElementOptions,
+): PageWithTier3SlotElementPreRender {
+    const [refManager, [refPlainCard, refRichCard]] = ReferencesManager.for(
+        options,
+        [],
+        [],
+        ['plainCard', 'richCard'],
+        [],
+    );
     const render = (viewState: PageWithTier3SlotViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-        adoptElement("S0/0", {}, [        adoptText("S0/0/0", vs => vs.pageTitle),
-        childCompHydrate(_HeadlessCard0, (vs: PageWithTier3SlotViewState) => ({heading: 'Plain'}), 'S1/0', refPlainCard()),
-        childCompHydrate(_HeadlessCard1, (vs: PageWithTier3SlotViewState) => ({heading: 'Rich'}), 'S2/0', refRichCard())])) as PageWithTier3SlotElement;
+            adoptElement('S0/0', {}, [
+                adoptText('S0/0/0', (vs) => vs.pageTitle),
+                childCompHydrate(
+                    _HeadlessCard0,
+                    (vs: PageWithTier3SlotViewState) => ({ heading: 'Plain' }),
+                    'S1/0',
+                    refPlainCard(),
+                ),
+                childCompHydrate(
+                    _HeadlessCard1,
+                    (vs: PageWithTier3SlotViewState) => ({ heading: 'Rich' }),
+                    'S2/0',
+                    refRichCard(),
+                ),
+            ]),
+        ) as PageWithTier3SlotElement;
     return [refManager.getPublicAPI() as PageWithTier3SlotElementRefs, render];
 }

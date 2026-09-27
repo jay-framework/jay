@@ -1,0 +1,32 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+    <script type="application/jay-headless"
+            contract="./components/card/card.jay-contract"
+            template="./components/card/card.jay-html"></script>
+</head>
+<body>
+<div>
+    <h1>{title}</h1>
+
+    <!-- Region A — <h3> class edited AND marked override="class": page-owned, must be silent. -->
+    <jay:card heading="{title}">
+        <div class="card">
+            <h3 class="card-heading featured" override="class">{heading}</h3>
+            <p class="card-body">Default body</p>
+        </div>
+    </jay:card>
+
+    <!-- Region B — <h3> text rewritten with no marker: must be reported as drift. -->
+    <jay:card heading="{title}">
+        <div class="card">
+            <h3 class="card-heading">On sale now</h3>
+            <p class="card-body">Default body</p>
+        </div>
+    </jay:card>
+</div>
+</body>
+</html>

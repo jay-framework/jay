@@ -1,15 +1,25 @@
 <html>
 <head>
-    <script type="application/jay-headfull"
-            src="../../components/site-header"
-            contract="../../components/site-header/site-header.jay-contract"
-            names="siteHeader"></script>
+    <script type="application/jay-headless"
+            src="../../components/site-header/index"
+            contract="../../components/site-header/site-header.jay-contract"></script>
+    <script type="application/jay-headless"
+            plugin="cart-badge"
+            contract="cart-badge"></script>
     <script type="application/jay-data" contract="./page.jay-contract">
     </script>
 </head>
 <body>
     <div>
-        <jay:siteHeader logoUrl="/logo.png" />
+        <jay:site-header logoUrl="/logo.png">
+            <header>
+                <img src="{logoUrl}" />
+                <span>{headerTitle}</span>
+                <jay:cart-badge label="Cart">
+                    <span class="badge">{badgeLabel}: {count}</span>
+                </jay:cart-badge>
+            </header>
+        </jay:site-header>
         <h1>{pageTitle}</h1>
         <p>Check out our featured items!</p>
     </div>

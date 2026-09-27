@@ -6,10 +6,20 @@ import {
     extractHeadlessPropsParamNames,
     checkRefElementTypes,
     checkHeadlessInstanceProps,
+    checkRegionDrift,
 } from '../lib/validate';
 import { parseJayFile, JAY_IMPORT_RESOLVER } from '@jay-framework/compiler-jay-html';
 import { JayEnumType, JayAtomicType } from '@jay-framework/compiler-shared';
-import { promises as fsp } from 'fs';
+import { promises as fsp, readFileSync } from 'fs';
+
+/** Read a file synchronously, returning undefined when it does not exist (test template loader). */
+function readFileSyncSafe(filePath: string): string | undefined {
+    try {
+        return readFileSync(filePath, 'utf-8');
+    } catch {
+        return undefined;
+    }
+}
 
 describe('validateJayFiles', () => {
     const baseFixturesDir = path.resolve('./test/fixtures/validate');
@@ -244,6 +254,61 @@ describe('checkRefElementTypes', () => {
         );
         expect(warnings[1]).toEqual(
             'Ref "widget.items.isSelected" is on a <button> (HTMLButtonElement) but the contract declares HTMLInputElement',
+        );
+    });
+});
+
+describe('checkRegionDrift (DL#196)', () => {
+    const fixturesDir = path.resolve('./test/fixtures/validate');
+    const driftDir = path.join(fixturesDir, 'region-drift');
+
+    async function parseDriftPage(fixturePath: string) {
+        const jayFile = path.join(driftDir, fixturePath);
+        const content = await fsp.readFile(jayFile, 'utf-8');
+        const dirname = path.dirname(jayFile);
+        const parsed = await parseJayFile(
+            content,
+            path.basename(jayFile.replace('.jay-html', '')),
+            dirname,
+            {},
+            JAY_IMPORT_RESOLVER,
+            driftDir,
+        );
+        expect(parsed.validations).toHaveLength(0);
+        return parsed.val!;
+    }
+
+    // Loads `template=` relative to the page directory, exactly as the CLI's file-system loader does.
+    const fsLoader = (rel: string) =>
+        readFileSyncSafe(path.resolve(driftDir, rel.replace(/^\.\//, '')));
+
+    it('reports the unmarked facet and suppresses the override-marked facet', async () => {
+        const jayHtml = await parseDriftPage('page.jay-html');
+        const warnings = checkRegionDrift(jayHtml, fsLoader);
+
+        // Region B (unmarked <h3> text edit) is caught; region A (override="class") is not.
+        expect(warnings).toHaveLength(1);
+        expect(warnings[0]).toEqual(
+            '<jay:card> region differs from source template "./components/card/card.jay-html": ' +
+                '<h3> children changed ("{heading}" → "On sale now"). ' +
+                'To keep the page\'s version, mark the node override="children"; ' +
+                'to discard it and re-flatten from source, run `jay-stack sync`.',
+        );
+    });
+
+    it('reports no drift for a region without template provenance', async () => {
+        const jayHtml = await parseDriftPage('page-no-template.jay-html');
+        const warnings = checkRegionDrift(jayHtml, fsLoader);
+        expect(warnings).toHaveLength(0);
+    });
+
+    it('warns when the declared source template cannot be read', async () => {
+        const jayHtml = await parseDriftPage('page.jay-html');
+        const warnings = checkRegionDrift(jayHtml, () => undefined);
+        expect(warnings).toHaveLength(1);
+        expect(warnings[0]).toEqual(
+            '<jay:card> declares template="./components/card/card.jay-html" but its source template ' +
+                'could not be read. Fix the path or remove the attribute.',
         );
     });
 });

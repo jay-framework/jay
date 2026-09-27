@@ -502,53 +502,6 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Block B/);
         });
 
-        it('/combined — Tier 3 (Fork C) + Tier 2 slots + full override vocabulary (DL#194 Phase C)', async () => {
-            const { status, body } = await fetchPage(server.url, '/combined/');
-            expect(status).toBe(200);
-            expectPage(body);
-            expect(body).toMatch(/Combined Page/);
-            // Tier 3 richCard: real component boundary; its `body` slot is parent-owned (foreignChild)
-            // and resolves the page-scope {pageTitle} binding.
-            expect(body).toMatch(/Rich Heading/);
-            expect(body).toMatch(/Body for Combined Page/);
-            expect(body).not.toMatch(/Default body/);
-            // Tier 2 promoCard: inlined; its own prop (heading) renders and its `cta` slot override
-            // resolves the page-scope {pageTitle} binding in the same SSR pass.
-            expect(body).toMatch(/Premium/);
-            expect(body).toMatch(/Start Combined Page trial/);
-            // Tier 2 overrideCard: the full override vocabulary (DL#181).
-            // content replace
-            expect(body).toMatch(/Start free trial/);
-            expect(body).not.toMatch(/Buy Now/);
-            // attribute + style merge on an element ref
-            expect(body).toMatch(/\/images\/new-hero\.png/);
-            expect(body).toMatch(/border-radius: 16px/);
-            // slot removal (empty override)
-            expect(body).not.toMatch(/Default disclaimer text/);
-            // container content replace
-            expect(body).toMatch(/href="\/docs"/);
-            expect(body).not.toMatch(/Default link/);
-        });
-
-        it('/foreach-composite — Tier 2 + Tier 3 composed under a parent forEach (DL#194)', async () => {
-            const { status, body } = await fetchPage(server.url, '/foreach-composite/');
-            expect(status).toBe(200);
-            expectPage(body);
-            expect(body).toMatch(/ForEach Composite/);
-            // Each repeated item carries its OWN scope: heading="{title}" and both overrides bind
-            // the item's {title}, proving repeated coordinates + per-item view state across tiers.
-            // Tier 3 richCard (real boundary), body slot override per item:
-            expect(body).toMatch(/Body for Alpha/);
-            expect(body).toMatch(/Body for Beta/);
-            expect(body).not.toMatch(/Default body/); // parent-owned slot clears the default
-            // Tier 2 promoCard (inlined), cta slot override per item:
-            expect(body).toMatch(/CTA for Alpha/);
-            expect(body).toMatch(/CTA for Beta/);
-            // Both components' own heading prop resolves the item title:
-            expect(body).toMatch(/Alpha/);
-            expect(body).toMatch(/Beta/);
-        });
-
         it('/nested-composition — Tier 3 > Tier 2 > Tier 3 nesting renders the outer levels (DL#194)', async () => {
             const { status, body } = await fetchPage(server.url, '/nested-composition/');
             expect(status).toBe(200);
@@ -742,37 +695,6 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Nested Test/);
             expect(body).toMatch(/Block A/);
             expect(body).toMatch(/Block B/);
-        });
-
-        it('/combined — Tier 3 (Fork C) + Tier 2 slots + full override vocabulary (DL#194 Phase C)', async () => {
-            const { status, body } = await fetchPage(server.url, '/combined/');
-            expect(status).toBe(200);
-            expect(body).toMatch(/Combined Page/);
-            expect(body).toMatch(/Rich Heading/);
-            expect(body).toMatch(/Body for Combined Page/);
-            expect(body).not.toMatch(/Default body/);
-            expect(body).toMatch(/Premium/);
-            expect(body).toMatch(/Start Combined Page trial/);
-            expect(body).toMatch(/Start free trial/);
-            expect(body).not.toMatch(/Buy Now/);
-            expect(body).toMatch(/\/images\/new-hero\.png/);
-            expect(body).toMatch(/border-radius: 16px/);
-            expect(body).not.toMatch(/Default disclaimer text/);
-            expect(body).toMatch(/href="\/docs"/);
-            expect(body).not.toMatch(/Default link/);
-        });
-
-        it('/foreach-composite — Tier 2 + Tier 3 composed under a parent forEach (DL#194)', async () => {
-            const { status, body } = await fetchPage(server.url, '/foreach-composite/');
-            expect(status).toBe(200);
-            expect(body).toMatch(/ForEach Composite/);
-            expect(body).toMatch(/Body for Alpha/);
-            expect(body).toMatch(/Body for Beta/);
-            expect(body).not.toMatch(/Default body/);
-            expect(body).toMatch(/CTA for Alpha/);
-            expect(body).toMatch(/CTA for Beta/);
-            expect(body).toMatch(/Alpha/);
-            expect(body).toMatch(/Beta/);
         });
 
         it('/nested-composition — Tier 3 > Tier 2 > Tier 3 nesting renders the outer levels (DL#194)', async () => {
@@ -993,6 +915,42 @@ describe('DL#192 — enum value validation via the CLI', () => {
             expect(enumErrors[0].message).toEqual(
                 '<jay:test-badge> prop "status" = "pending" is not a declared value of ' +
                     'enum(success | warning | error). Use one of: success, warning, error.',
+            );
+        },
+        BUILD_TIMEOUT,
+    );
+});
+
+// DL#196 §4 — the drift validator compensates for the retired /combined and /foreach-composite
+// override-vocabulary smoke pages: it proves the differ+validate wiring both REPORTS unmarked drift
+// and HONORS per-facet `override` suppression. The fixture flattens one <jay:card> source template
+// into two regions — region A edits the <h3> class but marks it `override="class"` (page-owned, must
+// be silent); region B rewrites the <h3> text with no marker (must be reported). One validate run
+// therefore covers "with overrides" (suppressed) and "without" (reported).
+describe('DL#196 — region drift validation via the CLI', () => {
+    const fixtureDir = path.resolve(__dirname, 'fixtures/region-drift');
+
+    it(
+        'reports unmarked region drift as a warning and suppresses the override-marked facet',
+        async () => {
+            const { code, result } = await runValidateCli(fixtureDir);
+
+            // Drift is a warning, not an error — the page still builds — so validation stays valid.
+            expect(code).toBe(0);
+            expect(result?.valid).toBe(true);
+
+            const driftWarnings = (result?.warnings ?? []).filter((w: any) =>
+                w.message.includes('differs from source template'),
+            );
+
+            // Exactly one: region B (unmarked text edit) is caught; region A (override="class") is not.
+            expect(driftWarnings).toHaveLength(1);
+            expect(driftWarnings[0].file).toEqual('src/pages/page.jay-html');
+            expect(driftWarnings[0].message).toEqual(
+                '<jay:card> region differs from source template "../components/card/card.jay-html": ' +
+                    '<h3> children changed ("{heading}" → "On sale now"). ' +
+                    'To keep the page\'s version, mark the node override="children"; ' +
+                    'to discard it and re-flatten from source, run `jay-stack sync`.',
             );
         },
         BUILD_TIMEOUT,

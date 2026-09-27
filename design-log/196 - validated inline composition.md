@@ -1034,7 +1034,7 @@ and leaves only the genuinely-changed `8x` expected files). Migrated in three co
     parsed by the dev-server — coded components import types from `.jay-contract`, not templates).
 
 Result: full dev-server `711` hydration tests pass (the count rose from 709 because `8n` gained a hydrate
-fixture) + `32` dev-server/action-router. (Vitest intermittently marks the hydration *file* "failed" while
+fixture) + `32` dev-server/action-router. (Vitest intermittently marks the hydration _file_ "failed" while
 all 711 tests pass — a pre-existing dev-server teardown race, orthogonal to these fixture-only changes; a
 clean re-run of any subset is green.)
 
@@ -1045,5 +1045,186 @@ copy (both: coded `siteHeader` nesting a plugin `cart-badge`, structurally like 
 **behavioural** (route/instance counts, `page-parts.json` config shape) and currently pass **via the
 still-present legacy inlining path** (`production-build` `build.test.ts` 33/33 green). Migrating them now,
 before the legacy path is deleted, would be premature — the instance-count/config assertions must change
-in the *same* commit that removes inlining. So these two fixtures + their assertions move together with
+in the _same_ commit that removes inlining. So these two fixtures + their assertions move together with
 the Phase 4 legacy-`contract=` deletion.
+
+### Phase 5 — example/smoke migration + drift-validation wiring (Increment, green)
+
+**Featured production fixtures migrated (deviation from the deferral note above).** The
+`production-build` and `production-server` `basic-project` `featured/page.jay-html` pages were migrated to
+the flattened headless form (coded `site-header` region — `src=…/site-header/index` — nesting a
+passthrough `cart-badge` plugin region). `build.test.ts` (33/33) stays green; test _names_ updated
+("headfull FS" → "flattened headless region"). This moved ahead of the legacy deletion because the
+assertions were content-based, not instance-count-based, so they did not need to change in lockstep.
+
+**Smoke pages migrated / dropped.** `/nested`, `/headfull`, `/nested-composition` migrated to flattened
+regions (Q11 resolved for `/nested-composition` = nested `section` → `card` → `button` regions; its SSR
+button-label assertion now passes without `it.fails`). `/combined` and `/foreach-composite` — which
+exercised the **retired** `<override slot>` / Fork-C vocabulary and the deferred §7 page-owned-binding
+case — were **dropped** (pages, tests, and the three now-unused components `rich-card`, `promo-card`,
+`override-card`) rather than re-authored, since the per-facet `override` directive that would replace that
+vocabulary is a validate/sync-time concern with no distinct SSR output to smoke-test.
+
+**Compensation for the dropped pages — the drift validator is now wired (Phase 2 debt paid).** Per the
+design owner's requirement ("compensate with at least one smoke test that verifies our validation work …
+with the overrides and without"), the Phase-1 differ is connected to `jay-stack validate`:
+
+- **`checkRegionDrift(jayHtml, loadTemplate)`** (`stack-cli/lib/validate.ts`, `@internal`) — for each
+  headless import carrying `template=` provenance, it collects the page's `<jay:X>` region elements
+  (`isRegionTag`), loads the source template via the injected reader, and runs `diffBodies` (the exact
+  wiring the module docstring anticipated: "Phase 2 wiring feeds these after loading via `parseJayFile`").
+  Each `DiffEntry` becomes a **warning** (the page still builds — Q10) formatted with `facetLabel` +
+  `overrideSpecFor` so the message names the drifted facet and the exact `override="…"` / `jay-stack sync`
+  remedy. Template loading is injected (CLI supplies a filesystem reader resolving `template=` relative to
+  the page dir) so the function is pure and unit-tested. A region without `template=` has no provenance and
+  is not checked, so the (provenance-less) migrated smoke pages are unaffected.
+- **Fixtures + tests.** A dedicated fixture flattens one `<jay:card>` source template into two regions —
+  region A edits the `<h3>` class but marks it `override="class"` (page-owned → silent); region B rewrites
+  the `<h3>` text with no marker (→ reported). One `validate --json` run proves **both** suppression and
+  detection: `valid: true`, exactly one drift warning on region B, none on region A. Covered by a smoke
+  test (`examples/jay-stack/smoke-test`, via the real CLI, 65/65) **and** three `checkRegionDrift` unit
+  tests (`stack-cli/test/validate.test.ts` — reported/suppressed, no-`template=` clean, unreadable-template
+  warning; package 86/86). `@jay-framework/compiler-inline-composition` added as a `stack-cli` dependency.
+
+**Still owed (Phase 3 / Phase 4):** `jay-stack sync` (the differ's materialiser is built but has no CLI
+surface yet); CSS drift (`diffCss`) is not yet wired (markup drift only); and the legacy
+`application/jay-headfull contract=` inlining apparatus is not yet deleted.
+
+### Phase 4 — legacy `application/jay-headfull contract=` inlining deleted (Increment, green)
+
+The string-inlining apparatus behind `application/jay-headfull … contract=` (concept B) is removed.
+`application/jay-headfull … contract=` is now a **hard validation error** directing the author to
+`application/jay-headless` + a flattened `<jay:X>` region (`jay-stack sync`). **Retained:** regular
+headfull (`names=`, no `contract=`) via `parseHeadfullImports`; the concept-A no-code `structural`
+passthrough region; the DL#196 `application/jay-headless` path.
+
+**Removed (parser / compiler / expression compiler).**
+
+- `jay-html-parser.ts`: `parseHeadfullFSImports`, `injectHeadfullFSTemplates(+Recursive)`,
+  `injectComposableTemplateIntoTag`, the `HeadfullFSParseResult` interface (~720 lines). `parseJayFile`
+  now splits `script[type="application/jay-headfull"]` into (a) any with `contract` → push the DL#196
+  removal error, (b) the rest → `parseHeadfullImports` unchanged. FS css / linkedCss merges and
+  `headfullFSResult.componentImports` dropped; `allLinkedComponentFiles` is now empty.
+- `jay-html-compiler.ts` / `-hydrate.ts` / `-server.ts`: the legacy branch in `renderHeadlessInstance`,
+  `renderInlinedStructuralInstance` (+ hydrate/server twins), `buildInlineAliases` (×3 targets), and the
+  `insideInlinedComposite` context field + its reads. `guardVariables` collapses to the non-inlined form;
+  `isOverrideInjected` simplifies to the marker check. **Kept:** `buildStructuralCoercions` +
+  `FOREIGN_SLOT_MARKER` (concept-A), `mergeContractStubRefs`, `withParentShift`.
+- `expression-compiler.ts`: the inlining-only alias overlay — `aliases` / `inlinedRoot` /
+  `withRootVarName` / `forInlinedComponent`, the `resolveAccessor` alias branch, and the
+  `rootParentInInlinedCompositeError`. **Kept:** the shared `withParentShift` / `asLexical` /
+  `childVariableFor(WithData)` / `parentShiftLevels` / `lexicallyInScope` core.
+- `jay-html-source-file.ts`: the `legacyInlined?` flag on `JayHeadlessImports` (kept `template?`).
+
+**External call sites cleaned.** `dev-server.ts` (3 `injectHeadfullFSTemplates` calls + import),
+`stack-server-build/load-page-parts.ts`, `production-build/load-production-parts.ts`,
+`production-build/server-element-compile.ts` all now pass the jay-html through unchanged
+(`resolveJayHtmlPaths` where path-rebasing was already needed) instead of pre-inlining.
+
+**Tests migrated.** `parse-jay-file.unit.test.ts`: the 854-line "headfull full-stack imports" describe
+replaced with a compact block — one test asserts the removal error fires on `contract=`, one asserts the
+error is **absent** for a regular no-`contract` headfull import. `expression-compiler.unit.test.ts`: the
+alias-substitution describe (removed 9-arg `Variables` overlay) deleted. The `page-with-tier3-slot`
+generated fixtures now reflect the single-path codegen (verified by the green `generate-element` /
+`-hydrate` / `-server-element` suites).
+
+**Examples.** `ref-forwarding` and `override-ref-forwarding` example projects dropped (they exercised the
+deleted ref-forwarding/override vocabulary). The **smoke** `section.jay-html` / `card.jay-html`
+components migrated from `application/jay-headfull contract=` to `application/jay-headless` with their
+`<jay:X>` regions flattened transitively (section now declares both the no-code `card` — contract only,
+passthrough-backed — and the coded `button` — `src` + `contract` — because its flattened body transitively
+contains `<jay:button>`). `section.ts` never used `refs.card`, so no ref survives on the region tags,
+matching the fully-flattened page form.
+
+**One incidental fix.** `compiler-analyze-exported-types` fixture `stack-header-two-step.ts` called
+`makeJayStackComponent().withSlowlyRender(…)` without `.withProps()`; a stale `fullstack-component`
+`.d.ts` had masked it. The current builder only exposes `withSlowlyRender` after `.withProps()`, so
+`.withProps<{}>()` was inserted (the AST-based `analyzeExportedTypes` assertion — `[]` refs — is
+unchanged).
+
+**Deviation from the deferral note.** Phase 4h deferred migrating the two production `featured/page.jay-html`
+fixtures to "move together with the legacy deletion". Phase 5 had already migrated them (content-based
+assertions, no lockstep needed), so this increment only had to delete the apparatus — no fixture-count
+assertions changed.
+
+**Verification.** Full repo green: `yarn build` (71 packages), `yarn build:check-types` (exit 0),
+`yarn test` (72 packages) — including `compiler-jay-html` 759, `dev-server` 743, `production-build` 87,
+`stack-server-build` 51, `stack-cli` 86, `compiler-inline-composition` 63, and the smoke suite 65 (the
+DL#196 region-drift CLI test among them). Global grep confirms zero remaining references to any deleted
+symbol.
+
+**Still owed after this increment:** `jay-stack sync` CLI surface; CSS drift (`diffCss`) wiring;
+validate-engine recursion detection; agent-kit docs (Phase 6); optional smoke vocab rename (test/label
+strings still say "Tier 2 / DL#194").
+
+### Phase 4i — Fork-C runtime + emission + orphaned lib helpers deleted (§6 complete, green)
+
+The final §6 increment: everything earlier phases left "in `lib` until the legacy path is deleted" is
+now gone. With the parser inlining path and every concept-B fixture already removed (Phases 4d–4h, 4),
+these symbols had zero remaining callers and were deleted outright — the compiler emits one
+`renderHeadlessInstance` path, and the runtime keeps only `childComp(compCreator, getProps, ref?)`.
+
+**Runtime primitives removed.**
+
+- `runtime/lib/element.ts`: `foreignChild` (the Fork-C DOM anchor) and `childComp`'s `slots` (#194) +
+  `refViewState` (#193) params, with the slot-update loop and the provenance-shifted ref branch —
+  `childComp` collapses to `mkRef`.
+- `runtime/lib/hydrate.ts`: `childCompHydrate`'s `slots` param and its slot-update loop.
+- `runtime/lib/node-reference.ts`: `slotRefManager` (+`set`/`getSlotRef`) on both `ComponentRefsImpl`
+  and `ComponentCollectionRefImpl`; the collection's `forwardedInnerListeners`, `addRef` replay
+  override, `hasForwardedInnerRef`, `getForwardedInnerRef`; and the three get-traps
+  `DELEGATE_SLOT_REF_TRAP`, `DELEGATE_COLLECTION_SLOT_REF_TRAP`, `DELEGATE_COLLECTION_INNER_REF_TRAP` —
+  `ComponentRefProxy` is now `[EVENT_TRAP, DELEGATE_REFS_TO_COMP_TRAP]`, the collection proxy just
+  `[EVENT_TRAP]`.
+- `runtime/lib/references-manager.ts`: the slot-collision block in `mkRefsOfType` (the only
+  `setSlotRefManager` caller) — a colliding `childRefManager` no longer special-cases component refs.
+- `runtime/lib/context.ts`: `pendingSyntheticParent`, `withSyntheticParentContext`,
+  `consumePendingSyntheticParent`, and the `if (syntheticParent) context.parent = …` adoption in
+  `withRootContext` + `withHydrationChildContext`.
+- `runtime/lib/index.ts`: the `withSyntheticParentContext` re-export (`foreignChild` fell out with
+  `export * from './element'`).
+- `component/lib/component.ts`: `PARENT_CONTEXT_PROP` (`__parentContext`), the synthetic-parent build
+  from that prop, the reaction's `syntheticParent.update(...)`, and the `withSyntheticParentContext`
+  render wrap — first render is now a plain `renderWithContexts(...)`. Its `ConstructContext` /
+  `withSyntheticParentContext` imports dropped.
+
+**Compiler emission collapsed to one path.** The Fork-C slot machinery in `renderHeadlessInstance` and
+its hydrate/server twins is gone: synthetic single/repeated ref types, `slotPreambles`,
+`emittedForwardedRefHelpers`, the `foreignChild(slots.X)` mount branch, the `__parentContext` prop
+emission, and the server/hydrate `foreign-slot` anchor branch. `renderHeadlessInstance` now reads
+`filterContentNodes(childNodes)` directly and emits `childComp(sym, getProps, ref?)`.
+`assign-coordinates.ts` loses the `<override>` split (node partition + page-scope override-coordinate
+walk); `assignHeadlessInstance` drops its now-unused `parentScopeId` param. `jay-html-compiler-bridge.ts`
+drops the two dead context fields.
+
+**Files deleted.** `jay-html-overrides.ts` (both `<override>` forms, pragma, `OVERRIDE_INJECTED_MARKER`,
+`FOREIGN_SLOT_MARKER`) and its `jay-html-overrides.unit.test.ts`.
+
+**Orphaned `lib` helpers deleted** (`jay-html-helpers.ts`): `hasForEachDescendant`,
+`forEachInsidePureComponentError`, `findForEachInsidePureComposite`, `headfullRecursionError`,
+`overrideRequiresExplicitRefError` — the Tier-2 inlining/recursion diagnostics whose call sites Phases
+4d/4e removed. `Import.foreignChild` dropped from `compiler-shared/lib/imports.ts`.
+
+**Expression-compiler parent-shift core removed** (supersedes Phase 4's "Kept"): `withParentShift`,
+`parentShiftLevels`, `PARENT_SCOPE_PRAGMA` — the #193 cross-boundary shift seam. **Retained and now
+sole survivors of the #193 scope work:** `asLexical` / `lexicallyInScope` / `childVariableFor(WithData)`
+(server Capability A `$parent`, one-function render), and the runtime `parentDataChain` / `parentDepth`
+chain (Capability A `$parent` within `forEach` / `withData`).
+
+**Tests deleted** (exercised removed features): `runtime/test/lib/slot-content.test.ts`,
+`runtime/test/lib/ref-forwarding.test.ts`, `component/test/parent-context.test.ts`.
+
+**Deviation from §6's conditional survivor.** §6 kept `foreignChild` "if §7 (page-scope pass-through)
+ships." §7 is deferred, so `foreignChild` is deleted **unconditionally** — if §7 is later built, it
+reintroduces its own slimmed, page-declared anchor rather than inheriting the Fork-C one. The
+`page-with-tier3-slot` / `-foreach` fixtures survive but no longer exercise slots (already re-authored to
+plain inline composition in Phase 4f); their names are now cosmetic (covered by the deferred vocab
+rename).
+
+**Verification.** Full repo green: `yarn build` (71 packages), `yarn build:check-types` (exit 0),
+`yarn test` (72 packages) — `runtime` 278/3-skip, `component` 58, `compiler-jay-html` 714/4-skip,
+`compiler-inline-composition` 63, `secure` 106, smoke 65 included. A global grep for every §6 removal
+symbol (`foreignChild`, `slotRefManager`, `forwardedInnerListeners`, `getForwardedInnerRef`,
+`withSyntheticParentContext`, `PARENT_CONTEXT_PROP`, `withParentShift`, `parentShiftLevels`,
+`FOREIGN_SLOT_MARKER`, `refViewState`, `forEachInsidePureComponentError`, …) returns zero source hits.
+§6 is complete.

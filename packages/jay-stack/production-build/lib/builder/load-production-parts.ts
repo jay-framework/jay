@@ -6,7 +6,6 @@ import { getLogger } from '@jay-framework/logger';
 import {
     parseJayFile,
     JAY_IMPORT_RESOLVER,
-    injectHeadfullFSTemplates,
     discoverHeadlessInstances,
     assignCoordinatesToJayHtml,
     type HeadlessContractInfo,
@@ -213,11 +212,7 @@ export async function loadProductionPageParts(
 
     // Discover headless instances from original jay-html (DL#144).
     // assignCoordinates runs first to pre-assign refs that match the hydrate compiler.
-    const jayHtmlForDiscovery = injectHeadfullFSTemplates(
-        jayHtmlContent,
-        dirName,
-        JAY_IMPORT_RESOLVER,
-    );
+    const jayHtmlForDiscovery = jayHtmlContent;
     let discoveredInstances: DiscoveredHeadlessInstance[] = [];
     let forEachInstances: ForEachHeadlessInstance[] = [];
 

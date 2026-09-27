@@ -1,0 +1,34 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+    <script type="application/jay-headless"
+            contract="../components/card/card.jay-contract"
+            template="../components/card/card.jay-html"></script>
+</head>
+<body>
+<div>
+    <h1>{title}</h1>
+
+    <!-- Region A — the <h3> class is edited AND marked override="class". The page owns that facet,
+         so it must NOT be reported as drift (DL#196 §4 per-facet suppression). -->
+    <jay:card heading="{title}">
+        <div class="card">
+            <h3 class="card-heading featured" override="class">{heading}</h3>
+            <p class="card-body">Default body</p>
+        </div>
+    </jay:card>
+
+    <!-- Region B — the <h3> text is rewritten with no override marker. This MUST be reported as
+         drift against the source template. -->
+    <jay:card heading="{title}">
+        <div class="card">
+            <h3 class="card-heading">On sale now</h3>
+            <p class="card-body">Default body</p>
+        </div>
+    </jay:card>
+</div>
+</body>
+</html>

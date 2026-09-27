@@ -94,7 +94,7 @@ describe('route manifest', () => {
         expect(home.instances.length).toBe(1);
     });
 
-    it('includes featured page route (headfull FS)', () => {
+    it('includes featured page route (flattened headless region)', () => {
         const featured = findRoute('/featured');
         expect(featured.instances.length).toBe(1);
     });
@@ -156,7 +156,7 @@ describe('per-instance artifacts', () => {
         expect(cache.slowViewState.siteName).toBe('Test Shop');
     });
 
-    it('produces artifacts for featured page (headfull FS)', async () => {
+    it('produces artifacts for featured page (flattened headless region)', async () => {
         const featured = findRoute('/featured');
         const inst = featured.instances[0];
         expect(
@@ -240,7 +240,7 @@ describe('page-parts.json (DL#137)', () => {
         }
     });
 
-    it('featured page config includes headfull-nested headless component', async () => {
+    it('featured page config includes nested headless component', async () => {
         const config = JSON.parse(
             await fs.readFile(
                 path.join(backendDir, 'pre-rendered/featured/page-parts.json'),

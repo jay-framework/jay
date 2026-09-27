@@ -1,0 +1,23 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+    <script type="application/jay-headless"
+            contract="./components/card/card.jay-contract"></script>
+</head>
+<body>
+<div>
+    <h1>{title}</h1>
+
+    <!-- No template= provenance on the import, so this region is never drift-checked even though its
+         body diverges from any source. -->
+    <jay:card heading="{title}">
+        <div class="card">
+            <h3 class="card-heading">Whatever the page wants</h3>
+        </div>
+    </jay:card>
+</div>
+</body>
+</html>

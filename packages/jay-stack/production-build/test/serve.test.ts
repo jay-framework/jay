@@ -141,14 +141,14 @@ describe('head tags (SEO)', () => {
     });
 });
 
-describe('featured page (headfull FS with nested headless)', () => {
+describe('featured page (flattened headless region with nested headless)', () => {
     it('serves featured page', async () => {
         const res = await fetch('/featured');
         expect(res.status).toBe(200);
         expect(res.body).toMatch(/Featured Items/);
     });
 
-    it('renders headfull FS component content', async () => {
+    it('renders flattened headless region content', async () => {
         const res = await fetch('/featured');
         expect(res.body).toMatch(/logo\.png/);
         expect(res.body).toMatch(/Test Shop/);

@@ -7,7 +7,6 @@ import {
     generateServerElementFile,
     generateElementHydrateFile,
     JAY_IMPORT_RESOLVER,
-    injectHeadfullFSTemplates,
     JayHtmlSourceFile,
 } from '@jay-framework/compiler-jay-html';
 import {
@@ -123,8 +122,7 @@ export async function compileRouteServerElement(
     const sourceDir = path.dirname(jayHtmlPath);
     const outputDir = path.dirname(outputPath);
 
-    let jayHtml = injectHeadfullFSTemplates(jayHtmlContent, sourceDir, JAY_IMPORT_RESOLVER);
-    jayHtml = resolveJayHtmlPaths(jayHtml, sourceDir, outputDir);
+    const jayHtml = resolveJayHtmlPaths(jayHtmlContent, sourceDir, outputDir);
 
     return compileServerElement(
         jayHtml,
@@ -157,8 +155,7 @@ export async function compileRouteHydrateScript(
     const jayHtmlContent = await fs.readFile(jayHtmlPath, 'utf-8');
     const sourceDir = path.dirname(jayHtmlPath);
 
-    let jayHtml = injectHeadfullFSTemplates(jayHtmlContent, sourceDir, JAY_IMPORT_RESOLVER);
-    jayHtml = resolveJayHtmlPaths(jayHtml, sourceDir, outputDir);
+    const jayHtml = resolveJayHtmlPaths(jayHtmlContent, sourceDir, outputDir);
 
     const jayFile = await parseJayFile(
         jayHtml,
