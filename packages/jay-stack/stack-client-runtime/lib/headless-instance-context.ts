@@ -247,9 +247,14 @@ export function makePassthroughHeadlessInstanceComponent<
     coordinateKey: string | ((dataIds: string[]) => string),
 ): (props: PropsT) => ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT> {
     const passthroughDef: HeadlessComponentDef = {
-        // Identity interactive constructor: no interactive-phase properties. The merged render
-        // output ({ ...resolvedFastVS, ...{} }) is the context-sourced fast ViewState.
-        comp: () => ({ render: () => ({}) }),
+        // Identity interactive constructor: reactively echo props as the interactive ViewState.
+        // Reading `signalProps.props()` INSIDE render registers a reactive dependency on the props
+        // signal (component.ts makePropsProxy `_props`), so a parent props update — e.g. a binding
+        // like `status="{currentStatus}"` — re-runs this render reaction and patches the element.
+        // The merged output ({ ...resolvedFastVS, ...signalProps.props() }) is the fast ViewState
+        // with live props overlaid. Returning a static `{}` here (the earlier form) read nothing
+        // reactively, so prop updates never re-rendered the region.
+        comp: (signalProps) => ({ render: () => signalProps.props() }),
         // Echo props as ViewState when the region has no server data (mirrors the server passthrough).
         clientDefaults: (props) => ({ viewState: props }),
     };

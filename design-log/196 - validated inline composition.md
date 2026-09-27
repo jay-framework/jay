@@ -1228,3 +1228,37 @@ symbol (`foreignChild`, `slotRefManager`, `forwardedInnerListeners`, `getForward
 `withSyntheticParentContext`, `PARENT_CONTEXT_PROP`, `withParentShift`, `parentShiftLevels`,
 `FOREIGN_SLOT_MARKER`, `refViewState`, `forEachInsidePureComponentError`, …) returns zero source hits.
 §6 is complete.
+
+### Phase 4j — passthrough interactive render made reactive (bug fix, green)
+
+**Symptom.** On the smoke test's `/headfull` page, clicking `ref=cycleButton` re-drove the second badge's
+`status="{currentStatus}"` binding, but the badge never updated. The props reached the badge instance, yet
+after the prop update the reactive's `batchedReactionsToRun` was empty — no reaction depended on the props.
+
+**Root cause.** The client/hydrate passthrough (`makePassthroughHeadlessInstanceComponent`,
+`stack-client-runtime/lib/headless-instance-context.ts`) defined its identity interactive constructor as
+`comp: () => ({ render: () => ({}) })`. The merged instance render is `{ ...resolvedFastVS, ...originalRender() }`
+(headless-instance-context.ts:208-213); with `originalRender()` returning a static `{}` and `resolvedFastVS`
+fixed at construction (server fast VS, or the `clientDefaults` props snapshot), **nothing was read reactively
+inside the render reaction.** So a prop update — `propsProxy.update()` → `_setProps()` inside `batchReactions`
+(component.ts:262-272) — had no dependent reaction to schedule. The region was frozen at its construction-time
+ViewState. This is a no-code region's whole contract (ViewState = props, live), so the identity render must
+actually *read* the props signal.
+
+**Fix (one line).** `comp: (signalProps) => ({ render: () => signalProps.props() })`. Reading
+`signalProps.props()` inside render registers a reactive dependency on the props signal (`_props` in
+`makePropsProxy`, component.ts:281), so a parent prop update re-runs the reaction; the merge then overlays the
+live props onto `resolvedFastVS`. Same mechanism for both branches (server fast VS vs `clientDefaults`) — only
+the base object differs. `clientDefaults` (the props echo) is retained: it still seeds `resolvedFastVS` /
+`signalVS` and the pre-hydration first render for the no-server-data case.
+
+**Regression test (additive).** `stack-client-runtime/test/passthrough-headless-instance.test.ts` drives a
+passthrough via `childComp` inside a parent whose ViewState feeds the instance's props (the vs → prop → vs
+chain), then asserts the rendered `#badge-status` text follows `page.update(...)`. Confirmed it fails against
+the pre-fix `render: () => ({})` (badge frozen at `success`) and passes after. The package's `test` script was
+`echo 'no tests'`, so neither this test nor the existing `action-caller` test ran in CI — repointed to
+`vitest run` (21 tests: 19 action-caller + 2 passthrough).
+
+**Verification.** `stack-client-runtime` `yarn test` (21) + `build:check-types` (exit 0) green; smoke
+`test:smoke` (65) green (SSR path unaffected — it does not exercise client click reactivity, which is why this
+escaped earlier).
