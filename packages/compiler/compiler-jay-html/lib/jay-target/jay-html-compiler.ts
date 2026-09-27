@@ -1682,9 +1682,12 @@ export function generateElementFile(
     // These come from headless imports and are used in ViewState/Refs interfaces
     const headlessModules = new Set<string>();
     for (const headless of jayFile.headlessImports) {
-        // DL#194: a Tier 2 (structural) composite is inlined — its ViewState/Refs types never appear
-        // in the output, so don't force-keep them. Enum types from its contract may still be
-        // referenced by inlined bindings (the grammar doesn't self-import enums), so keep those.
+        // DL#196: a no-code (structural) region is a childComp that references the contract Refs
+        // (force-kept via usedComponentImports) and InteractiveViewState — but never its bare rootType
+        // ViewState, which the passthrough replaces with InteractiveViewState. So don't force-keep the
+        // bare ViewState/Refs for structural (mirrors the hydrate-target drop below). Enum types from the
+        // contract may still be referenced by bindings (the grammar doesn't self-import enums), so keep
+        // those unconditionally.
         if (!headless.structural) {
             // The main ViewState and Refs types are always used when a real headless import exists
             usedHeadlessTypeNames.add(headless.rootType.name);
