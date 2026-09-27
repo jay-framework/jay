@@ -1001,13 +1001,13 @@ describe('hydration', () => {
         });
     });
 
-    describe('5g. Headless — Tier 3 code-backed typed instance props (DL#190)', () => {
-        // Tier 3 code-backed instance (widget: .jay-contract + .ts). Two <jay:widget> instances
+    describe('5g. Headless — code-backed coded region typed instance props (DL#190)', () => {
+        // Code-backed coded region instance (widget: .jay-contract + .ts). Two <jay:widget> instances
         // pass enum/number/boolean props both statically (status="warning" count="5" active="false")
         // and via {binding} from page fast ViewState (status="{reqStatus}" ...). Verifies instance
         // props are coerced to their declared type at the single serialization source
         // (normalizeAndResolveInstanceProps): the serialized __headlessInstances is typed, SSR DOM
-        // and client hydration agree with no `adoptBase … not found` warning, and — because Tier 3
+        // and client hydration agree with no `adoptBase … not found` warning, and — because coded-region
         // client interactivity works — the post-hydration __headlessInstances holds typed values.
         // The child template gates icons on the enum (status), text on the number (count), and a
         // flag on the boolean (active) — all three coercions drive rendering.
@@ -1523,8 +1523,8 @@ describe('hydration', () => {
         });
     });
 
-    describe('8n. Headfull FS — Tier 2 typed instance props (DL#190)', () => {
-        // Tier 2 pure headfull (badge: .jay-contract + .jay-html, no .ts). Two <jay:badge>
+    describe('8n. Headfull FS — structural passthrough typed instance props (DL#190)', () => {
+        // No-code structural passthrough region (badge: .jay-contract + .jay-html, no .ts). Two <jay:badge>
         // instances pass enum/number/boolean props both statically and via {binding}. Verifies
         // instance props are coerced to their declared type at the single serialization source
         // (normalizeAndResolveInstanceProps): the serialized __headlessInstances is typed, SSR DOM
@@ -1552,7 +1552,7 @@ describe('hydration', () => {
             // ViewStates are typed (featured:false, status:1, count:7) rather than strings.
             hydrationChecks: async (page) => {
                 // Slow content is stable across hydration. (Post-hydration interactive re-render of
-                // a Tier 2 pure-headfull instance's own props is a separate client-side concern —
+                // a no-code structural passthrough instance's own props is a separate client-side concern —
                 // DL#190 Q7 — so this fixture asserts SSR correctness + adopt-without-warnings.)
                 expect(await page.textContent('#target h1')).toEqual('Typed Props');
             },

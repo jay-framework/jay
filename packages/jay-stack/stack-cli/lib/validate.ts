@@ -975,10 +975,10 @@ export function checkHeadlessInstanceProps(jayHtml: JayHtmlSourceFile, file: str
                         const sourcePhase = resolveBindingPhase(bindingPath, jayHtml);
                         if (!sourcePhase) continue;
 
-                        // DL#189 — for a Tier 2 pure headfull component (DL#187) props ≡ tags:
+                        // DL#189 — for a no-code structural passthrough region (DL#196) props ≡ tags:
                         // the props section carries no phase (the parser defaults it to slow),
                         // so the effective prop phase is the matching tag's phase. Using the tag
-                        // phase avoids wrongly flagging a valid fast/fast+interactive Tier 2
+                        // phase avoids wrongly flagging a valid fast/fast+interactive structural passthrough
                         // binding as a slow-only prop. For a code-backed (non-structural) import,
                         // props and tags are distinct — keep the prop's own declared phase.
                         const propPhase = imp.structural

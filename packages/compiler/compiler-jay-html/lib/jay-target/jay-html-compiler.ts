@@ -375,7 +375,7 @@ export function renderElementRef(
 
 /**
  * Coerce a static (non-`{expr}`) component-prop attribute value to its declared contract dataType
- * (DL#187). A static attribute is plain text, so the expression grammar always yields a quoted
+ * (DL#196). A static attribute is plain text, so the expression grammar always yields a quoted
  * string (or a bare number for all-digit text) — which is wrong for enum/number/boolean props.
  * Returns the coerced TypeScript source, or `undefined` to leave the parsed value as-is (string
  * props, unknown types, or a value that isn't a valid member/literal of the declared type — the
@@ -437,7 +437,7 @@ export function renderChildCompProps(
             const outputKey =
                 contractProps?.find((p) => p.name.toLowerCase() === attrCanonical)?.name ?? attrKey;
             const expectedType = propTypeMap?.get(attrName) ?? propTypeMap?.get(outputKey);
-            // Static-value coercion (DL#187): a static attribute is plain text, so the grammar
+            // Static-value coercion (DL#196): a static attribute is plain text, so the grammar
             // produces a quoted string (or bare number) regardless of the prop's declared type.
             // Coerce it to the declared dataType — enum member, number, or boolean literal — so
             // the value lands as the right TypeScript type (e.g. `Status.success`, not `'success'`;
@@ -1398,7 +1398,7 @@ function renderFunctionImplementation(
         processImportedComponents(importStatements);
     const importedRefNameToRef = processImportedHeadless(headlessImports);
     // Build set of headless contract names for detecting <jay:contract-name> instances.
-    // Tier 2 pure headfull components (DL#187, `structural`) are real instances too — the
+    // no-code structural passthrough regions (DL#196, `structural`) are real instances too — the
     // compiler inlines an identity passthrough definition for them (see line ~917), so they
     // must be recognized here to receive coordinates and be treated as component instances.
     const headlessContractNames = new Set(headlessImports.map((h) => h.contractName));
@@ -1805,7 +1805,7 @@ export function generateElementHydrateFile(
 
     // Pre-assign coordinates and refs before element compilation so the element
     // compiler reads the same refs that the hydrate and server-element compilers use.
-    // Tier 2 pure headfull components (DL#187, `structural`) are instances here too, so
+    // no-code structural passthrough regions (DL#196, `structural`) are instances here too, so
     // their coordinates must match the element file — include them (only skip keyed ones).
     const headlessImports = jayFile.headlessImports?.filter((h) => !h.key) ?? [];
     const headlessContractNames = new Set(headlessImports.map((h) => h.contractName));

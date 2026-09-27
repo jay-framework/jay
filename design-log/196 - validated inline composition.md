@@ -1262,3 +1262,36 @@ the pre-fix `render: () => ({})` (badge frozen at `success`) and passes after. T
 **Verification.** `stack-client-runtime` `yarn test` (21) + `build:check-types` (exit 0) green; smoke
 `test:smoke` (65) green (SSR path unaffected — it does not exercise client click reactivity, which is why this
 escaped earlier).
+
+### Phase 4k — smoke `/headfull` retitle + tier vocabulary retired repo-wide (rename, green)
+
+The deferred "smoke test / label vocab rename" is done, extended to the whole tree (comments, JSDoc, and test
+`describe`/`it` titles only — no logic, identifiers, or asserted strings changed; the design logs keep the
+historical tier/DL#187/DL#194 terms).
+
+**Vocabulary (region-based).** `Tier 2` / "pure headfull component" → **no-code structural passthrough region**;
+`Tier 3` (coded) → **coded region** / **coded (headless) component**; the general concept → **inline
+composition**. `DL#187` and `DL#194` citations that labelled *current* behavior → `DL#196` (DL#196 supersedes
+both). Files touched span `compiler-jay-html` (`jay-html-compiler.ts`, `structural-coercions.ts`,
+`jay-html-compile-refs.ts`, `jay-html-compiler-server.ts`, `slow-render-transform.ts`), `stack-server-runtime`
+(passthrough-component, resolve-instance-props, types, instance-slow-render, slowly/fast-changing-runner),
+`stack-server-build`, `production-build`/`production-server` loaders, `stack-cli` (`validate.ts`/`validate.test.ts`),
+`stack-client-runtime`, `dev-server` (`hydration.test.ts`), and the smoke example (`smoke.test.ts`, `section.ts`,
+`button.ts`).
+
+**`/headfull` page retitled.** `pageTitle` → **"Inline Composition"** (it composes a coded `banner`, a no-code
+structural `info-box`, and two structural passthrough `badge` regions); its `page.jay-contract` comment and the
+`smoke.test.ts` `/headfull` titles updated to match. Route/folder `headfull` kept — the *page* is genuinely a
+headfull page.
+
+**Fixtures renamed** (`git mv`, `compiler-jay-html/test/fixtures/contracts/`): `page-with-tier3-slot` →
+**`page-with-coded-region`**, `page-with-tier3-slot-foreach` → **`page-with-coded-region-foreach`** (dirs +
+`.jay-html` files). Because the generated element type prefix derives from the jay-html filename, the golden
+`generated-element*.ts` files were regenerated (`PageWithTier3Slot*` → `PageWithCodedRegion*`) and the six
+`folder = 'contracts/page-with-tier3-slot*'` references in the three `generate-*.test.ts` updated. (These
+fixtures no longer exercise slots — re-authored to plain inline composition back in Phase 4f — so the old name
+was doubly stale.)
+
+**Verification.** `compiler-jay-html` generate suites (element/hydrate/server, 132) green with regenerated
+goldens; `stack-client-runtime` (21), smoke (65) green; repo-wide `build:check-types` exit 0; a repo-wide grep
+for the tier/DL#187/DL#194 vocab and the old fixture names returns zero hits outside `design-log/`.

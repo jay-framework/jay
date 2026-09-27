@@ -463,7 +463,7 @@ describe('generate jay-html element', () => {
         // source-owned region backed by `makePassthroughHeadlessInstanceComponent`. The page mounts it
         // via `childComp(_HeadlessBadge0, propsGetter, ref)`; the prop getter coerces static attribute
         // values to the declared prop types (enum → member, number → literal, boolean → literal).
-        it('generate element file with structural (Tier 2) no-code region — passthrough childComp + coerced static props (DL#196)', async () => {
+        it('generate element file with no-code structural passthrough region — passthrough childComp + coerced static props (DL#196)', async () => {
             const folder = 'contracts/page-with-structural-badge';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
@@ -473,8 +473,8 @@ describe('generate jay-html element', () => {
         // DL#196 — a coded (`src=`) headless region: the card template is flattened into the page as
         // source-owned markup and compiled to `makeHeadlessInstanceComponent(renderFn, card, coord)`.
         // Both `<jay:card>` regions share the single `card` logic import; each mounts its own `childComp`.
-        it('generate element file with Tier 3 coded region (DL#196)', async () => {
-            const folder = 'contracts/page-with-tier3-slot';
+        it('generate element file with coded region (DL#196)', async () => {
+            const folder = 'contracts/page-with-coded-region';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
@@ -483,8 +483,8 @@ describe('generate jay-html element', () => {
         // DL#196 under repetition: parent repeats a coded card region via forEach. The flattened render
         // fn is hoisted once; the `childComp` and its collection ref (`refRichCards()`) live inside the
         // forEach item callback, with a keyed coordinate function.
-        it('generate element file with Tier 3 coded region under a parent forEach (DL#196)', async () => {
-            const folder = 'contracts/page-with-tier3-slot-foreach';
+        it('generate element file with coded region under a parent forEach (DL#196)', async () => {
+            const folder = 'contracts/page-with-coded-region-foreach';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));

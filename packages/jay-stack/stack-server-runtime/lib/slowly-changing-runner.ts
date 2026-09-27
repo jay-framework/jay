@@ -98,7 +98,7 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
                 const coordKey = instance.coordinate.join('/');
 
                 // Nested instances resolve against their enclosing instance's resolved slow
-                // ViewState; top-level instances against the page ViewState (DL#194).
+                // ViewState; top-level instances against the page ViewState (DL#196).
                 const normalizedProps = normalizeAndResolveInstanceProps(
                     instance.props,
                     comp.contract?.props,

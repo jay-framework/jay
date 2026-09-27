@@ -1,5 +1,5 @@
 /**
- * Tier 3 leaf component (DL#194): its .ts makes <jay:button> a real component boundary.
+ * Coded (headless) component (DL#196): its .ts makes <jay:button> a real component boundary.
  * Used as the innermost element of the nested-composition page (button in card in section).
  */
 import { type Props } from '@jay-framework/component';

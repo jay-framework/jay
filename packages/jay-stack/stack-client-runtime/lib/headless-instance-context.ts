@@ -108,7 +108,7 @@ export function makeHeadlessInstanceComponent<
     ) => {
         // Read instance data from the context stack (provided by the composite component).
         // Use findContext (returns undefined when absent) rather than useContext (which throws):
-        // a structural (Tier 2) headfull composite can be rendered under a plain client render()
+        // a no-code structural passthrough composite can be rendered under a plain client render()
         // that has no composite wrapper, so HEADLESS_INSTANCES may legitimately be missing. Every
         // consumer below already tolerates undefined (optional chaining + clientDefaults fallback).
         // (DL#193 Phase 3.)

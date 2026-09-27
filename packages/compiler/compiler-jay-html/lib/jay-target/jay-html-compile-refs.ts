@@ -50,7 +50,7 @@ export function refsToRepeated(refsTreeNode: RefsTree): RefsTree {
 }
 
 /**
- * DL#193 Phase 3 (Q2 = (a) implicit): forwarding a structural (Tier 2) component's inner refs is
+ * DL#193 Phase 3 (Q2 = (a) implicit): forwarding a structural passthrough component's inner refs is
  * scoped to NAMED child-component refs. Auto (unnamed) refs and plain element refs stay private.
  */
 export function hasNamedComponentRefs(tree: RefsTree): boolean {

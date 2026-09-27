@@ -39,8 +39,8 @@ export interface HeadlessModuleInfo {
     contractInfo?: { contractName: string; metadata?: Record<string, unknown> };
     headlessProps?: Record<string, string>;
     structural?: boolean;
-    /** Tier 2 passthrough tags (name + phase) — persisted so the serve-time passthrough can be
-     * rebuilt from config without the compiler contract (DL#187). */
+    /** structural passthrough tags (name + phase) — persisted so the serve-time passthrough can be
+     * rebuilt from config without the compiler contract (DL#196). */
     structuralTags?: Array<{ name: string; phase?: string }>;
 }
 
@@ -125,7 +125,7 @@ export async function loadProductionPageParts(
         let headlessCompDef: any;
 
         if (headlessImport.structural) {
-            // Tier 2 pure headfull component (DL#187): no code file. Synthesize an identity
+            // no-code structural passthrough region (DL#196): no code file. Synthesize an identity
             // passthrough definition from the contract's tags (props ≡ tags) so its ViewState
             // echoes the usage-site props, split per tag phase. No module to load.
             headlessCompDef = makePassthroughInstanceComponent(
@@ -373,7 +373,7 @@ export async function loadPagePartsFromConfig(
             props: entry.propNames.map((name) => ({ name })),
         };
         if (entry.structural) {
-            // Tier 2 pure headfull component (DL#187): rebuild the identity passthrough from the
+            // no-code structural passthrough region (DL#196): rebuild the identity passthrough from the
             // persisted tag phases — no module to load.
             headlessInstanceComponents.push({
                 contractName: entry.contractName,

@@ -97,7 +97,7 @@ export async function renderFastChangingData(
                 const cf = instancePhaseData.carryForwards[coordKey];
 
                 // Nested instances resolve against their enclosing instance's resolved
-                // (slow+fast) ViewState; top-level instances against the page (DL#194).
+                // (slow+fast) ViewState; top-level instances against the page (DL#196).
                 // The enclosing instance was rendered earlier this loop (parent-first order),
                 // so its fast ViewState is already in instanceViewStates.
                 const parentKey = instance.parentCoordinate?.join('/');

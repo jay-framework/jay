@@ -85,7 +85,7 @@ export async function loadPagePartsFromConfig(
             props: entry.propNames.map((name) => ({ name })),
         };
         if (entry.structural) {
-            // Tier 2 pure headfull component (DL#187): rebuild the identity passthrough from the
+            // no-code structural passthrough region (DL#196): rebuild the identity passthrough from the
             // persisted tag phases — no module to load.
             headlessInstanceComponents.push({
                 contractName: entry.contractName,

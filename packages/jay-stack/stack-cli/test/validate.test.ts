@@ -532,8 +532,8 @@ describe('headless instance props validation (DL#124 Phase 2)', () => {
         });
     });
 
-    describe('structural (Tier 2) prop phase from tag (DL#189)', () => {
-        // A Tier 2 pure headfull component (DL#187): props ≡ tags. The parser defaults every
+    describe('structural passthrough prop phase from tag (DL#189)', () => {
+        // A no-code structural passthrough region (DL#196): props ≡ tags. The parser defaults every
         // prop's phase to slow and carries the real phase on the tags, so validation must read
         // the effective prop phase from the matching tag for structural imports.
         function makeStructuralJayHtml(options: {
@@ -780,7 +780,7 @@ describe('headless instance props validation (DL#124 Phase 2)', () => {
             expect(typeErrors(warnings)).toEqual([]);
         });
 
-        it('validates a static enum value for a Tier 2 structural import', () => {
+        it('validates a static enum value for a structural passthrough import', () => {
             const jayHtml = makeEnumJayHtml({
                 propType: status(),
                 propValue: 'pending',

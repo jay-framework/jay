@@ -20,45 +20,45 @@ import {
 } from './card/card.jay-contract';
 import { card } from './card/card';
 
-export interface CardOfPageWithTier3SlotForeachViewState {
+export interface CardOfPageWithCodedRegionForeachViewState {
     id: string;
     title: string;
 }
 
-export interface PageWithTier3SlotForeachViewState {
+export interface PageWithCodedRegionForeachViewState {
     pageTitle: string;
-    cards: Array<CardOfPageWithTier3SlotForeachViewState>;
+    cards: Array<CardOfPageWithCodedRegionForeachViewState>;
 }
 
-export interface PageWithTier3SlotForeachElementRefs {
+export interface PageWithCodedRegionForeachElementRefs {
     cards: {
         richCards: CardRepeatedRefs;
     };
 }
 
-export type PageWithTier3SlotForeachSlowViewState = {};
-export type PageWithTier3SlotForeachFastViewState = PageWithTier3SlotForeachViewState;
-export type PageWithTier3SlotForeachInteractiveViewState = PageWithTier3SlotForeachViewState;
+export type PageWithCodedRegionForeachSlowViewState = {};
+export type PageWithCodedRegionForeachFastViewState = PageWithCodedRegionForeachViewState;
+export type PageWithCodedRegionForeachInteractiveViewState = PageWithCodedRegionForeachViewState;
 
-export type PageWithTier3SlotForeachElement = JayElement<
-    PageWithTier3SlotForeachViewState,
-    PageWithTier3SlotForeachElementRefs
+export type PageWithCodedRegionForeachElement = JayElement<
+    PageWithCodedRegionForeachViewState,
+    PageWithCodedRegionForeachElementRefs
 >;
-export type PageWithTier3SlotForeachElementRender = RenderElement<
-    PageWithTier3SlotForeachViewState,
-    PageWithTier3SlotForeachElementRefs,
-    PageWithTier3SlotForeachElement
+export type PageWithCodedRegionForeachElementRender = RenderElement<
+    PageWithCodedRegionForeachViewState,
+    PageWithCodedRegionForeachElementRefs,
+    PageWithCodedRegionForeachElement
 >;
-export type PageWithTier3SlotForeachElementPreRender = [
-    PageWithTier3SlotForeachElementRefs,
-    PageWithTier3SlotForeachElementRender,
+export type PageWithCodedRegionForeachElementPreRender = [
+    PageWithCodedRegionForeachElementRefs,
+    PageWithCodedRegionForeachElementRender,
 ];
-export type PageWithTier3SlotForeachContract = JayContract<
-    PageWithTier3SlotForeachViewState,
-    PageWithTier3SlotForeachElementRefs,
-    PageWithTier3SlotForeachSlowViewState,
-    PageWithTier3SlotForeachFastViewState,
-    PageWithTier3SlotForeachInteractiveViewState
+export type PageWithCodedRegionForeachContract = JayContract<
+    PageWithCodedRegionForeachViewState,
+    PageWithCodedRegionForeachElementRefs,
+    PageWithCodedRegionForeachSlowViewState,
+    PageWithCodedRegionForeachFastViewState,
+    PageWithCodedRegionForeachInteractiveViewState
 >;
 
 // Inline template for headless component: card #0
@@ -93,7 +93,7 @@ const _HeadlessCard0 = makeHeadlessInstanceComponent(_headlessCard0Render, card,
     [...dataIds, 'card:richCards'].toString(),
 );
 
-export function render(options?: RenderElementOptions): PageWithTier3SlotForeachElementPreRender {
+export function render(options?: RenderElementOptions): PageWithCodedRegionForeachElementPreRender {
     const [cardsRefManager, [refRichCards]] = ReferencesManager.for(
         options,
         [],
@@ -104,17 +104,17 @@ export function render(options?: RenderElementOptions): PageWithTier3SlotForeach
     const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
         cards: cardsRefManager,
     });
-    const render = (viewState: PageWithTier3SlotForeachViewState) =>
+    const render = (viewState: PageWithCodedRegionForeachViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             de('div', {}, [
                 e('h1', {}, [dt((vs) => vs.pageTitle)]),
                 forEach(
-                    (vs: PageWithTier3SlotForeachViewState) => vs.cards,
-                    (vs1: CardOfPageWithTier3SlotForeachViewState) => {
+                    (vs: PageWithCodedRegionForeachViewState) => vs.cards,
+                    (vs1: CardOfPageWithCodedRegionForeachViewState) => {
                         return e('div', { class: 'cards' }, [
                             childComp(
                                 _HeadlessCard0,
-                                (vs1: CardOfPageWithTier3SlotForeachViewState) => ({
+                                (vs1: CardOfPageWithCodedRegionForeachViewState) => ({
                                     heading: vs1.title,
                                 }),
                                 refRichCards(),
@@ -124,6 +124,6 @@ export function render(options?: RenderElementOptions): PageWithTier3SlotForeach
                     'id',
                 ),
             ]),
-        ) as PageWithTier3SlotForeachElement;
-    return [refManager.getPublicAPI() as PageWithTier3SlotForeachElementRefs, render];
+        ) as PageWithCodedRegionForeachElement;
+    return [refManager.getPublicAPI() as PageWithCodedRegionForeachElementRefs, render];
 }

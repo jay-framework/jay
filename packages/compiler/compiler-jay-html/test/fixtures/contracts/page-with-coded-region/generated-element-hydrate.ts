@@ -14,38 +14,38 @@ import { makeHeadlessInstanceComponent } from '@jay-framework/stack-client-runti
 import { CardViewState, CardRefs, CardInteractiveViewState } from './card/card.jay-contract';
 import { card } from './card/card';
 
-export interface PageWithTier3SlotViewState {
+export interface PageWithCodedRegionViewState {
     pageTitle: string;
 }
 
-export interface PageWithTier3SlotElementRefs {
+export interface PageWithCodedRegionElementRefs {
     plainCard: CardRefs;
     richCard: CardRefs;
 }
 
-export type PageWithTier3SlotSlowViewState = {};
-export type PageWithTier3SlotFastViewState = PageWithTier3SlotViewState;
-export type PageWithTier3SlotInteractiveViewState = PageWithTier3SlotViewState;
+export type PageWithCodedRegionSlowViewState = {};
+export type PageWithCodedRegionFastViewState = PageWithCodedRegionViewState;
+export type PageWithCodedRegionInteractiveViewState = PageWithCodedRegionViewState;
 
-export type PageWithTier3SlotElement = JayElement<
-    PageWithTier3SlotViewState,
-    PageWithTier3SlotElementRefs
+export type PageWithCodedRegionElement = JayElement<
+    PageWithCodedRegionViewState,
+    PageWithCodedRegionElementRefs
 >;
-export type PageWithTier3SlotElementRender = RenderElement<
-    PageWithTier3SlotViewState,
-    PageWithTier3SlotElementRefs,
-    PageWithTier3SlotElement
+export type PageWithCodedRegionElementRender = RenderElement<
+    PageWithCodedRegionViewState,
+    PageWithCodedRegionElementRefs,
+    PageWithCodedRegionElement
 >;
-export type PageWithTier3SlotElementPreRender = [
-    PageWithTier3SlotElementRefs,
-    PageWithTier3SlotElementRender,
+export type PageWithCodedRegionElementPreRender = [
+    PageWithCodedRegionElementRefs,
+    PageWithCodedRegionElementRender,
 ];
-export type PageWithTier3SlotContract = JayContract<
-    PageWithTier3SlotViewState,
-    PageWithTier3SlotElementRefs,
-    PageWithTier3SlotSlowViewState,
-    PageWithTier3SlotFastViewState,
-    PageWithTier3SlotInteractiveViewState
+export type PageWithCodedRegionContract = JayContract<
+    PageWithCodedRegionViewState,
+    PageWithCodedRegionElementRefs,
+    PageWithCodedRegionSlowViewState,
+    PageWithCodedRegionFastViewState,
+    PageWithCodedRegionInteractiveViewState
 >;
 
 // Hydrate inline template for headless component: card #0
@@ -119,7 +119,7 @@ const _HeadlessCard1 = makeHeadlessInstanceComponent(
 export function hydrate(
     rootElement: Element,
     options?: RenderElementOptions,
-): PageWithTier3SlotElementPreRender {
+): PageWithCodedRegionElementPreRender {
     const [refManager, [refPlainCard, refRichCard]] = ReferencesManager.for(
         options,
         [],
@@ -127,23 +127,23 @@ export function hydrate(
         ['plainCard', 'richCard'],
         [],
     );
-    const render = (viewState: PageWithTier3SlotViewState) =>
+    const render = (viewState: PageWithCodedRegionViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('S0/0', {}, [
                 adoptText('S0/0/0', (vs) => vs.pageTitle),
                 childCompHydrate(
                     _HeadlessCard0,
-                    (vs: PageWithTier3SlotViewState) => ({ heading: 'Plain' }),
+                    (vs: PageWithCodedRegionViewState) => ({ heading: 'Plain' }),
                     'S1/0',
                     refPlainCard(),
                 ),
                 childCompHydrate(
                     _HeadlessCard1,
-                    (vs: PageWithTier3SlotViewState) => ({ heading: 'Rich' }),
+                    (vs: PageWithCodedRegionViewState) => ({ heading: 'Rich' }),
                     'S2/0',
                     refRichCard(),
                 ),
             ]),
-        ) as PageWithTier3SlotElement;
-    return [refManager.getPublicAPI() as PageWithTier3SlotElementRefs, render];
+        ) as PageWithCodedRegionElement;
+    return [refManager.getPublicAPI() as PageWithCodedRegionElementRefs, render];
 }

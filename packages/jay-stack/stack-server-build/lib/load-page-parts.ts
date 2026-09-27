@@ -173,7 +173,7 @@ export async function loadPageParts(
             let isNpmPackage: boolean;
 
             if (headlessImport.structural) {
-                // Tier 2 pure headfull component (DL#187): no .ts file. Synthesize an identity
+                // no-code structural passthrough region (DL#196): no .ts file. Synthesize an identity
                 // passthrough definition from the contract's tags (props ≡ tags) so its ViewState
                 // echoes the usage-site props, split per tag phase. No module to load.
                 compDefinition = makePassthroughInstanceComponent(

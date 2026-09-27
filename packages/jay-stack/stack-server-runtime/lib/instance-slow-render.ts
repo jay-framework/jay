@@ -34,7 +34,7 @@ export interface InstancePhaseData {
         contractName: string;
         props: Record<string, string>;
         coordinate: Coordinate;
-        /** Enclosing instance coordinate for enclosing-instance-scope resolution (DL#194). */
+        /** Enclosing instance coordinate for enclosing-instance-scope resolution (DL#196). */
         parentCoordinate?: Coordinate;
     }>;
     /** CarryForward per instance (keyed by coordinate path, e.g. "p1/product-card:0") */
@@ -88,7 +88,7 @@ export async function slowRenderInstances(
 
         // Resolve `{key.field}` bindings against the slow scope for this instance's own
         // slow render. A nested instance resolves against its enclosing instance's resolved
-        // slow ViewState (DL#194); a top-level instance against the page. Fast / fast+interactive
+        // slow ViewState (DL#196); a top-level instance against the page. Fast / fast+interactive
         // props are not resolvable here and collapse to '' — which is correct: a slow-only
         // component must not read them (DL#189).
         const instanceBindingContext: InstanceBindingContext = {

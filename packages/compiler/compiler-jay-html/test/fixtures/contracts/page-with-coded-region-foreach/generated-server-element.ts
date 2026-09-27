@@ -2,18 +2,18 @@ import { escapeHtml, type ServerRenderContext } from '@jay-framework/ssr-runtime
 
 import { CardViewState } from './card/card.jay-contract';
 
-export interface CardOfPageWithTier3SlotForeachViewState {
+export interface CardOfPageWithCodedRegionForeachViewState {
     id: string;
     title: string;
 }
 
-export interface PageWithTier3SlotForeachViewState {
+export interface PageWithCodedRegionForeachViewState {
     pageTitle: string;
-    cards: Array<CardOfPageWithTier3SlotForeachViewState>;
+    cards: Array<CardOfPageWithCodedRegionForeachViewState>;
 }
 
 export function renderToStream(
-    vs: PageWithTier3SlotForeachViewState,
+    vs: PageWithCodedRegionForeachViewState,
     ctx: ServerRenderContext,
 ): void {
     const { write: w } = ctx;

@@ -2,11 +2,11 @@ import { escapeHtml, type ServerRenderContext } from '@jay-framework/ssr-runtime
 
 import { CardViewState } from './card/card.jay-contract';
 
-export interface PageWithTier3SlotViewState {
+export interface PageWithCodedRegionViewState {
     pageTitle: string;
 }
 
-export function renderToStream(vs: PageWithTier3SlotViewState, ctx: ServerRenderContext): void {
+export function renderToStream(vs: PageWithCodedRegionViewState, ctx: ServerRenderContext): void {
     const { write: w } = ctx;
     w('<div');
     w(' jay-coordinate="S0/0">');

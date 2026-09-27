@@ -1,10 +1,10 @@
 /**
- * Coercion of a structural (Tier 2, DL#187) passthrough instance's ViewState from the raw
+ * Coercion of a structural (DL#196) passthrough instance's ViewState from the raw
  * attribute strings the passthrough echoes (e.g. `status: "success"`, `count: "42"`,
  * `featured: "true"`) to the typed values the inlined template expects (`vs.status ===
  * Status.warning`, numbers, booleans).
  *
- * A Tier 2 passthrough has no `.ts`, so props ≡ tags and each field arrives verbatim as a string
+ * A structural passthrough has no `.ts`, so props ≡ tags and each field arrives verbatim as a string
  * regardless of static/dynamic origin. Every render target — server (SSR), hydrate (client adopt),
  * and client element — must apply the SAME type-driven coercion or the outputs diverge (DL#189):
  * SSR coerces `featured: "false"` → `false` and omits the span, while an un-coerced client treats
@@ -19,7 +19,7 @@
  *     reverse map would return the *name* `"warning"`, so we detect that (result is a string, not
  *     a number) and fall back to `Number("1")` → `1`.
  * Both paths converge on the numeric value. The enum symbol is already imported by every target
- * because the template compares against it (DL#187). String fields need no coercion.
+ * because the template compares against it (DL#196). String fields need no coercion.
  */
 
 import { isEnumType, JayType } from '@jay-framework/compiler-shared';
@@ -53,7 +53,7 @@ export function buildStructuralCoercions(rawVar: string, tags: StructuralTag[]):
 }
 
 /**
- * Build the inline identity-passthrough component definition for a Tier 2 structural instance on
+ * Build the inline identity-passthrough component definition for a structural passthrough instance on
  * the client (hydrate + client element targets). It echoes the supplied props verbatim as its
  * ViewState — no coercion.
  *

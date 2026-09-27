@@ -502,23 +502,23 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Block B/);
         });
 
-        it('/nested-composition — Tier 3 > Tier 2 > Tier 3 nesting renders the outer levels (DL#194)', async () => {
+        it('/nested-composition — coded > structural passthrough > coded nesting renders the outer levels (DL#196)', async () => {
             const { status, body } = await fetchPage(server.url, '/nested-composition/');
             expect(status).toBe(200);
             expectPage(body);
             expect(body).toMatch(/Nested Composition/);
-            // section (Tier 3) title threads down and renders, and the inlined card (Tier 2) resolves
-            // its heading from section's title binding:
+            // section (coded region) title threads down and renders, and the structural passthrough card
+            // region resolves its heading from section's title binding:
             expect(body).toMatch(/Section: Featured/);
             expect(body).toMatch(/Card: Featured/);
-            // the innermost button (Tier 3) is present as a real boundary:
+            // the innermost button (coded region) is present as a real boundary:
             expect(body).toMatch(/class="btn"/);
         });
 
-        // DL#194 enclosing-instance scope: a dynamic prop binding that threads through an inlined
-        // Tier 2 component (card) to a nested Tier 3 child (button) now resolves at SSR — each nested
+        // DL#196 enclosing-instance scope: a dynamic prop binding that threads through a structural
+        // passthrough card region to a nested coded button region now resolves at SSR — each nested
         // instance resolves its bindings against its enclosing instance's ViewState.
-        it('/nested-composition — SSR resolves the nested Tier 3 button label (DL#194)', async () => {
+        it('/nested-composition — SSR resolves the nested coded button label (DL#196)', async () => {
             const { body } = await fetchPage(server.url, '/nested-composition/');
             expect(body).toMatch(/Button: Featured/);
         });
@@ -697,7 +697,7 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Block B/);
         });
 
-        it('/nested-composition — Tier 3 > Tier 2 > Tier 3 nesting renders the outer levels (DL#194)', async () => {
+        it('/nested-composition — coded > structural passthrough > coded nesting renders the outer levels (DL#196)', async () => {
             const { status, body } = await fetchPage(server.url, '/nested-composition/');
             expect(status).toBe(200);
             expect(body).toMatch(/Nested Composition/);
@@ -706,9 +706,9 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/class="btn"/);
         });
 
-        // DL#194 enclosing-instance scope — see the dev-mode block for details. The inlined-Tier2 →
-        // nested-Tier3 prop binding now resolves at SSR.
-        it('/nested-composition — SSR resolves the nested Tier 3 button label (DL#194)', async () => {
+        // DL#196 enclosing-instance scope — see the dev-mode block for details. The structural
+        // passthrough → nested coded region prop binding now resolves at SSR.
+        it('/nested-composition — SSR resolves the nested coded button label (DL#196)', async () => {
             const { body } = await fetchPage(server.url, '/nested-composition/');
             expect(body).toMatch(/Button: Featured/);
         });

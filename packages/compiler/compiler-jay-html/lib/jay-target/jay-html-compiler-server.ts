@@ -313,9 +313,9 @@ function renderServerHeadlessInstance(
     //   const vs_pc0 = (vs as any).__headlessInstances?.[key] as Type | undefined;
     //   if (vs_pc0) { ... rendered children ... }
     const guardIndent = ifCondition ? new Indent(indent.curr + '    ') : indent;
-    // Structural (Tier 2) passthrough instances echo raw string props; coerce them to
+    // Structural passthrough instances echo raw string props; coerce them to
     // their declared contract types so the SSR HTML matches the compiled template and
-    // the client's coerced prop getter (DL#187).
+    // the client's coerced prop getter (DL#196).
     const coercions = headlessImport.structural
         ? buildStructuralCoercions(`${varName}_raw`, headlessImport.contract?.tags ?? [])
         : [];

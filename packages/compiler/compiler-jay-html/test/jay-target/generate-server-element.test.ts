@@ -164,8 +164,8 @@ describe('generate jay-html server element', () => {
         // DL#196 — a coded (`src=`) headless region: SSR renders each `<jay:card>` region from the
         // flattened, source-owned card template (no slot/override anchors). Card view state is cast
         // as `CardViewState` at the region boundary.
-        it('for Tier 3 coded region (DL#196)', async () => {
-            const folder = 'contracts/page-with-tier3-slot';
+        it('for coded region (DL#196)', async () => {
+            const folder = 'contracts/page-with-coded-region';
             const serverFile = await readFileAndGenerateServerElementFile(folder);
             expect(serverFile.validations).toEqual([]);
             expect(await prettify(serverFile.val)).toEqual(
@@ -175,8 +175,8 @@ describe('generate jay-html server element', () => {
 
         // DL#196 under repetition: SSR emits each repeated coded card region inside the `for..of`
         // item loop, bound to the item view state (`heading: vs1.title`).
-        it('for Tier 3 coded region under a parent forEach (DL#196)', async () => {
-            const folder = 'contracts/page-with-tier3-slot-foreach';
+        it('for coded region under a parent forEach (DL#196)', async () => {
+            const folder = 'contracts/page-with-coded-region-foreach';
             const serverFile = await readFileAndGenerateServerElementFile(folder);
             expect(serverFile.validations).toEqual([]);
             expect(await prettify(serverFile.val)).toEqual(
@@ -210,12 +210,12 @@ describe('generate jay-html server element', () => {
             );
         });
 
-        // DL#187 — a structural (Tier 2) headfull component (jay-html + contract, no .ts)
+        // DL#196 — a no-code structural passthrough region (jay-html + contract, no .ts)
         // renders via an identity passthrough that echoes raw string props. The server
         // element coerces those strings to the declared contract types (enum via the
         // numeric enum reverse-map, number via Number, boolean via === 'true') so the
         // SSR HTML matches the client's coerced prop getter.
-        it('for structural (Tier 2) instance — coerces passthrough props by dataType (DL#187)', async () => {
+        it('for no-code structural passthrough instance — coerces passthrough props by dataType (DL#196)', async () => {
             const folder = 'contracts/page-with-structural-badge';
             const serverFile = await readFileAndGenerateServerElementFile(folder);
             expect(serverFile.validations).toEqual([]);

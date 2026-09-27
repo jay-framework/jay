@@ -255,8 +255,8 @@ describe('generate jay-html element hydrate', () => {
         // DL#196 — a coded (`src=`) headless region flattens the card template into the page and hydrates
         // it via `makeHeadlessInstanceComponent(renderFn, card, coord)`. The two `<jay:card>` regions carry
         // the card body as source-owned markup (no slots/overrides); each hydrates its own `childComp`.
-        it('for Tier 3 coded region (DL#196)', async () => {
-            const folder = 'contracts/page-with-tier3-slot';
+        it('for coded region (DL#196)', async () => {
+            const folder = 'contracts/page-with-coded-region';
             const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
             expect(hydrateFile.validations).toEqual([]);
             expect(await prettify(hydrateFile.val)).toEqual(
@@ -267,8 +267,8 @@ describe('generate jay-html element hydrate', () => {
         // DL#196 under repetition: the parent repeats a coded card region via forEach. The flattened
         // render fn is hoisted once; each item mounts its own `childComp(_HeadlessCard0, …, refRichCards())`
         // with a keyed coordinate function, wiring its own collection ref.
-        it('for Tier 3 coded region under a parent forEach (DL#196)', async () => {
-            const folder = 'contracts/page-with-tier3-slot-foreach';
+        it('for coded region under a parent forEach (DL#196)', async () => {
+            const folder = 'contracts/page-with-coded-region-foreach';
             const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
             expect(hydrateFile.validations).toEqual([]);
             expect(await prettify(hydrateFile.val)).toEqual(
@@ -276,10 +276,10 @@ describe('generate jay-html element hydrate', () => {
             );
         });
 
-        // DL#187 — a structural (Tier 2) headfull component hydrates via the inline
+        // DL#196 — a no-code structural passthrough region hydrates via the inline
         // identity passthrough and the prop getter carries the coerced static prop
         // values (enum member, number literal, boolean literal), matching the SSR.
-        it('for structural (Tier 2) instance — coerced static props (DL#187)', async () => {
+        it('for no-code structural passthrough instance — coerced static props (DL#196)', async () => {
             const folder = 'contracts/page-with-structural-badge';
             const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
             expect(hydrateFile.validations).toEqual([]);

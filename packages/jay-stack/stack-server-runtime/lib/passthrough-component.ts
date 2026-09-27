@@ -3,7 +3,7 @@ import type { AnyJayStackComponentDefinition } from '@jay-framework/fullstack-co
 
 /**
  * A contract tag reduced to what the passthrough synthesis needs: its name and phase.
- * (For a Tier 2 pure headfull component, props ≡ tags — validated at compile time (DL#187 Q9) —
+ * (For a no-code structural passthrough region, props ≡ tags — validated at compile time (DL#196) —
  * so the tag name is also the prop name the usage site binds to.)
  */
 export interface PassthroughTag {
@@ -29,15 +29,15 @@ const pick = (props: Record<string, any>, tags: PassthroughTag[]): Record<string
 };
 
 /**
- * DL#187 — synthesize an identity passthrough component definition for a Tier 2 pure headfull
- * component (`.jay-html` + `.jay-contract`, no `.ts`). Its ViewState is exactly the props the usage
- * site supplies, split per tag phase so slow fields bake into the SSG output and fast fields resolve
- * at request time. There is no code to transform, no services, and no carryForward — each phase
- * echoes its subset of props straight through (props ≡ tags, validated at compile time). Values are
- * typed by contract `dataType` upstream in `normalizeAndResolveInstanceProps` (DL#190).
+ * DL#196 — synthesize an identity passthrough component definition for a no-code structural
+ * passthrough region (`.jay-html` + `.jay-contract`, no `.ts`). Its ViewState is exactly the props
+ * the usage site supplies, split per tag phase so slow fields bake into the SSG output and fast fields
+ * resolve at request time. There is no code to transform, no services, and no carryForward — each
+ * phase echoes its subset of props straight through (props ≡ tags, validated at compile time). Values
+ * are typed by contract `dataType` upstream in `normalizeAndResolveInstanceProps` (DL#190).
  *
- * Used by the dev server, the production build, and the production server so a Tier 2 instance
- * behaves like a code-backed instance component at every phase without an author-written `.ts`.
+ * Used by the dev server, the production build, and the production server so a structural passthrough
+ * region behaves like a code-backed instance component at every phase without an author-written `.ts`.
  */
 export function makePassthroughInstanceComponent(
     tags: PassthroughTag[],

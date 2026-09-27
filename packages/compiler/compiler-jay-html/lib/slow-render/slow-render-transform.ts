@@ -525,7 +525,7 @@ export interface DiscoveredHeadlessInstance {
      */
     coordinate: Coordinate;
     /**
-     * Coordinate of the nearest enclosing headless instance (DL#194). A nested instance's
+     * Coordinate of the nearest enclosing headless instance (DL#196). A nested instance's
      * prop bindings resolve against this enclosing instance's resolved ViewState rather than
      * the page ViewState. `undefined` for top-level instances (enclosing scope is the page).
      */
@@ -748,7 +748,7 @@ export function discoverHeadlessInstances(
                 });
 
                 // Descendants of this instance resolve their bindings against this
-                // instance's resolved ViewState (DL#194 enclosing-instance scope).
+                // instance's resolved ViewState (DL#196 enclosing-instance scope).
                 childParentCoordinate = coordinate;
             } else {
                 // Instance inside preserved forEach — collect for server-time validation

@@ -1,7 +1,7 @@
 /**
- * Placeholder Tier 3 headfull component for test fixtures.
+ * Placeholder coded (headless) component for test fixtures.
  * Its mere presence (a .ts alongside card.jay-html + card.jay-contract) makes <jay:card>
- * a Tier 3 instance — a real component boundary compiled via makeHeadlessInstanceComponent.
+ * a coded region — a real component boundary compiled via makeHeadlessInstanceComponent.
  */
 import { type Props } from '@jay-framework/component';
 import {
