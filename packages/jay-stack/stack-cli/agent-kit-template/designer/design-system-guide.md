@@ -1,0 +1,185 @@
+# Design-System Elements (Materialise, Drift, Sync)
+
+A **design-system element** is a component whose template you flatten (copy) into your page and then own
+the copy of. You edit the copy freely; `jay-stack validate` tells you where your copy has drifted from the
+source; `jay-stack sync` re-flattens from the current source while keeping the edits you marked. This is
+Jay's answer to "reuse a shared component but tweak this one instance" — with no runtime cost and no hidden
+composition machinery.
+
+> Replaces the old `<override>` tag. If you have seen `<override ref="…">` in older pages, that mechanism
+> is gone — its job is now done by editing the flattened copy and marking the edited **facet** (see
+> [Marking what you own](#marking-what-you-own-facets)).
+
+## The three component models — only one is a design-system element
+
+| Model                     | How it is imported                                 | Template? | Validate / sync? |
+| ------------------------- | -------------------------------------------------- | --------- | ---------------- |
+| **Keyed headless**        | `<script … key="cart">`, used via `{cart.field}`   | No        | No               |
+| **Nested (no template)**  | `<jay:card>` with an inline body you wrote by hand | No        | No               |
+| **Design-system element** | `<jay:card>` whose import carries `template="…"`   | **Yes**   | **Yes**          |
+
+Only a `<jay:X>` region whose `application/jay-headless` import carries a `template=` attribute is a
+design-system element. That `template=` is the **provenance marker**: it records where the flattened body
+came from, so validate can diff it and sync can re-flatten it. Nothing else — a keyed import, a nested
+region you hand-authored, a plain instance — is ever drift-checked or synced.
+
+## Creating / using a design-system element
+
+### 1. Declare the import with `template=`
+
+```html
+<head>
+  <script
+    type="application/jay-headless"
+    contract="./components/card/card.jay-contract"
+    template="./components/card/card.jay-html"
+  ></script>
+</head>
+```
+
+- `contract=` — the component's contract (data shape, refs, props), as for any headless import.
+- `template=` — the source `.jay-html` to flatten from. Resolved **relative to the page directory**.
+
+A `template=` that does not resolve is a **hard error**, not a warning — fix the path or remove the
+attribute.
+
+### 2. Place the region and flatten it
+
+Write the tag, then let `sync` fill its body from the source template:
+
+```html
+<body>
+  <jay:card ref="promo" heading="{title}"></jay:card>
+</body>
+```
+
+```bash
+jay-stack sync
+```
+
+After sync the region carries a flattened copy of the source body, plus the component's CSS copied into
+the page's `<style>`, `@scope`-wrapped by the region's `ref`:
+
+```html
+<jay:card ref="promo" heading="{title}">
+  <div class="card">
+    <h3 class="card-heading">{heading}</h3>
+    <p class="card-body">Default body</p>
+  </div>
+</jay:card>
+```
+
+```css
+@scope (.promo) {
+  .card-heading {
+    color: black;
+  }
+}
+```
+
+> A bare `<jay:X>` with **no** flattened body is a hard error at build time — flatten it with `jay-stack
+sync` (first-fill is just the no-edits case of sync; there is no separate `add` command).
+
+### 3. Edit the copy freely
+
+The flattened body is yours. Rewrite text, change classes, add/remove children, edit the scoped CSS. Bind
+`{…}` expressions against the component's own contract — inside `<jay:card>`, `{heading}` is the card's
+`heading` prop, not the page's.
+
+## Drift: what `jay-stack validate` tells you
+
+Because the copy has a known source (its `template=`), `jay-stack validate` diffs the two and reports each
+place your copy differs — at **facet** granularity (one attribute, one style declaration, a subtree, one
+CSS rule or declaration), not "this node changed":
+
+```
+<jay:card> region differs from source template "./components/card/card.jay-html":
+<h3> children changed ("{heading}" → "On sale now").
+To keep the page's version, mark the node override="children";
+to discard it and re-flatten from source, run `jay-stack sync`.
+```
+
+Every drift is a **warning**, and the page still builds. A warning is a decision point, not a failure:
+
+- **Keep your edit** → mark the facet (below). It will no longer be reported, and `sync` will preserve it.
+- **Discard your edit** → run `jay-stack sync` to re-flatten that facet from source.
+
+An unedited copy validates clean. A `template=` that cannot be read, and a template that (transitively)
+includes itself, are **hard errors**.
+
+## Marking what you own (facets)
+
+To keep an edit, mark the exact facet you own. Everything you do not mark still reconciles with source, so
+you get the source's future fixes for free on the parts you did not touch.
+
+### Markup facets — the `override` attribute
+
+| You own…                        | Mark it                  | Effect                                              |
+| ------------------------------- | ------------------------ | --------------------------------------------------- |
+| one attribute                   | `override="class"`       | your `class` is kept; other attributes reconcile    |
+| one inline-style declaration    | `override="style.color"` | your `color` is kept; other style props reconcile   |
+| this element's children/subtree | `override="children"`    | your subtree is kept; the element's attrs reconcile |
+| the whole node                  | `override` (bare)        | the entire node is kept verbatim                    |
+
+```html
+<jay:card ref="promo" heading="{item.title}">
+  <div class="card featured" override="class">
+    <!-- class is page-owned; the rest of this div still reconciles -->
+    <h3 override="children">Half price this week</h3>
+    <p class="card-body">Default body</p>
+  </div>
+</jay:card>
+```
+
+- **Removing a child:** delete it and mark the parent `override="children"` — otherwise `sync` restores it.
+- **Attribute / style tweak:** edit the value and mark that facet (`override="href"`,
+  `override="style.color"`), leaving siblings to reconcile.
+
+### CSS facets — the `jay:override` pragma
+
+A comment has no element to hang an attribute on, so scoped CSS uses a pragma placed immediately before (or
+inside) the rule:
+
+```css
+@scope (.promo) {
+  /* jay:override: color */
+  .card-heading {
+    color: red; /* kept across sync */
+    font-weight: bold; /* still reconciles with source */
+  }
+  /* jay:override */
+  .card-badge {
+    /* the whole rule is page-owned */
+  }
+}
+```
+
+- `/* jay:override: <prop> */` — the page owns that one declaration.
+- `/* jay:override */` — the page owns the whole rule.
+
+## Upgrading: `jay-stack sync`
+
+When the source template changes (a component upgrade, a design fix), re-flatten:
+
+```bash
+jay-stack sync                       # every design-system region in the project
+jay-stack sync src/pages/home.jay-html   # one page
+jay-stack sync --all                 # explicit "all pages"
+```
+
+Sync is **re-flatten, not merge**: it overwrites everything from the current source **except** the facets
+you marked `override`, which it preserves verbatim. There is no merge base, no hash, no conflict prompt —
+your region is by definition equal to its source except at your marked facets, so sync is deterministic
+overwrite-with-holes. It can never silently combine two edited versions into wrong markup. A synced region
+validates clean.
+
+CSS is merged non-destructively: sync injects the `@scope (.<ref>)` block for a region only if the page
+does not already have one. A block the page already scopes is left as-is for you (and validate's CSS drift
+check) to reconcile — so a `jay:override` pragma you placed is never rewritten by sync.
+
+## Why copy instead of reference?
+
+Flattening removes the composition "seam": the region compiles through the ordinary headless-instance path,
+so there is **no runtime crossing machinery** and no per-component ref-scope rules. The cost is that page
+files grow and a copy duplicates its source — which is exactly what `validate` (drift) and `sync`
+(re-flatten) exist to manage. Design edits stay in the page; the source stays reusable.

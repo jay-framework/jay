@@ -1,0 +1,23 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+    <script type="application/jay-headless"
+            contract="./loop/loop.jay-contract"
+            template="./loop/loop.jay-html"></script>
+</head>
+<body>
+<div>
+    <h1>{title}</h1>
+
+    <!-- loop's source template includes <jay:loop> — a self-inclusion cycle caught at validate/sync. -->
+    <jay:loop>
+        <div class="loop">
+            <span>item</span>
+        </div>
+    </jay:loop>
+</div>
+</body>
+</html>

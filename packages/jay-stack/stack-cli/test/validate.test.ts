@@ -7,6 +7,8 @@ import {
     checkRefElementTypes,
     checkHeadlessInstanceProps,
     checkRegionDrift,
+    checkRegionCssDrift,
+    checkRegionRecursion,
 } from '../lib/validate';
 import { parseJayFile, JAY_IMPORT_RESOLVER } from '@jay-framework/compiler-jay-html';
 import { JayEnumType, JayAtomicType } from '@jay-framework/compiler-shared';
@@ -310,6 +312,81 @@ describe('checkRegionDrift (DL#196)', () => {
             '<jay:card> declares template="./components/card/card.jay-html" but its source template ' +
                 'could not be read. Fix the path or remove the attribute.',
         );
+    });
+});
+
+describe('checkRegionCssDrift (DL#196)', () => {
+    const fixturesDir = path.resolve('./test/fixtures/validate');
+    const cssDir = path.join(fixturesDir, 'region-css-drift');
+
+    async function parseCssPage(fixturePath: string) {
+        const jayFile = path.join(cssDir, fixturePath);
+        const content = await fsp.readFile(jayFile, 'utf-8');
+        const dirname = path.dirname(jayFile);
+        const parsed = await parseJayFile(
+            content,
+            path.basename(jayFile.replace('.jay-html', '')),
+            dirname,
+            {},
+            JAY_IMPORT_RESOLVER,
+            cssDir,
+        );
+        expect(parsed.validations).toHaveLength(0);
+        return parsed.val!;
+    }
+
+    const fsLoader = (rel: string) =>
+        readFileSyncSafe(path.resolve(cssDir, rel.replace(/^\.\//, '')));
+
+    it('reports the drifted declaration inside the region @scope block', async () => {
+        const jayHtml = await parseCssPage('page.jay-html');
+        const warnings = checkRegionCssDrift(jayHtml, fsLoader);
+
+        // Only .card-heading color drifted (black → red); font-weight and .card-body are unchanged.
+        expect(warnings).toHaveLength(1);
+        expect(warnings[0]).toEqual(
+            '<jay:card> region differs from source template "./components/card/card.jay-html": ' +
+                'css ".card-heading" declaration "color" changed (black → red). ' +
+                "To keep the page's version, mark the CSS rule /* jay:override: color */; " +
+                'to discard it and re-flatten from source, run `jay-stack sync`.',
+        );
+    });
+});
+
+describe('checkRegionRecursion (DL#196)', () => {
+    const fixturesDir = path.resolve('./test/fixtures/validate');
+    const recursionDir = path.join(fixturesDir, 'region-recursion');
+
+    async function parseRecursionPage(fixturePath: string) {
+        const jayFile = path.join(recursionDir, fixturePath);
+        const content = await fsp.readFile(jayFile, 'utf-8');
+        const dirname = path.dirname(jayFile);
+        const parsed = await parseJayFile(
+            content,
+            path.basename(jayFile.replace('.jay-html', '')),
+            dirname,
+            {},
+            JAY_IMPORT_RESOLVER,
+            recursionDir,
+        );
+        expect(parsed.validations).toHaveLength(0);
+        return { content, jayHtml: parsed.val!, dirname };
+    }
+
+    it('detects a template-inclusion cycle', async () => {
+        const { content, jayHtml, dirname } = await parseRecursionPage('page.jay-html');
+        const errors = checkRegionRecursion(content, dirname, jayHtml, readFileSyncSafe);
+        expect(errors).toHaveLength(1);
+        expect(errors[0].startsWith('template inclusion cycle: <jay:loop>')).toBe(true);
+    });
+
+    it('reports no cycle for a non-recursive design-system page', async () => {
+        const cssDir = path.join(fixturesDir, 'region-css-drift');
+        const jayFile = path.join(cssDir, 'page.jay-html');
+        const content = await fsp.readFile(jayFile, 'utf-8');
+        const parsed = await parseJayFile(content, 'page', cssDir, {}, JAY_IMPORT_RESOLVER, cssDir);
+        const errors = checkRegionRecursion(content, cssDir, parsed.val!, readFileSyncSafe);
+        expect(errors).toHaveLength(0);
     });
 });
 

@@ -1321,3 +1321,88 @@ was doubly stale.)
 **Verification.** `compiler-jay-html` generate suites (element/hydrate/server, 132) green with regenerated
 goldens; `stack-client-runtime` (21), smoke (65) green; repo-wide `build:check-types` exit 0; a repo-wide grep
 for the tier/DL#187/DL#194 vocab and the old fixture names returns zero hits outside `design-log/`.
+
+### Phase 2/3/6 — the four remaining debts closed (`sync` CLI, CSS drift, recursion, agent-kit docs)
+
+The four items owed since Phase 5 (§1183) are done, all in `stack-cli`. All new logic is pure and
+unit-tested; template loading is injected exactly as the engine expects.
+
+**Shared filesystem wiring — `lib/materialise-context.ts`.** `buildMaterialiseOptions(pageDir, jayHtml,
+readFile, extra)` builds the engine's `{resolveTemplate, loadTemplate}` from the page's `template=` imports
+(a global contract-name→path map, resolved relative to the page dir), so `sync` and recursion detection
+resolve provenance identically. Only design-system elements (imports carrying `template=`) resolve — a
+template-less nested/keyed region returns `null` and is left as authored.
+
+**`@scope` extraction — `lib/scope-css.ts`.** `extractScopeBlock(css, selector)` (brace-matched, respects
+nested `@media`/`@supports`) and `splitScopeBlocks(css)` — dependency-free, so `stack-cli` needs no postcss.
+
+**Item 2 — CSS drift wired.** `checkRegionCssDrift(jayHtml, loadTemplate)` isolates each region's
+`@scope (.<ref>)` block from the page CSS and diffs it against the source template's `<style>` CSS via
+`diffCss` (`@scope` transparent). Reported as warnings through the same `formatRegionDrift` formatter as
+markup drift. A region without a `ref` (no CSS was scoped) is skipped. Wired at the page loop next to
+`checkRegionDrift`.
+
+**Item 3 — recursion detection wired.** `checkRegionRecursion(pageHtml, pageDir, jayHtml, readFile)` runs
+`materialise` as a dry-run and lifts its `template inclusion cycle: …` errors (from `fillRegions`'
+per-branch stack) to hard validation errors — repaying the Phase 4e debt (the removed parse-time
+`headfullRecursionError`). Other materialise errors (unreadable template) stay owned by `checkRegionDrift`,
+so cycles are the only class lifted here.
+
+**Item 1 — `jay-stack sync`.** `lib/run-sync.ts` + `cli.ts` command `sync [target] [--all]`. Pure core
+`syncPageContent(rawPage, pageDir, jayHtml, readFile)` runs `materialise` with `preserveOverrides: true`
+(the `mergeOverrides` re-flatten), merges the aggregated `@scope` CSS into the page `<style>`
+**non-destructively** (a selector the page already scopes is left for the author / CSS drift check —
+`mergeOverrides` governs markup facets, not CSS pragmas, so sync never rewrites marked CSS), prettifies,
+and reports `changed` by comparing prettified forms (so pure reformatting is not a change; a synced page is
+idempotent). Exact CLI messages (`✓ synced N region(s) in <path>`, `Synced N region(s) across M file(s).`,
+`Nothing to sync.`) per §566.
+
+**Deviation — `#ref` per-region targeting not implemented (v1).** §366's `sync page.jay-html#signupCard`
+form is not supported: narrowing `resolveTemplate` to one contract would break transitive fill of nested
+design-system elements re-introduced by the re-flatten (leaving a bare `<jay:Y>` in the output). `sync`
+takes a page path or `--all`; a `#ref` suffix logs a notice and syncs the whole page. Whole-page sync is
+safe because it is deterministic overwrite-with-holes. Full per-region targeting is deferred.
+
+**Item 4 — agent-kit docs (Phase 6).** Designer: new `designer/design-system-guide.md` (the three
+component models, `template=` provenance, materialise/first-fill via `sync`, drift warnings, the full
+`override` facet + CSS `jay:override` vocabulary, upgrades) — this also folds in the user-requested
+"how to create and use a design system" guidance. The stale `<override>`-tag section in
+`designer/jay-html-components.md` (removed in Phase 4d) is replaced with the flatten-and-mark model;
+`designer/cli-commands.md` gains a `jay-stack sync` section; INSTRUCTIONS index updated. Plugin: new
+`plugin/design-system-guide.md` (ship contract + optional code + template — not a running UI, Q1; upgrades
+flow through `sync`; design-for-clean-upgrades guidance) linked from `plugin/INSTRUCTIONS.md`. Repo-wide the
+only remaining `<override` mentions are the two guides explaining that the tag is gone.
+
+**Verification.** `stack-cli` type-check exit 0; `stack-cli` tests 91/91 green — new: `validate.test.ts`
+`checkRegionCssDrift` (declaration drift, exact message) and `checkRegionRecursion` (cycle detected via
+self-including template fixture; clean page reports none); `run-sync.test.ts` `syncPageContent`
+(re-flattens unmarked drift, preserves `override="class"`, injects `@scope` CSS; second sync idempotent).
+New fixtures under `test/fixtures/validate/region-css-drift`, `region-recursion`, `region-sync`.
+
+### Fix — `@scope (.<ref>)` needs a real DOM anchor (scope-anchor class stamping)
+
+**Bug.** Q5 / §5 chose to `@scope`-wrap each region's copied CSS with `.<ref>` (`@scope (.signupCard)`),
+believing the `<jay:X ref>` region is "a real instance" whose ref surfaces as a class-selectable element
+(§167). It does not: a jay `ref` is consumed by the reference/coordinate system and **never emitted to the
+DOM** as a `class` or any attribute (`jay-html-compiler.ts:433-434` returns early for `ref`), and the
+compiler emits `@scope` verbatim (no rewrite into descendant selectors — it is only transparent to the
+_differ_, `diff-css.ts`). So `@scope (.promo)` matched **no scope root** and the entire copied CSS block
+was **inert** at runtime.
+
+**Fix (chosen — smallest change, keeps the `.<ref>` selector).** The materialiser now **stamps the ref as
+a real class on the flattened region's top-level element(s)** so the `@scope (.<ref>)` block has an anchor.
+`<jay:card ref="promo">` flattens to `<div class="card promo">…`; `@scope (.promo)` roots at that `.card`
+div, and `.card-heading` inside is a descendant. The stamp is derived fresh from the ref on every
+(re-)flatten, so it is idempotent and survives `override="class"` (re-applied after `mergeOverrides`).
+
+**Companion — the differ must ignore the synthetic class.** The stamped `promo` token is materialiser-
+injected, not author content (analogous to `jc`); the markup differ (`diff-markup.ts`) strips the region's
+ref-anchor class from the `class` attribute on both sides before comparing, so the anchor is never reported
+as drift. `diffBodies` reads the ignore-class from the region tag's `ref`; the string-based `diffMarkup`
+path (no `<jay:X>` wrapper) ignores nothing. CSS drift is unaffected — `extractScopeBlock` already isolates
+the `@scope (.<ref>)` block by selector.
+
+**Alternative rejected.** A dedicated synthetic attribute (`data-jay-scope="promo"` + `@scope
+([data-jay-scope=promo])`) would be ignored by the differ for free (via `isMetaAttr`) and never touch the
+author's `class`, but it abandons the `.<ref>` selector the design and docs already use; the class approach
+was chosen for continuity.

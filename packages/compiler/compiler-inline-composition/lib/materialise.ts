@@ -101,7 +101,17 @@ function fillRegions(
 
         if (template.css) {
             const selector = (opts.scopeSelector ?? defaultScopeSelector)(region);
-            cssBlocks.push(selector ? scopeWrap(template.css, selector) : template.css);
+            if (selector) {
+                // A jay `ref` is consumed by the reference system and never emitted to the DOM, so
+                // `@scope (.<ref>)` has no element to root at. Stamp the ref as a real class on the
+                // flattened region root(s) — the element(s) the scoped rules must sit under. The differ
+                // ignores this synthetic class so it is never reported as drift (diff-markup.ts).
+                const ref = readAttr(region, 'ref');
+                if (ref) stampScopeAnchor(region, ref);
+                cssBlocks.push(scopeWrap(template.css, selector));
+            } else {
+                cssBlocks.push(template.css);
+            }
         }
 
         // Transitive: flatten regions the just-inserted template body itself contains.
@@ -134,6 +144,17 @@ function defaultScopeSelector(region: HTMLElement): string | null {
 
 function scopeWrap(css: string, selector: string): string {
     return `@scope (${selector}) {\n${css}\n}`;
+}
+
+/**
+ * Stamp the scope-anchor class on the flattened region's top-level element(s). `@scope (.<ref>)` needs a
+ * real DOM element to root at, but a jay `ref` is not rendered as a class — so the materialiser adds it.
+ * Idempotent (`classList.add` dedups); re-derived from the ref on every re-flatten (survives sync).
+ */
+function stampScopeAnchor(region: HTMLElement, className: string): void {
+    for (const child of region.childNodes) {
+        if (child instanceof HTMLElement) child.classList.add(className);
+    }
 }
 
 // --- sync merge: re-flatten from template, keep the page's override facets ---

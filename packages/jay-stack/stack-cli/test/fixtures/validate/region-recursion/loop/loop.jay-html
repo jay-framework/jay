@@ -1,0 +1,11 @@
+<html>
+<head>
+  <script type="application/jay-data" contract="./loop.jay-contract"></script>
+</head>
+<body>
+  <div class="loop">
+    <span>item</span>
+    <jay:loop></jay:loop>
+  </div>
+</body>
+</html>

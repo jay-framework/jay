@@ -33,6 +33,8 @@ import {
 import { getLogger } from '@jay-framework/logger';
 import {
     diffBodies,
+    diffCss,
+    materialise,
     isRegionTag,
     facetLabel,
     overrideSpecFor,
@@ -40,6 +42,8 @@ import {
 } from '@jay-framework/compiler-inline-composition';
 import { parse as parseHtml, HTMLElement, NodeType } from 'node-html-parser';
 import { loadConfig, getConfigWithDefaults } from './config';
+import { buildMaterialiseOptions } from './materialise-context';
+import { extractScopeBlock } from './scope-css';
 
 export interface ValidateOptions {
     path?: string;
@@ -863,6 +867,86 @@ export function checkRegionDrift(
     return warnings;
 }
 
+/** Concatenate the CSS of every `<style>` in a template's raw HTML source. */
+function extractStyleCss(templateHtml: string): string {
+    return parseHtml(templateHtml)
+        .querySelectorAll('style')
+        .map((s) => s.textContent)
+        .join('\n\n');
+}
+
+/**
+ * DL#196 §4 — report CSS drift between a flattened region's `@scope (.<ref>)` block and its source
+ * template's CSS.
+ *
+ * The materialiser wraps each design-system region's copied CSS in `@scope (.<ref>)` (the region's `ref`).
+ * We isolate that block from the page's aggregated CSS and diff it, facet-granular (`diffCss`, with
+ * `@scope` transparent), against the source template's `<style>` CSS. Unmarked deviations are warnings;
+ * the author keeps the page's version with a `/​* jay:override *​/` pragma or re-flattens with `jay-stack
+ * sync`. A region without `template=` (no provenance) or without a `ref` (no CSS was scoped) is skipped.
+ *
+ * @internal Exported for testing
+ */
+export function checkRegionCssDrift(
+    jayHtml: JayHtmlSourceFile,
+    loadTemplate: (relativeTemplatePath: string) => string | undefined,
+): string[] {
+    const importsWithTemplate = jayHtml.headlessImports.filter((imp) => imp.template);
+    if (importsWithTemplate.length === 0) return [];
+
+    const pageCss = jayHtml.css ?? '';
+    const warnings: string[] = [];
+    // Parse each source template's CSS once even when flattened into several regions.
+    const templateCssCache = new Map<string, string | null>();
+
+    for (const region of collectRegionElements(jayHtml.body)) {
+        const contractName = (region.rawTagName ?? '').toLowerCase().substring(4);
+        const imp = importsWithTemplate.find((i) => i.contractName === contractName);
+        if (!imp?.template) continue;
+
+        const ref = region.getAttribute('ref');
+        if (!ref) continue; // no scope selector → the materialiser scoped no CSS for this region
+
+        let templateCss = templateCssCache.get(imp.template);
+        if (templateCss === undefined) {
+            const content = loadTemplate(imp.template);
+            templateCss = content !== undefined ? extractStyleCss(content) : null;
+            templateCssCache.set(imp.template, templateCss);
+        }
+        if (templateCss === null) continue; // unreadable template already reported by checkRegionDrift
+
+        const pageBlock = extractScopeBlock(pageCss, `.${ref}`) ?? '';
+        if (!templateCss.trim() && !pageBlock.trim()) continue;
+
+        for (const entry of diffCss(templateCss, pageBlock)) {
+            warnings.push(formatRegionDrift(contractName, imp.template, entry));
+        }
+    }
+    return warnings;
+}
+
+/**
+ * DL#196 §5 — detect a template-inclusion cycle among design-system regions.
+ *
+ * A materialised region whose source template transitively contains its own `<jay:X>` would flatten
+ * forever. `materialise`'s `fillRegions` already guards this with a per-branch stack, emitting
+ * `template inclusion cycle: …` errors; here we run it as a dry-run over the page and lift those cycle
+ * errors to hard validation errors. Other materialise errors (an unreadable template) are already
+ * surfaced by `checkRegionDrift`, so only cycle errors are lifted.
+ *
+ * @internal Exported for testing
+ */
+export function checkRegionRecursion(
+    pageHtml: string,
+    pageDir: string,
+    jayHtml: JayHtmlSourceFile,
+    readFile: (absPath: string) => string | undefined,
+): string[] {
+    if (!jayHtml.headlessImports.some((imp) => imp.template)) return [];
+    const { errors } = materialise(pageHtml, buildMaterialiseOptions(pageDir, jayHtml, readFile));
+    return errors.filter((e) => e.startsWith('template inclusion cycle'));
+}
+
 /**
  * Check that <jay:xxx> instance attributes match contract props (DL#124 Phase 2).
  *
@@ -1350,15 +1434,39 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
             }
 
             // Check flattened region bodies against their source templates (DL#196 drift validation)
-            const driftWarnings = checkRegionDrift(parsedFile.val!, (templatePath) => {
+            const readTemplateRel = (templatePath: string): string | undefined => {
                 try {
                     return fs.readFileSync(path.resolve(dirname, templatePath), 'utf-8');
                 } catch {
                     return undefined;
                 }
-            });
+            };
+            const driftWarnings = checkRegionDrift(parsedFile.val!, readTemplateRel);
             for (const msg of driftWarnings) {
                 warnings.push({ file: relativePath, message: msg });
+            }
+
+            // Check flattened region CSS against source template CSS (DL#196 §4 CSS drift)
+            const cssDriftWarnings = checkRegionCssDrift(parsedFile.val!, readTemplateRel);
+            for (const msg of cssDriftWarnings) {
+                warnings.push({ file: relativePath, message: msg });
+            }
+
+            // Detect template-inclusion cycles among design-system regions (DL#196 §5) — hard errors
+            const recursionErrors = checkRegionRecursion(
+                content,
+                dirname,
+                parsedFile.val!,
+                (absPath) => {
+                    try {
+                        return fs.readFileSync(absPath, 'utf-8');
+                    } catch {
+                        return undefined;
+                    }
+                },
+            );
+            for (const msg of recursionErrors) {
+                errors.push({ file: relativePath, message: msg, stage: 'generate' });
             }
 
             // Analyze tag coverage for headless imports

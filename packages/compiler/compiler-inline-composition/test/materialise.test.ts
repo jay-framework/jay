@@ -99,6 +99,35 @@ describe('materialise — @scope CSS', () => {
         );
         expect(result.css).toBe(`.card { color: red }`);
     });
+
+    it('stamps the ref as a class on the flattened root so @scope has a DOM anchor', () => {
+        const page = `<body><jay:card ref="promo"></jay:card></body>`;
+        const result = materialise(
+            page,
+            withTemplates({
+                card: {
+                    body: `<div class="card"><h3 class="card-heading">x</h3></div>`,
+                    css: `.card-heading { color: red }`,
+                },
+            }),
+        );
+        expect(result.css).toBe(`@scope (.promo) {\n.card-heading { color: red }\n}`);
+        // the flattened root now carries the ref class `promo` alongside its own `card`
+        expect(squash(result.html)).toBe(
+            `<body><jay:card ref="promo"><div class="card promo"><h3 class="card-heading">x</h3></div></jay:card></body>`,
+        );
+    });
+
+    it('does not stamp an anchor class when the template ships no CSS', () => {
+        const page = `<body><jay:card ref="promo"></jay:card></body>`;
+        const result = materialise(
+            page,
+            withTemplates({ card: { body: `<div class="card"></div>` } }),
+        );
+        expect(squash(result.html)).toBe(
+            `<body><jay:card ref="promo"><div class="card"></div></jay:card></body>`,
+        );
+    });
 });
 
 describe('materialise — sync preserves override facets', () => {

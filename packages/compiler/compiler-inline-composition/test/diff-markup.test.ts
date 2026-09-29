@@ -1,4 +1,5 @@
-import { diffMarkup, facetKey } from '../lib';
+import { HTMLElement, parse } from 'node-html-parser';
+import { diffBodies, diffMarkup, facetKey } from '../lib';
 import type { DiffEntry } from '../lib';
 
 /** Sorted facet keys, for order-independent assertions. */
@@ -125,5 +126,34 @@ describe('diffMarkup — nested regions (Q2)', () => {
         const source = `<div class="a"><jay:counter ref="c"></jay:counter></div>`;
         const region = `<div class="b"><jay:counter ref="c"></jay:counter></div>`;
         expect(keys(diffMarkup(source, region))).toEqual(['changed:attribute@0#class']);
+    });
+});
+
+describe('diffBodies — scope-anchor class (DL#196)', () => {
+    it('ignores the ref-anchor class the materialiser stamps on the flattened root', () => {
+        const source = parse(`<div class="card"><h3 class="card-heading">x</h3></div>`);
+        const region = parse(
+            `<jay:card ref="promo"><div class="card promo"><h3 class="card-heading">x</h3></div></jay:card>`,
+        ).firstChild as HTMLElement;
+        expect(diffBodies(source, region)).toEqual([]);
+    });
+
+    it('reports a genuine class change with the anchor token stripped from the values', () => {
+        const source = parse(`<div class="card"></div>`);
+        const region = parse(
+            `<jay:card ref="promo"><div class="card-large promo"></div></jay:card>`,
+        ).firstChild as HTMLElement;
+        const [entry, ...rest] = diffBodies(source, region);
+        expect(rest).toEqual([]);
+        expect(`${entry.change}:${facetKey(entry.facet)}`).toBe('changed:attribute@0#class');
+        expect(entry.sourceValue).toBe('card');
+        expect(entry.regionValue).toBe('card-large');
+    });
+
+    it('a root whose only class is the anchor matches a template root with no class', () => {
+        const source = parse(`<div></div>`);
+        const region = parse(`<jay:card ref="promo"><div class="promo"></div></jay:card>`)
+            .firstChild as HTMLElement;
+        expect(diffBodies(source, region)).toEqual([]);
     });
 });

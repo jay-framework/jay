@@ -26,6 +26,7 @@ import {
     isRegionTag,
     NO_SUPPRESSION,
     parseOverride,
+    readAttr,
     Suppression,
 } from './override';
 import { normalizeExpr } from './normalize';
@@ -42,7 +43,11 @@ export function diffMarkup(source: string, region: string): DiffEntry[] {
  */
 export function diffBodies(sourceParent: HTMLElement, regionParent: HTMLElement): DiffEntry[] {
     const out: DiffEntry[] = [];
-    diffChildren([], sourceParent, regionParent, out);
+    // The materialiser stamps the region's `ref` as a class on the flattened root(s) to anchor the copied
+    // `@scope (.<ref>)` CSS (DL#196). That class is synthetic (not author content), so drop it before
+    // comparing the `class` attribute — else every scoped region would falsely report `class` drift.
+    const ignoreClass = isRegionTag(regionParent) ? readAttr(regionParent, 'ref') : undefined;
+    diffChildren([], sourceParent, regionParent, ignoreClass, out);
     return out;
 }
 
@@ -50,6 +55,7 @@ function diffChildren(
     parentPath: NodePath,
     sParent: HTMLElement,
     rParent: HTMLElement,
+    ignoreClass: string | undefined,
     out: DiffEntry[],
 ): void {
     const rSup = isElement(rParent) ? parseOverride(rParent) : NO_SUPPRESSION;
@@ -76,16 +82,25 @@ function diffChildren(
         if (rc.nodeType !== NodeType.ELEMENT_NODE) continue; // text already known equal
         const re = rc as HTMLElement;
         if (isRegionTag(re)) continue; // nested <jay:X> — its own source (Q2)
-        diffElement([...parentPath, i], s[i] as HTMLElement, re, out);
+        // The anchor class is only stamped on the region's top-level roots; deeper elements never carry
+        // it, so stop threading it once we descend past the roots (parentPath was the region tag).
+        const childIgnoreClass = parentPath.length === 0 ? ignoreClass : undefined;
+        diffElement([...parentPath, i], s[i] as HTMLElement, re, childIgnoreClass, out);
     }
 }
 
-function diffElement(path: NodePath, se: HTMLElement, re: HTMLElement, out: DiffEntry[]): void {
+function diffElement(
+    path: NodePath,
+    se: HTMLElement,
+    re: HTMLElement,
+    ignoreClass: string | undefined,
+    out: DiffEntry[],
+): void {
     const sup = parseOverride(re);
     if (sup.all) return; // whole node page-owned
-    compareAttributes(path, se, re, sup, out);
+    compareAttributes(path, se, re, sup, ignoreClass, out);
     compareStyle(path, se, re, sup, out);
-    diffChildren(path, se, re, out); // may emit a `children` facet at this node
+    diffChildren(path, se, re, undefined, out); // may emit a `children` facet at this node
 }
 
 function compareAttributes(
@@ -93,14 +108,15 @@ function compareAttributes(
     se: HTMLElement,
     re: HTMLElement,
     sup: Suppression,
+    ignoreClass: string | undefined,
     out: DiffEntry[],
 ): void {
     const sm = attrMap(se);
     const rm = attrMap(re);
     const names = [...new Set([...sm.keys(), ...rm.keys()])].sort();
     for (const name of names) {
-        const sv = sm.get(name);
-        const rv = rm.get(name);
+        const sv = name === 'class' ? stripClassToken(sm.get(name), ignoreClass) : sm.get(name);
+        const rv = name === 'class' ? stripClassToken(rm.get(name), ignoreClass) : rm.get(name);
         const change = scalarChange(sv, rv, (a, b) => normalizeExpr(a) === normalizeExpr(b));
         if (!change) continue;
         const facet: Facet = { kind: 'attribute', path, element: tagOf(re), name };
@@ -131,6 +147,16 @@ function compareStyle(
 }
 
 // --- helpers ---
+
+/**
+ * Drop one class token (the synthetic scope-anchor) from a `class` value. Returns `undefined` when nothing
+ * remains, so a root whose only class is the anchor compares equal to a template root with no class.
+ */
+function stripClassToken(value: string | undefined, token: string | undefined): string | undefined {
+    if (value === undefined || !token) return value;
+    const kept = value.split(/\s+/).filter((t) => t && t !== token);
+    return kept.length ? kept.join(' ') : undefined;
+}
 
 function scalarChange(
     sv: string | undefined,

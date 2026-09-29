@@ -4,7 +4,7 @@ This folder contains guides for creating jay-stack plugins: contracts, headless 
 
 ## What is a Jay Plugin?
 
-A plugin provides headless components (data + interactions, no UI) that project designers use via contracts. Plugins can also provide complete pages (backoffice tools, admin dashboards) via routes. Plugins can be standalone npm packages or inline within a project (see `examples/jay-stack/fake-shop`).
+A plugin provides headless components (data + interactions, no UI) that project designers use via contracts. Plugins can also provide complete pages (backoffice tools, admin dashboards) via routes. A plugin may additionally ship a **design-system element** — a component that also ships a `.jay-html` template designers flatten into their pages and upgrade via `jay-stack sync` (see [design-system-guide.md](design-system-guide.md)). Plugins can be standalone npm packages or inline within a project (see `examples/jay-stack/fake-shop`).
 
 ## Workflow
 
@@ -40,6 +40,7 @@ The plugin participates in four CLI commands, each running different hooks:
 | [contracts-guide.md](contracts-guide.md)               | Plugin-specific contract concerns                                       |
 | [plugin-structure.md](plugin-structure.md)             | plugin.yaml, package layout, exports                                    |
 | [component-structure.md](component-structure.md)       | makeJayStackComponent, builder API, three-phase rendering               |
+| [design-system-guide.md](design-system-guide.md)       | Shipping a template designers flatten; upgrades via `jay-stack sync`    |
 | [component-state.md](component-state.md)               | createSignal, createMemo, createEffect, createDerivedArray, createEvent |
 | [component-refs.md](component-refs.md)                 | Refs, collection refs, element types                                    |
 | [component-data.md](component-data.md)                 | Immutable data, JSON Patch, createPatchableSignal                       |

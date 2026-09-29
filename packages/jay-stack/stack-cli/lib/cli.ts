@@ -11,6 +11,7 @@ import {
     resolveProductionContext,
 } from './run-production';
 import { runValidate, runValidatePlugin } from './run-validate';
+import { runSync } from './run-sync';
 import { runAgentKit } from './run-agent-kit';
 import { runAction } from './run-action';
 import { runParams } from './run-params';
@@ -133,6 +134,24 @@ program
             } else {
                 getLogger().error(chalk.red('Validation error:') + ' ' + error.message);
             }
+            process.exit(1);
+        }
+    });
+
+program
+    .command('sync [target]')
+    .description(
+        'Re-flatten design-system regions from their source templates (keeps override facets)',
+    )
+    .option('-p, --path <path>', 'Project root (default: cwd)')
+    .option('--all', 'Sync every page in the project (default when no target is given)')
+    .option('-v, --verbose', 'Show pages that are already in sync')
+    .action(async (target: string | undefined, options) => {
+        try {
+            await runSync(target, options);
+        } catch (error: any) {
+            getLogger().error(chalk.red('Sync failed:') + ' ' + error.message);
+            if (error.stack) getLogger().error(error.stack);
             process.exit(1);
         }
     });
