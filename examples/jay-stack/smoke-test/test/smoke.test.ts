@@ -555,6 +555,44 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Markdown Live Test/);
             expect(body).toMatch(/dynamically rendered/);
         });
+
+        // DL#198 D-1: a region-body ref (`dismiss`) NOT declared by the card contract is re-emitted
+        // on the region boundary. The region renders at SSR with its contract data (heading) and both
+        // the contract ref button (Action) and the free-ref button (Dismiss Free Ref).
+        it('/free-ref — free ref on a single region renders at SSR (DL#198 D-1)', async () => {
+            const { status, body } = await fetchPage(server.url, '/free-ref/');
+            expect(status).toBe(200);
+            expectPage(body);
+            expect(body).toMatch(/Free Ref/);
+            expect(body).toMatch(/Action/); // contract ref button
+            expect(body).toMatch(/Dismiss Free Ref/); // free ref button
+        });
+
+        // DL#198 Case 1: a collection of regions (page-level forEach), each carrying the same free ref.
+        // Every card instance renders with its own heading (resolved from the `title` prop binding) and
+        // its own free-ref button.
+        it('/free-ref-collection — free ref on a collection of regions renders at SSR (DL#198 Case 1)', async () => {
+            const { status, body } = await fetchPage(server.url, '/free-ref-collection/');
+            expect(status).toBe(200);
+            expectPage(body);
+            expect(body).toMatch(/Free Ref Collection/);
+            expect(body).toMatch(/Card One/); // per-item heading (prop binding {title})
+            expect(body).toMatch(/Card Two/);
+            expect(body.match(/Dismiss Free Ref/g)?.length).toBe(2); // one free-ref button per card
+        });
+
+        // DL#198 Case 2: the free ref lives inside the region's OWN forEach (`tags`). A single region
+        // instance renders every tag row, each with its own free-ref button.
+        it('/free-ref-in-foreach — free ref inside a region-internal forEach renders at SSR (DL#198 Case 2)', async () => {
+            const { status, body } = await fetchPage(server.url, '/free-ref-in-foreach/');
+            expect(status).toBe(200);
+            expectPage(body);
+            expect(body).toMatch(/Free Ref In Foreach/);
+            expect(body).toMatch(/Card Heading/);
+            expect(body).toMatch(/Tag One/);
+            expect(body).toMatch(/Tag Two/);
+            expect(body.match(/>x<\/button>/g)?.length).toBe(2); // one free-ref button per tag row
+        });
     });
 
     describe('production self-hosted', () => {
@@ -737,6 +775,32 @@ describe('Smoke Test', () => {
             const { status, body } = await fetchPage(server.url, '/markdown/hello/');
             expect(status).toBe(200);
             expect(body).toMatch(/Hello from Markdown/);
+        });
+
+        // DL#198 D-1 — free ref on a single region (see dev block for rationale).
+        it('/free-ref — free ref on a single region renders at SSR (DL#198 D-1)', async () => {
+            const { status, body } = await fetchPage(server.url, '/free-ref/');
+            expect(status).toBe(200);
+            expect(body).toMatch(/Action/);
+            expect(body).toMatch(/Dismiss Free Ref/);
+        });
+
+        // DL#198 Case 1 — free ref on a collection of regions.
+        it('/free-ref-collection — free ref on a collection of regions renders at SSR (DL#198 Case 1)', async () => {
+            const { status, body } = await fetchPage(server.url, '/free-ref-collection/');
+            expect(status).toBe(200);
+            expect(body).toMatch(/Card One/);
+            expect(body).toMatch(/Card Two/);
+            expect(body.match(/Dismiss Free Ref/g)?.length).toBe(2);
+        });
+
+        // DL#198 Case 2 — free ref inside a region-internal forEach.
+        it('/free-ref-in-foreach — free ref inside a region-internal forEach renders at SSR (DL#198 Case 2)', async () => {
+            const { status, body } = await fetchPage(server.url, '/free-ref-in-foreach/');
+            expect(status).toBe(200);
+            expect(body).toMatch(/Tag One/);
+            expect(body).toMatch(/Tag Two/);
+            expect(body.match(/>x<\/button>/g)?.length).toBe(2);
         });
 
         it('/robots.txt — served in production', async () => {

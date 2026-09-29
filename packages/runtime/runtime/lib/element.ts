@@ -30,7 +30,7 @@ const STYLE = 'style';
 // DL#198 Design D — the subset of a page-side FreeReferenceManager that `childComp` needs to drive a
 // region's free refs at mount. Kept as a local structural type to avoid coupling element.ts to the
 // ReferencesManager implementation.
-interface FreeRefDriver {
+export interface FreeRefDriver {
     driveFreeRefsFrom(regionFreeManager: any, regionCoordinate: Coordinate): () => void;
 }
 

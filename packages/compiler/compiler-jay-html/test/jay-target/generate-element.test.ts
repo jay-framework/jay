@@ -490,6 +490,48 @@ describe('generate jay-html element', () => {
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
+        // DL#198 Design D — a free ref (a region-body element ref NOT declared by the region's contract,
+        // here `<button ref="dismiss">`) is re-emitted on the region boundary as a typed event source. The
+        // region's render manager lists it (`['cardAction', 'dismiss']`), the factory receives the free-ref
+        // names (`makeHeadlessInstanceComponent(..., ['dismiss'])`), and the page keeps `plainCard` a plain
+        // component ref while wiring a per-region FreeReferenceManager (`refPlainCardFreeRefManager`) via
+        // `setFreeRefManager` and handing it to `childComp` — so `refs.plainCard.dismiss.onclick` resolves
+        // as a boundary event source. The author `card.ts` is untouched.
+        it('generate element file with a region free ref as a boundary event source (DL#198)', async () => {
+            const folder = 'contracts/page-with-free-ref';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
+        // DL#198 Design D (Case 1) — a COLLECTION of regions: a coded region (`<jay:card ref="region">`)
+        // repeated under a page forEach, whose body carries a free ref (`<button ref="dismiss">`). The
+        // region ref is a compCollection nested under the forEach child manager; its per-region
+        // FreeReferenceManager declares `dismiss` as an elementCollection (one dismiss per region) and is
+        // registered via `(cardsRefManager.get('region') as ComponentCollectionRefImpl<...>).setFreeRefManager`.
+        // Each forEach item's `childComp` receives that shared manager, so `refs.region.dismiss` reaches
+        // every card as a boundary event source.
+        it('generate element file with a collection of regions each carrying a free ref (DL#198 Case 1)', async () => {
+            const folder = 'contracts/page-with-free-ref-collection';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
+        // DL#198 Design D (Case 2) — a free ref (`<button ref="dismiss">`) that lives inside the region's
+        // OWN internal forEach. The ref is hoisted out of the forEach child manager to the top level of the
+        // region's combined manager as an elementCollection (so `getPublicAPI()` exposes `dismiss` flat for
+        // the driver), while `refDismiss()` is still invoked inside the forEach (coordinate/viewState come
+        // from the construction context). The page keeps `region` a single component ref but declares its
+        // FreeReferenceManager's `dismiss` as an elementCollection (one per list item), cast via
+        // `ComponentRefsImpl` — so `refs.region.dismiss` fires per item as a boundary event source.
+        it('generate element file with a free ref inside a region-internal forEach (DL#198 Case 2)', async () => {
+            const folder = 'contracts/page-with-free-ref-in-foreach';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
         it('generate element file with headless component instance inside forEach', async () => {
             const folder = 'contracts/page-with-headless-in-foreach';
             const elementFile = await readFileAndGenerateElementFile(folder);

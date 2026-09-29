@@ -1,5 +1,6 @@
 import {
     equalJayTypes,
+    FreeRefDecl,
     GenerateTarget,
     Import,
     Imports,
@@ -604,6 +605,10 @@ export function renderReferenceManager(
 ): { renderedRefsManager: string; refsManagerImport: Imports } {
     const { referenceManagerInit, imports } = REFERENCE_MANAGER_TYPES[target];
     const options = target === ReferenceManagerTarget.element ? 'options, ' : '';
+    // DL#198 Design D — set when a region ref carries free refs; adds the `ComponentRefsImpl` /
+    // `ComponentCollectionRefImpl` imports for the `setFreeRefManager` casts emitted below.
+    let usesComponentRefsImpl = false;
+    let usesComponentCollectionRefsImpl = false;
 
     // Track used ref manager names to avoid duplicates
     const usedRefManagerNames = new Set<string>();
@@ -685,16 +690,25 @@ export function renderReferenceManager(
         const elemCollectionRefsDeclarations = elemCollectionRefs
             .map((ref) => `'${ref.ref}'`)
             .join(', ');
+        // DL#198 Design D — the page ref tree stays clean: a region ref is a bare string even when it
+        // carries free refs. The free refs are wired via a separate per-region FreeReferenceManager
+        // (emitted below) rather than baked into the component ref declaration.
         const compRefsDeclarations = compRefs.map((ref) => `'${ref.ref}'`).join(', ');
         const compCollectionRefsDeclarations = compCollectionRefs
             .map((ref) => `'${ref.ref}'`)
             .join(', ');
-        // Use unique const names to avoid duplicate variable declarations across branches
+        // Use unique const names to avoid duplicate variable declarations across branches.
+        // Resolve in declaration order (getUniqueRefConstName mutates the used-names set), keeping the
+        // compRef names so the free-ref managers below can reference them by their resolved const name.
+        const elemRefVars = elemRefs.map((ref) => getUniqueRefConstName(ref));
+        const elemCollectionRefVars = elemCollectionRefs.map((ref) => getUniqueRefConstName(ref));
+        const compRefVars = compRefs.map((ref) => getUniqueRefConstName(ref));
+        const compCollectionRefVars = compCollectionRefs.map((ref) => getUniqueRefConstName(ref));
         const refVariables = [
-            ...elemRefs.map((ref) => getUniqueRefConstName(ref)),
-            ...elemCollectionRefs.map((ref) => getUniqueRefConstName(ref)),
-            ...compRefs.map((ref) => getUniqueRefConstName(ref)),
-            ...compCollectionRefs.map((ref) => getUniqueRefConstName(ref)),
+            ...elemRefVars,
+            ...elemCollectionRefVars,
+            ...compRefVars,
+            ...compCollectionRefVars,
         ].join(', ');
 
         const childRenderedRefManagers: string[] = [];
@@ -715,12 +729,74 @@ export function renderReferenceManager(
 
         const renderedRefManager = `    const [${name}, [${refVariables}]] =
         ${referenceManagerInit}(${options}[${elemRefsDeclarations}], [${elemCollectionRefsDeclarations}], [${compRefsDeclarations}], [${compCollectionRefsDeclarations}]${childRefManager});`;
-        return [...childRenderedRefManagers, renderedRefManager].join('\n');
+
+        // DL#198 Design D — for each region ref that carries free refs, emit a page-scoped
+        // FreeReferenceManager (page eventWrapper) declaring the free-ref names, and register it as the
+        // region ref's overlay. childComp hands it the region at mount to drive: it mints a page-context
+        // RefImpl over each free-ref DOM node so the page reaches `refs.<region>.<freeRef>`.
+        //
+        // Multiplicity of the free ref on the page side:
+        // - a single region (compRef): the free ref is an `element` (1st .for arg), cast ComponentRefsImpl.
+        // - a collection of regions (compCollectionRef, Case 1): the free ref is one-per-region, so it is an
+        //   `elementCollection` (2nd .for arg), cast ComponentCollectionRefImpl.
+        // - a free ref repeated inside the region's own forEach (Case 2) is an `elementCollection` even for a
+        //   single region — driven by the per-free-ref `repeated` flag.
+        const emitFreeRefManager = (
+            ref: Ref,
+            constName: string,
+            regionIsCollection: boolean,
+        ): string => {
+            const freeMgrName = `${constName}FreeRefManager`;
+            // A free ref is exposed on the page as an elementCollection when there is more than one instance
+            // of it: either the region itself is a collection (Case 1) or the free ref lives inside the
+            // region's own forEach (Case 2, `repeated`). Otherwise it is a plain element.
+            const asCollection = (free: FreeRefDecl) => regionIsCollection || free.repeated;
+            const elementNames = ref.freeRefs
+                .filter((free) => !asCollection(free))
+                .map((free) => `'${free.name}'`)
+                .join(', ');
+            const collectionNames = ref.freeRefs
+                .filter((free) => asCollection(free))
+                .map((free) => `'${free.name}'`)
+                .join(', ');
+            const forCall = `${referenceManagerInit}(${options}[${elementNames}], [${collectionNames}], [], [])`;
+            if (regionIsCollection) {
+                usesComponentCollectionRefsImpl = true;
+                return `    const [${freeMgrName}] = ${forCall};
+    (${name}.get('${ref.ref}') as ComponentCollectionRefImpl<any, any>).setFreeRefManager(${freeMgrName});`;
+            } else {
+                usesComponentRefsImpl = true;
+                return `    const [${freeMgrName}] = ${forCall};
+    (${name}.get('${ref.ref}') as ComponentRefsImpl<any, any>).setFreeRefManager(${freeMgrName});`;
+            }
+        };
+        const freeRefManagerLines =
+            target === ReferenceManagerTarget.element
+                ? [
+                      ...compRefs
+                          .map((ref, i) => ({ ref, constName: compRefVars[i] }))
+                          .filter(({ ref }) => ref.freeRefs && ref.freeRefs.length > 0)
+                          .map(({ ref, constName }) => emitFreeRefManager(ref, constName, false)),
+                      ...compCollectionRefs
+                          .map((ref, i) => ({ ref, constName: compCollectionRefVars[i] }))
+                          .filter(({ ref }) => ref.freeRefs && ref.freeRefs.length > 0)
+                          .map(({ ref, constName }) => emitFreeRefManager(ref, constName, true)),
+                  ]
+                : [];
+
+        return [...childRenderedRefManagers, renderedRefManager, ...freeRefManagerLines].join('\n');
     };
 
     if (hasRefs(refs, true)) {
         const renderedRefsManager = renderRefManagerNode('refManager', refs);
-        return { renderedRefsManager, refsManagerImport: imports };
+        let refsManagerImport = imports;
+        if (usesComponentRefsImpl)
+            refsManagerImport = refsManagerImport.plus(Imports.for(Import.ComponentRefsImpl));
+        if (usesComponentCollectionRefsImpl)
+            refsManagerImport = refsManagerImport.plus(
+                Imports.for(Import.ComponentCollectionRefImpl),
+            );
+        return { renderedRefsManager, refsManagerImport };
     } else {
         const renderedRefsManager = `const [refManager, []] = ${referenceManagerInit}(${options}[], [], [], []);`;
         return { renderedRefsManager, refsManagerImport: imports };

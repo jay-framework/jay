@@ -65,7 +65,9 @@ function mkPage(eventWrapper: JayEventHandlerWrapper<any, any, any> = undefined)
 
     const dismissButtons = () =>
         [
-            ...cardComp.element.dom.querySelectorAll<HTMLButtonElement>('button[data-id="dismiss"]'),
+            ...cardComp.element.dom.querySelectorAll<HTMLButtonElement>(
+                'button[data-id="dismiss"]',
+            ),
         ] as HTMLButtonElement[];
     const dismissButton = (tagId: string) =>
         cardComp.element.dom.querySelector<HTMLButtonElement>(
@@ -152,7 +154,9 @@ describe('DL#198 free ref inside a region-internal forEach (Case 2)', () => {
 
             render();
 
-            const found = (refsApi.region.dismiss as any).find((viewState: Tag) => viewState.id === 't2');
+            const found = (refsApi.region.dismiss as any).find(
+                (viewState: Tag) => viewState.id === 't2',
+            );
             expect(found).toBeDefined();
         });
     });

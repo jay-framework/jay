@@ -35,13 +35,7 @@ const PAGE_VS: PageViewState = { pageTitle: PAGE_TITLE };
 
 function mkPage(eventWrapper: JayEventHandlerWrapper<any, any, any> = undefined) {
     let cardComp: CardComponent;
-    let [refManager, [regionRef]] = ReferencesManager.for(
-        { eventWrapper },
-        [],
-        [],
-        ['region'],
-        [],
-    );
+    let [refManager, [regionRef]] = ReferencesManager.for({ eventWrapper }, [], [], ['region'], []);
     // DL#198 Design D — page-side FreeReferenceManager for the region's free refs (page scope → page
     // eventWrapper). Registered as the region ComponentRefsImpl's overlay and handed to childComp to drive.
     let [pageFreeMgr] = ReferencesManager.for({ eventWrapper }, ['dismiss'], [], [], []);

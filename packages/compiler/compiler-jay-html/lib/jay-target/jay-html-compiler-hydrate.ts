@@ -3,8 +3,12 @@
  * Extracted from jay-html-compiler.ts (Design Log #118).
  */
 import {
+    FreeRefDecl,
+    freeRefsAugmentedRefType,
+    hoistFreeRefs,
     Import,
     Imports,
+    isComponentType,
     JayImportLink,
     JayType,
     JayTypeAlias,
@@ -701,8 +705,45 @@ function renderHydrateHeadlessInstance(
         );
     }
 
-    // Merge contract ref stubs into adopt inline template refs (DL#138)
-    const adoptMergedRefs = mergeContractStubRefs(adoptInlineBody.refs, headlessImport.refs);
+    // DL#198 (D-4 hydrate parity) — free refs: region-body element refs NOT declared by the region's
+    // contract. Collected recursively (so a free ref nested inside the region's own forEach, Case 2, is
+    // captured too); `repeated` marks those so the page exposes them as an elementCollection. Mirrors the
+    // element target in jay-html-compiler.ts.
+    const contractRefNames = new Set<string>();
+    const collectContractRefNames = (tree: RefsTree) => {
+        for (const r of tree.refs) contractRefNames.add(camelCase(r.ref));
+        for (const child of Object.values(tree.children)) collectContractRefNames(child);
+    };
+    collectContractRefNames(headlessImport.refs);
+    const freeRefDecls: FreeRefDecl[] = [];
+    const seenFreeRefNames = new Set<string>();
+    const collectFreeRefs = (tree: RefsTree) => {
+        for (const r of tree.refs) {
+            if (isComponentType(r.elementType)) continue;
+            if (contractRefNames.has(camelCase(r.ref))) continue;
+            if (seenFreeRefNames.has(r.ref)) continue;
+            seenFreeRefNames.add(r.ref);
+            freeRefDecls.push({
+                name: r.ref,
+                repeated: r.repeated,
+                viewStateType: r.viewStateType.name,
+                elementType: r.elementType.name,
+            });
+        }
+        for (const child of Object.values(tree.children)) collectFreeRefs(child);
+    };
+    collectFreeRefs(adoptInlineBody.refs);
+    const freeRefNames = freeRefDecls.map((f) => f.name);
+    const freeRefsArg =
+        freeRefNames.length > 0 ? `\n    [${freeRefNames.map((r) => `'${r}'`).join(', ')}],` : '';
+
+    // Merge contract ref stubs into adopt inline template refs (DL#138), then hoist any free refs living
+    // in the region's own forEach up to the top level so the region's public API exposes them flat — the
+    // page-side driver reads `freeRefs[name]` by name (DL#198 Case 2).
+    const adoptMergedRefs = hoistFreeRefs(
+        mergeContractStubRefs(adoptInlineBody.refs, headlessImport.refs),
+        new Set(freeRefNames),
+    );
     const { renderedRefsManager, refsManagerImport } = renderReferenceManager(
         adoptMergedRefs,
         ReferenceManagerTarget.element,
@@ -739,17 +780,17 @@ ${adoptInlineBody.rendered}
         : `'${coordinateKey}'`;
     if (headlessImport.structural) {
         // DL#196: no-code region — passthrough backing, no imported logic. `makePassthrough…` takes
-        // (render, coord) only.
+        // (render, coord) only. DL#198 — pass free-ref names so the factory exposes them on the boundary.
         adoptComponentSymbol = `_Headless${pascal}${idx}`;
-        adoptComponentDef = `const ${adoptComponentSymbol} = makePassthroughHeadlessInstanceComponent(\n    ${renderFnName},\n    ${coordinateArg},\n);`;
+        adoptComponentDef = `const ${adoptComponentSymbol} = makePassthroughHeadlessInstanceComponent(\n    ${renderFnName},\n    ${coordinateArg},${freeRefsArg}\n);`;
     } else if (isInsideForEach) {
         adoptComponentSymbol = `_Headless${pascal}${idx}Adopt`;
-        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName},\n    (dataIds) => [...dataIds, '${coordinateSuffix}'].toString(),\n);`;
+        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName},\n    (dataIds) => [...dataIds, '${coordinateSuffix}'].toString(),${freeRefsArg}\n);`;
     } else {
         adoptComponentSymbol = `_Headless${pascal}${idx}`;
         // Use the __headlessInstances key (not full DOM coordinate) for data lookup.
         // Static: 'widget:0'
-        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName},\n    '${coordinateKey}',\n);`;
+        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName},\n    '${coordinateKey}',${freeRefsArg}\n);`;
     }
 
     let adoptImports = adoptInlineBody.imports
@@ -810,7 +851,10 @@ ${adoptInlineBody.rendered}
             createInlineBody = createRenderedChildren;
         }
 
-        const createMergedRefs = mergeContractStubRefs(createInlineBody.refs, headlessImport.refs);
+        const createMergedRefs = hoistFreeRefs(
+            mergeContractStubRefs(createInlineBody.refs, headlessImport.refs),
+            new Set(freeRefNames),
+        );
         const { renderedRefsManager: createRefsManager, refsManagerImport: createRefsImport } =
             renderReferenceManager(createMergedRefs, ReferenceManagerTarget.element);
 
@@ -826,7 +870,7 @@ ${createInlineBody.rendered}
 
 const ${createComponentSymbol} = ${headlessImport.structural ? 'makePassthroughHeadlessInstanceComponent' : 'makeHeadlessInstanceComponent'}(
     ${createRenderFnName},${headlessImport.structural ? '' : `\n    ${pluginComponentName},`}
-    ${isInsideForEach ? `(dataIds) => [...dataIds, '${coordinateSuffix}'].toString()` : `'${coordinateKey}'`},
+    ${isInsideForEach ? `(dataIds) => [...dataIds, '${coordinateSuffix}'].toString()` : `'${coordinateKey}'`},${freeRefsArg}
 );`;
         createImports = createInlineBody.imports.plus(createRefsImport);
     }
@@ -861,6 +905,24 @@ const ${createComponentSymbol} = ${headlessImport.structural ? 'makePassthroughH
             link.names.push({ name: contractRefType, type: JayUnknown });
         }
     }
+    // DL#198 (design point 3) — augment the page-side region ref type with its free refs so
+    // `refs.<regionRef>.<freeRef>` is typed as an element proxy. Import the proxies' viewState types.
+    const augmented = freeRefsAugmentedRefType(contractRefType, freeRefDecls, isRepeated);
+    if (freeRefDecls.length > 0) {
+        for (const f of freeRefDecls) {
+            if (!f.viewStateType) continue;
+            for (const link of headlessImport.contractLinks) {
+                if (!link.names.some((n) => n.name === f.viewStateType)) {
+                    link.names.push({ name: f.viewStateType, type: JayUnknown });
+                }
+            }
+        }
+    }
+    let freeRefProxyImports = Imports.for();
+    if (augmented.needsElementProxy)
+        freeRefProxyImports = freeRefProxyImports.plus(Import.HTMLElementProxy);
+    if (augmented.needsCollectionProxy)
+        freeRefProxyImports = freeRefProxyImports.plus(Import.HTMLElementCollectionProxy);
     const instanceRef = mkRef(
         refRefName,
         refOriginalName,
@@ -868,11 +930,18 @@ const ${createComponentSymbol} = ${headlessImport.structural ? 'makePassthroughH
         isRepeated,
         !element.attributes.ref,
         context.variables.currentType,
-        new JayTypeAlias(contractRefType),
+        new JayTypeAlias(augmented.type),
+        // DL#198 — declare free refs on the page-side region ref so the page-level renderReferenceManager
+        // emits the per-region FreeReferenceManager (`${refConstName}FreeRefManager`) + setFreeRefManager.
+        freeRefDecls.length > 0 ? freeRefDecls : undefined,
     );
     const instanceRefsTree = mkRefsTree([instanceRef], {});
     let renderedRef = new RenderFragment(`${refConstName}()`, Imports.for(), [], instanceRefsTree);
     if (renderedRef.rendered !== '') renderedRef = renderedRef.map((_) => ', ' + _);
+
+    // DL#198 Design D (D-4) — hand the page-side FreeReferenceManager to childCompHydrate/childComp so it
+    // drives the region's free refs at mount. The const is emitted by the page-level ref manager block.
+    const freeRefManagerArg = freeRefNames.length > 0 ? `, ${refConstName}FreeRefManager` : '';
 
     // --- Build the call expression ---
     // With scoped coordinates (DL#126), no coordinate stripping needed.
@@ -888,8 +957,8 @@ const ${createComponentSymbol} = ${headlessImport.structural ? 'makePassthroughH
         // Fast conditional: wrap in hydrateConditional with adopt and create callbacks.
         // createComponentSymbol is guaranteed to exist here (needsCreateVersion was true).
         const renderedCondition = parseCondition(ifCondition, context.variables);
-        const adoptCall = `() => childCompHydrate(${adoptComponentSymbol}, ${getProps}, ${scopeRootCoord}${renderedRef.rendered})`;
-        const createCall = `() => childComp(${createComponentSymbol}, ${getProps}${renderedRef.rendered})`;
+        const adoptCall = `() => childCompHydrate(${adoptComponentSymbol}, ${getProps}, ${scopeRootCoord}${renderedRef.rendered}${freeRefManagerArg})`;
+        const createCall = `() => childComp(${createComponentSymbol}, ${getProps}${renderedRef.rendered}${freeRefManagerArg})`;
         const callExpr = `${context.indent.firstLine}hydrateConditional(${renderedCondition.rendered}, ${adoptCall},\n${context.indent.firstLine}    ${createCall})`;
 
         return new RenderFragment(
@@ -897,7 +966,8 @@ const ${createComponentSymbol} = ${headlessImport.structural ? 'makePassthroughH
             Imports.for(Import.childCompHydrate, Import.hydrateConditional, Import.childComp)
                 .plus(propsGetterAndRefs.imports)
                 .plus(renderedRef.imports)
-                .plus(renderedCondition.imports),
+                .plus(renderedCondition.imports)
+                .plus(freeRefProxyImports),
             [
                 ...propsGetterAndRefs.validations,
                 ...adoptInlineBody.validations,
@@ -908,10 +978,11 @@ const ${createComponentSymbol} = ${headlessImport.structural ? 'makePassthroughH
     }
 
     return new RenderFragment(
-        `${context.indent.firstLine}childCompHydrate(${adoptComponentSymbol}, ${getProps}, ${scopeRootCoord}${renderedRef.rendered})`,
+        `${context.indent.firstLine}childCompHydrate(${adoptComponentSymbol}, ${getProps}, ${scopeRootCoord}${renderedRef.rendered}${freeRefManagerArg})`,
         Imports.for(Import.childCompHydrate)
             .plus(propsGetterAndRefs.imports)
-            .plus(renderedRef.imports),
+            .plus(renderedRef.imports)
+            .plus(freeRefProxyImports),
         [
             ...propsGetterAndRefs.validations,
             ...adoptInlineBody.validations,

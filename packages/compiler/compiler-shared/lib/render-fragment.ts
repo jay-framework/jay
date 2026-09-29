@@ -80,6 +80,54 @@ export function nestRefs(path: string[], renderFragment: RenderFragment): Render
     );
 }
 
+/**
+ * DL#198 Case 2 — hoist a region's free refs (matched by ref name) out of any nested (forEach) child
+ * managers up to the top level of the region's ref tree. The runtime exposes the region's free refs via the
+ * flat public API (`freeRefs['dismiss']`), and the page-side driver reads them by name — so a free ref that
+ * lives inside the region's own forEach must be declared as a flat (elementCollection) ref rather than nested.
+ * The ref's `constName` is unchanged, so the render body's `refDismiss()` invocation inside the forEach still
+ * resolves; only the manager declaration and `getPublicAPI()` shape change. Children emptied by the hoist are
+ * dropped so no empty child managers are emitted. Top-level free refs are already flat and are left in place.
+ */
+export function hoistFreeRefs(tree: RefsTree, freeRefNames: Set<string>): RefsTree {
+    const hoisted: Ref[] = [];
+    const stripChild = (child: RefsTree): RefsTree | undefined => {
+        const keptRefs = child.refs.filter((ref) => {
+            if (freeRefNames.has(ref.ref)) {
+                hoisted.push(ref);
+                return false;
+            }
+            return true;
+        });
+        const newChildren: Record<string, RefsTree> = {};
+        for (const [key, grandChild] of Object.entries(child.children)) {
+            const stripped = stripChild(grandChild);
+            if (stripped) newChildren[key] = stripped;
+        }
+        const stillHasRefs = keptRefs.length > 0 || Object.keys(newChildren).length > 0;
+        if (!stillHasRefs && !child.imported) return undefined;
+        return mkRefsTree(
+            keptRefs,
+            newChildren,
+            child.repeated,
+            child.imported?.refsTypeName,
+            child.imported?.repeatedRefsTypeName,
+        );
+    };
+    const newChildren: Record<string, RefsTree> = {};
+    for (const [key, child] of Object.entries(tree.children)) {
+        const stripped = stripChild(child);
+        if (stripped) newChildren[key] = stripped;
+    }
+    return mkRefsTree(
+        [...tree.refs, ...hoisted],
+        newChildren,
+        tree.repeated,
+        tree.imported?.refsTypeName,
+        tree.imported?.repeatedRefsTypeName,
+    );
+}
+
 export function mkRefsTree(
     refs: Ref[],
     children: Record<string, RefsTree>,
@@ -98,6 +146,50 @@ export function mkRefsTree(
     else return { kind: 'refTree', refs, children, repeated };
 }
 
+// DL#198 — a region's free ref (a region-body element ref not declared by the region's contract). `repeated`
+// is true when the free ref lives inside the region's own forEach (Case 2), so the page must expose it as an
+// elementCollection even for a single region.
+export interface FreeRefDecl {
+    name: string;
+    repeated: boolean;
+    // DL#198 (design point 3) — type info for augmenting the page-side region ref so
+    // `refs.<regionRef>.<freeRef>` is typed as an element proxy carrying the free ref's viewState.
+    viewStateType?: string;
+    elementType?: string;
+}
+
+// DL#198 (design point 3) — build the page-side region ref type augmented with its free refs.
+// Each free ref becomes an `HTMLElementProxy<VS, El>` (or `HTMLElementCollectionProxy<...>` when the
+// region is a collection OR the free ref is repeated), intersected onto the region's contract ref type.
+export interface FreeRefAugmentedType {
+    type: string;
+    needsElementProxy: boolean;
+    needsCollectionProxy: boolean;
+}
+
+export function freeRefsAugmentedRefType(
+    contractRefType: string,
+    freeRefs: FreeRefDecl[],
+    regionIsCollection: boolean,
+): FreeRefAugmentedType {
+    if (!freeRefs.length)
+        return { type: contractRefType, needsElementProxy: false, needsCollectionProxy: false };
+    let needsElementProxy = false;
+    let needsCollectionProxy = false;
+    const parts = freeRefs.map((f) => {
+        const collection = regionIsCollection || f.repeated;
+        if (collection) needsCollectionProxy = true;
+        else needsElementProxy = true;
+        const proxy = collection ? 'HTMLElementCollectionProxy' : 'HTMLElementProxy';
+        return `${f.name}: ${proxy}<${f.viewStateType}, ${f.elementType}>`;
+    });
+    return {
+        type: `${contractRefType} & { ${parts.join('; ')} }`,
+        needsElementProxy,
+        needsCollectionProxy,
+    };
+}
+
 export interface Ref {
     readonly kind: 'ref';
     originalName: string;
@@ -107,6 +199,10 @@ export interface Ref {
     autoRef: boolean;
     viewStateType: JayType;
     elementType: JayType;
+    // DL#198 — for a component (region) ref, the region's free refs. Drives the per-region
+    // FreeReferenceManager emitted alongside the region ref so the aggregate resolves them as boundary event
+    // sources (`refs.<regionRef>.<freeRef>.<domEvent>`).
+    freeRefs?: FreeRefDecl[];
 }
 
 export function mkRef(
@@ -117,6 +213,7 @@ export function mkRef(
     autoRef: boolean,
     viewStateType: JayType,
     elementType: JayType,
+    freeRefs?: FreeRefDecl[],
 ): Ref {
     return {
         kind: 'ref',
@@ -127,6 +224,7 @@ export function mkRef(
         autoRef,
         viewStateType,
         elementType,
+        freeRefs,
     };
 }
 

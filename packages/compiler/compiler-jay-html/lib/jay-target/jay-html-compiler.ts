@@ -10,6 +10,10 @@ import {
     JayType,
     JayTypeAlias,
     JayUnknown,
+    isComponentType,
+    FreeRefDecl,
+    freeRefsAugmentedRefType,
+    hoistFreeRefs,
     MainRuntimeModes,
     mergeRefsTrees,
     mkRef,
@@ -938,8 +942,43 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? 
             htmlElement.attributes.ref || newContext.refNameGenerator.newAutoRefNameGenerator();
         const refRefName = camelCase(refOriginalName);
 
-        // Merge contract ref stubs into inline template refs (DL#138)
-        const mergedRefs = mergeContractStubRefs(inlineBody.refs, headlessImport.refs);
+        // DL#198 — free refs: region-body element refs NOT declared by the region's contract. They are
+        // re-emitted on the region boundary as typed event sources (`refs.<regionRef>.<freeRef>.<domEvent>`).
+        // Collected recursively so a free ref nested inside the region's own forEach (Case 2) is captured too;
+        // `repeated` marks those so the page exposes them as an elementCollection.
+        const contractRefNames = new Set<string>();
+        const collectContractRefNames = (tree: RefsTree) => {
+            for (const r of tree.refs) contractRefNames.add(camelCase(r.ref));
+            for (const child of Object.values(tree.children)) collectContractRefNames(child);
+        };
+        collectContractRefNames(headlessImport.refs);
+        const freeRefDecls: FreeRefDecl[] = [];
+        const seenFreeRefNames = new Set<string>();
+        const collectFreeRefs = (tree: RefsTree) => {
+            for (const r of tree.refs) {
+                if (isComponentType(r.elementType)) continue;
+                if (contractRefNames.has(camelCase(r.ref))) continue;
+                if (seenFreeRefNames.has(r.ref)) continue;
+                seenFreeRefNames.add(r.ref);
+                freeRefDecls.push({
+                    name: r.ref,
+                    repeated: r.repeated,
+                    viewStateType: r.viewStateType.name,
+                    elementType: r.elementType.name,
+                });
+            }
+            for (const child of Object.values(tree.children)) collectFreeRefs(child);
+        };
+        collectFreeRefs(inlineBody.refs);
+        const freeRefNames = freeRefDecls.map((f) => f.name);
+
+        // Merge contract ref stubs into inline template refs (DL#138), then hoist any free refs that live in
+        // the region's own forEach up to the top level so the region's public API exposes them flat — the
+        // page-side driver reads `freeRefs[name]` by name (DL#198 Case 2).
+        const mergedRefs = hoistFreeRefs(
+            mergeContractStubRefs(inlineBody.refs, headlessImport.refs),
+            new Set(freeRefNames),
+        );
         const { renderedRefsManager, refsManagerImport } = renderReferenceManager(
             mergedRefs,
             ReferenceManagerTarget.element,
@@ -974,15 +1013,20 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}'${dependsOnParent ? 
         // DL#196: a no-code (structural) region is backed by the synthesized passthrough — no imported
         // logic module, so it uses `makePassthroughHeadlessInstanceComponent(render, coord)` (2 args).
         // A coded region uses `makeHeadlessInstanceComponent(render, logic, coord)`.
+        // DL#198 — pass the region's free-ref names so the factory exposes them as boundary event sources.
+        const freeRefsArg =
+            freeRefNames.length > 0
+                ? `\n    [${freeRefNames.map((r) => `'${r}'`).join(', ')}],`
+                : '';
         const componentDefCode = headlessImport.structural
             ? `const ${componentSymbol} = makePassthroughHeadlessInstanceComponent(
     ${renderFnName},
-    ${coordinateArg},
+    ${coordinateArg},${freeRefsArg}
 );`
             : `const ${componentSymbol} = makeHeadlessInstanceComponent(
     ${renderFnName},
     ${pluginComponentName},
-    ${coordinateArg},
+    ${coordinateArg},${freeRefsArg}
 );`;
 
         // Generate type aliases and render function code
@@ -1035,6 +1079,21 @@ ${componentDefCode}`;
             }
         }
         newContext.usedComponentImports.add(contractRefType);
+        // DL#198 (design point 3) — augment the page-side region ref type with its free refs so
+        // `refs.<regionRef>.<freeRef>` is typed as an element proxy. The proxies' viewState types are
+        // imported from the contract module alongside the contract ref type.
+        const augmented = freeRefsAugmentedRefType(contractRefType, freeRefDecls, isRepeated);
+        if (freeRefDecls.length > 0) {
+            for (const f of freeRefDecls) {
+                if (!f.viewStateType) continue;
+                for (const link of headlessImport.contractLinks) {
+                    if (!link.names.some((n) => n.name === f.viewStateType)) {
+                        link.names.push({ name: f.viewStateType, type: JayUnknown });
+                    }
+                }
+                newContext.usedComponentImports.add(f.viewStateType);
+            }
+        }
         const instanceRef = mkRef(
             refRefName,
             refOriginalName,
@@ -1042,7 +1101,10 @@ ${componentDefCode}`;
             isRepeated,
             !htmlElement.attributes.ref,
             newContext.variables.currentType,
-            new JayTypeAlias(contractRefType),
+            new JayTypeAlias(augmented.type),
+            // DL#198 — declare free refs on the page-side region ref so renderReferenceManager emits the
+            // per-region FreeReferenceManager (with per-free-ref `repeated` driving element vs collection).
+            freeRefDecls.length > 0 ? freeRefDecls : undefined,
         );
         const instanceRefsTree = mkRefsTree([instanceRef], {});
         let renderedRef = new RenderFragment(
@@ -1053,18 +1115,30 @@ ${componentDefCode}`;
         );
         if (renderedRef.rendered !== '') renderedRef = renderedRef.map((_) => ', ' + _);
 
+        // DL#198 Design D — hand the page-side FreeReferenceManager (declared in the ref manager block as
+        // `${refConstName}FreeRefManager` and registered via setFreeRefManager) to childComp so it drives
+        // the region's free refs at mount. Only when the region carries free refs.
+        const freeRefManagerArg = freeRefNames.length > 0 ? `, ${refConstName}FreeRefManager` : '';
+
         // Return childComp call for the page render function
+        let childCompImports = Imports.for(Import.childComp)
+            .plus(propsGetterAndRefs.imports)
+            .plus(renderedRef.imports)
+            .plus(Import.ConstructContext)
+            .plus(
+                headlessImport.structural
+                    ? Import.makePassthroughHeadlessInstanceComponent
+                    : Import.makeHeadlessInstanceComponent,
+            );
+        // DL#198 (design point 3) — the augmented region ref type uses element proxies in the ElementRefs
+        // interface; ensure they are imported (renderRefsType skips them on the type-alias branch).
+        if (augmented.needsElementProxy)
+            childCompImports = childCompImports.plus(Import.HTMLElementProxy);
+        if (augmented.needsCollectionProxy)
+            childCompImports = childCompImports.plus(Import.HTMLElementCollectionProxy);
         return new RenderFragment(
-            `${newContext.indent.firstLine}childComp(${componentSymbol}, ${getProps}${renderedRef.rendered})`,
-            Imports.for(Import.childComp)
-                .plus(propsGetterAndRefs.imports)
-                .plus(renderedRef.imports)
-                .plus(Import.ConstructContext)
-                .plus(
-                    headlessImport.structural
-                        ? Import.makePassthroughHeadlessInstanceComponent
-                        : Import.makeHeadlessInstanceComponent,
-                ),
+            `${newContext.indent.firstLine}childComp(${componentSymbol}, ${getProps}${renderedRef.rendered}${freeRefManagerArg})`,
+            childCompImports,
             [
                 ...propsGetterAndRefs.validations,
                 ...inlineBody.validations,
@@ -1500,10 +1574,12 @@ ${Indent.forceIndent(code, 4)},
         );
     }
 
-    const { renderedRefsManager } = renderReferenceManager(
+    const { renderedRefsManager, refsManagerImport } = renderReferenceManager(
         renderedRoot.refs,
         ReferenceManagerTarget.element,
     );
+    // DL#198 Design D — the ref manager block may add `ComponentRefsImpl` (setFreeRefManager casts).
+    imports = imports.plus(refsManagerImport);
 
     // Generate head links injection code
     const headLinksInjection =

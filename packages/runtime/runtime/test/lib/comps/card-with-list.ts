@@ -1,4 +1,9 @@
-import { dynamicElement as de, dynamicText as dt, element as e, forEach as fe } from '../../../lib/element';
+import {
+    dynamicElement as de,
+    dynamicText as dt,
+    element as e,
+    forEach as fe,
+} from '../../../lib/element';
 import { JayComponent, JayElement, ReferencesManager } from '../../../lib';
 import { HTMLElementCollectionProxy, ConstructContext } from '../../../lib';
 
@@ -42,7 +47,12 @@ function renderCardWithList(
                     (tag: Tag) =>
                         e('li', {}, [
                             dt((t: Tag) => t.label),
-                            e('button', { 'data-id': 'dismiss', 'data-tag': tag.id }, ['x'], dismiss()),
+                            e(
+                                'button',
+                                { 'data-id': 'dismiss', 'data-tag': tag.id },
+                                ['x'],
+                                dismiss(),
+                            ),
                         ]),
                     'id',
                 ),
@@ -57,8 +67,11 @@ export interface CardWithListProps {
     tags: Tag[];
 }
 
-export interface CardWithListComponent
-    extends JayComponent<CardWithListProps, CardWithListVS, CardWithListElement> {
+export interface CardWithListComponent extends JayComponent<
+    CardWithListProps,
+    CardWithListVS,
+    CardWithListElement
+> {
     freeRefs: CardWithListFreeRefs;
     getHeading: () => string;
 }

@@ -48,7 +48,9 @@ function mkPage(eventWrapper: JayEventHandlerWrapper<any, any, any> = undefined)
     // Page-side FreeReferenceManager — ONE per region-name, shared across all items. The free ref is a
     // COLLECTION (one dismiss per card), so `refs.region.dismiss` gets .map/.find plus aggregate events.
     let [pageFreeMgr] = ReferencesManager.for({ eventWrapper }, [], ['dismiss'], [], []);
-    (refManager.get('region') as ComponentCollectionRefImpl<any, any>).setFreeRefManager(pageFreeMgr);
+    (refManager.get('region') as ComponentCollectionRefImpl<any, any>).setFreeRefManager(
+        pageFreeMgr,
+    );
     const refsApi = refManager.getPublicAPI() as PageRefs;
 
     let pageRoot: JayElement<PageViewState, PageRefs>;

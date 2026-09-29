@@ -172,36 +172,39 @@ export async function renderFastChangingData(
                     );
                 }
 
-                if (comp.compDefinition.fastRender) {
-                    const services = resolveServices(comp.compDefinition.services);
+                const services = resolveServices(comp.compDefinition.services);
+                const coord = computeForEachInstanceKey(trackByValue, instance.coordinateSuffix);
 
-                    let slowVS: object = {};
-                    let cf: object = {};
-                    if (comp.compDefinition.slowlyRender) {
-                        const slowResult = await comp.compDefinition.slowlyRender(
-                            props,
-                            ...services,
-                        );
-                        if (slowResult.kind === 'PhaseOutput') {
-                            slowVS = slowResult.rendered;
-                            cf = slowResult.carryForward;
-                        }
+                // ForEach instances have no pre-baked slow ViewState (the array is only known
+                // at request time), so run slowlyRender per item here — unlike static instances,
+                // whose slow ViewState is baked at build time (DL#198).
+                let slowVS: object = {};
+                let cf: object = {};
+                if (comp.compDefinition.slowlyRender) {
+                    const slowResult = await comp.compDefinition.slowlyRender(props, ...services);
+                    if (slowResult.kind === 'PhaseOutput') {
+                        slowVS = slowResult.rendered;
+                        cf = slowResult.carryForward;
                     }
+                }
 
+                if (comp.compDefinition.fastRender) {
                     const forEachProps = { ...props, query, cookies };
                     const fastResult = comp.compDefinition.slowlyRender
                         ? await comp.compDefinition.fastRender(forEachProps, cf, ...services)
                         : await comp.compDefinition.fastRender(forEachProps, ...services);
 
                     if (fastResult.kind === 'PhaseOutput') {
-                        const coord = computeForEachInstanceKey(
-                            trackByValue,
-                            instance.coordinateSuffix,
-                        );
                         instanceViewStates[coord] = { ...slowVS, ...fastResult.rendered };
                         if (fastResult.carryForward) {
                             instanceCarryForwards[coord] = fastResult.carryForward;
                         }
+                    }
+                } else if (comp.compDefinition.slowlyRender) {
+                    // Slow-only forEach instance: populate from the per-item slow render alone.
+                    instanceViewStates[coord] = slowVS;
+                    if (cf && Object.keys(cf).length > 0) {
+                        instanceCarryForwards[coord] = cf;
                     }
                 }
             }

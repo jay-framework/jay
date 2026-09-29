@@ -1,0 +1,16 @@
+<html>
+<head>
+  <script type="application/jay-data" contract="./tag-card.jay-contract"></script>
+</head>
+<body>
+  <div class="card">
+    <h2>{heading}</h2>
+    <ul>
+      <li forEach="tags" trackBy="id">
+        <span>{label}</span>
+        <button>x</button>
+      </li>
+    </ul>
+  </div>
+</body>
+</html>

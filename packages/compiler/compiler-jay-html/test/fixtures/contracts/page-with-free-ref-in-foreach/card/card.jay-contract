@@ -1,0 +1,22 @@
+name: Card
+props:
+  - name: heading
+    type: string
+    required: true
+tags:
+  - tag: heading
+    type: data
+    dataType: string
+    phase: fast+interactive
+  - tag: tags
+    type: sub-contract
+    repeated: true
+    trackBy: id
+    phase: fast+interactive
+    tags:
+      - tag: id
+        type: data
+        dataType: string
+      - tag: label
+        type: data
+        dataType: string

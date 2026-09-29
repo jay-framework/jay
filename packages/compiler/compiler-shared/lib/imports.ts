@@ -98,6 +98,16 @@ export const Import = {
         'ReferencesManager',
         ImportsFor.implementation,
     ),
+    ComponentRefsImpl: importStatementFragment(
+        JAY_RUNTIME,
+        'ComponentRefsImpl',
+        ImportsFor.implementation,
+    ),
+    ComponentCollectionRefImpl: importStatementFragment(
+        JAY_RUNTIME,
+        'ComponentCollectionRefImpl',
+        ImportsFor.implementation,
+    ),
     SecureReferencesManager: importStatementFragment(
         JAY_SECURE,
         'SecureReferencesManager',

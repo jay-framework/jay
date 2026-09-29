@@ -89,6 +89,7 @@ export function makeHeadlessInstanceComponent<
     preRender: PreRenderElement<ViewState, Refs, JayElementT>,
     componentDef: HeadlessComponentDef,
     coordinateKey: string | ((dataIds: string[]) => string),
+    freeRefNames?: string[],
 ): (props: PropsT) => ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT> {
     const interactiveConstructor = componentDef.comp as ComponentConstructor<
         PropsT,
@@ -170,6 +171,14 @@ export function makeHeadlessInstanceComponent<
             ...pluginResolvedContexts,
         );
 
+        // DL#198 Design D — when the region has free refs (region-body element refs not declared by its
+        // contract), expose the region's refs public API as `compCore.freeRefs`. The page hands a per-region
+        // FreeReferenceManager to childComp; at region mount it reads carriers from `freeRefs[name].getCarriers()`
+        // (the aggregate proxy exposes `getCarriers` via the ref GetTrapProxy fallthrough) and mints a
+        // page-context RefImpl over each free-ref DOM node, so the page reaches them as `refs.<regionRef>.<freeRef>`.
+        // The driver only reads the names the page free manager owns, so non-free refs (contract refs) are ignored.
+        if (freeRefNames?.length) (compCore as any).freeRefs = refs;
+
         // Merge render() output with full fast ViewState signals.
         // The interactive render() only returns interactive-phase properties (e.g., { value }).
         // Slow/fast-only properties (e.g., label) must persist from the initial ViewState.
@@ -245,6 +254,7 @@ export function makePassthroughHeadlessInstanceComponent<
 >(
     preRender: PreRenderElement<ViewState, Refs, JayElementT>,
     coordinateKey: string | ((dataIds: string[]) => string),
+    freeRefNames?: string[],
 ): (props: PropsT) => ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT> {
     const passthroughDef: HeadlessComponentDef = {
         // Identity interactive constructor: reactively echo props as the interactive ViewState.
@@ -262,5 +272,6 @@ export function makePassthroughHeadlessInstanceComponent<
         preRender,
         passthroughDef,
         coordinateKey,
+        freeRefNames,
     );
 }

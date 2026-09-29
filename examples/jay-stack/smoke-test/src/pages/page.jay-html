@@ -29,6 +29,9 @@
         <li><a href="/markdown/hello/">Markdown</a> — markdown-pages component rendering .md files</li>
         <li><a href="/markdown/second-page/">Markdown</a> — markdown-pages, second page with mermaid diagram</li>
         <li><a href="/markdown-live/">Markdown Live</a> — client-rendered markdown via markdown-live component</li>
+        <li><a href="/free-ref/">Free Ref</a> — DL#198 D-1: free ref on a single region</li>
+        <li><a href="/free-ref-collection/">Free Ref Collection</a> — DL#198 Case 1: free ref on a collection of regions</li>
+        <li><a href="/free-ref-in-foreach/">Free Ref In ForEach</a> — DL#198 Case 2: free ref inside a region-internal forEach</li>
       </ul>
     </nav>
   </div>

@@ -1,0 +1,25 @@
+<html>
+<head>
+  <script type="application/jay-headless"
+          src="../../components/dismiss-card/dismiss-card"
+          contract="../../components/dismiss-card/dismiss-card.jay-contract"></script>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+  <div>
+    <h1>{pageTitle}</h1>
+    <!-- DL#198 Case 1: a collection of regions, each carrying the same `dismiss` free ref. The page
+         exposes it as an elementCollection — `refs.cards.region.dismiss` addresses the dismiss button
+         of every card instance through one boundary event source (see page.ts). -->
+    <div class="cards" forEach="cards" trackBy="id">
+      <jay:dismiss-card ref="region" heading="{title}">
+        <div class="card">
+          <h2>{heading}</h2>
+          <button ref="cardAction">Action</button>
+          <button ref="dismiss">Dismiss Free Ref</button>
+        </div>
+      </jay:dismiss-card>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,23 @@
+<html>
+<head>
+  <script type="application/jay-headless"
+          src="../../components/dismiss-card/dismiss-card"
+          contract="../../components/dismiss-card/dismiss-card.jay-contract"></script>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+  <div>
+    <h1>{pageTitle}</h1>
+    <!-- DL#198 D-1: the region body carries a `dismiss` ref that the card contract does NOT declare.
+         The compiler re-emits it on the region boundary as `refs.plainCard.dismiss`, a boundary event
+         source the page drives (see page.ts). `cardAction` is a normal contract ref. -->
+    <jay:dismiss-card ref="plainCard" heading="Plain">
+      <div class="card">
+        <h2>{heading}</h2>
+        <button ref="cardAction">Action</button>
+        <button ref="dismiss">Dismiss Free Ref</button>
+      </div>
+    </jay:dismiss-card>
+  </div>
+</body>
+</html>

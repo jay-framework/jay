@@ -77,7 +77,11 @@ export abstract class PrivateRefs<
     // refs are not in the region's contract), they just hold the bound DOM node, the region viewState and
     // the region-relative coordinate. The page-side FreeReferenceManager reads these to mint a
     // page-context RefImpl per node at region mount.
-    getCarriers(): Array<{ element: ReferenceTarget<ViewState>; viewState: ViewState; coordinate: Coordinate }> {
+    getCarriers(): Array<{
+        element: ReferenceTarget<ViewState>;
+        viewState: ViewState;
+        coordinate: Coordinate;
+    }> {
         return [...this.elements].map((ref) => ({
             element: ref.getBoundElement(),
             viewState: ref.viewState,

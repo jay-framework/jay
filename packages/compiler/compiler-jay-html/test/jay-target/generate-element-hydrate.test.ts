@@ -311,5 +311,37 @@ describe('generate jay-html element hydrate', () => {
                 await readFixtureElementHydrateFile(folder),
             );
         });
+
+        // DL#198 Design D (D-4 hydrate parity) — the hydrate twin of the element-target free-ref tests. The
+        // adopt render function lists the free ref in the region's ReferencesManager, the factory receives the
+        // free-ref names (`makeHeadlessInstanceComponent(..., ['dismiss'])`), the page wires a per-region
+        // FreeReferenceManager via `setFreeRefManager`, and `childCompHydrate` (and, for conditionals/list
+        // additions, `childComp`) receives it — so `refs.<region>.<freeRef>` survives hydration.
+        it('for a region free ref as a boundary event source (DL#198 D-1)', async () => {
+            const folder = 'contracts/page-with-free-ref';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+
+        it('for a collection of regions each carrying a free ref (DL#198 Case 1)', async () => {
+            const folder = 'contracts/page-with-free-ref-collection';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+
+        it('for a free ref inside a region-internal forEach (DL#198 Case 2)', async () => {
+            const folder = 'contracts/page-with-free-ref-in-foreach';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
     });
 });

@@ -26,6 +26,7 @@ import {
     applyHtmlContent,
     type Attributes,
     type HtmlContent,
+    type FreeRefDriver,
 } from './element';
 import type { PrivateRef } from './node-reference';
 
@@ -643,6 +644,7 @@ export function childCompHydrate<
     getProps: (t: ParentVS) => Props,
     scopeRootCoordinate?: string,
     ref?: PrivateRef<ParentVS, ChildComp>,
+    freeRefManager?: FreeRefDriver,
 ): BaseJayElement<ParentVS> {
     const context = currentConstructionContext();
 
@@ -662,6 +664,23 @@ export function childCompHydrate<
             ref.set(childComp as any);
             mounts.push(ref.mount);
             unmounts.push(ref.unmount);
+        }
+        // DL#198 Design D (D-4 hydrate parity) — mirror childComp: if the page handed a
+        // FreeReferenceManager for this region, drive it at mount so the page reaches the region's
+        // free refs as `refs.<regionRef>.<freeRef>`. Guarded idempotent, torn down at unmount.
+        if (freeRefManager && ref) {
+            let teardown: (() => void) | undefined;
+            mounts.push(() => {
+                if (teardown) return;
+                teardown = freeRefManager.driveFreeRefsFrom(
+                    (childComp as any).freeRefs,
+                    ref.coordinate,
+                );
+            });
+            unmounts.push(() => {
+                teardown?.();
+                teardown = undefined;
+            });
         }
         return {
             dom: childComp.element.dom,

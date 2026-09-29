@@ -1,0 +1,14 @@
+<html>
+<head>
+  <!-- Coded region: its own source template declares only the contract ref `cardAction`. The plain
+       <button>Dismiss</button> has no ref here; the page adds one (DL#198 free ref). -->
+  <script type="application/jay-data" contract="./dismiss-card.jay-contract"></script>
+</head>
+<body>
+  <div class="card">
+    <h2>{heading}</h2>
+    <button ref="cardAction">Action</button>
+    <button>Dismiss</button>
+  </div>
+</body>
+</html>

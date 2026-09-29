@@ -525,7 +525,8 @@ path. It reuses `createEvent`-shaped surface, is secure-mode-native, and handles
 **This grew into its own feature with its own implementation plan — see [DL#198 — Free refs as boundary
 event sources](<198 - free refs as boundary event sources.md>).** DL#198 is the design of record; it
 carries the grounding, the two settled decisions (composed-array coordinate; `makeHeadlessInstanceComponent`
-+ passthrough-forward attach point), the nested-region deferral, and Phases A–E.
+
+- passthrough-forward attach point), the nested-region deferral, and Phases A–E.
 
 ## Implementation Plan
 
@@ -1268,7 +1269,7 @@ fixed at construction (server fast VS, or the `clientDefaults` props snapshot), 
 inside the render reaction.** So a prop update — `propsProxy.update()` → `_setProps()` inside `batchReactions`
 (component.ts:262-272) — had no dependent reaction to schedule. The region was frozen at its construction-time
 ViewState. This is a no-code region's whole contract (ViewState = props, live), so the identity render must
-actually *read* the props signal.
+actually _read_ the props signal.
 
 **Fix (one line).** `comp: (signalProps) => ({ render: () => signalProps.props() })`. Reading
 `signalProps.props()` inside render registers a reactive dependency on the props signal (`_props` in
@@ -1296,7 +1297,7 @@ historical tier/DL#187/DL#194 terms).
 
 **Vocabulary (region-based).** `Tier 2` / "pure headfull component" → **no-code structural passthrough region**;
 `Tier 3` (coded) → **coded region** / **coded (headless) component**; the general concept → **inline
-composition**. `DL#187` and `DL#194` citations that labelled *current* behavior → `DL#196` (DL#196 supersedes
+composition**. `DL#187` and `DL#194` citations that labelled _current_ behavior → `DL#196` (DL#196 supersedes
 both). Files touched span `compiler-jay-html` (`jay-html-compiler.ts`, `structural-coercions.ts`,
 `jay-html-compile-refs.ts`, `jay-html-compiler-server.ts`, `slow-render-transform.ts`), `stack-server-runtime`
 (passthrough-component, resolve-instance-props, types, instance-slow-render, slowly/fast-changing-runner),
@@ -1306,7 +1307,7 @@ both). Files touched span `compiler-jay-html` (`jay-html-compiler.ts`, `structur
 
 **`/headfull` page retitled.** `pageTitle` → **"Inline Composition"** (it composes a coded `banner`, a no-code
 structural `info-box`, and two structural passthrough `badge` regions); its `page.jay-contract` comment and the
-`smoke.test.ts` `/headfull` titles updated to match. Route/folder `headfull` kept — the *page* is genuinely a
+`smoke.test.ts` `/headfull` titles updated to match. Route/folder `headfull` kept — the _page_ is genuinely a
 headfull page.
 
 **Fixtures renamed** (`git mv`, `compiler-jay-html/test/fixtures/contracts/`): `page-with-tier3-slot` →

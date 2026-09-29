@@ -1,0 +1,28 @@
+<html>
+<head>
+    <script type="application/jay-headless"
+            src="./card/card"
+            contract="./card/card.jay-contract"></script>
+    <script type="application/jay-data">
+data:
+    pageTitle: string
+    cards:
+        - id: string
+          title: string
+    </script>
+</head>
+<body>
+<div>
+    <h1>{pageTitle}</h1>
+    <div class="cards" forEach="cards" trackBy="id">
+        <jay:card ref="region" heading="{title}">
+            <div class="card">
+                <h2>{heading}</h2>
+                <button ref="cardAction">Action</button>
+                <button ref="dismiss">Dismiss</button>
+            </div>
+        </jay:card>
+    </div>
+</div>
+</body>
+</html>

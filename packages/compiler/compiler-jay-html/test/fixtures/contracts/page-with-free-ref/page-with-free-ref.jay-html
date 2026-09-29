@@ -1,0 +1,23 @@
+<html>
+<head>
+    <script type="application/jay-headless"
+            src="./card/card"
+            contract="./card/card.jay-contract"></script>
+    <script type="application/jay-data">
+data:
+    pageTitle: string
+    </script>
+</head>
+<body>
+<div>
+    <h1>{pageTitle}</h1>
+    <jay:card ref="plainCard" heading="Plain">
+        <div class="card">
+            <h2>{heading}</h2>
+            <button ref="cardAction">Action</button>
+            <button ref="dismiss">Dismiss</button>
+        </div>
+    </jay:card>
+</div>
+</body>
+</html>

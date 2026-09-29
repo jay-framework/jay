@@ -1,0 +1,27 @@
+<html>
+<head>
+  <script type="application/jay-headless"
+          src="../../components/tag-card/tag-card"
+          contract="../../components/tag-card/tag-card.jay-contract"></script>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+  <div>
+    <h1>{pageTitle}</h1>
+    <!-- DL#198 Case 2: the `dismiss` free ref lives inside the region's OWN forEach (`tags`). Even
+         with a single region instance the page exposes `refs.region.dismiss` as an elementCollection,
+         one boundary event source spanning every tag row (see page.ts). -->
+    <jay:tag-card ref="region" heading="Card Heading">
+      <div class="card">
+        <h2>{heading}</h2>
+        <ul>
+          <li forEach="tags" trackBy="id">
+            <span>{label}</span>
+            <button ref="dismiss">x</button>
+          </li>
+        </ul>
+      </div>
+    </jay:tag-card>
+  </div>
+</body>
+</html>
