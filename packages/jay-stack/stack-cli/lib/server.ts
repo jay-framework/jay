@@ -6,6 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { loadConfig, getConfigWithDefaults } from './config';
 import { generatePageDefinitionFiles } from './generate-page-definition-files';
+import { generateContractDefinitionFiles } from './generate-contract-definition-files';
 import { getLogger, type LogLevel } from '@jay-framework/logger';
 
 export interface StartDevServerOptions {
@@ -77,7 +78,17 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
         });
     });
 
-    generatePageDefinitionFiles(routes, jayOptions.tsConfigFilePath, process.cwd());
+    void (async () => {
+        await generatePageDefinitionFiles(
+            routes.map((route) => route.fsRoute.jayHtmlPath),
+            jayOptions.tsConfigFilePath,
+            process.cwd(),
+        );
+        // Generate a `.jay-contract.d.ts` for every contract under `src/` — components and page data
+        // contracts alike. A page keeps both: `page.jay-html.d.ts` (composed/free refs) and
+        // `page.jay-contract.d.ts` (data types + runtime enum values). See DL#199.
+        await generateContractDefinitionFiles(path.resolve('src'));
+    })();
 
     httpServer.listen(devServerPort, () => {
         log.important(`🚀 Jay Stack dev server started successfully!`);

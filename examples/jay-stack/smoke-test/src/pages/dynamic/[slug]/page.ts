@@ -4,7 +4,7 @@ import {
     type PageProps,
     type UrlParams,
 } from '@jay-framework/fullstack-component';
-import type { PageContract, PageSlowViewState } from './page.jay-contract';
+import type { PageContract, PageSlowViewState } from './page.jay-html';
 
 interface DynamicParams extends UrlParams {
     slug: string;

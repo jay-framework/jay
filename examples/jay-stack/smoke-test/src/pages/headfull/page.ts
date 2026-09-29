@@ -10,7 +10,7 @@ import {
     type PageContract,
     type PageSlowViewState,
     type PageFastViewState,
-    type PageElementRefs,
+    type PageRefs,
 } from './page.jay-contract';
 
 export const page = makeJayStackComponent<PageContract>()
@@ -28,7 +28,7 @@ export const page = makeJayStackComponent<PageContract>()
         }));
     })
     .withInteractive(
-        (_props: Props<{}>, refs: PageElementRefs, fastViewState: Signals<PageFastViewState>) => {
+        (_props: Props<{}>, refs: PageRefs, fastViewState: Signals<PageFastViewState>) => {
             const [currentStatus, setCurrentStatus] = fastViewState.currentStatus;
             // vs -> prop -> vs: cycling the page tag re-drives the badge instance's prop.
             refs.cycleButton.onclick(() => setCurrentStatus((currentStatus() + 1) % 3));

@@ -9,8 +9,8 @@ import type {
     PageContract,
     PageSlowViewState,
     PageFastViewState,
-    PageRefs,
-} from './page.jay-contract';
+    PageElementRefs,
+} from './page.jay-html';
 import type { Props } from '@jay-framework/component';
 
 export const page = makeJayStackComponent<PageContract>()
@@ -27,7 +27,11 @@ export const page = makeJayStackComponent<PageContract>()
         }));
     })
     .withInteractive(
-        (props: Props<PageProps>, refs: PageRefs, fastViewState: Signals<PageFastViewState>) => {
+        (
+            props: Props<PageProps>,
+            refs: PageElementRefs,
+            fastViewState: Signals<PageFastViewState>,
+        ) => {
             const [clickCount, setClickCount] = fastViewState.clickCount;
             refs.clickButton.onclick(() => setClickCount(clickCount() + 1));
             return { render: () => ({ clickCount: clickCount() }) };

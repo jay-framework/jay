@@ -3,7 +3,7 @@ import {
     RenderPipeline,
     type PageProps,
 } from '@jay-framework/fullstack-component';
-import type { PageContract, PageFastViewState } from './page.jay-contract';
+import type { PageContract, PageFastViewState } from './page.jay-html';
 
 export const page = makeJayStackComponent<PageContract>()
     .withProps<PageProps>()

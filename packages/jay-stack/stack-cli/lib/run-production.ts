@@ -79,6 +79,10 @@ export async function runBuild(
 
     const ctx = await resolveProductionContext(projectPath, options.version);
 
+    // Generate type definitions (page.jay-html.d.ts + component .jay-contract.d.ts) so a fresh
+    // checkout type-checks after a build — see DL#199.
+    await generateDefinitionFiles(ctx);
+
     const { buildVersion } = await import('@jay-framework/production-build');
     await buildVersion({
         version: ctx.version,
@@ -90,6 +94,27 @@ export async function runBuild(
         minify: options.minify,
         siteBaseUrl: ctx.siteBaseUrl,
     });
+}
+
+/**
+ * Generates all `.d.ts` files for a production build: `page.jay-html.d.ts` for every route page and
+ * `<name>.jay-contract.d.ts` for every non-route contract (component/plugin), skipping the route
+ * data contracts inlined into the page definitions. See DL#199.
+ */
+async function generateDefinitionFiles(ctx: ProductionContext): Promise<void> {
+    const { glob } = await import('glob');
+    const { generatePageDefinitionFiles } = await import('./generate-page-definition-files');
+    const { generateContractDefinitionFiles } =
+        await import('./generate-contract-definition-files');
+
+    const jayHtmlPaths = await glob('**/page.jay-html', {
+        cwd: ctx.pagesRoot,
+        absolute: true,
+        ignore: ['**/node_modules/**', '**/build/**', '**/dist/**'],
+    });
+
+    await generatePageDefinitionFiles(jayHtmlPaths, ctx.tsConfigFilePath, ctx.resolvedPath);
+    await generateContractDefinitionFiles(path.resolve(ctx.resolvedPath, 'src'));
 }
 
 export async function runServe(

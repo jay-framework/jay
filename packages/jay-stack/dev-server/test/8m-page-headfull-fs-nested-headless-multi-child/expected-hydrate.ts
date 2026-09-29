@@ -68,9 +68,12 @@ const _HeadlessHeader0 = makeHeadlessInstanceComponent(
     _headlessHeader0HydrateRender,
     header,
     'S0/0/header:AR0',
+    ['ar0'],
 );
 export function hydrate(rootElement, options) {
     const [refManager, [refAr02]] = ReferencesManager.for(options, [], [], ['ar0'], []);
+    const [refAr02FreeRefManager] = ReferencesManager.for(options, ['ar0'], [], [], []);
+    refManager.get('ar0').setFreeRefManager(refAr02FreeRefManager);
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('S0/0', {}, [
@@ -79,6 +82,7 @@ export function hydrate(rootElement, options) {
                     (vs) => ({ logoUrl: '/logo.png' }),
                     'S1/0',
                     refAr02(),
+                    refAr02FreeRefManager,
                 ),
             ]),
         );

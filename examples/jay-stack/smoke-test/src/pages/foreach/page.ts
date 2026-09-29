@@ -3,7 +3,7 @@ import {
     phaseOutput,
     type PageProps,
 } from '@jay-framework/fullstack-component';
-import type { PageContract, PageSlowViewState, PageFastViewState } from './page.jay-contract';
+import type { PageContract, PageSlowViewState, PageFastViewState } from './page.jay-html';
 
 export const page = makeJayStackComponent<PageContract>()
     .withProps<PageProps>()

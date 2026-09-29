@@ -50,13 +50,22 @@ const _HeadlessLayout0 = makeHeadlessInstanceComponent(
     _headlessLayout0HydrateRender,
     Layout,
     'S0/0/layout:AR0',
+    ['ar0'],
 );
 export function hydrate(rootElement, options) {
     const [refManager, [refAr02]] = ReferencesManager.for(options, [], [], ['ar0'], []);
+    const [refAr02FreeRefManager] = ReferencesManager.for(options, ['ar0'], [], [], []);
+    refManager.get('ar0').setFreeRefManager(refAr02FreeRefManager);
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('S0/0', {}, [
-                childCompHydrate(_HeadlessLayout0, (vs) => ({}), 'S1/0', refAr02()),
+                childCompHydrate(
+                    _HeadlessLayout0,
+                    (vs) => ({}),
+                    'S1/0',
+                    refAr02(),
+                    refAr02FreeRefManager,
+                ),
             ]),
         );
     return [refManager.getPublicAPI(), render];
