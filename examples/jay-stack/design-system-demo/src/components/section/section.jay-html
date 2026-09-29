@@ -1,0 +1,46 @@
+<html>
+<head>
+  <script type="application/jay-data" contract="./section.jay-contract"></script>
+  <!-- Section > Gallery > Card > Button: the top of the nested design-system hierarchy (DL#196).
+       A composing template imports the contract of every region in its inlined body, transitively. -->
+  <script type="application/jay-headless" contract="../gallery/gallery.jay-contract"></script>
+  <script type="application/jay-headless" contract="../card/card.jay-contract"></script>
+  <script type="application/jay-headless" contract="../button/button.jay-contract"></script>
+  <style>
+    .ds-section {
+      padding: 24px;
+      background: #f8fafc;
+      border-radius: 12px;
+    }
+    .ds-section__title {
+      font-size: 1.7rem;
+      margin: 0 0 16px;
+      color: #0f172a;
+    }
+  </style>
+</head>
+<body>
+  <section class="ds-section">
+    <h1 class="ds-section__title">{title}</h1>
+    <jay:gallery ref="grid" heading="{title}">
+      <div class="ds-gallery">
+        <h2 class="ds-gallery__heading">{heading}</h2>
+        <jay:card ref="cardStarter" heading="Starter" body="Everything you need to get going." ctaLabel="Choose Starter">
+          <div class="ds-card">
+            <h3 class="ds-card__heading">{heading}</h3>
+            <p class="ds-card__body">{body}</p>
+            <jay:button label="{ctaLabel}"><button class="ds-button">{label}</button></jay:button>
+          </div>
+        </jay:card>
+        <jay:card ref="cardPro" heading="Pro" body="For growing teams that need more." ctaLabel="Choose Pro">
+          <div class="ds-card">
+            <h3 class="ds-card__heading">{heading}</h3>
+            <p class="ds-card__body">{body}</p>
+            <jay:button label="{ctaLabel}"><button class="ds-button">{label}</button></jay:button>
+          </div>
+        </jay:card>
+      </div>
+    </jay:gallery>
+  </section>
+</body>
+</html>

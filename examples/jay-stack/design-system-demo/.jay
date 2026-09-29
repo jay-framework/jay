@@ -1,0 +1,6 @@
+devServer:
+  portRange: [3400, 3410]
+  pagesBase: './src/pages'
+  publicFolder: './public'
+site:
+  baseUrl: https://design-system-demo.example.com

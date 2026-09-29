@@ -793,8 +793,18 @@ function collectRegionElements(root: HTMLElement): HTMLElement[] {
     return out;
 }
 
+/** A region-drift finding: the factual `message` plus a separate remediation `suggestion` (DL#196 §4). */
+interface RegionDriftFinding {
+    message: string;
+    suggestion?: string;
+}
+
 /** Format one facet drift entry as a validation warning (DL#196 §4). */
-function formatRegionDrift(contractName: string, template: string, entry: DiffEntry): string {
+function formatRegionDrift(
+    contractName: string,
+    template: string,
+    entry: DiffEntry,
+): RegionDriftFinding {
     const label = facetLabel(entry.facet);
     const values =
         entry.change === 'added'
@@ -803,17 +813,18 @@ function formatRegionDrift(contractName: string, template: string, entry: DiffEn
               ? ` (was ${entry.sourceValue ?? ''})`
               : ` (${entry.sourceValue ?? ''} → ${entry.regionValue ?? ''})`;
     const spec = overrideSpecFor(entry.facet);
-    const suggestion =
+    const mark =
         spec.target === 'markup-attribute'
             ? `mark the node override="${spec.value}"`
             : spec.value
               ? `mark the CSS rule /* jay:override: ${spec.value} */`
               : 'mark the CSS rule /* jay:override */';
-    return (
-        `<jay:${contractName}> region differs from source template "${template}": ` +
-        `${label} ${entry.change}${values}. ` +
-        `To keep the page's version, ${suggestion}; to discard it and re-flatten from source, run \`jay-stack sync\`.`
-    );
+    return {
+        message:
+            `<jay:${contractName}> region differs from source template "${template}": ` +
+            `${label} ${entry.change}${values}.`,
+        suggestion: `To keep the page's version, ${mark}; to discard it and re-flatten from source, run \`jay-stack sync\`.`,
+    };
 }
 
 /**
@@ -833,11 +844,11 @@ function formatRegionDrift(contractName: string, template: string, entry: DiffEn
 export function checkRegionDrift(
     jayHtml: JayHtmlSourceFile,
     loadTemplate: (relativeTemplatePath: string) => string | undefined,
-): string[] {
+): RegionDriftFinding[] {
     const importsWithTemplate = jayHtml.headlessImports.filter((imp) => imp.template);
     if (importsWithTemplate.length === 0) return [];
 
-    const warnings: string[] = [];
+    const warnings: RegionDriftFinding[] = [];
     // A page may flatten the same source template into several regions — parse each template once.
     const templateBodyCache = new Map<string, HTMLElement | null>();
 
@@ -852,10 +863,12 @@ export function checkRegionDrift(
             templateBody = (content ? parseHtml(content).querySelector('body') : null) ?? null;
             templateBodyCache.set(imp.template, templateBody);
             if (!templateBody) {
-                warnings.push(
-                    `<jay:${contractName}> declares template="${imp.template}" but its source template ` +
-                        `could not be read. Fix the path or remove the attribute.`,
-                );
+                warnings.push({
+                    message:
+                        `<jay:${contractName}> declares template="${imp.template}" but its source ` +
+                        `template could not be read.`,
+                    suggestion: 'Fix the path or remove the attribute.',
+                });
             }
         }
         if (!templateBody) continue;
@@ -890,12 +903,12 @@ function extractStyleCss(templateHtml: string): string {
 export function checkRegionCssDrift(
     jayHtml: JayHtmlSourceFile,
     loadTemplate: (relativeTemplatePath: string) => string | undefined,
-): string[] {
+): RegionDriftFinding[] {
     const importsWithTemplate = jayHtml.headlessImports.filter((imp) => imp.template);
     if (importsWithTemplate.length === 0) return [];
 
     const pageCss = jayHtml.css ?? '';
-    const warnings: string[] = [];
+    const warnings: RegionDriftFinding[] = [];
     // Parse each source template's CSS once even when flattened into several regions.
     const templateCssCache = new Map<string, string | null>();
 
@@ -1442,14 +1455,22 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                 }
             };
             const driftWarnings = checkRegionDrift(parsedFile.val!, readTemplateRel);
-            for (const msg of driftWarnings) {
-                warnings.push({ file: relativePath, message: msg });
+            for (const finding of driftWarnings) {
+                warnings.push({
+                    file: relativePath,
+                    message: finding.message,
+                    suggestion: finding.suggestion,
+                });
             }
 
             // Check flattened region CSS against source template CSS (DL#196 §4 CSS drift)
             const cssDriftWarnings = checkRegionCssDrift(parsedFile.val!, readTemplateRel);
-            for (const msg of cssDriftWarnings) {
-                warnings.push({ file: relativePath, message: msg });
+            for (const finding of cssDriftWarnings) {
+                warnings.push({
+                    file: relativePath,
+                    message: finding.message,
+                    suggestion: finding.suggestion,
+                });
             }
 
             // Detect template-inclusion cycles among design-system regions (DL#196 §5) — hard errors

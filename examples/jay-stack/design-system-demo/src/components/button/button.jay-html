@@ -1,0 +1,8 @@
+<html>
+<head>
+  <script type="application/jay-data" contract="./button.jay-contract"></script>
+</head>
+<body>
+  <button class="ds-button">{label}</button>
+</body>
+</html>

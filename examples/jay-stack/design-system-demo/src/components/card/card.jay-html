@@ -1,0 +1,40 @@
+<html>
+<head>
+  <script type="application/jay-data" contract="./card.jay-contract"></script>
+  <!-- The card composes the design-system Button. The page that flattens this card must also carry a
+       template= import for Button so the nested region resolves transitively (DL#196). -->
+  <script type="application/jay-headless" contract="../button/button.jay-contract"></script>
+  <style>
+    .ds-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 20px;
+      background: #ffffff;
+    }
+    .ds-card__heading {
+      font-size: 1.15rem;
+      margin: 0 0 8px;
+      color: #0f172a;
+    }
+    .ds-card__body {
+      margin: 0 0 16px;
+      color: #475569;
+    }
+    .ds-button {
+      border: 0;
+      border-radius: 6px;
+      padding: 8px 14px;
+      background: #2563eb;
+      color: #ffffff;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="ds-card">
+    <h3 class="ds-card__heading">{heading}</h3>
+    <p class="ds-card__body">{body}</p>
+    <jay:button label="{ctaLabel}"><button class="ds-button">{label}</button></jay:button>
+  </div>
+</body>
+</html>

@@ -1,0 +1,21 @@
+name: Card
+props:
+  - name: heading
+    type: string
+    required: true
+  - name: body
+    type: string
+    required: true
+  - name: ctaLabel
+    type: string
+    required: true
+tags:
+  - tag: heading
+    type: data
+    dataType: string
+  - tag: body
+    type: data
+    dataType: string
+  - tag: ctaLabel
+    type: data
+    dataType: string

@@ -1012,8 +1012,10 @@ describe('DL#196 — region drift validation via the CLI', () => {
             expect(driftWarnings[0].file).toEqual('src/pages/page.jay-html');
             expect(driftWarnings[0].message).toEqual(
                 '<jay:card> region differs from source template "../components/card/card.jay-html": ' +
-                    '<h3> children changed ("{heading}" → "On sale now"). ' +
-                    'To keep the page\'s version, mark the node override="children"; ' +
+                    '<h3> children changed ("{heading}" → "On sale now").',
+            );
+            expect(driftWarnings[0].suggestion).toEqual(
+                'To keep the page\'s version, mark the node override="children"; ' +
                     'to discard it and re-flatten from source, run `jay-stack sync`.',
             );
         },

@@ -1406,3 +1406,63 @@ the `@scope (.<ref>)` block by selector.
 ([data-jay-scope=promo])`) would be ignored by the differ for free (via `isMetaAttr`) and never touch the
 author's `class`, but it abandons the `.<ref>` selector the design and docs already use; the class approach
 was chosen for continuity.
+
+### Refinement — drift remediation moves to the `suggestion` field
+
+`ValidationWarning` already carries a `suggestion?` field that the CLI renders on its own `Suggestion:`
+line (and the `--json` output exposes as a distinct key), but `formatRegionDrift` crammed the whole
+"To keep the page's version, … run `jay-stack sync`." remediation into `message`. `formatRegionDrift`
+now returns `{ message, suggestion }` — `message` is the factual drift
+(`<jay:X> region differs from source template "…": <h3> children changed (…).`) and `suggestion` is the
+remediation — and `checkRegionDrift` / `checkRegionCssDrift` return `RegionDriftFinding[]` so the two
+consumers push both fields. Same for the unreadable-template warning ("… could not be read." + suggestion
+"Fix the path or remove the attribute."). No message text changed, only where each half lives.
+
+## Issues exposed by the `design-system-demo` example
+
+`examples/jay-stack/design-system-demo` was built (2026-09) to exercise DL#196 end-to-end against a
+realistic, deeply nested design system — `section → gallery → card → button`, with two `card` instances and
+a `button` inside each. Three pages exercise the pristine / overridden / drifted states. Building it
+surfaced two real gaps. **Both are left unfixed on purpose** — the example is the reproduction, and fixes
+follow review of what the example exposes. The example's smoke test (`test/smoke.test.ts`) asserts the
+_current_ (buggy-where-noted) behaviour so the fixes have a failing target to flip.
+
+### Issue 1 — `sync` does not preserve `override=` inside a nested region
+
+`checkRegionDrift` is recursive (`collectRegionElements` walks _every_ region, nested included) so
+`validate` correctly suppresses `override=` facets at any depth. But `jay-stack sync` only round-trips
+overrides on the **outermost** region's own body. Overrides buried inside a nested region are silently
+discarded on re-sync.
+
+Reproduce (from the example dir):
+
+```bash
+yarn sync src/pages/branded/page.jay-html
+git diff src/pages/branded/page.jay-html
+```
+
+The section `<h1 override="class">` (direct child of the outer `<jay:section>` body) survives; the three
+overrides living inside the `<jay:card>` / `<jay:button>` subtrees (`ds-card__heading--brand`,
+`style.color`, `ds-button--gold`) are gone.
+
+**Root cause.** `mergeOverrides` (materialise.ts) returns early at nested region tags —
+`if (isRegionTag(te)) return` — the Q2 decision "a nested region's own source governs it." When the outer
+`<jay:section>` re-flattens from `section.jay-html`, the whole deep subtree is regenerated from the source
+templates, and the page's deep override markers go with it. Q2 was written assuming a nested region on a
+page is _thin_ (its body governed by its own source); it did not account for a page overriding a facet that
+lives structurally inside a nested region's flattened body.
+
+**Fix direction (deferred, for review).** `sync` needs the same recursive descent `checkRegionDrift`
+already has: when re-flattening the outer region, carry the page's per-facet `override=` markers down into
+the nested subtree and re-apply them after each nested re-flatten — i.e. `mergeOverrides` should descend
+into region tags for the _override-preservation_ pass even though drift attribution stops at the region
+boundary. Validate and sync must share one recursive override-collection walk so "validate says clean" and
+"sync keeps it" cannot diverge.
+
+### Issue 2 — `prettifyHtml` drops a space when reflowing wrapped text
+
+Running `sync` on a page whose body has a `<p>` spanning two source lines reflows the text and joins the
+two words across the wrap boundary (`… jay-stack validate reports …` → `… jay-stack validatereports …`).
+A text-node whitespace-collapse bug in the prettifier, surfaced by the sync write-back path (independent of
+the composition machinery — it will bite any sync that reflows wrapped prose).
+

@@ -1,0 +1,41 @@
+<html>
+<head>
+  <script type="application/jay-data" contract="./gallery.jay-contract"></script>
+  <!-- The gallery holds several instances of the same Card region — "multiple instances" (DL#196).
+       It also imports Button's contract because the inlined card bodies contain a <jay:button>. -->
+  <script type="application/jay-headless" contract="../card/card.jay-contract"></script>
+  <script type="application/jay-headless" contract="../button/button.jay-contract"></script>
+  <style>
+    .ds-gallery {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+    }
+    .ds-gallery__heading {
+      grid-column: 1 / -1;
+      margin: 0;
+      font-size: 1.3rem;
+      color: #1e293b;
+    }
+  </style>
+</head>
+<body>
+  <div class="ds-gallery">
+    <h2 class="ds-gallery__heading">{heading}</h2>
+    <jay:card ref="cardStarter" heading="Starter" body="Everything you need to get going." ctaLabel="Choose Starter">
+      <div class="ds-card">
+        <h3 class="ds-card__heading">{heading}</h3>
+        <p class="ds-card__body">{body}</p>
+        <jay:button label="{ctaLabel}"><button class="ds-button">{label}</button></jay:button>
+      </div>
+    </jay:card>
+    <jay:card ref="cardPro" heading="Pro" body="For growing teams that need more." ctaLabel="Choose Pro">
+      <div class="ds-card">
+        <h3 class="ds-card__heading">{heading}</h3>
+        <p class="ds-card__body">{body}</p>
+        <jay:button label="{ctaLabel}"><button class="ds-button">{label}</button></jay:button>
+      </div>
+    </jay:card>
+  </div>
+</body>
+</html>

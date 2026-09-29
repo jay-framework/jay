@@ -10901,6 +10901,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"example-jay-design-system-demo@workspace:examples/jay-stack/design-system-demo":
+  version: 0.0.0-use.local
+  resolution: "example-jay-design-system-demo@workspace:examples/jay-stack/design-system-demo"
+  dependencies:
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/fullstack-component": "workspace:^"
+    "@jay-framework/jay-stack-cli": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/stack-client-runtime": "workspace:^"
+    "@jay-framework/stack-server-runtime": "workspace:^"
+    "@types/node": "npm:^22.10.0"
+    typescript: "npm:~5.7.2"
+    vitest: "npm:^3.2.1"
+  languageName: unknown
+  linkType: soft
+
 "example-jay-fake-shop@workspace:examples/jay-stack/fake-shop":
   version: 0.0.0-use.local
   resolution: "example-jay-fake-shop@workspace:examples/jay-stack/fake-shop"

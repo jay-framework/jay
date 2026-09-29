@@ -290,12 +290,14 @@ describe('checkRegionDrift (DL#196)', () => {
 
         // Region B (unmarked <h3> text edit) is caught; region A (override="class") is not.
         expect(warnings).toHaveLength(1);
-        expect(warnings[0]).toEqual(
-            '<jay:card> region differs from source template "./components/card/card.jay-html": ' +
-                '<h3> children changed ("{heading}" → "On sale now"). ' +
+        expect(warnings[0]).toEqual({
+            message:
+                '<jay:card> region differs from source template "./components/card/card.jay-html": ' +
+                '<h3> children changed ("{heading}" → "On sale now").',
+            suggestion:
                 'To keep the page\'s version, mark the node override="children"; ' +
                 'to discard it and re-flatten from source, run `jay-stack sync`.',
-        );
+        });
     });
 
     it('reports no drift for a region without template provenance', async () => {
@@ -308,10 +310,12 @@ describe('checkRegionDrift (DL#196)', () => {
         const jayHtml = await parseDriftPage('page.jay-html');
         const warnings = checkRegionDrift(jayHtml, () => undefined);
         expect(warnings).toHaveLength(1);
-        expect(warnings[0]).toEqual(
-            '<jay:card> declares template="./components/card/card.jay-html" but its source template ' +
-                'could not be read. Fix the path or remove the attribute.',
-        );
+        expect(warnings[0]).toEqual({
+            message:
+                '<jay:card> declares template="./components/card/card.jay-html" but its source ' +
+                'template could not be read.',
+            suggestion: 'Fix the path or remove the attribute.',
+        });
     });
 });
 
@@ -344,12 +348,14 @@ describe('checkRegionCssDrift (DL#196)', () => {
 
         // Only .card-heading color drifted (black → red); font-weight and .card-body are unchanged.
         expect(warnings).toHaveLength(1);
-        expect(warnings[0]).toEqual(
-            '<jay:card> region differs from source template "./components/card/card.jay-html": ' +
-                'css ".card-heading" declaration "color" changed (black → red). ' +
+        expect(warnings[0]).toEqual({
+            message:
+                '<jay:card> region differs from source template "./components/card/card.jay-html": ' +
+                'css ".card-heading" declaration "color" changed (black → red).',
+            suggestion:
                 "To keep the page's version, mark the CSS rule /* jay:override: color */; " +
                 'to discard it and re-flatten from source, run `jay-stack sync`.',
-        );
+        });
     });
 });
 
