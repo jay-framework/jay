@@ -21,6 +21,8 @@ describe('prettifyHtml', () => {
     });
 
     it('leaves single-line markup unchanged in word spacing', () => {
-        expect(prettifyHtml(`<p>already one line here</p>`)).toEqual(`<p>already one line here</p>`);
+        expect(prettifyHtml(`<p>already one line here</p>`)).toEqual(
+            `<p>already one line here</p>`,
+        );
     });
 });

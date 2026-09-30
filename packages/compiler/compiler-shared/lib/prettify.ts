@@ -29,7 +29,8 @@ ${code}`);
  * YAML. It is swapped out for a placeholder before formatting and restored verbatim afterwards. (Other
  * scripts hold JS that should be beautified; `<pre>`/`<textarea>` are already js-beautify defaults.)
  */
-const JAY_DATA_SCRIPT = /<script\b[^>]*\btype\s*=\s*["']application\/jay-data["'][^>]*>[\s\S]*?<\/script\s*>/gi;
+const JAY_DATA_SCRIPT =
+    /<script\b[^>]*\btype\s*=\s*["']application\/jay-data["'][^>]*>[\s\S]*?<\/script\s*>/gi;
 // An empty <script> placeholder (not an HTML comment) so js-beautify lays it out on its own line like
 // the sibling jay-headless scripts, rather than gluing a comment onto the preceding tag.
 const JAY_DATA_PLACEHOLDER = (i: number): string => `<script data-jay-data-raw="${i}"></script>`;
@@ -66,7 +67,10 @@ export function prettifyHtml(html: string): string {
         wrap_line_length: 100,
     });
 
-    return formatted.replace(JAY_DATA_PLACEHOLDER_RE, (_match, i) => preserved[Number(i)] ?? _match);
+    return formatted.replace(
+        JAY_DATA_PLACEHOLDER_RE,
+        (_match, i) => preserved[Number(i)] ?? _match,
+    );
 }
 
 export function removeComments(code: string): string {

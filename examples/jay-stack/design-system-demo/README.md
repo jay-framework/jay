@@ -26,7 +26,7 @@ compiler flattens `section → gallery → card → button` transitively, and ea
 Two mechanics worth calling out:
 
 - **Every transitive `template=` import lives on the page.** Transitive flatten resolves each nested
-  `<jay:X>` through the *page's* import map, so a page that flattens `section` also declares `template=`
+  `<jay:X>` through the _page's_ import map, so a page that flattens `section` also declares `template=`
   imports for `gallery`, `card`, and `button`. See the `<head>` of any page.
 - **Scope-anchor class.** A jay `ref` is never emitted to the DOM, so the materialiser stamps the ref name
   as a real class on the flattened region root (e.g. `<div class="ds-card cardStarter">`) to give
@@ -34,11 +34,11 @@ Two mechanics worth calling out:
 
 ## The three pages
 
-| Route      | File                          | Demonstrates                                                        |
-| ---------- | ----------------------------- | ------------------------------------------------------------------ |
-| `/`        | `src/pages/page.jay-html`         | **Pristine** — flattened straight from source, no overrides, no drift. |
+| Route      | File                              | Demonstrates                                                                            |
+| ---------- | --------------------------------- | --------------------------------------------------------------------------------------- |
+| `/`        | `src/pages/page.jay-html`         | **Pristine** — flattened straight from source, no overrides, no drift.                  |
 | `/branded` | `src/pages/branded/page.jay-html` | **With overrides** — page-owned facets marked `override=`; `validate` reports no drift. |
-| `/drifted` | `src/pages/drifted/page.jay-html` | **Unmarked deviations** — hand edits with no `override=`; `validate` reports drift. |
+| `/drifted` | `src/pages/drifted/page.jay-html` | **Unmarked deviations** — hand edits with no `override=`; `validate` reports drift.     |
 
 The branded page owns four facets across the nesting levels:
 

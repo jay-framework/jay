@@ -233,7 +233,9 @@ describe('materialise — sync preserves overrides inside nested regions (Issue 
     it('preserves overrides two region levels deep (section → card → button)', () => {
         const deep = {
             section: { body: `<section><jay:card ref="c"></jay:card></section>` },
-            card: { body: `<div class="card"><h3 class="ttl">{heading}</h3><jay:button ref="b"></jay:button></div>` },
+            card: {
+                body: `<div class="card"><h3 class="ttl">{heading}</h3><jay:button ref="b"></jay:button></div>`,
+            },
             button: { body: `<button class="btn">{label}</button>` },
         };
         const page =
