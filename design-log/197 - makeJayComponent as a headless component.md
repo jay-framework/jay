@@ -8,19 +8,24 @@ DL#20 (component compiler), DL#193 (`$parent` / synthetic parent context).
 
 ## Decisions for the Implementer (TL;DR)
 
-- **`makeJayComponent` stops coupling the template.** Today `makeJayComponent(preRender, comp, ...markers)`
-  binds a compiled template (`preRender`) to the logic (`comp`) inside the component's **own** `.ts`.
-  After this change it takes **only the logic + context markers** and returns a **headless component
-  marker** carrying `{ comp, contextMarkers }` + the phantom `Props/ViewState/Refs/CompCore` types. It
-  does **not** create the reactive factory.
-- **The template↔logic bind moves to the consumer.** The current factory body
-  (`component.ts:143-267`) is extracted verbatim into a runtime binder `bindComponentTemplate(preRender,
-headless): (props) => ConcreteJayComponent`. The consuming `.jay-html`'s **generated code** calls it —
-  regular jay does **not** need the `makeHeadlessInstanceComponent` indirection (that wrapper exists only
-  for the stack runtime's instance-context/coordinate plumbing).
-- **Keep the name `makeJayComponent`** (change the signature). No deprecated throwing stub — the signature
-  change is a compile-time type error at every call site, which is a better migration signal than a
-  runtime throw. (Q1 — open for confirmation.)
+- **Two functions, split by responsibility.** Today `makeJayComponent` is _both_ the component
+  **definition** (logic + markers) and its **implementation** (bind to a template). This change splits them:
+  - **`makeJayComponent` — the definition (user-facing, name kept).** The developer keeps writing
+    `makeJayComponent(comp, ...contextMarkers)` in the component's own `.ts`. The signature changes (no
+    `preRender`); it now returns a **headless component marker** carrying `{ comp, contextMarkers }` +
+    the phantom `Props/ViewState/Refs/CompCore` types, and does **not** create the reactive factory.
+  - **`composeJayComponent` — the implementation (runtime, compiler-emitted).** A new runtime function
+    `composeJayComponent(preRender, headless): (props) => ConcreteJayComponent` binds the definition to a
+    template/element. It is the current factory body (`component.ts:143-267`) relocated verbatim, and is
+    only ever emitted by the consuming `.jay-html`'s **generated code** — developers never call it by hand.
+- **The template↔logic bind moves to the consumer.** `composeJayComponent` runs consumer-side; regular
+  jay does **not** need the `makeHeadlessInstanceComponent` indirection (that wrapper exists only for the
+  stack runtime's instance-context/coordinate plumbing).
+- **`makeJayComponent` keeps its name; the binder gets a new one.** (Q1, resolved.) The user-facing
+  definition function stays `makeJayComponent` so authored component `.ts` reads unchanged apart from
+  dropping the template import; the _implementation_ half becomes the distinctly-named
+  `composeJayComponent`. `makeJayComponent`'s signature change is a compile-time type error at every old
+  call site (a better migration signal than a runtime throw) — no deprecated stub.
 - **Detection stays by-symbol; props become recoverable.** `analyzeExportedTypes` still finds the
   component via `functionType.symbol === MAKE_JAY_COMPONENT.symbol` (`analyze-exported-types.ts:299-302`)
   — **zero new detection surface**. Only the type-**extraction** walk changes: it currently reads
@@ -38,7 +43,7 @@ headless): (props) => ConcreteJayComponent`. The consuming `.jay-html`'s **gener
   the _same_ model (one instance path, one composition story).
 - **Sequencing: this is Phase 2.** Land [[196 - validated inline composition]]'s jay-stack `contract=`
   deletion first (proven two-import/flatten model), then apply this. The two touch independent code paths
-  (`parseHeadfullImports` vs `parseHeadfullFSImports`; `bindComponentTemplate` vs
+  (`parseHeadfullImports` vs `parseHeadfullFSImports`; `composeJayComponent` vs
   `makeHeadlessInstanceComponent`), so nothing forces them together.
 
 ---
@@ -87,15 +92,15 @@ Concretely, three things are currently private to the component `.ts` and must b
 
 ## Prior Art / Adjacent Mechanisms
 
-| Mechanism                                                                       | Where                                                        | Solves / constrains                                                                                                                            |
-| ------------------------------------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `makeJayComponent` factory                                                      | `component.ts:131-267`                                       | Already consumer-callable given `(preRender, comp, markers)`. Its body is the binder we extract. **Nothing runtime-new is required.**          |
-| `makeJayStackComponent` + `makeHeadlessInstanceComponent(render, logic, coord)` | stack-client-runtime                                         | The working template/logic-separated model. But its binder adds instance-context + coordinate indirection regular jay does not need.           |
-| DL#196 flatten / passthrough                                                    | jay-html parser + `makePassthroughHeadlessInstanceComponent` | The consumer-owns-the-template story. Regular jay should reuse it (Q2), not invent a second one.                                               |
-| `parseHeadfullImports` (no `contract=`)                                         | `jay-html-parser.ts:585-631`                                 | The regular path. Reads `src=`+`names=`, **rejects** fullStack exports (`:608`), emits one import + `childComp`. This is what changes.         |
-| `parseHeadfullFSImports` (`contract=`)                                          | `jay-html-parser.ts:1134`                                    | Already reads `src=` + the `.jay-html` template + emits a binder. The reader/emitter split to copy.                                            |
-| `analyzeExportedTypes` detection                                                | `analyze-exported-types.ts:290-327`                          | Detection is by **symbol identity** (survives unchanged); the return-type **extraction** walk (`:303-309`) must change.                        |
-| `plugin-validator` `analyzeBuilderChains`                                       | `check-component-contract.ts:208-255`                        | Already reads a `.withProps<T>()` type arg to validate props — precedent for typing props off a marker call rather than the constructor param. |
+| Mechanism                                                                       | Where                                                        | Solves / constrains                                                                                                                                             |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `makeJayComponent` factory                                                      | `component.ts:131-267`                                       | Already consumer-callable given `(preRender, comp, markers)`. Its body becomes `composeJayComponent` (relocated verbatim). **Nothing runtime-new is required.** |
+| `makeJayStackComponent` + `makeHeadlessInstanceComponent(render, logic, coord)` | stack-client-runtime                                         | The working template/logic-separated model. But its binder adds instance-context + coordinate indirection regular jay does not need.                            |
+| DL#196 flatten / passthrough                                                    | jay-html parser + `makePassthroughHeadlessInstanceComponent` | The consumer-owns-the-template story. Regular jay should reuse it (Q2), not invent a second one.                                                                |
+| `parseHeadfullImports` (no `contract=`)                                         | `jay-html-parser.ts:585-631`                                 | The regular path. Reads `src=`+`names=`, **rejects** fullStack exports (`:608`), emits one import + `childComp`. This is what changes.                          |
+| `parseHeadfullFSImports` (`contract=`)                                          | `jay-html-parser.ts:1134`                                    | Already reads `src=` + the `.jay-html` template + emits a binder. The reader/emitter split to copy.                                                             |
+| `analyzeExportedTypes` detection                                                | `analyze-exported-types.ts:290-327`                          | Detection is by **symbol identity** (survives unchanged); the return-type **extraction** walk (`:303-309`) must change.                                         |
+| `plugin-validator` `analyzeBuilderChains`                                       | `check-component-contract.ts:208-255`                        | Already reads a `.withProps<T>()` type arg to validate props — precedent for typing props off a marker call rather than the constructor param.                  |
 
 **Null-hypothesis check:** the runtime needs **no new mechanism** — we _subtract_ the `preRender` argument
 from `makeJayComponent` and _relocate_ (not rewrite) its body into a binder. The only genuinely new
@@ -104,14 +109,17 @@ imported-symbol-identity resolution.
 
 ## Questions and Answers
 
-**Q1. Keep the name `makeJayComponent`, or add a variant + deprecate the old one?**
-_Recommendation: keep the name, change the signature; no throwing stub._ Because the return + argument
-types both change, every existing call site becomes a **compile error** the moment the package rebuilds —
-a stronger, earlier migration signal than a runtime throw, and Jay carries no backcompat obligation
-(experimental). A throwing stub only helps if old and new coexist during a transition, which they won't
-(the regular-jay migration is a single compiler-wide pass). _Open: confirm, or do you want a
-`makeJayHeadlessComponent` alias + a `makeJayComponent` that throws with a migration URL for the benefit
-of external/example code outside this repo?_
+**Q1. What are the two function names?**
+_Resolved: `makeJayComponent` stays the user-facing **definition**; the new **implementation** binder is
+`composeJayComponent`._ The developer keeps authoring `makeJayComponent(comp, ...markers)` in the
+component `.ts` — the name that already means "define my component" — and the compiler emits
+`composeJayComponent(preRender, headless)` to bind that definition to a template/element ("compose the
+component with its element"). Splitting the name makes the two responsibilities legible: today one call
+does both; after this, the definition and the implementation are distinct functions with distinct names.
+`makeJayComponent`'s signature still changes (drops `preRender`), so every existing call site becomes a
+**compile error** the moment the package rebuilds — a stronger, earlier migration signal than a runtime
+throw, and Jay carries no backcompat obligation (experimental). No throwing stub: old and new never
+coexist (the regular-jay migration is a single compiler-wide pass).
 
 **Q2. How does the consumer obtain the template — flatten inline (DL#196) or import a separate `.jay-html`?**
 _Recommendation: flatten inline (DL#196), so headfull and jay-stack are one model._ Under flatten, the
@@ -121,8 +129,8 @@ attribute pointing at the component's `.jay-html` — is simpler to land increme
 composition models. _Open._
 
 **Q3. Is the regular-jay binder distinct from `makeHeadlessInstanceComponent`, or do they converge?**
-_Answer for now: distinct._ Regular jay's binder = today's `makeJayComponent` body (plain factory, no
-coordinates). The stack binder keeps its instance-context/coordinate wrapping. Converging them is a
+_Answer for now: distinct._ Regular jay's binder (`composeJayComponent`) = today's `makeJayComponent` body
+(plain factory, no coordinates). The stack binder keeps its instance-context/coordinate wrapping. Converging them is a
 possible later subtraction (Trade-offs), not required here.
 
 **Q4. What carries the ordered context markers to the consumer?**
@@ -161,10 +169,11 @@ export function makeJayComponent<
 }
 ```
 
-**New binder — the relocated factory body (unchanged logic, `component.ts:143-267`):**
+**New implementation binder `composeJayComponent` — the relocated factory body (unchanged logic,
+`component.ts:143-267`):**
 
 ```ts
-export function bindComponentTemplate<…>(
+export function composeJayComponent<…>(
     preRender: PreRenderElement<ViewState, Refs, JayElementT>,
     headless: JayHeadlessComponent<PropsT, ViewState, Refs, Contexts, CompCore>,
 ): (props: PropsT) => ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT> {
@@ -181,9 +190,9 @@ untouched — they just now live in the binder, sourcing `comp`/`contextMarkers`
 Generated consuming `.jay-html` code emits, per instance (illustrative — exact shape depends on Q2):
 
 ```ts
-import { Counter } from '../counter/counter'; // logic (headless marker)
+import { Counter } from '../counter/counter'; // logic (headless marker, from makeJayComponent)
 import { render as counterRender } from './counter.jay-html'; // OR the page-flattened region render (Q2)
-const CounterComp = bindComponentTemplate(counterRender, Counter);
+const CounterComp = composeJayComponent(counterRender, Counter);
 // …
 childComp(CounterComp, (vs) => ({ initialValue: vs.count1 }), refCounter1());
 ```
@@ -209,7 +218,7 @@ graph LR
   end
   subgraph Proposed
     D[counter.ts] -->|makeJayComponent comp+markers| E[Counter headless marker]
-    F[template .jay-html / flattened region] --> G[bindComponentTemplate]
+    F[template .jay-html / flattened region] --> G[composeJayComponent]
     E --> G
     G --> H[consumer: childComp CounterComp]
   end
@@ -217,14 +226,14 @@ graph LR
 
 ## Implementation Plan
 
-1. **Runtime, additive:** add `JayHeadlessComponent` + `bindComponentTemplate` (copy of the factory body);
+1. **Runtime, additive:** add `JayHeadlessComponent` + `composeJayComponent` (copy of the factory body);
    keep the old `makeJayComponent` temporarily as `makeJayComponentLegacy` internally so tests stay green.
-2. **Flip `makeJayComponent`** to the headless signature; update `component` unit tests to bind via
-   `bindComponentTemplate`.
+2. **Flip `makeJayComponent`** to the headless definition signature; update `component` unit tests to bind
+   via `composeJayComponent`.
 3. **`analyzeExportedTypes`:** update the extraction walk (`:303-311`), add a two-step-builder-free unit
    fixture for the marker shape, assert props recovery.
 4. **Compiler:** rework `parseHeadfullImports` + `renderNestedComponent` (+ `jay-html-compile-imports`) to
-   the chosen template model (Q2). Emit `bindComponentTemplate` + the logic/template imports. Ensure all
+   the chosen template model (Q2). Emit `composeJayComponent` + the logic/template imports. Ensure all
    three targets (main-trusted, secure, react) emit correctly.
 5. **Migrate component `.ts` fixtures** (26 files found across runtime/secure, jay-4-react, rollup-plugin,
    compiler-jay-html, compiler) to export the marker; regenerate expected output.
@@ -236,7 +245,7 @@ graph LR
   uniformly. Net runtime **subtraction** (an argument removed; body relocated).
 - **(−)** Large migration: every component `.ts` + regenerated fixtures across three compile targets. This
   is why it is **Phase 2**, after the jay-stack `contract=` deletion proves the model.
-- **(−/open)** Two binders (`bindComponentTemplate` vs `makeHeadlessInstanceComponent`) until/unless Q3
+- **(−/open)** Two binders (`composeJayComponent` vs `makeHeadlessInstanceComponent`) until/unless Q3
   converges them.
 
 ## Verification criteria

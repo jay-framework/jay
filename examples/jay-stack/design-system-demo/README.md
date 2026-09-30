@@ -66,33 +66,44 @@ yarn dev
 Expected `validate` result: **valid, with exactly two drift warnings — both on `/drifted`**. The pristine
 and branded pages are clean (the branded page's overrides suppress their facets at every nesting level).
 
-## Issues this example exposes
+## Issues this example exposed
 
-Building this example surfaced real gaps in the current DL#196 implementation. They are **left unfixed on
-purpose** so the example can drive the fix discussion.
+Building this example surfaced real gaps in the DL#196 implementation. All three are now fixed.
 
-### 1. `sync` does not preserve overrides inside a nested region
+### 1. `sync` did not preserve overrides inside a nested region — FIXED
 
-`validate` correctly suppresses `override=` facets at every nesting depth, but `jay-stack sync` only
-round-trips overrides on the page's **outermost** region's own body. Overrides buried inside a nested
-region are silently discarded on re-sync.
+`validate` correctly suppresses `override=` facets at every nesting depth, but `jay-stack sync` used to
+round-trip overrides only on the page's **outermost** region's own body — overrides buried inside a nested
+region were silently discarded on re-sync (only the section `<h1 override="class">` survived; the three
+overrides inside the `<jay:card>` / `<jay:button>` regions were lost).
 
-Reproduce:
+Fixed in `mergeOverrides` (`compiler-inline-composition`): at a nested region boundary it now keeps the
+template's region tag but carries the page's region body across, so the transitive re-flatten merges the
+deep facets in at each child region's own level — mirroring how the differ stops at the boundary while
+`checkRegionDrift` visits each region separately. An override deep inside a nested region is preserved
+without marking the parent `<jay:X>` inclusion. Verify:
 
 ```bash
-yarn sync src/pages/branded/page.jay-html
-git diff src/pages/branded/page.jay-html
+yarn sync                                     # re-flatten every page
+git diff src/pages/branded/page.jay-html      # no diff — all four overrides survive
 ```
 
-The section `<h1 override="class">` (direct body of the outer `<jay:section>`) survives, but the three
-overrides inside the `<jay:card>` / `<jay:button>` regions are gone.
+### 2. `sync` scanned the whole project root — FIXED
 
-Root cause: `mergeOverrides` deliberately does not descend into nested region tags (DL#196 Q2 — "a nested
-region's own source governs it"). When the outer `<jay:section>` re-flattens from `section.jay-html`, the
-entire deep subtree is regenerated from the templates, taking the page's deep override markers with it.
+The first `yarn sync` after a build swept in the flattened page copies under `build/` and failed on their
+`template=` provenance. `sync` now scopes discovery to the config's `pagesBase` + `componentsBase`, like
+`validate`.
 
-### 2. `prettifyHtml` can drop a space when reflowing wrapped text
+### 3. `prettifyHtml` dropped a space when reflowing wrapped text — FIXED
 
-Running `sync` on the branded page reflows the intro `<p>` and joins two words across the wrap boundary
-("… jay-stack validate reports …" → "… jay-stack validatereports …"). A text-node whitespace-collapse bug
-in the prettifier, surfaced by the sync write-back path.
+Running `sync` on a page whose body has a `<p>` spanning two source lines reflowed the text and joined two
+words across the wrap boundary ("… jay-stack validate reports …" → "… jay-stack validatereports …"). The
+prettifier pre-normalized author line-wrapping by joining trimmed lines with `''`, which welded the words
+on either side of a wrapped text node — a newline inside a text node is significant HTML whitespace that
+renders as one space.
+
+Fixed in `prettifyHtml` (`compiler-shared`): the line-collapse now inserts a single space **only** where
+the wrap boundary sits between two text characters; at any boundary touching a tag it still joins with
+nothing (so element-to-element spacing is unchanged). The same fix also stopped corrupting
+`<script type="application/jay-data">` YAML — that block is now swapped for a placeholder and restored
+verbatim, so its indentation/nesting survives formatting.

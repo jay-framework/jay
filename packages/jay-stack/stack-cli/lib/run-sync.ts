@@ -27,6 +27,7 @@ import { materialise } from '@jay-framework/compiler-inline-composition';
 import { parse as parseHtml } from 'node-html-parser';
 import { buildMaterialiseOptions } from './materialise-context';
 import { extractScopeBlock, splitScopeBlocks } from './scope-css';
+import { loadConfig, getConfigWithDefaults } from './config';
 
 export interface SyncPageResult {
     /** the re-flattened page HTML (regions filled + `@scope` CSS merged), prettified. */
@@ -115,9 +116,17 @@ function mergeScopeCss(html: string, aggregatedCss: string): string {
     return root.toString();
 }
 
-/** Discover the page `.jay-html` files a sync run should touch. */
-async function resolveTargets(
+/**
+ * Discover the page `.jay-html` files a sync run should touch. Scanning is scoped to the project's
+ * source directories (`pagesBase` + `componentsBase`), never the whole project root — otherwise sync
+ * would sweep in the flattened page copies under `build/`, whose `template=` paths resolve against the
+ * build tree and fail (mirrors `validate`'s config-scoped discovery).
+ *
+ * @internal Exported for testing
+ */
+export async function resolveTargets(
     projectRoot: string,
+    scanDirs: string[],
     target: string | undefined,
     all: boolean,
 ): Promise<string[]> {
@@ -127,7 +136,10 @@ async function resolveTargets(
         const abs = path.isAbsolute(file) ? file : path.resolve(projectRoot, file);
         return [abs];
     }
-    return glob(`${projectRoot}/**/*${JAY_EXTENSION}`);
+    const found = await Promise.all(
+        scanDirs.map((dir) => glob(`${dir}/**/*${JAY_EXTENSION}`).catch(() => [] as string[])),
+    );
+    return [...new Set(found.flat())];
 }
 
 export async function runSync(
@@ -145,7 +157,12 @@ export async function runSync(
         );
     }
 
-    const files = await resolveTargets(projectRoot, target, options.all ?? false);
+    const resolvedConfig = getConfigWithDefaults(loadConfig(projectRoot));
+    const scanDirs = [
+        path.resolve(projectRoot, resolvedConfig.devServer.pagesBase),
+        path.resolve(projectRoot, resolvedConfig.devServer.componentsBase),
+    ];
+    const files = await resolveTargets(projectRoot, scanDirs, target, options.all ?? false);
     let filesChanged = 0;
     let regionsSynced = 0;
     let hadError = false;

@@ -1423,9 +1423,8 @@ consumers push both fields. Same for the unreadable-template warning ("… could
 `examples/jay-stack/design-system-demo` was built (2026-09) to exercise DL#196 end-to-end against a
 realistic, deeply nested design system — `section → gallery → card → button`, with two `card` instances and
 a `button` inside each. Three pages exercise the pristine / overridden / drifted states. Building it
-surfaced two real gaps. **Both are left unfixed on purpose** — the example is the reproduction, and fixes
-follow review of what the example exposes. The example's smoke test (`test/smoke.test.ts`) asserts the
-_current_ (buggy-where-noted) behaviour so the fixes have a failing target to flip.
+surfaced three real gaps — all three are now **fixed**. The example's smoke test (`test/smoke.test.ts`)
+asserts the drift-validation behaviour end-to-end.
 
 ### Issue 1 — `sync` does not preserve `override=` inside a nested region
 
@@ -1459,10 +1458,67 @@ into region tags for the _override-preservation_ pass even though drift attribut
 boundary. Validate and sync must share one recursive override-collection walk so "validate says clean" and
 "sync keeps it" cannot diverge.
 
-### Issue 2 — `prettifyHtml` drops a space when reflowing wrapped text
+**Resolution (implemented).** The fix is smaller than the direction above and needs no new recursive walk —
+the transitive re-flatten (`fillRegions`) is _already_ recursive; the bug was only that `mergeOverrides`
+**discarded** the page's nested-region body before that recursion could see it. `mergeElement`'s region-tag
+branch changed from `return` (discard, leaving the parent template's copy of the nested body) to
+`te.set_content(ee.innerHTML)` — keep the template's region **tag** (its `ref` + props stay
+parent-template-governed), but carry the page's region **body** across. `fillRegions` then re-flattens that
+region from its own template with the page body as the merge input, so `mergeOverrides` runs again at the
+child's level and preserves its facets — recursively, to any depth. This is the exact mirror of the
+validate side: the differ (`diffBodies`) stops at the region boundary (`if (isRegionTag) continue`) while
+`checkRegionDrift` visits each region separately via `collectRegionElements`. So the two now share one
+model — per-region, override-per-facet, stop-at-boundary, recurse-by-region — and cannot diverge: a facet
+marked `override=` is suppressed by validate **and** kept by sync; an unmarked deviation is reported by
+validate **and** reconciled by sync, at every nesting depth. An override deep inside a nested region is
+preserved **without** marking the parent's `<jay:X>` inclusion (the requirement). Landed in
+`materialise.ts`; tests in `materialise.test.ts` › "sync preserves overrides inside nested regions
+(Issue 1)" (single-level preserve, single-level reconcile-unmarked, two-level section→card→button
+preserve). Verified end-to-end on the example: `yarn sync` leaves `branded/page.jay-html` byte-identical
+(all four overrides survive) and reconciles both unmarked deep deviations in `drifted/page.jay-html`.
 
-Running `sync` on a page whose body has a `<p>` spanning two source lines reflows the text and joins the
+### Issue 2 — `prettifyHtml` drops a space when reflowing wrapped text (FIXED)
+
+Running `sync` on a page whose body has a `<p>` spanning two source lines reflowed the text and joined the
 two words across the wrap boundary (`… jay-stack validate reports …` → `… jay-stack validatereports …`).
 A text-node whitespace-collapse bug in the prettifier, surfaced by the sync write-back path (independent of
-the composition machinery — it will bite any sync that reflows wrapped prose).
+the composition machinery — it bit any sync that reflowed wrapped prose).
+
+**Root cause.** `prettifyHtml` (`compiler-shared/lib/prettify.ts`) pre-normalized the author's line
+wrapping before handing markup to `js-beautify` by joining trimmed lines with `''`. A newline inside a text
+node is significant HTML whitespace that renders as one space, so the empty join welded the words on either
+side of a wrap boundary (`validate\nreports` → `validatereports`). The pre-collapse is deliberate — it makes
+`prettifyHtml` a strong normalizer, which sync's change detection relies on (it compares
+`prettifyHtml(merged) !== prettifyHtml(rawPage)` as **strings**, so both sides must normalize incidental
+whitespace identically).
+
+**Fix (implemented).** The line-collapse now inserts a single space **only** where the wrap boundary sits
+between two text characters (prev char ≠ `>` and next char ≠ `<`); at any boundary touching a tag it still
+joins with nothing, so element-to-element spacing is byte-identical to before (zero regressions across the
+compiler/jay-html/inline-composition/stack-cli/stack-server-build suites). While fixing this we found the
+same pre-collapse **also** corrupted `<script type="application/jay-data">` YAML — collapsing its lines
+flattened the nesting (and the new space made `data:\n title:` → `data: title:`, invalid YAML). So jay-data
+blocks are now swapped for an empty-`<script>` placeholder before formatting and restored **verbatim**
+after, leaving their indentation/nesting intact (JS `<script>` and `<style>` are still beautified as
+before). Landed in `prettify.ts`; tests in `compiler-shared/test/prettify.test.ts`. Verified end-to-end:
+`yarn sync` on `drifted/page.jay-html` leaves the wrapped `<p>` byte-identical and touches only the two
+intended drift reconciliations.
+
+> Note — sync change detection is a **string** compare (`prettifyHtml(a) !== prettifyHtml(b)`), which is
+> why a prettifier whitespace bug surfaces here. This is distinct from the DL#196 **drift differ**
+> (`diffBodies`/`diffMarkup`, used by `validate`), which is a **DOM-model**, facet-granular compare (Q3).
+
+### Issue 3 — `sync` scanned the whole project root, sweeping in `build/` copies (FIXED)
+
+The first `yarn sync` after a dev/build run failed on the flattened page copies the build emits under
+`build/dev/pre-rendered/**/page.jay-html`: their `template=` provenance resolves against the build tree
+(`build/dev/pre-rendered/components/section/section.jay-html`), which does not exist, so each errored with
+`cannot resolve template … for <jay:section>`. Root cause: `resolveTargets` globbed
+`${projectRoot}/**/*.jay-html` — the entire project — whereas `validate` scopes discovery to the config's
+`pagesBase` + `componentsBase`.
+
+**Fix (landed).** `runSync` now loads `.jay` config and scans only `pagesBase` + `componentsBase`
+(resolved against the project root), mirroring `validate`. Build output, `dist/`, and `node_modules/` are
+never touched. Regression test: `run-sync.test.ts` › `resolveTargets — discovery scoping` (a fixture with a
+`build/dev/pre-rendered/page.jay-html` proves it is excluded).
 

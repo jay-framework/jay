@@ -3,7 +3,7 @@ import path from 'path';
 import { promises as fsp, readFileSync } from 'fs';
 import { parse as parseHtml } from 'node-html-parser';
 import { parseJayFile, JAY_IMPORT_RESOLVER } from '@jay-framework/compiler-jay-html';
-import { syncPageContent } from '../lib/run-sync';
+import { syncPageContent, resolveTargets } from '../lib/run-sync';
 import { extractScopeBlock } from '../lib/scope-css';
 
 /** Read a file synchronously, returning undefined when it does not exist (test template loader). */
@@ -73,5 +73,28 @@ describe('syncPageContent (DL#196)', () => {
         expect(reparsed.validations).toHaveLength(0);
         const second = syncPageContent(first.content, dirname, reparsed.val!, readFileSyncSafe);
         expect(second.changed).toBe(false);
+    });
+});
+
+describe('resolveTargets — discovery scoping (DL#196)', () => {
+    const root = path.resolve('./test/fixtures/validate/region-sync-scope');
+    const pagesDir = path.join(root, 'src', 'pages');
+    const componentsDir = path.join(root, 'src', 'components');
+    const rel = (files: string[]) => files.map((f) => path.relative(root, f)).sort();
+
+    it('scans only pagesBase + componentsBase, never the build/ output tree', async () => {
+        const files = await resolveTargets(root, [pagesDir, componentsDir], undefined, false);
+
+        // The flattened page copy under build/ must never be swept in — that was the sync bug.
+        expect(rel(files)).toEqual([
+            path.join('src', 'components', 'card.jay-html'),
+            path.join('src', 'pages', 'nested', 'page.jay-html'),
+            path.join('src', 'pages', 'page.jay-html'),
+        ]);
+    });
+
+    it('an explicit target resolves to that single page, ignoring scan dirs', async () => {
+        const files = await resolveTargets(root, [pagesDir], 'src/pages/page.jay-html', false);
+        expect(files).toEqual([path.resolve(root, 'src/pages/page.jay-html')]);
     });
 });

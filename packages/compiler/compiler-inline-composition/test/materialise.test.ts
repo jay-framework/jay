@@ -192,6 +192,68 @@ describe('materialise — sync preserves override facets', () => {
     });
 });
 
+describe('materialise — sync preserves overrides inside nested regions (Issue 1)', () => {
+    const templates = {
+        card: { body: `<div class="card"><jay:button ref="b"></jay:button></div>` },
+        button: { body: `<button class="btn">{label}</button>` },
+    };
+
+    it('preserves an override facet inside a nested region without marking the parent inclusion', () => {
+        const page =
+            `<body><jay:card ref="c"><div class="card">` +
+            `<jay:button ref="b"><button class="btn btn--gold" override="class">{label}</button></jay:button>` +
+            `</div></jay:card></body>`;
+        const result = materialise(page, withTemplates(templates, { preserveOverrides: true }));
+
+        expect(result.errors).toEqual([]);
+        // The deep <button override="class"> survives even though neither <jay:card> nor <jay:button> is marked.
+        expect(squash(result.html)).toBe(
+            `<body><jay:card ref="c"><div class="card">` +
+                `<jay:button ref="b"><button class="btn btn--gold" override="class">{label}</button></jay:button>` +
+                `</div></jay:card></body>`,
+        );
+    });
+
+    it('re-flattens an unmarked deviation inside a nested region (consistent with validate)', () => {
+        const page =
+            `<body><jay:card ref="c"><div class="card">` +
+            `<jay:button ref="b"><button class="btn btn--xl">{label}</button></jay:button>` +
+            `</div></jay:card></body>`;
+        const result = materialise(page, withTemplates(templates, { preserveOverrides: true }));
+
+        expect(result.errors).toEqual([]);
+        // Unmarked → the nested button's class is reconciled back to source (validate would report it as drift).
+        expect(squash(result.html)).toBe(
+            `<body><jay:card ref="c"><div class="card">` +
+                `<jay:button ref="b"><button class="btn">{label}</button></jay:button>` +
+                `</div></jay:card></body>`,
+        );
+    });
+
+    it('preserves overrides two region levels deep (section → card → button)', () => {
+        const deep = {
+            section: { body: `<section><jay:card ref="c"></jay:card></section>` },
+            card: { body: `<div class="card"><h3 class="ttl">{heading}</h3><jay:button ref="b"></jay:button></div>` },
+            button: { body: `<button class="btn">{label}</button>` },
+        };
+        const page =
+            `<body><jay:section ref="s"><section><jay:card ref="c"><div class="card">` +
+            `<h3 class="ttl ttl--brand" override="class">{heading}</h3>` +
+            `<jay:button ref="b"><button class="btn btn--gold" override="class">{label}</button></jay:button>` +
+            `</div></jay:card></section></jay:section></body>`;
+        const result = materialise(page, withTemplates(deep, { preserveOverrides: true }));
+
+        expect(result.errors).toEqual([]);
+        // Both the card-level <h3 override> and the button-level <button override> survive the re-flatten.
+        expect(squash(result.html)).toBe(
+            `<body><jay:section ref="s"><section><jay:card ref="c"><div class="card">` +
+                `<h3 class="ttl ttl--brand" override="class">{heading}</h3>` +
+                `<jay:button ref="b"><button class="btn btn--gold" override="class">{label}</button></jay:button>` +
+                `</div></jay:card></section></jay:section></body>`,
+        );
+    });
+});
+
 describe('mergeOverrides — unit', () => {
     it('carries an owned attribute onto the re-flattened node', () => {
         const merged = mergeOverrides(

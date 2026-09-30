@@ -180,7 +180,17 @@ function mergeChildren(tParent: HTMLElement, eParent: HTMLElement): void {
 }
 
 function mergeElement(te: HTMLElement, ee: HTMLElement): void {
-    if (isRegionTag(te)) return; // nested region — its own source governs it (Q2)
+    if (isRegionTag(te)) {
+        // A nested region's tag (its `ref` + props) is governed by the parent template, but its body may
+        // hold page-owned `override` facets at any depth. Keep the template's tag, but carry the page's
+        // region body across so the transitive re-flatten (`fillRegions`) merges those facets in at the
+        // child region's own level (DL#196 Issue 1). This mirrors the differ, which stops at the region
+        // boundary while `checkRegionDrift` visits each region separately — so an override deep inside a
+        // nested region is preserved without marking the parent's `<jay:X>` inclusion. Returning here
+        // instead (the old behaviour) discarded the page's nested body before recursion could see it.
+        te.set_content(ee.innerHTML);
+        return;
+    }
     const sup = parseOverride(ee);
 
     if (sup.all) {
