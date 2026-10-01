@@ -116,8 +116,8 @@ jay-stack sync -v
 
 Sync is **re-flatten, not merge**: it overwrites everything from source except your `override` facets — no
 merge base, no conflict prompt. It only touches regions with `template=` provenance; keyed and
-hand-authored nested components are left alone. CSS is merged non-destructively — an `@scope (.<ref>)` block
-the page already has is not rewritten.
+hand-authored nested components are left alone. CSS reconciles the same way: an `@scope (.<ref>)` block is
+rewritten to canonical form unless it carries a `/* jay:override */` pragma, which is preserved verbatim.
 
 Example output:
 

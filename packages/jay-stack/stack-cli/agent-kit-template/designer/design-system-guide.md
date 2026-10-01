@@ -62,7 +62,7 @@ the page's `<style>`, `@scope`-wrapped by the region's `ref`:
 
 ```html
 <jay:card ref="promo" heading="{title}">
-  <div class="card">
+  <div class="card promo">
     <h3 class="card-heading">{heading}</h3>
     <p class="card-body">Default body</p>
   </div>
@@ -71,14 +71,90 @@ the page's `<style>`, `@scope`-wrapped by the region's `ref`:
 
 ```css
 @scope (.promo) {
+  :scope {
+    border: 1px solid #ccc;
+    padding: 16px;
+  }
   .card-heading {
     color: black;
   }
 }
 ```
 
+Note two things sync did to the CSS — both required for the styles to actually apply. **Write region CSS in
+this shape yourself**; the rules are below in [The shape of a region's CSS](#the-shape-of-a-regions-css).
+
 > A bare `<jay:X>` with **no** flattened body is a hard error at build time — flatten it with `jay-stack
 sync` (first-fill is just the no-edits case of sync; there is no separate `add` command).
+
+## The shape of a region's CSS
+
+A region's CSS is the component's own CSS, copied into the page `<style>` and rewritten into a canonical
+form. `sync` produces this form and `validate` enforces it — but when you **hand-write or edit** a region's
+CSS, write it this way directly:
+
+### 1. Wrap the component's rules in `@scope (.<ref>)`
+
+All of a region's rules live inside one `@scope` block keyed by the region's `ref`:
+
+```css
+@scope (.promo) {
+  /* …the card's rules… */
+}
+```
+
+This isolates the component's styles to that region — rules inside never leak out, and page rules outside
+never bleed in.
+
+### 2. The `ref` is a real class on the region root (scope-anchor)
+
+A jay `ref` is not emitted to the DOM, so `@scope (.promo)` would have nothing to match. The region root
+therefore carries the ref **as an actual class** — `<div class="card promo">` above. Keep that class on the
+root when you edit markup; it is what anchors the scope. (validate's drift check ignores this synthetic
+class, so it never shows up as drift.)
+
+### 3. The component's own root rule targets `:scope`, not its block class
+
+This is the one that trips people up. **Inside `@scope (.<ref>) { … }`, a scoped selector matches
+_descendants_ of the scope root only — the scope root element itself is reachable solely through `:scope`.**
+So a rule for the region's own root element must be written as `:scope`, _not_ as the root's class:
+
+```css
+@scope (.promo) {
+  :scope {
+    border: 1px solid #ccc;
+  } /* ✅ styles the region root (<div class="card promo">) */
+  .card {
+    border: 1px solid #ccc;
+  } /* ❌ never matches — .card IS the scope root, not a descendant */
+  .card-heading {
+    color: black;
+  } /* ✅ descendant — plain class selector is correct */
+}
+```
+
+Rule of thumb: the component's **root block class** → `:scope`; keep compounds and descendants on that
+class (`.card.active` → `:scope.active`, `.card .card-heading` → `:scope .card-heading`), and leave every
+**descendant/element** selector as its ordinary class.
+
+### 4. Instances of the same component coalesce into one block
+
+When a page holds several regions flattened from the _same_ template, they share one `@scope` block with a
+selector list — never one duplicated block per `ref`:
+
+```css
+@scope (.cardStarter, .cardPro) {
+  :scope {
+    border: 1px solid #ccc;
+  }
+  .card-heading {
+    color: black;
+  }
+}
+```
+
+Regions from _different_ templates stay in separate blocks. If you add a second instance by hand, fold its
+ref into the existing block's selector list rather than copying the block.
 
 ### 3. Edit the copy freely
 
@@ -173,9 +249,18 @@ your region is by definition equal to its source except at your marked facets, s
 overwrite-with-holes. It can never silently combine two edited versions into wrong markup. A synced region
 validates clean.
 
-CSS is merged non-destructively: sync injects the `@scope (.<ref>)` block for a region only if the page
-does not already have one. A block the page already scopes is left as-is for you (and validate's CSS drift
-check) to reconcile — so a `jay:override` pragma you placed is never rewritten by sync.
+CSS reconciles the same way as markup — drift is overwritten, marked facets are kept:
+
+- A region block **equal** to the canonical form (or missing) is (re-)emitted as the canonical
+  `@scope (.<ref>)` block, coalesced with its same-template siblings.
+- A block that **diverges but carries a `/* jay:override */` pragma** is preserved verbatim — your pragma is
+  never rewritten.
+- A block that **diverges without any pragma** is unmarked CSS drift: `sync` overwrites it back to the
+  canonical form, exactly as it re-flattens unmarked markup. (This is what lets `sync` _migrate_ a page to a
+  new canonical form — e.g. an older `.card { … }` root rule is rewritten to `:scope { … }`.)
+
+So after one `sync` a page's CSS is in canonical form, and a `validate`-clean page is one `sync` leaves
+unchanged. To keep a hand-edit through `sync`, mark it with a `jay:override` pragma.
 
 ## Why copy instead of reference?
 
