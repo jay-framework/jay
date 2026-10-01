@@ -1,8 +1,55 @@
 # 197 - `makeJayComponent` as a headless component (template bound by the consumer)
 
-Status: **Draft for review** — no implementation started.
+Status: **REJECTED** (2026-10-01) — not implemented, and will not be. The draft below is kept for the
+record; the rejection rationale is at the top (see **Rejection**), the original draft follows unchanged.
 Related: [[196 - validated inline composition]] (the jay-stack collapse this generalizes),
 DL#20 (component compiler), DL#193 (`$parent` / synthetic parent context).
+
+---
+
+## Rejection (2026-10-01)
+
+**Decision: do not proceed. Jay keeps two distinct component models, by design.**
+
+DL197's sole motivation (see Problem) was to remove the "component `.ts` couples its own template"
+divergence so the [[196 - validated inline composition]] *flatten* story would apply to regular Jay too —
+"one component model across Jay." On review, that goal is not worth pursuing, because unifying the two
+models loses on **both** branches:
+
+- **Keep regular Jay by-reference (don't flatten).** Splitting `makeJayComponent` into a definition marker +
+  `composeJayComponent` binder decouples a template import that *nothing needs decoupled* — the only
+  beneficiary of that decoupling was the flatten story. The result is a large migration (26+ component
+  `.ts`, three compile targets, regenerated goldens) for a cosmetic reshape with no behavioral gain.
+- **Move regular Jay to flattened.** This is semantically wrong for **code-first, encapsulated** components:
+  the consumer would own a copy of the component's private UI, needing `sync` to receive upstream template
+  fixes, which breaks "import and use." It also collides at the import syntax: `application/jay-headless` +
+  `template=` would *look* like the jay-stack import but mean the opposite on every provenance dimension.
+
+**The divergence DL197 treated as a defect is not one.** The two models encode two genuinely different
+relationships, and both should remain first-class:
+
+| | regular Jay — `application/jay-headfull` | jay-stack — `application/jay-headless` |
+| --- | --- | --- |
+| discriminator | `src=` + `names=` | `contract=` (+ optional `src=`) + `template=` |
+| identity source | **code-first** (types via `analyzeExportedTypes` of the `.ts`) | **contract-first** (`.jay-contract` is source of truth) |
+| what's imported | a **finished component** (logic + its own template, bundled) | a contract + a template to **flatten** |
+| template ownership | **component-owned** (coupled in the `.ts`, used by reference) | **consumer-owned** (flattened copy in the page; `validate`/`sync`) |
+| compose site | by reference (`childComp(Component)`) | flattened region; loader composes |
+
+Two honest syntaxes for two real meanings is clearer than one overloaded tag whose meaning flips on whether
+`contract=` or `src=` is present. Note also that the DL195/196 pain was jay-stack's *internal* Tier-2
+inlining apparatus — regular Jay was never the source of it, so there is no independent problem here to fix.
+
+**Net positioning (now documented in the agent-kit):** **jay-stack supports headless components only**
+(contract-first, `<jay:X>` regions, flatten/validate/sync). The lower-level **Jay** runtime
+(`makeJayComponent`, `childComp`) is where **headfull** components live; it is used to *author* headless
+component logic and for standalone client-only apps, but a jay-stack page never composes a headfull
+component directly.
+
+**Rescued separately (if real):** DL197 claimed regular Jay has no prop type-checking at the
+`<jay:X>`/`childComp` call site. If that gap is real it is worth closing — but it is a pure compiler/type
+concern (`analyzeExportedTypes` already recovers the component type) and needs **neither** the
+`makeJayComponent` split **nor** any component-model change. Track it on its own, not here.
 
 ---
 

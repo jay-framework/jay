@@ -15,12 +15,12 @@
 The validator processes each `.jay-html` file with:
 
 - **Page template** — your HTML, bindings, and inline styles
-- **Headfull component content** — `<jay:SiteHeader />`, `<jay:DocsSidebar />` etc. are expanded into the page before validation
+- **Full-stack component content** — `<jay:SiteHeader />`, `<jay:DocsSidebar />` etc. are flattened into the page before validation
 - **Headless component tags** — `<jay:product-widget>` inline templates are visible
 - **Linked CSS files** — `<link rel="stylesheet" href="...">` referenced from `<head>` are read and validated (e.g., for CSS `@import` of external URLs)
 - **Inline `<style>` blocks** — CSS in `<head>` is parsed for rule violations
 
-So a warning about an `<img>` might come from a headfull component's template, not your page template. A CSS warning might come from a linked stylesheet.
+So a warning about an `<img>` might come from a full-stack component's template, not your page template. A CSS warning might come from a linked stylesheet.
 
 ## Errors vs Warnings
 
@@ -37,9 +37,9 @@ Each warning has:
 
 ### Acting on Warnings
 
-1. **Check if the element is in your template** — search your `.jay-html` file for the element. If it's not there, it comes from a headfull component.
+1. **Check if the element is in your template** — search your `.jay-html` file for the element. If it's not there, it comes from a full-stack component.
 
-2. **For headfull component warnings** — fix them in the component's `.jay-html` file (e.g., `src/components/site-header/site-header.jay-html`), not in the page that imports it.
+2. **For full-stack component warnings** — fix them in the component's `.jay-html` file (e.g., `src/components/site-header/site-header.jay-html`), not in the page that imports it.
 
 3. **For dynamic content warnings** — if the warning is about content inside a `{binding}` (like `{post.content}`), you can't fix it in the template. The content is generated at render time. These are usually false positives.
 
@@ -49,7 +49,7 @@ Each warning has:
 
 ### "Image without loading attribute" from a component
 
-The image is in a headfull component (e.g., sidebar icons). Fix it in the component's `.jay-html`, not the page.
+The image is in a full-stack component (e.g., sidebar icons). Fix it in the component's `.jay-html`, not the page.
 
 ### "Heading level skipped" with dynamic content
 

@@ -124,7 +124,7 @@ tags:
 
 ## Dynamic Routes and Contract Params
 
-When a component on the page — whether the page contract, a headless component, or a headfull full-stack component — declares `params`, the page should be placed in a dynamic route directory that provides those params.
+When a component on the page — whether the page contract, a plugin headless component, or a shared full-stack component — declares `params`, the page should be placed in a dynamic route directory that provides those params.
 
 For example, if a headless component's contract declares:
 

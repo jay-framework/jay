@@ -4,7 +4,7 @@ This folder contains guides for creating jay-stack plugins: contracts, headless 
 
 ## What is a Jay Plugin?
 
-A plugin provides headless components (data + interactions, no UI) that project designers use via contracts. Plugins can also provide complete pages (backoffice tools, admin dashboards) via routes. A plugin may additionally ship a **design-system element** — a component that also ships a `.jay-html` template designers flatten into their pages and upgrade via `jay-stack sync` (see [design-system-guide.md](design-system-guide.md)). Plugins can be standalone npm packages or inline within a project (see `examples/jay-stack/fake-shop`).
+A plugin provides headless components (data + interactions, no UI) that project designers use via contracts. Plugins can also provide complete pages (backoffice tools, admin dashboards) via routes. **Prefer shipping your components as design-system elements** — a component that also ships one or more `.jay-html` templates designers flatten into their pages and upgrade via `jay-stack sync` (see [design-system-guide.md](design-system-guide.md)). Shipping a template gives consumers consistent, upgradable UI out of the box instead of hand-authoring every region; ship a bare contract (no template) only when the component truly has no default markup. Plugins can be standalone npm packages or inline within a project (see `examples/jay-stack/fake-shop`).
 
 ## Workflow
 
@@ -62,6 +62,7 @@ The plugin participates in four CLI commands, each running different hooks:
 ## Key Principles
 
 - **Contract is the source of truth** — define it before implementing the component
+- **Ship a design system** — give each component one or more `.jay-html` templates so consumers flatten and upgrade via `jay-stack sync`, rather than hand-authoring UI
 - **Data is immutable** — never mutate ViewState directly, use JSON Patch
 - **Phase-aware** — choose the right rendering phase for each piece of data
 - **Props for configuration, params for URLs** — props are passed by parent components, params come from route segments

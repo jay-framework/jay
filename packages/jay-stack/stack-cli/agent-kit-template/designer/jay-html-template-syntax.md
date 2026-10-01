@@ -18,8 +18,8 @@ A `.jay-html` file is standard HTML with jay-specific extensions.
     <!-- Headless component imports -->
     <script type="application/jay-headless" plugin="..." contract="..." key="..."></script>
 
-    <!-- Headfull component imports -->
-    <script type="application/jay-headfull" src="..." names="..." contract="..."></script>
+    <!-- Shared full-stack component imports (headless) -->
+    <script type="application/jay-headless" src="..." contract="..." template="..."></script>
 
     <!-- SEO head tags (support {binding} syntax) -->
     <title>{productPage.name} | My Store</title>
@@ -182,7 +182,7 @@ Available at all render phases (slow, fast, interactive). Use in text bindings, 
 <a if="jay.url.path ^= '/docs'" class="docs-active">Docs</a>
 ```
 
-`jay.` bindings are available in **page templates only** — headfull components receive this data via props.
+`jay.` bindings are available in **page templates only** — shared full-stack components receive this data via props.
 
 ### Choosing the Right Condition Type
 

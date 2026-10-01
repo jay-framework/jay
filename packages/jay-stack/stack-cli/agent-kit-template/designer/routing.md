@@ -124,7 +124,7 @@ tags:
 
 ## Dynamic Routes and Contract Params
 
-When a component on the page — whether the page contract, a headless component, or a headfull full-stack component — declares `params`, the page should be placed in a dynamic route directory that provides those params.
+When a component on the page — whether the page contract, a plugin headless component, or a shared full-stack component — declares `params`, the page should be placed in a dynamic route directory that provides those params.
 
 For example, if a headless component's contract declares:
 
@@ -146,7 +146,7 @@ Multiple components on the same page can each declare params. The route director
 
 ### Passing Route Params to Nested Components
 
-Route params flow automatically to keyed headless components that declare them as `params` in their contract. Instance-based headless components and headfull components do not receive route params directly — they receive props from the template.
+Route params flow automatically to keyed headless components that declare them as `params` in their contract. Instance-based headless components and shared full-stack components do not receive route params directly — they receive props from the template.
 
 #### Direct binding with `jay.params` (no page.ts needed)
 

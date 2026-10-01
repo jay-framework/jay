@@ -13,7 +13,7 @@ A page has its own data that isn't fully provided by plugins.
 - Can coexist with plugin headless contracts on the same page
 - See [page-contracts.md](page-contracts.md)
 
-### Headfull component contract
+### Full-stack component contract
 
 A shared UI section (header, footer, sidebar) that appears across multiple pages.
 

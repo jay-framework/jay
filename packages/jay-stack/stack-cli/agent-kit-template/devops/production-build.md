@@ -72,7 +72,7 @@ The build is **environment-agnostic**. The same output serves any deployment mod
 
 For production builds to work correctly:
 
-- **Headfull FS components** must be in `src/components/` (not inside page directories)
+- **Full-stack components** (headless) must be in `src/components/` (not inside page directories)
 - **Headless plugins** must be in `src/plugins/`
 - **Actions** must be in `src/actions/` with `*.actions.ts` naming
 - **Init** must be at `src/init.ts`

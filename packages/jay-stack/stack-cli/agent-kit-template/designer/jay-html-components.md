@@ -2,7 +2,9 @@
 
 ## Headless Components
 
-Headless components provide data and interactions with no UI. The page or headfull component provides the template.
+`Headless components provide data and interactions with no UI of their own. The page (or a consuming component) provides the template. **Every component a Jay Stack page composes is headless** — imported with `application/jay-headless`.
+
+The page can supply that template two ways: **write the `<jay:X>` body by hand**, or **flatten one the component ships** — a _design-system element_. **Prefer flattening a shipped template** when the component provides one: a component can offer one or more `.jay-html` templates, so add `template=` to the import and run `jay-stack sync` to copy a chosen one into your page, then edit the copy. You get UI that stays consistent across pages and upgrades in one step, with `jay-stack validate` tracking drift from the source and `jay-stack sync` re-flattening it. Hand-author the `<jay:X>` body only when no template is shipped. See [design-system-guide.md](design-system-guide.md) for the full model.
 
 ### Pattern 1: Key-Based Import
 
@@ -37,7 +39,7 @@ Access data and refs with the key prefix:
 </div>
 ```
 
-Key-based imports are only available in **pages** (not in headfull FS components).
+Key-based imports are only available in **pages** (not in shared full-stack components).
 
 **Important:** Do NOT use `<jay:keyName>` for key-based imports. The key is for ViewState access (`{key.field}`), not for inline elements. `<jay:>` tags use the **contract name**, not the key.
 
@@ -139,44 +141,60 @@ props:
     phase: fast # Only needs to be available at request time
 ```
 
-## Headfull Components
+## Full-Stack Shared Components (Headless)
 
-In Jay Stack, headfull components are full-stack. They must have a `.jay-contract` file and are created using `makeJayStackComponent` in their `.ts` file. They support server rendering (slow/fast/interactive phases) and must include a `contract` attribute in the import.
+A shared UI section with its own logic — a site header, a footer, a side nav — is a **headless full-stack
+component**: logic authored with `makeJayStackComponent` against a `.jay-contract`, with its template
+provided by the consuming page. It supports server rendering (slow/fast/interactive phases). Like every
+Jay Stack component, it is imported with `application/jay-headless` — **not** `application/jay-headfull`
+(see [Headfull components are not for Jay Stack](#headfull-components-are-not-for-jay-stack) below).
 
-Each headfull component lives in its own subdirectory under `src/components/` with three files: `.ts`, `.jay-html`, and `.jay-contract`. The production build only discovers server-side component modules from `src/components/` and `src/plugins/`. Placing them inside page directories will work in dev mode but fail in production.
-
-> **Note:** In Jay (without Jay Stack), headfull components use `makeJayComponent` and do not require a contract. However, `makeJayComponent` components should not be used in Jay Stack because they do not support server rendering.
+Each lives in its own subdirectory under `src/components/` with three files: `.ts`, `.jay-html` (its
+source template), and `.jay-contract`. The production build only discovers server-side component modules
+from `src/components/` and `src/plugins/`. Placing them inside page directories works in dev mode but
+fails in production.
 
 ### Import Declaration
+
+Import it like any coded headless component — `src=` for the logic, `contract=` for the data shape, and
+`template=` so its markup can be flattened into your page:
 
 ```html
 <head>
   <script
-    type="application/jay-headfull"
+    type="application/jay-headless"
     src="../components/shared-header/shared-header"
-    names="SharedHeader"
     contract="../components/shared-header/shared-header.jay-contract"
+    template="../components/shared-header/shared-header.jay-html"
   ></script>
 </head>
 ```
 
 **Attributes:**
 
-- `src` — Path to the component file (must include the filename, not just the directory)
-- `names` — Component name to import
-- `contract` — Path to the component's `.jay-contract` file (required in Jay Stack)
+- `src` — path to the component logic (include the filename, not just the directory)
+- `contract` — path to the component's `.jay-contract` file
+- `template` — path to the component's source `.jay-html`, so `jay-stack sync` can flatten its markup
+  into the region
 
 ### Usage
 
+Place a `<jay:X>` region (the tag is the contract's `name:`) and run `jay-stack sync` to flatten its body:
+
 ```html
-<jay:SharedHeader logoUrl="/logo.png" />
+<jay:SharedHeader ref="header" logoUrl="/logo.png" />
 ```
 
-> **Route params:** Headfull and instance-based headless components do not receive route params directly. To pass a route param, expose it through the page's ViewState and bind it as a prop: `<jay:SideNav activePage="{activePage}" />`. See [routing.md](routing.md) for the full pattern.
+After sync the region carries a flattened, editable copy of the component's template. See
+[design-system-guide.md](design-system-guide.md) for drift, facet-marking, and upgrades.
+
+> **Route params:** instance-based components do not receive route params directly. To pass a route param,
+> expose it through the page's ViewState and bind it as a prop: `<jay:SideNav activePage="{activePage}" />`.
+> See [routing.md](routing.md) for the full pattern.
 
 ### Component Structure
 
-Each headfull component needs three files in its subdirectory under `src/components/`:
+Each shared full-stack component needs three files in its subdirectory under `src/components/`:
 
 **`.jay-contract`** — declares props. Tags are optional (use `tags: []` or omit for structural components):
 
@@ -220,6 +238,15 @@ For a structural component with only props and no data logic, `.withFastRender` 
 </html>
 ```
 
+### Headfull components are not for Jay Stack
+
+`application/jay-headfull` is the **lower-level Jay** component model: logic bundled with its _own_ template
+via `makeJayComponent`, imported with `src=` + `names=` and **no** `contract=`. It has no server rendering,
+so **it is never used directly in a Jay Stack page**. A `jay-headfull` import that carries a `contract=`
+attribute is a **hard build error** (DL#196) — declare the component with `application/jay-headless` and
+flatten it into a `<jay:X>` region instead. Reach for `makeJayComponent` / headfull only in standalone,
+client-only Jay apps, never in Jay Stack.
+
 ## Customizing Component Markup — flatten, then edit
 
 To reuse a component but tweak **this one instance** — a label, an image, whether a paragraph appears, a
@@ -261,19 +288,22 @@ elements, reading drift warnings, the complete facet-marking vocabulary (markup 
 
 ## Nesting Components
 
-### Headfull Inside Headfull
+Components nest by importing other headless components in their own `<head>` and composing them in their
+template.
 
-A layout component imports a header component:
+### A shared component composing another shared component
+
+A layout component flattens a header component:
 
 ```html
 <!-- layout/layout.jay-html -->
 <html>
   <head>
     <script
-      type="application/jay-headfull"
+      type="application/jay-headless"
       src="../header/header"
       contract="../header/header.jay-contract"
-      names="header"
+      template="../header/header.jay-html"
     ></script>
     <script type="application/jay-data">
       data:
@@ -282,14 +312,14 @@ A layout component imports a header component:
   </head>
   <body>
     <div class="layout">
-      <jay:header logoUrl="/logo.png" />
+      <jay:header ref="header" logoUrl="/logo.png" />
       <aside>{sidebarLabel}</aside>
     </div>
   </body>
 </html>
 ```
 
-### Headless Inside Headfull
+### A shared component using a plugin widget
 
 A header component uses a headless plugin widget:
 
@@ -314,19 +344,20 @@ A header component uses a headless plugin widget:
 </html>
 ```
 
-Nesting depth is unlimited. Circular imports are detected as errors. Key-based headless imports (`key="..."`) are not allowed inside headfull FS components — use instance-based imports instead.
+Nesting depth is unlimited. Circular imports are detected as errors. Key-based headless imports
+(`key="..."`) are only allowed in pages — inside a shared component use instance-based (`<jay:X>`) imports.
 
 ## Nesting Rules
 
-| Parent component | Can import headfull FS? | Can import headless (instance)? | Can import keyed headless? |
-| ---------------- | ----------------------- | ------------------------------- | -------------------------- |
-| **Page**         | Yes                     | Yes                             | Yes                        |
-| **Headfull FS**  | Yes (recursive)         | Yes (in its own head)           | No                         |
-| **Headless**     | No (no template)        | No (no template)                | No (no template)           |
+| Parent component           | Can compose full-stack components? | Can import instance headless? | Can import keyed headless? |
+| -------------------------- | ---------------------------------- | ----------------------------- | -------------------------- |
+| **Page**                   | Yes                                | Yes                           | Yes                        |
+| **Full-stack component**   | Yes (recursive)                    | Yes (in its own head)         | No                         |
+| **Keyed / plugin headless**| No (consumer owns the template)    | No                            | No                         |
 
 ## Complete Example
 
-A homepage with key-based, instance-based, and headfull components:
+A homepage with key-based, instance-based, and shared full-stack components — all headless:
 
 ```html
 <html>
@@ -343,10 +374,10 @@ A homepage with key-based, instance-based, and headfull components:
       contract="product-widget"
     ></script>
     <script
-      type="application/jay-headfull"
+      type="application/jay-headless"
       src="../components/shared-header/shared-header"
-      names="SharedHeader"
       contract="../components/shared-header/shared-header.jay-contract"
+      template="../components/shared-header/shared-header.jay-html"
     ></script>
     <script type="application/jay-data" contract="./page.jay-contract"></script>
     <style>
@@ -362,7 +393,7 @@ A homepage with key-based, instance-based, and headfull components:
     </style>
   </head>
   <body>
-    <jay:SharedHeader logoUrl="/logo.png" />
+    <jay:SharedHeader ref="header" logoUrl="/logo.png" />
     <h1>Homepage</h1>
 
     <!-- Key-based: mood tracker -->
