@@ -13,6 +13,7 @@
  */
 
 import { HTMLElement, parse } from 'node-html-parser';
+import postcss from 'postcss';
 import { isPageScope, isRegionTag, parseOverride, readAttr, Suppression } from './override';
 import { parseInlineStyle, serializeInlineStyle } from './style';
 
@@ -46,20 +47,63 @@ export interface MaterialiseResult {
     errors: string[];
 }
 
+/**
+ * One region's contribution to the aggregated CSS, before coalescing. `key` is the region's `template=`
+ * provenance path — the coalescing key (DL#196 §4/§5 refinement): scoped blocks sharing a template are
+ * merged into one selector-list `@scope`. A ref-less block (no `selector`) is never coalesced.
+ */
+interface CssContribution {
+    key: string;
+    selector: string | null;
+    css: string;
+}
+
 /** Flatten every resolvable `<jay:X>` region in `pageHtml`, transitively. */
 export function materialise(pageHtml: string, opts: MaterialiseOptions): MaterialiseResult {
     const root = parse(pageHtml);
     const errors: string[] = [];
-    const cssBlocks: string[] = [];
+    const contributions: CssContribution[] = [];
 
-    fillRegions(root, [], opts, errors, cssBlocks);
+    fillRegions(root, [], opts, errors, contributions);
 
     const serialized = root.toString();
     return {
         html: opts.prettify ? opts.prettify(serialized) : serialized,
-        css: cssBlocks.join('\n\n'),
+        css: coalesceCss(contributions),
         errors,
     };
+}
+
+/**
+ * Coalesce per-region `@scope` blocks that share a `template=` provenance into one selector-list block
+ * (DL#196 §4/§5 refinement). N override-free instances of the same template emit one
+ * `@scope (.a, .b) { … }`, not N identical copies. Blocks are keyed by template path, not by body: same
+ * component through *different* templates stays separate (independent sources). Ref-less blocks (no scope)
+ * are passed through in place, never merged. First-seen order is preserved.
+ */
+function coalesceCss(contributions: CssContribution[]): string {
+    interface Group {
+        selectors: string[];
+        css: string;
+    }
+    const groups: Group[] = [];
+    const byKey = new Map<string, Group>();
+    for (const { key, selector, css } of contributions) {
+        if (selector === null) {
+            groups.push({ selectors: [], css }); // ref-less — standalone, never coalesced
+            continue;
+        }
+        const existing = byKey.get(key);
+        if (existing) existing.selectors.push(selector);
+        else {
+            const group: Group = { selectors: [selector], css };
+            byKey.set(key, group);
+            groups.push(group);
+        }
+    }
+    return groups
+        .map((g) => (g.selectors.length > 0 ? scopeWrap(g.css, g.selectors.join(', ')) : g.css))
+        .join('\n\n');
 }
 
 /**
@@ -71,7 +115,7 @@ function fillRegions(
     stack: string[],
     opts: MaterialiseOptions,
     errors: string[],
-    cssBlocks: string[],
+    cssBlocks: CssContribution[],
 ): void {
     for (const region of directRegions(container)) {
         const name = contractName(region);
@@ -108,9 +152,15 @@ function fillRegions(
                 // ignores this synthetic class so it is never reported as drift (diff-markup.ts).
                 const ref = readAttr(region, 'ref');
                 if (ref) stampScopeAnchor(region, ref);
-                cssBlocks.push(scopeWrap(template.css, selector));
+                // Rewrite root-block selectors to `:scope` so the component's own root rule applies to the
+                // `@scope` root element (scoped selectors otherwise match descendants only — see scopeReadyCss).
+                cssBlocks.push({
+                    key: templatePath,
+                    selector,
+                    css: scopeReadyCss(template.body, template.css),
+                });
             } else {
-                cssBlocks.push(template.css);
+                cssBlocks.push({ key: templatePath, selector: null, css: template.css });
             }
         }
 
@@ -144,6 +194,55 @@ function defaultScopeSelector(region: HTMLElement): string | null {
 
 function scopeWrap(css: string, selector: string): string {
     return `@scope (${selector}) {\n${css}\n}`;
+}
+
+/**
+ * The class tokens on the top-level element(s) of a template body — the region's flattened root element(s).
+ * These are the classes the component authors its root rule against (e.g. `ds-card` for `<div class="ds-card">`).
+ */
+export function rootClassesOf(templateBody: string): Set<string> {
+    const classes = new Set<string>();
+    for (const child of parse(templateBody).childNodes) {
+        if (child instanceof HTMLElement) {
+            for (const c of child.classList.values()) classes.add(c);
+        }
+    }
+    return classes;
+}
+
+/**
+ * DL#196 — make a component's CSS apply to its flattened region **root**, not just descendants.
+ *
+ * The materialiser wraps component CSS in `@scope (.<ref>)`, but a scoped selector only matches *proper
+ * descendants* of the scope root; the root element itself is matchable **only via `:scope`** (CSS Cascade 6
+ * — verified in Chromium: `.ds-card { … }` inside `@scope (.ref)` does not style the `.ds-card` root, but
+ * `:scope { … }` does). A component targets its own root through the root element's block class (`.ds-card`),
+ * which would silently stop applying once scoped. So every selector token equal to a root class is rewritten
+ * to `:scope`; descendant/element selectors (`.ds-card__heading`) are left untouched — they already match in
+ * scope. Applied before coalescing, so same-template instances still produce an identical body and merge.
+ *
+ * Only meaningful for CSS that will be `@scope`-wrapped (a `ref` is present); unscoped (global) CSS keeps its
+ * class selectors, where `:scope` has no scope root to resolve against.
+ */
+export function scopeReadyCss(templateBody: string, css: string): string {
+    const rootClasses = rootClassesOf(templateBody);
+    if (rootClasses.size === 0) return css;
+    try {
+        const root = postcss.parse(css);
+        root.walkRules((rule) => {
+            rule.selectors = rule.selectors.map((sel) => rewriteRootSelector(sel, rootClasses));
+        });
+        return root.toString();
+    } catch {
+        return css; // malformed CSS — emit verbatim rather than throwing (matches diffCss resilience)
+    }
+}
+
+/** Replace each class token equal to a root class with `:scope` (leaving other class tokens intact). */
+function rewriteRootSelector(selector: string, rootClasses: Set<string>): string {
+    return selector.replace(/\.([A-Za-z0-9_-]+)/g, (match, name) =>
+        rootClasses.has(name) ? ':scope' : match,
+    );
 }
 
 /**

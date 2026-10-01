@@ -228,6 +228,16 @@ describe('Design System Demo — DL#196 region drift validation', () => {
                 w.message.includes('differs from source template'),
             );
 
+            // DL#196 §4/§5 — the pages are in canonical coalesced CSS form (same-template instances share
+            // one selector-list @scope block), so no CSS-scoping warnings are raised.
+            const cssScopingWarnings = (result?.warnings ?? []).filter(
+                (w: any) =>
+                    w.message.includes('not coalesced') ||
+                    w.message.includes('mixes refs') ||
+                    w.message.includes('has no @scope'),
+            );
+            expect(cssScopingWarnings).toEqual([]);
+
             // Every drift warning is on the drifted page — none on pristine or branded.
             const driftFiles = [...new Set(driftWarnings.map((w: any) => w.file))];
             expect(driftFiles).toEqual(['src/pages/drifted/page.jay-html']);

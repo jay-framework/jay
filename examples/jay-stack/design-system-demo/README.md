@@ -23,6 +23,14 @@ its own markup and CSS. A page pulls the whole hierarchy in with a single `<jay:
 compiler flattens `section → gallery → card → button` transitively, and each component's CSS is wrapped in
 `@scope (.<ref>)` and merged into the page's `<style>`.
 
+**CSS coalescing.** A page with several instances of the _same_ component through the _same_ template (the
+two cards, `cardStarter` + `cardPro`) does not emit one identical `@scope` block per instance — `sync`
+coalesces them into a single selector-list block `@scope (.cardStarter, .cardPro) { … }`. An instance that
+owns a CSS facet (`/* jay:override */`) keeps its own block and drops out of the list; instances flattened
+from _different_ templates never coalesce. `validate` enforces this canonical form
+(`CSS-SCOPE-MISSING` / `-MIXED-TEMPLATE` / `-NOT-COALESCED`), so a `validate`-clean page is one `sync`
+leaves unchanged. See DL#196 "Refinement — CSS instance duplication".
+
 Two mechanics worth calling out:
 
 - **Every transitive `template=` import lives on the page.** Transitive flatten resolves each nested
@@ -31,6 +39,12 @@ Two mechanics worth calling out:
 - **Scope-anchor class.** A jay `ref` is never emitted to the DOM, so the materialiser stamps the ref name
   as a real class on the flattened region root (e.g. `<div class="ds-card cardStarter">`) to give
   `@scope (.cardStarter)` something to anchor to. The drift checker ignores this synthetic class.
+- **Root-block rule → `:scope`.** Inside `@scope (.<ref>) { … }`, scoped selectors match _descendants_ of
+  the scope root only; the root element itself is reachable solely via `:scope`. So the materialiser rewrites
+  a component's own root-block rule to `:scope` — the card template's `.ds-card { border … }` is emitted as
+  `:scope { border … }`, while descendant rules (`.ds-card__heading`, `.ds-button`) keep their class
+  selectors. Without this, the card's own border/padding would never apply to its root. See DL#196
+  "Refinement — `@scope` root-matching".
 
 ## The three pages
 

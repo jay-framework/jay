@@ -1,0 +1,11 @@
+<html>
+<head>
+  <script type="application/jay-data" contract="./badge.jay-contract"></script>
+  <style>
+    .badge { color: white; background: blue; }
+  </style>
+</head>
+<body>
+  <span class="badge">{label}</span>
+</body>
+</html>

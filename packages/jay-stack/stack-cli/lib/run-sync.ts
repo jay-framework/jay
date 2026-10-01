@@ -26,7 +26,13 @@ import {
 import { materialise } from '@jay-framework/compiler-inline-composition';
 import { parse as parseHtml } from 'node-html-parser';
 import { buildMaterialiseOptions } from './materialise-context';
-import { extractScopeBlock, splitScopeBlocks } from './scope-css';
+import {
+    splitScopeBlocks,
+    tokenizeCss,
+    scopeInnerBody,
+    normalizeCssBody,
+    type ScopeBlock,
+} from './scope-css';
 import { loadConfig, getConfigWithDefaults } from './config';
 
 export interface SyncPageResult {
@@ -88,8 +94,19 @@ function countDesignSystemRegions(jayHtml: JayHtmlSourceFile): number {
 }
 
 /**
- * Merge the materialiser's aggregated `@scope` CSS into the page HTML's `<style>`, per-selector and
- * non-destructively: a `@scope (.<ref>)` block already present in the page is left untouched.
+ * Reconcile the page `<style>` with the materialiser's canonical `@scope` CSS (DL#196 §4/§5). The
+ * materialiser emits one coalesced block per template group (`@scope (.a, .b) { … }`); this brings the page
+ * to that canonical form while preserving what the page owns:
+ *
+ *  - a region block **equal** to the canonical CSS is collapsed into the group's one coalesced block;
+ *  - a region block that **diverges and is marked** with a `/* jay:override *​/` pragma keeps its own
+ *    block, and its ref is dropped from the coalesced list — so intentional overrides are never rewritten;
+ *  - a region block that **diverges without a marker** is unmarked drift: it is overwritten back to the
+ *    canonical coalesced block, exactly as markup drift is re-flattened on sync;
+ *  - CSS unrelated to any region (hand-authored rules, blocks for refs not on the page) is left in place.
+ *
+ * The result is idempotent: re-running on a canonical page reproduces it. This is what makes a
+ * `validate`-clean page one that `sync` leaves unchanged (and vice-versa) for CSS.
  */
 function mergeScopeCss(html: string, aggregatedCss: string): string {
     if (!aggregatedCss.trim()) return html;
@@ -101,19 +118,69 @@ function mergeScopeCss(html: string, aggregatedCss: string): string {
     const styleEl = head.querySelector('style');
     const existingCss = styleEl ? styleEl.textContent : '';
 
-    const seen = new Set<string>();
-    const toAppend: string[] = [];
-    for (const { selector, block } of splitScopeBlocks(aggregatedCss)) {
-        if (seen.has(selector)) continue; // same contract flattened into several sites
-        seen.add(selector);
-        if (extractScopeBlock(existingCss, selector) === undefined) toAppend.push(block);
+    // Index the canonical groups by member ref: its group block and the group's normalized body.
+    const groups = splitScopeBlocks(aggregatedCss);
+    const groupOf = new Map<string, ScopeBlock>();
+    const canonicalBody = new Map<string, string>();
+    for (const g of groups) {
+        const nb = normalizeCssBody(scopeInnerBody(g.block));
+        for (const s of g.selectors) {
+            groupOf.set(s, g);
+            canonicalBody.set(s, nb);
+        }
     }
-    if (toAppend.length === 0) return html;
 
-    const newCss = [existingCss.trim(), ...toAppend].filter(Boolean).join('\n\n');
+    // Walk the page CSS: keep raw text and unrelated blocks; from each region block keep only the members
+    // whose CSS diverges from canonical *and* carries a `/* jay:override *​/` pragma. A block that
+    // diverges without a marker is unmarked drift — overwritten back to canonical on sync, exactly as
+    // markup drift is re-flattened. Members equal to canonical are also dropped and re-emitted below as
+    // their group's single coalesced block. (This is what lets sync *migrate* a page to a new canonical
+    // form, and keeps `validate`-clean ⇔ `sync`-clean for CSS.)
+    const overridden = new Set<string>();
+    const kept: string[] = [];
+    for (const seg of tokenizeCss(existingCss)) {
+        if (seg.type === 'raw') {
+            if (seg.text.trim()) kept.push(seg.text.trim());
+            continue;
+        }
+        const marked = hasOverrideMarker(seg.block);
+        const body = normalizeCssBody(scopeInnerBody(seg.block));
+        const keepMembers = seg.selectors.filter((s) => {
+            if (!groupOf.has(s)) return true; // a ref not managed this run — leave it alone
+            const diverges = marked && body !== canonicalBody.get(s);
+            if (diverges) overridden.add(s);
+            return diverges;
+        });
+        if (keepMembers.length === seg.selectors.length) kept.push(seg.block);
+        else if (keepMembers.length > 0) kept.push(narrowScopeBlock(seg.block, keepMembers));
+        // else: every member is plain — drop the block; the coalesced group block replaces it.
+    }
+
+    // Emit one coalesced block per group, scoped to the members the page did not override.
+    const appended: string[] = [];
+    for (const g of groups) {
+        const plain = g.selectors.filter((s) => !overridden.has(s));
+        if (plain.length === 0) continue;
+        appended.push(
+            plain.length === g.selectors.length ? g.block : narrowScopeBlock(g.block, plain),
+        );
+    }
+
+    const newCss = [...kept, ...appended].filter(Boolean).join('\n\n');
+    if (newCss === existingCss.trim()) return html; // nothing to change
     if (styleEl) styleEl.set_content(newCss);
     else head.insertAdjacentHTML('beforeend', `<style>${newCss}</style>`);
     return root.toString();
+}
+
+/** True when a CSS block carries a `/* jay:override … *​/` pragma (a whole-rule or per-declaration marker). */
+function hasOverrideMarker(block: string): boolean {
+    return /\/\*\s*jay:override\b/.test(block);
+}
+
+/** Rewrite a coalesced `@scope (…)` block's scope-start to only `selectors` (re-narrowing the list). */
+function narrowScopeBlock(block: string, selectors: string[]): string {
+    return block.replace(/^(@scope\s*\()\s*[^)]*?\s*(\)\s*\{)/, `$1${selectors.join(', ')}$2`);
 }
 
 /**

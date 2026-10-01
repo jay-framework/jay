@@ -15,7 +15,7 @@
     content="A design-system page with page-owned overrides preserved across sync.">
   <style>
     @scope (.hero) {
-      .ds-section {
+      :scope {
         padding: 24px;
         background: #f8fafc;
         border-radius: 12px;
@@ -29,7 +29,7 @@
     }
 
     @scope (.grid) {
-      .ds-gallery {
+      :scope {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 20px;
@@ -43,37 +43,8 @@
       }
     }
 
-    @scope (.cardStarter) {
-      .ds-card {
-        border: 1px solid #e2e8f0;
-        border-radius: 10px;
-        padding: 20px;
-        background: #ffffff;
-      }
-
-      .ds-card__heading {
-        font-size: 1.15rem;
-        margin: 0 0 8px;
-        color: #0f172a;
-      }
-
-      .ds-card__body {
-        margin: 0 0 16px;
-        color: #475569;
-      }
-
-      .ds-button {
-        border: 0;
-        border-radius: 6px;
-        padding: 8px 14px;
-        background: #2563eb;
-        color: #ffffff;
-        cursor: pointer;
-      }
-    }
-
-    @scope (.cardPro) {
-      .ds-card {
+    @scope (.cardStarter, .cardPro) {
+      :scope {
         border: 1px solid #e2e8f0;
         border-radius: 10px;
         padding: 20px;
@@ -105,8 +76,8 @@
 
 <body>
   <div>
-    <p>Branded: the same regions, but specific facets are page-owned via override= — jay-stack validate
-      reports no drift for them.</p>
+    <p>Branded: the same regions, but specific facets are page-owned via override= — jay-stack
+      validate reports no drift for them.</p>
     <jay:section ref="hero" title="Our Plans">
       <section class="ds-section hero">
         <h1 class="ds-section__title ds-section__title--brand" override="class">{title}</h1>
@@ -128,8 +99,7 @@
                 <h3 class="ds-card__heading">{heading}</h3>
                 <p class="ds-card__body" style="color: #7c3aed" override="style.color">{body}</p>
                 <jay:button label="{ctaLabel}"><button class="ds-button ds-button--gold"
-                    override="class">{label}</button>
-                </jay:button>
+                    override="class">{label}</button></jay:button>
               </div>
             </jay:card>
           </div>

@@ -35,6 +35,7 @@ import {
     diffBodies,
     diffCss,
     materialise,
+    scopeReadyCss,
     isRegionTag,
     facetLabel,
     overrideSpecFor,
@@ -43,7 +44,7 @@ import {
 import { parse as parseHtml, HTMLElement, NodeType } from 'node-html-parser';
 import { loadConfig, getConfigWithDefaults } from './config';
 import { buildMaterialiseOptions } from './materialise-context';
-import { extractScopeBlock } from './scope-css';
+import { extractScopeBlock, splitScopeBlocks } from './scope-css';
 
 export interface ValidateOptions {
     path?: string;
@@ -923,7 +924,14 @@ export function checkRegionCssDrift(
         let templateCss = templateCssCache.get(imp.template);
         if (templateCss === undefined) {
             const content = loadTemplate(imp.template);
-            templateCss = content !== undefined ? extractStyleCss(content) : null;
+            if (content === undefined) {
+                templateCss = null;
+            } else {
+                // Compare against the same scope-ready form the materialiser emits (root-block selectors
+                // rewritten to `:scope`), so a correctly flattened region reports no drift (DL#196).
+                const body = parseHtml(content).querySelector('body');
+                templateCss = scopeReadyCss(body ? body.innerHTML : '', extractStyleCss(content));
+            }
             templateCssCache.set(imp.template, templateCss);
         }
         if (templateCss === null) continue; // unreadable template already reported by checkRegionDrift
@@ -931,11 +939,93 @@ export function checkRegionCssDrift(
         const pageBlock = extractScopeBlock(pageCss, `.${ref}`) ?? '';
         if (!templateCss.trim() && !pageBlock.trim()) continue;
 
+        // CSS-SCOPE-MISSING — the template ships CSS but the page has no @scope block for this region's
+        // ref. Without a block there is nothing to drift-check; a re-flatten would (re)introduce it, so
+        // report it rather than silently pass as "no drift" (DL#196 §4/§5 — validate-clean ⇔ sync-clean).
+        if (templateCss.trim() && !pageBlock.trim()) {
+            warnings.push({
+                message:
+                    `<jay:${contractName}> (template="${imp.template}") has no @scope (.${ref}) CSS ` +
+                    `block on the page, but its source template ships CSS.`,
+                suggestion: 'Run jay-stack sync to re-flatten the region CSS.',
+            });
+            continue;
+        }
+
         for (const entry of diffCss(templateCss, pageBlock)) {
             warnings.push(formatRegionDrift(contractName, imp.template, entry));
         }
     }
     return warnings;
+}
+
+/**
+ * DL#196 §4/§5 — validate that the page's `@scope` CSS is in canonical, coalesced form so `jay-stack sync`'s
+ * assumptions hold (one scoped block per template+overrides group; each ref in exactly one block). Two
+ * block-level rules that per-region drift cannot see:
+ *
+ *  - **CSS-SCOPE-MIXED-TEMPLATE** — one block's selector-list mixes refs from *different* source templates.
+ *    Its single body cannot be correct for all members, and `sync` never produces such a block.
+ *  - **CSS-SCOPE-NOT-COALESCED** — two blocks share the same template *and* an identical body but are
+ *    emitted separately; they should be one selector-list block (the duplication this refinement removes).
+ *
+ * @internal Exported for testing
+ */
+export function checkRegionCssScoping(jayHtml: JayHtmlSourceFile): RegionDriftFinding[] {
+    const importsWithTemplate = jayHtml.headlessImports.filter((imp) => imp.template);
+    if (importsWithTemplate.length === 0) return [];
+
+    const pageCss = jayHtml.css ?? '';
+    if (!pageCss.trim()) return [];
+
+    // Map each region's scope-anchor selector (`.<ref>`) to its source template path.
+    const templateOf = new Map<string, string>();
+    for (const region of collectRegionElements(jayHtml.body)) {
+        const contractName = (region.rawTagName ?? '').toLowerCase().substring(4);
+        const imp = importsWithTemplate.find((i) => i.contractName === contractName);
+        const ref = region.getAttribute('ref');
+        if (imp?.template && ref) templateOf.set(`.${ref}`, imp.template);
+    }
+
+    const warnings: RegionDriftFinding[] = [];
+    // Group blocks by (template, body) to detect same-group duplicates; flag mixed-template blocks inline.
+    const groups = new Map<string, string[]>();
+    for (const { selectors, block } of splitScopeBlocks(pageCss)) {
+        const known = selectors.filter((s) => templateOf.has(s));
+        if (known.length === 0) continue; // a hand-authored scope unrelated to any region — ignore
+        const templates = [...new Set(known.map((s) => templateOf.get(s)!))];
+        if (templates.length > 1) {
+            warnings.push({
+                message:
+                    `A single @scope (${selectors.join(', ')}) block mixes refs from different source ` +
+                    `templates (${templates.join(', ')}); each region's CSS must be scoped to its own template.`,
+                suggestion: 'Run jay-stack sync to re-flatten the region CSS.',
+            });
+            continue; // mixed block cannot be keyed for the coalesce check
+        }
+        const key = `${templates[0]} ${scopeBody(block)}`;
+        (groups.get(key) ?? groups.set(key, []).get(key)!).push(selectors.join(', '));
+    }
+    for (const [key, blockSelectors] of groups) {
+        if (blockSelectors.length < 2) continue;
+        const template = key.split(' ')[0];
+        warnings.push({
+            message:
+                `${blockSelectors.length} @scope blocks (${blockSelectors.join(' ; ')}) share template ` +
+                `"${template}" and identical CSS but are not coalesced into one selector-list block.`,
+            suggestion: 'Run jay-stack sync to coalesce the region CSS.',
+        });
+    }
+    return warnings;
+}
+
+/** The declarations inside a `@scope (…) { … }` block (its body), normalized for comparison. */
+function scopeBody(block: string): string {
+    return block
+        .replace(/^@scope\s*\([^)]*\)\s*\{/, '')
+        .replace(/\}\s*$/, '')
+        .replace(/\s+/g, ' ')
+        .trim();
 }
 
 /**
@@ -1466,6 +1556,16 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
             // Check flattened region CSS against source template CSS (DL#196 §4 CSS drift)
             const cssDriftWarnings = checkRegionCssDrift(parsedFile.val!, readTemplateRel);
             for (const finding of cssDriftWarnings) {
+                warnings.push({
+                    file: relativePath,
+                    message: finding.message,
+                    suggestion: finding.suggestion,
+                });
+            }
+
+            // Check that region CSS is in canonical coalesced form (DL#196 §4/§5 — validate-clean ⇔ sync-clean)
+            const cssScopingWarnings = checkRegionCssScoping(parsedFile.val!);
+            for (const finding of cssScopingWarnings) {
                 warnings.push({
                     file: relativePath,
                     message: finding.message,

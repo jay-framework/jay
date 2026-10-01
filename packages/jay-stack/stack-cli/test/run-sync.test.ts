@@ -57,6 +57,75 @@ describe('syncPageContent (DL#196)', () => {
         expect(extractScopeBlock(style, '.promo')).not.toBeUndefined();
     });
 
+    it('coalesces same-template instances into one selector-list @scope block', async () => {
+        const { content, jayHtml, dirname } = await parseSyncPage('two-cards.jay-html');
+        const result = syncPageContent(content, dirname, jayHtml, readFileSyncSafe);
+
+        expect(result.errors).toEqual([]);
+        expect(result.regions).toEqual(2);
+
+        const style = parseHtml(result.content).querySelector('style')!.textContent;
+        // One coalesced block scopes both refs; extraction answers per-member from that block.
+        const blocks = style.match(/@scope/g) ?? [];
+        expect(blocks).toHaveLength(1);
+        expect(extractScopeBlock(style, '.cardStarter')).toEqual(
+            extractScopeBlock(style, '.cardPro'),
+        );
+        // The component's root-block rule (`.card`) is scoped to the region root via `:scope`, not `.card`
+        // (a scoped selector matches descendants only — DL#196 root-matching fix).
+        const starter = extractScopeBlock(style, '.cardStarter')!;
+        expect(starter.includes(':scope')).toBe(true);
+        expect(/(^|[\s{,])\.card\s*\{/.test(starter)).toBe(false);
+    });
+
+    it('is idempotent after coalescing — a re-synced coalesced page reports no change', async () => {
+        const { content, jayHtml, dirname } = await parseSyncPage('two-cards.jay-html');
+        const first = syncPageContent(content, dirname, jayHtml, readFileSyncSafe);
+        expect(first.changed).toBe(true); // separate/absent blocks → coalesced
+
+        const reparsed = await parseJayFile(
+            first.content,
+            'two-cards',
+            dirname,
+            {},
+            JAY_IMPORT_RESOLVER,
+            syncDir,
+        );
+        expect(reparsed.validations).toHaveLength(0);
+        const second = syncPageContent(first.content, dirname, reparsed.val!, readFileSyncSafe);
+        expect(second.changed).toBe(false);
+    });
+
+    it('appends only the missing member when the page already scopes one ref', async () => {
+        const { content, jayHtml, dirname } = await parseSyncPage('two-cards-one-scoped.jay-html');
+        const result = syncPageContent(content, dirname, jayHtml, readFileSyncSafe);
+
+        const style = parseHtml(result.content).querySelector('style')!.textContent;
+        // The hand-scoped .cardStarter (with its override) is untouched; only .cardPro is appended,
+        // re-narrowed to just that member — never re-duplicating .cardStarter.
+        const starter = extractScopeBlock(style, '.cardStarter')!;
+        expect(starter.includes('rebeccapurple')).toBe(true);
+        expect(starter.includes('cardPro')).toBe(false);
+        const pro = extractScopeBlock(style, '.cardPro')!;
+        expect(pro.includes('rebeccapurple')).toBe(false);
+        expect(pro.includes('cardStarter')).toBe(false);
+    });
+
+    it('overwrites an unmarked stale `.card`-form block to the canonical `:scope` coalesced block', async () => {
+        const { content, jayHtml, dirname } = await parseSyncPage('two-cards-stale-css.jay-html');
+        const result = syncPageContent(content, dirname, jayHtml, readFileSyncSafe);
+
+        const style = parseHtml(result.content).querySelector('style')!.textContent;
+        // The stale, unmarked `.cardStarter` block (old `.card { border }` root form) is unmarked drift:
+        // sync overwrites it, coalescing both refs into one canonical `:scope` block (migration path).
+        const blocks = style.match(/@scope/g) ?? [];
+        expect(blocks).toHaveLength(1);
+        const starter = extractScopeBlock(style, '.cardStarter')!;
+        expect(starter).toEqual(extractScopeBlock(style, '.cardPro'));
+        expect(starter.includes(':scope')).toBe(true);
+        expect(/(^|[\s{,])\.card\s*\{/.test(starter)).toBe(false);
+    });
+
     it('is idempotent — a synced page reports no further change', async () => {
         const { content, jayHtml, dirname } = await parseSyncPage('page.jay-html');
         const first = syncPageContent(content, dirname, jayHtml, readFileSyncSafe);

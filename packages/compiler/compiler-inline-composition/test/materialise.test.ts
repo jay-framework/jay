@@ -80,7 +80,9 @@ describe('materialise — transitive flatten', () => {
 });
 
 describe('materialise — @scope CSS', () => {
-    it('wraps component CSS in @scope keyed on the region ref', () => {
+    it('wraps component CSS in @scope and rewrites the root-block selector to :scope', () => {
+        // The root-block rule (`.card`) must target the scope root via `:scope` — a scoped selector
+        // otherwise matches descendants only, so `.card` would never style the flattened root.
         const page = `<body><jay:card ref="signupCard"></jay:card></body>`;
         const result = materialise(
             page,
@@ -88,7 +90,7 @@ describe('materialise — @scope CSS', () => {
                 card: { body: `<div class="card"></div>`, css: `.card { color: red }` },
             }),
         );
-        expect(result.css).toBe(`@scope (.signupCard) {\n.card { color: red }\n}`);
+        expect(result.css).toBe(`@scope (.signupCard) {\n:scope { color: red }\n}`);
     });
 
     it('emits CSS unscoped when no ref is present', () => {
@@ -126,6 +128,50 @@ describe('materialise — @scope CSS', () => {
         );
         expect(squash(result.html)).toBe(
             `<body><jay:card ref="promo"><div class="card"></div></jay:card></body>`,
+        );
+    });
+
+    it('coalesces same-template instances into one selector-list @scope block', () => {
+        // DL#196 §4/§5: N override-free instances of a template emit one @scope (.a, .b), not N copies.
+        const page = `<body><jay:card ref="cardStarter"></jay:card><jay:card ref="cardPro"></jay:card></body>`;
+        const result = materialise(
+            page,
+            withTemplates({
+                card: { body: `<div class="card"></div>`, css: `.card { color: red }` },
+            }),
+        );
+        expect(result.css).toBe(`@scope (.cardStarter, .cardPro) {\n:scope { color: red }\n}`);
+    });
+
+    it('does not coalesce instances flattened from different templates', () => {
+        // Same body bytes, different provenance → independent sources, kept as separate blocks.
+        const page = `<body><jay:cardA ref="a"></jay:cardA><jay:cardB ref="b"></jay:cardB></body>`;
+        const result = materialise(page, {
+            resolveTemplate: (name) => (name === 'carda' ? 'a.jay-html' : 'b.jay-html'),
+            loadTemplate: (path) => ({
+                body: `<div class="card"></div>`,
+                css: `.card { color: red }`,
+            }),
+        });
+        expect(result.css).toBe(
+            `@scope (.a) {\n:scope { color: red }\n}\n\n@scope (.b) {\n:scope { color: red }\n}`,
+        );
+    });
+
+    it('rewrites only root-block tokens to :scope, keeping compounds and descendants intact', () => {
+        const page = `<body><jay:card ref="c"></jay:card></body>`;
+        const result = materialise(
+            page,
+            withTemplates({
+                card: {
+                    body: `<div class="card"><span class="card__tag">x</span></div>`,
+                    css: `.card { color: red } .card.active { color: blue } .card .card__tag { color: green }`,
+                },
+            }),
+        );
+        expect(result.css).toBe(
+            `@scope (.c) {\n:scope { color: red } :scope.active { color: blue } ` +
+                `:scope .card__tag { color: green }\n}`,
         );
     });
 });

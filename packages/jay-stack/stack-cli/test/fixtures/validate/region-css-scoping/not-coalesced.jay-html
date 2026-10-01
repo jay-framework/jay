@@ -1,0 +1,37 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+    <script type="application/jay-headless"
+            contract="./components/card/card.jay-contract"
+            template="./components/card/card.jay-html"></script>
+    <style>
+@scope (.cardStarter) {
+    .card-heading { color: black; font-weight: bold; }
+    .card-body { margin: 0; }
+}
+@scope (.cardPro) {
+    .card-heading { color: black; font-weight: bold; }
+    .card-body { margin: 0; }
+}
+    </style>
+</head>
+<body>
+<div>
+    <jay:card ref="cardStarter" heading="{title}">
+        <div class="card cardStarter">
+            <h3 class="card-heading">{heading}</h3>
+            <p class="card-body">Default body</p>
+        </div>
+    </jay:card>
+    <jay:card ref="cardPro" heading="{title}">
+        <div class="card cardPro">
+            <h3 class="card-heading">{heading}</h3>
+            <p class="card-body">Default body</p>
+        </div>
+    </jay:card>
+</div>
+</body>
+</html>

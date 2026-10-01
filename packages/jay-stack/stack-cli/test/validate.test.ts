@@ -8,6 +8,7 @@ import {
     checkHeadlessInstanceProps,
     checkRegionDrift,
     checkRegionCssDrift,
+    checkRegionCssScoping,
     checkRegionRecursion,
 } from '../lib/validate';
 import { parseJayFile, JAY_IMPORT_RESOLVER } from '@jay-framework/compiler-jay-html';
@@ -356,6 +357,68 @@ describe('checkRegionCssDrift (DL#196)', () => {
                 "To keep the page's version, mark the CSS rule /* jay:override: color */; " +
                 'to discard it and re-flatten from source, run `jay-stack sync`.',
         });
+    });
+});
+
+describe('checkRegionCssScoping (DL#196 §4/§5 coalescing)', () => {
+    const scopingDir = path.resolve('./test/fixtures/validate/region-css-scoping');
+
+    async function parseScopingPage(fixturePath: string) {
+        const jayFile = path.join(scopingDir, fixturePath);
+        const content = await fsp.readFile(jayFile, 'utf-8');
+        const parsed = await parseJayFile(
+            content,
+            path.basename(jayFile.replace('.jay-html', '')),
+            path.dirname(jayFile),
+            {},
+            JAY_IMPORT_RESOLVER,
+            scopingDir,
+        );
+        expect(parsed.validations).toHaveLength(0);
+        return parsed.val!;
+    }
+
+    const fsLoader = (rel: string) =>
+        readFileSyncSafe(path.resolve(scopingDir, rel.replace(/^\.\//, '')));
+
+    it('accepts a coalesced selector-list @scope block (no scoping warnings)', async () => {
+        const jayHtml = await parseScopingPage('coalesced.jay-html');
+        expect(checkRegionCssScoping(jayHtml)).toEqual([]);
+    });
+
+    it('reports two identical same-template blocks as not coalesced', async () => {
+        const jayHtml = await parseScopingPage('not-coalesced.jay-html');
+        const warnings = checkRegionCssScoping(jayHtml);
+        expect(warnings).toHaveLength(1);
+        expect(warnings[0].message).toBe(
+            '2 @scope blocks (.cardStarter ; .cardPro) share template ' +
+                '"./components/card/card.jay-html" and identical CSS but are not coalesced into one ' +
+                'selector-list block.',
+        );
+        expect(warnings[0].suggestion).toBe('Run jay-stack sync to coalesce the region CSS.');
+    });
+
+    it('reports a block whose selector-list mixes two source templates', async () => {
+        const jayHtml = await parseScopingPage('mixed.jay-html');
+        const warnings = checkRegionCssScoping(jayHtml);
+        expect(warnings).toHaveLength(1);
+        expect(warnings[0].message).toBe(
+            'A single @scope (.cardStarter, .badgeOne) block mixes refs from different source templates ' +
+                "(./components/card/card.jay-html, ./components/badge/badge.jay-html); each region's CSS " +
+                'must be scoped to its own template.',
+        );
+        expect(warnings[0].suggestion).toBe('Run jay-stack sync to re-flatten the region CSS.');
+    });
+
+    it('reports a region whose template ships CSS but the page has no @scope block', async () => {
+        const jayHtml = await parseScopingPage('missing.jay-html');
+        const warnings = checkRegionCssDrift(jayHtml, fsLoader);
+        expect(warnings).toHaveLength(1);
+        expect(warnings[0].message).toBe(
+            '<jay:card> (template="./components/card/card.jay-html") has no @scope (.promo) CSS block ' +
+                'on the page, but its source template ships CSS.',
+        );
+        expect(warnings[0].suggestion).toBe('Run jay-stack sync to re-flatten the region CSS.');
     });
 });
 

@@ -1522,3 +1522,258 @@ The first `yarn sync` after a dev/build run failed on the flattened page copies 
 never touched. Regression test: `run-sync.test.ts` › `resolveTargets — discovery scoping` (a fixture with a
 `build/dev/pre-rendered/page.jay-html` proves it is excluded).
 
+## Refinement — CSS instance duplication: coalesce identical `@scope` blocks (§4/§5)
+
+**Status: DESIGN — awaiting approval before implementation.**
+
+### Problem
+
+The materialiser wraps each region's copied CSS in `@scope (.<ref>)`, keyed on the region's `ref`
+(`materialise.ts:102-114`). When a page holds several instances of the same component, each instance emits
+its own block — byte-identical except for the scope selector. The design-system-demo `branded` route CSS
+shows it: two `card` instances (`cardStarter`, `cardPro`) yield two identical copies of the whole
+`.ds-card` / `.ds-card__heading` / `.ds-card__body` / `.ds-button` rule set, differing only in
+`@scope (.cardStarter)` vs `@scope (.cardPro)`:
+
+```css
+@scope (.cardStarter){.ds-card{…}.ds-card__heading{…}.ds-card__body{…}.ds-button{…}}
+@scope (.cardPro)    {.ds-card{…}.ds-card__heading{…}.ds-card__body{…}.ds-button{…}}
+```
+
+Most instances carry **no** CSS override, so this is pure duplication that grows linearly with instance
+count. But when an instance _does_ own a CSS facet (`/* jay:override */`), per-instance scoping is exactly
+what lets its block diverge — so we cannot simply scope by component and drop the ref.
+
+### Constraint from the drift model (answers "top-level scoped vs. effective CSS?")
+
+The CSS drift compare is **per-region, block-for-block, and structural — it does not resolve the cascade**.
+`checkRegionCssDrift` (`validate.ts:931-936`) isolates a region's CSS by pulling its own top-level
+`@scope (.<ref>)` block out of the page's aggregated CSS (`extractScopeBlock(pageCss, `.${ref}`)`) and hands
+that block to `diffCss`, which compares its declared rules/declarations against the source template's
+`<style>` selector-by-selector, treating `@scope` as transparent (`diff-css.ts:157-170`). It never computes
+"what CSS effectively applies to the region's elements." The model rests on one invariant:
+
+> **one region ↔ one top-level, ref-keyed `@scope` block that holds that region's complete CSS.**
+
+Any dedup that splits a region's CSS across a shared block + a per-instance delta breaks this invariant and
+forces the differ to compute effective (cascaded) CSS — a mechanism that deliberately does not exist today.
+
+### Options (null hypothesis first)
+
+**A — shared base block + per-instance delta (layered `@scope`).** Emit the component CSS once under a
+shared component class; per instance emit only the overridden declarations and rely on cascade order for
+the delta to win. Maximally deduped even under partial overrides. **Rejected for v1:** it breaks the
+invariant above — `extractScopeBlock(.<ref>)` no longer returns the region's full CSS, so the drift checker
+would need cascade resolution (base ⊕ delta), plus a shared-class stamping pass and a source-order/
+specificity guarantee. Large new surface to optimise the _rare_ partial-override case.
+
+**B — coalesce blocks by (template, overrides) into one selector-list `@scope` (chosen).** Keep emitting
+per-instance, but at aggregation merge the `@scope` blocks of regions that share the **same source template
+and the same override set** into a single block whose scope-start is the union of their selectors (`@scope`
+accepts a `<forgiving-selector-list>`):
+
+```css
+@scope (.cardStarter, .cardPro){.ds-card{…}.ds-card__heading{…}.ds-card__body{…}.ds-button{…}}
+```
+
+The coalescing key is the region's **`template=` provenance path**, not the block's byte content:
+
+- Same component, **same template**, no overrides → coalesce (the common case; the `branded` route above
+  should emit one `.cardStarter, .cardPro` block, not two identical ones).
+- Same component, **different templates** → **do not** coalesce, even if the two bodies happen to be
+  byte-identical today: they are independent sources that can diverge on the next `sync`, and each must keep
+  its own block so its drift check tracks its own template.
+- Same template, **different override sets** → **do not** coalesce: an instance that owns a CSS facet has a
+  different effective body, so it keeps its own block.
+
+This **preserves the invariant**: every region's CSS is still one contiguous block body equal to its
+effective CSS; the differ stays block-for-block with no cascade resolution. It is a serialization-layer
+optimisation, not a change to the composition or drift model. Chosen on the minimise-new-surface principle.
+
+Trade-off (accepted): dedup is all-or-nothing per instance — a single override re-duplicates that
+instance's whole block. Overrides are the exception, so this is the right cost/benefit; Option A is the
+future escape hatch if partial-override duplication ever becomes the dominant cost.
+
+### Where the CSS lives (single source point)
+
+The route CSS is not a separate artifact — `generate-ssr-response.ts:498-501` writes `parsedJayFile.css`
+(the page's parsed `<style>`, aggregated by the parser at `jay-html-parser.ts:1115`) verbatim to the route
+`.css` file. So the page `<style>` **is** the canonical CSS: `sync`/materialise produce it, `validate` reads
+the same `jayHtml.css`, and the build inherits it. Coalescing therefore lands at exactly one point (the page
+`<style>`), and its canonical form is what `validate` enforces and the build emits — no separate build-path
+change is needed.
+
+### Design (Option B)
+
+1. **Coalesce in the materialiser aggregation** so the coalesced form is the single canonical output of
+   `materialise` (both the page `<style>` / route-CSS path and `sync` consume it). Group the collected
+   `cssBlocks` by **coalescing key = (template provenance path, override-set)**, preserving first-seen
+   order; for each group emit one `@scope (<comma-joined selectors>) { <body> }`. Blocks with no `@scope`
+   wrapper (a ref-less region, `materialise.ts:112`) are passed through unchanged.
+2. **`scope-css.ts` becomes selector-list aware.** `splitScopeBlocks` must return, for a coalesced block,
+   the _set_ of member selectors (or be consumed per-member); `extractScopeBlock(css, `.<ref>`)` must match
+   when `.<ref>` is **one member** of a block's scope-start list, not only when it is the sole selector
+   (today's regex assumes a single selector, `scope-css.ts:16-18`). This keeps `checkRegionCssDrift`
+   unchanged — it still asks for "the block for `.<ref>`" and gets that region's full body.
+3. **`sync`'s `mergeScopeCss` stays per-ref granular** (`run-sync.ts:94-115`). Its non-destructive rule is
+   "append a region's block only if the page does not already scope that selector." For a coalesced
+   materialiser block covering `{a, b}`: check each member against the page's existing `<style>`
+   independently; append a block scoped to just the **missing** members (re-narrowing the selector list),
+   so a page that already hand-scopes `.a` still gets `.b` added, and neither is duplicated.
+
+### Validation phase (the main effort)
+
+Coalescing only pays off if `sync`'s assumptions are guaranteed to hold on the pages `sync` will touch. Per
+the prevention order (validation first), the real work is a `validate` rule set that enforces the canonical
+CSS form up front — so a validate-clean page is one where every region's CSS is scoped exactly per template
+and overrides, which is precisely what `sync` relies on. New rules in `checkRegionCssDrift`
+(`validate.ts:903-939`), each keyed to the region walk over `collectRegionElements(jayHtml.body)`:
+
+- **`CSS-SCOPE-MISSING`** — a region whose template carries CSS has no `@scope` block that contains its ref.
+  Today `extractScopeBlock` returning `undefined` is silently skipped; make it an error so a dropped region
+  block is reported rather than passing as "no drift."
+- **`CSS-SCOPE-MIXED-TEMPLATE`** — a single `@scope (…)` block's selector-list mixes refs that resolve to
+  **different templates or different override sets**. That block violates the coalescing key (its body cannot
+  be correct for all members at once), so `sync` could not have produced it and its members' drift checks are
+  ambiguous. Report it and point each offending ref at its own template.
+- **`CSS-SCOPE-NOT-COALESCED`** — two or more blocks share the same coalescing key (same template, same
+  overrides) but are emitted separately. This is the duplication the refinement removes; flag it so the page
+  is brought to canonical form. (Warning, not error: it is redundant, not incorrect.)
+- **content drift (existing `diffCss`)** — unchanged: for each region, diff the extracted block against its
+  source template CSS; unmarked deviations remain drift, `/* jay:override */`-marked facets are suppressed.
+
+Each rule's remediation `suggestion` is **run `jay-stack sync`**, which re-materialises the canonical form.
+This establishes the invariant **validate-clean ⇔ sync-clean** for CSS (mirroring the Issue 1 fix
+philosophy): if `validate` reports no CSS findings, a subsequent `sync` is a no-op; if `sync` would change
+the CSS, `validate` names exactly why.
+
+### Resolved questions
+
+1. **Coalesce across different components, or only instances of the same one?** — Coalesce by **template**
+   provenance (+ override set), not by body. Instances of the same component through the **same** template
+   merge (the stated problem); the same component through **different** templates, or with different
+   overrides, stay separate — even if byte-identical today — because they are independent sources that can
+   diverge on the next `sync` and each must track its own template's drift.
+2. **Byte-identical or normalized bodies?** — Body equality is not the key at all; the key is
+   (template path, override set). Within a coalesced group the bodies are byte-identical on the materialiser
+   output by construction (same source template CSS, only the selector differs), so no body normalisation is
+   needed.
+3. **Canonical form / round-trip.** — The model is deliberately simple: **exactly one scoped block per
+   (template, overrides) group** — i.e. per region, or per group of regions sharing template _and_
+   overrides. This canonical form is a **requirement enforced by `validate`** (rules above), not merely
+   tolerated by the read helpers, so `sync` may assume it. A page hand-split into separate per-ref blocks of
+   the same group is reported by `CSS-SCOPE-NOT-COALESCED` and normalised by `sync`; the read helpers still
+   accept either form so validate/sync can operate on a not-yet-canonical page to fix it.
+
+### Verification criteria
+
+- A page with N override-free instances of a component **through the same template** emits **one**
+  `@scope (…)` block (selectors comma-joined), not N — asserted on the design-system-demo `branded` route
+  CSS. Two instances through different templates keep two blocks.
+- An instance that owns a CSS facet (`/* jay:override */`) keeps its **own** block; `validate` still reports
+  zero drift for it and drift for an unmarked deviation — unchanged from today, at every nesting depth.
+- `validate` reports `CSS-SCOPE-MISSING` for a region whose block was deleted, `CSS-SCOPE-MIXED-TEMPLATE`
+  for a hand-merged block spanning two templates, and `CSS-SCOPE-NOT-COALESCED` for same-group duplicate
+  blocks — each with `suggestion: run jay-stack sync`.
+- **validate-clean ⇔ sync-clean:** on a canonical page `sync` is a no-op; running `sync` on any page that
+  `validate` flagged for CSS produces a page that `validate` then reports clean.
+- `extractScopeBlock(pageCss, `.<ref>`)` returns the region's full body whether that ref is coalesced or
+  standalone; `checkRegionCssDrift` content-drift output is identical before/after coalescing for the same
+  logical CSS.
+
+### Implementation results (CSS coalescing)
+
+Landed. All target suites green: `compiler-inline-composition` (73), `stack-cli` (100), design-system-demo
+smoke (5). Files: `materialise.ts` (coalesce by template key), `scope-css.ts` (selector-list awareness +
+tokenizer/normalizer), `run-sync.ts` (`mergeScopeCss` reconciliation), `validate.ts`
+(`checkRegionCssScoping` + `CSS-SCOPE-MISSING`).
+
+**Deviation from Design point 3 — `mergeScopeCss` is a reconciliation, not append-only.** The design said
+sync stays "per-ref granular… append a region's block only if the page does not already scope that selector."
+That is insufficient: a page that already carries **separate** per-ref blocks (a legacy sync, or hand
+authoring) would never be collapsed, so `sync` could not fix a `CSS-SCOPE-NOT-COALESCED` finding and the
+**validate-clean ⇔ sync-clean** invariant would break (proven on the example: all three pages were flagged
+NOT-COALESCED and append-only left them flagged). `mergeScopeCss` now reconciles the page `<style>` against
+the materialiser's canonical output: for each region block it keeps only the members whose CSS **diverges**
+from canonical (an override or unmarked drift — detected via `normalizeCssBody`, which is whitespace/`;`- and
+comment-tolerant so a prettified block still matches raw template CSS), drops members equal to canonical, and
+re-emits one coalesced block per template group for the non-overridden members. Raw and unrelated CSS is
+preserved in place. This still never rewrites an override, is idempotent (re-sync of a canonical page is a
+no-op after prettify), and it _does_ satisfy the invariant — verified end-to-end (`validate` clean after one
+`sync`; `sync` reports "already in sync" on re-run for the two non-drifted pages).
+
+Everything else landed as designed: coalesce keyed by template path (`materialise.ts`), selector-list-aware
+`extractScopeBlock`/`splitScopeBlocks` (`scope-css.ts`), and the three validate rules
+(`CSS-SCOPE-MISSING` inside `checkRegionCssDrift`; `CSS-SCOPE-MIXED-TEMPLATE` + `CSS-SCOPE-NOT-COALESCED` in
+the new `checkRegionCssScoping`), all with `suggestion: Run jay-stack sync`.
+
+## Refinement — `@scope` root-matching: route a component's root-block rule through `:scope`
+
+**Status: IMPLEMENTED.**
+
+### Problem
+
+Reported from the `design-system-demo`: a flattened component's **own root-block rule does not style the
+region's root element.** On the pristine page the `.ds-card` rule (border, padding, background, radius) had no
+effect on `<div class="ds-card cardStarter">` — the element at the root of the `@scope`.
+
+### Root cause
+
+Inside `@scope (.<ref>) { … }`, scoped selectors match **proper descendants of the scope root only** — the
+scope root element itself is matchable **solely via `:scope`** (verified empirically in Chromium via
+Playwright, not just from spec memory). So `.ds-card { … }` inside `@scope (.cardStarter)` never matches the
+`.ds-card` element that _is_ the scope root. The ref is stamped as a scope-anchor class on that same root
+element (`.cardStarter`), which is exactly what makes it the scope root and therefore unreachable by its own
+block class.
+
+### Fix — `scopeReadyCss` (shared emit/validate transform)
+
+Before wrapping a component's CSS in `@scope`, rewrite every selector class-token equal to one of the
+template body's **root-block classes** to `:scope`:
+
+- `.ds-card` → `:scope`
+- `.ds-card.active` → `:scope.active` (compound preserved)
+- `.ds-card .ds-card__heading` → `:scope .ds-card__heading` (only the root token rewritten)
+- `.ds-card__heading`, `.ds-button` (descendants) → unchanged
+
+Implemented in `compiler-inline-composition/lib/materialise.ts` as `scopeReadyCss(templateBody, css)` +
+`rootClassesOf(templateBody)` (postcss selector walk; malformed CSS emitted verbatim, matching `diffCss`
+resilience). The root-block class set is derived from the top-level elements of the template body, so it is
+BEM-agnostic. The transform is applied **only** on the scoped branch (ref present) and **before** coalescing,
+so same-template instances still produce byte-identical bodies and merge.
+
+**Consistency requirement:** `diffCss` keys rules by selector, so the identical transform must run on both
+sides of the diff. `validate.ts checkRegionCssDrift` now runs `scopeReadyCss` on the raw template CSS (via the
+template body) before diffing, so a correctly flattened `:scope`-form region reports no drift. Ref-less /
+global CSS keeps plain class selectors (no `@scope`, nothing to rewrite).
+
+Verified end-to-end: after migration, the card root computes `border: 1px solid`, `padding: 20px`,
+`background: #fff`, `border-radius: 10px` in the browser (previously all defaults).
+
+### Follow-on — sync must migrate _unmarked_ CSS drift (invariant fix)
+
+Switching emission to `:scope` exposed a pre-existing gap: `mergeScopeCss` preserved **any** divergent block,
+so it treated a page's old `.ds-card`-form block as a divergence and never migrated it — leaving `validate`
+flagging CSS drift that `sync` could not resolve (a direct violation of **validate-clean ⇔ sync-clean**: the
+page was sync-stable yet validate-dirty). Root cause: "diverges from canonical" conflated an intentional
+marked override with unmarked drift.
+
+Fix (`run-sync.ts mergeScopeCss`): a divergent region block is preserved **only if it carries a
+`/* jay:override … */` pragma** (`hasOverrideMarker`). A block that diverges **without** a marker is unmarked
+drift — overwritten back to the canonical coalesced block, exactly as markup drift is re-flattened on sync.
+This makes `sync` able to _migrate_ a page to a new canonical form and restores the invariant. The example's
+three pages migrated to `:scope` form with a single `sync`; `validate` then reports only the two intended
+markup drifts on `/drifted` and no CSS drift.
+
+**Limitation (documented, not a bug):** `sync` cannot migrate a block that both diverges and is marked
+`/* jay:override */` — a marked block is owned by the author and always preserved verbatim. Such a block must
+be hand-migrated. No example page carries a CSS override marker, so all three migrated automatically.
+
+### Tests
+
+- `compiler-inline-composition/test/materialise.test.ts` — root-block → `:scope` rewrite, incl. compound/
+  descendant preservation (74/74).
+- `stack-cli/test/run-sync.test.ts` — new `two-cards-stale-css` fixture asserts an unmarked stale `.card`-form
+  block is overwritten to the canonical `:scope` coalesced block; the marked `two-cards-one-scoped` override is
+  still preserved (8/8).
+- `stack-cli/test/validate.test.ts` + full suite (101/101); `design-system-demo` smoke (5/5).

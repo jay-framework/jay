@@ -1,0 +1,32 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+    <script type="application/jay-headless"
+            contract="./components/card/card.jay-contract"
+            template="./components/card/card.jay-html"></script>
+    <script type="application/jay-headless"
+            contract="./components/badge/badge.jay-contract"
+            template="./components/badge/badge.jay-html"></script>
+    <style>
+@scope (.cardStarter, .badgeOne) {
+    .card-heading { color: black; font-weight: bold; }
+}
+    </style>
+</head>
+<body>
+<div>
+    <jay:card ref="cardStarter" heading="{title}">
+        <div class="card cardStarter">
+            <h3 class="card-heading">{heading}</h3>
+            <p class="card-body">Default body</p>
+        </div>
+    </jay:card>
+    <jay:badge ref="badgeOne" label="{title}">
+        <span class="badge badgeOne">{label}</span>
+    </jay:badge>
+</div>
+</body>
+</html>
