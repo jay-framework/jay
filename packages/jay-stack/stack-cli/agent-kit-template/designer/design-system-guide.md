@@ -23,6 +23,43 @@ design-system element. That `template=` is the **provenance marker**: it records
 came from, so validate can diff it and sync can re-flatten it. Nothing else — a keyed import, a nested
 region you hand-authored, a plain instance — is ever drift-checked or synced.
 
+## Prefer design-system elements
+
+Reuse UI through design-system elements, not by hand-authoring the same markup in each page. Three
+preferences — `jay-stack validate` nudges you toward each (warnings, never blocking, each suppressible):
+
+1. **Create _and_ consume templates as design-system elements.** When a component renders UI, ship a
+   `.jay-html` template for it, and link it from the page with `template=` + `jay-stack sync` rather than
+   hand-writing the `<jay:X>` body. (Rules: `COMPONENT-NO-TEMPLATE` on the authoring side,
+   `REGION-NOT-LINKED` on the consuming side.)
+2. **When one instance needs extensive restyling or structural change, make _another_ template** for the same
+   component — a second design-system variant — instead of piling style/class/structure overrides onto one
+   flattened copy. (Rule: `REGION-OVERRIDE-NON-CONTENT`.)
+3. **Hand-author an inline region only for a genuinely one-off usage** — a region used once, where no shared
+   template exists or would help.
+
+### Two templates vs. a conditional — different axes
+
+These solve different problems; do not substitute one for the other:
+
+- **Two templates = two design-system elements.** Different _designs_ chosen **at composition time** (a
+  compact card vs. a feature card). You pick which template a region links to. This is the axis
+  `REGION-OVERRIDE-NON-CONTENT` points you to when an instance's _look or structure_ diverges.
+- **A conditional (`if` / variant) = one element, runtime change.** Same design, a branch driven by
+  **runtime state** (logged-in vs. not). Use conditionals for state, not to fork a design.
+
+A restyle or net-new layout DOM on one instance is a _second design_ — reach for a second template, not a
+conditional.
+
+### What counts as drift worth a new variant
+
+`REGION-OVERRIDE-NON-CONTENT` fires only on **non-content** changes to a linked region:
+
+- **Content (fine — this is what flattening is for):** editing text, image `src`/`alt`, and enriching text
+  with inline content markup (`<strong>`, `<span>`, `<img>`, a `<ul>`/`<li>` list, a `<table>`, headings…).
+- **Non-content (make a new variant):** changing `class` or inline/scoped CSS, or adding net-new layout DOM
+  (`<div>`/`<section>` wrappers, custom components) — a different look or structure.
+
 ## Creating / using a design-system element
 
 ### 1. Declare the import with `template=`
@@ -261,6 +298,38 @@ CSS reconciles the same way as markup — drift is overwritten, marked facets ar
 
 So after one `sync` a page's CSS is in canonical form, and a `validate`-clean page is one `sync` leaves
 unchanged. To keep a hand-edit through `sync`, mark it with a `jay:override` pragma.
+
+## Suppressing the preference warnings
+
+Each "prefer design-system elements" warning is suppressible for the legitimate case:
+
+| Rule                          | Suppress                                                                                                                                                   |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `REGION-NOT-LINKED`           | `jay-validations="REGION-NOT-LINKED"` on the `application/jay-headless` import (per region type), or list the contract under `allow-inline-region` (below) |
+| `REGION-OVERRIDE-NON-CONTENT` | `jay-validations="REGION-OVERRIDE-NON-CONTENT"` on the import                                                                                              |
+| `COMPONENT-NO-TEMPLATE`       | `allow-no-template: [Contract]` (a data-only component has no `.jay-html` to host an attribute)                                                            |
+| `NO-DESIGN-SYSTEM`            | `allow-no-design-system: true`                                                                                                                             |
+
+Per-region-type suppression lives on the import; put multiple rules in one attribute:
+
+```html
+<script
+  type="application/jay-headless"
+  contract="./components/card/card.jay-contract"
+  jay-validations="REGION-NOT-LINKED REGION-OVERRIDE-NON-CONTENT"
+></script>
+```
+
+Project-wide / list suppression lives in the page's validations script:
+
+```html
+<script type="application/jay-validations">
+  jay-stack:
+    allow-inline-region: [Card, HeroBanner] # contract names — allow hand-authored regions
+    allow-no-template: [MetricsProvider] # data-only components with no UI
+    allow-no-design-system: true # project intentionally shares no design system
+</script>
+```
 
 ## Why copy instead of reference?
 

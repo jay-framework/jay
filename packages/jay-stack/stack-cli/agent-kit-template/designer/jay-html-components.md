@@ -349,11 +349,11 @@ Nesting depth is unlimited. Circular imports are detected as errors. Key-based h
 
 ## Nesting Rules
 
-| Parent component           | Can compose full-stack components? | Can import instance headless? | Can import keyed headless? |
-| -------------------------- | ---------------------------------- | ----------------------------- | -------------------------- |
-| **Page**                   | Yes                                | Yes                           | Yes                        |
-| **Full-stack component**   | Yes (recursive)                    | Yes (in its own head)         | No                         |
-| **Keyed / plugin headless**| No (consumer owns the template)    | No                            | No                         |
+| Parent component            | Can compose full-stack components? | Can import instance headless? | Can import keyed headless? |
+| --------------------------- | ---------------------------------- | ----------------------------- | -------------------------- |
+| **Page**                    | Yes                                | Yes                           | Yes                        |
+| **Full-stack component**    | Yes (recursive)                    | Yes (in its own head)         | No                         |
+| **Keyed / plugin headless** | No (consumer owns the template)    | No                            | No                         |
 
 ## Complete Example
 

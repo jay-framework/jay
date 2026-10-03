@@ -1,4 +1,8 @@
-export { type JayHtmlSourceFile, type JayHtmlScript } from './jay-target/jay-html-source-file';
+export {
+    type JayHtmlSourceFile,
+    type JayHtmlScript,
+    type JayHeadlessImports,
+} from './jay-target/jay-html-source-file';
 export {
     generateElementDefinitionFile,
     generateElementFile,

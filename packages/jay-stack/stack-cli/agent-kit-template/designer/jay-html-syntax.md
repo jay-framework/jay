@@ -36,11 +36,11 @@ Plugin-provided logic component. No template of its own — the page or consumin
 
 ## Nesting Rules
 
-| Parent component         | Can compose full-stack components? | Can import headless (instance)? | Can import keyed headless? |
-| ------------------------ | ---------------------------------- | ------------------------------- | -------------------------- |
-| **Page**                 | Yes                                | Yes                             | Yes                        |
-| **Full-stack component** | Yes (recursive)                    | Yes (in its own head)           | No                         |
-| **Keyed / plugin headless** | No (consumer owns the template) | No                             | No                         |
+| Parent component            | Can compose full-stack components? | Can import headless (instance)? | Can import keyed headless? |
+| --------------------------- | ---------------------------------- | ------------------------------- | -------------------------- |
+| **Page**                    | Yes                                | Yes                             | Yes                        |
+| **Full-stack component**    | Yes (recursive)                    | Yes (in its own head)           | No                         |
+| **Keyed / plugin headless** | No (consumer owns the template)    | No                              | No                         |
 
 ## Validation
 
@@ -48,8 +48,8 @@ After creating or editing jay-html files, run `jay-stack validate` to check for 
 
 ## Reference
 
-| File                                                       | Topic                                                                  |
-| ---------------------------------------------------------- | ---------------------------------------------------------------------- |
-| [jay-html-template-syntax.md](jay-html-template-syntax.md) | Template markup: file structure, data binding, conditions, loops, refs |
+| File                                                       | Topic                                                                      |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------- |
+| [jay-html-template-syntax.md](jay-html-template-syntax.md) | Template markup: file structure, data binding, conditions, loops, refs     |
 | [jay-html-components.md](jay-html-components.md)           | Component imports: headless (key/instance), full-stack components, nesting |
-| [jay-html-styling.md](jay-html-styling.md)                 | Styling: inline, external, dynamic styles, class bindings              |
+| [jay-html-styling.md](jay-html-styling.md)                 | Styling: inline, external, dynamic styles, class bindings                  |

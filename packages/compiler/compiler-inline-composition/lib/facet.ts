@@ -33,6 +33,14 @@ export interface DiffEntry {
     sourceValue?: string;
     /** value as it appears in the region (undefined when `removed`). */
     regionValue?: string;
+    /**
+     * For a `children` facet only: the lowercase tag names of elements present in the region child
+     * sequence but not in the source (multiset difference). Lets a consumer classify a child-sequence
+     * change as content enrichment (e.g. a text node replaced by `<strong>`/`<span>`/`<img>`) vs
+     * structural rework (net-new `<div>`/`<section>`), without re-walking the DOM. Empty for a pure text
+     * change. (DL#200 — `REGION-OVERRIDE-NON-CONTENT`.)
+     */
+    addedElementTags?: string[];
 }
 
 /** A stable, comparable key for a facet — dedup, lookup, and deterministic ordering. */

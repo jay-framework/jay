@@ -29,6 +29,7 @@ import {
     type Contract,
     type RenderingPhase,
     type JayHtmlSourceFile,
+    type JayHeadlessImports,
 } from '@jay-framework/compiler-jay-html';
 import { getLogger } from '@jay-framework/logger';
 import {
@@ -98,6 +99,20 @@ async function findJayFiles(dir: string): Promise<string[]> {
 
 async function findContractFiles(dir: string): Promise<string[]> {
     return await glob(`${dir}/**/*${JAY_CONTRACT_EXTENSION}`);
+}
+
+/**
+ * DL#200 — does a design-system template exist for the contract at `contractFile`? Availability is keyed by
+ * contract identity; templates and components share a `.jay-contract`, so any `.jay-html` sitting beside the
+ * contract (the `card.jay-contract` + `card.jay-html` convention, local or plugin) is a template for it.
+ */
+function hasTemplateForContractFile(contractFile: string | undefined): boolean {
+    if (!contractFile) return false;
+    try {
+        return fs.readdirSync(path.dirname(contractFile)).some((f) => f.endsWith(JAY_EXTENSION));
+    } catch {
+        return false;
+    }
 }
 
 // --- Tag coverage internals ---
@@ -1019,6 +1034,293 @@ export function checkRegionCssScoping(jayHtml: JayHtmlSourceFile): RegionDriftFi
     return warnings;
 }
 
+/**
+ * DL#200 — the content-tag allowlist. Net-new DOM made *only* of these tags is content enrichment (a bare
+ * text turned into text + bold/span/icon/image, a bullet list, a table) — not a different design, so it does
+ * not fire `REGION-OVERRIDE-NON-CONTENT`. Any added element *outside* this set (`div`, `section`, `form`,
+ * layout wrappers, custom components) is structural rework → a new design variant. Tunable: a single constant.
+ */
+const CONTENT_TAGS = new Set<string>([
+    // inline text semantics
+    'span',
+    'strong',
+    'b',
+    'em',
+    'i',
+    'u',
+    's',
+    'small',
+    'mark',
+    'sub',
+    'sup',
+    'abbr',
+    'cite',
+    'q',
+    'code',
+    'kbd',
+    'samp',
+    'var',
+    'del',
+    'ins',
+    'time',
+    'data',
+    'bdi',
+    'bdo',
+    'ruby',
+    'rt',
+    'rp',
+    // links & line breaks
+    'a',
+    'br',
+    'wbr',
+    // media (content, not layout)
+    'img',
+    'picture',
+    'source',
+    'svg',
+    'use',
+    'path',
+    'icon',
+    'figure',
+    'figcaption',
+    'audio',
+    'video',
+    // lists
+    'ul',
+    'ol',
+    'li',
+    'dl',
+    'dt',
+    'dd',
+    // tables
+    'table',
+    'thead',
+    'tbody',
+    'tfoot',
+    'tr',
+    'td',
+    'th',
+    'caption',
+    'colgroup',
+    'col',
+    // text blocks & headings
+    'p',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'blockquote',
+    'pre',
+    'hr',
+    // form labels/copy (not controls, which imply structure)
+    'label',
+]);
+
+/** DL#200 — is this drift entry a *non-content* override (fires `REGION-OVERRIDE-NON-CONTENT`)? */
+function isNonContentOverride(entry: DiffEntry, contentTags: Set<string>): boolean {
+    switch (entry.facet.kind) {
+        case 'style-declaration':
+        case 'css-rule':
+        case 'css-declaration':
+            return true; // restyle — changes the look
+        case 'attribute':
+            return entry.facet.name.toLowerCase() === 'class'; // class = restyle; src/alt/href/… are content
+        case 'children':
+            // Net-new DOM: content iff every added element tag is on the allowlist (text-only change → []).
+            return (entry.addedElementTags ?? []).some((tag) => !contentTags.has(tag));
+    }
+}
+
+/** DL#200 — contract name backing a `<jay:X>` region tag (tag name minus the `jay:` prefix). */
+function regionContractName(region: HTMLElement): string {
+    return (region.rawTagName ?? '').toLowerCase().substring(4);
+}
+
+/**
+ * DL#200 — is a region-scoped rule suppressed for this import? Primary: `jay-validations="RULE"` on the
+ * `application/jay-headless` import (per region type). Addition (REGION-NOT-LINKED only): a contract-keyed
+ * `allow-inline-region: [Contract, …]` list in the `application/jay-validations` script.
+ */
+function isRegionRuleSuppressed(
+    imp: JayHeadlessImports | undefined,
+    jayHtml: JayHtmlSourceFile,
+    ruleId: string,
+): boolean {
+    if (imp?.suppressedValidations?.includes(ruleId)) return true;
+    if (ruleId === 'REGION-NOT-LINKED' && imp) {
+        const allow = jayHtml.validationOverrides?.['jay-stack']?.['allow-inline-region'];
+        const list = Array.isArray(allow) ? allow.map((v) => String(v).toLowerCase()) : [];
+        if (list.includes(imp.contractName.toLowerCase())) return true;
+    }
+    return false;
+}
+
+/**
+ * DL#200 — `REGION-NOT-LINKED` (warning, per region type). A `<jay:X>` region whose import has no
+ * `template=` while a design-system template *exists for its contract* is a hand-authored instance that
+ * could be a managed design-system element. Keyed imports and already-linked regions are skipped; a region
+ * whose contract has no template anywhere stays silent (nothing to link — `COMPONENT-NO-TEMPLATE` covers the
+ * authoring side). One finding per region type.
+ *
+ * `hasTemplate` is injected (availability by contract identity) so this stays pure and unit-testable.
+ *
+ * @internal Exported for testing
+ */
+export function checkRegionNotLinked(
+    jayHtml: JayHtmlSourceFile,
+    hasTemplate: (imp: JayHeadlessImports) => boolean,
+): RegionDriftFinding[] {
+    const findings: RegionDriftFinding[] = [];
+    const seen = new Set<string>();
+    for (const region of collectRegionElements(jayHtml.body)) {
+        const contractName = regionContractName(region);
+        if (seen.has(contractName)) continue;
+        const imp = jayHtml.headlessImports.find((i) => i.contractName === contractName);
+        if (!imp) continue;
+        if (imp.key || imp.template) continue; // keyed, or already a design-system element
+        if (!hasTemplate(imp)) continue; // no template for this contract → nothing to link
+        if (isRegionRuleSuppressed(imp, jayHtml, 'REGION-NOT-LINKED')) continue;
+        seen.add(contractName);
+        findings.push({
+            message:
+                `<jay:${contractName}> is hand-authored, but a design-system template exists for contract ` +
+                `"${imp.contractName}". Prefer linking it as a design-system element.`,
+            suggestion:
+                `Add template="…/${contractName}.jay-html" to the <script type="application/jay-headless"> ` +
+                `import and run \`jay-stack sync\`. For a deliberate one-off, suppress on the import with ` +
+                `jay-validations="REGION-NOT-LINKED" (or list the contract under allow-inline-region in ` +
+                `<script type="application/jay-validations">). See agent-kit/designer/design-system-guide.md.`,
+        });
+    }
+    return findings;
+}
+
+/**
+ * DL#200 — `REGION-OVERRIDE-NON-CONTENT` (warning, per linked region type). A region that *has* `template=`
+ * but drifts from its source template by a *non-content* override (style, class, CSS, or net-new DOM with any
+ * non-allowlisted tag) is becoming its own variant. Fire on the first such override — no threshold. Content
+ * drift (text / `src` / `alt`, and net-new DOM made only of allowlisted content tags) never fires; that is
+ * what flattening is for. One finding per region type.
+ *
+ * @internal Exported for testing
+ */
+export function checkRegionOverrideNonContent(
+    jayHtml: JayHtmlSourceFile,
+    loadTemplate: (relativeTemplatePath: string) => string | undefined,
+    contentTags: Set<string> = CONTENT_TAGS,
+): RegionDriftFinding[] {
+    const importsWithTemplate = jayHtml.headlessImports.filter((imp) => imp.template);
+    if (importsWithTemplate.length === 0) return [];
+
+    const findings: RegionDriftFinding[] = [];
+    const seen = new Set<string>();
+    const templateBodyCache = new Map<string, HTMLElement | null>();
+
+    for (const region of collectRegionElements(jayHtml.body)) {
+        const contractName = regionContractName(region);
+        if (seen.has(contractName)) continue;
+        const imp = importsWithTemplate.find((i) => i.contractName === contractName);
+        if (!imp?.template) continue;
+        if (isRegionRuleSuppressed(imp, jayHtml, 'REGION-OVERRIDE-NON-CONTENT')) continue;
+
+        let templateBody = templateBodyCache.get(imp.template);
+        if (templateBody === undefined) {
+            const content = loadTemplate(imp.template);
+            templateBody = (content ? parseHtml(content).querySelector('body') : null) ?? null;
+            templateBodyCache.set(imp.template, templateBody);
+        }
+        if (!templateBody) continue; // unreadable template already reported by checkRegionDrift
+
+        const hasNonContent = diffBodies(templateBody, region).some((entry) =>
+            isNonContentOverride(entry, contentTags),
+        );
+        if (!hasNonContent) continue;
+        seen.add(contractName);
+        findings.push({
+            message:
+                `<jay:${contractName}> changes its design-system template's look or structure (style, class, ` +
+                `or net-new layout DOM) — that is a different design, not a content tweak.`,
+            suggestion:
+                `Prefer a second design-system template (a new variant) for contract "${imp.contractName}" ` +
+                `and link this region to it. Editing text/images, or enriching text with inline markup, is ` +
+                `fine; use conditionals only for runtime state changes, not for a different design. To accept ` +
+                `this override, suppress on the import with jay-validations="REGION-OVERRIDE-NON-CONTENT". ` +
+                `See agent-kit/designer/design-system-guide.md.`,
+        });
+    }
+    return findings;
+}
+
+/**
+ * DL#200 — `COMPONENT-NO-TEMPLATE` (warning, per component). A headless component (`.jay-contract` under the
+ * components tree) that ships no `.jay-html` template for its contract cannot be flattened as a design-system
+ * element — every consumer must hand-author it. Suppress for genuinely UI-less (data/logic-only) components
+ * via `allow-no-template: [Contract, …]` (project-wide, in any page's `application/jay-validations`) since a
+ * data-only component has no `.jay-html` to host a `jay-validations=` attribute.
+ *
+ * @internal Exported for testing
+ */
+export function checkComponentNoTemplate(
+    contractFile: string,
+    contractName: string,
+    hasTemplate: (contractFile: string) => boolean,
+    allowNoTemplate: Set<string>,
+): RegionDriftFinding | undefined {
+    if (hasTemplate(contractFile)) return undefined;
+    const base = path.basename(contractFile, JAY_CONTRACT_EXTENSION).toLowerCase();
+    if (allowNoTemplate.has(contractName.toLowerCase()) || allowNoTemplate.has(base))
+        return undefined;
+    return {
+        message:
+            `Component "${contractName}" ships no .jay-html template. If it renders UI, create a reusable ` +
+            `design-system template so consumers flatten it (template= + jay-stack sync) instead of ` +
+            `hand-authoring each usage.`,
+        suggestion:
+            `Author a ${base}.jay-html next to the contract. If this component is intentionally UI-less ` +
+            `(data/logic only), suppress project-wide with allow-no-template: ["${contractName}"] in ` +
+            `<script type="application/jay-validations">. See agent-kit/designer/design-system-guide.md.`,
+    };
+}
+
+/**
+ * DL#200 — `NO-DESIGN-SYSTEM` (warning, project summary, once). After the per-file pass, if the whole project
+ * flattens zero design-system elements (no import carries `template=`), nudge adoption. Two messages: one when
+ * regions exist but none are linked, one when there are no regions at all. Suppress project-wide with
+ * `allow-no-design-system: true`.
+ *
+ * @internal Exported for testing
+ */
+export function checkNoDesignSystem(
+    regionsSeen: number,
+    templateImportsSeen: number,
+    suppressed: boolean,
+): RegionDriftFinding | undefined {
+    if (suppressed || templateImportsSeen > 0) return undefined;
+    if (regionsSeen > 0) {
+        return {
+            message:
+                'This project composes components but none are design-system elements (no template= imports). ' +
+                'Ship a .jay-html template with a reused component and flatten it so pages share consistent, ' +
+                'upgradable UI.',
+            suggestion:
+                'Add template= to a headless import and run `jay-stack sync`. Suppress project-wide with ' +
+                'allow-no-design-system: true in <script type="application/jay-validations">. ' +
+                'See agent-kit/designer/design-system-guide.md.',
+        };
+    }
+    return {
+        message:
+            'This project shares no UI through design-system elements. Consider composing reusable sections ' +
+            'as components with .jay-html templates — regions can be used without code, purely to flatten and ' +
+            'share a design system.',
+        suggestion:
+            'See agent-kit/designer/design-system-guide.md. Suppress project-wide with ' +
+            'allow-no-design-system: true in <script type="application/jay-validations">.',
+    };
+}
+
 /** The declarations inside a `@scope (…) { … }` block (its body), normalized for comparison. */
 function scopeBody(block: string): string {
     return block
@@ -1386,15 +1688,20 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
     const warnings: ValidationWarning[] = [];
     const coverage: FileCoverage[] = [];
     const parsedFiles: Array<{ relativePath: string; parsed: JayHtmlSourceFile }> = [];
+    // DL#200 — project-wide tallies for NO-DESIGN-SYSTEM.
+    let regionsSeen = 0;
+    let templateImportsSeen = 0;
 
     // Find all jay files (pages + components)
     const pageJayHtmlFiles = await findJayFiles(scanDir);
     const componentJayHtmlFiles = await findJayFiles(componentsDir).catch(() => [] as string[]);
     const jayHtmlFiles = [...pageJayHtmlFiles, ...componentJayHtmlFiles];
-    const contractFiles = [
-        ...(await findContractFiles(scanDir)),
-        ...(await findContractFiles(componentsDir).catch(() => [] as string[])),
-    ];
+    const componentContractFiles = await findContractFiles(componentsDir).catch(
+        () => [] as string[],
+    );
+    const contractFiles = [...(await findContractFiles(scanDir)), ...componentContractFiles];
+    // DL#200 — parsed contract names by file (for COMPONENT-NO-TEMPLATE messaging/suppression).
+    const contractNameByFile = new Map<string, string>();
 
     if (options.verbose) {
         getLogger().info(chalk.gray(`Scanning directory: ${scanDir}`));
@@ -1409,6 +1716,7 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
         try {
             const content = await fsp.readFile(contractFile, 'utf-8');
             const result = parseContract(content, path.basename(contractFile));
+            if (result.val?.name) contractNameByFile.set(contractFile, result.val.name);
 
             if (result.validations.length > 0) {
                 for (const validation of result.validations) {
@@ -1573,6 +1881,36 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                 });
             }
 
+            // DL#200 — prefer design-system elements: nudge hand-authored regions that could be linked, and
+            // linked regions drifting into their own variant. Also tally for the project NO-DESIGN-SYSTEM rule.
+            regionsSeen += collectRegionElements(parsedFile.val!.body).length;
+            templateImportsSeen += parsedFile.val!.headlessImports.filter(
+                (imp) => imp.template,
+            ).length;
+
+            const notLinkedWarnings = checkRegionNotLinked(parsedFile.val!, (imp) =>
+                hasTemplateForContractFile(imp.contractPath),
+            );
+            for (const finding of notLinkedWarnings) {
+                warnings.push({
+                    file: relativePath,
+                    message: finding.message,
+                    suggestion: finding.suggestion,
+                });
+            }
+
+            const overrideWarnings = checkRegionOverrideNonContent(
+                parsedFile.val!,
+                readTemplateRel,
+            );
+            for (const finding of overrideWarnings) {
+                warnings.push({
+                    file: relativePath,
+                    message: finding.message,
+                    suggestion: finding.suggestion,
+                });
+            }
+
             // Detect template-inclusion cycles among design-system regions (DL#196 §5) — hard errors
             const recursionErrors = checkRegionRecursion(
                 content,
@@ -1679,6 +2017,53 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
             message:
                 'site.baseUrl not configured — sitemap.xml will not be generated in production.',
             suggestion: 'Add to .jay config:\n  site:\n    baseUrl: https://your-domain.com',
+        });
+    }
+
+    // --- DL#200 — prefer design-system elements (project-level rules) ---
+    // Project-wide suppression lists are read from any page's `application/jay-validations` script.
+    const allowNoTemplate = new Set<string>();
+    let allowNoDesignSystem = false;
+    for (const { parsed } of parsedFiles) {
+        const overrides = parsed.validationOverrides?.['jay-stack'];
+        if (!overrides) continue;
+        const list = overrides['allow-no-template'];
+        if (Array.isArray(list))
+            for (const name of list) allowNoTemplate.add(String(name).toLowerCase());
+        if (overrides['allow-no-design-system'] === true) allowNoDesignSystem = true;
+    }
+
+    // COMPONENT-NO-TEMPLATE — a component under the components tree that ships no .jay-html template.
+    for (const contractFile of componentContractFiles) {
+        const contractName =
+            contractNameByFile.get(contractFile) ??
+            path.basename(contractFile, JAY_CONTRACT_EXTENSION);
+        const finding = checkComponentNoTemplate(
+            contractFile,
+            contractName,
+            hasTemplateForContractFile,
+            allowNoTemplate,
+        );
+        if (finding) {
+            warnings.push({
+                file: path.relative(projectRoot, contractFile),
+                message: finding.message,
+                suggestion: finding.suggestion,
+            });
+        }
+    }
+
+    // NO-DESIGN-SYSTEM — project has zero design-system elements (emitted once).
+    const noDesignSystem = checkNoDesignSystem(
+        regionsSeen,
+        templateImportsSeen,
+        allowNoDesignSystem,
+    );
+    if (noDesignSystem) {
+        warnings.push({
+            file: '.jay',
+            message: noDesignSystem.message,
+            suggestion: noDesignSystem.suggestion,
         });
     }
 

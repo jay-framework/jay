@@ -658,6 +658,12 @@ async function parseHeadlessImports(
         // validate/sync re-flatten.
         const srcAttr = element.getAttribute('src') ?? undefined;
         const templateAttr = element.getAttribute('template') ?? undefined;
+        // DL#200: per-region validation suppression — `jay-validations="RULE RULE"` on the import mutes
+        // those rules for this region type only (space- or comma-separated, case-insensitive rule ids).
+        const suppressedValidations = (element.getAttribute('jay-validations') ?? '')
+            .split(/[\s,]+/)
+            .map((s) => s.trim().toUpperCase())
+            .filter(Boolean);
 
         if (!contractAttr) {
             validations.push('headless import must specify contract attribute');
@@ -870,6 +876,7 @@ async function parseHeadlessImports(
                     headlessProps,
                     ...(structural && { structural }),
                     ...(templateAttr && { template: templateAttr }),
+                    ...(suppressedValidations.length && { suppressedValidations }),
                 });
             });
         } catch (e) {

@@ -37,22 +37,22 @@ There is no standalone "interactive" phase. Any tag with `type: interactive` (re
 
 ## Reference Docs
 
-| File                                                       | Topic                                                                                           |
-| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| [project-structure.md](project-structure.md)               | Project layout, styling patterns (CSS themes, design tokens), configuration files               |
-| [jay-html-syntax.md](jay-html-syntax.md)                   | Jay-HTML overview: philosophy, component types, nesting rules, links to sub-files               |
-| [jay-html-template-syntax.md](jay-html-template-syntax.md) | Template markup: data binding, conditions, expression limits (no `.length`), loops, refs        |
+| File                                                       | Topic                                                                                                  |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [project-structure.md](project-structure.md)               | Project layout, styling patterns (CSS themes, design tokens), configuration files                      |
+| [jay-html-syntax.md](jay-html-syntax.md)                   | Jay-HTML overview: philosophy, component types, nesting rules, links to sub-files                      |
+| [jay-html-template-syntax.md](jay-html-template-syntax.md) | Template markup: data binding, conditions, expression limits (no `.length`), loops, refs               |
 | [jay-html-components.md](jay-html-components.md)           | Component imports: headless (key/instance), full-stack components, nesting, per-instance customization |
-| [design-system-guide.md](design-system-guide.md)           | Design-system elements: flatten with `template=`, drift warnings, `override` facets, `sync`     |
-| [jay-html-styling.md](jay-html-styling.md)                 | Styling: inline, external, dynamic style bindings, class bindings                               |
-| [routing.md](routing.md)                                   | Directory-based routing: page structure, dynamic routes, route priority                         |
-| [navigation-patterns.md](navigation-patterns.md)           | Active menu/sidebar patterns using `jay.url.path`, `===`, and `^=` operators                    |
-| [contracts-and-plugins.md](contracts-and-plugins.md)       | Reading contracts, plugin.yaml, .jay-action files, and the materialized indexes                 |
-| [Contract Authoring Guide](../contracts/GUIDE.md)          | Writing contracts: syntax, page/component/linked contracts, examples                            |
-| [script-tags.md](script-tags.md)                           | Script tag policy: use page.ts for behavior, jay-script="allow" for third-party scripts         |
-| [cli-commands.md](cli-commands.md)                         | CLI commands: setup, validate, sync, params, action, dev server                                 |
-| [validation-guide.md](validation-guide.md)                 | Understanding validation output: static analysis, component warnings, how to act on findings    |
-| `../references/<plugin>/`                                  | Pre-generated discovery data: product catalogs, collection schemas (from `jay-stack agent-kit`) |
+| [design-system-guide.md](design-system-guide.md)           | Design-system elements: flatten with `template=`, drift warnings, `override` facets, `sync`            |
+| [jay-html-styling.md](jay-html-styling.md)                 | Styling: inline, external, dynamic style bindings, class bindings                                      |
+| [routing.md](routing.md)                                   | Directory-based routing: page structure, dynamic routes, route priority                                |
+| [navigation-patterns.md](navigation-patterns.md)           | Active menu/sidebar patterns using `jay.url.path`, `===`, and `^=` operators                           |
+| [contracts-and-plugins.md](contracts-and-plugins.md)       | Reading contracts, plugin.yaml, .jay-action files, and the materialized indexes                        |
+| [Contract Authoring Guide](../contracts/GUIDE.md)          | Writing contracts: syntax, page/component/linked contracts, examples                                   |
+| [script-tags.md](script-tags.md)                           | Script tag policy: use page.ts for behavior, jay-script="allow" for third-party scripts                |
+| [cli-commands.md](cli-commands.md)                         | CLI commands: setup, validate, sync, params, action, dev server                                        |
+| [validation-guide.md](validation-guide.md)                 | Understanding validation output: static analysis, component warnings, how to act on findings           |
+| `../references/<plugin>/`                                  | Pre-generated discovery data: product catalogs, collection schemas (from `jay-stack agent-kit`)        |
 
 ## When to Use Shared Full-Stack Components
 

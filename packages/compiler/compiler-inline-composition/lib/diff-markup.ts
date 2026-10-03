@@ -72,6 +72,7 @@ function diffChildren(
             change: 'changed',
             sourceValue: summarize(s),
             regionValue: summarize(r),
+            addedElementTags: addedElementTags(s, r),
         });
         return;
     }
@@ -214,6 +215,31 @@ function tagOf(n: Node): string {
 
 function nodeText(n: Node): string {
     return (n as unknown as { rawText?: string }).rawText ?? n.text ?? '';
+}
+
+/**
+ * Lowercase tag names of elements in the region child sequence not matched by an element of the same tag
+ * in the source (multiset difference). Text nodes are ignored — so a text node replaced by `<strong>` or
+ * `<img>` yields `['strong']` / `['img']` (content enrichment), while a net-new `<div>` yields `['div']`
+ * (structural). Empty for a pure text-only change. DL#200 consumers classify these against a content-tag
+ * allowlist.
+ */
+function addedElementTags(s: Node[], r: Node[]): string[] {
+    const srcCounts = new Map<string, number>();
+    for (const n of s)
+        if (n.nodeType === NodeType.ELEMENT_NODE) {
+            const t = tagOf(n).toLowerCase();
+            srcCounts.set(t, (srcCounts.get(t) ?? 0) + 1);
+        }
+    const added: string[] = [];
+    for (const n of r)
+        if (n.nodeType === NodeType.ELEMENT_NODE) {
+            const t = tagOf(n).toLowerCase();
+            const remaining = srcCounts.get(t) ?? 0;
+            if (remaining > 0) srcCounts.set(t, remaining - 1);
+            else added.push(t);
+        }
+    return added;
 }
 
 /** Compact one-line summary of a child sequence, for diagnostics on a `children` facet. */

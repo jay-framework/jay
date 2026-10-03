@@ -115,6 +115,40 @@ describe('diffMarkup — children facets', () => {
     });
 });
 
+describe('diffMarkup — addedElementTags on children facets (DL#200)', () => {
+    it('text enriched into inline markup lists only the added element tags', () => {
+        const source = `<h3>{heading}</h3>`;
+        const region = `<h3><strong>{heading}</strong></h3>`;
+        const [entry, ...rest] = diffMarkup(source, region);
+        expect(rest).toEqual([]);
+        expect(entry.addedElementTags).toEqual(['strong']);
+    });
+
+    it('a net-new structural wrapper lists its tag', () => {
+        const source = `<div class="card"><h3>{heading}</h3></div>`;
+        const region = `<div class="card"><div class="ribbon">Sale</div><h3>{heading}</h3></div>`;
+        const [entry, ...rest] = diffMarkup(source, region);
+        expect(rest).toEqual([]);
+        expect(entry.addedElementTags).toEqual(['div']);
+    });
+
+    it('a pure text-only change adds no element tags', () => {
+        const source = `<div><h3>{heading}</h3></div>`;
+        const region = `<div><h3>on sale</h3></div>`;
+        const [entry, ...rest] = diffMarkup(source, region);
+        expect(rest).toEqual([]);
+        expect(entry.addedElementTags).toEqual([]);
+    });
+
+    it('matching tags are not reported, only the extra one is', () => {
+        const source = `<ul><li>a</li></ul>`;
+        const region = `<ul><li>a</li><li>b</li></ul>`;
+        const [entry, ...rest] = diffMarkup(source, region);
+        expect(rest).toEqual([]);
+        expect(entry.addedElementTags).toEqual(['li']);
+    });
+});
+
 describe('diffMarkup — nested regions (Q2)', () => {
     it('does not descend into a nested <jay:X> region', () => {
         const source = `<div><jay:counter ref="c"><span>{count}</span></jay:counter></div>`;

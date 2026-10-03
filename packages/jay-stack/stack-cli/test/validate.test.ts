@@ -10,6 +10,10 @@ import {
     checkRegionCssDrift,
     checkRegionCssScoping,
     checkRegionRecursion,
+    checkRegionNotLinked,
+    checkRegionOverrideNonContent,
+    checkComponentNoTemplate,
+    checkNoDesignSystem,
 } from '../lib/validate';
 import { parseJayFile, JAY_IMPORT_RESOLVER } from '@jay-framework/compiler-jay-html';
 import { JayEnumType, JayAtomicType } from '@jay-framework/compiler-shared';
@@ -1046,6 +1050,202 @@ describe('headless instance props validation (DL#124 Phase 2)', () => {
 
             expect(result.valid).toBe(true);
             expect(result.errors).toHaveLength(0);
+        });
+    });
+});
+
+describe('prefer design-system elements (DL#200)', () => {
+    const dsDir = path.resolve('./test/fixtures/validate/design-system');
+
+    async function parseDsPage(fixture: string) {
+        const jayFile = path.join(dsDir, fixture);
+        const content = await fsp.readFile(jayFile, 'utf-8');
+        const parsed = await parseJayFile(
+            content,
+            path.basename(jayFile.replace('.jay-html', '')),
+            path.dirname(jayFile),
+            {},
+            JAY_IMPORT_RESOLVER,
+            dsDir,
+        );
+        expect(parsed.validations).toHaveLength(0);
+        return parsed.val!;
+    }
+
+    const fsLoader = (rel: string) =>
+        readFileSyncSafe(path.resolve(dsDir, rel.replace(/^\.\//, '')));
+    const templateAvailable = () => true;
+    const templateUnavailable = () => false;
+
+    describe('R1 — REGION-NOT-LINKED', () => {
+        it('warns when a hand-authored region has a template available for its contract', async () => {
+            const jayHtml = await parseDsPage('not-linked.jay-html');
+            const findings = checkRegionNotLinked(jayHtml, templateAvailable);
+            expect(findings).toEqual([
+                {
+                    message:
+                        '<jay:card> is hand-authored, but a design-system template exists for contract ' +
+                        '"card". Prefer linking it as a design-system element.',
+                    suggestion:
+                        'Add template="…/card.jay-html" to the <script type="application/jay-headless"> ' +
+                        'import and run `jay-stack sync`. For a deliberate one-off, suppress on the import ' +
+                        'with jay-validations="REGION-NOT-LINKED" (or list the contract under ' +
+                        'allow-inline-region in <script type="application/jay-validations">). ' +
+                        'See agent-kit/designer/design-system-guide.md.',
+                },
+            ]);
+        });
+
+        it('stays silent when no template exists for the contract', async () => {
+            const jayHtml = await parseDsPage('not-linked.jay-html');
+            expect(checkRegionNotLinked(jayHtml, templateUnavailable)).toEqual([]);
+        });
+
+        it('stays silent when the region is already linked (template=)', async () => {
+            const jayHtml = await parseDsPage('linked.jay-html');
+            expect(checkRegionNotLinked(jayHtml, templateAvailable)).toEqual([]);
+        });
+
+        it('stays silent when suppressed on the import (jay-validations attribute)', async () => {
+            const jayHtml = await parseDsPage('not-linked-suppressed.jay-html');
+            expect(checkRegionNotLinked(jayHtml, templateAvailable)).toEqual([]);
+        });
+
+        it('stays silent when suppressed via allow-inline-region list', async () => {
+            const jayHtml = await parseDsPage('not-linked.jay-html');
+            jayHtml.validationOverrides = { 'jay-stack': { 'allow-inline-region': ['Card'] } };
+            expect(checkRegionNotLinked(jayHtml, templateAvailable)).toEqual([]);
+        });
+
+        it('stays silent for a keyed import', async () => {
+            const jayHtml = await parseDsPage('not-linked.jay-html');
+            jayHtml.headlessImports[0].key = 'cards';
+            expect(checkRegionNotLinked(jayHtml, templateAvailable)).toEqual([]);
+        });
+    });
+
+    describe('R3 — REGION-OVERRIDE-NON-CONTENT', () => {
+        it('stays silent for content-only drift (text + inline content markup)', async () => {
+            const jayHtml = await parseDsPage('override-content.jay-html');
+            expect(checkRegionOverrideNonContent(jayHtml, fsLoader)).toEqual([]);
+        });
+
+        it('warns on a style/class override', async () => {
+            const jayHtml = await parseDsPage('override-style.jay-html');
+            const findings = checkRegionOverrideNonContent(jayHtml, fsLoader);
+            expect(findings).toEqual([
+                {
+                    message:
+                        "<jay:card> changes its design-system template's look or structure (style, class, " +
+                        'or net-new layout DOM) — that is a different design, not a content tweak.',
+                    suggestion:
+                        'Prefer a second design-system template (a new variant) for contract "card" ' +
+                        'and link this region to it. Editing text/images, or enriching text with inline ' +
+                        'markup, is fine; use conditionals only for runtime state changes, not for a ' +
+                        'different design. To accept this override, suppress on the import with ' +
+                        'jay-validations="REGION-OVERRIDE-NON-CONTENT". ' +
+                        'See agent-kit/designer/design-system-guide.md.',
+                },
+            ]);
+        });
+
+        it('warns on net-new structural DOM (non-allowlisted tag)', async () => {
+            const jayHtml = await parseDsPage('override-structural.jay-html');
+            const findings = checkRegionOverrideNonContent(jayHtml, fsLoader);
+            expect(findings).toHaveLength(1);
+            expect(findings[0].message).toEqual(
+                "<jay:card> changes its design-system template's look or structure (style, class, " +
+                    'or net-new layout DOM) — that is a different design, not a content tweak.',
+            );
+        });
+
+        it('stays silent when suppressed on the import', async () => {
+            const jayHtml = await parseDsPage('override-style.jay-html');
+            jayHtml.headlessImports[0].suppressedValidations = ['REGION-OVERRIDE-NON-CONTENT'];
+            expect(checkRegionOverrideNonContent(jayHtml, fsLoader)).toEqual([]);
+        });
+    });
+
+    describe('R2 — COMPONENT-NO-TEMPLATE', () => {
+        const hasTemplate = (file: string) => file.endsWith('with-template.jay-contract');
+
+        it('warns when a component ships no template', () => {
+            const finding = checkComponentNoTemplate(
+                '/x/components/banner/banner.jay-contract',
+                'Banner',
+                hasTemplate,
+                new Set(),
+            );
+            expect(finding).toEqual({
+                message:
+                    'Component "Banner" ships no .jay-html template. If it renders UI, create a reusable ' +
+                    'design-system template so consumers flatten it (template= + jay-stack sync) instead ' +
+                    'of hand-authoring each usage.',
+                suggestion:
+                    'Author a banner.jay-html next to the contract. If this component is intentionally ' +
+                    'UI-less (data/logic only), suppress project-wide with allow-no-template: ["Banner"] ' +
+                    'in <script type="application/jay-validations">. ' +
+                    'See agent-kit/designer/design-system-guide.md.',
+            });
+        });
+
+        it('stays silent when a template exists for the component', () => {
+            expect(
+                checkComponentNoTemplate(
+                    '/x/components/card/with-template.jay-contract',
+                    'Card',
+                    hasTemplate,
+                    new Set(),
+                ),
+            ).toBeUndefined();
+        });
+
+        it('stays silent when suppressed by contract name', () => {
+            expect(
+                checkComponentNoTemplate(
+                    '/x/components/banner/banner.jay-contract',
+                    'Banner',
+                    hasTemplate,
+                    new Set(['banner']),
+                ),
+            ).toBeUndefined();
+        });
+    });
+
+    describe('R4 — NO-DESIGN-SYSTEM', () => {
+        it('nudges to link when regions exist but none are design-system elements', () => {
+            const finding = checkNoDesignSystem(3, 0, false);
+            expect(finding).toEqual({
+                message:
+                    'This project composes components but none are design-system elements (no template= ' +
+                    'imports). Ship a .jay-html template with a reused component and flatten it so pages ' +
+                    'share consistent, upgradable UI.',
+                suggestion:
+                    'Add template= to a headless import and run `jay-stack sync`. Suppress project-wide ' +
+                    'with allow-no-design-system: true in <script type="application/jay-validations">. ' +
+                    'See agent-kit/designer/design-system-guide.md.',
+            });
+        });
+
+        it('nudges to adopt regions when there are no regions at all', () => {
+            const finding = checkNoDesignSystem(0, 0, false);
+            expect(finding).toEqual({
+                message:
+                    'This project shares no UI through design-system elements. Consider composing ' +
+                    'reusable sections as components with .jay-html templates — regions can be used ' +
+                    'without code, purely to flatten and share a design system.',
+                suggestion:
+                    'See agent-kit/designer/design-system-guide.md. Suppress project-wide with ' +
+                    'allow-no-design-system: true in <script type="application/jay-validations">.',
+            });
+        });
+
+        it('stays silent when the project has at least one design-system element', () => {
+            expect(checkNoDesignSystem(5, 1, false)).toBeUndefined();
+        });
+
+        it('stays silent when suppressed project-wide', () => {
+            expect(checkNoDesignSystem(3, 0, true)).toBeUndefined();
         });
     });
 });

@@ -105,7 +105,7 @@ See [design-system-guide.md](../designer/design-system-guide.md) for the full dr
 ## Component Contract vs Page Contract
 
 |              | Page contract                          | Component contract                                                   |
-| ------------ | -------------------------------------- | ------------------------------------------------------------------- |
+| ------------ | -------------------------------------- | -------------------------------------------------------------------- |
 | **Location** | `src/pages/.../page.jay-contract`      | `src/components/<name>/<name>.jay-contract`                          |
 | **Params**   | Yes (from route segments)              | No (components don't own routes)                                     |
 | **Props**    | Rarely                                 | Yes (configured by parent)                                           |

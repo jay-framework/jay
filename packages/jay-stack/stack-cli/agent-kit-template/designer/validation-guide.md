@@ -110,6 +110,27 @@ Design-system suppression keys include `allow-undefined-vars`, `allow-viewport-h
 viewport-height containers — see `jay-html-styling.md`), `allow-custom-breakpoints`,
 `allow-no-reduced-motion`, and `allow-font-no-fallback`.
 
+### Prefer-design-system-elements warnings (jay-stack namespace)
+
+The core `jay-stack validate` emits four warnings that nudge you to reuse UI through design-system elements
+(see `design-system-guide.md`). Suppress the legitimate case:
+
+| Rule                          | How to suppress                                                                                                                 |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `REGION-NOT-LINKED`           | `jay-validations="REGION-NOT-LINKED"` on the `application/jay-headless` import, or `jay-stack: allow-inline-region: [Contract]` |
+| `REGION-OVERRIDE-NON-CONTENT` | `jay-validations="REGION-OVERRIDE-NON-CONTENT"` on the import                                                                   |
+| `COMPONENT-NO-TEMPLATE`       | `jay-stack: allow-no-template: [Contract]`                                                                                      |
+| `NO-DESIGN-SYSTEM`            | `jay-stack: allow-no-design-system: true`                                                                                       |
+
+```html
+<script type="application/jay-validations">
+  jay-stack:
+    allow-inline-region: [Card]
+    allow-no-template: [MetricsProvider]
+    allow-no-design-system: true
+</script>
+```
+
 ### When you can't suppress
 
 If a warning comes from dynamic content (`{post.content}`) or a generated file, you can't suppress it in the template. This is a validator limitation — the warning is a false positive. Don't loop trying to fix it.

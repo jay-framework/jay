@@ -93,6 +93,13 @@ Errors:
 
 Always run validate after creating or editing jay-html and contract files.
 
+`validate` also nudges you to reuse UI through **design-system elements** (warnings, never blocking):
+`REGION-NOT-LINKED` (a hand-authored region that could link a shipped template), `COMPONENT-NO-TEMPLATE` (a
+component shipping no template), `REGION-OVERRIDE-NON-CONTENT` (a linked region restyled into its own
+variant), and `NO-DESIGN-SYSTEM` (the project uses none). Each is suppressible — see
+[design-system-guide.md](design-system-guide.md#suppressing-the-preference-warnings) and
+[validation-guide.md](validation-guide.md).
+
 ## jay-stack sync
 
 Re-flatten **design-system elements** — `<jay:X>` regions whose import carries `template=` — from their
