@@ -34,6 +34,7 @@
     "@jay-framework/stack-route-scanner": "workspace:^",
     "@jay-framework/stack-server-runtime": "workspace:^",
     "@jay-framework/view-state-merge": "workspace:^",
+    "node-html-parser": "^6.1.12",
     "yaml": "^2.3.4"
   },
   "devDependencies": {

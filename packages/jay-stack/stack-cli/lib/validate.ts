@@ -17,6 +17,11 @@ import {
 } from '@jay-framework/compiler-shared';
 import { scanPlugins } from '@jay-framework/stack-server-runtime';
 import {
+    hasTemplateForContractFile,
+    listTemplatesForContractFile,
+    type TemplateVariant,
+} from '@jay-framework/stack-server-build';
+import {
     parseJayFile,
     JAY_IMPORT_RESOLVER,
     generateElementFile,
@@ -101,19 +106,9 @@ async function findContractFiles(dir: string): Promise<string[]> {
     return await glob(`${dir}/**/*${JAY_CONTRACT_EXTENSION}`);
 }
 
-/**
- * DL#200 — does a design-system template exist for the contract at `contractFile`? Availability is keyed by
- * contract identity; templates and components share a `.jay-contract`, so any `.jay-html` sitting beside the
- * contract (the `card.jay-contract` + `card.jay-html` convention, local or plugin) is a template for it.
- */
-function hasTemplateForContractFile(contractFile: string | undefined): boolean {
-    if (!contractFile) return false;
-    try {
-        return fs.readdirSync(path.dirname(contractFile)).some((f) => f.endsWith(JAY_EXTENSION));
-    } catch {
-        return false;
-    }
-}
+// DL#200/204 — template availability (`hasTemplateForContractFile`) and enumeration
+// (`listTemplatesForContractFile`) are imported from stack-server-build, which associates a template
+// with a contract by the template's declared `contract=` reference rather than by filename.
 
 // --- Tag coverage internals ---
 
@@ -1252,13 +1247,14 @@ function isRegionRuleSuppressed(
  * whose contract has no template anywhere stays silent (nothing to link — `COMPONENT-NO-TEMPLATE` covers the
  * authoring side). One finding per region type.
  *
- * `hasTemplate` is injected (availability by contract identity) so this stays pure and unit-testable.
+ * `templatesFor` is injected (enumeration by contract identity, DL#204) so this stays pure and
+ * unit-testable; the suggestion names the real template path(s) instead of a placeholder.
  *
  * @internal Exported for testing
  */
 export function checkRegionNotLinked(
     jayHtml: JayHtmlSourceFile,
-    hasTemplate: (imp: JayHeadlessImports) => boolean,
+    templatesFor: (imp: JayHeadlessImports) => TemplateVariant[],
 ): RegionDriftFinding[] {
     const findings: RegionDriftFinding[] = [];
     const seen = new Set<string>();
@@ -1268,15 +1264,20 @@ export function checkRegionNotLinked(
         const imp = jayHtml.headlessImports.find((i) => i.contractName === contractName);
         if (!imp) continue;
         if (imp.key || imp.template) continue; // keyed, or already a design-system element
-        if (!hasTemplate(imp)) continue; // no template for this contract → nothing to link
+        const templates = templatesFor(imp);
+        if (templates.length === 0) continue; // no template for this contract → nothing to link
         if (isRegionRuleSuppressed(imp, jayHtml, 'REGION-NOT-LINKED')) continue;
         seen.add(contractName);
+        const templateHint =
+            templates.length === 1
+                ? `template="${templates[0].path}"`
+                : `template= one of: ${templates.map((t) => `"${t.path}"`).join(', ')}`;
         findings.push({
             message:
                 `<jay:${contractName}> is hand-authored, but a design-system template exists for contract ` +
                 `"${imp.contractName}". Prefer linking it as a design-system element.`,
             suggestion:
-                `Add template="…/${contractName}.jay-html" to the <script type="application/jay-headless"> ` +
+                `Add ${templateHint} to the <script type="application/jay-headless"> ` +
                 `import and run \`jay-stack sync\`. For a deliberate one-off, suppress on the import with ` +
                 `jay-validations="REGION-NOT-LINKED" (or list the contract under allow-inline-region in ` +
                 `<script type="application/jay-validations">). See agent-kit/designer/design-system-guide.md.`,
@@ -1998,7 +1999,10 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
             const notLinkedWarnings = componentJayHtmlFileSet.has(jayFile)
                 ? []
                 : checkRegionNotLinked(parsedFile.val!, (imp) =>
-                      hasTemplateForContractFile(imp.contractPath),
+                      listTemplatesForContractFile(imp.contractPath).map((t) => ({
+                          ...t,
+                          path: './' + path.relative(projectRoot, t.path).replace(/\\/g, '/'),
+                      })),
                   );
             for (const finding of notLinkedWarnings) {
                 warnings.push({

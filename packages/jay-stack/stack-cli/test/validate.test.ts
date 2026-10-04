@@ -1119,8 +1119,8 @@ describe('prefer design-system elements (DL#200)', () => {
 
     const fsLoader = (rel: string) =>
         readFileSyncSafe(path.resolve(dsDir, rel.replace(/^\.\//, '')));
-    const templateAvailable = () => true;
-    const templateUnavailable = () => false;
+    const templateAvailable = () => [{ path: './card.jay-html', variant: '' }];
+    const templateUnavailable = () => [];
 
     describe('R1 — REGION-NOT-LINKED', () => {
         it('warns when a hand-authored region has a template available for its contract', async () => {
@@ -1132,7 +1132,7 @@ describe('prefer design-system elements (DL#200)', () => {
                         '<jay:card> is hand-authored, but a design-system template exists for contract ' +
                         '"card". Prefer linking it as a design-system element.',
                     suggestion:
-                        'Add template="…/card.jay-html" to the <script type="application/jay-headless"> ' +
+                        'Add template="./card.jay-html" to the <script type="application/jay-headless"> ' +
                         'import and run `jay-stack sync`. For a deliberate one-off, suppress on the import ' +
                         'with jay-validations="REGION-NOT-LINKED" (or list the contract under ' +
                         'allow-inline-region in <script type="application/jay-validations">). ' +

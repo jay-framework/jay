@@ -8,6 +8,7 @@
     "dev": "jay-stack-cli dev",
     "build": "jay-stack-cli build",
     "validate": "jay-stack-cli validate",
+    "agent-kit": "jay-stack-cli agent-kit",
     "sync": "jay-stack-cli sync",
     "build:check-types": "tsc",
     "clean": "rimraf dist && rimraf build && rimraf -g 'src/**/*.d.ts'",

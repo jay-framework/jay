@@ -126,6 +126,11 @@ async function runMaterialize(
             getLogger().important(`   Static: ${result.staticCount}`);
             getLogger().important(`   Dynamic: ${result.dynamicCount}`);
             getLogger().important(`   Output: ${result.outputDir}`);
+            if (result.pluginsIndex.designSystemIndex) {
+                getLogger().important(
+                    `   Design-system catalog: agent-kit/design-system-index.yaml + design-system.md`,
+                );
+            }
         }
 
         return { initErrors, viteServer: keepViteAlive ? viteServer : undefined };

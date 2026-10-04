@@ -1,0 +1,272 @@
+# CLI Commands Reference
+
+## jay-stack-cli setup
+
+Run plugin setup. Plugins create configuration files, prompt for credentials, and validate services.
+
+```bash
+# Run setup for all installed plugins (interactive — may prompt for input)
+jay-stack-cli setup
+
+# Run setup for a specific plugin
+jay-stack-cli setup wix-stores
+
+# Re-run setup (e.g., after config change)
+jay-stack-cli setup --force
+
+# Non-interactive mode (creates config templates without prompting)
+jay-stack-cli setup --no-interactive
+```
+
+Setup is **interactive by default** — plugins may prompt for API keys and credentials. Use `--no-interactive` in CI/scripts.
+
+Run this after installing new plugins, before `jay-stack-cli agent-kit`.
+
+## jay-stack agent-kit
+
+Materialize contracts, generate discovery indexes, and produce plugin reference data. Run this after setup.
+
+```bash
+# Default: writes to agent-kit/
+jay-stack agent-kit
+
+# Custom output directory for contracts
+jay-stack agent-kit --output my-output/
+
+# List contracts without writing files
+jay-stack agent-kit --list
+
+# Filter to specific plugin
+jay-stack agent-kit --plugin wix-stores
+
+# Force re-materialization
+jay-stack agent-kit --force
+
+# Skip reference data generation
+jay-stack agent-kit --no-references
+```
+
+Outputs:
+
+- `plugins-index.yaml`
+- `materialized-contracts/<plugin>/*.jay-contract` (dynamic contracts)
+- `references/<plugin>/` — plugin reference data (product catalogs, collection schemas, etc.)
+- Documentation files (INSTRUCTIONS.md and reference docs)
+
+## jay-stack validate
+
+Validate all `.jay-html` and `.jay-contract` files.
+
+```bash
+# Validate entire project
+jay-stack validate
+
+# Validate a specific path
+jay-stack validate src/pages/products/
+
+# Verbose (per-file status)
+jay-stack validate -v
+
+# JSON output
+jay-stack validate --json
+```
+
+Example output:
+
+```
+✅ Jay Stack validation successful!
+Scanned 5 .jay-html files, 3 .jay-contract files
+No errors found.
+```
+
+On failure:
+
+```
+❌ Jay Stack validation failed
+
+Errors:
+  ❌ src/pages/products/page.jay-html
+     Unknown ref "nonExistentRef" - not found in contract
+
+1 error(s) found, 7 file(s) valid.
+```
+
+Always run validate after creating or editing jay-html and contract files.
+
+`validate` also nudges you to reuse UI through **design-system elements** (warnings, never blocking):
+`REGION-NOT-LINKED` (a hand-authored region that could link a shipped template), `COMPONENT-NO-TEMPLATE` (a
+component shipping no template), `REGION-OVERRIDE-NON-CONTENT` (a linked region restyled into its own
+variant), and `NO-DESIGN-SYSTEM` (the project uses none). Each is suppressible — see
+[design-system-guide.md](design-system-guide.md#suppressing-the-preference-warnings) and
+[validation-guide.md](validation-guide.md).
+
+## jay-stack sync
+
+Re-flatten **design-system elements** — `<jay:X>` regions whose import carries `template=` — from their
+current source templates. Fills an empty region on first use, and re-flattens after a component upgrade,
+**preserving every facet you marked `override`**. See
+[design-system-guide.md](design-system-guide.md) for the full model.
+
+```bash
+# Sync every design-system region in the project
+jay-stack sync
+
+# Sync a single page
+jay-stack sync src/pages/home.jay-html
+
+# Explicitly sync all pages
+jay-stack sync --all
+
+# Show pages that were already in sync
+jay-stack sync -v
+```
+
+Sync is **re-flatten, not merge**: it overwrites everything from source except your `override` facets — no
+merge base, no conflict prompt. It only touches regions with `template=` provenance; keyed and
+hand-authored nested components are left alone. CSS reconciles the same way: an `@scope (.<ref>)` block is
+rewritten to canonical form unless it carries a `/* jay:override */` pragma, which is preserved verbatim.
+
+Example output:
+
+```
+✓ synced 2 region(s) in src/pages/home.jay-html
+Synced 2 region(s) across 1 file(s).
+```
+
+When nothing needs re-flattening:
+
+```
+Nothing to sync.
+```
+
+## jay-stack params
+
+Discover load param values for SSG route generation.
+
+```bash
+# Discover slug values for product pages
+jay-stack params wix-stores/product-page
+
+# YAML output
+jay-stack params wix-stores/product-page --yaml
+
+# Verbose
+jay-stack params wix-stores/product-page -v
+```
+
+Format: `<plugin-name>/<contract-name>`
+
+Example output:
+
+```json
+[
+  { "slug": "ceramic-flower-vase" },
+  { "slug": "blue-running-shoes" },
+  { "slug": "organic-cotton-tshirt" }
+]
+
+✅ Found 3 param combination(s)
+```
+
+Use this to discover what param values exist for dynamic routes like `[slug]`. Only works on contracts whose component has `loadParams`.
+
+## jay-stack action
+
+Run a plugin action from the CLI. Use to discover data for populating pages.
+
+```bash
+# Run with default input
+jay-stack action wix-stores/searchProducts
+
+# Run with input
+jay-stack action wix-stores/searchProducts --input '{"query": "shoes", "limit": 5}'
+
+# YAML output
+jay-stack action wix-stores/getCategories --yaml
+
+# Verbose
+jay-stack action wix-stores/getProductBySlug --input '{"slug": "blue-shirt"}' -v
+```
+
+Format: `<plugin-name>/<action-name>`
+
+Action names are listed in `plugins-index.yaml` under each plugin's `actions:` array. Each action entry includes a `description` and a `path` to the `.jay-action` file. Read the `.jay-action` file to see the full input/output schemas before calling an action.
+
+Example output:
+
+```json
+{
+  "items": [
+    { "_id": "prod-1", "name": "Blue Shirt", "slug": "blue-shirt", "price": 29.99 },
+    { "_id": "prod-2", "name": "Red Hat", "slug": "red-hat", "price": 19.99 }
+  ],
+  "totalCount": 2
+}
+```
+
+If not found, lists available actions:
+
+```
+❌ Action "badName" not found.
+   Available actions: searchProducts, getProductBySlug, getCategories
+```
+
+## jay-stack dev
+
+Start the development server.
+
+```bash
+# Normal dev mode
+jay-stack dev
+
+# Test mode (enables health/shutdown endpoints)
+jay-stack dev --test-mode
+
+# Auto-timeout (implies test mode)
+jay-stack dev --timeout 60
+```
+
+### Test mode endpoints
+
+| Endpoint         | Method | Response                                                        |
+| ---------------- | ------ | --------------------------------------------------------------- |
+| `/_jay/health`   | GET    | `{"status":"ready","port":3300,"editorPort":3301,"uptime":5.2}` |
+| `/_jay/shutdown` | POST   | `{"status":"shutting_down"}`                                    |
+
+### Wait for server ready
+
+Poll the health endpoint:
+
+```bash
+# Bash
+for i in {1..30}; do
+  curl -s http://localhost:3300/_jay/health | grep -q "ready" && break
+  sleep 1
+done
+```
+
+```typescript
+// TypeScript
+async function waitForServer(timeout = 30000): Promise<string> {
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    try {
+      const res = await fetch('http://localhost:3300/_jay/health');
+      if (res.ok) {
+        const { port } = await res.json();
+        return `http://localhost:${port}`;
+      }
+    } catch {
+      /* not ready */
+    }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error('Server not ready');
+}
+```
+
+### Shutdown
+
+```bash
+curl -X POST http://localhost:3300/_jay/shutdown
+```

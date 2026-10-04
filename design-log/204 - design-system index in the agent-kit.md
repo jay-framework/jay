@@ -1,8 +1,10 @@
 # DL#204 — A design-system (region/template) index in the agent-kit
 
-Status: **DESIGN — ready for review.** Promoted from DL#201 Item 4. Covers a new agent-kit index that
-catalogs, for every headless component an agent could flatten, its contract and the `.jay-html`
-template variants it ships. Nothing here is implemented yet.
+Status: **DESIGN — ready for review (rev. 2, review feedback folded in).** Promoted from DL#201
+Item 4. Covers a new agent-kit index — plus a human/agent-readable "add-menu" doc — that catalogs,
+for every headless component an agent could flatten, its contract and the `.jay-html` template
+variants it ships. Template↔contract association is by the template's declared contract reference, not
+a filename convention. Nothing here is implemented yet.
 
 Related: #85 (plugins-index / agent kit), #196 (flatten / regions / `template=`), #200 (prefer
 design-system elements — `REGION-NOT-LINKED`, `COMPONENT-NO-TEMPLATE`, availability heuristic),
@@ -27,17 +29,29 @@ design-system elements — `REGION-NOT-LINKED`, `COMPONENT-NO-TEMPLATE`, availab
   2. **Plugin components** — reuse `scanPlugins({ projectRoot, includeDevDeps: true })`
      (`plugin-scanner.ts`); for each `manifest.contracts` / `dynamic_contracts` entry, enumerate
      sibling template variants next to the contract path.
-- **Template-variant enumeration rule (new):** for contract `X.jay-contract` in directory `D`, a
-  template is any `D/X.jay-html` or `D/X.<variant>.jay-html` (filename == contract basename, or
-  basename + `.` + variant). This _tightens_ DL#200's boolean `hasTemplateForContractFile`
-  (`validate.ts:104-116`), which today counts **any** `.jay-html` in `D`. Generalize that helper
-  into a `listTemplatesForContractFile(contractFile): TemplateVariant[]` and have the boolean rule
-  delegate to `list.length > 0` so the two never disagree.
-- **Each template entry is `{ path, variant, title?, description? }`.** `title` comes from the
-  template's `headMeta.title` (`jay-html-parser.ts:985`, exposed as
+- **Template-variant enumeration rule:** a template is a variant of contract `X.jay-contract` when
+  its own `<script type="application/jay-data" contract="…">` resolves to that same `.jay-contract`
+  file. No filename convention — the template already _declares_ its contract (`contractRef`,
+  `jay-html-parser.ts:545-546`), so we match on that, not on the filename. This also handles a
+  directory holding several contracts correctly: each `.jay-html` is grouped under whichever contract
+  it points at. Generalize DL#200's boolean `hasTemplateForContractFile` (`validate.ts:104-116`,
+  which today counts **any** `.jay-html` in the dir) into
+  `listTemplatesForContractFile(contractFile): TemplateVariant[]` that scans the dir, parses each
+  `.jay-html`, and keeps the ones whose resolved `contractRef === contractFile`; the boolean rule
+  delegates to `list.length > 0`.
+- **Each template entry is `{ path, variant, title? }`.** `title` comes from the template's
+  `headMeta.title` (`jay-html-parser.ts:985`, exposed as
   `JayHtmlSourceFile.headMeta.title: TemplatePart[]`) — reconstruct text from the **static** parts;
-  if empty or interpolation-only, fall back to the contract's `description`. `variant` is the
-  filename suffix (`''`/`default` for the name-matched base template).
+  if empty or interpolation-only, omit it. **No fallback to the contract description** — that is a
+  property of the component, not of a specific template (see next bullet). `variant` is a stable id
+  derived from the filename stem (`''`/`default` for `X.jay-html`, else the stem, e.g. `card.feature`).
+- **The contract `description` lives on the _component_ entry, not the template.** A
+  `DesignSystemComponentEntry` carries `description?` read from the `.jay-contract`; template entries
+  carry only their own `<title>`. One contract → one description; N templates → N titles.
+- **Also emit an agent/editor "add-menu" doc** (`agent-kit/design-system.md`) generated from the
+  same scan: a human- and agent-readable catalog of every component and its template variants, each
+  with the ready-to-paste `template=` import + `<jay:X>` snippet. The YAML index is the machine edge;
+  this doc is the "what can I add here" menu an editor UI or an agent reads.
 - **Feed DL#200's `REGION-NOT-LINKED` suggestion** with the real template path(s) from this index
   instead of the current `"…/card.jay-html"` placeholder (`validate.ts` suggestion string).
 - **Non-goal:** no new runtime, no new `.jay-html`/contract syntax. This is a build-time catalog
@@ -100,18 +114,31 @@ index must also cover local components. Keeping them separate keeps each index's
 A: No — only plugins (`src/plugins/*` + node_modules, both gated on `plugin.yaml`). Confirmed in
 `plugin-scanner.ts:82-188`. This is why the new index can't just reference plugins-index entries.
 
-**Q: Can one contract have multiple templates? How are they named?**
-A: Yes — co-location allows any number of `.jay-html` beside a `.jay-contract`
-(`hasTemplateForContractFile` uses `.some(...)`). There is no naming scheme in code today. This DL
-_defines_ one: `X.jay-html` (base) and `X.<variant>.jay-html` (variants), keyed to the contract
-basename. This disambiguates directories that hold more than one contract and gives each variant a
-stable `variant` id. (DL#200's looser "any `.jay-html` in dir" boolean becomes `list.length > 0`
-over this stricter enumeration — a behavior change only in the pathological multi-contract-dir case,
-which we should also flag in `validate`.)
+**Q: Can one contract have multiple templates? How are they associated — by filename?**
+A: Yes, co-location allows any number of `.jay-html` beside a `.jay-contract`. **No filename
+convention is needed** (reviewer: "why not just count any template variant that shares the same
+contract?"). Each `.jay-html` already declares its contract via
+`<script type="application/jay-data" contract="…">` (`contractRef`, `jay-html-parser.ts:545-546`); a
+template is a variant of contract `X` iff its resolved `contractRef` points at `X.jay-contract`.
+That is both simpler (no new naming rule to teach) and more correct in a multi-contract directory
+(each template is grouped by what it actually points at, not by a basename coincidence). DL#200's
+"any `.jay-html` in dir" boolean becomes `listTemplatesForContractFile(...).length > 0` over this
+contract-reference match. The `variant` id is just the filename stem, for a stable handle — it is a
+label, not the association key.
 
 **Q: What is a template's description?**
-A: Its `<title>` (`headMeta.title`), reconstructed from static `TemplatePart`s; fall back to the
-contract `description` when the title is empty/interpolation-only. (DL#201 Item 4 tentative design.)
+A: Its `<title>` (`headMeta.title`), reconstructed from static `TemplatePart`s; omit it when the
+title is empty/interpolation-only. **It does _not_ fall back to the contract `description`**
+(reviewer: the contract description "belongs at the contract level, not the specific template"). The
+contract description is a property of the _component_, so it lives on `DesignSystemComponentEntry`
+(read once from the `.jay-contract`), while each template entry carries only its own `<title>`.
+
+**Q: Only a YAML index, or a human/agent-facing doc too?**
+A: Both. Since we already have the scan, also generate an "add-menu" markdown doc
+(`agent-kit/design-system.md`) — a catalog of every component and its template variants with a
+copy-paste import + `<jay:X>` snippet. This is the menu an editor UI's "add element" panel or an
+agent reads to decide what to flatten; the YAML stays the structured/machine form. (Reviewer: "if we
+create the index, we can as well create an editor/add-menu doc as well.")
 
 **Q: Should this index affect the build, or just inform agents?**
 A: Inform agents, plus one validator improvement: `REGION-NOT-LINKED`'s suggestion names the real
@@ -124,17 +151,17 @@ path(s). No build gating — consistent with DL#200 (warnings never block).
 ```ts
 export interface TemplateVariant {
   path: string; // repo-relative or agent-kit-relative path to the .jay-html
-  variant: string; // '' | 'default' for the base, else the filename suffix (e.g. 'feature', 'compact')
-  title?: string; // from headMeta.title static parts
-  description?: string; // title ?? contract.description
+  variant: string; // '' | 'default' for X.jay-html, else the filename stem — a stable label, not the association key
+  title?: string; // from headMeta.title static parts; omitted when empty/interpolation-only
 }
 
 export interface DesignSystemComponentEntry {
   name: string; // contract name
   contractPath: string; // path to the .jay-contract
+  description?: string; // from the .jay-contract — a component-level property, read once
   source: 'local' | 'plugin';
   plugin?: string; // plugin name when source === 'plugin'
-  templates: TemplateVariant[];
+  templates: TemplateVariant[]; // every .jay-html whose contractRef resolves to this contract
 }
 
 export interface DesignSystemIndex {
@@ -155,10 +182,11 @@ export interface PluginsIndex {
 
 ```ts
 // Replaces the boolean-only hasTemplateForContractFile; boolean becomes list.length > 0.
+// Association is by the template's declared contract (contractRef), not by filename.
 export function listTemplatesForContractFile(contractFile: string | undefined): TemplateVariant[] {
   if (!contractFile) return [];
   const dir = path.dirname(contractFile);
-  const base = path.basename(contractFile, JAY_CONTRACT_EXTENSION); // e.g. 'card'
+  const target = path.resolve(contractFile);
   let names: string[];
   try {
     names = fs.readdirSync(dir);
@@ -166,20 +194,26 @@ export function listTemplatesForContractFile(contractFile: string | undefined): 
     return [];
   }
   return names
-    .filter(
-      (f) =>
-        f === `${base}${JAY_EXTENSION}` || (f.startsWith(`${base}.`) && f.endsWith(JAY_EXTENSION)),
-    )
-    .map((f) => toTemplateVariant(path.join(dir, f), base));
+    .filter((f) => f.endsWith(JAY_EXTENSION))
+    .map((f) => path.join(dir, f))
+    .filter((p) => resolvedContractRef(p) === target) // parse .jay-html, resolve its contract=, compare
+    .map((p) => toTemplateVariant(p));
 }
 export function hasTemplateForContractFile(c: string | undefined): boolean {
   return listTemplatesForContractFile(c).length > 0;
 }
 ```
 
-`toTemplateVariant` parses the `.jay-html` (reuse the existing jay-html parse) to read
-`headMeta.title`, derives `variant` from the filename (`'' ` when `f === base.jay-html`, else the
-middle segment).
+`resolvedContractRef(jayHtmlPath)` parses the `.jay-html` (reuse the existing jay-html parse), reads
+the `contractRef` from its `<script type="application/jay-data" contract="…">`
+(`jay-html-parser.ts:545-546`), and resolves it relative to the template's directory; returns
+`undefined` for templates with inline data / no contract (those are never design-system variants).
+`toTemplateVariant` reads `headMeta.title` for the `title` and derives `variant` from the filename
+stem (`''` when the file is `<contract-basename>.jay-html`, else the stem) — a label only.
+
+> **Note — we parse each candidate `.jay-html` anyway.** Both the old filename rule and this
+> contract-reference rule have to parse the template to read its `<title>`. Matching on `contractRef`
+> adds no parse cost over what the `title` already requires; it only removes the naming convention.
 
 ### Generation (`materializeContracts`, after the plugins-index write at `:625-629`)
 
@@ -201,9 +235,21 @@ fs.writeFileSync(
   YAML.stringify(designSystem),
   'utf-8',
 );
+// human/agent "add-menu" doc, generated from the same object
+fs.writeFileSync(
+  path.join(agentKitDir, 'design-system.md'),
+  renderAddMenu(designSystem),
+  'utf-8',
+);
 ```
 
 (`agentKitDir = path.dirname(outputDir)`, already computed at `:625`.)
+
+`localEntry`/`pluginEntry` set the component `description` by parsing the `.jay-contract` and reading
+its `description` (component-level). `renderAddMenu` walks the same `DesignSystemIndex` and emits a
+markdown catalog — one section per component (name + contract `description`), a row per template
+variant (its `<title>` + `variant`), and a ready-to-paste snippet pairing the `template=` import with
+the `<jay:X>` region.
 
 ### DL#200 suggestion upgrade (`validate.ts`)
 
@@ -214,21 +260,28 @@ list is somehow empty (shouldn't happen, since the rule only fires when a templa
 ## Implementation Plan
 
 1. **Types** — add `TemplateVariant`, `DesignSystemComponentEntry`, `DesignSystemIndex`, and
-   `PluginsIndex.designSystemIndex` in `contract-materializer.ts`.
+   `PluginsIndex.designSystemIndex` in `contract-materializer.ts`. (`TemplateVariant` has no
+   `description`; `DesignSystemComponentEntry` has `description`.)
 2. **Lookup** — generalize `hasTemplateForContractFile` → `listTemplatesForContractFile` in
-   `validate.ts`; keep the boolean as a wrapper; add `toTemplateVariant` (reads `headMeta.title`).
+   `validate.ts`, matching on the template's resolved `contractRef` (not filename); keep the boolean
+   as a wrapper; add `resolvedContractRef` and `toTemplateVariant` (reads `headMeta.title`, derives
+   `variant` from the filename stem).
 3. **Generation** — in `materializeContracts`, after the plugins-index write: local scan over
-   `componentsBase` + plugin scan over `scannedPlugins`; emit `design-system-index.yaml`; set the
-   `designSystemIndex` link on the plugins-index object before it serializes.
-4. **CLI print** — `run-agent-kit.ts`: when printing the index (`:118-128`), also surface the new
+   `componentsBase` + plugin scan over `scannedPlugins`; read each contract's `description` for the
+   component entry; emit `design-system-index.yaml`; set the `designSystemIndex` link on the
+   plugins-index object before it serializes.
+4. **Add-menu doc** — `renderAddMenu(designSystem)` → write `agent-kit/design-system.md` (component
+   sections with contract `description`, per-variant rows, copy-paste import + `<jay:X>` snippet).
+5. **CLI print** — `run-agent-kit.ts`: when printing the index (`:118-128`), also surface the new
    index (and a `--design-system` list mode mirroring `--list`, optional).
-5. **DL#200 suggestion** — rewrite `REGION-NOT-LINKED`'s suggestion to name real paths.
-6. **Docs** — add a pointer in `agent-kit-template/designer/contracts-and-plugins.md` ("read
-   `design-system-index.yaml` to choose a template to flatten").
-7. **Tests** (fixture-based, `toEqual` on parsed YAML — never `toContain`): a fixture project with
-   (a) a local component that ships two variants (`card.jay-html` + `card.feature.jay-html`), (b) a
-   local component with no template (empty `templates`), (c) a plugin contract with a template.
-   Assert the emitted `design-system-index.yaml` object and the `designSystemIndex` link.
+6. **DL#200 suggestion** — rewrite `REGION-NOT-LINKED`'s suggestion to name real paths.
+7. **Docs** — add a pointer in `agent-kit-template/designer/contracts-and-plugins.md` ("read
+   `design-system.md` / `design-system-index.yaml` to choose a template to flatten").
+8. **Tests** (fixture-based, `toEqual` on parsed YAML — never `toContain`): a fixture project with
+   (a) a local component that ships two variants both pointing at the same contract, (b) a local
+   component with no template (empty `templates`), (c) a plugin contract with a template, and (d) a
+   directory holding **two** contracts with one template each, to prove association is by `contractRef`
+   not filename. Assert the emitted `design-system-index.yaml` object and the `designSystemIndex` link.
 
 ## Examples
 
@@ -238,22 +291,23 @@ list is somehow empty (shouldn't happen, since the rule only fires when a templa
 components:
   - name: card
     contractPath: ./src/components/card/card.jay-contract
+    description: A product card with media, title and body. # from the .jay-contract
     source: local
     templates:
       - path: ./src/components/card/card.jay-html
         variant: ''
         title: Card
-        description: Card
       - path: ./src/components/card/card.feature.jay-html
-        variant: feature
+        variant: card.feature # the filename stem
         title: Feature card
-        description: Feature card
   - name: badge
     contractPath: ./src/components/badge/badge.jay-contract
+    description: A small status badge.
     source: local
     templates: [] # COMPONENT-NO-TEMPLATE also fires (DL#200)
   - name: rating
     contractPath: ./node_modules/@acme/reviews/rating.jay-contract
+    description: Star rating control.
     source: plugin
     plugin: '@acme/reviews'
     templates:
@@ -261,6 +315,39 @@ components:
         variant: ''
         title: Star rating
 ```
+
+`agent-kit/design-system.md` (the add-menu doc, same data):
+
+````md
+# Design-system elements you can add
+
+## card — A product card with media, title and body.
+
+| Variant   | Title        | Template                                   |
+| --------- | ------------ | ------------------------------------------ |
+| (default) | Card         | ./src/components/card/card.jay-html         |
+| card.feature | Feature card | ./src/components/card/card.feature.jay-html |
+
+To add the **Feature card** variant:
+
+```html
+<script
+  type="application/jay-headless"
+  contract="./src/components/card/card.jay-contract"
+  template="./src/components/card/card.feature.jay-html"
+></script>
+
+<jay:card ref="myCard"><!-- flattened copy; edit freely --></jay:card>
+```
+
+Then run `jay-stack sync` to flatten it.
+
+## rating — Star rating control.
+
+| Variant   | Title       | Template                                  |
+| --------- | ----------- | ----------------------------------------- |
+| (default) | Star rating | ./node_modules/@acme/reviews/rating.jay-html |
+````
 
 `plugins-index.yaml` gains one line:
 
@@ -276,19 +363,80 @@ plugins:
 - **Two indexes instead of one.** Slight duplication (plugin contracts appear in both), but each
   index keeps a coherent scope; merging would force plugins-index to also mean "local components,"
   which it currently doesn't.
-- **A stricter template-naming rule.** `X.jay-html` / `X.<variant>.jay-html` is new convention. It
-  tightens DL#200's "any `.jay-html` in the dir" — a behavior change only when a directory holds
-  multiple contracts (already an unusual layout). Worth a companion `validate` note so a stray
-  `.jay-html` that matches no contract basename is reported rather than silently ignored.
-- **Parse cost at agent-kit time.** We now parse every candidate `.jay-html` to read its `<title>`.
-  Agent-kit generation is a dev/build-time step, not a hot path; acceptable.
+- **No new naming convention.** Association is by the template's declared `contractRef`, which
+  already exists, so there is nothing new to teach and a multi-contract directory groups correctly.
+  (Earlier draft proposed an `X.jay-html` / `X.<variant>.jay-html` filename rule; dropped per review
+  as unnecessary surface.) A `.jay-html` whose `contractRef` resolves to no scanned contract is
+  simply uncatalogued — worth a companion `validate` note so a stray template is reported rather than
+  silently ignored.
+- **Parse cost at agent-kit time.** We parse every candidate `.jay-html` to read its `<title>` and
+  `contractRef`. Agent-kit generation is a dev/build-time step, not a hot path; acceptable — and the
+  contract-reference match adds no parse over what the title already needs.
+- **A second generated artifact (the add-menu doc).** `design-system.md` duplicates the YAML's
+  content in prose. It is regenerated from the same object each run, so they can't drift; the cost is
+  one more file write.
 
 ## Verification criteria
 
 1. A project with local components (some multi-variant, some template-less) and a plugin component
-   emits a `design-system-index.yaml` whose object equals the fixture (`toEqual`).
-2. `plugins-index.yaml` carries `designSystemIndex: ./design-system-index.yaml`.
-3. `hasTemplateForContractFile` still returns the same boolean for existing DL#200 tests (wrapper
+   emits a `design-system-index.yaml` whose object equals the fixture (`toEqual`). Each component
+   entry carries its contract `description`; each template entry carries only its `<title>`.
+2. A directory holding two contracts with one template each groups each template under the contract
+   its `contractRef` points at (proves association is by reference, not filename).
+3. `plugins-index.yaml` carries `designSystemIndex: ./design-system-index.yaml`.
+4. `agent-kit/design-system.md` is emitted and lists every component + variant with a paste-ready
+   import/`<jay:X>` snippet.
+5. `hasTemplateForContractFile` still returns the same boolean for existing DL#200 tests (wrapper
    over the new enumeration) — no regression in `COMPONENT-NO-TEMPLATE` / `REGION-NOT-LINKED`.
-4. `REGION-NOT-LINKED`'s suggestion names the real template path(s) for a contract with a sibling
+6. `REGION-NOT-LINKED`'s suggestion names the real template path(s) for a contract with a sibling
    template.
+
+## Implementation Results
+
+Status: **implemented**. All verification criteria met. Tests: `design-system-index` 8/8,
+`validate` 84/84, full `stack-cli` 127/127, full `stack-server-build` 59/59; both packages
+type-check and build clean.
+
+### What shipped
+
+- **`packages/jay-stack/stack-server-build/lib/design-system-index.ts`** (new) — the shared
+  module. Exports the `TemplateVariant` / `DesignSystemComponentEntry` / `DesignSystemIndex`
+  types, plus `listTemplatesForContractFile`, `hasTemplateForContractFile`,
+  `buildDesignSystemIndex`, and `renderAddMenu`. A lightweight `readTemplateMeta` reads each
+  `.jay-html` with `node-html-parser` to extract `contractRef` (the `contract=` attr on
+  `script[type="application/jay-data"]`, resolved absolute) and `<title>` (interpolation-only
+  titles are dropped).
+- **`contract-materializer.ts`** — generation wired into `materializeContracts`: builds the index,
+  writes `agent-kit/design-system-index.yaml` + `agent-kit/design-system.md`, and links the YAML
+  from `plugins-index.yaml` via `designSystemIndex`. `readComponentsBase` honors the `.jay`
+  `devServer.componentsBase` (default `./src/components`).
+- **`stack-cli/lib/validate.ts`** — `checkRegionNotLinked` now takes a
+  `templatesFor: (imp) => TemplateVariant[]` and names real, project-relative template paths in its
+  suggestion; the local `hasTemplateForContractFile` was removed in favor of the shared one.
+- **`stack-cli/lib/run-agent-kit.ts`** + **`designer/contracts-and-plugins.md`** — summary line and
+  a "Discovery: Design-System Index" doc section.
+
+### Deviations from the design
+
+1. **Shared lookup lives in `stack-server-build`, not `validate.ts`.** The DL placed the
+   enumeration in `validate.ts`, but `stack-server-build` (which generates the index) cannot import
+   from `stack-cli` — the dependency runs the other way. The functions therefore live in
+   `stack-server-build`'s new module and `validate.ts` imports them.
+2. **Lightweight `node-html-parser` read, not a full `parseJayFile`.** Only `contractRef` + `<title>`
+   are needed, so a full parse is unnecessary; added `node-html-parser` as an explicit dependency.
+3. **`variant` is the filename stem** (e.g. `card.feature`), with the base template (stem ===
+   contract basename) normalized to `''`. The DL examples showed a bare `feature`; the stem form is
+   unambiguous when a directory holds multiple contracts.
+4. **Dynamic plugin contracts are excluded** — they are generated at runtime and ship no co-located
+   template, so they can never be flattened. Only static manifest contracts are cataloged.
+
+### Note on association semantics (intentional)
+
+Association is strictly by **declared contract reference**: a `.jay-html` is a variant of contract X
+iff its `script[type="application/jay-data"]` carries `contract="…X.jay-contract"`. This is stricter
+than DL#200's old "any sibling `.jay-html`" filename rule. A headfull component whose template uses
+**inline** `application/jay-data` (no `contract=` attr) — e.g. the smoke-test `inner-block` — is
+correctly reported as template-less: such a template is not contract-bound and cannot be flattened
+into a `<jay:X>` region. This is the desired behavior for the index, and consistent with
+`REGION-NOT-LINKED` / `COMPONENT-NO-TEMPLATE`, which concern flattenable contract-referencing
+templates.

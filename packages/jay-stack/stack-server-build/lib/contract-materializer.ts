@@ -20,6 +20,7 @@ import { type ScannedPlugin, scanPlugins } from '@jay-framework/stack-server-run
 import type { ViteSSRLoader } from '@jay-framework/stack-server-runtime';
 import { getLogger } from '@jay-framework/logger';
 import { loadActionMetadata, resolveActionMetadataPath } from './action-metadata';
+import { buildDesignSystemIndex, renderAddMenu } from './design-system-index';
 
 const require = createRequire(import.meta.url);
 
@@ -91,6 +92,8 @@ export interface PluginsIndexEntry {
 
 export interface PluginsIndex {
     plugins: PluginsIndexEntry[];
+    /** DL#204 — pointer to the sibling design-system index (region/template catalog). */
+    designSystemIndex?: string;
 }
 
 export interface MaterializeContractsOptions {
@@ -325,6 +328,18 @@ function toKebabCase(str: string): string {
         .replace(/([A-Z])/g, '-$1')
         .toLowerCase()
         .replace(/^-/, '');
+}
+
+/** DL#204 — local-component root for the design-system index. Reads `.jay` (devServer.componentsBase), defaults to `./src/components`. */
+function readComponentsBase(projectRoot: string): string {
+    try {
+        const parsed = YAML.parse(fs.readFileSync(path.join(projectRoot, '.jay'), 'utf-8'));
+        const base = parsed?.devServer?.componentsBase;
+        if (typeof base === 'string' && base.length > 0) return base;
+    } catch {
+        // no .jay / unreadable — fall through to default
+    }
+    return './src/components';
 }
 
 // ============================================================================
@@ -622,14 +637,33 @@ export async function materializeContracts(
         })),
     };
 
+    // DL#204 — build the design-system (region/template) catalog from the same scan, plus a local
+    // `src/components` scan that plugins-index does not cover. Link it from plugins-index and emit a
+    // human/agent "add-menu" doc beside it.
+    const designSystem = buildDesignSystemIndex({
+        projectRoot,
+        componentsBase: readComponentsBase(projectRoot),
+        plugins,
+        resolvePluginContractPath: (plugin, spec) =>
+            resolveStaticContractPath(plugin, spec, projectRoot),
+    });
+    pluginsIndex.designSystemIndex = './design-system-index.yaml';
+
     fs.mkdirSync(outputDir, { recursive: true });
     // Write plugins-index.yaml to agent-kit/ root (parent of materialized-contracts/)
     const agentKitDir = path.dirname(outputDir);
     const pluginsIndexPath = path.join(agentKitDir, 'plugins-index.yaml');
     fs.writeFileSync(pluginsIndexPath, YAML.stringify(pluginsIndex), 'utf-8');
 
+    const designSystemIndexPath = path.join(agentKitDir, 'design-system-index.yaml');
+    fs.writeFileSync(designSystemIndexPath, YAML.stringify(designSystem), 'utf-8');
+    const addMenuPath = path.join(agentKitDir, 'design-system.md');
+    fs.writeFileSync(addMenuPath, renderAddMenu(designSystem), 'utf-8');
+
     if (verbose) {
         getLogger().info(`\n✅ Plugins index written to: ${pluginsIndexPath}`);
+        getLogger().info(`✅ Design-system index written to: ${designSystemIndexPath}`);
+        getLogger().info(`✅ Design-system add-menu written to: ${addMenuPath}`);
     }
 
     return {

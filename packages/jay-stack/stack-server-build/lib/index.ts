@@ -7,6 +7,7 @@ export * from './generate-client-script';
 export * from './action-metadata';
 export * from './action-discovery';
 export * from './contract-materializer';
+export * from './design-system-index';
 export * from './plugin-commands';
 export * from './plugin-setup';
 export * from './slow-render-cache';
