@@ -188,7 +188,10 @@ function peg$parse(input, options) {
     peg$c4 = ';',
     peg$c5 = peg$literalExpectation(';', false),
     peg$c6 = function (prop, value) {
-      const camelProp = prop.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+      // CSS custom properties (--name) are case-sensitive and must keep their exact name
+      const camelProp = prop.startsWith('--')
+          ? prop
+          : prop.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
       const [valueFragment, isDynamic] = value;
 
       return {
