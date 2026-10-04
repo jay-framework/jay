@@ -12,7 +12,6 @@ import { runHydrateScriptInJsdom } from './run-script-in-jsdom';
 // @vitest-environment node
 
 describe('dev server', () => {
-
     const baseOptions = {
         serverBase: '/',
         pagesBase: path.resolve(__dirname, './'),
