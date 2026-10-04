@@ -139,6 +139,8 @@ The project follows a rigorous design log methodology for all significant featur
    - **Validation first** (`jay-stack validate` via stack-cli) — Can the problem be caught at build/validation time? Add a validation rule that detects and reports the issue with a clear error message. Most bugs become non-issues if they're caught early.
    - **Agent-kit guide second** — Can the problem be prevented by better documentation? Update or create an agent-kit guide so AI agents (and humans) avoid the pattern that causes the issue.
    - **Framework feature last** — Only add framework code (compiler, runtime, new syntax) when validation and documentation cannot solve the problem. Framework features have the highest maintenance cost.
+5. **Name the shared cause before the second workaround** — if a change works around the same obstacle as a recent related DL, say so in Prior Art; two workarounds for one obstacle means redesign the obstacle (DL#195).
+6. **Serial-supersession tripwire** — if a DL supersedes part of its own predecessor twice in a short span, stop and write a root-cause retrospective DL before the next increment (DL#195).
 
 ### When Creating Design Logs
 
@@ -147,6 +149,7 @@ The project follows a rigorous design log methodology for all significant featur
 3. **Prior Art / Adjacent Mechanisms section**: before designing, enumerate the existing framework mechanisms in the same area (coordinate system, ConstructContext, existing runtime primitives, related DLs) and state whether each solves or constrains the problem. This is the author's job up front — do not rely on review to surface what already exists.
 4. **Minimize new surface (null hypothesis first)**: for every proposed new mechanism (API, type, syntax, runtime facility), first state why an _existing_ primitive does not already suffice. Prefer subtraction. The simpler model is often also the more correct one — reach for new surface only after the null hypothesis fails.
 5. **Trace it through the real runtime code**: for any design touching the runtime data/update path, walk one concrete change through the actual functions with file:line citations _before_ declaring the design sound. Do not reason about runtime behavior abstractly — update gates, reference checks, and lifecycle order are where designs break.
+   - **Tag load-bearing claims ✅ verified / ⚠️ assumed**: for each claim the design rests on (a file:line, "no new runtime", "primitive X suffices", a CSS/DOM behavior), cite the file:line you actually read or the executed check; unverified claims are what review attacks first (DL#196).
 6. **Be specific**: Include file paths, type signatures, validation rules
 7. **Show examples**: Use checkmark/cross for good/bad patterns, include realistic code
 8. **Explain why**: Don't just describe what, explain rationale and trade-offs
@@ -155,16 +158,19 @@ The project follows a rigorous design log methodology for all significant featur
 11. **Be brief**: write short explanations and only what most relevant
 12. **Draw Diagrams**: Use mermaid inline diagrams when it makes sense
 13. **Define verification criteria**: how do we know the implementation solves the original problem
+14. **Scope pre-mortem**: before the Implementation Plan, list what this will _not_ handle and decide each gap (defer / own DL). A multi-subsystem design is a program — decompose it; a long tail of follow-ups patching foreseeable gaps means the surface was under-specified (DL#196 → #198/#200–#205).
+15. **Boundary / multi-target changes need fixtures + a live example up front**: crossings (component boundary, or element/hydrate/server/sandbox targets) render wrong _silently_ — invisible to types and validation — so plan cross-target fixtures and a running example from the start, not a late phase (DL#195).
 
 ### When Implementing
 
 1. **Follow the implementation plan** phases from the design log
 2. **Write tests first** or update existing tests to match new behavior
-3. **Do not Update design log** initial section once implementation started
-4. **Append design log** with "Implementation Results" section as you go
+3. **Never rewrite the initial design sections** once implementation started — append-only from here.
+4. **Append** results, findings, bugs, and deviations as new sections (an "Implementation Results" section) as you go
 5. **Document deviations**: Explain why implementation differs from design
 6. **Run tests**: Include test results (X/Y passing) in implementation notes
 7. **After Implementation** add a summary of deviations from original design
+8. **A new mini-design gets its own DL**: don't embed speculative design (own options/status) in an Implementation Results appendix — split and link it (DL#196).
 
 ### When Answering Questions
 
@@ -187,6 +193,7 @@ The project follows a rigorous design log methodology for all significant featur
 1. **Maintain `./design-log/index.md`**: Catalog important design logs by category in markdown tables
 2. **Before reading**: Check index.md first to find relevant design logs
 3. **After creating/updating**: Add new entries to appropriate category table
+4. **One line per entry, led by a status tag**: **[Design]** / **[Implemented]** / **[Rejected]** / **[Retrospective]** / **[Promoted]** / **[Superseded by #N]**. Keep descriptions to a single line — detail lives in the DL.
 
 IMPORTANT - YOU ARE NOT ALLOWED TO USE toContain ON CODE FILES.
 
