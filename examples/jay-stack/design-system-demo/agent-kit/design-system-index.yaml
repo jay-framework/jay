@@ -15,6 +15,9 @@ components:
     templates:
       - path: ./src/components/card/card.jay-html
         variant: ""
+      - path: ./src/components/card/card.feature.jay-html
+        variant: card.feature
+        title: Feature card
   - name: Gallery
     contractPath: ./src/components/gallery/gallery.jay-contract
     source: local

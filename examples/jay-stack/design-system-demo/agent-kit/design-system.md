@@ -32,6 +32,7 @@ Then run `jay-stack sync` to flatten it.
 | Variant | Title | Template |
 | --- | --- | --- |
 | (default) |  | ./src/components/card/card.jay-html |
+| card.feature | Feature card | ./src/components/card/card.feature.jay-html |
 
 ```html
 <script

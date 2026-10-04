@@ -8,7 +8,6 @@ import {
 import {
     JayArrayType,
     JayBoolean,
-    JayComponentType,
     JayEnumType,
     JayNumber,
     JayObjectType,
@@ -21,9 +20,7 @@ import {
 import { stripMargin } from '../test-utils/strip-margin';
 import { ResolveTsConfigOptions } from '@jay-framework/compiler-analyze-exported-types';
 import { JayType } from '@jay-framework/compiler-shared';
-import fs from 'node:fs';
 import path from 'node:path';
-import os from 'node:os';
 
 describe('compiler', () => {
     const defaultImportResolver: JayImportResolver = {
@@ -1876,6 +1873,157 @@ describe('compiler', () => {
             expect(secondEnum).toBeDefined();
             expect(secondEnum!.as).toEqual('Mode$1');
             expect((secondEnum!.type as JayEnumType).alias).toEqual('Mode$1');
+        });
+    });
+
+    describe('region tag aliasing with as= (DL#205)', () => {
+        const cardContract: Contract = {
+            name: 'card',
+            tags: [
+                { tag: 'heading', type: [ContractTagType.data], dataType: JayString },
+                { tag: 'body', type: [ContractTagType.data], dataType: JayString },
+            ],
+        };
+
+        const cardResolver: JayImportResolver = {
+            ...defaultImportResolver,
+            loadContract(fullPath: string): WithValidations<Contract> {
+                if (fullPath.includes('card')) return new WithValidations(cardContract, []);
+                throw new Error('Unexpected contract path: ' + fullPath);
+            },
+            resolveLink(importingModule: string, link: string): string {
+                return '/resolved/' + link;
+            },
+        };
+
+        it('should derive the region tag from the contract name when no as= is given', async () => {
+            const jayFile = await parseJayFile(
+                stripMargin(
+                    `<html>
+                    |   <head>
+                    |     <script type="application/jay-headless" contract="../components/card/card.jay-contract" template="../components/card/card.jay-html"></script>
+                    |     <script type="application/jay-data">data:</script>
+                    |   </head>
+                    |   <body></body>
+                    | </html>`,
+                ),
+                'Page',
+                '',
+                {},
+                cardResolver,
+                '',
+            );
+
+            expect(jayFile.validations).toEqual([]);
+            expect(jayFile.val.headlessImports).toHaveLength(1);
+            expect(jayFile.val.headlessImports[0].contractName).toEqual('card');
+        });
+
+        it('should let as= override the contract-derived region tag so two variants coexist', async () => {
+            const jayFile = await parseJayFile(
+                stripMargin(
+                    `<html>
+                    |   <head>
+                    |     <script type="application/jay-headless" contract="../components/card/card.jay-contract" template="../components/card/card.jay-html"></script>
+                    |     <script type="application/jay-headless" contract="../components/card/card.jay-contract" template="../components/card/card.feature.jay-html" as="feature-card"></script>
+                    |     <script type="application/jay-data">data:</script>
+                    |   </head>
+                    |   <body></body>
+                    | </html>`,
+                ),
+                'Page',
+                '',
+                {},
+                cardResolver,
+                '',
+            );
+
+            expect(jayFile.validations).toEqual([]);
+            expect(jayFile.val.headlessImports).toHaveLength(2);
+            expect(jayFile.val.headlessImports.map((i) => i.contractName)).toEqual([
+                'card',
+                'feature-card',
+            ]);
+            // Both still back the same underlying contract — only the region tag differs
+            expect(jayFile.val.headlessImports[0].contract.name).toEqual('card');
+            expect(jayFile.val.headlessImports[1].contract.name).toEqual('card');
+        });
+
+        it('should report REGION-TAG-COLLISION when two imports back the same region tag without as=', async () => {
+            const jayFile = await parseJayFile(
+                stripMargin(
+                    `<html>
+                    |   <head>
+                    |     <script type="application/jay-headless" contract="../components/card/card.jay-contract" template="../components/card/card.jay-html"></script>
+                    |     <script type="application/jay-headless" contract="../components/card/card.jay-contract" template="../components/card/card.feature.jay-html"></script>
+                    |     <script type="application/jay-data">data:</script>
+                    |   </head>
+                    |   <body></body>
+                    | </html>`,
+                ),
+                'Page',
+                '',
+                {},
+                cardResolver,
+                '',
+            );
+
+            expect(
+                jayFile.validations.some((v) =>
+                    v.includes('Two headless imports back the same <jay:card> region tag'),
+                ),
+            ).toBe(true);
+        });
+
+        it('should report REGION-TAG-COLLISION when an as= alias collides with another contract-derived tag', async () => {
+            const jayFile = await parseJayFile(
+                stripMargin(
+                    `<html>
+                    |   <head>
+                    |     <script type="application/jay-headless" contract="../components/card/card.jay-contract" template="../components/card/card.jay-html"></script>
+                    |     <script type="application/jay-headless" contract="../components/card/card.jay-contract" template="../components/card/card.feature.jay-html" as="card"></script>
+                    |     <script type="application/jay-data">data:</script>
+                    |   </head>
+                    |   <body></body>
+                    | </html>`,
+                ),
+                'Page',
+                '',
+                {},
+                cardResolver,
+                '',
+            );
+
+            expect(
+                jayFile.validations.some((v) =>
+                    v.includes('Two headless imports back the same <jay:card> region tag'),
+                ),
+            ).toBe(true);
+        });
+
+        it('should reject an as= alias that is not a valid kebab-case region tag', async () => {
+            const jayFile = await parseJayFile(
+                stripMargin(
+                    `<html>
+                    |   <head>
+                    |     <script type="application/jay-headless" contract="../components/card/card.jay-contract" template="../components/card/card.feature.jay-html" as="FeatureCard"></script>
+                    |     <script type="application/jay-data">data:</script>
+                    |   </head>
+                    |   <body></body>
+                    | </html>`,
+                ),
+                'Page',
+                '',
+                {},
+                cardResolver,
+                '',
+            );
+
+            expect(
+                jayFile.validations.some((v) =>
+                    v.includes('as="FeatureCard" is not a valid region tag name'),
+                ),
+            ).toBe(true);
         });
     });
 

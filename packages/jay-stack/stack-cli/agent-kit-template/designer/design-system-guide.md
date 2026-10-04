@@ -249,6 +249,47 @@ The flattened body is yours. Rewrite text, change classes, add/remove children, 
 `heading` prop, not the page's. What you may change without prompting a "make a new variant" nudge is the
 [content vs. non-content](#what-counts-as-drift-worth-a-new-variant) distinction above.
 
+### 4. Two variants of one component on a page — `as=`
+
+A `<jay:X>` region tag is derived from the imported contract's name, so importing one contract twice would
+make **both** imports back the same `<jay:card>` tag — an ambiguous collision (`REGION-TAG-COLLISION`, a
+hard error). To flatten **two [design variants](#two-templates-vs-a-conditional--different-axes) of one
+contract** side by side (e.g. a default card and a feature card — same data shape, different design), give
+the second import its own region tag with `as=`:
+
+```html
+<head>
+  <!-- default card → <jay:card> -->
+  <script
+    type="application/jay-headless"
+    contract="./components/card/card.jay-contract"
+    template="./components/card/card.jay-html"
+  ></script>
+  <!-- feature card (same contract, different template) → <jay:feature-card> -->
+  <script
+    type="application/jay-headless"
+    contract="./components/card/card.jay-contract"
+    template="./components/card/card.feature.jay-html"
+    as="feature-card"
+  ></script>
+</head>
+
+<body>
+  <jay:card ref="starter" heading="Starter"></jay:card>
+  <jay:feature-card ref="pro" heading="Pro"></jay:feature-card>
+</body>
+```
+
+- `as=` must be a **kebab-case region tag** (`[a-z][a-z0-9-]*`), e.g. `as="feature-card"` → `<jay:feature-card>`.
+- Both imports share the same contract, so both regions bind the **same props/refs** — only the design
+  (template + CSS) differs. Each region flattens and drifts independently from its own `template=`.
+- `as=` composes at every nesting level: a template may alias the nested regions it uses (two
+  `<jay:button>`s as `<jay:main-cta>` / `<jay:secondary-cta>`), as long as the page carries a matching
+  aliased import for each.
+- Write a second variant only when the difference is [non-content](#what-counts-as-drift-worth-a-new-variant)
+  (class / CSS / structure). A difference that is just **runtime state** (same design, a branch) is a
+  conditional inside **one** element, not a second import.
+
 ## The shape of a region's CSS
 
 A region's CSS is the component's own CSS, copied into the page `<style>` and rewritten into a canonical

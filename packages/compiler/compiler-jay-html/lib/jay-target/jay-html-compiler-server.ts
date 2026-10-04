@@ -1195,16 +1195,32 @@ export function generateServerElementFile(
     }
 
     // Generate import statements for headless types (ViewState, enums, iteration types).
-    const contractImports = jayFile.imports
-        .filter((imp) => headlessModules.has(imp.module))
-        .map((imp) => {
-            const typeNames = imp.names
-                .filter((n) => usedTypeNames.has(n.as || n.name))
-                .map((n) => (n.as ? `${n.name} as ${n.as}` : n.name));
-            if (typeNames.length === 0) return null;
-            return `import {${typeNames.join(', ')}} from "${imp.module}";`;
-        })
-        .filter((_): _ is string => _ !== null);
+    // DL#205: two headless imports can back the same contract module (two design variants of one contract,
+    // one aliased with `as=`), so group import links by module and dedup symbols — otherwise the same type
+    // name is imported twice from one module, a `Duplicate identifier` TypeScript error.
+    const typeNamesByModule = new Map<string, string[]>();
+    const typeNamesSeen = new Map<string, Set<string>>();
+    for (const imp of jayFile.imports) {
+        if (!headlessModules.has(imp.module)) continue;
+        let names = typeNamesByModule.get(imp.module);
+        let seen = typeNamesSeen.get(imp.module);
+        if (!names) {
+            names = [];
+            seen = new Set<string>();
+            typeNamesByModule.set(imp.module, names);
+            typeNamesSeen.set(imp.module, seen);
+        }
+        for (const n of imp.names) {
+            if (!usedTypeNames.has(n.as || n.name)) continue;
+            const rendered = n.as ? `${n.name} as ${n.as}` : n.name;
+            if (seen!.has(rendered)) continue;
+            seen!.add(rendered);
+            names.push(rendered);
+        }
+    }
+    const contractImports = [...typeNamesByModule.entries()]
+        .filter(([, typeNames]) => typeNames.length > 0)
+        .map(([module, typeNames]) => `import {${typeNames.join(', ')}} from "${module}";`);
 
     // Destructure onAsync from ctx when async directives are present
     const ctxDestructure = hasAsync

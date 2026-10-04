@@ -227,6 +227,21 @@ describe('Design System Demo — dev mode', () => {
         expect(body).toMatch(/Most popular/); // the net-new ribbon DOM
         expect(body).toMatch(/Choose Pro/); // cta label
     });
+
+    // DL#205 — two design variants of one Card contract on one page: <jay:card> (default, flattened from
+    // card.jay-html) beside <jay:feature-card> (aliased as=, flattened from card.feature.jay-html).
+    it('/variants — two design variants of one Card contract render side by side', async () => {
+        const { status, body } = await fetchPage(server.url, '/variants/');
+        expect(status).toBe(200);
+        expectPage(body);
+        // Default card variant
+        expect(body).toMatch(/Starter/); // default card heading
+        expect(body).toMatch(/Choose Starter/); // default card cta
+        // Feature card variant (its own template — ribbon DOM + feature class only on this variant)
+        expect(body).toMatch(/Most popular/); // feature-card ribbon
+        expect(body).toMatch(/ds-card--feature/); // feature-card design class
+        expect(body).toMatch(/Choose Pro/); // feature-card cta
+    });
 });
 
 // DL#196 §4 — the drift validator reports unmarked deviations and honors per-facet override=

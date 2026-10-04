@@ -652,6 +652,18 @@ async function parseHeadlessImports(
             continue;
         }
 
+        // DL#205: `as=` aliases the `<jay:X>` region tag this import backs, so a page can flatten two
+        // design variants of the same contract (each with its own `template=`) under distinct tags —
+        // e.g. `as="feature-card"` → `<jay:feature-card>`. Must be a valid kebab region-tag identifier.
+        const asAttr = element.getAttribute('as') ?? undefined;
+        if (asAttr && !/^[a-z][a-z0-9-]*$/.test(asAttr)) {
+            validations.push(
+                `Headless component as="${asAttr}" is not a valid region tag name. ` +
+                    `Use kebab-case (e.g., as="feature-card").`,
+            );
+            continue;
+        }
+
         // DL#196: a headless import resolves from a plugin (plugin=) or the local components
         // folder (no plugin=, file-path contract=). `src=` present ⇒ coded (resolve the single
         // exported component); absent ⇒ passthrough. `template=` records source provenance for
@@ -775,6 +787,10 @@ async function parseHeadlessImports(
                 contractTagName = paramCase(loadedContract.name);
             }
 
+            // DL#205: an `as=` alias overrides the contract-derived tag so two variants of one contract
+            // can coexist on a page under distinct `<jay:X>` tags.
+            if (asAttr) contractTagName = asAttr;
+
             const contractTypes = await contractToImportsViewStateAndRefs(
                 loadedContract,
                 contractFile,
@@ -883,6 +899,25 @@ async function parseHeadlessImports(
             validations.push(`failed to parse linked contract - ${e.message}${e.stack}`);
         }
     }
+
+    // DL#205 — REGION-TAG-COLLISION: every headless import must back a distinct `<jay:X>` tag. Two imports
+    // resolving to the same tag (e.g. two variants of one contract without `as=`, or an alias that collides
+    // with another contract's derived tag) would make region resolution ambiguous — the materialiser and
+    // drift validator key by tag name, so the second import would silently shadow the first.
+    const tagCounts = new Map<string, number>();
+    for (const imp of result) {
+        tagCounts.set(imp.contractName, (tagCounts.get(imp.contractName) ?? 0) + 1);
+    }
+    for (const [tag, count] of tagCounts) {
+        if (count > 1) {
+            validations.push(
+                `Two headless imports back the same <jay:${tag}> region tag. ` +
+                    `Add as="<alias>" to one of them to flatten them as distinct design variants ` +
+                    `(e.g. as="feature-${tag}" → <jay:feature-${tag}>).`,
+            );
+        }
+    }
+
     return result;
 }
 
