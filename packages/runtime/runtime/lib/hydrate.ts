@@ -23,6 +23,7 @@ import {
     normalizeUpdates,
     isHtmlContent,
     applyHtmlContent,
+    setStyleProperty,
     type Attributes,
     type HtmlContent,
 } from './element';
@@ -174,6 +175,32 @@ function adoptBase<ViewState>(
     }
 
     Object.entries(attributes).forEach(([key, value]) => {
+        if (
+            key === STYLE &&
+            element instanceof HTMLElement &&
+            typeof value === 'object' &&
+            value !== null &&
+            !('valueFunc' in value)
+        ) {
+            // `style` is compiled to a map of per-property values (as in createBaseElement). Static
+            // properties are already in the server-rendered markup; connect the dynamic ones.
+            Object.entries(value as Record<string, unknown>).forEach(([styleKey, styleValue]) => {
+                if (
+                    typeof styleValue !== 'object' ||
+                    styleValue === null ||
+                    !('valueFunc' in styleValue)
+                )
+                    return;
+                const dynStyle = styleValue as { valueFunc: (vs: ViewState) => any };
+                let current = dynStyle.valueFunc(context.currData as ViewState);
+                updates.push((newData: ViewState) => {
+                    const next = dynStyle.valueFunc(newData);
+                    if (next !== current) setStyleProperty(element.style, styleKey, next);
+                    current = next;
+                });
+            });
+            return;
+        }
         if (typeof value === 'object' && value !== null && 'valueFunc' in value) {
             const dynAttr = value as { valueFunc: (vs: ViewState) => any; style: number };
             let attrValue = dynAttr.valueFunc(context.currData as ViewState);

@@ -266,7 +266,11 @@ export function renderDynamicAttributes(
         if (isDirectiveAttribute(attrCanonical)) return;
         if (attrCanonical === 'style') {
             const styleFragment = renderStyleAttribute(attributes[attrName], variables);
-            if (styleFragment.imports.has(Import.dynamicAttribute)) {
+            // Style property bindings compile to dynamic properties (dp), not dynamic attributes
+            if (
+                styleFragment.imports.has(Import.dynamicAttribute) ||
+                styleFragment.imports.has(Import.dynamicProperty)
+            ) {
                 renderedAttributes.push(styleFragment);
             }
         } else if (attrCanonical === 'class') {

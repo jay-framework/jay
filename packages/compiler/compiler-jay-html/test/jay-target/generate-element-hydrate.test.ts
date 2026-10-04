@@ -51,6 +51,15 @@ describe('generate jay-html element hydrate', () => {
             );
         });
 
+        it('for style bindings (dynamic style properties are adopted)', async () => {
+            const folder = 'basics/style-bindings';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+
         it('for dynamic attribute parent with child ref', async () => {
             const folder = 'basics/dynamic-attr-with-child-ref';
             const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);

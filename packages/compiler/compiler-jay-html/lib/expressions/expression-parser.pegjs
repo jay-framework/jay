@@ -170,7 +170,8 @@ styleDeclarations
 styleDeclaration
   = comment:cssComment __ { return null; }
   / prop:stylePropName __ ":" __ value:styleValueContent __ ";"* __ {
-    const camelProp = prop.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+    // CSS custom properties (--name) are case-sensitive and must keep their exact name
+    const camelProp = prop.startsWith('--') ? prop : prop.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
     const [valueFragment, isDynamic] = value;
     
     return {

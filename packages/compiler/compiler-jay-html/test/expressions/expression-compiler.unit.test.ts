@@ -1081,6 +1081,18 @@ describe('expression-compiler', () => {
             expect(result.declarations[1].valueFragment.rendered).toBe("'10px'");
         });
 
+        it('keeps CSS custom property names as written (they are case-sensitive)', () => {
+            const result = parseStyleDeclarations(
+                '--slide-index: {fontSize}; font-size: 12px',
+                variables,
+            );
+            expect(result.declarations.map((d) => d.property)).toEqual([
+                '--slide-index',
+                'fontSize',
+            ]);
+            expect(result.declarations[0].valueFragment.rendered).toBe('dp(vs => vs.fontSize)');
+        });
+
         it('parses fully dynamic styles', () => {
             const result = parseStyleDeclarations('color: {color}; width: {width}', variables);
             expect(result.hasDynamic).toBe(true);

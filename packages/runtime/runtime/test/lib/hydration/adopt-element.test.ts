@@ -47,6 +47,47 @@ describe('adoptElement', () => {
         expect(box.getAttribute('class')).toBe('updated');
     });
 
+    // Dynamic style properties: the compiler passes `style` as a map of per-property values
+    it('connects dynamic style properties — updates on ViewState change, keeps static ones', () => {
+        interface VS {
+            offset: number;
+        }
+        const { jayElement, root } = hydrate<VS>(
+            '<div jay-coordinate="box" style="color: red; transform: translateX(0px)">Content</div>',
+            { offset: 0 },
+            () =>
+                adoptElement<VS>('box', {
+                    style: {
+                        color: 'red',
+                        transform: da((vs) => `translateX(${vs.offset}px)`),
+                    },
+                }),
+        );
+
+        const box = root.querySelector('[jay-coordinate="box"]') as HTMLElement;
+        jayElement.update({ offset: -980 });
+        expect(box.style.transform).toBe('translateX(-980px)');
+        expect(box.style.color).toBe('red');
+    });
+
+    it('connects dynamic CSS custom properties', () => {
+        interface VS {
+            current: number;
+        }
+        const { jayElement, root } = hydrate<VS>(
+            '<div jay-coordinate="box" style="--current: 0">Content</div>',
+            { current: 0 },
+            () =>
+                adoptElement<VS>('box', {
+                    style: { '--current': da((vs) => String(vs.current)) },
+                }),
+        );
+
+        const box = root.querySelector('[jay-coordinate="box"]') as HTMLElement;
+        jayElement.update({ current: 2 });
+        expect(box.style.getPropertyValue('--current')).toBe('2');
+    });
+
     // Test #8: connects dynamic children
     it('connects dynamic children — text updates on ViewState change', () => {
         interface VS {

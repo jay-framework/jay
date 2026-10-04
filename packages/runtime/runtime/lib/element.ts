@@ -111,6 +111,15 @@ export type Attribute<ViewState, S> =
     | Record<string, string | DynamicAttributeOrProperty<ViewState, S>>;
 export type Attributes<ViewState> = Record<string, Attribute<ViewState, any>>;
 
+/**
+ * Set one style property. CSS custom properties (`--name`) are only settable through `setProperty`;
+ * regular properties keep the property-assignment path (which also accepts camelCase names).
+ */
+export function setStyleProperty(style: CSSStyleDeclaration, key: string, value: unknown) {
+    if (key.startsWith('--')) style.setProperty(key, value == null ? '' : String(value));
+    else style[key] = value;
+}
+
 function doSetAttribute<S>(
     target: Element | CSSStyleDeclaration,
     key: string,
@@ -123,7 +132,8 @@ function doSetAttribute<S>(
     } else if (isHTMLElement && attributeStyle === BOOLEAN_ATTRIBUTE) {
         if (value) target.setAttribute(key, value as unknown as string);
         else target.removeAttribute(key);
-    } else target[key] = value;
+    } else if (!isHTMLElement) setStyleProperty(target as CSSStyleDeclaration, key, value);
+    else target[key] = value;
 }
 
 function setAttribute<ViewState, S>(
