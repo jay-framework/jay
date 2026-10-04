@@ -209,6 +209,24 @@ describe('Design System Demo — dev mode', () => {
         expect(body).toMatch(/Best Value/); // unmarked h3 text edit
         expect(body).toMatch(/ds-button--xl/); // unmarked button class edit
     });
+
+    it('/not-linked — hand-authored (unlinked) card region renders', async () => {
+        const { status, body } = await fetchPage(server.url, '/not-linked/');
+        expect(status).toBe(200);
+        expectPage(body);
+        expect(body).toMatch(/Starter/); // card heading
+        expect(body).toMatch(/Everything you need to get going/); // card body
+        expect(body).toMatch(/Choose Starter/); // cta label
+    });
+
+    it('/variant — linked card with a structural ribbon renders', async () => {
+        const { status, body } = await fetchPage(server.url, '/variant/');
+        expect(status).toBe(200);
+        expectPage(body);
+        expect(body).toMatch(/Pro/); // card heading
+        expect(body).toMatch(/Most popular/); // the net-new ribbon DOM
+        expect(body).toMatch(/Choose Pro/); // cta label
+    });
 });
 
 // DL#196 §4 — the drift validator reports unmarked deviations and honors per-facet override=
@@ -238,10 +256,16 @@ describe('Design System Demo — DL#196 region drift validation', () => {
             );
             expect(cssScopingWarnings).toEqual([]);
 
-            // Every drift warning is on the drifted page — none on pristine or branded.
-            const driftFiles = [...new Set(driftWarnings.map((w: any) => w.file))];
-            expect(driftFiles).toEqual(['src/pages/drifted/page.jay-html']);
-            expect(driftWarnings).toHaveLength(2);
+            // The pristine and branded pages carry no drift (branded marks every facet override=).
+            const noDriftPages = ['src/pages/page.jay-html', 'src/pages/branded/page.jay-html'];
+            expect(driftWarnings.filter((w: any) => noDriftPages.includes(w.file))).toEqual([]);
+
+            // The drifted page has exactly its two unmarked deviations. (The DL#200 showcase page
+            // /variant also carries one unmarked deviation; it is asserted in its own block below.)
+            const driftedDrift = driftWarnings.filter(
+                (w: any) => w.file === 'src/pages/drifted/page.jay-html',
+            );
+            expect(driftedDrift).toHaveLength(2);
 
             // The factual drift lives in `message`; the remediation lives in a separate `suggestion`.
             const byMessage = (m: string) => driftWarnings.find((w: any) => w.message === m);
@@ -267,6 +291,59 @@ describe('Design System Demo — DL#196 region drift validation', () => {
                 'To keep the page\'s version, mark the node override="class"; to discard it and ' +
                     're-flatten from source, run `jay-stack sync`.',
             );
+        },
+        CLI_TIMEOUT,
+    );
+});
+
+// DL#200 — "prefer design-system elements". Three warnings, each on a dedicated showcase artifact:
+//   • REGION-NOT-LINKED          → src/pages/not-linked (a <jay:card> whose import omits template=)
+//   • REGION-OVERRIDE-NON-CONTENT → src/pages/variant   (a linked card that adds structural DOM)
+//   • COMPONENT-NO-TEMPLATE       → src/components/badge (a UI component shipping no .jay-html)
+// All are warnings — the build stays valid. Component source templates (section/gallery/card) hand-author
+// their child regions by design, so REGION-NOT-LINKED must NOT fire on them (page-scoped rule).
+describe('Design System Demo — DL#200 prefer design-system elements', () => {
+    it(
+        'reports each preference warning on its showcase artifact and nowhere else',
+        async () => {
+            const { code, result } = await runValidateCli();
+
+            // Every DL#200 finding is a warning — the project still builds.
+            expect(code).toBe(0);
+            expect(result?.valid).toBe(true);
+            const warns = result?.warnings ?? [];
+
+            // REGION-NOT-LINKED — only on the not-linked page, not on any component source template.
+            const notLinked = warns.filter((w: any) =>
+                w.message.includes('is hand-authored, but a design-system template exists'),
+            );
+            expect(notLinked.map((w: any) => w.file)).toEqual([
+                'src/pages/not-linked/page.jay-html',
+            ]);
+
+            // REGION-OVERRIDE-NON-CONTENT — the variant page's structural ribbon.
+            const override = warns.filter((w: any) =>
+                w.message.includes("changes its design-system template's look or structure"),
+            );
+            expect(override.some((w: any) => w.file === 'src/pages/variant/page.jay-html')).toBe(
+                true,
+            );
+
+            // COMPONENT-NO-TEMPLATE — only Badge ships no template.
+            const noTemplate = warns.filter((w: any) =>
+                w.message.includes('ships no .jay-html template'),
+            );
+            expect(noTemplate.map((w: any) => w.file)).toEqual([
+                'src/components/badge/badge.jay-contract',
+            ]);
+
+            // NO-DESIGN-SYSTEM must NOT fire — the project flattens real design-system elements.
+            const noDesignSystem = warns.filter(
+                (w: any) =>
+                    w.message.includes('none are design-system elements') ||
+                    w.message.includes('shares no UI through design-system elements'),
+            );
+            expect(noDesignSystem).toEqual([]);
         },
         CLI_TIMEOUT,
     );

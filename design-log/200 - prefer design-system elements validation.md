@@ -414,6 +414,16 @@ All four rules implemented and green. Status: **IMPLEMENTED**.
    identical warnings when a page flattens the same component many times.
 4. **`allow-inline-region` list scoped to `REGION-NOT-LINKED` only** (not `REGION-OVERRIDE-NON-CONTENT`), since
    the list name means "allow this region to be inline (unlinked)". Override suppression stays on the import.
+5. **`REGION-NOT-LINKED` is page-scoped — component source templates are exempt** (added 2026-10-03, surfaced by
+   `examples/jay-stack/design-system-demo`). Rule 1 as designed fires on _every_ `<jay:X>` region in any scanned
+   file. But a DL#196 composite (e.g. `section.jay-html` → `gallery` → `card` → `button`) hand-authors its child
+   regions with **contract-only** imports **by design**: the component template is the flatten _source_, and the
+   transitive `template=` always lives on the consuming page, never in the component template. So the rule
+   systematically false-positived on every nested design-system component. Fix: in `validateJayFiles`, skip
+   `checkRegionNotLinked` for files under `componentsBase` (`componentJayHtmlFileSet`). The other region rules
+   (`REGION-OVERRIDE-NON-CONTENT`, drift) already no-op on component templates because they require `template=`
+   imports, which component sources never carry — so only Rule 1 needed the guard. Covered end-to-end by the
+   demo's smoke test (`DL#200` block asserts the warning lands only on the consuming page, not the components).
 
 ### Verification against criteria
 

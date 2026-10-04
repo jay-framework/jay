@@ -1,11 +1,13 @@
-# Design System Demo (DL#196)
+# Design System Demo (DL#196 + DL#200)
 
 A jay-stack example that exercises **validated inline composition** (Design Log #196) with a small but
 realistic design system: nested design-system regions, multiple instances of the same region, and three
-pages that each demonstrate a different override/drift situation.
+pages that each demonstrate a different override/drift situation. It also showcases the **"prefer
+design-system elements" validation warnings** (Design Log #200) — see
+[DL#200 — prefer design-system element warnings](#dl200--prefer-design-system-element-warnings).
 
-This example is deliberately built to **exercise the DL#196 machinery end-to-end and expose its rough
-edges** — see [Issues this example exposes](#issues-this-example-exposes).
+This example is deliberately built to **exercise the machinery end-to-end and expose its rough
+edges** — see [Issues this example exposes](#issues-this-example-exposed).
 
 ## The design system
 
@@ -77,8 +79,48 @@ yarn validate            # add --json for machine-readable output
 yarn dev
 ```
 
-Expected `validate` result: **valid, with exactly two drift warnings — both on `/drifted`**. The pristine
-and branded pages are clean (the branded page's overrides suppress their facets at every nesting level).
+Expected `validate` result: **valid (zero errors), with warnings**. The pristine and branded pages are
+clean (the branded page's overrides suppress their facets at every nesting level). The remaining pages each
+raise a deliberate warning:
+
+- `/drifted` — two DL#196 **drift** warnings (unmarked h3 text + button class), and because the button's
+  unmarked `class` edit is a _non-content_ change, one DL#200 `REGION-OVERRIDE-NON-CONTENT` warning.
+- `/not-linked`, `/variant`, and `src/components/badge` — one DL#200 warning each (see below).
+
+All are warnings, never errors — the project always builds.
+
+## DL#200 — prefer design-system element warnings
+
+Beyond DL#196 drift, `jay-stack validate` nudges you to **reuse UI through design-system elements** rather
+than hand-authoring the same markup everywhere. These are warnings (default-on, suppressible, never blocking).
+Three dedicated artifacts each trigger exactly one of them:
+
+| Artifact                                  | Warning                       | Why it fires                                                                                                                                                             |
+| ----------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/pages/not-linked/page.jay-html`      | `REGION-NOT-LINKED`           | The `<jay:card>` import carries only `contract=` (no `template=`), yet a design-system template exists for Card. The region is hand-authored where it could be _linked_. |
+| `src/pages/variant/page.jay-html`         | `REGION-OVERRIDE-NON-CONTENT` | The card **is** linked, but adds net-new layout DOM (`<div class="ds-card__ribbon">`) the source template never had — a structural change, i.e. a different design.      |
+| `src/components/badge/badge.jay-contract` | `COMPONENT-NO-TEMPLATE`       | A UI component that ships **no** `badge.jay-html`, so every consumer would hand-author its markup instead of flattening a shared template.                               |
+
+The fourth DL#200 rule, `NO-DESIGN-SYSTEM` (a once-per-project nudge), is intentionally **silent** here —
+the project flattens real design-system elements (`template=` imports exist), which is exactly what it asks for.
+
+**Resolution paths** (each warning's `suggestion` spells these out):
+
+- `REGION-NOT-LINKED` → add `template="…/card.jay-html"` to the import and run `jay-stack sync`; or, for a
+  deliberate one-off, suppress on the import with `jay-validations="REGION-NOT-LINKED"` (or list the contract
+  under `allow-inline-region`).
+- `REGION-OVERRIDE-NON-CONTENT` → make a **second** card template (a new variant) and link this region to it,
+  instead of piling structure onto one copy; or accept it with `jay-validations="REGION-OVERRIDE-NON-CONTENT"`.
+  (Content edits — text, `src`/`alt`, inline markup — never fire this rule; that is what flattening is for.)
+- `COMPONENT-NO-TEMPLATE` → author a `badge.jay-html` beside the contract; or, if the component is genuinely
+  data/logic-only, suppress project-wide with `jay-stack: allow-no-template: [Badge]`.
+
+> **Component source templates are exempt from `REGION-NOT-LINKED`.** A composite like `section.jay-html`
+> hand-authors its child `<jay:gallery>` / `<jay:card>` / `<jay:button>` with contract-only imports **by
+> design** — it is the flatten _source_, and the transitive `template=` always lives on the consuming page
+> (DL#196). So the rule is page-scoped; it never fires on the component templates under `src/components/`.
+> (This false positive was surfaced by this example and fixed in `stack-cli/lib/validate.ts` — see DL#200
+> Implementation Results.)
 
 ## Issues this example exposed
 

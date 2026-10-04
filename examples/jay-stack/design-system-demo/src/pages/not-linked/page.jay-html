@@ -1,0 +1,58 @@
+<html>
+
+<head>
+  <script type="application/jay-data">data:</script>
+  <!-- REGION-NOT-LINKED (DL#200): the Card import carries only contract= — no template=. A design-system
+       template DOES exist for this contract (../../components/card/card.jay-html), so this hand-authored
+       <jay:card> could be a managed design-system element instead. `jay-stack validate` warns once per
+       region type, suggesting you add template= + run `jay-stack sync`. For a deliberate one-off, suppress
+       on the import with jay-validations="REGION-NOT-LINKED" (or list Card under allow-inline-region). -->
+  <script type="application/jay-headless" contract="../../components/card/card.jay-contract"></script>
+  <title>Design System Demo — Not Linked</title>
+  <meta name="description"
+    content="A hand-authored <jay:card> region whose import has no template= — REGION-NOT-LINKED.">
+  <style>
+    .ds-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 20px;
+      background: #ffffff;
+    }
+
+    .ds-card__heading {
+      font-size: 1.15rem;
+      margin: 0 0 8px;
+      color: #0f172a;
+    }
+
+    .ds-card__body {
+      margin: 0 0 16px;
+      color: #475569;
+    }
+
+    .ds-button {
+      border: 0;
+      border-radius: 6px;
+      padding: 8px 14px;
+      background: #2563eb;
+      color: #ffffff;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+  <div>
+    <p>Not linked: the Card import has no template=, so this card region's body is hand-authored —
+      jay-stack validate raises REGION-NOT-LINKED because a shared card template exists.</p>
+    <jay:card heading="Starter" body="Everything you need to get going." ctaLabel="Choose Starter">
+      <div class="ds-card">
+        <h3 class="ds-card__heading">{heading}</h3>
+        <p class="ds-card__body">{body}</p>
+        <button class="ds-button">{ctaLabel}</button>
+      </div>
+    </jay:card>
+  </div>
+</body>
+
+</html>

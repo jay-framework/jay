@@ -1,0 +1,14 @@
+# A UI component that ships NO .jay-html template — this is the COMPONENT-NO-TEMPLATE case (DL#200).
+# Because there is no badge.jay-html beside this contract, every consumer would have to hand-author the
+# badge markup instead of flattening a shared design-system template. `jay-stack validate` warns once,
+# project-wide, nudging you to author a badge.jay-html (or, if the component were truly data/logic-only,
+# to suppress with `jay-stack: allow-no-template: [Badge]`).
+name: Badge
+props:
+  - name: label
+    type: string
+    required: true
+tags:
+  - tag: label
+    type: data
+    dataType: string

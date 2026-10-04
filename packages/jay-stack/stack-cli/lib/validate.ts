@@ -1696,6 +1696,12 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
     const pageJayHtmlFiles = await findJayFiles(scanDir);
     const componentJayHtmlFiles = await findJayFiles(componentsDir).catch(() => [] as string[]);
     const jayHtmlFiles = [...pageJayHtmlFiles, ...componentJayHtmlFiles];
+    // DL#200 — component source templates (a DL#196 composite like section/gallery/card) hand-author their
+    // child `<jay:X>` regions with contract-only imports by design: they are the flatten *source*, and the
+    // transitive `template=` always lives on the consuming page, never in the component template. So
+    // REGION-NOT-LINKED is scoped to pages — firing it on component sources would warn on every nested
+    // design-system component, which is exactly the authoring pattern we want.
+    const componentJayHtmlFileSet = new Set(componentJayHtmlFiles);
     const componentContractFiles = await findContractFiles(componentsDir).catch(
         () => [] as string[],
     );
@@ -1888,9 +1894,13 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                 (imp) => imp.template,
             ).length;
 
-            const notLinkedWarnings = checkRegionNotLinked(parsedFile.val!, (imp) =>
-                hasTemplateForContractFile(imp.contractPath),
-            );
+            // REGION-NOT-LINKED is page-scoped: component source templates legitimately hand-author their
+            // child regions (see componentJayHtmlFileSet above), so skip them here.
+            const notLinkedWarnings = componentJayHtmlFileSet.has(jayFile)
+                ? []
+                : checkRegionNotLinked(parsedFile.val!, (imp) =>
+                      hasTemplateForContractFile(imp.contractPath),
+                  );
             for (const finding of notLinkedWarnings) {
                 warnings.push({
                     file: relativePath,
