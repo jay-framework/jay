@@ -25,7 +25,9 @@ function templateFile(contractRef: string, title?: string): string {
 }
 
 function contractFile(name: string, description?: string): string {
-    return description ? `name: ${name}\ndescription: ${description}\ntags: []\n` : `name: ${name}\ntags: []\n`;
+    return description
+        ? `name: ${name}\ndescription: ${description}\ntags: []\n`
+        : `name: ${name}\ntags: []\n`;
 }
 
 describe('design-system-index (DL#204)', () => {
@@ -55,10 +57,18 @@ describe('design-system-index (DL#204)', () => {
             write('src/components/multi/b.jay-html', templateFile('./b.jay-contract', 'B'));
 
             expect(listTemplatesForContractFile(aContract)).toEqual([
-                { path: path.join(root, 'src/components/multi/a.jay-html'), variant: '', title: 'A' },
+                {
+                    path: path.join(root, 'src/components/multi/a.jay-html'),
+                    variant: '',
+                    title: 'A',
+                },
             ]);
             expect(listTemplatesForContractFile(bContract)).toEqual([
-                { path: path.join(root, 'src/components/multi/b.jay-html'), variant: '', title: 'B' },
+                {
+                    path: path.join(root, 'src/components/multi/b.jay-html'),
+                    variant: '',
+                    title: 'B',
+                },
             ]);
         });
 
@@ -86,7 +96,10 @@ describe('design-system-index (DL#204)', () => {
 
         it('omits an empty or interpolation-only title', () => {
             const contract = write('src/components/hero/hero.jay-contract', contractFile('Hero'));
-            write('src/components/hero/hero.jay-html', templateFile('./hero.jay-contract', '{headline}'));
+            write(
+                'src/components/hero/hero.jay-html',
+                templateFile('./hero.jay-contract', '{headline}'),
+            );
 
             expect(listTemplatesForContractFile(contract)).toEqual([
                 { path: path.join(root, 'src/components/hero/hero.jay-html'), variant: '' },
@@ -94,9 +107,15 @@ describe('design-system-index (DL#204)', () => {
         });
 
         it('hasTemplateForContractFile reflects the enumeration', () => {
-            const withTemplate = write('src/components/card/card.jay-contract', contractFile('Card'));
+            const withTemplate = write(
+                'src/components/card/card.jay-contract',
+                contractFile('Card'),
+            );
             write('src/components/card/card.jay-html', templateFile('./card.jay-contract', 'Card'));
-            const noTemplate = write('src/components/badge/badge.jay-contract', contractFile('Badge'));
+            const noTemplate = write(
+                'src/components/badge/badge.jay-contract',
+                contractFile('Badge'),
+            );
 
             expect(hasTemplateForContractFile(withTemplate)).toBe(true);
             expect(hasTemplateForContractFile(noTemplate)).toBe(false);
@@ -164,7 +183,11 @@ describe('design-system-index (DL#204)', () => {
                         description: 'A product card with media, title and body.',
                         source: 'local',
                         templates: [
-                            { path: './src/components/card/card.jay-html', variant: '', title: 'Card' },
+                            {
+                                path: './src/components/card/card.jay-html',
+                                variant: '',
+                                title: 'Card',
+                            },
                             {
                                 path: './src/components/card/card.feature.jay-html',
                                 variant: 'card.feature',
@@ -210,7 +233,11 @@ describe('design-system-index (DL#204)', () => {
                         description: 'A product card.',
                         source: 'local',
                         templates: [
-                            { path: './src/components/card/card.jay-html', variant: '', title: 'Card' },
+                            {
+                                path: './src/components/card/card.jay-html',
+                                variant: '',
+                                title: 'Card',
+                            },
                             {
                                 path: './src/components/card/card.feature.jay-html',
                                 variant: 'card.feature',

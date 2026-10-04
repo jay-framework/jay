@@ -22,7 +22,7 @@ export function renderImports(
     // contract, one aliased with `as=`). Each contributes its own import link, so merge links by module
     // (+ sandbox) and dedup symbols — otherwise the same name is imported twice from one module, which is a
     // `Duplicate identifier` TypeScript error. Preserve first-seen module and symbol order for stable output.
-    const mergedByModulemergedByModulemergedByModule = new Map<string, { link: JayImportLink; symbols: Set<string> }>();
+    const mergedByModule = new Map<string, { link: JayImportLink; symbols: Set<string> }>();
     for (const importStatement of componentImports) {
         const key = `${importStatement.sandbox ? 'sandbox:' : ''}${importStatement.module}`;
         let entry = mergedByModule.get(key);

@@ -20,3 +20,4 @@ plugins:
         description: Renders markdown with fast+interactive updates
         type: static
         path: ./../../../packages/plugins/markdown/dist/contracts/markdown-live.jay-contract
+designSystemIndex: ./design-system-index.yaml

@@ -12,11 +12,6 @@ import { runHydrateScriptInJsdom } from './run-script-in-jsdom';
 // @vitest-environment node
 
 describe('dev server', () => {
-    afterAll(() => {
-        for (const dir of ['simple-page', 'page-with-code', '6a-page-with-keyed-headless']) {
-            fs.rmSync(path.resolve(__dirname, dir, 'build'), { recursive: true, force: true });
-        }
-    });
 
     const baseOptions = {
         serverBase: '/',

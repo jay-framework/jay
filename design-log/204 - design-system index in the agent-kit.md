@@ -236,11 +236,7 @@ fs.writeFileSync(
   'utf-8',
 );
 // human/agent "add-menu" doc, generated from the same object
-fs.writeFileSync(
-  path.join(agentKitDir, 'design-system.md'),
-  renderAddMenu(designSystem),
-  'utf-8',
-);
+fs.writeFileSync(path.join(agentKitDir, 'design-system.md'), renderAddMenu(designSystem), 'utf-8');
 ```
 
 (`agentKitDir = path.dirname(outputDir)`, already computed at `:625`.)
@@ -323,9 +319,9 @@ components:
 
 ## card — A product card with media, title and body.
 
-| Variant   | Title        | Template                                   |
-| --------- | ------------ | ------------------------------------------ |
-| (default) | Card         | ./src/components/card/card.jay-html         |
+| Variant      | Title        | Template                                    |
+| ------------ | ------------ | ------------------------------------------- |
+| (default)    | Card         | ./src/components/card/card.jay-html         |
 | card.feature | Feature card | ./src/components/card/card.feature.jay-html |
 
 To add the **Feature card** variant:
@@ -344,8 +340,8 @@ Then run `jay-stack sync` to flatten it.
 
 ## rating — Star rating control.
 
-| Variant   | Title       | Template                                  |
-| --------- | ----------- | ----------------------------------------- |
+| Variant   | Title       | Template                                     |
+| --------- | ----------- | -------------------------------------------- |
 | (default) | Star rating | ./node_modules/@acme/reviews/rating.jay-html |
 ````
 

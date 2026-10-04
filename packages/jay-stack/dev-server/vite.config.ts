@@ -37,5 +37,6 @@ export default defineConfig({
     },
     test: {
         globals: true,
+        globalSetup: resolve(__dirname, 'test/global-teardown.ts'),
     },
 });

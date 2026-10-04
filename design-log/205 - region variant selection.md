@@ -10,7 +10,7 @@ Status: **IMPLEMENTED** (see Implementation Results)
   (`nameToPath.set(contractName, …)`) — the second import overwrites the first; the drift matcher
   (`validate.ts:893`, `find((i) => i.contractName === name)`) and the materialiser (`materialise.ts:147`,
   `resolveTemplate(name)`) both resolve a `<jay:card>` region to a **single** template. DL#200/#204
-  introduced *variants* (two `.jay-html` per contract) and DL#200 says they are "chosen at composition" —
+  introduced _variants_ (two `.jay-html` per contract) and DL#200 says they are "chosen at composition" —
   but **the composition-side selector was never built.**
 - **Chosen mechanism — an `as=` alias on the import.** The region tag name is already just `contractName`
   on the import (`jay-html-parser.ts:775,868`). Let an `application/jay-headless` import **name its own
@@ -19,10 +19,19 @@ Status: **IMPLEMENTED** (see Implementation Results)
   unchanged** — it already keys by tag name; aliasing just makes the key unique.
 
   ```html
-  <script type="application/jay-headless" contract="…/card.jay-contract"
-    template="…/card.jay-html"></script>                               <!-- <jay:card> (default) -->
-  <script type="application/jay-headless" contract="…/card.jay-contract"
-    template="…/card.feature.jay-html" as="feature-card"></script>      <!-- <jay:feature-card> -->
+  <script
+    type="application/jay-headless"
+    contract="…/card.jay-contract"
+    template="…/card.jay-html"
+  ></script>
+  <!-- <jay:card> (default) -->
+  <script
+    type="application/jay-headless"
+    contract="…/card.jay-contract"
+    template="…/card.feature.jay-html"
+    as="feature-card"
+  ></script>
+  <!-- <jay:feature-card> -->
   ```
 
 - **Backward compatible:** an import without `as=` still derives its tag from the contract name — existing
@@ -44,8 +53,8 @@ documented **two templates (design variants) vs. conditional (runtime)**. DL#204
 design-system **index**, cataloging each contract's `.jay-html` **variants** (`X.jay-html`,
 `X.<variant>.jay-html`), associated by the template's declared `contract=` reference.
 
-So *variants* exist as an author-time + catalog concept. What is missing is the **page-side selector**:
-how a region says "flatten me from *this* variant" when the page also uses another variant of the same
+So _variants_ exist as an author-time + catalog concept. What is missing is the **page-side selector**:
+how a region says "flatten me from _this_ variant" when the page also uses another variant of the same
 contract.
 
 ## Problem
@@ -55,25 +64,25 @@ A `<jay:X>` region's tag name is derived from the **contract name** (kebab) at
 `JayHeadlessImports.contractName` (`:868`). Two variants share one contract → one tag name → ambiguous.
 Every resolution path keys by that tag name:
 
-| Site | Code | Keyed by |
-| --- | --- | --- |
-| Materialise map | `materialise-context.ts:39–42` | tag name (2nd import overwrites 1st) |
-| Materialise fill | `materialise.ts:147` | `resolveTemplate(name)` |
-| Drift matcher | `validate.ts:893` | `find((i) => i.contractName === name)` |
+| Site             | Code                           | Keyed by                               |
+| ---------------- | ------------------------------ | -------------------------------------- |
+| Materialise map  | `materialise-context.ts:39–42` | tag name (2nd import overwrites 1st)   |
+| Materialise fill | `materialise.ts:147`           | `resolveTemplate(name)`                |
+| Drift matcher    | `validate.ts:893`              | `find((i) => i.contractName === name)` |
 
 Put two `<script application/jay-headless contract="card" template="…">` imports on one page and the
-behaviors diverge (validate uses the *first*, sync uses the *last*), and **every** `<jay:card>` region
+behaviors diverge (validate uses the _first_, sync uses the _last_), and **every** `<jay:card>` region
 gets the same template. Two variants of one contract on one page is therefore not expressible.
 
 The key observation: the resolution is already **tag-name-keyed**, and the tag name is **derived**, not
-intrinsic. If the import can *name* its tag, the collision disappears with no change to any resolver.
+intrinsic. If the import can _name_ its tag, the collision disappears with no change to any resolver.
 
 ## Prior Art / Adjacent Mechanisms
 
 - **`contractName` is already the tag key** (`jay-html-parser.ts:775,868`) — `as=` overrides the one line
   that sets it. Nothing downstream changes.
 - **`key=` on the import** (`jay-html-parser.ts:645`) — an existing import attribute that namespaces the
-  component's contribution to **page ViewState** (an identifier). It is *orthogonal* to the tag name:
+  component's contribution to **page ViewState** (an identifier). It is _orthogonal_ to the tag name:
   `key` affects type/ViewState merging (`validate.ts:755`, `jay-html-parser.ts:867`), `as` affects the
   region tag. A variant import may carry both. We do **not** overload `key` for this (its identifier is a
   camelCase JS name used in binding paths; the tag is kebab) — see Q4.
@@ -84,14 +93,14 @@ intrinsic. If the import can *name* its tag, the collision disappears with no ch
 - **ES module aliasing (`import { x as y }`)** — the mental model: import the same source under a new local
   name. `as=` reads naturally to any developer.
 - **Null hypothesis — does an existing primitive already suffice?**
-  - *Separate contracts per variant* (`card` + `card-featured`) — works today, but that is **two
+  - _Separate contracts per variant_ (`card` + `card-featured`) — works today, but that is **two
     components**, not two variants of one contract; contradicts DL#204's shared-contract variant model and
     loses the "same contract / same props" guarantee. Rejected.
-  - *Conditional (`if`/`variant`) inside one template* — a **runtime** switch, not two author-time
+  - _Conditional (`if`/`variant`) inside one template_ — a **runtime** switch, not two author-time
     designs; DL#200 routes "different design" to the two-templates axis. Does not solve it.
-  - *Reuse `key=` as the tag alias* — conflates ViewState namespacing with the region tag; different
+  - _Reuse `key=` as the tag alias_ — conflates ViewState namespacing with the region tag; different
     casing and purpose. Rejected (Q4).
-  - *A `template=` attribute on the `<jay:card>` region* (the prior draft of this DL) — also works, but
+  - _A `template=` attribute on the `<jay:card>` region_ (the prior draft of this DL) — also works, but
     requires `resolveTemplate(name, region)`, threading the region through the materialiser, a new
     region/prop skip-attr, and a per-region lookup in three validators. `as=` is strictly less surface and
     more legible at the call site, and composes just as well (Q8). Rejected in favor of `as=`.
@@ -131,9 +140,9 @@ its own headless instance. (Instances are keyed by tag, so they stay distinct.) 
 
 **Q7. CSS coalescing / `@scope` donut?**
 Both key by **template path** (`materialise.ts:195`, `cssBlocks[].key`), not tag name. Two variants have
-two paths → two blocks; two instances of the *same* variant still coalesce. No change.
+two paths → two blocks; two instances of the _same_ variant still coalesce. No change.
 
-**Q8. Does `as=` compose for *nested* regions (two variants of a nested component inside one region)?**
+**Q8. Does `as=` compose for _nested_ regions (two variants of a nested component inside one region)?**
 Yes. `as=` is parsed in **every** jay-html head, templates included, and a flattened region body lives on
 the page where its nested `<jay:X>` tags resolve against the **page's** import map (`materialise-context.ts`
 builds `nameToPath` from the page's imports; `fillRegions` recurses into the inserted body,
@@ -142,10 +151,18 @@ directly:
 
 ```html
 <!-- card.feature.jay-html head: two button variants, distinct tags -->
-<script type="application/jay-headless" contract="../button/button.jay-contract"
-  template="../button/button.jay-html" as="main-cta"></script>
-<script type="application/jay-headless" contract="../button/button.jay-contract"
-  template="../button/button.secondary.jay-html" as="secondary-cta"></script>
+<script
+  type="application/jay-headless"
+  contract="../button/button.jay-contract"
+  template="../button/button.jay-html"
+  as="main-cta"
+></script>
+<script
+  type="application/jay-headless"
+  contract="../button/button.jay-contract"
+  template="../button/button.secondary.jay-html"
+  as="secondary-cta"
+></script>
 <!-- …its body: -->
 <jay:main-cta ref="primary" label="{ctaLabel}"> … </jay:main-cta>
 <jay:secondary-cta ref="alt" label="{altLabel}"> … </jay:secondary-cta>
@@ -165,23 +182,33 @@ as above. So there is no practical nested limitation.
 
 ```html
 <head>
-  <script type="application/jay-data">data:</script>
+  <script type="application/jay-data">
+    data:
+  </script>
   <!-- default variant: tag derived from contract name → <jay:card> -->
-  <script type="application/jay-headless"
+  <script
+    type="application/jay-headless"
     contract="../components/card/card.jay-contract"
-    template="../components/card/card.jay-html"></script>
+    template="../components/card/card.jay-html"
+  ></script>
   <!-- feature variant: same contract, own template, aliased tag → <jay:feature-card> -->
-  <script type="application/jay-headless"
+  <script
+    type="application/jay-headless"
     contract="../components/card/card.jay-contract"
     template="../components/card/card.feature.jay-html"
-    as="feature-card"></script>
-  <script type="application/jay-headless"
+    as="feature-card"
+  ></script>
+  <script
+    type="application/jay-headless"
     contract="../components/button/button.jay-contract"
-    template="../components/button/button.jay-html"></script>
+    template="../components/button/button.jay-html"
+  ></script>
 </head>
 <body>
   <jay:card ref="cardStarter" heading="Starter" body="…" ctaLabel="Choose Starter"> … </jay:card>
-  <jay:feature-card ref="cardPro" heading="Pro" body="…" ctaLabel="Choose Pro"> … </jay:feature-card>
+  <jay:feature-card ref="cardPro" heading="Pro" body="…" ctaLabel="Choose Pro">
+    …
+  </jay:feature-card>
 </body>
 ```
 
@@ -198,7 +225,7 @@ as above. So there is no practical nested limitation.
    own instance.
 4. **Nothing else** — `materialise-context.ts`, `materialise.ts`, `run-sync.ts`, the three region drift
    checks, CSS coalescing, and DL#204's index generator are all already tag-name/path-keyed and need no
-   change. (DL#204's add-menu *optionally* gains an `as=` suggestion — a doc nicety, not required.)
+   change. (DL#204's add-menu _optionally_ gains an `as=` suggestion — a doc nicety, not required.)
 
 ## Implementation Plan
 
@@ -226,19 +253,23 @@ as above. So there is no practical nested limitation.
 
 ```html
 <html>
-<head>
-  <script type="application/jay-data" contract="./card.jay-contract"></script>
-  <script type="application/jay-headless" contract="../button/button.jay-contract"></script>
-  <style> .ds-card--feature { … } .ds-card__ribbon { … } </style>
-</head>
-<body>
-  <div class="ds-card ds-card--feature">
-    <div class="ds-card__ribbon">Most popular</div>
-    <h3 class="ds-card__heading">{heading}</h3>
-    <p class="ds-card__body">{body}</p>
-    <jay:button ref="cta" label="{ctaLabel}"><button class="ds-button">{label}</button></jay:button>
-  </div>
-</body>
+  <head>
+    <script type="application/jay-data" contract="./card.jay-contract"></script>
+    <script type="application/jay-headless" contract="../button/button.jay-contract"></script>
+    <style>
+      .ds-card--feature { … } .ds-card__ribbon { … }
+    </style>
+  </head>
+  <body>
+    <div class="ds-card ds-card--feature">
+      <div class="ds-card__ribbon">Most popular</div>
+      <h3 class="ds-card__heading">{heading}</h3>
+      <p class="ds-card__body">{body}</p>
+      <jay:button ref="cta" label="{ctaLabel}"
+        ><button class="ds-button">{label}</button></jay:button
+      >
+    </div>
+  </body>
 </html>
 ```
 
@@ -251,7 +282,11 @@ components:
     source: local
     templates:
       - { path: ./src/components/card/card.jay-html, variant: '', title: Card }
-      - { path: ./src/components/card/card.feature.jay-html, variant: card.feature, title: Feature card }
+      - {
+          path: ./src/components/card/card.feature.jay-html,
+          variant: card.feature,
+          title: Feature card,
+        }
 ```
 
 `design-system.md` add-menu snippet for the feature variant (suggested `as=` derived from the variant id):
@@ -259,16 +294,18 @@ components:
 ````md
 ## Card — A product card.
 
-| Variant | Title | Template |
-| --- | --- | --- |
-| (default) | Card | ./src/components/card/card.jay-html |
+| Variant      | Title        | Template                                    |
+| ------------ | ------------ | ------------------------------------------- |
+| (default)    | Card         | ./src/components/card/card.jay-html         |
 | card.feature | Feature card | ./src/components/card/card.feature.jay-html |
 
 ```html
-<script type="application/jay-headless"
+<script
+  type="application/jay-headless"
   contract="./src/components/card/card.jay-contract"
   template="./src/components/card/card.feature.jay-html"
-  as="feature-card"></script>
+  as="feature-card"
+></script>
 
 <jay:feature-card ref="featureCard"><!-- flattened copy; edit freely --></jay:feature-card>
 ```
@@ -321,7 +358,7 @@ Implemented on the `DL195-196-composition-rethink` branch.
   rejection; demo smoke test `/variants` renders both the default card and the ribboned feature card.
 - **Docs** — `designer/design-system-guide.md` §"Two variants of one component on a page — `as=`".
 
-### Deviation — codegen import dedup was *not* free (revises Q6)
+### Deviation — codegen import dedup was _not_ free (revises Q6)
 
 Q6 assumed importing one contract twice would "just work" in codegen. It did not: both generated targets
 emitted the contract's type import **once per import link**, producing duplicate named imports from one
@@ -348,11 +385,11 @@ in a single statement (`CardRefs` once). The region-tag-derived ViewState/Refs t
 - Demo `yarn build` + dev-mode TS generation: no duplicate imports; both cards render from their own
   templates with per-variant `@scope` CSS.
 
-Criteria 1–6 met. (Criterion 4 met *after* the codegen dedup fix above.)
+Criteria 1–6 met. (Criterion 4 met _after_ the codegen dedup fix above.)
 
 ### Note — `jay-stack sync` re-flattens the whole project
 
-Running `sync` to first-fill the new `/variants` page also re-flattened the demo's deliberately *drifted*
+Running `sync` to first-fill the new `/variants` page also re-flattened the demo's deliberately _drifted_
 showcase pages (`/drifted`, `/variant`), discarding their intentional deviations that the smoke test asserts.
 Those two pages were restored from git. Not a DL#205 behavior change — just a reminder that `sync` is
 project-wide; isolate intentional-drift fixtures or restore them after a global sync.

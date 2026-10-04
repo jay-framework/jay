@@ -1,0 +1,46 @@
+components:
+  - name: product-rating
+    contractPath: ./src/plugins/product-rating/product-rating.jay-contract
+    source: plugin
+    plugin: product-rating
+    templates: []
+  - name: product-widget
+    contractPath: ./src/plugins/product-widget/product-widget.jay-contract
+    source: plugin
+    plugin: product-widget
+    templates: []
+  - name: stock-status
+    contractPath: ./src/plugins/stock-status/stock-status.jay-contract
+    source: plugin
+    plugin: stock-status
+    templates: []
+  - name: popover-menu
+    contractPath: ./../../../packages/plugins/ui-kit/dist/popover-menu.jay-contract
+    source: plugin
+    plugin: ui-kit
+    templates: []
+  - name: scroll-carousel
+    contractPath: ./../../../packages/plugins/ui-kit/dist/scroll-carousel.jay-contract
+    source: plugin
+    plugin: ui-kit
+    templates: []
+  - name: clipboard-copy
+    contractPath: ./../../../packages/plugins/ui-kit/dist/clipboard-copy.jay-contract
+    source: plugin
+    plugin: ui-kit
+    templates: []
+  - name: word-split
+    contractPath: ./../../../packages/plugins/ui-kit/dist/word-split.jay-contract
+    source: plugin
+    plugin: ui-kit
+    templates: []
+  - name: letter-split
+    contractPath: ./../../../packages/plugins/ui-kit/dist/letter-split.jay-contract
+    source: plugin
+    plugin: ui-kit
+    templates: []
+  - name: mood-tracker
+    contractPath: ./../mood-tracker-plugin/dist/mood-tracker.jay-contract
+    source: plugin
+    plugin: mood-tracker-plugin
+    templates: []
