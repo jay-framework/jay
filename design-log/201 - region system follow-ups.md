@@ -1,9 +1,20 @@
 # DL#201 — Region system follow-ups (backlog, for review)
 
-Status: **OPEN — not started.** A todo/design holding pen for four follow-ups raised while reviewing DL#196
-(validated inline composition) + DL#200 (prefer design-system elements). Each item is captured with its
-background, the decision to make, a tentative lean, and prior art. **Nothing here is implemented; review and
-split into their own DLs (or fold into #196/#200) before building.**
+Status: **PROMOTED.** All four items reviewed with the user and split into their own DLs:
+
+- Item 1 → **DL#202** (template-side `jay-content` marker) — building.
+- Item 2 → **DL#203** (CSS `@scope (…) to (…)` donut) — building.
+- Item 3 → blog post `docs/blog/from-a-component-system-to-a-region-system.md` — drafted.
+- Item 4 → **DL#204** (design-system index in the agent-kit) — design ready.
+
+This file is retained as the original holding pen (the background/options/prior-art for each item). The
+decided designs live in the promoted DLs above.
+
+---
+
+_Original holding-pen contents follow._ A todo/design holding pen for four follow-ups raised while reviewing
+DL#196 (validated inline composition) + DL#200 (prefer design-system elements). Each item is captured with
+its background, the decision to make, a tentative lean, and prior art.
 
 Related: #196 (flatten / drift / sync), #200 (prefer design-system elements validation), #85 (plugins-index),
 #197 (why jay-stack is headless-only / regions over components).

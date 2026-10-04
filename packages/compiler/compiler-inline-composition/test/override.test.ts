@@ -50,6 +50,33 @@ describe('override suppression — per facet', () => {
     });
 });
 
+describe('content slot (jay-content) — facet list, read from the source side (DL#202)', () => {
+    it('bare jay-content owns the children subtree', () => {
+        const source = `<div jay-content><h3>{t}</h3></div>`;
+        const region = `<div><h3>rewritten</h3><p>extra</p></div>`;
+        expect(diffMarkup(source, region)).toEqual([]);
+    });
+
+    it('jay-content="*" owns the whole node', () => {
+        const source = `<div class="a" jay-content="*"><h3>{t}</h3></div>`;
+        const region = `<div class="b"><h3>rewritten</h3></div>`;
+        expect(diffMarkup(source, region)).toEqual([]);
+    });
+
+    it('a named-attribute slot owns only those attributes, not children', () => {
+        const source = `<a jay-content="href" class="link" href="#">{t}</a>`;
+        const region = `<a class="link" href="/pricing">buy</a>`;
+        // href is content (skipped); the text-children change is still drift.
+        expect(keys(diffMarkup(source, region))).toEqual(['changed:children@0']);
+    });
+
+    it('combines children and attributes in one slot', () => {
+        const source = `<figure jay-content="children src"><img src="p.png"></figure>`;
+        const region = `<figure src="hero.png"><img src="x"><figcaption>c</figcaption></figure>`;
+        expect(diffMarkup(source, region)).toEqual([]);
+    });
+});
+
 describe('page-scope subtree (§7)', () => {
     it('a page-scope subtree is excluded from comparison and does not cause children drift', () => {
         const source = `<div class="card"><h3>{heading}</h3></div>`;

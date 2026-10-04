@@ -14,7 +14,16 @@
 
 import { HTMLElement, parse } from 'node-html-parser';
 import postcss from 'postcss';
-import { isPageScope, isRegionTag, parseOverride, readAttr, Suppression } from './override';
+import {
+    CONTENT_MARKER,
+    isPageScope,
+    isRegionTag,
+    parseContent,
+    parseOverride,
+    readAttr,
+    Suppression,
+    unionSuppression,
+} from './override';
 import { parseInlineStyle, serializeInlineStyle } from './style';
 
 /** A component template resolved for flattening. */
@@ -56,6 +65,12 @@ interface CssContribution {
     key: string;
     selector: string | null;
     css: string;
+    /**
+     * DL#203 — the donut boundary: the scope-anchor classes (`.<ref>`) of this region's *direct* child
+     * regions. Emitted as `@scope (sel) to (…)` so the region's scoped CSS stops at each nested region.
+     * Folded into `key` so two instances of one template with different child nesting do not coalesce.
+     */
+    to?: string[];
 }
 
 /** Flatten every resolvable `<jay:X>` region in `pageHtml`, transitively. */
@@ -65,6 +80,7 @@ export function materialise(pageHtml: string, opts: MaterialiseOptions): Materia
     const contributions: CssContribution[] = [];
 
     fillRegions(root, [], opts, errors, contributions);
+    stripContentMarkers(root);
 
     const serialized = root.toString();
     return {
@@ -85,24 +101,32 @@ function coalesceCss(contributions: CssContribution[]): string {
     interface Group {
         selectors: string[];
         css: string;
+        to?: string[];
     }
     const groups: Group[] = [];
     const byKey = new Map<string, Group>();
-    for (const { key, selector, css } of contributions) {
+    for (const { key, selector, css, to } of contributions) {
         if (selector === null) {
             groups.push({ selectors: [], css }); // ref-less — standalone, never coalesced
             continue;
         }
         const existing = byKey.get(key);
-        if (existing) existing.selectors.push(selector);
-        else {
-            const group: Group = { selectors: [selector], css };
+        if (existing) {
+            // Dedupe: distinct region instances can share a ref (e.g. two cards each nesting a
+            // `ref="cta"` button), which would otherwise emit `@scope (.cta, .cta)`.
+            if (!existing.selectors.includes(selector)) existing.selectors.push(selector);
+        } else {
+            // The `to` list is identical across a group by construction (it is folded into `key`), so any
+            // member's `to` is the group's `to` (DL#203).
+            const group: Group = { selectors: [selector], css, to };
             byKey.set(key, group);
             groups.push(group);
         }
     }
     return groups
-        .map((g) => (g.selectors.length > 0 ? scopeWrap(g.css, g.selectors.join(', ')) : g.css))
+        .map((g) =>
+            g.selectors.length > 0 ? scopeWrap(g.css, g.selectors.join(', '), g.to) : g.css,
+        )
         .join('\n\n');
 }
 
@@ -116,6 +140,7 @@ function fillRegions(
     opts: MaterialiseOptions,
     errors: string[],
     cssBlocks: CssContribution[],
+    parentScoped: boolean = false,
 ): void {
     for (const region of directRegions(container)) {
         const name = contractName(region);
@@ -143,29 +168,50 @@ function fillRegions(
             : template.body;
         region.set_content(filled);
 
+        const ref = readAttr(region, 'ref');
+        let scoped = false; // does this region emit its own `@scope` block?
+
         if (template.css) {
             const selector = (opts.scopeSelector ?? defaultScopeSelector)(region);
             if (selector) {
-                // A jay `ref` is consumed by the reference system and never emitted to the DOM, so
-                // `@scope (.<ref>)` has no element to root at. Stamp the ref as a real class on the
-                // flattened region root(s) — the element(s) the scoped rules must sit under. The differ
-                // ignores this synthetic class so it is never reported as drift (diff-markup.ts).
-                const ref = readAttr(region, 'ref');
-                if (ref) stampScopeAnchor(region, ref);
+                scoped = true;
+                // DL#203 — the donut boundary: the scope-anchor classes of this region's *direct* child
+                // regions, so the scoped CSS stops at each nested region. Only materialisable children with a
+                // `ref` get a stamped anchor and can be excluded; a ref-less or non-materialisable child is
+                // omitted here (and flagged by `jay-stack validate`'s require-ref rule). Fold the (sorted) list
+                // into the coalescing key so two instances of one template with different nesting do not merge.
+                const to = [
+                    ...new Set(
+                        directRegions(region)
+                            .filter((c) => opts.resolveTemplate(contractName(c)) !== null)
+                            .map((c) => readAttr(c, 'ref'))
+                            .filter((r): r is string => !!r)
+                            .map((r) => `.${r}`),
+                    ),
+                ];
                 // Rewrite root-block selectors to `:scope` so the component's own root rule applies to the
                 // `@scope` root element (scoped selectors otherwise match descendants only — see scopeReadyCss).
                 cssBlocks.push({
-                    key: templatePath,
+                    key: `${templatePath}\0${[...to].sort().join(',')}`,
                     selector,
                     css: scopeReadyCss(template.body, template.css),
+                    to,
                 });
             } else {
                 cssBlocks.push({ key: templatePath, selector: null, css: template.css });
             }
         }
 
-        // Transitive: flatten regions the just-inserted template body itself contains.
-        fillRegions(region, [...stack, templatePath], opts, errors, cssBlocks);
+        // A jay `ref` is consumed by the reference system and never emitted to the DOM, so `@scope (.<ref>)`
+        // has no element to root at. Stamp the ref as a real class on the flattened region root(s) — the
+        // element(s) the scoped rules sit under. Stamp when this region ships scoped CSS (its own root), OR
+        // when its parent's donut (`to (.<ref>)`) names it as a boundary (`parentScoped`) — a child with no
+        // CSS still needs the class so the parent's limit resolves. The differ ignores it (never drift).
+        if (ref && (scoped || parentScoped)) stampScopeAnchor(region, ref);
+
+        // Transitive: flatten regions the just-inserted template body itself contains. `scoped` tells those
+        // children whether this region's donut names them (so they must stamp their boundary anchor).
+        fillRegions(region, [...stack, templatePath], opts, errors, cssBlocks, scoped);
     }
 }
 
@@ -192,8 +238,11 @@ function defaultScopeSelector(region: HTMLElement): string | null {
     return ref ? `.${ref}` : null;
 }
 
-function scopeWrap(css: string, selector: string): string {
-    return `@scope (${selector}) {\n${css}\n}`;
+function scopeWrap(css: string, selector: string, to?: string[]): string {
+    // DL#203 — the scoping limit (donut): `to (…)` stops the scoped CSS at each direct child region's root,
+    // so a parent descendant selector never styles DOM inside a nested region (structural isolation).
+    const limit = to && to.length ? ` to (${to.join(', ')})` : '';
+    return `@scope (${selector})${limit} {\n${css}\n}`;
 }
 
 /**
@@ -268,7 +317,23 @@ export function mergeOverrides(templateBody: string, existingBody: string): stri
     const tRoot = parse(templateBody);
     const eRoot = parse(existingBody);
     mergeChildren(tRoot, eRoot);
+    stripContentMarkers(tRoot);
     return tRoot.toString();
+}
+
+/**
+ * DL#202 — `jay-content` is a **template-side** marker: the materialiser and differ always re-read it from
+ * the component source (`parseContent(te)` / `parseContent(se)`), never from the page. A copy on the
+ * flattened page is therefore never consulted — it is dead weight and misleading (it reads as if the page
+ * were declaring the slot). So strip it from every flattened output node. Contrast `override=`/`page-scope`,
+ * which are page-owned provenance that {@link carryMarkers} deliberately persists so the hole survives sync.
+ */
+function stripContentMarkers(root: HTMLElement): void {
+    const visit = (el: HTMLElement): void => {
+        if (readAttr(el, CONTENT_MARKER) !== undefined) el.removeAttribute(CONTENT_MARKER);
+        for (const child of el.childNodes) if (child instanceof HTMLElement) visit(child);
+    };
+    visit(root);
 }
 
 function mergeChildren(tParent: HTMLElement, eParent: HTMLElement): void {
@@ -290,10 +355,15 @@ function mergeElement(te: HTMLElement, ee: HTMLElement): void {
         te.set_content(ee.innerHTML);
         return;
     }
-    const sup = parseOverride(ee);
+    // DL#202 — union the page node's `override=` with the template node's `jay-content` slot. On sync we keep
+    // the consumer's version of every owned facet (children and/or named attributes like `src`/`alt`) and
+    // re-flatten the rest. `jay-content` lives on the template node `te`, so it is re-read each sync and never
+    // needs a page-side marker; it is stripped from the flattened output by `stripContentMarkers` (it has no
+    // role on the page — see that helper).
+    const sup = unionSuppression(parseOverride(ee), parseContent(te));
 
     if (sup.all) {
-        // whole node page-owned — keep the page's node verbatim (it already carries its marker).
+        // whole node page-owned — keep the page's node verbatim.
         te.replaceWith(ee.outerHTML);
         return;
     }

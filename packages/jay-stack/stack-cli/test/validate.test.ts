@@ -9,6 +9,7 @@ import {
     checkRegionDrift,
     checkRegionCssDrift,
     checkRegionCssScoping,
+    checkNestedRegionRefs,
     checkRegionRecursion,
     checkRegionNotLinked,
     checkRegionOverrideNonContent,
@@ -301,7 +302,9 @@ describe('checkRegionDrift (DL#196)', () => {
                 '<h3> children changed ("{heading}" → "On sale now").',
             suggestion:
                 'To keep the page\'s version, mark the node override="children"; ' +
-                'to discard it and re-flatten from source, run `jay-stack sync`.',
+                'to discard it and re-flatten from source, run `jay-stack sync`.' +
+                ' Or, if these children are a content slot, mark the node jay-content in the template ' +
+                '"./components/card/card.jay-html" so consumer edits are expected.',
         });
     });
 
@@ -423,6 +426,48 @@ describe('checkRegionCssScoping (DL#196 §4/§5 coalescing)', () => {
                 'on the page, but its source template ships CSS.',
         );
         expect(warnings[0].suggestion).toBe('Run jay-stack sync to re-flatten the region CSS.');
+    });
+});
+
+describe('checkNestedRegionRefs (DL#203 — require ref on nested regions under scoped CSS)', () => {
+    const nestedDir = path.resolve('./test/fixtures/validate/region-nested-ref');
+
+    async function parseNestedPage(fixturePath: string) {
+        const jayFile = path.join(nestedDir, fixturePath);
+        const content = await fsp.readFile(jayFile, 'utf-8');
+        const parsed = await parseJayFile(
+            content,
+            path.basename(jayFile.replace('.jay-html', '')),
+            path.dirname(jayFile),
+            {},
+            JAY_IMPORT_RESOLVER,
+            nestedDir,
+        );
+        expect(parsed.validations).toHaveLength(0);
+        return parsed.val!;
+    }
+
+    const fsLoader = (rel: string) =>
+        readFileSyncSafe(path.resolve(nestedDir, rel.replace(/^\.\//, '')));
+
+    it('warns when a materialisable nested region under a CSS-shipping parent has no ref', async () => {
+        const jayHtml = await parseNestedPage('page-missing-ref.jay-html');
+        const warnings = checkNestedRegionRefs(jayHtml, fsLoader);
+        expect(warnings).toHaveLength(1);
+        expect(warnings[0].message).toBe(
+            '<jay:button> is nested inside <jay:card> (template="./components/card/card.jay-html"), ' +
+                'whose CSS is scoped as an @scope (.cardStarter) donut, but <jay:button> has no ref= — ' +
+                "so its region cannot be isolated from the parent's styles.",
+        );
+        expect(warnings[0].suggestion).toBe(
+            'Add a ref= to the <jay:button> in template "./components/card/card.jay-html" so sync can ' +
+                'stamp its scope-anchor class and emit the `to (.<ref>)` boundary.',
+        );
+    });
+
+    it('accepts a nested region that carries a ref (no warning)', async () => {
+        const jayHtml = await parseNestedPage('page-with-ref.jay-html');
+        expect(checkNestedRegionRefs(jayHtml, fsLoader)).toEqual([]);
     });
 });
 

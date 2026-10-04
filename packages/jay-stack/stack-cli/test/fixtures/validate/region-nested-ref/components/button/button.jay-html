@@ -2,14 +2,7 @@
 <head>
   <script type="application/jay-data" contract="./button.jay-contract"></script>
   <style>
-    .ds-button {
-      border: 0;
-      border-radius: 6px;
-      padding: 8px 14px;
-      background: #2563eb;
-      color: #ffffff;
-      cursor: pointer;
-    }
+    .ds-button { background: blue; color: white; }
   </style>
 </head>
 <body>

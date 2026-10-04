@@ -6,6 +6,12 @@ source; `jay-stack sync` re-flattens from the current source while keeping the e
 Jay's answer to "reuse a shared component but tweak this one instance" — with no runtime cost and no hidden
 composition machinery.
 
+**As a designer you both _create_ and _use_ design systems — this is your job, not only a plugin author's.**
+A design-system element can be one you author from scratch, one you copy from a plugin into your project and
+adapt, or one you link straight from a plugin. This guide covers **both sides**: [creating a design-system
+element](#creating-a-design-system-element) (authoring the template + contract) and [using
+one](#using-a-design-system-element-link--flatten) (linking, flattening, editing, syncing).
+
 > Replaces the old `<override>` tag. If you have seen `<override ref="…">` in older pages, that mechanism
 > is gone — its job is now done by editing the flattened copy and marking the edited **facet** (see
 > [Marking what you own](#marking-what-you-own-facets)).
@@ -60,7 +66,119 @@ conditional.
 - **Non-content (make a new variant):** changing `class` or inline/scoped CSS, or adding net-new layout DOM
   (`<div>`/`<section>` wrappers, custom components) — a different look or structure.
 
-## Creating / using a design-system element
+## Creating a design-system element
+
+Authoring a design-system element is just authoring a **component**: a `.jay-contract` (its data shape,
+props, refs) and a `.jay-html` template (its markup + optional `<style>`). You can start it three ways:
+
+- **From scratch** — write the contract and template yourself for a reusable piece of your UI (a card, a
+  hero, a callout).
+- **From a plugin, copied in** — copy a plugin's shipped `.jay-html` (and its `.jay-contract`) into your own
+  `src/components/…`, then adapt it. Point pages at _your_ copy; it is now project-owned, so you edit the
+  source directly — no `override` marks and no upstream `sync`.
+- **From an existing project component** — add a `.jay-html` template to a component that only had a
+  contract, so pages can flatten it.
+
+### 1. Put it under `src/components/`
+
+A project-owned element lives beside your pages:
+
+```
+src/components/card/
+  card.jay-contract   # data shape, props, refs
+  card.jay-html       # the template pages flatten from
+```
+
+(A plugin's element lives in its package; you link it by a `template=` path into `node_modules/…`. Same
+mechanics — only the path differs.)
+
+### 2. Write the contract
+
+The contract is the component's API — the props an instance is configured with and the tags the template
+binds. Keep it to what varies per use. See the [Contract Authoring Guide](../contracts/GUIDE.md).
+
+```yaml
+# card.jay-contract
+name: Card
+props:
+  - { name: heading, type: string, required: true }
+  - { name: body, type: string, required: true }
+tags:
+  - { tag: heading, type: data, dataType: string }
+  - { tag: body, type: data, dataType: string }
+```
+
+**A pure presentational element can have an (almost) empty contract.** If the element binds no data and
+needs no code — static markup and styles only — the contract still has to exist (it names the element and is
+what the page's `contract=` import resolves), but it needs **nothing but a name**:
+
+```yaml
+# hero-banner.jay-contract — a pure design element, no data, no code
+name: HeroBanner
+tags: [] # no data to bind
+```
+
+### 3. Write the template
+
+An ordinary `.jay-html`: a `<head>` declaring its contract, a `<body>` of markup binding `{…}` against the
+component's **own** tags, and an optional `<style>` of **plain component CSS**.
+
+```html
+<!-- card.jay-html -->
+<html>
+  <head>
+    <script type="application/jay-data" contract="./card.jay-contract"></script>
+  </head>
+  <body>
+    <div class="ds-card">
+      <h3 class="ds-card__heading">{heading}</h3>
+      <p class="ds-card__body" jay-content>{body}</p>
+    </div>
+  </body>
+  <style>
+    .ds-card {
+      border: 1px solid #e2e8f0;
+      padding: 20px;
+    }
+    .ds-card__heading {
+      font-size: 1.15rem;
+    }
+  </style>
+</html>
+```
+
+> **Author plain CSS here, not `@scope`.** In the template you write ordinary class rules
+> (`.ds-card { … }`). When a page flattens the element, `sync` copies this CSS into the page and rewrites it
+> into the canonical `@scope (.<ref>)` / `:scope` form for you — that scoped shape is a _page-side_ concern
+> (see [The shape of a region's CSS](#the-shape-of-a-regions-css)); you don't write it in the template.
+
+### 4. Choose the right axis of variation
+
+Decide _how_ each instance is allowed to differ, and encode it in the element — this is the core design
+skill:
+
+| The instance varies by…                              | Encode it as…                                 | Example                          |
+| ---------------------------------------------------- | --------------------------------------------- | -------------------------------- |
+| **data** (same design, different values)             | a **contract prop/tag**, bound `{…}`          | `{heading}`, `{price}`           |
+| **content** (per-page text/media the consumer fills) | a **content slot** — `jay-content` (optional) | a body paragraph, a hero `<img>` |
+| **runtime state** (same design, a branch)            | a **conditional** (`if` / variant)            | logged-in vs. not                |
+| **design / structure** (a different look)            | a **separate template** (a second element)    | compact card vs. feature card    |
+
+Prefer props for anything that is really just data. Use `jay-content` to pre-open the content a page is meant
+to fill (optional — it spares the consumer an `override`; see [Content
+slots](#content-slots--jay-content-an-optional-helper)). Fork a **second template**, not a conditional, when
+the _look or structure_ differs — see [Two templates vs. a conditional](#two-templates-vs-a-conditional--different-axes).
+
+### 5. Compose other elements inside it
+
+A template may nest other design-system elements (`<jay:button>`). Declare their contract import in the
+template `<head>`; when a page flattens this element, the nested regions flatten **transitively** (the page
+must also carry a `template=` import for each nested element so it resolves). See
+[jay-html-components.md](jay-html-components.md).
+
+Once the element exists, pages consume it exactly as below.
+
+## Using a design-system element (link + flatten)
 
 ### 1. Declare the import with `template=`
 
@@ -123,6 +241,13 @@ this shape yourself**; the rules are below in [The shape of a region's CSS](#the
 
 > A bare `<jay:X>` with **no** flattened body is a hard error at build time — flatten it with `jay-stack
 sync` (first-fill is just the no-edits case of sync; there is no separate `add` command).
+
+### 3. Edit the copy freely
+
+The flattened body is yours. Rewrite text, change classes, add/remove children, edit the scoped CSS. Bind
+`{…}` expressions against the component's own contract — inside `<jay:card>`, `{heading}` is the card's
+`heading` prop, not the page's. What you may change without prompting a "make a new variant" nudge is the
+[content vs. non-content](#what-counts-as-drift-worth-a-new-variant) distinction above.
 
 ## The shape of a region's CSS
 
@@ -193,12 +318,6 @@ selector list — never one duplicated block per `ref`:
 Regions from _different_ templates stay in separate blocks. If you add a second instance by hand, fold its
 ref into the existing block's selector list rather than copying the block.
 
-### 3. Edit the copy freely
-
-The flattened body is yours. Rewrite text, change classes, add/remove children, edit the scoped CSS. Bind
-`{…}` expressions against the component's own contract — inside `<jay:card>`, `{heading}` is the card's
-`heading` prop, not the page's.
-
 ## Drift: what `jay-stack validate` tells you
 
 Because the copy has a known source (its `template=`), `jay-stack validate` diffs the two and reports each
@@ -227,12 +346,15 @@ you get the source's future fixes for free on the parts you did not touch.
 
 ### Markup facets — the `override` attribute
 
-| You own…                        | Mark it                  | Effect                                              |
-| ------------------------------- | ------------------------ | --------------------------------------------------- |
-| one attribute                   | `override="class"`       | your `class` is kept; other attributes reconcile    |
-| one inline-style declaration    | `override="style.color"` | your `color` is kept; other style props reconcile   |
-| this element's children/subtree | `override="children"`    | your subtree is kept; the element's attrs reconcile |
-| the whole node                  | `override` (bare)        | the entire node is kept verbatim                    |
+| You own…                        | Mark it                     | Effect                                                 |
+| ------------------------------- | --------------------------- | ------------------------------------------------------ |
+| one attribute                   | `override="class"`          | your `class` is kept; other attributes reconcile       |
+| one inline-style declaration    | `override="style.color"`    | your `color` is kept; other style props reconcile      |
+| this element's children/subtree | `override="children"`       | your subtree is kept; the element's attrs reconcile    |
+| several facets at once          | `override="class children"` | space- **or** comma-separated list; each facet is kept |
+| the whole node                  | `override` (bare) or `*`    | the entire node is kept verbatim                       |
+
+`override` is a **facet list**: list the facets you own, separated by spaces or commas (`override="class, style.color"`). A bare `override` (or `override="*"`) is the shorthand for "the whole node is mine." Anything not listed still reconciles with source.
 
 ```html
 <jay:card ref="promo" heading="{item.title}">
@@ -269,6 +391,39 @@ inside) the rule:
 
 - `/* jay:override: <prop> */` — the page owns that one declaration.
 - `/* jay:override */` — the page owns the whole rule.
+
+### Content slots — `jay-content` (an optional helper)
+
+`override` lives on the **page** and is per-instance. `jay-content` is its mirror on the **template** side —
+and because you [author templates too](#creating-a-design-system-element), it is a tool you reach for when
+_creating_ an element, not something only plugin authors use. Put it on a template node to pre-declare a
+**content slot**: "this part is meant to be filled per page." Edits to a marked facet are then expected by
+design — `validate` never reports them as drift, and `sync` keeps the consumer's version — **without** any
+page-side `override`.
+
+```html
+<!-- in a template you author or own: -->
+<p jay-content>{body}</p>
+<img jay-content="src alt" src="placeholder.png" alt="" />
+```
+
+```html
+<!-- in each flattened page, just edit — no override needed: -->
+<p>Everything your team needs, in one place.</p>
+<img src="/hero.png" alt="Our team at work" />
+```
+
+**`jay-content` is optional, not required.** It is purely a convenience that removes the need to mark
+`override` on the slot. Unlike slot/children mechanisms in other frameworks, you do **not** have to annotate
+every variable spot — an unmarked content edit still works; it just shows up as drift until you either mark
+it (`override` on the page, or `jay-content` on the template) or `sync` it away. Reach for `jay-content` when
+a node is _meant_ to vary across pages and you'd rather not repeat an `override` on every instance.
+
+It is a **template-side** marker — it lives on the source template and is stripped from the flattened page
+(so it is stated once, and resilient to template edits). It uses the **same facet-list grammar** as
+`override` (`children`, `style.<prop>`, attribute names, `*` — see
+[_Marking what you own_](#marking-what-you-own-facets)), with one difference: a **bare** `jay-content` means
+**children** (the common text slot), whereas a bare `override` means the whole node.
 
 ## Upgrading: `jay-stack sync`
 

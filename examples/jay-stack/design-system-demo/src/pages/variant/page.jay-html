@@ -16,7 +16,7 @@
   <meta name="description"
     content="A linked card region that adds structural DOM — REGION-OVERRIDE-NON-CONTENT.">
   <style>
-    @scope (.cardFeatured) {
+    @scope (.cardFeatured) to (.cta) {
       :scope {
         border: 1px solid #e2e8f0;
         border-radius: 10px;
@@ -34,8 +34,10 @@
         margin: 0 0 16px;
         color: #475569;
       }
+    }
 
-      .ds-button {
+    @scope (.cta) {
+      :scope {
         border: 0;
         border-radius: 6px;
         padding: 8px 14px;
@@ -49,16 +51,16 @@
 
 <body>
   <div>
-    <p>Variant: this card is linked (template=) and flattened, but it adds a structural ribbon the source
-      template never had — jay-stack validate raises REGION-OVERRIDE-NON-CONTENT, pointing you to a second
-      card template rather than a one-off structural override.</p>
+    <p>Variant: this card is linked (template=) and flattened, but it adds a structural ribbon the
+      source template never had — jay-stack validate raises REGION-OVERRIDE-NON-CONTENT, pointing
+      you to a second card template rather than a one-off structural override.</p>
     <jay:card ref="cardFeatured" heading="Pro" body="For growing teams that need more."
       ctaLabel="Choose Pro">
       <div class="ds-card cardFeatured">
         <h3 class="ds-card__heading">{heading}</h3>
         <p class="ds-card__body">{body}</p>
         <div class="ds-card__ribbon">Most popular</div>
-        <jay:button label="{ctaLabel}"><button class="ds-button">{label}</button>
+        <jay:button ref="cta" label="{ctaLabel}"><button class="ds-button cta">{label}</button>
         </jay:button>
       </div>
     </jay:card>

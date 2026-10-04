@@ -1016,7 +1016,9 @@ describe('DL#196 — region drift validation via the CLI', () => {
             );
             expect(driftWarnings[0].suggestion).toEqual(
                 'To keep the page\'s version, mark the node override="children"; ' +
-                    'to discard it and re-flatten from source, run `jay-stack sync`.',
+                    'to discard it and re-flatten from source, run `jay-stack sync`. ' +
+                    'Or, if these children are a content slot, mark the node jay-content in ' +
+                    'the template "../components/card/card.jay-html" so consumer edits are expected.',
             );
         },
         BUILD_TIMEOUT,

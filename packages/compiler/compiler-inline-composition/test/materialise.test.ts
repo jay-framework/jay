@@ -311,3 +311,141 @@ describe('mergeOverrides — unit', () => {
         expect(squash(merged)).toBe(`<div class="b" override="class"><h3>{t}</h3></div>`);
     });
 });
+
+describe('mergeOverrides — content slot (jay-content, DL#202)', () => {
+    it('preserves the consumer content under a content-slot template node (no page marker needed)', () => {
+        const merged = mergeOverrides(
+            `<div class="card"><p jay-content>{body}</p></div>`,
+            `<div class="card"><p>Everything you need <strong>today</strong>.</p></div>`,
+        );
+        // The template's `{body}` is not re-imposed; the page's edited children survive. The `jay-content`
+        // marker is template-side only, so it is stripped from the flattened page (DL#202 refinement).
+        expect(squash(merged)).toBe(
+            `<div class="card"><p>Everything you need <strong>today</strong>.</p></div>`,
+        );
+    });
+
+    it('without the marker, the template content wins on re-flatten (override-model fallback)', () => {
+        const merged = mergeOverrides(
+            `<div class="card"><p>{body}</p></div>`,
+            `<div class="card"><p>edited body</p></div>`,
+        );
+        expect(squash(merged)).toBe(`<div class="card"><p>{body}</p></div>`);
+    });
+
+    it('a content slot governs children only — the node own attributes still re-flatten from source', () => {
+        const merged = mergeOverrides(
+            `<div class="card"><p class="body" jay-content>{body}</p></div>`,
+            `<div class="card"><p class="body edited">consumer copy</p></div>`,
+        );
+        // class is unmarked ⇒ re-flattened to source ("body"); children preserved ("consumer copy").
+        // The template-side `jay-content` marker is stripped from the flattened page.
+        expect(squash(merged)).toBe(`<div class="card"><p class="body">consumer copy</p></div>`);
+    });
+
+    it('preserves consumer values for attributes named by a content slot (jay-content="src alt")', () => {
+        const merged = mergeOverrides(
+            `<div class="hero"><img jay-content="src alt" src="placeholder.png" alt="placeholder"></div>`,
+            `<div class="hero"><img src="hero.png" alt="Our hero"></div>`,
+        );
+        // src/alt are the consumer's content and survive the re-flatten; no page-side marker is needed, and the
+        // template-side `jay-content` marker is stripped from the flattened page.
+        expect(squash(merged)).toBe(`<div class="hero"><img src="hero.png" alt="Our hero"></div>`);
+    });
+
+    it('a content slot that lists only attributes still re-flattens the children from source', () => {
+        const merged = mergeOverrides(
+            `<figure jay-content="src"><img src="p.png"><figcaption>{caption}</figcaption></figure>`,
+            `<figure><img src="hero.png"><figcaption>edited caption</figcaption></figure>`,
+        );
+        // src (the figure's own attr) is the slot; children (img, figcaption) re-flatten. The template-side
+        // `jay-content` marker is stripped from the flattened page.
+        expect(squash(merged)).toBe(
+            `<figure><img src="p.png"><figcaption>{caption}</figcaption></figure>`,
+        );
+    });
+});
+
+describe('materialise — @scope donut (to), DL#203', () => {
+    it('stops a scoped region at a nested ref-bearing child region (emits `to`)', () => {
+        const page = `<body><jay:card ref="c"></jay:card></body>`;
+        const result = materialise(
+            page,
+            withTemplates({
+                card: {
+                    body: `<div class="card"><jay:button ref="b"></jay:button></div>`,
+                    css: `.card { color: red }`,
+                },
+                button: { body: `<button>{label}</button>` },
+            }),
+        );
+        expect(result.css).toBe(`@scope (.c) to (.b) {\n:scope { color: red }\n}`);
+        // the child region's root carries the boundary anchor `b` even though the button ships no CSS.
+        expect(squash(result.html)).toBe(
+            `<body><jay:card ref="c"><div class="card c">` +
+                `<jay:button ref="b"><button class="b">{label}</button></jay:button>` +
+                `</div></jay:card></body>`,
+        );
+    });
+
+    it('a leaf scoped region (no child regions) emits a plain @scope block', () => {
+        const page = `<body><jay:card ref="c"></jay:card></body>`;
+        const result = materialise(
+            page,
+            withTemplates({
+                card: { body: `<div class="card"><h3>x</h3></div>`, css: `.card { color: red }` },
+            }),
+        );
+        expect(result.css).toBe(`@scope (.c) {\n:scope { color: red }\n}`);
+    });
+
+    it('omits a ref-less child region from the donut (and does not stamp it)', () => {
+        const page = `<body><jay:card ref="c"></jay:card></body>`;
+        const result = materialise(
+            page,
+            withTemplates({
+                card: {
+                    body: `<div class="card"><jay:button></jay:button></div>`,
+                    css: `.card { color: red }`,
+                },
+                button: { body: `<button>{label}</button>` },
+            }),
+        );
+        expect(result.css).toBe(`@scope (.c) {\n:scope { color: red }\n}`);
+        expect(squash(result.html)).toBe(
+            `<body><jay:card ref="c"><div class="card c">` +
+                `<jay:button><button>{label}</button></jay:button>` +
+                `</div></jay:card></body>`,
+        );
+    });
+
+    it('omits a non-materialisable child region from the donut', () => {
+        const page = `<body><jay:card ref="c"></jay:card></body>`;
+        const result = materialise(
+            page,
+            withTemplates({
+                card: {
+                    body: `<div class="card"><jay:widget ref="w"></jay:widget></div>`,
+                    css: `.card { color: red }`,
+                },
+                // no `widget` template → not materialisable → no anchor → omitted from `to`
+            }),
+        );
+        expect(result.css).toBe(`@scope (.c) {\n:scope { color: red }\n}`);
+    });
+
+    it('coalesces same-template instances with matching child nesting into one donut block', () => {
+        const page = `<body><jay:card ref="cardA"></jay:card><jay:card ref="cardB"></jay:card></body>`;
+        const result = materialise(
+            page,
+            withTemplates({
+                card: {
+                    body: `<div class="card"><jay:button ref="b"></jay:button></div>`,
+                    css: `.card { color: red }`,
+                },
+                button: { body: `<button>{label}</button>` },
+            }),
+        );
+        expect(result.css).toBe(`@scope (.cardA, .cardB) to (.b) {\n:scope { color: red }\n}`);
+    });
+});

@@ -26,14 +26,14 @@
       <div class="ds-card">
         <h3 class="ds-card__heading">{heading}</h3>
         <p class="ds-card__body">{body}</p>
-        <jay:button label="{ctaLabel}"><button class="ds-button">{label}</button></jay:button>
+        <jay:button ref="cta" label="{ctaLabel}"><button class="ds-button">{label}</button></jay:button>
       </div>
     </jay:card>
     <jay:card ref="cardPro" heading="Pro" body="For growing teams that need more." ctaLabel="Choose Pro">
       <div class="ds-card">
         <h3 class="ds-card__heading">{heading}</h3>
         <p class="ds-card__body">{body}</p>
-        <jay:button label="{ctaLabel}"><button class="ds-button">{label}</button></jay:button>
+        <jay:button ref="cta" label="{ctaLabel}"><button class="ds-button">{label}</button></jay:button>
       </div>
     </jay:card>
   </div>

@@ -14,7 +14,7 @@
   <meta name="description"
     content="A design-system page with hand edits that were never marked override=.">
   <style>
-    @scope (.hero) {
+    @scope (.hero) to (.grid) {
       :scope {
         padding: 24px;
         background: #f8fafc;
@@ -28,7 +28,7 @@
       }
     }
 
-    @scope (.grid) {
+    @scope (.grid) to (.cardStarter, .cardPro) {
       :scope {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -43,7 +43,7 @@
       }
     }
 
-    @scope (.cardStarter, .cardPro) {
+    @scope (.cardStarter, .cardPro) to (.cta) {
       :scope {
         border: 1px solid #e2e8f0;
         border-radius: 10px;
@@ -61,8 +61,10 @@
         margin: 0 0 16px;
         color: #475569;
       }
+    }
 
-      .ds-button {
+    @scope (.cta) {
+      :scope {
         border: 0;
         border-radius: 6px;
         padding: 8px 14px;
@@ -89,8 +91,8 @@
               <div class="ds-card cardStarter">
                 <h3 class="ds-card__heading">Best Value</h3>
                 <p class="ds-card__body">{body}</p>
-                <jay:button label="{ctaLabel}"><button class="ds-button">{label}</button>
-                </jay:button>
+                <jay:button ref="cta" label="{ctaLabel}"><button
+                    class="ds-button cta">{label}</button></jay:button>
               </div>
             </jay:card>
             <jay:card ref="cardPro" heading="Pro" body="For growing teams that need more."
@@ -98,8 +100,8 @@
               <div class="ds-card cardPro">
                 <h3 class="ds-card__heading">{heading}</h3>
                 <p class="ds-card__body">{body}</p>
-                <jay:button label="{ctaLabel}"><button class="ds-button ds-button--xl">{label}</button>
-                </jay:button>
+                <jay:button ref="cta" label="{ctaLabel}"><button
+                    class="ds-button ds-button--xl cta">{label}</button></jay:button>
               </div>
             </jay:card>
           </div>

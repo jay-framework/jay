@@ -128,6 +128,9 @@ const DIRECTIVE_ATTRIBUTES = new Set([
     // Component provenance marker stamped by the parser on `<jay:Name>` usage tags (DL#123 discovery).
     // Read by the coordinate/discovery pipeline, never a component prop or a rendered attribute.
     'jc',
+    // DL#202 — template-side content-slot marker. A pure build-time authoring directive read by the
+    // drift/sync differ; it rides into the flattened page copy (verbatim flatten) but must never render.
+    'jay-content',
     AsyncDirectiveTypes.loading.directive,
     AsyncDirectiveTypes.resolved.directive,
     AsyncDirectiveTypes.rejected.directive,

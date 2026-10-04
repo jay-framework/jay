@@ -809,6 +809,25 @@ function collectRegionElements(root: HTMLElement): HTMLElement[] {
     return out;
 }
 
+/**
+ * The *direct* child regions of a region: `<jay:Y>` reachable under `region` without descending through a
+ * nested region first (mirrors the materialiser's `directRegions`). These are the regions a parent's DL#203
+ * `@scope (…) to (…)` donut names as its boundary.
+ */
+function directChildRegions(region: HTMLElement): HTMLElement[] {
+    const out: HTMLElement[] = [];
+    const visit = (el: HTMLElement) => {
+        for (const child of el.childNodes) {
+            if (child.nodeType !== NodeType.ELEMENT_NODE) continue;
+            const childEl = child as HTMLElement;
+            if (isRegionTag(childEl)) out.push(childEl);
+            else visit(childEl);
+        }
+    };
+    visit(region);
+    return out;
+}
+
 /** A region-drift finding: the factual `message` plus a separate remediation `suggestion` (DL#196 §4). */
 interface RegionDriftFinding {
     message: string;
@@ -835,11 +854,17 @@ function formatRegionDrift(
             : spec.value
               ? `mark the CSS rule /* jay:override: ${spec.value} */`
               : 'mark the CSS rule /* jay:override */';
+    // DL#202 — for a content (`children`) drift, offer the template-side content-slot marker as the
+    // resilient alternative: a consumer owning the copy, not a per-page override.
+    const contentSlotHint =
+        entry.facet.kind === 'children'
+            ? ` Or, if these children are a content slot, mark the node jay-content in the template "${template}" so consumer edits are expected.`
+            : '';
     return {
         message:
             `<jay:${contractName}> region differs from source template "${template}": ` +
             `${label} ${entry.change}${values}.`,
-        suggestion: `To keep the page's version, ${mark}; to discard it and re-flatten from source, run \`jay-stack sync\`.`,
+        suggestion: `To keep the page's version, ${mark}; to discard it and re-flatten from source, run \`jay-stack sync\`.${contentSlotHint}`,
     };
 }
 
@@ -1005,7 +1030,7 @@ export function checkRegionCssScoping(jayHtml: JayHtmlSourceFile): RegionDriftFi
     const warnings: RegionDriftFinding[] = [];
     // Group blocks by (template, body) to detect same-group duplicates; flag mixed-template blocks inline.
     const groups = new Map<string, string[]>();
-    for (const { selectors, block } of splitScopeBlocks(pageCss)) {
+    for (const { selectors, to, block } of splitScopeBlocks(pageCss)) {
         const known = selectors.filter((s) => templateOf.has(s));
         if (known.length === 0) continue; // a hand-authored scope unrelated to any region — ignore
         const templates = [...new Set(known.map((s) => templateOf.get(s)!))];
@@ -1018,7 +1043,9 @@ export function checkRegionCssScoping(jayHtml: JayHtmlSourceFile): RegionDriftFi
             });
             continue; // mixed block cannot be keyed for the coalesce check
         }
-        const key = `${templates[0]} ${scopeBody(block)}`;
+        // DL#203 - fold the sorted `to (...)` boundary into the key: two blocks sharing a template and
+        // body but with different donut boundaries stay separate, so they must not be flagged to coalesce.
+        const key = `${templates[0]} ${scopeBody(block)} ${[...to].sort().join(',')}`;
         (groups.get(key) ?? groups.set(key, []).get(key)!).push(selectors.join(', '));
     }
     for (const [key, blockSelectors] of groups) {
@@ -1030,6 +1057,67 @@ export function checkRegionCssScoping(jayHtml: JayHtmlSourceFile): RegionDriftFi
                 `"${template}" and identical CSS but are not coalesced into one selector-list block.`,
             suggestion: 'Run jay-stack sync to coalesce the region CSS.',
         });
+    }
+    return warnings;
+}
+
+/**
+ * DL#203 — require a `ref` on every materialisable nested region that sits inside a region whose template
+ * ships CSS. That parent region's CSS is emitted as a `@scope (.<parentRef>) to (.<childRef>…)` donut so it
+ * stops at each nested region; the boundary `.<childRef>` only exists because the materialiser stamps the
+ * child's `ref` as a class on the flattened region root. A ref-less nested region has no anchor to stamp, so
+ * it cannot be named in the `to (…)` list — the parent's descendant selectors would bleed into it. Flag it
+ * so the author adds a `ref=` in the template.
+ *
+ * (A non-materialisable child — a `<jay:Y>` imported without `template=` — is never flattened or stamped, so
+ * it cannot be a donut boundary regardless; it is out of scope for this rule.)
+ *
+ * Template loading is injected (mirrors `checkRegionDrift`) so this stays pure and unit-testable.
+ *
+ * @internal Exported for testing
+ */
+export function checkNestedRegionRefs(
+    jayHtml: JayHtmlSourceFile,
+    loadTemplate: (relativeTemplatePath: string) => string | undefined,
+): RegionDriftFinding[] {
+    const importsWithTemplate = jayHtml.headlessImports.filter((imp) => imp.template);
+    if (importsWithTemplate.length === 0) return [];
+
+    const warnings: RegionDriftFinding[] = [];
+    const shipsCssCache = new Map<string, boolean>();
+    const templateShipsCss = (rel: string): boolean => {
+        let v = shipsCssCache.get(rel);
+        if (v === undefined) {
+            const content = loadTemplate(rel);
+            v = content !== undefined && extractStyleCss(content).trim() !== '';
+            shipsCssCache.set(rel, v);
+        }
+        return v;
+    };
+
+    for (const region of collectRegionElements(jayHtml.body)) {
+        const contractName = (region.rawTagName ?? '').toLowerCase().substring(4);
+        const imp = importsWithTemplate.find((i) => i.contractName === contractName);
+        if (!imp?.template) continue;
+        const parentRef = region.getAttribute('ref');
+        if (!parentRef) continue; // no scope selector -> no @scope block -> no donut emitted for this region
+        if (!templateShipsCss(imp.template)) continue; // template ships no CSS -> no @scope block -> no donut
+
+        for (const child of directChildRegions(region)) {
+            const childName = (child.rawTagName ?? '').toLowerCase().substring(4);
+            const childImp = importsWithTemplate.find((i) => i.contractName === childName);
+            if (!childImp?.template) continue; // non-materialisable child — cannot be a donut boundary anyway
+            if (child.getAttribute('ref')) continue;
+            warnings.push({
+                message:
+                    `<jay:${childName}> is nested inside <jay:${contractName}> (template="${imp.template}"), ` +
+                    `whose CSS is scoped as an @scope (.${parentRef}) donut, but <jay:${childName}> has no ref= — ` +
+                    `so its region cannot be isolated from the parent's styles.`,
+                suggestion:
+                    `Add a ref= to the <jay:${childName}> in template "${imp.template}" so sync can stamp its ` +
+                    `scope-anchor class and emit the \`to (.<ref>)\` boundary.`,
+            });
+        }
     }
     return warnings;
 }
@@ -1321,10 +1409,10 @@ export function checkNoDesignSystem(
     };
 }
 
-/** The declarations inside a `@scope (…) { … }` block (its body), normalized for comparison. */
+/** The declarations inside a `@scope (…) [to (…)] { … }` block (its body), normalized for comparison. */
 function scopeBody(block: string): string {
     return block
-        .replace(/^@scope\s*\([^)]*\)\s*\{/, '')
+        .replace(/^@scope\s*\([^)]*\)(?:\s*to\s*\([^)]*\))?\s*\{/, '')
         .replace(/\}\s*$/, '')
         .replace(/\s+/g, ' ')
         .trim();
@@ -1880,6 +1968,17 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
             // Check that region CSS is in canonical coalesced form (DL#196 §4/§5 — validate-clean ⇔ sync-clean)
             const cssScopingWarnings = checkRegionCssScoping(parsedFile.val!);
             for (const finding of cssScopingWarnings) {
+                warnings.push({
+                    file: relativePath,
+                    message: finding.message,
+                    suggestion: finding.suggestion,
+                });
+            }
+
+            // DL#203 — every nested region under a CSS-shipping (scoped) region must have a ref so the parent's
+            // @scope donut can name it as a `to (…)` boundary and isolate it from the parent's styles.
+            const nestedRefWarnings = checkNestedRegionRefs(parsedFile.val!, readTemplateRel);
+            for (const finding of nestedRefWarnings) {
                 warnings.push({
                     file: relativePath,
                     message: finding.message,

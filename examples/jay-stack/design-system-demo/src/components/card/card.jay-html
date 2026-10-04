@@ -20,21 +20,13 @@
       margin: 0 0 16px;
       color: #475569;
     }
-    .ds-button {
-      border: 0;
-      border-radius: 6px;
-      padding: 8px 14px;
-      background: #2563eb;
-      color: #ffffff;
-      cursor: pointer;
-    }
   </style>
 </head>
 <body>
   <div class="ds-card">
     <h3 class="ds-card__heading">{heading}</h3>
     <p class="ds-card__body">{body}</p>
-    <jay:button label="{ctaLabel}"><button class="ds-button">{label}</button></jay:button>
+    <jay:button ref="cta" label="{ctaLabel}"><button class="ds-button">{label}</button></jay:button>
   </div>
 </body>
 </html>

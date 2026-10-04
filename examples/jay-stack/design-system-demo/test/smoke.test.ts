@@ -278,7 +278,9 @@ describe('Design System Demo — DL#196 region drift validation', () => {
             expect(cardWarning).toBeDefined();
             expect(cardWarning.suggestion).toEqual(
                 'To keep the page\'s version, mark the node override="children"; to discard it and ' +
-                    're-flatten from source, run `jay-stack sync`.',
+                    're-flatten from source, run `jay-stack sync`.' +
+                    ' Or, if these children are a content slot, mark the node jay-content in the ' +
+                    'template "../../components/card/card.jay-html" so consumer edits are expected.',
             );
 
             const buttonWarning = byMessage(

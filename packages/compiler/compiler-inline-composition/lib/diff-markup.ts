@@ -25,9 +25,11 @@ import {
     isPageScope,
     isRegionTag,
     NO_SUPPRESSION,
+    parseContent,
     parseOverride,
     readAttr,
     Suppression,
+    unionSuppression,
 } from './override';
 import { normalizeExpr } from './normalize';
 import { parseInlineStyle } from './style';
@@ -58,9 +60,12 @@ function diffChildren(
     ignoreClass: string | undefined,
     out: DiffEntry[],
 ): void {
+    // A facet is page-owned if the region node marks it `override=` OR the source (template) node marks it a
+    // `jay-content` slot (DL#202) — union the two. Whole node or subtree owned: neither report nor descend (§4).
     const rSup = isElement(rParent) ? parseOverride(rParent) : NO_SUPPRESSION;
-    // Whole node or subtree is page-owned: neither report nor descend into it (§4).
-    if (rSup.all || rSup.children) return;
+    const sSup = isElement(sParent) ? parseContent(sParent) : NO_SUPPRESSION;
+    const sup = unionSuppression(rSup, sSup);
+    if (sup.all || sup.children) return;
 
     const s = contentNodes(sParent);
     const r = contentNodes(rParent);
@@ -97,7 +102,9 @@ function diffElement(
     ignoreClass: string | undefined,
     out: DiffEntry[],
 ): void {
-    const sup = parseOverride(re);
+    // Union the page node's `override=` with the template node's `jay-content` slot (DL#202) so a
+    // content attribute (e.g. `src`/`alt` on an `<img jay-content="src alt">`) is not reported as drift.
+    const sup = unionSuppression(parseOverride(re), parseContent(se));
     if (sup.all) return; // whole node page-owned
     compareAttributes(path, se, re, sup, ignoreClass, out);
     compareStyle(path, se, re, sup, out);

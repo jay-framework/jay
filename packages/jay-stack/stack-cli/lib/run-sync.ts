@@ -178,9 +178,17 @@ function hasOverrideMarker(block: string): boolean {
     return /\/\*\s*jay:override\b/.test(block);
 }
 
-/** Rewrite a coalesced `@scope (…)` block's scope-start to only `selectors` (re-narrowing the list). */
-function narrowScopeBlock(block: string, selectors: string[]): string {
-    return block.replace(/^(@scope\s*\()\s*[^)]*?\s*(\)\s*\{)/, `$1${selectors.join(', ')}$2`);
+/**
+ * Rewrite a coalesced `@scope (…)` block's scope-start to only `selectors` (re-narrowing the list),
+ * preserving any DL#203 `to (…)` scoping limit that follows the selector list.
+ *
+ * @internal Exported for testing
+ */
+export function narrowScopeBlock(block: string, selectors: string[]): string {
+    return block.replace(
+        /^(@scope\s*\()\s*[^)]*?\s*(\)(?:\s*to\s*\([^)]*\))?\s*\{)/,
+        `$1${selectors.join(', ')}$2`,
+    );
 }
 
 /**

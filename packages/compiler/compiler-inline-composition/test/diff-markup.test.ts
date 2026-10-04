@@ -163,6 +163,60 @@ describe('diffMarkup — nested regions (Q2)', () => {
     });
 });
 
+describe('diffMarkup — content slot (jay-content, DL#202)', () => {
+    it('a text edit under a content-slot template node is not drift', () => {
+        const source = `<div class="card"><p class="body" jay-content>{body}</p></div>`;
+        const region = `<div class="card"><p class="body">Everything you need today.</p></div>`;
+        expect(diffMarkup(source, region)).toEqual([]);
+    });
+
+    it('content enrichment under a content-slot node is not drift', () => {
+        const source = `<div class="card"><p jay-content>{body}</p></div>`;
+        const region = `<div class="card"><p>Everything <strong>you</strong> need.</p></div>`;
+        expect(diffMarkup(source, region)).toEqual([]);
+    });
+
+    it('even a structural (non-content-tag) addition under a content slot is not drift', () => {
+        // The marker is an explicit opt-in — broader than the DL#200 CONTENT_TAGS allowlist (a <div>
+        // would normally be a non-content override); the template author owns this subtree to the consumer.
+        const source = `<div class="card"><section jay-content>{body}</section></div>`;
+        const region = `<div class="card"><section><div class="ribbon">Sale</div>{body}</section></div>`;
+        expect(diffMarkup(source, region)).toEqual([]);
+    });
+
+    it('without the marker, the same content edit is reported (override-model fallback)', () => {
+        const source = `<div class="card"><p class="body">{body}</p></div>`;
+        const region = `<div class="card"><p class="body">Everything you need today.</p></div>`;
+        expect(keys(diffMarkup(source, region))).toEqual(['changed:children@0.0']);
+    });
+
+    it('a content slot exempts only its own children — drift elsewhere is still reported', () => {
+        const source = `<div class="card"><h3 class="h">{heading}</h3><p jay-content>{body}</p></div>`;
+        const region = `<div class="card"><h3 class="h brand">{heading}</h3><p>edited body</p></div>`;
+        expect(keys(diffMarkup(source, region))).toEqual(['changed:attribute@0.0#class']);
+    });
+
+    it('attributes named by a content slot are not drift (jay-content="src alt" on an img)', () => {
+        // An <img> content slot owns src/alt, not children — the facet-list form (DL#202 refinement).
+        const source = `<img jay-content="src alt" src="placeholder.png" alt="placeholder">`;
+        const region = `<img src="hero.png" alt="Our hero">`;
+        expect(diffMarkup(source, region)).toEqual([]);
+    });
+
+    it('a content slot exempts only its named attributes — an unlisted attribute still drifts', () => {
+        const source = `<img jay-content="src" class="media" src="placeholder.png">`;
+        const region = `<img class="media wide" src="hero.png">`;
+        // src is a content slot (skipped); class is unmarked → drift.
+        expect(keys(diffMarkup(source, region))).toEqual(['changed:attribute@0#class']);
+    });
+
+    it('a comma-separated content list is accepted (jay-content="src, alt")', () => {
+        const source = `<img jay-content="src, alt" src="p.png" alt="p">`;
+        const region = `<img src="hero.png" alt="hero">`;
+        expect(diffMarkup(source, region)).toEqual([]);
+    });
+});
+
 describe('diffBodies — scope-anchor class (DL#196)', () => {
     it('ignores the ref-anchor class the materialiser stamps on the flattened root', () => {
         const source = parse(`<div class="card"><h3 class="card-heading">x</h3></div>`);

@@ -16,7 +16,11 @@ export {
     isPageScope,
     readAttr,
     parseOverride,
+    parseContent,
+    unionSuppression,
+    isContentSlot,
     isSuppressed,
+    CONTENT_MARKER,
 } from './override';
 export { normalizeExpr, expressionsEqual } from './normalize';
 export { parseInlineStyle, serializeInlineStyle } from './style';

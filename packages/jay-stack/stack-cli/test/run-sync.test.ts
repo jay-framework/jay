@@ -3,7 +3,7 @@ import path from 'path';
 import { promises as fsp, readFileSync } from 'fs';
 import { parse as parseHtml } from 'node-html-parser';
 import { parseJayFile, JAY_IMPORT_RESOLVER } from '@jay-framework/compiler-jay-html';
-import { syncPageContent, resolveTargets } from '../lib/run-sync';
+import { syncPageContent, resolveTargets, narrowScopeBlock } from '../lib/run-sync';
 import { extractScopeBlock } from '../lib/scope-css';
 
 /** Read a file synchronously, returning undefined when it does not exist (test template loader). */
@@ -142,6 +142,21 @@ describe('syncPageContent (DL#196)', () => {
         expect(reparsed.validations).toHaveLength(0);
         const second = syncPageContent(first.content, dirname, reparsed.val!, readFileSyncSafe);
         expect(second.changed).toBe(false);
+    });
+});
+
+describe('narrowScopeBlock — DL#203 preserves the `to (…)` donut on re-narrowing', () => {
+    it('re-narrows the selector list while keeping the `to (…)` boundary intact', () => {
+        const block = `@scope (.cardStarter, .cardPro) to (.cta) {\n  .card-heading { color: black; }\n}`;
+        const narrowed = narrowScopeBlock(block, ['.cardPro']);
+        expect(narrowed).toEqual(
+            `@scope (.cardPro) to (.cta) {\n  .card-heading { color: black; }\n}`,
+        );
+    });
+
+    it('leaves a plain block (no `to`) correctly narrowed', () => {
+        const block = `@scope (.a, .b) {\n  .x { color: red; }\n}`;
+        expect(narrowScopeBlock(block, ['.a'])).toEqual(`@scope (.a) {\n  .x { color: red; }\n}`);
     });
 });
 

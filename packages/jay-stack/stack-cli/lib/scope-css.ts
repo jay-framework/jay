@@ -14,7 +14,9 @@ export interface ScopeBlock {
     selector: string;
     /** the parsed member selectors, e.g. `['.a', '.b']`. */
     selectors: string[];
-    /** the block verbatim, `@scope (…) { … }`. */
+    /** DL#203 — the scoping-limit (donut) `to (…)` members, e.g. `['.badge']`; empty when there is no limit. */
+    to: string[];
+    /** the block verbatim, `@scope (…) [to (…)] { … }`. */
     block: string;
 }
 
@@ -47,7 +49,8 @@ export function extractScopeBlock(css: string, selector: string): string | undef
 export function tokenizeCss(css: string): CssSegment[] {
     const out: CssSegment[] = [];
     if (!css) return out;
-    const header = /@scope\s*\(\s*([^)]+?)\s*\)\s*\{/g;
+    // Scope-start, with an optional DL#203 scoping limit: `@scope (sel) [to (limit)] {`.
+    const header = /@scope\s*\(\s*([^)]+?)\s*\)(?:\s*to\s*\(\s*([^)]+?)\s*\))?\s*\{/g;
     let last = 0;
     let m: RegExpExecArray | null;
     while ((m = header.exec(css)) !== null) {
@@ -71,7 +74,11 @@ export function tokenizeCss(css: string): CssSegment[] {
             .split(',')
             .map((s) => s.trim())
             .filter(Boolean);
-        out.push({ type: 'scope', selector, selectors, block: css.slice(m.index, end) });
+        const to = (m[2] ?? '')
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean);
+        out.push({ type: 'scope', selector, selectors, to, block: css.slice(m.index, end) });
         last = end;
         header.lastIndex = end;
     }
@@ -86,12 +93,14 @@ export function tokenizeCss(css: string): CssSegment[] {
 export function splitScopeBlocks(css: string): ScopeBlock[] {
     return tokenizeCss(css)
         .filter((s): s is CssSegment & { type: 'scope' } => s.type === 'scope')
-        .map(({ selector, selectors, block }) => ({ selector, selectors, block }));
+        .map(({ selector, selectors, to, block }) => ({ selector, selectors, to, block }));
 }
 
-/** The declarations inside a `@scope (…) { … }` block (its body), un-normalized. */
+/** The declarations inside a `@scope (…) [to (…)] { … }` block (its body), un-normalized. */
 export function scopeInnerBody(block: string): string {
-    return block.replace(/^@scope\s*\([^)]*\)\s*\{/, '').replace(/\}\s*$/, '');
+    return block
+        .replace(/^@scope\s*\([^)]*\)(?:\s*to\s*\([^)]*\))?\s*\{/, '')
+        .replace(/\}\s*$/, '');
 }
 
 /**
