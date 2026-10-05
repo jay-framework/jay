@@ -15,7 +15,7 @@
     content="A design-system page flattened verbatim from source, with no overrides.">
   <style>
     @scope (.hero) to (.grid) {
-      :scope {
+      .ds-section {
         padding: 24px;
         background: #f8fafc;
         border-radius: 12px;
@@ -29,7 +29,7 @@
     }
 
     @scope (.grid) to (.cardStarter, .cardPro) {
-      :scope {
+      .ds-gallery {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 20px;
@@ -44,7 +44,7 @@
     }
 
     @scope (.cardStarter, .cardPro) to (.cta) {
-      :scope {
+      .ds-card {
         border: 1px solid #e2e8f0;
         border-radius: 10px;
         padding: 20px;
@@ -64,7 +64,7 @@
     }
 
     @scope (.cta) {
-      :scope {
+      .ds-button {
         border: 0;
         border-radius: 6px;
         padding: 8px 14px;
@@ -81,27 +81,27 @@
     <p>Pristine: every region flattened straight from its source template — no overrides, no drift.
     </p>
     <jay:section ref="hero" title="Our Plans">
-      <section class="ds-section hero">
+      <section class="ds-section">
         <h1 class="ds-section__title">{title}</h1>
         <jay:gallery ref="grid" heading="{title}">
-          <div class="ds-gallery grid">
+          <div class="ds-gallery">
             <h2 class="ds-gallery__heading">{heading}</h2>
             <jay:card ref="cardStarter" heading="Starter" body="Everything you need to get going."
               ctaLabel="Choose Starter">
-              <div class="ds-card cardStarter">
+              <div class="ds-card">
                 <h3 class="ds-card__heading">{heading}</h3>
                 <p class="ds-card__body">{body}</p>
-                <jay:button ref="cta" label="{ctaLabel}"><button
-                    class="ds-button cta">{label}</button></jay:button>
+                <jay:button ref="cta" label="{ctaLabel}"><button class="ds-button">{label}</button>
+                </jay:button>
               </div>
             </jay:card>
             <jay:card ref="cardPro" heading="Pro" body="For growing teams that need more."
               ctaLabel="Choose Pro">
-              <div class="ds-card cardPro">
+              <div class="ds-card">
                 <h3 class="ds-card__heading">{heading}</h3>
                 <p class="ds-card__body">{body}</p>
-                <jay:button ref="cta" label="{ctaLabel}"><button
-                    class="ds-button cta">{label}</button></jay:button>
+                <jay:button ref="cta" label="{ctaLabel}"><button class="ds-button">{label}</button>
+                </jay:button>
               </div>
             </jay:card>
           </div>

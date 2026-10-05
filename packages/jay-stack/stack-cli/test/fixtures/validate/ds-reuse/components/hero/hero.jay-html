@@ -1,0 +1,10 @@
+<html>
+<head>
+  <script type="application/jay-data" contract="./hero.jay-contract"></script>
+</head>
+<body>
+  <section class="hero">
+    <h1 class="hero-title">Hero</h1>
+  </section>
+</body>
+</html>

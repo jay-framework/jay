@@ -32,6 +32,4 @@ export {
     type MaterialiseResult,
     materialise,
     mergeOverrides,
-    scopeReadyCss,
-    rootClassesOf,
 } from './materialise';

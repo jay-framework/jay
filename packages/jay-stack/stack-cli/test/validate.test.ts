@@ -10,6 +10,7 @@ import {
     checkRegionCssDrift,
     checkRegionCssScoping,
     checkNestedRegionRefs,
+    checkRegionCssNoRef,
     checkRegionRecursion,
     checkRegionNotLinked,
     checkRegionOverrideNonContent,
@@ -468,6 +469,53 @@ describe('checkNestedRegionRefs (DL#203 — require ref on nested regions under 
     it('accepts a nested region that carries a ref (no warning)', async () => {
         const jayHtml = await parseNestedPage('page-with-ref.jay-html');
         expect(checkNestedRegionRefs(jayHtml, fsLoader)).toEqual([]);
+    });
+});
+
+describe('checkRegionCssNoRef (DL#209 — region ships CSS but has no ref)', () => {
+    const noRefDir = path.resolve('./test/fixtures/validate/region-css-no-ref');
+
+    async function parseNoRefPage(fixturePath: string) {
+        const jayFile = path.join(noRefDir, fixturePath);
+        const content = await fsp.readFile(jayFile, 'utf-8');
+        const parsed = await parseJayFile(
+            content,
+            path.basename(jayFile.replace('.jay-html', '')),
+            path.dirname(jayFile),
+            {},
+            JAY_IMPORT_RESOLVER,
+            noRefDir,
+        );
+        expect(parsed.validations).toHaveLength(0);
+        return parsed.val!;
+    }
+
+    const fsLoader = (rel: string) =>
+        readFileSyncSafe(path.resolve(noRefDir, rel.replace(/^\.\//, '')));
+
+    it('reports a region whose template ships CSS but the tag has no ref', async () => {
+        const jayHtml = await parseNoRefPage('page-no-ref.jay-html');
+        const findings = checkRegionCssNoRef(jayHtml, fsLoader);
+        expect(findings).toHaveLength(1);
+        expect(findings[0]).toEqual({
+            message:
+                '<jay:card> flattens template="./components/card/card.jay-html" which ships CSS, but ' +
+                'the region has no ref= — so its CSS cannot be scoped and `jay-stack sync` will silently ' +
+                'drop it.',
+            suggestion:
+                'Add a ref= to the <jay:card> so sync can scope its CSS as an @scope (.<ref>) block ' +
+                'and preserve it.',
+        });
+    });
+
+    it('accepts a CSS-shipping region that carries a ref (no finding)', async () => {
+        const jayHtml = await parseNoRefPage('page-with-ref.jay-html');
+        expect(checkRegionCssNoRef(jayHtml, fsLoader)).toEqual([]);
+    });
+
+    it('accepts a ref-less region whose template ships no CSS (nothing to lose)', async () => {
+        const jayHtml = await parseNoRefPage('page-no-css.jay-html');
+        expect(checkRegionCssNoRef(jayHtml, fsLoader)).toEqual([]);
     });
 });
 

@@ -1,0 +1,5 @@
+name: Hero
+tags:
+  - tag: label
+    type: data
+    dataType: string

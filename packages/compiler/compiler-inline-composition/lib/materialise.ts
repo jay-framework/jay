@@ -13,7 +13,6 @@
  */
 
 import { HTMLElement, parse } from 'node-html-parser';
-import postcss from 'postcss';
 import {
     CONTENT_MARKER,
     isPageScope,
@@ -140,7 +139,6 @@ function fillRegions(
     opts: MaterialiseOptions,
     errors: string[],
     cssBlocks: CssContribution[],
-    parentScoped: boolean = false,
 ): void {
     for (const region of directRegions(container)) {
         const name = contractName(region);
@@ -162,19 +160,18 @@ function fillRegions(
             continue;
         }
 
-        const existing = region.innerHTML;
+        // DL#206 Phase 3 — the flattened region body is the author's template body (merged with the
+        // page's `override` facets on sync). The `display:contents` scope anchor is NOT written here: the
+        // jay-html compiler synthesizes it at compile time from `<jay:X ref>` (a pure function of the ref),
+        // so the source stays wrapper-free and sync/validate diff the author's body directly.
         const filled = opts.preserveOverrides
-            ? mergeOverrides(template.body, existing)
+            ? mergeOverrides(template.body, region.innerHTML)
             : template.body;
         region.set_content(filled);
-
-        const ref = readAttr(region, 'ref');
-        let scoped = false; // does this region emit its own `@scope` block?
 
         if (template.css) {
             const selector = (opts.scopeSelector ?? defaultScopeSelector)(region);
             if (selector) {
-                scoped = true;
                 // DL#203 — the donut boundary: the scope-anchor classes of this region's *direct* child
                 // regions, so the scoped CSS stops at each nested region. Only materialisable children with a
                 // `ref` get a stamped anchor and can be excluded; a ref-less or non-materialisable child is
@@ -189,12 +186,16 @@ function fillRegions(
                             .map((r) => `.${r}`),
                     ),
                 ];
-                // Rewrite root-block selectors to `:scope` so the component's own root rule applies to the
-                // `@scope` root element (scoped selectors otherwise match descendants only — see scopeReadyCss).
+                // DL#206 — component CSS is emitted verbatim inside `@scope (.<ref>) { … }`. The region's
+                // real roots are descendants of the compiler-synthesized scope-anchor wrapper
+                // (`assignHeadlessInstance`, assign-coordinates.ts), so a root rule like `.ds-card { … }`
+                // matches as an ordinary descendant — no `:scope` rewrite needed. This also lets a multi-root
+                // region style each root distinctly (`.a {…} .b {…}`), which the old union-to-`:scope`
+                // rewrite collapsed.
                 cssBlocks.push({
                     key: `${templatePath}\0${[...to].sort().join(',')}`,
                     selector,
-                    css: scopeReadyCss(template.body, template.css),
+                    css: template.css,
                     to,
                 });
             } else {
@@ -202,16 +203,8 @@ function fillRegions(
             }
         }
 
-        // A jay `ref` is consumed by the reference system and never emitted to the DOM, so `@scope (.<ref>)`
-        // has no element to root at. Stamp the ref as a real class on the flattened region root(s) — the
-        // element(s) the scoped rules sit under. Stamp when this region ships scoped CSS (its own root), OR
-        // when its parent's donut (`to (.<ref>)`) names it as a boundary (`parentScoped`) — a child with no
-        // CSS still needs the class so the parent's limit resolves. The differ ignores it (never drift).
-        if (ref && (scoped || parentScoped)) stampScopeAnchor(region, ref);
-
-        // Transitive: flatten regions the just-inserted template body itself contains. `scoped` tells those
-        // children whether this region's donut names them (so they must stamp their boundary anchor).
-        fillRegions(region, [...stack, templatePath], opts, errors, cssBlocks, scoped);
+        // Transitive: flatten regions the just-inserted template body itself contains.
+        fillRegions(region, [...stack, templatePath], opts, errors, cssBlocks);
     }
 }
 
@@ -243,66 +236,6 @@ function scopeWrap(css: string, selector: string, to?: string[]): string {
     // so a parent descendant selector never styles DOM inside a nested region (structural isolation).
     const limit = to && to.length ? ` to (${to.join(', ')})` : '';
     return `@scope (${selector})${limit} {\n${css}\n}`;
-}
-
-/**
- * The class tokens on the top-level element(s) of a template body — the region's flattened root element(s).
- * These are the classes the component authors its root rule against (e.g. `ds-card` for `<div class="ds-card">`).
- */
-export function rootClassesOf(templateBody: string): Set<string> {
-    const classes = new Set<string>();
-    for (const child of parse(templateBody).childNodes) {
-        if (child instanceof HTMLElement) {
-            for (const c of child.classList.values()) classes.add(c);
-        }
-    }
-    return classes;
-}
-
-/**
- * DL#196 — make a component's CSS apply to its flattened region **root**, not just descendants.
- *
- * The materialiser wraps component CSS in `@scope (.<ref>)`, but a scoped selector only matches *proper
- * descendants* of the scope root; the root element itself is matchable **only via `:scope`** (CSS Cascade 6
- * — verified in Chromium: `.ds-card { … }` inside `@scope (.ref)` does not style the `.ds-card` root, but
- * `:scope { … }` does). A component targets its own root through the root element's block class (`.ds-card`),
- * which would silently stop applying once scoped. So every selector token equal to a root class is rewritten
- * to `:scope`; descendant/element selectors (`.ds-card__heading`) are left untouched — they already match in
- * scope. Applied before coalescing, so same-template instances still produce an identical body and merge.
- *
- * Only meaningful for CSS that will be `@scope`-wrapped (a `ref` is present); unscoped (global) CSS keeps its
- * class selectors, where `:scope` has no scope root to resolve against.
- */
-export function scopeReadyCss(templateBody: string, css: string): string {
-    const rootClasses = rootClassesOf(templateBody);
-    if (rootClasses.size === 0) return css;
-    try {
-        const root = postcss.parse(css);
-        root.walkRules((rule) => {
-            rule.selectors = rule.selectors.map((sel) => rewriteRootSelector(sel, rootClasses));
-        });
-        return root.toString();
-    } catch {
-        return css; // malformed CSS — emit verbatim rather than throwing (matches diffCss resilience)
-    }
-}
-
-/** Replace each class token equal to a root class with `:scope` (leaving other class tokens intact). */
-function rewriteRootSelector(selector: string, rootClasses: Set<string>): string {
-    return selector.replace(/\.([A-Za-z0-9_-]+)/g, (match, name) =>
-        rootClasses.has(name) ? ':scope' : match,
-    );
-}
-
-/**
- * Stamp the scope-anchor class on the flattened region's top-level element(s). `@scope (.<ref>)` needs a
- * real DOM element to root at, but a jay `ref` is not rendered as a class — so the materialiser adds it.
- * Idempotent (`classList.add` dedups); re-derived from the ref on every re-flatten (survives sync).
- */
-function stampScopeAnchor(region: HTMLElement, className: string): void {
-    for (const child of region.childNodes) {
-        if (child instanceof HTMLElement) child.classList.add(className);
-    }
 }
 
 // --- sync merge: re-flatten from template, keep the page's override facets ---

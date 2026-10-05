@@ -1,0 +1,20 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+    <script type="application/jay-headless"
+            contract="../components/card/card.jay-contract"
+            template="../components/card/card.jay-html"></script>
+</head>
+<body>
+<jay:card>
+    <div class="card">
+        <h3 class="card-heading">Card</h3>
+        <p class="card-body">Body</p>
+    </div>
+</jay:card>
+<footer>small print</footer>
+</body>
+</html>

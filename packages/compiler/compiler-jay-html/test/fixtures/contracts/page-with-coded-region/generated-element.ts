@@ -66,10 +66,12 @@ function _headlessCard0Render(options?: RenderElementOptions): _HeadlessCard0Ele
     );
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
-            e('div', { class: 'card' }, [
-                e('h2', {}, [dt((vs) => vs.heading)]),
-                e('button', {}, ['Action'], refCardAction()),
-                e('div', {}, ['Default body']),
+            e('div', { class: 'plainCard', style: { cssText: 'display: contents' } }, [
+                e('div', { class: 'card' }, [
+                    e('h2', {}, [dt((vs) => vs.heading)]),
+                    e('button', {}, ['Action'], refCardAction()),
+                    e('div', {}, ['Default body']),
+                ]),
             ]),
         ) as _HeadlessCard0Element;
     return [refManager.getPublicAPI() as CardRefs, render];
@@ -100,10 +102,12 @@ function _headlessCard1Render(options?: RenderElementOptions): _HeadlessCard1Ele
     );
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
-            e('div', { class: 'card' }, [
-                e('h2', {}, [dt((vs) => vs.heading)]),
-                e('button', {}, ['Action'], refCardAction()),
-                e('div', {}, ['Default body']),
+            e('div', { class: 'richCard', style: { cssText: 'display: contents' } }, [
+                e('div', { class: 'card' }, [
+                    e('h2', {}, [dt((vs) => vs.heading)]),
+                    e('button', {}, ['Action'], refCardAction()),
+                    e('div', {}, ['Default body']),
+                ]),
             ]),
         ) as _HeadlessCard1Element;
     return [refManager.getPublicAPI() as CardRefs, render];

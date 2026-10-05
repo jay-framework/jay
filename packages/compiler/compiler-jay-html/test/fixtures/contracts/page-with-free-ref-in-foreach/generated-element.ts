@@ -70,19 +70,21 @@ function _headlessCard0Render(options?: RenderElementOptions): _HeadlessCard0Ele
     const [refManager, [refDismiss]] = ReferencesManager.for(options, [], ['dismiss'], [], []);
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
-            e('div', { class: 'card' }, [
-                e('h2', {}, [dt((vs) => vs.heading)]),
-                de('ul', {}, [
-                    forEach(
-                        (vs: CardViewState) => vs.tags,
-                        (vs1: TagOfCardViewState) => {
-                            return e('li', {}, [
-                                e('span', {}, [dt((vs1) => vs1.label)]),
-                                e('button', {}, ['x'], refDismiss()),
-                            ]);
-                        },
-                        'id',
-                    ),
+            e('div', { class: 'region', style: { cssText: 'display: contents' } }, [
+                e('div', { class: 'card' }, [
+                    e('h2', {}, [dt((vs) => vs.heading)]),
+                    de('ul', {}, [
+                        forEach(
+                            (vs: CardViewState) => vs.tags,
+                            (vs1: TagOfCardViewState) => {
+                                return e('li', {}, [
+                                    e('span', {}, [dt((vs1) => vs1.label)]),
+                                    e('button', {}, ['x'], refDismiss()),
+                                ]);
+                            },
+                            'id',
+                        ),
+                    ]),
                 ]),
             ]),
         ) as _HeadlessCard0Element;

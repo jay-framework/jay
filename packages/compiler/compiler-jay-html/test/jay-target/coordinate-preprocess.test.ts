@@ -107,12 +107,19 @@ describe('assignCoordinates', () => {
             // jay-scope marks the child scope boundary
             expect(jayTag.getAttribute(SCOPE)).toBe('S1');
 
-            // Children are in the child scope S1
+            // DL#206 Phase 3 — an explicit-ref region wraps its body in the synthesized scope anchor
+            // (a `<div class="<ref>" style="display: contents">`), which occupies S1/0; the author's
+            // content shifts one level deeper.
+            const anchor = jayTag.querySelector('div')!;
+            expect(anchor.getAttribute(COORD)).toBe('S1/0');
+            expect(anchor.getAttribute('class')).toBe('0');
+            expect(anchor.getAttribute('style')).toBe('display: contents');
+
             const article = jayTag.querySelector('article')!;
-            expect(article.getAttribute(COORD)).toBe('S1/0');
+            expect(article.getAttribute(COORD)).toBe('S1/0/0');
 
             const h2 = jayTag.querySelector('h2')!;
-            expect(h2.getAttribute(COORD)).toBe('S1/0/0');
+            expect(h2.getAttribute(COORD)).toBe('S1/0/0/0');
         });
 
         it('should assign unique coordinates to two consecutive jay:xxx tags', () => {
@@ -138,11 +145,13 @@ describe('assignCoordinates', () => {
             expect(jayTag1.getAttribute(SCOPE)).toBe('S1');
             expect(jayTag2.getAttribute(SCOPE)).toBe('S2');
 
+            // DL#206 Phase 3 — each explicit-ref region wraps its body in a scope anchor at S<n>/0,
+            // so the author's content shifts one level deeper.
             const article1 = jayTag1.querySelector('article')!;
-            expect(article1.getAttribute(COORD)).toBe('S1/0');
+            expect(article1.getAttribute(COORD)).toBe('S1/0/0');
 
             const article2 = jayTag2.querySelector('article')!;
-            expect(article2.getAttribute(COORD)).toBe('S2/0');
+            expect(article2.getAttribute(COORD)).toBe('S2/0/0');
         });
 
         it('should use ref attribute for coordinate suffix', () => {
@@ -158,8 +167,13 @@ describe('assignCoordinates', () => {
             const jayTag = body.querySelector('jay\\:product-card')!;
             expect(jayTag.getAttribute(COORD)).toBe('S0/0/product-card:hero');
 
+            // DL#206 Phase 3 — explicit-ref scope anchor (class="hero") at S1/0; content shifts deeper.
+            const anchor = jayTag.querySelector('div')!;
+            expect(anchor.getAttribute(COORD)).toBe('S1/0');
+            expect(anchor.getAttribute('class')).toBe('hero');
+
             const article = jayTag.querySelector('article')!;
-            expect(article.getAttribute(COORD)).toBe('S1/0');
+            expect(article.getAttribute(COORD)).toBe('S1/0/0');
         });
 
         it('should use positional counter for inline template refs', () => {
@@ -173,9 +187,9 @@ describe('assignCoordinates', () => {
             </div></body>`);
             assignCoordinates(body, { headlessContractNames: headlessNames });
 
-            // Fully positional within child scope S1
+            // Fully positional within child scope S1, below the Phase 3 scope anchor at S1/0
             const button = body.querySelector('button')!;
-            expect(button.getAttribute(COORD)).toBe('S1/0/1');
+            expect(button.getAttribute(COORD)).toBe('S1/0/0/1');
         });
 
         it('should not increment parent counter for jay:xxx tags', () => {
@@ -235,8 +249,9 @@ describe('assignCoordinates', () => {
             expect(jayTag.getAttribute(COORD)).toBe('S1/product-card:0');
             expect(jayTag.getAttribute(SCOPE)).toBe('S2');
 
+            // DL#206 Phase 3 — explicit-ref scope anchor at S2/0; content shifts one level deeper.
             const article = jayTag.querySelector('article')!;
-            expect(article.getAttribute(COORD)).toBe('S2/0');
+            expect(article.getAttribute(COORD)).toBe('S2/0/0');
         });
     });
 
@@ -251,10 +266,12 @@ describe('assignCoordinates', () => {
             </div></body>`);
             assignCoordinates(body, { headlessContractNames: headlessNames });
 
-            // Should have wrapped the children in a <div>
+            // Should have wrapped the children in a <div class="<ref>" style="display: contents">
             const jayTag = body.querySelector('jay\\:product-card')!;
             const wrapper = jayTag.querySelector('div')!;
             expect(wrapper).toBeTruthy();
+            expect(wrapper.getAttribute('class')).toBe('0');
+            expect(wrapper.getAttribute('style')).toBe('display: contents');
             // Wrapper is in child scope S1
             expect(wrapper.getAttribute(COORD)).toBe('S1/0');
 
@@ -262,10 +279,34 @@ describe('assignCoordinates', () => {
             expect(wrapper.querySelector('span')!.getAttribute(COORD)).toBe('S1/0/1');
         });
 
-        it('should not wrap single-child inline templates', () => {
+        it('should wrap single-child inline templates when the ref is explicit', () => {
+            // DL#206 Phase 3 — an explicit ref may anchor page CSS `@scope (.<ref>)`, so the body is
+            // always wrapped (even a single child) to give that scope a real element to root at.
             const headlessNames = new Set(['product-card']);
             const body = getBody(`<body><div>
                 <jay:product-card productId="123" ref="0">
+                    <article><h2>Title</h2><span>Price</span></article>
+                </jay:product-card>
+            </div></body>`);
+            assignCoordinates(body, { headlessContractNames: headlessNames });
+
+            const jayTag = body.querySelector('jay\\:product-card')!;
+            const wrapper = jayTag.querySelector('div')!;
+            expect(wrapper.getAttribute('class')).toBe('0');
+            expect(wrapper.getAttribute('style')).toBe('display: contents');
+            expect(wrapper.getAttribute(COORD)).toBe('S1/0');
+
+            // The single child shifts one level deeper, under the anchor.
+            const article = jayTag.querySelector('article')!;
+            expect(article.getAttribute(COORD)).toBe('S1/0/0');
+        });
+
+        it('should not wrap single-child ref-less inline templates', () => {
+            // A ref-less (auto-ref) region ships no scoped CSS, so a single-child body keeps the legacy
+            // no-wrap normalization: one returnable root, no synthesized anchor.
+            const headlessNames = new Set(['product-card']);
+            const body = getBody(`<body><div>
+                <jay:product-card productId="123">
                     <article><h2>Title</h2><span>Price</span></article>
                 </jay:product-card>
             </div></body>`);

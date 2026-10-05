@@ -24,24 +24,26 @@ ${code}`);
 }
 
 /**
- * `<script type="application/jay-data">` carries YAML whose indentation is significant: neither the
- * line-collapse below nor js-beautify preserves its nesting, and collapsing it can even yield invalid
- * YAML. It is swapped out for a placeholder before formatting and restored verbatim afterwards. (Other
- * scripts hold JS that should be beautified; `<pre>`/`<textarea>` are already js-beautify defaults.)
+ * Several `<script type="application/…">` bodies carry YAML whose indentation is significant: neither
+ * the line-collapse below nor js-beautify preserves its nesting, and collapsing it can even yield
+ * invalid YAML. Each such block is swapped out for a placeholder before formatting and restored
+ * verbatim afterwards. The protected family is the whitespace-significant YAML scripts — `jay-data`,
+ * `jay-headless`, `jay-params`, `jay-validations`, and `yaml` (DL#208). (Other scripts hold JS that
+ * should be beautified; `<pre>`/`<textarea>` are already js-beautify defaults.)
  */
-const JAY_DATA_SCRIPT =
-    /<script\b[^>]*\btype\s*=\s*["']application\/jay-data["'][^>]*>[\s\S]*?<\/script\s*>/gi;
+const PROTECTED_SCRIPT =
+    /<script\b[^>]*\btype\s*=\s*["']application\/(?:jay-data|jay-headless|jay-params|jay-validations|yaml)["'][^>]*>[\s\S]*?<\/script\s*>/gi;
 // An empty <script> placeholder (not an HTML comment) so js-beautify lays it out on its own line like
 // the sibling jay-headless scripts, rather than gluing a comment onto the preceding tag.
-const JAY_DATA_PLACEHOLDER = (i: number): string => `<script data-jay-data-raw="${i}"></script>`;
-const JAY_DATA_PLACEHOLDER_RE = /<script data-jay-data-raw="(\d+)"><\/script>/g;
+const PROTECTED_PLACEHOLDER = (i: number): string => `<script data-jay-data-raw="${i}"></script>`;
+const PROTECTED_PLACEHOLDER_RE = /<script data-jay-data-raw="(\d+)"><\/script>/g;
 
 export function prettifyHtml(html: string): string {
-    // Preserve jay-data YAML verbatim across formatting.
+    // Preserve whitespace-significant YAML script bodies verbatim across formatting.
     const preserved: string[] = [];
-    const withPlaceholders = html.replace(JAY_DATA_SCRIPT, (block) => {
+    const withPlaceholders = html.replace(PROTECTED_SCRIPT, (block) => {
         preserved.push(block);
-        return JAY_DATA_PLACEHOLDER(preserved.length - 1);
+        return PROTECTED_PLACEHOLDER(preserved.length - 1);
     });
 
     // Collapse the author's line wrapping onto one line so js-beautify re-formats from a canonical form
@@ -68,7 +70,7 @@ export function prettifyHtml(html: string): string {
     });
 
     return formatted.replace(
-        JAY_DATA_PLACEHOLDER_RE,
+        PROTECTED_PLACEHOLDER_RE,
         (_match, i) => preserved[Number(i)] ?? _match,
     );
 }

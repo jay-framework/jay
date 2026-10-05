@@ -1,0 +1,5 @@
+name: Card
+tags:
+  - tag: label
+    type: data
+    dataType: string

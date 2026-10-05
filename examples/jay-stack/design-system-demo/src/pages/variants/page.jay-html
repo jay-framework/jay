@@ -13,7 +13,7 @@
     content="Two design variants of one Card contract (default + feature) flattened side by side via as=.">
   <style>
     @scope (.cardDefault) to (.cta) {
-      :scope {
+      .ds-card {
         border: 1px solid #e2e8f0;
         border-radius: 10px;
         padding: 20px;
@@ -33,7 +33,7 @@
     }
 
     @scope (.cta) {
-      :scope {
+      .ds-button {
         border: 0;
         border-radius: 6px;
         padding: 8px 14px;
@@ -44,7 +44,7 @@
     }
 
     @scope (.cardFeature) to (.cta) {
-      :scope {
+      .ds-card--feature {
         border: 1px solid #c7d2fe;
         border-radius: 10px;
         padding: 20px;
@@ -82,19 +82,19 @@
       card (aliased <code>as="feature-card"</code>), each flattened from its own template.</p>
     <jay:card ref="cardDefault" heading="Starter" body="Everything you need to get going."
       ctaLabel="Choose Starter">
-      <div class="ds-card cardDefault">
+      <div class="ds-card">
         <h3 class="ds-card__heading">{heading}</h3>
         <p class="ds-card__body">{body}</p>
-        <jay:button ref="cta" label="{ctaLabel}"><button class="ds-button cta">{label}</button>
+        <jay:button ref="cta" label="{ctaLabel}"><button class="ds-button">{label}</button>
         </jay:button>
       </div>
     </jay:card><jay:feature-card ref="cardFeature" heading="Pro"
       body="For growing teams that need more." ctaLabel="Choose Pro">
-      <div class="ds-card ds-card--feature cardFeature">
+      <div class="ds-card ds-card--feature">
         <div class="ds-card__ribbon">Most popular</div>
         <h3 class="ds-card__heading">{heading}</h3>
         <p class="ds-card__body">{body}</p>
-        <jay:button ref="cta" label="{ctaLabel}"><button class="ds-button cta">{label}</button>
+        <jay:button ref="cta" label="{ctaLabel}"><button class="ds-button">{label}</button>
         </jay:button>
       </div>
     </jay:feature-card>

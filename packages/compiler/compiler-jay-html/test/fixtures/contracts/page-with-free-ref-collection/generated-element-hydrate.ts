@@ -90,9 +90,9 @@ function _headlessCard0HydrateRender(
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
             adoptElement('S2/0', {}, [
-                adoptText('S2/0/0', (vs) => vs.heading),
-                adoptElement('S2/0/1', {}, [], refCardAction()),
-                adoptElement('S2/0/2', {}, [], refDismiss()),
+                adoptText('S2/0/0/0', (vs) => vs.heading),
+                adoptElement('S2/0/0/1', {}, [], refCardAction()),
+                adoptElement('S2/0/0/2', {}, [], refDismiss()),
             ]),
         ) as _HeadlessCard0Element;
     return [refManager.getPublicAPI() as CardRefs, render];
@@ -123,10 +123,12 @@ function _headlessCard1Render(options?: RenderElementOptions): _HeadlessCard1Ele
     );
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
-            e('div', { class: 'card' }, [
-                e('h2', {}, [dt((vs) => vs.heading)]),
-                e('button', {}, ['Action'], refCardAction()),
-                e('button', {}, ['Dismiss'], refDismiss()),
+            e('div', { class: 'region', style: { cssText: 'display: contents' } }, [
+                e('div', { class: 'card' }, [
+                    e('h2', {}, [dt((vs) => vs.heading)]),
+                    e('button', {}, ['Action'], refCardAction()),
+                    e('button', {}, ['Dismiss'], refDismiss()),
+                ]),
             ]),
         ) as _HeadlessCard1Element;
     return [refManager.getPublicAPI() as CardRefs, render];

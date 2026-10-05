@@ -80,9 +80,11 @@ describe('materialise — transitive flatten', () => {
 });
 
 describe('materialise — @scope CSS', () => {
-    it('wraps component CSS in @scope and rewrites the root-block selector to :scope', () => {
-        // The root-block rule (`.card`) must target the scope root via `:scope` — a scoped selector
-        // otherwise matches descendants only, so `.card` would never style the flattened root.
+    it('flattens a single-root region body verbatim and emits root CSS scoped to the ref', () => {
+        // DL#206 Phase 3 — the materialiser no longer writes the `display:contents` anchor; the compiler
+        // synthesizes it at build time (`assignHeadlessInstance`). The source stays wrapper-free, and the
+        // root CSS is still emitted inside `@scope (.<ref>)` — no `:scope` rewrite: the real root `.card`
+        // matches as an ordinary descendant of the (build-time) `.signupCard` anchor.
         const page = `<body><jay:card ref="signupCard"></jay:card></body>`;
         const result = materialise(
             page,
@@ -90,7 +92,10 @@ describe('materialise — @scope CSS', () => {
                 card: { body: `<div class="card"></div>`, css: `.card { color: red }` },
             }),
         );
-        expect(result.css).toBe(`@scope (.signupCard) {\n:scope { color: red }\n}`);
+        expect(result.css).toBe(`@scope (.signupCard) {\n.card { color: red }\n}`);
+        expect(squash(result.html)).toBe(
+            `<body><jay:card ref="signupCard"><div class="card"></div></jay:card></body>`,
+        );
     });
 
     it('emits CSS unscoped when no ref is present', () => {
@@ -100,9 +105,11 @@ describe('materialise — @scope CSS', () => {
             withTemplates({ card: { body: `<div></div>`, css: `.card { color: red }` } }),
         );
         expect(result.css).toBe(`.card { color: red }`);
+        // No ref → no scope → no wrapper; the body is flattened as authored.
+        expect(squash(result.html)).toBe(`<body><jay:card><div></div></jay:card></body>`);
     });
 
-    it('stamps the ref as a class on the flattened root so @scope has a DOM anchor', () => {
+    it('emits @scope keyed on the ref while the flattened body stays verbatim (anchor is build-time)', () => {
         const page = `<body><jay:card ref="promo"></jay:card></body>`;
         const result = materialise(
             page,
@@ -114,13 +121,13 @@ describe('materialise — @scope CSS', () => {
             }),
         );
         expect(result.css).toBe(`@scope (.promo) {\n.card-heading { color: red }\n}`);
-        // the flattened root now carries the ref class `promo` alongside its own `card`
+        // The source stays the author's body — the `.promo` scope anchor is synthesized at compile time.
         expect(squash(result.html)).toBe(
-            `<body><jay:card ref="promo"><div class="card promo"><h3 class="card-heading">x</h3></div></jay:card></body>`,
+            `<body><jay:card ref="promo"><div class="card"><h3 class="card-heading">x</h3></div></jay:card></body>`,
         );
     });
 
-    it('does not stamp an anchor class when the template ships no CSS', () => {
+    it('does not wrap when the template ships no CSS (and the ref is not a donut boundary)', () => {
         const page = `<body><jay:card ref="promo"></jay:card></body>`;
         const result = materialise(
             page,
@@ -128,6 +135,30 @@ describe('materialise — @scope CSS', () => {
         );
         expect(squash(result.html)).toBe(
             `<body><jay:card ref="promo"><div class="card"></div></jay:card></body>`,
+        );
+    });
+
+    it('styles two distinct roots of a multi-root region, each verbatim under one @scope', () => {
+        // DL#206 — the core fix: a two-root region is wrapped (at compile time) in a single `.hero` anchor, so
+        // `.ds-media` and `.ds-ribbon` survive as distinct descendant rules instead of both collapsing to
+        // `:scope`. The materialiser's job is just the `@scope (.hero)` block; the body stays verbatim.
+        const page = `<body><jay:card ref="hero"></jay:card></body>`;
+        const result = materialise(
+            page,
+            withTemplates({
+                card: {
+                    body: `<div class="ds-media"></div><aside class="ds-ribbon"></aside>`,
+                    css: `.ds-media { aspect-ratio: 16/9 } .ds-ribbon { position: absolute }`,
+                },
+            }),
+        );
+        expect(result.css).toBe(
+            `@scope (.hero) {\n.ds-media { aspect-ratio: 16/9 } .ds-ribbon { position: absolute }\n}`,
+        );
+        expect(squash(result.html)).toBe(
+            `<body><jay:card ref="hero">` +
+                `<div class="ds-media"></div><aside class="ds-ribbon"></aside>` +
+                `</jay:card></body>`,
         );
     });
 
@@ -140,7 +171,7 @@ describe('materialise — @scope CSS', () => {
                 card: { body: `<div class="card"></div>`, css: `.card { color: red }` },
             }),
         );
-        expect(result.css).toBe(`@scope (.cardStarter, .cardPro) {\n:scope { color: red }\n}`);
+        expect(result.css).toBe(`@scope (.cardStarter, .cardPro) {\n.card { color: red }\n}`);
     });
 
     it('does not coalesce instances flattened from different templates', () => {
@@ -154,11 +185,11 @@ describe('materialise — @scope CSS', () => {
             }),
         });
         expect(result.css).toBe(
-            `@scope (.a) {\n:scope { color: red }\n}\n\n@scope (.b) {\n:scope { color: red }\n}`,
+            `@scope (.a) {\n.card { color: red }\n}\n\n@scope (.b) {\n.card { color: red }\n}`,
         );
     });
 
-    it('rewrites only root-block tokens to :scope, keeping compounds and descendants intact', () => {
+    it('emits compound and descendant selectors verbatim (no :scope rewrite)', () => {
         const page = `<body><jay:card ref="c"></jay:card></body>`;
         const result = materialise(
             page,
@@ -170,8 +201,8 @@ describe('materialise — @scope CSS', () => {
             }),
         );
         expect(result.css).toBe(
-            `@scope (.c) {\n:scope { color: red } :scope.active { color: blue } ` +
-                `:scope .card__tag { color: green }\n}`,
+            `@scope (.c) {\n.card { color: red } .card.active { color: blue } ` +
+                `.card .card__tag { color: green }\n}`,
         );
     });
 });
@@ -234,6 +265,30 @@ describe('materialise — sync preserves override facets', () => {
         );
         expect(squash(result.html)).toBe(
             `<body><jay:card ref="c"><div class="wholly-ours" override><span>ours</span></div></jay:card></body>`,
+        );
+    });
+
+    it('preserves a nested override on re-sync of a wrapper-free body (DL#206 Phase 3)', () => {
+        // Post-Phase-3 the flattened region body is wrapper-free (the `display:contents` anchor is
+        // synthesized by the compiler at build time, never written to source). So sync aligns the page body
+        // against the template body directly — no wrapper to see through — and the `override` one level deep
+        // survives the re-flatten.
+        const cssTemplate: LoadedTemplate = {
+            body: `<div class="card"><h3 class="card-heading">{heading}</h3><p>{body}</p></div>`,
+            css: `.card-heading { color: black }`,
+        };
+        const page =
+            `<body><jay:card ref="c">` +
+            `<div class="card"><h3 class="card-heading featured" override="class">{heading}</h3><p>{body}</p></div>` +
+            `</jay:card></body>`;
+        const result = materialise(
+            page,
+            withTemplates({ card: cssTemplate }, { preserveOverrides: true }),
+        );
+        expect(squash(result.html)).toBe(
+            `<body><jay:card ref="c">` +
+                `<div class="card"><h3 class="card-heading featured" override="class">{heading}</h3><p>{body}</p></div>` +
+                `</jay:card></body>`,
         );
     });
 });
@@ -379,11 +434,13 @@ describe('materialise — @scope donut (to), DL#203', () => {
                 button: { body: `<button>{label}</button>` },
             }),
         );
-        expect(result.css).toBe(`@scope (.c) to (.b) {\n:scope { color: red }\n}`);
-        // the child region's root carries the boundary anchor `b` even though the button ships no CSS.
+        expect(result.css).toBe(`@scope (.c) to (.b) {\n.card { color: red }\n}`);
+        // DL#206 Phase 3 — the source stays wrapper-free; the donut boundary `.b` resolves to the child
+        // region's build-time anchor. `to (.b)` is computed from the child `<jay:button ref="b">`, not from
+        // any wrapper in the flattened body.
         expect(squash(result.html)).toBe(
-            `<body><jay:card ref="c"><div class="card c">` +
-                `<jay:button ref="b"><button class="b">{label}</button></jay:button>` +
+            `<body><jay:card ref="c"><div class="card">` +
+                `<jay:button ref="b"><button>{label}</button></jay:button>` +
                 `</div></jay:card></body>`,
         );
     });
@@ -396,10 +453,10 @@ describe('materialise — @scope donut (to), DL#203', () => {
                 card: { body: `<div class="card"><h3>x</h3></div>`, css: `.card { color: red }` },
             }),
         );
-        expect(result.css).toBe(`@scope (.c) {\n:scope { color: red }\n}`);
+        expect(result.css).toBe(`@scope (.c) {\n.card { color: red }\n}`);
     });
 
-    it('omits a ref-less child region from the donut (and does not stamp it)', () => {
+    it('omits a ref-less child region from the donut (and does not wrap it)', () => {
         const page = `<body><jay:card ref="c"></jay:card></body>`;
         const result = materialise(
             page,
@@ -411,9 +468,9 @@ describe('materialise — @scope donut (to), DL#203', () => {
                 button: { body: `<button>{label}</button>` },
             }),
         );
-        expect(result.css).toBe(`@scope (.c) {\n:scope { color: red }\n}`);
+        expect(result.css).toBe(`@scope (.c) {\n.card { color: red }\n}`);
         expect(squash(result.html)).toBe(
-            `<body><jay:card ref="c"><div class="card c">` +
+            `<body><jay:card ref="c"><div class="card">` +
                 `<jay:button><button>{label}</button></jay:button>` +
                 `</div></jay:card></body>`,
         );
@@ -431,7 +488,7 @@ describe('materialise — @scope donut (to), DL#203', () => {
                 // no `widget` template → not materialisable → no anchor → omitted from `to`
             }),
         );
-        expect(result.css).toBe(`@scope (.c) {\n:scope { color: red }\n}`);
+        expect(result.css).toBe(`@scope (.c) {\n.card { color: red }\n}`);
     });
 
     it('coalesces same-template instances with matching child nesting into one donut block', () => {
@@ -446,6 +503,39 @@ describe('materialise — @scope donut (to), DL#203', () => {
                 button: { body: `<button>{label}</button>` },
             }),
         );
-        expect(result.css).toBe(`@scope (.cardA, .cardB) to (.b) {\n:scope { color: red }\n}`);
+        expect(result.css).toBe(`@scope (.cardA, .cardB) to (.b) {\n.card { color: red }\n}`);
+    });
+
+    it('nested multi-root region: parent donut excludes the child subtree and each level styles its own roots', () => {
+        // DL#206 §4 — a multi-root parent region nests a multi-root child region. The parent's donut
+        // `to (.card)` resolves to the child's build-time anchor, excluding the child subtree, and each
+        // level's roots are styled distinctly inside its own @scope block. The source stays wrapper-free.
+        const page = `<body><jay:section ref="hero"></jay:section></body>`;
+        const result = materialise(
+            page,
+            withTemplates({
+                section: {
+                    body: `<header class="sec-head"></header><div class="sec-body"><jay:card ref="card"></jay:card></div>`,
+                    css: `.sec-head { color: red } .sec-body { color: blue }`,
+                },
+                card: {
+                    body: `<div class="ds-media"></div><aside class="ds-ribbon"></aside>`,
+                    css: `.ds-media { aspect-ratio: 16/9 } .ds-ribbon { position: absolute }`,
+                },
+            }),
+        );
+        expect(result.css).toBe(
+            `@scope (.hero) to (.card) {\n.sec-head { color: red } .sec-body { color: blue }\n}` +
+                `\n\n` +
+                `@scope (.card) {\n.ds-media { aspect-ratio: 16/9 } .ds-ribbon { position: absolute }\n}`,
+        );
+        expect(squash(result.html)).toBe(
+            `<body><jay:section ref="hero">` +
+                `<header class="sec-head"></header>` +
+                `<div class="sec-body"><jay:card ref="card">` +
+                `<div class="ds-media"></div><aside class="ds-ribbon"></aside>` +
+                `</jay:card></div>` +
+                `</jay:section></body>`,
+        );
     });
 });

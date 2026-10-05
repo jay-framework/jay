@@ -27,6 +27,11 @@ So a warning about an `<img>` might come from a full-stack component's template,
 - **Errors** block the build. They must be fixed — there is no way to suppress them.
 - **Warnings** must be either fixed or explicitly suppressed. Do not ignore warnings — each one has a clear resolution path (add the missing attribute, or suppress via `<script type="application/jay-validations">`).
 
+One design-system rule is a **hard error**, not a warning: `REGION-CSS-NO-REF` (DL#209) — a `<jay:X>` region
+whose `template=` ships CSS but which has no `ref=`. Without a `ref` the CSS has no scope anchor, so `sync`
+silently drops it; the fix is to add a `ref` (see `design-system-guide.md` → _The shape of a region's CSS_).
+It is unsuppressible because the alternative would leak the region's styles across the whole page.
+
 ## How to Read Warnings
 
 Each warning has:
@@ -135,10 +140,38 @@ The core `jay-stack validate` emits four warnings that nudge you to reuse UI thr
 
 If a warning comes from dynamic content (`{post.content}`) or a generated file, you can't suppress it in the template. This is a validator limitation — the warning is a false positive. Don't loop trying to fix it.
 
+## Design-system scorecard (metrics to optimize)
+
+Below the warnings, `validate` prints a **report-only scorecard** (DL#207). It is **never** a pass/fail — it
+emits no warnings and never affects the exit code. It turns "prefer design-system elements" from a nudge into
+two numbers you can deliberately raise:
+
+- **Tag coverage** — of every contract tag/ref a page's regions _could_ bind, how many it actually binds.
+- **Design-system coverage %** — what share of a page's DOM elements come from `template=`-backed
+  design-system regions (vs. hand-authored markup). Higher = more of the page is built from the design system.
+- **Reuse** — how many catalogued templates are used **more than once** across the project. A design system
+  whose templates are each used once isn't really a design system.
+
+The healthy target: **most of each page is composed of design-system elements, and each template is reused
+more than once.** When building a page, prefer linking an existing template (raising coverage and reuse) over
+hand-authoring markup.
+
+By default the scorecard prints **one-line totals** for the whole project:
+
+```
+📦 Tag coverage: 100% (43/43 tags used across 10 page(s))
+📊 Design-system scorecard: 80% element coverage (74/92), 2 of 5 catalogued templates reused > 1
+   Run validate -v for per-page details.
+```
+
+Run with `-v` / `--verbose` to expand the **per-page** breakdown (coverage per file, which tags are unused,
+per-template reuse counts, and `⚠ low` flags on pages under 50% coverage).
+
 ## Running Validation
 
 ```bash
-jay-stack validate              # validate all pages
+jay-stack validate              # validate all pages (+ one-line scorecard totals)
+jay-stack validate -v           # add per-page tag coverage + scorecard detail
 jay-stack validate --strict     # treat warnings as errors
 ```
 

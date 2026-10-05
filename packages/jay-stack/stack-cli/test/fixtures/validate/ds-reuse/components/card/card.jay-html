@@ -1,0 +1,10 @@
+<html>
+<head>
+  <script type="application/jay-data" contract="./card.jay-contract"></script>
+</head>
+<body>
+  <div class="card">
+    <h3 class="card-heading">Card</h3>
+  </div>
+</body>
+</html>

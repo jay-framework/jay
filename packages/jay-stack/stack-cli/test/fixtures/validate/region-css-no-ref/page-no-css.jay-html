@@ -1,0 +1,18 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+    <script type="application/jay-headless"
+            contract="./components/plain/plain.jay-contract"
+            template="./components/plain/plain.jay-html"></script>
+</head>
+<body>
+<div>
+    <jay:plain label="{title}">
+        <span class="plain">{label}</span>
+    </jay:plain>
+</div>
+</body>
+</html>

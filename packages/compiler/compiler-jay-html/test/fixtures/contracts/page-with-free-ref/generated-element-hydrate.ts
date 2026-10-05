@@ -71,9 +71,9 @@ function _headlessCard0HydrateRender(
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
             adoptElement('S1/0', {}, [
-                adoptText('S1/0/0', (vs) => vs.heading),
-                adoptElement('S1/0/1', {}, [], refCardAction()),
-                adoptElement('S1/0/2', {}, [], refDismiss()),
+                adoptText('S1/0/0/0', (vs) => vs.heading),
+                adoptElement('S1/0/0/1', {}, [], refCardAction()),
+                adoptElement('S1/0/0/2', {}, [], refDismiss()),
             ]),
         ) as _HeadlessCard0Element;
     return [refManager.getPublicAPI() as CardRefs, render];

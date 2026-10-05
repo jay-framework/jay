@@ -1,0 +1,5 @@
+name: Feature
+tags:
+  - tag: label
+    type: data
+    dataType: string

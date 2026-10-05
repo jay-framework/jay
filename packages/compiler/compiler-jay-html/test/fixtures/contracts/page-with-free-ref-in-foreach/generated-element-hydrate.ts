@@ -76,12 +76,12 @@ function _headlessCard0HydrateRender(
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
             adoptElement('S1/0', {}, [
-                adoptText('S1/0/0', (vs) => vs.heading),
-                adoptDynamicElement('S1/0/1', {}, [
+                adoptText('S1/0/0/0', (vs) => vs.heading),
+                adoptDynamicElement('S1/0/0/1', {}, [
                     hydrateForEach(
                         (vs: CardViewState) => vs.tags,
                         'id',
-                        'S1/0/1/0',
+                        'S1/0/0/1/0',
                         (vs1: TagOfCardViewState) => [
                             adoptText('S2/0', (vs1) => vs1.label),
                             adoptElement('S2/1', {}, [], refDismiss()),

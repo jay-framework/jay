@@ -1,0 +1,8 @@
+<html>
+<head>
+  <script type="application/jay-data" contract="./plain.jay-contract"></script>
+</head>
+<body>
+  <span class="plain">{label}</span>
+</body>
+</html>

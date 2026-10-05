@@ -217,31 +217,26 @@ describe('diffMarkup — content slot (jay-content, DL#202)', () => {
     });
 });
 
-describe('diffBodies — scope-anchor class (DL#196)', () => {
-    it('ignores the ref-anchor class the materialiser stamps on the flattened root', () => {
+describe('diffBodies — no scope anchor in source (DL#206 Phase 3)', () => {
+    // Post-Phase-3 the `display:contents` scope anchor is synthesized by the compiler at build time and is
+    // never written to the flattened page source. So the flattened region body equals the author's template
+    // body verbatim — no wrapper to see through, no synthetic ref class to strip.
+    it('a verbatim flattened body — ref and all — produces no drift', () => {
         const source = parse(`<div class="card"><h3 class="card-heading">x</h3></div>`);
         const region = parse(
-            `<jay:card ref="promo"><div class="card promo"><h3 class="card-heading">x</h3></div></jay:card>`,
+            `<jay:card ref="promo"><div class="card"><h3 class="card-heading">x</h3></div></jay:card>`,
         ).firstChild as HTMLElement;
         expect(diffBodies(source, region)).toEqual([]);
     });
 
-    it('reports a genuine class change with the anchor token stripped from the values', () => {
+    it('reports a genuine class change in full (nothing is stripped)', () => {
         const source = parse(`<div class="card"></div>`);
-        const region = parse(
-            `<jay:card ref="promo"><div class="card-large promo"></div></jay:card>`,
-        ).firstChild as HTMLElement;
+        const region = parse(`<jay:card ref="promo"><div class="card-large"></div></jay:card>`)
+            .firstChild as HTMLElement;
         const [entry, ...rest] = diffBodies(source, region);
         expect(rest).toEqual([]);
         expect(`${entry.change}:${facetKey(entry.facet)}`).toBe('changed:attribute@0#class');
         expect(entry.sourceValue).toBe('card');
         expect(entry.regionValue).toBe('card-large');
-    });
-
-    it('a root whose only class is the anchor matches a template root with no class', () => {
-        const source = parse(`<div></div>`);
-        const region = parse(`<jay:card ref="promo"><div class="promo"></div></jay:card>`)
-            .firstChild as HTMLElement;
-        expect(diffBodies(source, region)).toEqual([]);
     });
 });

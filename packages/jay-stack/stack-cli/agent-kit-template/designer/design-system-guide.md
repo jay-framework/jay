@@ -148,8 +148,8 @@ component's **own** tags, and an optional `<style>` of **plain component CSS**.
 ```
 
 > **Author plain CSS here, not `@scope`.** In the template you write ordinary class rules
-> (`.ds-card { … }`). When a page flattens the element, `sync` copies this CSS into the page and rewrites it
-> into the canonical `@scope (.<ref>)` / `:scope` form for you — that scoped shape is a _page-side_ concern
+> (`.ds-card { … }`). When a page flattens the element, `sync` copies these rules into the page verbatim and
+> wraps them in a canonical `@scope (.<ref>)` block for you — that scoped wrapper is a _page-side_ concern
 > (see [The shape of a region's CSS](#the-shape-of-a-regions-css)); you don't write it in the template.
 
 ### 4. Choose the right axis of variation
@@ -217,7 +217,7 @@ the page's `<style>`, `@scope`-wrapped by the region's `ref`:
 
 ```html
 <jay:card ref="promo" heading="{title}">
-  <div class="card promo">
+  <div class="card">
     <h3 class="card-heading">{heading}</h3>
     <p class="card-body">Default body</p>
   </div>
@@ -226,7 +226,7 @@ the page's `<style>`, `@scope`-wrapped by the region's `ref`:
 
 ```css
 @scope (.promo) {
-  :scope {
+  .card {
     border: 1px solid #ccc;
     padding: 16px;
   }
@@ -236,8 +236,9 @@ the page's `<style>`, `@scope`-wrapped by the region's `ref`:
 }
 ```
 
-Note two things sync did to the CSS — both required for the styles to actually apply. **Write region CSS in
-this shape yourself**; the rules are below in [The shape of a region's CSS](#the-shape-of-a-regions-css).
+The flattened body is the template body **verbatim** — no synthetic class on the root — and the CSS is the
+component's own plain rules wrapped in one `@scope (.<ref>)` block. **Write region CSS in this shape
+yourself**; the rules are below in [The shape of a region's CSS](#the-shape-of-a-regions-css).
 
 > A bare `<jay:X>` with **no** flattened body is a hard error at build time — flatten it with `jay-stack
 sync` (first-fill is just the no-edits case of sync; there is no separate `add` command).
@@ -292,9 +293,9 @@ the second import its own region tag with `as=`:
 
 ## The shape of a region's CSS
 
-A region's CSS is the component's own CSS, copied into the page `<style>` and rewritten into a canonical
-form. `sync` produces this form and `validate` enforces it — but when you **hand-write or edit** a region's
-CSS, write it this way directly:
+A region's CSS is the component's own CSS, copied into the page `<style>` and wrapped in one `@scope` block.
+`sync` produces this form and `validate` enforces it — but when you **hand-write or edit** a region's CSS,
+write it this way directly:
 
 ### 1. Wrap the component's rules in `@scope (.<ref>)`
 
@@ -302,52 +303,47 @@ All of a region's rules live inside one `@scope` block keyed by the region's `re
 
 ```css
 @scope (.promo) {
-  /* …the card's rules… */
+  /* …the card's rules, as plain class selectors… */
 }
 ```
 
 This isolates the component's styles to that region — rules inside never leak out, and page rules outside
 never bleed in.
 
-### 2. The `ref` is a real class on the region root (scope-anchor)
+### 2. Write plain class selectors — the ref is _not_ a class on your markup
 
-A jay `ref` is not emitted to the DOM, so `@scope (.promo)` would have nothing to match. The region root
-therefore carries the ref **as an actual class** — `<div class="card promo">` above. Keep that class on the
-root when you edit markup; it is what anchors the scope. (validate's drift check ignores this synthetic
-class, so it never shows up as drift.)
+A jay `ref` is not emitted to the DOM, so `@scope (.promo)` would have nothing to match. The compiler
+therefore synthesizes a `<div class="promo" style="display: contents">` **scope-anchor wrapper** around the
+region body at build time (DL#206). It is layout-transparent (`display:contents` generates no box) and you
+**never write it, see it in source, or style it** — it exists only so `.promo` has a real element to root at.
 
-### 3. The component's own root rule targets `:scope`, not its block class
-
-This is the one that trips people up. **Inside `@scope (.<ref>) { … }`, a scoped selector matches
-_descendants_ of the scope root only — the scope root element itself is reachable solely through `:scope`.**
-So a rule for the region's own root element must be written as `:scope`, _not_ as the root's class:
+Because the wrapper is the scope root, your real roots are ordinary **descendants** of it. So every rule —
+including the component's own root element — is a **plain class selector**, exactly as authored in the
+template. Keep the template's classes on your markup unchanged; add **no** ref class:
 
 ```css
 @scope (.promo) {
-  :scope {
-    border: 1px solid #ccc;
-  } /* ✅ styles the region root (<div class="card promo">) */
   .card {
     border: 1px solid #ccc;
-  } /* ❌ never matches — .card IS the scope root, not a descendant */
+  } /* ✅ the region root — a plain class selector, matched as a descendant of the wrapper */
   .card-heading {
     color: black;
-  } /* ✅ descendant — plain class selector is correct */
+  } /* ✅ descendant — also a plain class selector */
 }
 ```
 
-Rule of thumb: the component's **root block class** → `:scope`; keep compounds and descendants on that
-class (`.card.active` → `:scope.active`, `.card .card-heading` → `:scope .card-heading`), and leave every
-**descendant/element** selector as its ordinary class.
+> **No `:scope` rewrite.** In the old model the root rule was rewritten to `:scope` and the ref was stamped
+> onto the root as a class. DL#206 removed both: page region CSS is now byte-for-byte the template's plain
+> rules, just wrapped in `@scope (.<ref>)`. `:scope` would now refer to the invisible wrapper — don't use it.
 
-### 4. Instances of the same component coalesce into one block
+### 3. Instances of the same component coalesce into one block
 
 When a page holds several regions flattened from the _same_ template, they share one `@scope` block with a
 selector list — never one duplicated block per `ref`:
 
 ```css
 @scope (.cardStarter, .cardPro) {
-  :scope {
+  .card {
     border: 1px solid #ccc;
   }
   .card-heading {
@@ -358,6 +354,21 @@ selector list — never one duplicated block per `ref`:
 
 Regions from _different_ templates stay in separate blocks. If you add a second instance by hand, fold its
 ref into the existing block's selector list rather than copying the block.
+
+### 4. A CSS-shipping region must have a `ref` (error)
+
+The `@scope (.<ref>)` anchor is derived from the region's `ref=`. A region whose `template=` ships CSS but
+whose `<jay:X>` tag has **no `ref`** has nothing to scope to — the materialiser cannot wrap the CSS and
+`jay-stack sync` silently drops it. `validate` catches this as a **hard error** (`REGION-CSS-NO-REF`, DL#209):
+
+```
+<jay:card> flattens template="./components/card/card.jay-html" which ships CSS, but the region has no ref=
+— so its CSS cannot be scoped and `jay-stack sync` will silently drop it.
+  → Add a ref= to the <jay:card> so sync can scope its CSS as an @scope (.<ref>) block and preserve it.
+```
+
+Fix it by adding a `ref` — there is no suppression, because the alternative (keeping the CSS unscoped) would
+leak the region's styles across the whole page.
 
 ## Drift: what `jay-stack validate` tells you
 
@@ -490,7 +501,8 @@ CSS reconciles the same way as markup — drift is overwritten, marked facets ar
   never rewritten.
 - A block that **diverges without any pragma** is unmarked CSS drift: `sync` overwrites it back to the
   canonical form, exactly as it re-flattens unmarked markup. (This is what lets `sync` _migrate_ a page to a
-  new canonical form — e.g. an older `.card { … }` root rule is rewritten to `:scope { … }`.)
+  new canonical form — e.g. an older `:scope { … }` / ref-on-root block is rewritten to the DL#206 form:
+  plain class rules wrapped in `@scope (.<ref>)`.)
 
 So after one `sync` a page's CSS is in canonical form, and a `validate`-clean page is one `sync` leaves
 unchanged. To keep a hand-edit through `sync`, mark it with a `jay:override` pragma.

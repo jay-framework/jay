@@ -1,0 +1,15 @@
+<html>
+<head>
+  <script type="application/jay-data" contract="./card.jay-contract"></script>
+  <style>
+    .card-heading { color: black; font-weight: bold; }
+    .card-body { margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h3 class="card-heading">{heading}</h3>
+    <p class="card-body">Default body</p>
+  </div>
+</body>
+</html>

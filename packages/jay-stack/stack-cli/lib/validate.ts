@@ -41,7 +41,6 @@ import {
     diffBodies,
     diffCss,
     materialise,
-    scopeReadyCss,
     isRegionTag,
     facetLabel,
     overrideSpecFor,
@@ -88,6 +87,32 @@ export interface FileCoverage {
     contracts: ContractCoverage[];
 }
 
+/**
+ * DL#207 — per-page design-system coverage: how much of a page's markup is composed of `template=`-backed
+ * `<jay:X>` regions. `coveragePct = covered / total` (DOM element count; `0` when the page has no elements).
+ * Report-only metric — never affects `valid`/exit code and emits no warnings.
+ */
+export interface DesignSystemCoverage {
+    file: string;
+    coveragePct: number;
+    covered: number;
+    total: number;
+}
+
+/**
+ * DL#207 — project-wide design-system reuse. `perTemplate` counts how many `template=`-backed regions
+ * resolve to each template path (project-relative key); same-page repeats count. `catalogued` is the size
+ * of the known template universe (design-system index); `reusedMoreThanOnce` is how many used templates
+ * have count ≥ 2; `reusedOfCatalogued` is how many *catalogued* templates have count ≥ 2 (the "K of M").
+ * Report-only metric.
+ */
+export interface DesignSystemReuse {
+    perTemplate: Record<string, number>;
+    catalogued: number;
+    reusedMoreThanOnce: number;
+    reusedOfCatalogued: number;
+}
+
 export interface ValidationResult {
     valid: boolean;
     jayHtmlFilesScanned: number;
@@ -96,6 +121,9 @@ export interface ValidationResult {
     warnings: ValidationWarning[];
     coverage: FileCoverage[];
     pluginValidators: string[];
+    // DL#207 — report-only design-system scorecard.
+    designSystemCoverage: DesignSystemCoverage[];
+    designSystemReuse: DesignSystemReuse;
 }
 
 async function findJayFiles(dir: string): Promise<string[]> {
@@ -962,10 +990,10 @@ export function checkRegionCssDrift(
             if (content === undefined) {
                 templateCss = null;
             } else {
-                // Compare against the same scope-ready form the materialiser emits (root-block selectors
-                // rewritten to `:scope`), so a correctly flattened region reports no drift (DL#196).
-                const body = parseHtml(content).querySelector('body');
-                templateCss = scopeReadyCss(body ? body.innerHTML : '', extractStyleCss(content));
+                // DL#206 — the materialiser now emits component CSS verbatim inside `@scope (.<ref>)` (the
+                // real roots are descendants of the scope-anchor wrapper, so no root→`:scope` rewrite), so a
+                // correctly flattened region reports no drift when compared against the source CSS as-is.
+                templateCss = extractStyleCss(content);
             }
             templateCssCache.set(imp.template, templateCss);
         }
@@ -1115,6 +1143,62 @@ export function checkNestedRegionRefs(
         }
     }
     return warnings;
+}
+
+/**
+ * DL#209 — REGION-CSS-NO-REF (error): a region that flattens a `template=` which ships CSS, but whose
+ * `<jay:X>` tag has **no `ref=`**, silently loses that CSS on `sync`.
+ *
+ * Without a `ref` there is no scope anchor (`.<ref>`), so the materialiser can only emit the region's CSS
+ * **unscoped/global**; `mergeScopeCss` then re-emits only `@scope` blocks it owns, so the unscoped block is
+ * never carried back into the page `<style>` and the styling vanishes with no other diagnostic. The fix is
+ * **not** to carry the unscoped CSS (that would leak the region's selectors page-wide, defeating DL#203) —
+ * it is to require a `ref` so the CSS can be scoped and survive. This fills a real gap: `checkRegionCssDrift`
+ * skips ref-less regions entirely, and `checkNestedRegionRefs` (DL#203) only covers the nested-child case.
+ *
+ * Severity is **error** (not warning like the sibling region-CSS rules): unlike drift, this silently
+ * deletes authored styling — a correctness loss the author should fix before it is lost.
+ *
+ * Template loading is injected (mirrors `checkNestedRegionRefs`) so this stays pure and unit-testable.
+ *
+ * @internal Exported for testing
+ */
+export function checkRegionCssNoRef(
+    jayHtml: JayHtmlSourceFile,
+    loadTemplate: (relativeTemplatePath: string) => string | undefined,
+): RegionDriftFinding[] {
+    const importsWithTemplate = jayHtml.headlessImports.filter((imp) => imp.template);
+    if (importsWithTemplate.length === 0) return [];
+
+    const findings: RegionDriftFinding[] = [];
+    const shipsCssCache = new Map<string, boolean>();
+    const templateShipsCss = (rel: string): boolean => {
+        let v = shipsCssCache.get(rel);
+        if (v === undefined) {
+            const content = loadTemplate(rel);
+            v = content !== undefined && extractStyleCss(content).trim() !== '';
+            shipsCssCache.set(rel, v);
+        }
+        return v;
+    };
+
+    for (const region of collectRegionElements(jayHtml.body)) {
+        const contractName = (region.rawTagName ?? '').toLowerCase().substring(4);
+        const imp = importsWithTemplate.find((i) => i.contractName === contractName);
+        if (!imp?.template) continue; // not a design-system region (REGION-NOT-LINKED covers that)
+        if (region.getAttribute('ref')) continue; // has a scope anchor -> CSS can be scoped and survives
+        if (!templateShipsCss(imp.template)) continue; // nothing to lose -> no diagnostic
+
+        findings.push({
+            message:
+                `<jay:${contractName}> flattens template="${imp.template}" which ships CSS, but the region ` +
+                `has no ref= — so its CSS cannot be scoped and \`jay-stack sync\` will silently drop it.`,
+            suggestion:
+                `Add a ref= to the <jay:${contractName}> so sync can scope its CSS as an ` +
+                `@scope (.<ref>) block and preserve it.`,
+        });
+    }
+    return findings;
 }
 
 /**
@@ -1780,6 +1864,14 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
     // DL#200 — project-wide tallies for NO-DESIGN-SYSTEM.
     let regionsSeen = 0;
     let templateImportsSeen = 0;
+    // DL#207 — report-only design-system scorecard accumulators.
+    const designSystemCoverage: DesignSystemCoverage[] = [];
+    // Project-wide reuse, keyed by the region's resolved (absolute) template path.
+    const reuseByTemplate = new Map<string, number>();
+    // The catalogued template universe (M): contracts shipped under the components tree, plus any contract
+    // a page imports with template= — so the catalog is complete even if the components root isn't co-located
+    // with cwd (e.g. in tests). Deduped to absolute template paths after the scan.
+    const cataloguedContractFiles = new Set<string>();
 
     // Find all jay files (pages + components)
     const pageJayHtmlFiles = await findJayFiles(scanDir);
@@ -1794,6 +1886,8 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
     const componentContractFiles = await findContractFiles(componentsDir).catch(
         () => [] as string[],
     );
+    // DL#207 — every component under the components tree is part of the catalogued template universe.
+    for (const cf of componentContractFiles) cataloguedContractFiles.add(cf);
     const contractFiles = [...(await findContractFiles(scanDir)), ...componentContractFiles];
     // DL#200 — parsed contract names by file (for COMPONENT-NO-TEMPLATE messaging/suppression).
     const contractNameByFile = new Map<string, string>();
@@ -1987,12 +2081,59 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                 });
             }
 
+            // DL#209 — REGION-CSS-NO-REF (error): a region flattening a CSS-shipping template with no ref=
+            // loses its CSS on sync (unscoped CSS is never carried back). Error, not warning: it silently
+            // deletes authored styling. The fix is to add a ref so the CSS can be scoped and survive.
+            const cssNoRefErrors = checkRegionCssNoRef(parsedFile.val!, readTemplateRel);
+            for (const finding of cssNoRefErrors) {
+                errors.push({
+                    file: relativePath,
+                    message: finding.message,
+                    stage: 'generate',
+                    suggestion: finding.suggestion,
+                });
+            }
+
             // DL#200 — prefer design-system elements: nudge hand-authored regions that could be linked, and
             // linked regions drifting into their own variant. Also tally for the project NO-DESIGN-SYSTEM rule.
             regionsSeen += collectRegionElements(parsedFile.val!.body).length;
             templateImportsSeen += parsedFile.val!.headlessImports.filter(
                 (imp) => imp.template,
             ).length;
+
+            // DL#207 — report-only design-system scorecard. Coverage is page-scoped (matching where DL#200's
+            // region warnings run); components are the design-system *source*, so scoring their internal
+            // coverage would be circular. Reuse is accumulated project-wide from the same page regions.
+            if (!componentJayHtmlFileSet.has(jayFile)) {
+                const body = parsedFile.val!.body;
+                const total = body.querySelectorAll('*').length;
+                // Count only top-level regions' element subtrees; a Set keyed by node identity dedupes a
+                // nested region that sits inside a top-level region so it is never double-counted.
+                const coveredNodes = new Set<HTMLElement>();
+                for (const region of directChildRegions(body)) {
+                    const contractName = regionContractName(region);
+                    const imp = parsedFile.val!.headlessImports.find(
+                        (i) => i.contractName === contractName,
+                    );
+                    if (!imp?.template) continue; // only template=-backed regions are design-system coverage
+                    coveredNodes.add(region); // the region element itself
+                    for (const descendant of region.querySelectorAll('*')) {
+                        coveredNodes.add(descendant);
+                    }
+                    // Reuse: resolve the region's template to an absolute path (page-relative, like the
+                    // drift readers) and tally; same-page repeats count as real reuse (a carousel of cards).
+                    const templateAbs = path.resolve(dirname, imp.template);
+                    reuseByTemplate.set(templateAbs, (reuseByTemplate.get(templateAbs) ?? 0) + 1);
+                    if (imp.contractPath) cataloguedContractFiles.add(imp.contractPath);
+                }
+                const covered = coveredNodes.size;
+                designSystemCoverage.push({
+                    file: relativePath,
+                    coveragePct: total ? covered / total : 0,
+                    covered,
+                    total,
+                });
+            }
 
             // REGION-NOT-LINKED is page-scoped: component source templates legitimately hand-author their
             // child regions (see componentJayHtmlFileSet above), so skip them here.
@@ -2180,6 +2321,26 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
         });
     }
 
+    // --- DL#207 — design-system reuse summary (report-only) ---
+    // M = the catalogued template universe: every template variant shipped by a known component.
+    const cataloguedTemplatePaths = new Set<string>();
+    for (const contractFile of cataloguedContractFiles) {
+        for (const t of listTemplatesForContractFile(contractFile)) {
+            cataloguedTemplatePaths.add(path.resolve(t.path));
+        }
+    }
+    const rel = (p: string): string => './' + path.relative(projectRoot, p).replace(/\\/g, '/');
+    const perTemplate: Record<string, number> = {};
+    for (const [abs, count] of reuseByTemplate) perTemplate[rel(abs)] = count;
+    const designSystemReuse: DesignSystemReuse = {
+        perTemplate,
+        catalogued: cataloguedTemplatePaths.size,
+        reusedMoreThanOnce: [...reuseByTemplate.values()].filter((n) => n >= 2).length,
+        reusedOfCatalogued: [...cataloguedTemplatePaths].filter(
+            (p) => (reuseByTemplate.get(p) ?? 0) >= 2,
+        ).length,
+    };
+
     // --- Plugin validators (DL#145) ---
     const pluginValidators = await runPluginValidators(projectRoot, parsedFiles, errors, warnings);
 
@@ -2191,6 +2352,8 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
         warnings,
         coverage,
         pluginValidators,
+        designSystemCoverage,
+        designSystemReuse,
     };
 }
 
@@ -2276,26 +2439,102 @@ export function printJayValidationResult(result: ValidationResult, options: Vali
         }
     }
 
-    // --- Tag coverage section (verbose only) ---
-    if (options.verbose && result.coverage.length > 0) {
-        logger.important('');
-        logger.important(chalk.bold('📦 Tag Coverage'));
-        for (const fileCov of result.coverage) {
-            logger.important(`   ${fileCov.file}`);
-            for (const contract of fileCov.contracts) {
-                const label = contract.key
-                    ? `${contract.key} (${contract.contractName})`
-                    : contract.contractName;
-                logger.important(
-                    `     ${label}: ${contract.usedTags}/${contract.totalTags} tags used`,
-                );
-                if (contract.unusedTags.length > 0) {
+    // --- Report-only metrics: tag coverage + design-system scorecard (DL#207) ---
+    // Never affect the exit code. Regular mode prints one-line totals; `-v` expands the per-page
+    // (and per-contract) breakdown.
+    const { designSystemCoverage, designSystemReuse } = result;
+    const reuseTemplates = Object.keys(designSystemReuse.perTemplate);
+    const hasTagCoverage = result.coverage.length > 0;
+    const hasScorecard = designSystemCoverage.length > 0 || reuseTemplates.length > 0;
+
+    // Tag-coverage totals across all pages/contracts.
+    let totalUsedTags = 0;
+    let totalTags = 0;
+    for (const fileCov of result.coverage) {
+        for (const contract of fileCov.contracts) {
+            totalUsedTags += contract.usedTags;
+            totalTags += contract.totalTags;
+        }
+    }
+
+    // Design-system coverage totals across all pages.
+    let totalCovered = 0;
+    let totalElements = 0;
+    for (const cov of designSystemCoverage) {
+        totalCovered += cov.covered;
+        totalElements += cov.total;
+    }
+
+    if (options.verbose) {
+        if (hasTagCoverage) {
+            logger.important('');
+            logger.important(chalk.bold('📦 Tag Coverage'));
+            for (const fileCov of result.coverage) {
+                logger.important(`   ${fileCov.file}`);
+                for (const contract of fileCov.contracts) {
+                    const label = contract.key
+                        ? `${contract.key} (${contract.contractName})`
+                        : contract.contractName;
                     logger.important(
-                        chalk.gray(`       Unused: ${contract.unusedTags.join(', ')}`),
+                        `     ${label}: ${contract.usedTags}/${contract.totalTags} tags used`,
                     );
+                    if (contract.unusedTags.length > 0) {
+                        logger.important(
+                            chalk.gray(`       Unused: ${contract.unusedTags.join(', ')}`),
+                        );
+                    }
                 }
             }
         }
+
+        if (hasScorecard) {
+            logger.important('');
+            logger.important(chalk.bold('📊 Design-system scorecard'));
+            for (const cov of designSystemCoverage) {
+                const pct = Math.round(cov.coveragePct * 100);
+                // Informational only — flags a page that is mostly hand-authored markup; no effect on exit code.
+                const lowFlag = pct < 50 ? chalk.yellow('  ⚠ low') : '';
+                logger.important(
+                    chalk.gray(
+                        `   Coverage: ${cov.file}  ${pct}%  (${cov.covered}/${cov.total} elements)`,
+                    ) + lowFlag,
+                );
+            }
+            if (reuseTemplates.length > 0) {
+                const parts = reuseTemplates.map((t) => {
+                    const n = designSystemReuse.perTemplate[t];
+                    return n < 2 ? `${t} ×${n}${chalk.yellow(' ⚠ single-use')}` : `${t} ×${n}`;
+                });
+                logger.important(chalk.gray(`   Reuse: ${parts.join('   ')}`));
+            }
+            logger.important(
+                chalk.gray(
+                    `   ${designSystemReuse.reusedOfCatalogued} of ${designSystemReuse.catalogued} ` +
+                        `catalogued templates reused > 1`,
+                ),
+            );
+        }
+    } else if (hasTagCoverage || hasScorecard) {
+        logger.important('');
+        if (hasTagCoverage) {
+            const pct = totalTags ? Math.round((totalUsedTags / totalTags) * 100) : 0;
+            logger.important(
+                chalk.bold('📦 Tag coverage: ') +
+                    `${pct}% (${totalUsedTags}/${totalTags} tags used across ${result.coverage.length} page(s))`,
+            );
+        }
+        if (hasScorecard) {
+            const pct = totalElements ? Math.round((totalCovered / totalElements) * 100) : 0;
+            const lowFlag = pct < 50 ? chalk.yellow('  ⚠ low') : '';
+            logger.important(
+                chalk.bold('📊 Design-system scorecard: ') +
+                    `${pct}% element coverage (${totalCovered}/${totalElements}), ` +
+                    `${designSystemReuse.reusedOfCatalogued} of ${designSystemReuse.catalogued} ` +
+                    `catalogued templates reused > 1` +
+                    lowFlag,
+            );
+        }
+        logger.important(chalk.gray('   Run validate -v for per-page details.'));
     }
 
     // --- Summary ---

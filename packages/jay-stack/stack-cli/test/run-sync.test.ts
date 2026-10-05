@@ -71,11 +71,12 @@ describe('syncPageContent (DL#196)', () => {
         expect(extractScopeBlock(style, '.cardStarter')).toEqual(
             extractScopeBlock(style, '.cardPro'),
         );
-        // The component's root-block rule (`.card`) is scoped to the region root via `:scope`, not `.card`
-        // (a scoped selector matches descendants only — DL#196 root-matching fix).
+        // DL#206 — the component CSS is emitted verbatim inside `@scope (.<ref>) { … }`; the region's real
+        // roots are descendants of the `display:contents` scope-anchor wrapper, so a root rule (`.card`)
+        // matches as an ordinary descendant. No `:scope` rewrite (the old root-matching fix is removed).
         const starter = extractScopeBlock(style, '.cardStarter')!;
-        expect(starter.includes(':scope')).toBe(true);
-        expect(/(^|[\s{,])\.card\s*\{/.test(starter)).toBe(false);
+        expect(starter.includes(':scope')).toBe(false);
+        expect(/(^|[\s{,])\.card\s*\{/.test(starter)).toBe(true);
     });
 
     it('is idempotent after coalescing — a re-synced coalesced page reports no change', async () => {
@@ -111,19 +112,20 @@ describe('syncPageContent (DL#196)', () => {
         expect(pro.includes('cardStarter')).toBe(false);
     });
 
-    it('overwrites an unmarked stale `.card`-form block to the canonical `:scope` coalesced block', async () => {
+    it('overwrites an unmarked stale CSS block, coalescing both refs into one canonical block', async () => {
         const { content, jayHtml, dirname } = await parseSyncPage('two-cards-stale-css.jay-html');
         const result = syncPageContent(content, dirname, jayHtml, readFileSyncSafe);
 
         const style = parseHtml(result.content).querySelector('style')!.textContent;
-        // The stale, unmarked `.cardStarter` block (old `.card { border }` root form) is unmarked drift:
-        // sync overwrites it, coalescing both refs into one canonical `:scope` block (migration path).
+        // The stale, unmarked `.cardStarter` block is unmarked drift: sync overwrites it, coalescing both
+        // refs into one canonical block. DL#206 — the canonical form emits the component CSS verbatim
+        // (root rule `.card` kept), not the old root→`:scope` rewrite.
         const blocks = style.match(/@scope/g) ?? [];
         expect(blocks).toHaveLength(1);
         const starter = extractScopeBlock(style, '.cardStarter')!;
         expect(starter).toEqual(extractScopeBlock(style, '.cardPro'));
-        expect(starter.includes(':scope')).toBe(true);
-        expect(/(^|[\s{,])\.card\s*\{/.test(starter)).toBe(false);
+        expect(starter.includes(':scope')).toBe(false);
+        expect(/(^|[\s{,])\.card\s*\{/.test(starter)).toBe(true);
     });
 
     it('is idempotent — a synced page reports no further change', async () => {

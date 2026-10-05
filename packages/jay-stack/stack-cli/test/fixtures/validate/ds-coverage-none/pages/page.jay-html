@@ -1,0 +1,14 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+</head>
+<body>
+<div class="hand-authored">
+    <h1>{title}</h1>
+    <p>Entirely hand-authored markup — no design-system regions.</p>
+</div>
+</body>
+</html>

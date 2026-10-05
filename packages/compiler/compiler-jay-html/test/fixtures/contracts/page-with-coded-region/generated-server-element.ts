@@ -18,19 +18,24 @@ export function renderToStream(vs: PageWithCodedRegionViewState, ctx: ServerRend
         CardViewState | undefined;
     if (vs_card0) {
         w('<div');
-        w(' class="card"');
+        w(' class="plainCard"');
+        w(' style="display: contents"');
         w(' jay-coordinate="S1/0">');
+        w('<div');
+        w(' class="card"');
+        w('>');
         w('<h2');
-        w(' jay-coordinate="S1/0/0">');
+        w(' jay-coordinate="S1/0/0/0">');
         w(escapeHtml(String(vs_card0.heading)));
         w('</h2>');
         w('<button');
-        w(' jay-coordinate="S1/0/1">');
+        w(' jay-coordinate="S1/0/0/1">');
         w('Action');
         w('</button>');
         w('<div');
         w('>');
         w('Default body');
+        w('</div>');
         w('</div>');
         w('</div>');
     }
@@ -38,19 +43,24 @@ export function renderToStream(vs: PageWithCodedRegionViewState, ctx: ServerRend
         CardViewState | undefined;
     if (vs_card1) {
         w('<div');
-        w(' class="card"');
+        w(' class="richCard"');
+        w(' style="display: contents"');
         w(' jay-coordinate="S2/0">');
+        w('<div');
+        w(' class="card"');
+        w('>');
         w('<h2');
-        w(' jay-coordinate="S2/0/0">');
+        w(' jay-coordinate="S2/0/0/0">');
         w(escapeHtml(String(vs_card1.heading)));
         w('</h2>');
         w('<button');
-        w(' jay-coordinate="S2/0/1">');
+        w(' jay-coordinate="S2/0/0/1">');
         w('Action');
         w('</button>');
         w('<div');
         w('>');
         w('Default body');
+        w('</div>');
         w('</div>');
         w('</div>');
     }

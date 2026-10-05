@@ -9,10 +9,20 @@
  * See Design Log #103, #106, #126 (scoped coordinates).
  */
 
-import { HTMLElement, NodeType, parse } from 'node-html-parser';
+import { HTMLElement, Node, NodeType, parse } from 'node-html-parser';
 
 const COORD_ATTR = 'jay-coordinate-base';
 export const SCOPE_ATTR = 'jay-scope';
+
+/**
+ * DL#206 Phase 3 — the shape of a ref this pass auto-generated for a ref-less region (see
+ * {@link assignHeadlessInstance}'s wrap gate and the matching generator in `jay-html-compiler.ts`). The
+ * coordinate pass can run more than once on the same tree (hydrate/element pre-assign at
+ * `generateElementHydrateFile`, then `renderFunctionImplementation` assigns again); on the second pass the
+ * first pass's `AR<n>` placeholder is already on the element, so it must NOT be mistaken for an author's
+ * explicit ref — only an explicit ref anchors page CSS `@scope (.<ref>)` and forces the scope-anchor wrap.
+ */
+const AUTO_REF_PATTERN = /^AR\d+$/;
 
 export interface AssignCoordinatesOptions {
     /** Set of headless contract names (for detecting <jay:xxx> tags) */
@@ -56,6 +66,20 @@ interface ScopeCounter {
 
 function nextScopeId(counter: ScopeCounter): string {
     return `S${counter.next++}`;
+}
+
+/**
+ * DL#206 Phase 3 — is this node our scope-anchor wrapper (a `<div style="display: contents">`)? Used to
+ * keep {@link assignHeadlessInstance}'s wrapping idempotent: the coordinate pass can run more than once on
+ * the same tree (the hydrate target pre-assigns, then `renderFunctionImplementation` assigns again), and a
+ * transitional page may still carry a wrapper the materialiser wrote before Phase 3. In both cases the body
+ * is already wrapped — re-wrapping would nest a second anchor.
+ */
+function isScopeAnchorDiv(node: Node): boolean {
+    if (node.nodeType !== NodeType.ELEMENT_NODE) return false;
+    const el = node as HTMLElement;
+    if (el.tagName?.toLowerCase() !== 'div') return false;
+    return (el.getAttribute('style') ?? '').replace(/\s+/g, '').includes('display:contents');
 }
 
 /**
@@ -121,13 +145,22 @@ function walkChildren(
             const contractName = tagName.substring(4);
             if (options.headlessContractNames.has(contractName)) {
                 let ref = element.getAttribute('ref');
+                const explicitRef = !!ref && !AUTO_REF_PATTERN.test(ref);
                 if (!ref) {
                     const idx = options._refCounters!.get(contractName) ?? 0;
                     options._refCounters!.set(contractName, idx + 1);
                     ref = `AR${idx}`;
                     element.setAttribute('ref', ref);
                 }
-                assignHeadlessInstance(element, contractName, ref, parentCoord, options, counter);
+                assignHeadlessInstance(
+                    element,
+                    contractName,
+                    ref,
+                    parentCoord,
+                    options,
+                    counter,
+                    explicitRef,
+                );
                 // Don't increment childCounter — jay:xxx is a directive, not a DOM element
                 continue;
             }
@@ -174,6 +207,7 @@ function assignHeadlessInstance(
     parentCoord: string,
     options: AssignCoordinatesOptions,
     counter: ScopeCounter,
+    explicitRef: boolean,
 ): void {
     // Store the instance coordinate on the jay:xxx tag — still uses the
     // contractName:ref format so compilers can identify the instance.
@@ -185,16 +219,25 @@ function assignHeadlessInstance(
     const childScopeId = nextScopeId(counter);
     element.setAttribute(SCOPE_ATTR, childScopeId);
 
-    // Multi-child wrapping normalization (for non-slow pages).
-    // For slow-rendered pages, wrapping already happened in resolveHeadlessInstances.
-    // For non-slow pages, wrap here before assigning child coordinates.
+    // DL#206 Phase 3 — synthesize the scope anchor here, in the shared coordinate pre-processor that
+    // all three targets (element / hydrate / server) read, so the wrapper can never diverge between
+    // targets and the on-disk source stays the author's body (no `display:contents` wrapper to
+    // round-trip through sync/validate). A jay `ref` is never emitted as a DOM class, so page CSS
+    // `@scope (.<ref>)` needs a real element to root at: wrap a ref'd region's flattened body in a
+    // single `<div class="<ref>" style="display: contents">`. An explicit-ref region always wraps
+    // (its ref may be a CSS scope anchor or a parent's donut boundary); a ref-less (auto-ref) region
+    // ships no scoped CSS, so it keeps the legacy multi-child-only normalization (one returnable root).
     const significantTemplateChildren = element.childNodes.filter(
         (n) =>
             n.nodeType === NodeType.ELEMENT_NODE ||
             (n.nodeType === NodeType.TEXT_NODE && (n.innerText || '').trim() !== ''),
     );
-    if (significantTemplateChildren.length > 1) {
+    const alreadyWrapped =
+        significantTemplateChildren.length === 1 &&
+        isScopeAnchorDiv(significantTemplateChildren[0]);
+    if (!alreadyWrapped && (explicitRef || significantTemplateChildren.length > 1)) {
         const wrapper = parse('<div></div>').querySelector('div')!;
+        if (explicitRef) wrapper.setAttribute('class', ref);
         wrapper.setAttribute('style', 'display: contents');
         const children = element.childNodes;
         element.innerHTML = '';
@@ -230,6 +273,7 @@ function walkForEachChildren(
             const contractName = tagName.substring(4);
             if (options.headlessContractNames.has(contractName)) {
                 let ref = element.getAttribute('ref');
+                const explicitRef = !!ref && !AUTO_REF_PATTERN.test(ref);
                 if (!ref) {
                     const counterKey = `forEach/${contractName}`;
                     const idx = options._refCounters!.get(counterKey) ?? 0;
@@ -238,7 +282,15 @@ function walkForEachChildren(
                     element.setAttribute('ref', ref);
                 }
                 // The headless instance's parent coord is the item scope root
-                assignHeadlessInstance(element, contractName, ref, itemScopeId, options, counter);
+                assignHeadlessInstance(
+                    element,
+                    contractName,
+                    ref,
+                    itemScopeId,
+                    options,
+                    counter,
+                    explicitRef,
+                );
                 continue;
             }
         }

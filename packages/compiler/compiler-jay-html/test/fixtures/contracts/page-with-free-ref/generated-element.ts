@@ -67,10 +67,12 @@ function _headlessCard0Render(options?: RenderElementOptions): _HeadlessCard0Ele
     );
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
-            e('div', { class: 'card' }, [
-                e('h2', {}, [dt((vs) => vs.heading)]),
-                e('button', {}, ['Action'], refCardAction()),
-                e('button', {}, ['Dismiss'], refDismiss()),
+            e('div', { class: 'plainCard', style: { cssText: 'display: contents' } }, [
+                e('div', { class: 'card' }, [
+                    e('h2', {}, [dt((vs) => vs.heading)]),
+                    e('button', {}, ['Action'], refCardAction()),
+                    e('button', {}, ['Dismiss'], refDismiss()),
+                ]),
             ]),
         ) as _HeadlessCard0Element;
     return [refManager.getPublicAPI() as CardRefs, render];

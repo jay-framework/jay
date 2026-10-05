@@ -2,12 +2,7 @@
 
 <head>
   <script type="application/jay-data">data:</script>
-  <!-- REGION-OVERRIDE-NON-CONTENT (DL#200): the Card region IS linked (template=), flattened from source,
-       but it then adds net-new layout DOM (<div class="ds-card__ribbon">) that the source template does not
-       have. That is a structural change — a different design, not a content tweak — so `jay-stack validate`
-       nudges you to make a *second* card template (a new variant) and link this region to it, rather than
-       piling structure onto one flattened copy. (The same change is also unmarked drift, so DL#196 reports
-       it too; mark it override="children" or run `jay-stack sync` to resolve the drift.) -->
+  <!-- REGION-OVERRIDE-NON-CONTENT (DL#200): the Card region IS linked (template=), flattened from source, but it then adds net-new layout DOM (<div class="ds-card__ribbon">) that the source template does not have. That is a structural change — a different design, not a content tweak — so `jay-stack validate` nudges you to make a *second* card template (a new variant) and link this region to it, rather than piling structure onto one flattened copy. (The same change is also unmarked drift, so DL#196 reports it too; mark it override="children" or run `jay-stack sync` to resolve the drift.) -->
   <script type="application/jay-headless" contract="../../components/card/card.jay-contract"
     template="../../components/card/card.jay-html"></script>
   <script type="application/jay-headless" contract="../../components/button/button.jay-contract"
@@ -17,7 +12,7 @@
     content="A linked card region that adds structural DOM — REGION-OVERRIDE-NON-CONTENT.">
   <style>
     @scope (.cardFeatured) to (.cta) {
-      :scope {
+      .ds-card {
         border: 1px solid #e2e8f0;
         border-radius: 10px;
         padding: 20px;
@@ -37,7 +32,7 @@
     }
 
     @scope (.cta) {
-      :scope {
+      .ds-button {
         border: 0;
         border-radius: 6px;
         padding: 8px 14px;
@@ -56,11 +51,11 @@
       you to a second card template rather than a one-off structural override.</p>
     <jay:card ref="cardFeatured" heading="Pro" body="For growing teams that need more."
       ctaLabel="Choose Pro">
-      <div class="ds-card cardFeatured">
+      <div class="ds-card">
         <h3 class="ds-card__heading">{heading}</h3>
         <p class="ds-card__body">{body}</p>
         <div class="ds-card__ribbon">Most popular</div>
-        <jay:button ref="cta" label="{ctaLabel}"><button class="ds-button cta">{label}</button>
+        <jay:button ref="cta" label="{ctaLabel}"><button class="ds-button">{label}</button>
         </jay:button>
       </div>
     </jay:card>
