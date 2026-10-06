@@ -1,0 +1,13 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+</head>
+<body>
+    <h1>About</h1>
+    <a href="/about">self link</a>
+    <a href="/">home</a>
+</body>
+</html>

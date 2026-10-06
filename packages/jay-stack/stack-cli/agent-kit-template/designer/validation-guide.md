@@ -27,6 +27,13 @@ So a warning about an `<img>` might come from a full-stack component's template,
 - **Errors** block the build. They must be fixed — there is no way to suppress them.
 - **Warnings** must be either fixed or explicitly suppressed. Do not ignore warnings — each one has a clear resolution path (add the missing attribute, or suppress via `<script type="application/jay-validations">`).
 
+**Broken internal links are errors** (DL#210). `validate` resolves every `<a href>` against the project's
+**static routes + public assets**. An href that resolves to nothing is an error: a placeholder (`href="#"` or
+empty), a typo, or a link to a page/asset that does not exist. Links that match a **dynamic** route pattern
+(e.g. `/blog/[slug]`) are **not** checked here — the concrete slug list isn't known at validate time — so they
+never false-error. External URLs, `mailto:`/`tel:`, in-page `#fragments`, and `{binding}` hrefs are skipped.
+Fix the path, use `<button>` for JS-driven anchors, or suppress per-page (see the `jay-stack` table below).
+
 One design-system rule is a **hard error**, not a warning: `REGION-CSS-NO-REF` (DL#209) — a `<jay:X>` region
 whose `template=` ships CSS but which has no `ref=`. Without a `ref` the CSS has no scope anchor, so `sync`
 silently drops it; the fix is to add a `ref` (see `design-system-guide.md` → _The shape of a region's CSS_).
@@ -126,6 +133,7 @@ The core `jay-stack validate` emits four warnings that nudge you to reuse UI thr
 | `REGION-OVERRIDE-NON-CONTENT` | `jay-validations="REGION-OVERRIDE-NON-CONTENT"` on the import                                                                   |
 | `COMPONENT-NO-TEMPLATE`       | `jay-stack: allow-no-template: [Contract]`                                                                                      |
 | `NO-DESIGN-SYSTEM`            | `jay-stack: allow-no-design-system: true`                                                                                       |
+| Broken internal link (DL#210) | `jay-stack: allow-broken-links: true` (per-page — skips all link checks for that page)                                         |
 
 ```html
 <script type="application/jay-validations">

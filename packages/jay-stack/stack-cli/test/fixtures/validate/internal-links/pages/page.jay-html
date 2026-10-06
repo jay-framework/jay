@@ -1,0 +1,20 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+</head>
+<body>
+    <nav>
+        <a href="/about">About (static page — ok)</a>
+        <a href="/images/logo.svg">Logo (public asset — ok)</a>
+        <a href="/blog/first-post">Blog post (matches /blog/[slug] — deferred, ok)</a>
+        <a href="https://example.com/external">External (skip)</a>
+        <a href="mailto:hi@example.com">Email (skip)</a>
+        <a href="#section">In-page fragment (skip)</a>
+        <a href="#">Placeholder (degenerate — error)</a>
+        <a href="/does-not-exist">Missing static page (broken — error)</a>
+    </nav>
+</body>
+</html>

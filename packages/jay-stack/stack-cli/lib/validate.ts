@@ -50,6 +50,7 @@ import { parse as parseHtml, HTMLElement, NodeType } from 'node-html-parser';
 import { loadConfig, getConfigWithDefaults } from './config';
 import { buildMaterialiseOptions } from './materialise-context';
 import { extractScopeBlock, splitScopeBlocks } from './scope-css';
+import { buildRouteOracle, collectPublicAssets, checkInternalLinks } from './check-internal-links';
 
 export interface ValidateOptions {
     path?: string;
@@ -2340,6 +2341,28 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
             (p) => (reuseByTemplate.get(p) ?? 0) >= 2,
         ).length,
     };
+
+    // --- DL#210 — Check 1: broken internal links (static routes + public assets) ---
+    const linkOracle = await buildRouteOracle(scanDir);
+    const assetUrls = await collectPublicAssets(
+        path.resolve(projectRoot, resolvedConfig.devServer.publicFolder),
+    );
+    const linkFindings = checkInternalLinks({
+        parsedFiles,
+        oracle: linkOracle,
+        assetUrls,
+        baseUrl: config.site?.baseUrl,
+        projectRoot,
+    });
+    for (const finding of linkFindings) {
+        errors.push({
+            file: finding.file,
+            message: finding.message,
+            stage: 'generate',
+            source: 'internal-links',
+            suggestion: finding.suggestion,
+        });
+    }
 
     // --- Plugin validators (DL#145) ---
     const pluginValidators = await runPluginValidators(projectRoot, parsedFiles, errors, warnings);

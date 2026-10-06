@@ -3899,6 +3899,7 @@ __metadata:
     "@jay-framework/plugin-validator": "workspace:^"
     "@jay-framework/production-build": "workspace:^"
     "@jay-framework/production-server": "workspace:^"
+    "@jay-framework/stack-route-scanner": "workspace:^"
     "@jay-framework/stack-server-build": "workspace:^"
     "@jay-framework/stack-server-runtime": "workspace:^"
     "@types/express": "npm:^5.0.2"
