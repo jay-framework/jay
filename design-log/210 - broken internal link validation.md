@@ -10,7 +10,7 @@
     **validate error**: degenerate (`#`, empty), typo'd path, or a link to a static page that does not exist.
     The **only** thing Check 1 defers is an href that **matches a dynamic route pattern** (`/blog/[slug]`),
     because we cannot enumerate the slug list without running `loadParams`.
-  - **Check 2 (deferred to its own DL):** the residue — hrefs that match a *dynamic* route pattern, where we
+  - **Check 2 (deferred to its own DL):** the residue — hrefs that match a _dynamic_ route pattern, where we
     need the enumerated param values to know if the specific URL exists. **Deferred.** When built, it targets
     **approach (b): an agent-kit-generated slug/param reference** that `validate` consumes (keeps the check at
     validate time). Approach (a) (build-time output-HTML check) is **rejected** — too late in the cycle and
@@ -42,10 +42,11 @@ catch this at validate/build time, not in production.
 Two concrete instances were found:
 
 1. **Footer placeholders** — `src/components/site-footer/site-footer.jay-html:73-74`:
+
    ```html
-   <a href="#">Security Policy</a>
-   <a href="#">Privacy</a>
+   <a href="#">Security Policy</a> <a href="#">Privacy</a>
    ```
+
    `#` placeholders that ship as dead links; no backing page was ever created. Duplicated across nearly every
    page's footer.
 
@@ -55,7 +56,7 @@ Two concrete instances were found:
    ```
    The route **pattern** `/design-log/wix/[slug]` exists (markdown plugin, `contentDir: content/design-log/wix`),
    but `content/design-log/wix/` has **no `index.md`**, so slug `index` is never generated → 404. (Sibling
-   `jay/` and `website/` sections *do* have `index.md`, which is why the author assumed `wix` would too.)
+   `jay/` and `website/` sections _do_ have `index.md`, which is why the author assumed `wix` would too.)
 
 Instance 1 (and any link to a missing **static** page) is Check 1. Instance 2 is Check 2 (deferred) — the href
 matches the dynamic pattern `wix/[slug]`, so distinguishing "slug `index` exists" from "never generated" needs
@@ -65,17 +66,17 @@ the enumerated slug list.
 
 A link is "broken" in ways that differ by **what we can know at validate time**:
 
-| href | Resolves against… | Decidable at validate? | Owned by |
-|---|---|---|---|
-| `#`, `""` | nothing | yes | Check 1 — **error** |
-| `/pirvacy` (typo, no route) | no route pattern | yes | Check 1 — **error** |
-| `/about` where `/about` is a static page | a static route | yes | Check 1 — ok |
-| `/about` where no such static page exists | no route | yes | Check 1 — **error** |
-| `/images/logo.svg` | public asset | yes | Check 1 — ok |
+| href                                             | Resolves against…     | Decidable at validate?  | Owned by               |
+| ------------------------------------------------ | --------------------- | ----------------------- | ---------------------- |
+| `#`, `""`                                        | nothing               | yes                     | Check 1 — **error**    |
+| `/pirvacy` (typo, no route)                      | no route pattern      | yes                     | Check 1 — **error**    |
+| `/about` where `/about` is a static page         | a static route        | yes                     | Check 1 — ok           |
+| `/about` where no such static page exists        | no route              | yes                     | Check 1 — **error**    |
+| `/images/logo.svg`                               | public asset          | yes                     | Check 1 — ok           |
 | `/blog/first-post` where route is `/blog/[slug]` | a **dynamic** pattern | **no** (need slug list) | Check 2 — **deferred** |
 
 The subtlety that forces the split: a link matching a dynamic pattern (`/design-log/wix/index` vs
-`wix/[slug]`) is *syntactically* valid but may be a 404 depending on the enumerated slugs — and those are
+`wix/[slug]`) is _syntactically_ valid but may be a 404 depending on the enumerated slugs — and those are
 produced only by `loadParams`, which we deliberately do not run during `validate` (build-only, possibly
 network-bound). So Check 1 can only say "this matches a dynamic pattern — I can't confirm the instance";
 Check 2 is the mechanism that supplies the instance list.
@@ -96,8 +97,8 @@ Check 2 is the mechanism that supplies the instance list.
 - **DL#175 sitemap generation** — `generate-sitemap.ts` builds the canonical URL set from `RouteManifest`
   (`routes × instances`) at build time. ✅ verified. → This is what approach (a) for Check 2 would reuse; it
   is **rejected** here (too late; post-build mutation). Noted so a future Check-2 DL does not re-litigate it.
-- **DL#204 design-system index in agent-kit** — establishes agent-kit as the home for *generated reference
-  data* consumed by validation. → The natural home for Check 2's slug/param reference (approach b).
+- **DL#204 design-system index in agent-kit** — establishes agent-kit as the home for _generated reference
+  data_ consumed by validation. → The natural home for Check 2's slug/param reference (approach b).
 
 **Null-hypothesis result:** Check 1 needs no new infrastructure — `validate` already scans routes and reads
 `public/`; we add a project pass that cross-references `a[href]` against those. Check 2 needs a new data source
@@ -129,12 +130,13 @@ that **both options are inherently slow**: enumerating every dynamic slug/param 
 and adding a second, slower feedback gate to the agent/author loop has a **high price** — it must not run on
 every `validate`. The right pattern (when to run it, how to cache, on-demand vs. scheduled vs. pre-commit) is
 itself an open design question, so Check 2 gets its own DL rather than a default here.
-- **(a) build-time output check** — still useful as a *last-line* gate, but too late in the loop and exposed to
+
+- **(a) build-time output check** — still useful as a _last-line_ gate, but too late in the loop and exposed to
   post-build route mutation by Jay's slow-render/second server, so not authoritative on its own.
 - **(b) agent-kit slug reference** — keeps the check at validate time by consuming a pre-generated reference,
   but the reference generation is the slow part and goes stale after any content change (e.g.
   `npm run sync:design-log`), so it needs a freshness/regeneration story.
-- **Upside that justifies eventually paying the cost:** once we *do* enumerate concrete dynamic instances, the
+- **Upside that justifies eventually paying the cost:** once we _do_ enumerate concrete dynamic instances, the
   same slow gate unlocks far more than link-checking — **per-instance dynamic-page validation**: meta tags
   correctly reflecting each page, full SEO over dynamically-rendered content, a11y on real content, etc. So
   Check 2 should be scoped as "dynamic-page validation (incl. links)," not "dynamic link checking." Parked —
@@ -170,6 +172,7 @@ checkLinks():
 ```
 
 Key points:
+
 - **Degenerate hrefs** (`#`, empty) fall straight through to the error (they match no static route, no asset,
   no dynamic pattern). No separate rule needed — the resolve step subsumes the DL#145-style check.
 - **Dynamic-pattern links are silently allowed in v1** (deferred), so Check 1 never false-errors on
@@ -181,30 +184,31 @@ Key points:
 ## Implementation Plan (Check 1 only)
 
 **Phase 1 — resolvable set:**
+
 1. In `validate`, call `scanRoutes(scanDir)`; partition into concrete static URLs vs dynamic matchers (reuse
    `route-to-express-route`). Build the `public/` asset set (respect `config.publicFolder`, default `public`).
 
-**Phase 2 — link check pass:**
-2. Add the project-level pass (model: NO-DESIGN-SYSTEM) that walks each parsed page's `a[href]`, applies the
-   skip rules (external, `#`/`mailto:`/`tel:`/`javascript:`, `{binding}` hrefs), resolves + normalizes, and
-   emits an **error** for anything not in `resolvable` and not matching a dynamic pattern.
-3. Emit a clear message with the href and the owning page URL.
+**Phase 2 — link check pass:** 2. Add the project-level pass (model: NO-DESIGN-SYSTEM) that walks each parsed page's `a[href]`, applies the
+skip rules (external, `#`/`mailto:`/`tel:`/`javascript:`, `{binding}` hrefs), resolves + normalizes, and
+emits an **error** for anything not in `resolvable` and not matching a dynamic pattern. 3. Emit a clear message with the href and the owning page URL.
 
-**Phase 3 — tests:**
-4. Fixture project asserting: `#`/empty → error; `/typo` → error; link to existing static page → ok; link to
-   missing static page → error; `/images/x.png` present in public → ok; external `https://…` → ignored;
-   `/blog/{id}` binding href → ignored; link matching a dynamic pattern → **ok in v1 (deferred)**. Assert on
-   `ValidationResult` fields (not console strings; not `toContain`).
+**Phase 3 — tests:** 4. Fixture project asserting: `#`/empty → error; `/typo` → error; link to existing static page → ok; link to
+missing static page → error; `/images/x.png` present in public → ok; external `https://…` → ignored;
+`/blog/{id}` binding href → ignored; link matching a dynamic pattern → **ok in v1 (deferred)**. Assert on
+`ValidationResult` fields (not console strings; not `toContain`).
 
-**Phase 4 — live validation + agent-kit:**
-5. Run `validate` on jay-website; confirm it flags the footer `#` placeholders and any missing-static-page
-   links; fix them as the acceptance demo. (The `wix/index` link is Check 2 — remains uncaught until that DL.)
-6. Agent-kit: document the rule in `validation-guide.md` (Errors vs Warnings) and the designer link-authoring
-   guide; note the dynamic-link blind spot so agents know it is deferred.
+**Phase 4 — live validation + agent-kit:** 5. Run `validate` on jay-website; confirm it flags the footer `#` placeholders and any missing-static-page
+links; fix them as the acceptance demo. (The `wix/index` link is Check 2 — remains uncaught until that DL.) 6. Agent-kit: document the rule in `validation-guide.md` (Errors vs Warnings) and the designer link-authoring
+guide; note the dynamic-link blind spot so agents know it is deferred.
 
 **Parked — Check 2 (own DL):** see the Parked section below.
 
 ## Parked — Dynamic-Page Validation (incl. link checking)
+
+> **De-parked → see [DL#211 — Build-Output Validation](211%20-%20build-output%20validation.md).** The execution-pattern
+> question below is answered there: read an **existing build's** artifacts (`route-manifest.json` + per-instance
+> `*.cache.json`) in a **separate, opt-in `validate --from-build` tier**, so the slow enumeration is amortized into
+> the build and the hot `validate` loop stays fast. The section below is retained as the original parking rationale.
 
 Check 2 is **parked**, not just deferred — it carries an unresolved design question, not merely unwritten code.
 
