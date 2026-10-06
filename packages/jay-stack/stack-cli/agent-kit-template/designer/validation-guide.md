@@ -133,7 +133,7 @@ The core `jay-stack validate` emits four warnings that nudge you to reuse UI thr
 | `REGION-OVERRIDE-NON-CONTENT` | `jay-validations="REGION-OVERRIDE-NON-CONTENT"` on the import                                                                   |
 | `COMPONENT-NO-TEMPLATE`       | `jay-stack: allow-no-template: [Contract]`                                                                                      |
 | `NO-DESIGN-SYSTEM`            | `jay-stack: allow-no-design-system: true`                                                                                       |
-| Broken internal link (DL#210) | `jay-stack: allow-broken-links: true` (per-page — skips all link checks for that page)                                         |
+| Broken internal link (DL#210) | `jay-stack: allow-broken-links: true` (per-page — skips all link checks for that page)                                          |
 
 ```html
 <script type="application/jay-validations">

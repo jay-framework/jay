@@ -167,9 +167,9 @@ describe('validateJayFiles — DL#210 integration', () => {
 
         const linkErrors = result.errors.filter((e) => e.source === 'internal-links');
         expect(
-            linkErrors.map((e) => ({ file: e.file, message: e.message })).sort((a, b) =>
-                (a.file + a.message).localeCompare(b.file + b.message),
-            ),
+            linkErrors
+                .map((e) => ({ file: e.file, message: e.message }))
+                .sort((a, b) => (a.file + a.message).localeCompare(b.file + b.message)),
         ).toEqual(
             [
                 {
