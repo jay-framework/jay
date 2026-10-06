@@ -115,9 +115,9 @@
             <a ref="trigger" class="nav-link products-trigger">Products &#x25BE;</a>
             <div popover ref="popover" class="dropdown products-dropdown">
               <a href="/products">All Products</a>
-              <a href="#">Shoes</a>
-              <a href="#">Bags</a>
-              <a href="#">Accessories</a>
+              <a href="/products?category=shoes">Shoes</a>
+              <a href="/products?category=bags">Bags</a>
+              <a href="/products?category=accessories">Accessories</a>
             </div>
           </div>
         </jay:popover-menu>
@@ -127,8 +127,8 @@
             <a ref="trigger" class="nav-link checkout-trigger">Checkout &#x25BE;</a>
             <div popover ref="popover" class="dropdown checkout-dropdown">
               <a href="/checkout">View Cart</a>
-              <a href="#">Express Checkout</a>
-              <a href="#">Gift Cards</a>
+              <a href="/checkout?mode=express">Express Checkout</a>
+              <a href="/products?category=gift-cards">Gift Cards</a>
             </div>
           </div>
         </jay:popover-menu>
