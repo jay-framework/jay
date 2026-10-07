@@ -239,12 +239,11 @@ export async function generateSSRPageHtml(
     // resolution, HMR, and avoids duplication with the hydrate module.
     const cssLink = cached.cssHref ? `    <link rel="stylesheet" href="${cached.cssHref}" />` : '';
 
-    // Merge head tags: component tags (defaults) then jay-html <head> (template wins, DL#148)
+    // Merge head tags: component tags (defaults) then jay-html <head> (template wins silently, DL#148)
     const tagSources: HeadTag[][] = [];
     if (headTags && headTags.length > 0) tagSources.push(headTags);
     const headMetaTags = headMetaToHeadTags(cached.headMeta, viewState);
-    if (headMetaTags.length > 0) tagSources.push(headMetaTags);
-    const mergedTags = mergeHeadTags(tagSources);
+    const mergedTags = mergeHeadTags(tagSources, headMetaTags);
     const hasCustomTitle = mergedTags.some((t) => t.tag.toLowerCase() === 'title');
     const titleTag = hasCustomTitle ? '' : '    <title>Vite + TS</title>\n';
     const headTagsHtml = mergedTags.length > 0 ? serializeHeadTags(mergedTags) : '';

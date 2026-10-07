@@ -31,9 +31,17 @@ export function tagIdentityKey(tag: HeadTag): string | undefined {
 
 /**
  * Merge head tags from multiple sources with last-write-wins.
- * Warns on collision via logger.
+ *
+ * `sources` are plugin/component-provided tags; a collision on the same key
+ * between two *different* plugin sources is unexpected and logs a warning.
+ *
+ * `templateTags` are the page template's `<head>` tags, which have documented
+ * higher precedence (DL#148) and always win silently. A template tag overriding
+ * a plugin-provided tag is intentional, not a collision, so it never warns —
+ * this is the common case for markdown pages that both declare `<title>` in the
+ * template and inject one from frontmatter.
  */
-export function mergeHeadTags(sources: HeadTag[][]): HeadTag[] {
+export function mergeHeadTags(sources: HeadTag[][], templateTags?: HeadTag[]): HeadTag[] {
     const byKey = new Map<string, { tag: HeadTag; sourceIndex: number }>();
     const result: HeadTag[] = [];
 
@@ -48,6 +56,18 @@ export function mergeHeadTags(sources: HeadTag[][]): HeadTag[] {
                     );
                 }
                 byKey.set(key, { tag, sourceIndex: si });
+            } else {
+                result.push(tag);
+            }
+        }
+    }
+
+    // Template <head> tags win silently over plugin-provided tags (DL#148).
+    if (templateTags) {
+        for (const tag of templateTags) {
+            const key = tagIdentityKey(tag);
+            if (key) {
+                byKey.set(key, { tag, sourceIndex: -1 });
             } else {
                 result.push(tag);
             }

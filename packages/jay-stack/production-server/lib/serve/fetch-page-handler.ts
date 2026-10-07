@@ -113,14 +113,16 @@ export async function fetchPageRequest(
         url: { path: requestUrl.pathname },
     };
 
-    // Merge head tags: component tags (defaults) then jay-html <head> (template wins, DL#148)
+    // Merge head tags: component tags (defaults) then jay-html <head> (template wins silently, DL#148)
     const headTagSources: HeadTag[][] = [];
     const slowHeadTags = cf.__slowHeadTags;
     if (slowHeadTags) headTagSources.push(...slowHeadTags);
     if (fastResult.headTags) headTagSources.push(fastResult.headTags);
     const templateHeadTags = headMetaToHeadTags(route.headMeta, fullViewState);
-    if (templateHeadTags.length > 0) headTagSources.push(templateHeadTags);
-    const headTags = headTagSources.length > 0 ? mergeHeadTags(headTagSources) : [];
+    const headTags =
+        headTagSources.length > 0 || templateHeadTags.length > 0
+            ? mergeHeadTags(headTagSources, templateHeadTags)
+            : [];
     const hasCustomTitle = headTags.some((t) => t.tag?.toLowerCase() === 'title');
     const titleTag = hasCustomTitle ? '' : '    <title>Vite + TS</title>\n';
     const preconnectTags = headTags.filter(

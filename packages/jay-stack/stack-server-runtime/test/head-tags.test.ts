@@ -92,6 +92,46 @@ describe('mergeHeadTags', () => {
         warnSpy.mockRestore();
     });
 
+    it('does not warn when template tags override plugin tags', async () => {
+        const logger = await import('@jay-framework/logger');
+        const warnSpy = vi.spyOn(logger.getLogger(), 'warn');
+
+        const pluginTags: HeadTag[] = [{ tag: 'title', children: 'Plugin Title' }];
+        const templateTags: HeadTag[] = [{ tag: 'title', children: 'Template Title' }];
+        const result = mergeHeadTags([pluginTags], templateTags);
+
+        expect(warnSpy).not.toHaveBeenCalled();
+        expect(result).toEqual([{ tag: 'title', children: 'Template Title' }]);
+        warnSpy.mockRestore();
+    });
+
+    it('still warns on plugin-vs-plugin collision even when template tags are present', async () => {
+        const logger = await import('@jay-framework/logger');
+        const warnSpy = vi.spyOn(logger.getLogger(), 'warn');
+
+        const pluginA: HeadTag[] = [{ tag: 'title', children: 'A' }];
+        const pluginB: HeadTag[] = [{ tag: 'title', children: 'B' }];
+        const templateTags: HeadTag[] = [
+            { tag: 'meta', attrs: { name: 'description', content: 'd' } },
+        ];
+        mergeHeadTags([pluginA, pluginB], templateTags);
+
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('Collision on "title"'));
+        warnSpy.mockRestore();
+    });
+
+    it('template-only keyed tags are appended after plugin tags', () => {
+        const pluginTags: HeadTag[] = [{ tag: 'title', children: 'Plugin' }];
+        const templateTags: HeadTag[] = [
+            { tag: 'meta', attrs: { name: 'description', content: 'desc' } },
+        ];
+        const result = mergeHeadTags([pluginTags], templateTags);
+        expect(result).toEqual([
+            { tag: 'title', children: 'Plugin' },
+            { tag: 'meta', attrs: { name: 'description', content: 'desc' } },
+        ]);
+    });
+
     it('non-keyed tags are always included', () => {
         const source1: HeadTag[] = [{ tag: 'link', attrs: { rel: 'stylesheet', href: '/a.css' } }];
         const source2: HeadTag[] = [{ tag: 'link', attrs: { rel: 'stylesheet', href: '/b.css' } }];

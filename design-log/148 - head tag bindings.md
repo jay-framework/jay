@@ -187,3 +187,22 @@ If the binding path doesn't exist in ViewState, the `{...}` is kept as-is:
 5. No canonical warning when canonical is absent
 6. SEO validator suppresses title/description warnings when headless import's plugin declares `headTags: [title, meta:description]`
 7. All existing smoke tests pass
+
+## Implementation Follow-up — silent template overrides (October 2026)
+
+Two false-positive warnings surfaced once sites started pairing the `@jay-framework/markdown` plugin (which injects `title` + `meta:description` from frontmatter via `frontmatterToHeadTags`) with page templates that also declare `<title>{post.title} — Section</title>` and `<meta name="description">`. Output was correct (template wins, per Verification #2), but every page logged:
+
+```
+[head-tags] Collision on "title" — overwriting with tag from source 1
+[head-tags] Collision on "meta:name:description" — overwriting with tag from source 1
+```
+
+A template overriding a plugin-provided tag is the documented, intended precedence — not a collision — so the warnings were noise. Two fixes:
+
+1. **`mergeHeadTags` distinguishes plugin sources from the template** (`stack-server-runtime/lib/head-tags.ts`). New signature `mergeHeadTags(sources: HeadTag[][], templateTags?: HeadTag[])`. Plugin `sources` still warn on cross-source collisions (plugin-vs-plugin is unexpected); `templateTags` apply last and win **silently**. Call sites updated to pass the jay-html `<head>` tags as `templateTags` instead of appending them as a trailing source: `stack-server-build/lib/generate-ssr-response.ts` and `production-server/lib/serve/fetch-page-handler.ts`. `dev-server.ts:586` (pure slow-phase plugin aggregation, no template) is unchanged, so genuine plugin-vs-plugin collisions still warn across dev, production, and build.
+
+   - A naive "last source wins silently" heuristic was rejected: `mergeHeadTags` is also used for pure plugin aggregation where the last source **is** a plugin, so the template must be an explicit argument, not inferred by position.
+
+2. **`markdown-pages` declares its provided head tags** (`packages/plugins/markdown/plugin.yaml`): `headTags: [title, meta:description, meta:og:title, meta:og:description, meta:og:image, link:canonical]` — matching what `frontmatterToHeadTags` emits. This lets consuming sites drop the redundant template tags entirely without tripping the SEO validator's missing-title / missing-description presence checks (Verification #6).
+
+**Tests:** `stack-server-runtime/test/head-tags.test.ts` — added cases for template-overrides-plugin (no warn), plugin-vs-plugin still warns when template tags present, and template-only keyed tags appended after plugin tags. 26/26 passing; markdown `head-tags.test.ts` 9/9; `stack-server-runtime` / `stack-server-build` / `production-server` type-check clean.

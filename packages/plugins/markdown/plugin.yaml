@@ -6,6 +6,16 @@ contracts:
     contract: markdown-pages.jay-contract
     component: markdownPages
     description: Renders a directory of markdown files as routable pages
+    # Head tags injected at runtime from frontmatter (frontmatterToHeadTags, DL#148).
+    # Lets consuming sites drop redundant template tags without tripping the SEO
+    # validator's missing-title / missing-description warnings.
+    headTags:
+      - title
+      - meta:description
+      - meta:og:title
+      - meta:og:description
+      - meta:og:image
+      - link:canonical
 
   - name: markdown-content
     contract: markdown-content.jay-contract
