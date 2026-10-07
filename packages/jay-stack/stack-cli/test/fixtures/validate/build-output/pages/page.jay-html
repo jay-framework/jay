@@ -1,0 +1,15 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+</head>
+<body>
+    <nav>
+        <a href="/about">About (static page — produced by build — ok)</a>
+        <a href="/blog/hello">Blog post (produced slug — ok)</a>
+        <a href="/blog/ghost">Blog post (dynamic match, slug NOT produced — error via Check 1′)</a>
+    </nav>
+</body>
+</html>

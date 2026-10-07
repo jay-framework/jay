@@ -175,12 +175,28 @@ By default the scorecard prints **one-line totals** for the whole project:
 Run with `-v` / `--verbose` to expand the **per-page** breakdown (coverage per file, which tags are unused,
 per-template reuse counts, and `⚠ low` flags on pages under 50% coverage).
 
+## Two validation tiers
+
+Validation comes in two tiers. This guide covers **Tier 1**, the always-on gate.
+
+**Tier 1 — always on (`jay-stack validate`)** is the fast, template-only gate. It reads your `.jay-html` files and
+route scan only — **no build needed** — so it's cheap enough for the hot agent loop and runs on every `validate`.
+Everything described in this guide is Tier 1. For links, Tier 1 (DL#210) resolves every hand-authored `<a href>`
+against the project's static routes + public assets and **errors** on broken internal links (typos, missing
+pages), degenerate `#` / empty placeholder links, and self-links. Links matching a **dynamic** route pattern
+(`/design-log/[...slug]`) are deferred — the concrete slug set isn't known without a build.
+
+**Tier 2 — opt-in, against a build (`jay-stack validate --tier-2`)** adds deeper checks that need a build:
+dynamic-slug links, broken links in rendered content, and per-instance meta/SEO. It's documented separately to
+keep this guide focused — see **`validation-tier-2-guide.md`**. Run it pre-deploy / in CI.
+
 ## Running Validation
 
 ```bash
-jay-stack validate              # validate all pages (+ one-line scorecard totals)
-jay-stack validate -v           # add per-page tag coverage + scorecard detail
-jay-stack validate --strict     # treat warnings as errors
+jay-stack validate                     # Tier 1: all pages (+ one-line scorecard totals)
+jay-stack validate -v                  # add per-page tag coverage + scorecard detail
+jay-stack validate --strict            # treat warnings as errors
+jay-stack validate --tier-2            # also run Tier 2 — see validation-tier-2-guide.md
 ```
 
 Validation runs automatically during `jay-stack build`. Warnings don't block the build; errors do (with `--strict`).

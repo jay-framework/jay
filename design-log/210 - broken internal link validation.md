@@ -207,7 +207,7 @@ guide; note the dynamic-link blind spot so agents know it is deferred.
 
 > **De-parked → see [DL#211 — Build-Output Validation](211%20-%20build-output%20validation.md).** The execution-pattern
 > question below is answered there: read an **existing build's** artifacts (`route-manifest.json` + per-instance
-> `*.cache.json`) in a **separate, opt-in `validate --from-build` tier**, so the slow enumeration is amortized into
+> `*.cache.json`) in a **separate, opt-in `validate --tier-2` tier**, so the slow enumeration is amortized into
 > the build and the hot `validate` loop stays fast. The section below is retained as the original parking rationale.
 
 Check 2 is **parked**, not just deferred — it carries an unresolved design question, not merely unwritten code.

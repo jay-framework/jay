@@ -69,7 +69,14 @@ jay-stack validate -v
 
 # JSON output
 jay-stack validate --json
+
+# Tier 2: deeper checks against an existing build (needs `jay-stack build` first)
+jay-stack validate --tier-2
 ```
+
+The default run is **Tier 1** (fast, template-only). `--tier-2` adds deep checks against a build's output
+(dynamic-slug links, rendered-content links, per-instance meta) — see
+[validation-tier-2-guide.md](validation-tier-2-guide.md).
 
 Example output:
 

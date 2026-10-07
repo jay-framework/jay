@@ -51,12 +51,28 @@ import { loadConfig, getConfigWithDefaults } from './config';
 import { buildMaterialiseOptions } from './materialise-context';
 import { extractScopeBlock, splitScopeBlocks } from './scope-css';
 import { buildRouteOracle, collectPublicAssets, checkInternalLinks } from './check-internal-links';
+import {
+    discoverBuildBackendDir,
+    loadBuildManifest,
+    buildBuildOracle,
+    loadSlowViewState,
+    checkTemplateLinksAgainstBuild,
+    checkContentLinks,
+    checkInstanceMeta,
+    isBuildStale,
+    newestSourceMtime,
+    type BuildOutputFinding,
+} from './check-build-output';
 
 export interface ValidateOptions {
     path?: string;
     verbose?: boolean;
     json?: boolean;
     projectRoot?: string;
+    /** DL#211 — opt-in Tier 2: additionally validate against an existing build's artifacts. */
+    tier2?: boolean;
+    /** DL#211 — explicit build backend dir or build root for Tier 2 (default: highest build version dir). */
+    buildDir?: string;
 }
 
 export interface ValidationError {
@@ -2364,6 +2380,20 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
         });
     }
 
+    // --- DL#211 — Tier 2: Build-Output Validation (opt-in: validate against an existing build) ---
+    if (options.tier2) {
+        await runBuildOutputValidation({
+            projectRoot,
+            buildDir: options.buildDir,
+            parsedFiles,
+            linkOracle,
+            assetUrls,
+            baseUrl: config.site?.baseUrl,
+            errors,
+            warnings,
+        });
+    }
+
     // --- Plugin validators (DL#145) ---
     const pluginValidators = await runPluginValidators(projectRoot, parsedFiles, errors, warnings);
 
@@ -2380,6 +2410,121 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
     };
 }
 
+/**
+ * DL#211 — run the build-output validation tier and fold its findings into `errors`/`warnings`.
+ * All findings carry `source: 'build-output'` so they print in their own group and are test-filterable.
+ */
+async function runBuildOutputValidation(args: {
+    projectRoot: string;
+    buildDir?: string;
+    parsedFiles: Array<{
+        relativePath: string;
+        parsed: {
+            body: HTMLElement;
+            validationOverrides?: Record<string, Record<string, boolean | string[]>>;
+        };
+    }>;
+    linkOracle: { dynamicMatchers: RegExp[] };
+    assetUrls: Set<string>;
+    baseUrl?: string;
+    errors: ValidationError[];
+    warnings: ValidationWarning[];
+}): Promise<void> {
+    const { projectRoot, buildDir, parsedFiles, linkOracle, assetUrls, baseUrl, errors, warnings } =
+        args;
+
+    const backendDir = await discoverBuildBackendDir(projectRoot, buildDir);
+    if (!backendDir) {
+        errors.push({
+            file: 'build',
+            message:
+                'Tier 2: no build found. Run `jay-stack build` first, or point --build-dir at a build.',
+            stage: 'generate',
+            source: 'build-output',
+        });
+        return;
+    }
+
+    const loaded = await loadBuildManifest(backendDir);
+    if (!loaded) {
+        errors.push({
+            file: backendDir,
+            message: `Tier 2: could not read route-manifest.json in ${backendDir}.`,
+            stage: 'generate',
+            source: 'build-output',
+        });
+        return;
+    }
+
+    // Staleness — warning only (the tier validates a point-in-time build by definition).
+    const newest = await newestSourceMtime([
+        path.join(projectRoot, 'src'),
+        path.join(projectRoot, 'content'),
+    ]);
+    if (isBuildStale(loaded.metadata, newest)) {
+        warnings.push({
+            file: 'build',
+            message: `Tier 2: validated against a build from ${loaded.metadata?.buildTimestamp}; source has changed since.`,
+            source: 'build-output',
+            suggestion: 'Re-run `jay-stack build` for accurate results.',
+        });
+    }
+
+    const oracle = buildBuildOracle(loaded.manifest, backendDir);
+    const findings: BuildOutputFinding[] = [];
+
+    // Check 1′ — template links Check 1 deferred, resolved against the concrete URL set.
+    findings.push(
+        ...checkTemplateLinksAgainstBuild({
+            parsedFiles,
+            buildUrls: oracle.urls,
+            assetUrls,
+            dynamicMatchers: linkOracle.dynamicMatchers,
+            baseUrl,
+        }),
+    );
+
+    // Checks 2 + 3 — per concrete instance: rendered-content links + meta/SEO.
+    for (const instance of oracle.instances) {
+        const slowViewState = await loadSlowViewState(instance.cacheAbsPath);
+        findings.push(
+            ...checkContentLinks({
+                instanceUrl: instance.url,
+                slowViewState,
+                buildUrls: oracle.urls,
+                assetUrls,
+                baseUrl,
+            }),
+        );
+        findings.push(
+            ...checkInstanceMeta({
+                instanceUrl: instance.url,
+                headMeta: instance.headMeta,
+                slowViewState,
+            }),
+        );
+    }
+
+    for (const finding of findings) {
+        if (finding.severity === 'error') {
+            errors.push({
+                file: finding.file,
+                message: finding.message,
+                stage: 'generate',
+                source: 'build-output',
+                suggestion: finding.suggestion,
+            });
+        } else {
+            warnings.push({
+                file: finding.file,
+                message: finding.message,
+                source: 'build-output',
+                suggestion: finding.suggestion,
+            });
+        }
+    }
+}
+
 export function printJayValidationResult(result: ValidationResult, options: ValidateOptions): void {
     const logger = getLogger();
     if (options.json) {
@@ -2390,10 +2535,13 @@ export function printJayValidationResult(result: ValidationResult, options: Vali
     logger.important('');
 
     // --- Core validation section ---
-    const coreErrors = result.errors.filter((e) => e.stage !== 'plugin');
+    // Tier 2 (--tier-2) findings get their own section below, so keep them out of core.
+    const coreErrors = result.errors.filter(
+        (e) => e.stage !== 'plugin' && e.source !== 'build-output',
+    );
     const coreWarnings = result.warnings.filter((w) => !w.source);
 
-    logger.important(chalk.bold('📦 jay-stack (core)'));
+    logger.important(chalk.bold('📦 Tier 1 — jay-stack (core)'));
     if (coreErrors.length === 0) {
         logger.important(
             chalk.green(
@@ -2414,6 +2562,43 @@ export function printJayValidationResult(result: ValidationResult, options: Vali
         logger.important(chalk.gray(`     ${warning.message}`));
         if (warning.suggestion) {
             logger.important(chalk.blue(`     Suggestion: ${warning.suggestion}`));
+        }
+    }
+
+    // --- Tier 2 section (--tier-2) ---
+    const buildErrors = result.errors.filter((e) => e.source === 'build-output');
+    const buildWarnings = result.warnings.filter((w) => w.source === 'build-output');
+    if (buildErrors.length > 0 || buildWarnings.length > 0) {
+        logger.important('');
+        logger.important(chalk.bold('📦 Tier 2 — build-output validation (--tier-2)'));
+        for (const error of buildErrors) {
+            logger.important(chalk.red(`   ❌ ${error.file}`));
+            logger.important(chalk.gray(`      ${error.message}`));
+            if (error.suggestion) {
+                logger.important(chalk.blue(`      Suggestion: ${error.suggestion}`));
+            }
+        }
+        // Group warnings by file (an instance URL can carry many broken content links).
+        const buildWarnGroups = new Map<string, typeof buildWarnings>();
+        for (const warning of buildWarnings) {
+            const group = buildWarnGroups.get(warning.file) || [];
+            group.push(warning);
+            buildWarnGroups.set(warning.file, group);
+        }
+        for (const [file, groupWarns] of buildWarnGroups) {
+            logger.important(chalk.yellow(`   ⚠ ${file}`));
+            for (const warning of groupWarns) {
+                if (warning.message) {
+                    logger.important(chalk.gray(`      ${warning.message}`));
+                }
+            }
+            const suggestions = [...new Set(groupWarns.map((w) => w.suggestion).filter(Boolean))];
+            if (suggestions.length > 0) {
+                logger.important(chalk.blue(`      Suggestions:`));
+                for (const s of suggestions) {
+                    logger.important(chalk.blue(`        ${s}`));
+                }
+            }
         }
     }
 
@@ -2586,6 +2771,19 @@ export function printJayValidationResult(result: ValidationResult, options: Vali
         logger.important(
             chalk.gray(
                 '\nSee: agent-kit/designer/validation-guide.md for how to interpret and suppress warnings.',
+            ),
+        );
+    }
+
+    // This was Tier 1 only — point the author at the deeper, opt-in Tier 2 pass.
+    if (!options.tier2) {
+        logger.important('');
+        logger.important(
+            chalk.gray(
+                'ℹ This was Tier 1 (template) validation. Tier 2 runs deeper checks against an existing build\n' +
+                    '  (dynamic-slug links, rendered-content links, per-instance meta):\n' +
+                    '    jay-stack validate --tier-2\n' +
+                    '  See: agent-kit/designer/validation-tier-2-guide.md',
             ),
         );
     }

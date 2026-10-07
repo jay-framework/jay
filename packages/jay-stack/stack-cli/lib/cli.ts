@@ -1,4 +1,4 @@
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import chalk from 'chalk';
 import { getLogger } from '@jay-framework/logger';
 import { initializeServicesForCli } from './cli-services';
@@ -123,9 +123,21 @@ program
     .option('-p, --path <path>', 'Scan root (default: cwd)')
     .option('-v, --verbose', 'Show per-file validation status')
     .option('--json', 'Output results as JSON')
+    .addOption(
+        new Option(
+            '--tier-2',
+            'Run Tier 2: deep validation against an existing build (dynamic-slug links, rendered content, per-instance meta)',
+        ),
+    )
+    // Short alias for --tier-2.
+    .addOption(new Option('--t2', 'Alias for --tier-2').hideHelp())
+    .option(
+        '--build-dir <dir>',
+        'Build backend dir or build root for Tier 2 (default: highest build/v*)',
+    )
     .action(async (options) => {
         try {
-            await runValidate(options.path, options);
+            await runValidate(options.path, { ...options, tier2: options.tier2 || options.t2 });
         } catch (error: any) {
             if (options.json) {
                 getLogger().important(
