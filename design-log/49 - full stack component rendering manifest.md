@@ -4,7 +4,7 @@ The Jay full stack component, created using the Syntax below, is based on the `V
 where `renderSlowlyChanging` renders part of the `ViewState` members and both `renderFastChanging` and `ProductsPageConstructor`
 render the rest of the `ViewState` members.
 
-The current API is at [jay-stack-builder.ts](packages/jay-stack/full-stack-component/lib/jay-stack-builder.ts),
+The current API is at [`packages/jay-stack/full-stack-component/lib/jay-stack-builder.ts`](https://github.com/jay-framework/jay/blob/main/packages/jay-stack/full-stack-component/lib/jay-stack-builder.ts),
 and an example usage is
 
 ```typescript

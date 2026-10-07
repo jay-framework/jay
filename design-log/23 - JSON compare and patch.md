@@ -64,7 +64,7 @@ has also a good apply algorithm which updates in place
 **Candidate algorithm**
 
 **NO** - simple validation on a 100x100 matrix with 100 updates shows seconds of runtime!!!
-see [/exploration/rfc6902](../exploration/rfc6902)
+see `exploration/rfc6902`
 
 ## [immer](https://github.com/immerjs/immer)
 

@@ -327,4 +327,4 @@ For repeated lists, add a **boolean variant** (e.g. `hasItems`, `hasCategories`)
 <div if="hasCategories" forEach="categories" trackBy="_id">...</div>
 ```
 
-Alternatively, expose a **number** data tag (`itemCount`) and use numeric comparison: `if="itemCount===0"`. See [jay-html-template-syntax.md](jay-html-template-syntax.md#expression-limits-important) and [contracts/examples/category-list.md](../contracts/examples/category-list.md).
+Alternatively, expose a **number** data tag (`itemCount`) and use numeric comparison: `if="itemCount===0"`. See [jay-html-template-syntax.md](jay-html-template-syntax.md#expression-limits-important) and [contracts/examples/category-list.md](https://github.com/jay-framework/jay/blob/main/packages/jay-stack/stack-cli/agent-kit-template/contracts/examples/category-list.md).

@@ -2,7 +2,7 @@
 
 ## Status
 
-**Done (U1–U3)** — 2026-06-02. Parent: [jay-aiditor #19](../../jay-aiditor/design-log/19%20-%20aiditor-add-menu.md). **Does not block** M19.1 (aiditor + wix-stores).
+**Done (U1–U3)** — 2026-06-02. Parent: jay-aiditor design-log `19 - aiditor-add-menu`. **Does not block** M19.1 (aiditor + wix-stores).
 
 **Note:** ui-kit lives in **jay** monorepo (`packages/plugins/ui-kit`), not wix. **wix-media out of scope.**
 

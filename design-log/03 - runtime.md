@@ -125,10 +125,10 @@ The compiler output is similar to React/JSX compiler output, with a few design d
 
 ## The main components of the Runtime
 
-1. [Random Access Linked List](../packages/list-compare/lib/random-access-linked-list.ts) - (RAList) an implementation of a double-sided linked list with random access based on id.
-1. [Kindergarden](../packages/runtime/lib/kindergarden.ts) - a wrapper for an HTML element to manage it's children.
-1. [List Compare](../packages/list-compare/lib/list-compare.ts) - an algorithm to mutate one RAList into another, creating a list of instructions to apply later.
-1. [element](../packages/runtime/lib/element.ts) - declares the different constructor functions such as `element`, `dynamicText`, etc.
+1. Random Access Linked List ([`packages/runtime/list-compare/lib/random-access-linked-list.ts`](https://github.com/jay-framework/jay/blob/main/packages/runtime/list-compare/lib/random-access-linked-list.ts)) - (RAList) an implementation of a double-sided linked list with random access based on id.
+1. Kindergarden ([`packages/runtime/runtime/lib/kindergarden.ts`](https://github.com/jay-framework/jay/blob/main/packages/runtime/runtime/lib/kindergarden.ts)) - a wrapper for an HTML element to manage it's children.
+1. List Compare ([`packages/runtime/list-compare/lib/list-compare.ts`](https://github.com/jay-framework/jay/blob/main/packages/runtime/list-compare/lib/list-compare.ts)) - an algorithm to mutate one RAList into another, creating a list of instructions to apply later.
+1. element ([`packages/runtime/runtime/lib/element.ts`](https://github.com/jay-framework/jay/blob/main/packages/runtime/runtime/lib/element.ts)) - declares the different constructor functions such as `element`, `dynamicText`, etc.
 
 ## Random Access Linked List
 

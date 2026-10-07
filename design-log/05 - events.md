@@ -66,7 +66,7 @@ binding patterns have two challenges for Jay.
 # Events binding in Jay
 
 With Jay, we try to decouple the JayFile from the code element. We explore two main directions for event bindings below.
-More options can be found in the [exploration](../exploration) folder
+More options can be found in the `exploration` folder
 
 ## 1 - id based event binding
 

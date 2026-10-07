@@ -237,7 +237,7 @@ The vendor system provides:
 
 **Purpose:** Complete implementation of Figma document to Jay HTML conversion with support for bindings, repeaters, and variants.
 
-**Related Design Log:** [Design Log #67 - Figma Vendor Conversion Algorithm](design-log/67%20-%20Figma%20Vendor%20Convesion%20Algorithm)
+**Related Design Log:** [Design Log #67 - Figma Vendor Conversion Algorithm](<67 - Figma Vendor Convesion Algorithm.md>)
 
 ### Changes
 
@@ -709,7 +709,7 @@ This branch introduces a **complete vendor system** with a **fully-functional Fi
 
 **Recommended Review Order:**
 
-1. Read [Design Log #67](design-log/67%20-%20Figma%20Vendor%20Convesion%20Algorithm) for context
+1. Read [Design Log #67](<67 - Figma Vendor Convesion Algorithm.md>) for context
 2. Review Known Limitations section (important for understanding scope)
 3. Review plugin resolution (foundation)
 4. Review protocol extensions (API contract)

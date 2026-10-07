@@ -1,7 +1,7 @@
 # View State Types
 
 The Jay type system, represented internally as `JayType` in
-[jay-type.ts](..%2Fpackages%2Fcompiler%2Fcompiler-shared%2Flib%2Fjay-type.ts) describes the type system
+[`packages/compiler/compiler-shared/lib/jay-type.ts`](https://github.com/jay-framework/jay/blob/main/packages/compiler/compiler-shared/lib/jay-type.ts) describes the type system
 used to represent the `Data` and `Variant` parts of a contract.
 
 The current supported types are

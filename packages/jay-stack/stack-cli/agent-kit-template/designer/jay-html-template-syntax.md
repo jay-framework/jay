@@ -240,7 +240,7 @@ Jay-html expressions resolve **contract or page tag names only**. They are **not
 | Empty list hint | `hasItems: boolean` variant  | `if="!hasItems"`     |
 | Count-based UI  | `itemCount: number` data tag | `if="itemCount===0"` |
 
-See [contracts/examples/category-list.md](../contracts/examples/category-list.md) (`hasCategories`).
+See [contracts/examples/category-list.md](https://github.com/jay-framework/jay/blob/main/packages/jay-stack/stack-cli/agent-kit-template/contracts/examples/category-list.md) (`hasCategories`).
 
 ### Common Errors
 

@@ -22,7 +22,7 @@ where the `sandbox` attribute can give a semantic name for the sandbox, allowing
 for now, we focus on creating the initial sandbox (one sandbox), but later we can expand the notion to multiple sandboxes.
 
 Once identified a jay element file with a `sandbox` indicator, we generate the element with support for sandboxed child components.
-This generation happens with the [`generateElementFile`](../packages/compiler/lib/jay-file/jay-file-compiler.ts#883)
+This generation happens with the `generateElementFile` ([`packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts`](https://github.com/jay-framework/jay/blob/main/packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts))
 function, and should return, aside from the generated file, also the
 list of sandboxed child components.
 
@@ -30,7 +30,7 @@ list of sandboxed child components.
 
 From this point - the element that indicates inporting sandboxed components, we need to track the import linage as
 we create the bundle. Each component that it's linage has one of the sandboxed components as to be bundled as a component bridge
-created using the [`componentBridgeTransformer`](../packages/compiler/lib/ts-file/transform-component-bridge.ts) typescript transformer.
+created using the `componentBridgeTransformer` ([`packages/compiler/compiler/lib/components-files/transform-component-bridge.ts`](https://github.com/jay-framework/jay/blob/main/packages/compiler/compiler/lib/components-files/transform-component-bridge.ts)) typescript transformer.
 
 For the transformer to work, it need to have a list of which components to transform (a list from the previous step) and
 a list of which imports are safe (element imports, again a list from the previous step). Maybe the list of elements should be
@@ -41,9 +41,9 @@ Given this transformer and the previous generation step, the bundler can create 
 ## problem 3 - bundling
 
 Given the element with the `sandbox` imports, we generate the for the same element a sandbox root (`worker-root.ts`) using
-[`generateSandboxRootFile`](../packages/compiler/lib/jay-file/jay-file-compiler.ts#962) which
+`generateSandboxRootFile` ([`packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts`](https://github.com/jay-framework/jay/blob/main/packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts)) which
 is the start of the worker bundling process. Following the imports line, we import components as-is and element bridges generated
-using [`generateElementBridgeFile`](../packages/compiler/lib/jay-file/jay-file-compiler.ts#916).
+using `generateElementBridgeFile` ([`packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts`](https://github.com/jay-framework/jay/blob/main/packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts)).
 
 ## open question
 

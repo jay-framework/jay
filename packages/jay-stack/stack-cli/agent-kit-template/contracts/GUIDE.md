@@ -60,11 +60,11 @@ See [syntax.md](syntax.md) for the full YAML format: tag types, phases, data typ
 
 Start with the simplest example that matches your use case, then add complexity as needed:
 
-| Example                                                | Complexity     | Key patterns                                                |
-| ------------------------------------------------------ | -------------- | ----------------------------------------------------------- |
-| [mini-cart](examples/mini-cart.md)                     | Trivial        | Variant + interactive refs                                  |
-| [cart-indicator](examples/cart-indicator.md)           | Simple         | Flat data, variants, phase choices                          |
-| [category-list](examples/category-list.md)             | Medium         | Props, repeated sub-contracts                               |
-| [product-card](examples/product-card.md)               | Medium-complex | Linked sub-contracts, variants, multiple ref types          |
-| [product-page](examples/product-page.md)               | Complex        | Params, nested repeated sub-contracts, linked sub-contracts |
-| [composing-contracts](examples/composing-contracts.md) | Pattern        | How contracts link together into a hierarchy                |
+| Example                                                                                                                                                         | Complexity     | Key patterns                                                |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- | ----------------------------------------------------------- |
+| [mini-cart](https://github.com/jay-framework/jay/blob/main/packages/jay-stack/stack-cli/agent-kit-template/contracts/examples/mini-cart.md)                     | Trivial        | Variant + interactive refs                                  |
+| [cart-indicator](https://github.com/jay-framework/jay/blob/main/packages/jay-stack/stack-cli/agent-kit-template/contracts/examples/cart-indicator.md)           | Simple         | Flat data, variants, phase choices                          |
+| [category-list](https://github.com/jay-framework/jay/blob/main/packages/jay-stack/stack-cli/agent-kit-template/contracts/examples/category-list.md)             | Medium         | Props, repeated sub-contracts                               |
+| [product-card](https://github.com/jay-framework/jay/blob/main/packages/jay-stack/stack-cli/agent-kit-template/contracts/examples/product-card.md)               | Medium-complex | Linked sub-contracts, variants, multiple ref types          |
+| [product-page](https://github.com/jay-framework/jay/blob/main/packages/jay-stack/stack-cli/agent-kit-template/contracts/examples/product-page.md)               | Complex        | Params, nested repeated sub-contracts, linked sub-contracts |
+| [composing-contracts](https://github.com/jay-framework/jay/blob/main/packages/jay-stack/stack-cli/agent-kit-template/contracts/examples/composing-contracts.md) | Pattern        | How contracts link together into a hierarchy                |

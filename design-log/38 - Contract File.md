@@ -18,7 +18,7 @@ The contract file is used
 The format selected for the Jay Contract File is a `YAML` formal, with a hierarchical structure capturing the
 contract hierarchical structure.
 
-To set the syntax of the `YAML` file, we take as an example the [todo-one-flat-component](..%2Fexamples%2Fjay%2Ftodo-one-flat-component)
+To set the syntax of the `YAML` file, we take as an example the `examples/jay/todo-one-flat-component`
 contract.
 
 ```yaml
