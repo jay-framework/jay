@@ -52,7 +52,7 @@ export async function generateSitemap(
     return urls.length;
 }
 
-function buildUrlFromManifest(pattern: string, params: Record<string, string>): string {
+export function buildUrlFromManifest(pattern: string, params: Record<string, string>): string {
     return (
         pattern
             .replace(/\[\[(\w+)\]\]/g, (_, name) => params[name] || '')

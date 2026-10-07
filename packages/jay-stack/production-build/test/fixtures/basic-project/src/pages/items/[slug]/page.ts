@@ -22,7 +22,8 @@ export const page = makeJayStackComponent()
     .withSlowlyRender(async (props: PageProps & ItemParams) => {
         const item = items[props.slug];
         if (!item) return phaseOutput({}, {});
-        const result = phaseOutput({ name: item.name, price: item.price }, {});
+        // props.url must carry the concrete route path at the slow phase (DL#163).
+        const result = phaseOutput({ name: item.name, price: item.price, urlPath: props.url }, {});
         result.headTags = [
             { tag: 'title', children: item.name },
             {

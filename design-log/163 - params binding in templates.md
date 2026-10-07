@@ -365,3 +365,23 @@ All five phases from the implementation plan, with no deviations from the design
 - `jay.url.path` and `jay.params` accessors
 
 All 195 expression tests pass. All 682 compiler tests pass. Type checking passes.
+
+## Implementation Follow-up — `jay.url.path` empty at slow/SSG render (October 2026)
+
+The runtime injection documented above covered the dev-server and production _serve_ paths, but the **build-time slow phase** (SSG pre-render) and the **on-demand rebuild** path never populated `pageProps.url`. Any slow-only component or instance binding on `{jay.url.path}` collapsed to `/` in production builds, violating the DL#163 guarantee that `jay.url.path` is available at every phase.
+
+`buildInstanceBindingScope` (`stack-server-runtime/resolve-instance-props.ts`) derives `jay.url.path` from `pageProps.url`; it was already correct. The bug was purely the slow-phase call sites passing an empty/absent `url`:
+
+- `production-build/lib/builder/instance-pipeline.ts` — `runSlowlyForPage(params, { params }, …)` (no url) and `slowRenderInstances(…, { pageProps: { language, url: '' } })`.
+- `production-server/lib/invalidation/rebuild-instance.ts` — the same two shapes.
+
+**Fix:** compute the concrete instance URL once and thread it into `pageProps` at all four call sites:
+
+- production-build uses `buildUrl(route, params)` (`param-routing.ts`); its signature was widened to `Pick<RouteInfo, 'rawRoute' | 'inferredParams'>` so a `JayRoute` (no `hasDynamicParams`) qualifies.
+- production-server uses `buildUrlFromManifest(route.pattern, params)`, now **exported** from `builder/generate-sitemap.ts` (it was private) and reused instead of adding a fourth inline copy.
+
+The dev-server path was already correct — it builds `pageProps` from the live request URL (`dev-server.ts:371`) and threads it through `preRenderJayHtml`; the `url: ''` default on `preRenderJayHtml` is an unused fallback.
+
+**Shared cause (DL#195 tripwire):** `jay.url.path` has now been patched at four independent slow/fast entry points, and URL-from-params logic exists in three near-duplicate forms (`buildUrl`, `buildUrlFromManifest`, plus a reproduced copy in `stack-cli/check-build-output.ts`). The root obstacle is that every slow-render entry point constructs `pageProps` by hand and must remember to populate `url`. A future consolidation — a single `routeUrl(route, params)` helper and a shared `makePageProps()` — would remove the whole class; deferred, not owned here.
+
+**Test:** `production-build/test/build.test.ts` — the dynamic `/items/[slug]` fixture now emits `urlPath: props.url` into its slow ViewState; a new test asserts the cached `slowViewState.urlPath` is `/items/widget-a` / `/items/widget-b`, not `''`/`/`. 34/34 passing. `production-server` type-checks and its suite passes; dev-server unchanged.

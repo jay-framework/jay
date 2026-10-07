@@ -3,6 +3,7 @@ import type { JayRollupConfig } from '@jay-framework/compiler-jay-stack';
 import type { JayRoute } from '@jay-framework/stack-route-scanner';
 import type { InstanceEntry } from '@jay-framework/production-server';
 import { loadProductionPageParts, buildPagePartsConfig } from './load-production-parts';
+import { buildUrl } from './param-routing';
 import { getLogger } from '@jay-framework/logger';
 import path from 'node:path';
 import fs from 'node:fs/promises';
@@ -126,11 +127,15 @@ export async function buildInstance(
     await fs.writeFile(pagePartsConfigPath, JSON.stringify(config, null, 2));
     logger.info(`[Build] Page parts config: ${routeDir}/page-parts.json`);
 
+    // Concrete URL for this instance, so slow-phase bindings like {jay.url.path}
+    // resolve to the real path instead of '' (DL#163).
+    const pageUrl = buildUrl(route, params);
+
     // 1. Slow render (page + keyed headless components)
     const slowPhase = new DevSlowlyChangingPhase();
     const slowResult = await slowPhase.runSlowlyForPage(
         params,
-        { params },
+        { language: 'en', url: pageUrl },
         pageParts.parts,
         pageParts.discoveredInstances,
         pageParts.headlessInstanceComponents,
@@ -165,7 +170,7 @@ export async function buildInstance(
             {
                 pageViewState: slowViewState,
                 pageParams: params,
-                pageProps: { language: 'en', url: '' },
+                pageProps: { language: 'en', url: pageUrl },
             },
         );
 

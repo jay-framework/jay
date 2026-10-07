@@ -202,6 +202,22 @@ describe('per-instance artifacts', () => {
         expect(cacheB.slowViewState.price).toBe(19.99);
     });
 
+    it('populates props.url with the concrete route path at the slow phase (DL#163)', async () => {
+        const items = findRoute('/items/[slug]');
+        const widgetA = items.instances.find((i) => i.params.slug === 'widget-a')!;
+        const widgetB = items.instances.find((i) => i.params.slug === 'widget-b')!;
+
+        const cacheA = JSON.parse(
+            await fs.readFile(path.join(backendDir, widgetA.cachePath), 'utf-8'),
+        );
+        const cacheB = JSON.parse(
+            await fs.readFile(path.join(backendDir, widgetB.cachePath), 'utf-8'),
+        );
+
+        expect(cacheA.slowViewState.urlPath).toBe('/items/widget-a');
+        expect(cacheB.slowViewState.urlPath).toBe('/items/widget-b');
+    });
+
     it('server element renders index page HTML', async () => {
         const index = findRoute('');
         const mod = await import(path.join(backendDir, index.instances[0].serverElementPath));

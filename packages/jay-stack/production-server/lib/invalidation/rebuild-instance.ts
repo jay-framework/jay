@@ -1,5 +1,6 @@
 import type { InstanceEntry, RouteEntry } from '../types';
 import { loadPagePartsFromConfig } from '../builder/load-production-parts';
+import { buildUrlFromManifest } from '../builder/generate-sitemap';
 import { FilesystemArtifactStore } from '../serve/artifact-store';
 import { DevSlowlyChangingPhase, slowRenderInstances } from '@jay-framework/stack-server-runtime';
 import { getLogger } from '@jay-framework/logger';
@@ -56,10 +57,14 @@ export async function rebuildInstance(
         return { status: 'skipped', reason: `Failed to load page-parts.json: ${err.message}` };
     }
 
+    // Concrete URL for this instance, so slow-phase bindings like {jay.url.path}
+    // resolve to the real path instead of '' (DL#163).
+    const pageUrl = buildUrlFromManifest(route.pattern, params);
+
     const slowPhase = new DevSlowlyChangingPhase();
     const slowResult = await slowPhase.runSlowlyForPage(
         params,
-        { params },
+        { language: 'en', url: pageUrl },
         pageParts.parts,
         pageParts.discoveredInstances,
         pageParts.headlessInstanceComponents,
@@ -89,7 +94,7 @@ export async function rebuildInstance(
             {
                 pageViewState: slowViewState,
                 pageParams: params,
-                pageProps: { language: 'en', url: '' },
+                pageProps: { language: 'en', url: pageUrl },
             },
         );
 
