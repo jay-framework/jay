@@ -1,0 +1,53 @@
+{
+    "version": "0.2.0",
+    "projectRoot": ".",
+    "sharedManifest": {},
+    "routes": [
+        {
+            "pattern": "/",
+            "segments": [],
+            "serverModule": "home.server.js",
+            "instances": []
+        },
+        {
+            "pattern": "/about",
+            "segments": [{ "type": "static", "value": "about" }],
+            "serverModule": "about.server.js",
+            "instances": []
+        },
+        {
+            "pattern": "/blog/[slug]",
+            "segments": [
+                { "type": "static", "value": "blog" },
+                { "type": "param", "value": "slug" }
+            ],
+            "serverModule": "blog.server.js",
+            "headMeta": {
+                "title": [{ "kind": "binding", "value": "post.title" }],
+                "meta": [
+                    {
+                        "name": "description",
+                        "content": [{ "kind": "static", "value": "A blog post" }]
+                    }
+                ],
+                "links": []
+            },
+            "instances": [
+                {
+                    "params": { "slug": "hello" },
+                    "cachePath": "pre-rendered/blog-hello.cache.json",
+                    "serverElementPath": "",
+                    "clientBundlePath": ""
+                },
+                {
+                    "params": { "slug": "world" },
+                    "cachePath": "pre-rendered/blog-world.cache.json",
+                    "serverElementPath": "",
+                    "clientBundlePath": ""
+                }
+            ]
+        }
+    ],
+    "actions": [],
+    "plugins": []
+}

@@ -1,0 +1,15 @@
+{
+    "version": "0.1.0",
+    "projectRoot": ".",
+    "sharedManifest": {},
+    "routes": [
+        {
+            "pattern": "/",
+            "segments": [],
+            "serverModule": "home.server.js",
+            "instances": []
+        }
+    ],
+    "actions": [],
+    "plugins": []
+}

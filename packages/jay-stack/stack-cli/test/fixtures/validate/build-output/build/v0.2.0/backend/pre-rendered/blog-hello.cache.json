@@ -1,0 +1,7 @@
+{
+    "slowViewState": {
+        "post": { "title": "Hello World" },
+        "body": "<p>Links: <a href=\"/blog/world\">next</a> and <a href=\"/blog/ghost\">missing</a></p>"
+    },
+    "carryForward": {}
+}

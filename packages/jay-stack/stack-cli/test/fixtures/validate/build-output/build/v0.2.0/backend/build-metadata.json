@@ -1,0 +1,7 @@
+{
+    "version": "0.2.0",
+    "sourceHash": "deadbeef",
+    "buildTimestamp": "2099-01-01T00:00:00.000Z",
+    "nodeVersion": "v20.0.0",
+    "instanceCount": 2
+}

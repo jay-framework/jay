@@ -14,3 +14,9 @@ examples/**/lib/**/*.jay-html.ts
 /.idea/workspace.xml
 
 4example
+
+# Static test fixture that mirrors a real build/ layout — a committed INPUT the
+# check-build-output tests read (not generated output). Re-include it despite the
+# global `build` rule above. Scoped tightly so generated fixture build/ dirs stay ignored.
+!**/test/fixtures/validate/build-output/build/
+!**/test/fixtures/validate/build-output/build/**
