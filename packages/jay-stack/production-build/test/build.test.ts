@@ -111,6 +111,22 @@ describe('route manifest', () => {
         expect(slugs).toEqual(['widget-a', 'widget-b']);
     });
 
+    it('persists jay-script="allow" passthrough scripts into the manifest (DL#149)', () => {
+        const home = findRoute('/home');
+        expect(home.scripts).toEqual([
+            {
+                src: 'https://cdn.example.com/analytics.js',
+                attributes: { async: '', defer: '' },
+                position: 'head',
+            },
+            {
+                inline: 'window.__brand = "A & B <ok>";',
+                attributes: {},
+                position: 'body',
+            },
+        ]);
+    });
+
     it('includes actions', () => {
         const cartAction = manifest.actions.find((a) => a.actionNames.includes('cart.add'));
         expect(cartAction).toBeDefined();

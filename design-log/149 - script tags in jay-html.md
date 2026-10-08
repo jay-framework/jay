@@ -166,3 +166,15 @@ Create a new agent-kit guide `designer/script-tags.md` (referenced from designer
 - SSR: head scripts appear in `<head>`, body scripts appear in `<body>` at correct position
 - Frozen pages: allowed scripts appear in static output
 - Agent-kit: `designer/script-tags.md` guide exists and is referenced from designer INSTRUCTIONS.md
+
+## Implementation Follow-up — passthrough scripts dropped in production (October 2026)
+
+**Bug:** `jay-script="allow"` scripts rendered in dev SSR and `stack-server-build`, but the production path dropped them silently: (1) the build never persisted collected scripts into `route-manifest.json`; (2) `production-server` head/body assembly had no serialize step. Repro: add a `<script jay-script="allow">` to a page `<head>`/`<body>`, `jay-stack-cli build`, serve → present in dev, absent in production. This is the DL#195 boundary-crossing failure mode — the dev target rendered correctly while the production target silently diverged, invisible to types and validation.
+
+**Fix (persist, then render):**
+
+- Shared serializer: `JayHtmlScript` + `serializeScripts(scripts, position)` now live in `stack-server-runtime/lib/head-tags.ts` alongside `serializeHeadTags` (one copy, consumed by both `stack-server-build` and `production-server`). `generate-ssr-response.ts` dropped its private duplicate — avoiding a third near-duplicate (DL#195 tripwire).
+- Persistence (mirrors the `headMeta` path): `server-element-compile.ts` returns `scripts: parsedJayFile.scripts` → `build-pipeline.ts` sets `entry.scripts` → `RouteEntry.scripts?: JayHtmlScript[]` in `production-server/types.ts`.
+- Render: `fetch-page-handler.ts` calls `serializeScripts(route.scripts, "head")` into `headParts` and `serializeScripts(route.scripts, "body")` before `</body>`.
+
+**Tests:** `production-build/test/build.test.ts` — a `jay-script="allow"` head `src` (async/defer) + inline body script on the `/home` fixture persist into the manifest with exact shape. `stack-server-runtime/test/head-tags.test.ts` — `serializeScripts` unit tests: position filtering, boolean attrs preserved, inline body emitted un-escaped. 35/35 + 31/31 passing; stack-server-build 59/59, production-server 9/9 after the shared-serializer refactor.

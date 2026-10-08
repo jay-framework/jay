@@ -156,6 +156,43 @@ export function headMetaToHeadTags(
 }
 
 /**
+ * A passthrough `<script jay-script="allow">` collected from a jay-html template (DL#149 Phase 2).
+ * Structurally mirrors the compiler's `JayHtmlScript` so values flow through unchanged.
+ */
+export interface JayHtmlScript {
+    src?: string;
+    inline?: string;
+    attributes: Record<string, string>;
+    position: 'head' | 'body';
+}
+
+/**
+ * Serialize passthrough scripts for one position (`head` or `body`) into an HTML string.
+ * Inline bodies are emitted un-escaped (the author opted in via `jay-script="allow"`).
+ * Shared by the dev SSR path and the production server so both render identically (DL#149).
+ */
+export function serializeScripts(
+    scripts: JayHtmlScript[] | undefined,
+    position: 'head' | 'body',
+): string {
+    if (!scripts) return '';
+    const filtered = scripts.filter((s) => s.position === position);
+    if (filtered.length === 0) return '';
+    return filtered
+        .map((s) => {
+            const attrs = Object.entries(s.attributes)
+                .map(([k, v]) => (v === '' ? k : `${k}="${v}"`))
+                .join(' ');
+            const attrStr = attrs ? ' ' + attrs : '';
+            if (s.src) {
+                return `    <script src="${s.src}"${attrStr}></script>`;
+            }
+            return `    <script${attrStr}>${s.inline}</script>`;
+        })
+        .join('\n');
+}
+
+/**
  * Serialize an array of HeadTag objects into an HTML string.
  */
 export function serializeHeadTags(tags: HeadTag[]): string {

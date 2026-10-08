@@ -8,6 +8,7 @@ import {
     generateElementHydrateFile,
     JAY_IMPORT_RESOLVER,
     JayHtmlSourceFile,
+    type JayHtmlScript,
 } from '@jay-framework/compiler-jay-html';
 import {
     RuntimeMode,
@@ -26,6 +27,8 @@ export interface ServerElementCompileResult {
     /** External URLs extracted from @import rules (e.g., Google Fonts) */
     cssImports?: string[];
     headMeta?: JayHtmlHeadMeta;
+    /** Passthrough `<script jay-script="allow">` tags from the jay-html template (DL#149 Phase 2). */
+    scripts?: JayHtmlScript[];
 }
 
 export async function compileServerElement(
@@ -99,7 +102,12 @@ export async function compileServerElement(
     }
 
     getLogger().info(`[Build] Compiled server element: ${path.basename(outputPath)}`);
-    return { cssFile, cssImports, headMeta: parsedJayFile.headMeta };
+    return {
+        cssFile,
+        cssImports,
+        headMeta: parsedJayFile.headMeta,
+        scripts: parsedJayFile.scripts,
+    };
 }
 
 /**

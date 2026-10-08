@@ -1,4 +1,4 @@
-import type { JayHtmlHeadMeta } from '@jay-framework/stack-server-runtime';
+import type { JayHtmlHeadMeta, JayHtmlScript } from '@jay-framework/stack-server-runtime';
 
 export interface RouteManifest {
     version: string;
@@ -33,6 +33,8 @@ export interface RouteEntry {
     cssImports?: string[];
     /** Head metadata from jay-html <head> (title, meta tags). */
     headMeta?: JayHtmlHeadMeta;
+    /** Passthrough `<script jay-script="allow">` tags from the jay-html template (DL#149 Phase 2). */
+    scripts?: JayHtmlScript[];
     /** True when page has static <meta name="robots" content="noindex"> */
     noIndex?: boolean;
     instances: InstanceEntry[];

@@ -5,6 +5,7 @@ import {
     renderFastChangingData,
     mergeHeadTags,
     serializeHeadTags,
+    serializeScripts,
     headMetaToHeadTags,
     getClientInitData,
 } from '@jay-framework/stack-server-runtime';
@@ -135,6 +136,10 @@ export async function fetchPageRequest(
         preconnectTags.length > 0 ? serializeHeadTags(preconnectTags) + '\n' : '';
     const headTagsHtml = otherHeadTags.length > 0 ? serializeHeadTags(otherHeadTags) + '\n' : '';
 
+    // Passthrough scripts from the jay-html template (jay-script="allow", DL#149 Phase 2).
+    const headScriptsHtml = serializeScripts(route.scripts, 'head');
+    const bodyScriptsHtml = serializeScripts(route.scripts, 'body');
+
     const serverElementPath = route.serverElementPath || instance.serverElementPath;
     const tLoadStart = Date.now();
     const serverElement = await artifacts.loadServerElement(serverElementPath);
@@ -168,7 +173,9 @@ export async function fetchPageRequest(
         async start(controller) {
             const write = (s: string) => controller.enqueue(encoder.encode(s));
 
-            const headParts = [headTagsHtml, modulePreloads, cssLink].filter(Boolean).join('\n');
+            const headParts = [headTagsHtml, modulePreloads, cssLink, headScriptsHtml]
+                .filter(Boolean)
+                .join('\n');
             write(`<!doctype html>
 <html lang="en">
   <head>
@@ -227,7 +234,7 @@ ${headParts}
       const _t=performance.now();
       await init(${initArgs});
       console.log('[jay] hydrate: '+(performance.now()-_t).toFixed(1)+'ms');
-    </script>
+    </script>${bodyScriptsHtml ? '\n    ' + bodyScriptsHtml : ''}
   </body>
 </html>`);
             controller.close();

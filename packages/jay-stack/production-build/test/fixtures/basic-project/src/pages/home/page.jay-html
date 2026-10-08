@@ -6,11 +6,13 @@ data:
     itemCount: number
     </script>
     <style>.home { padding: 10px }</style>
+    <script jay-script="allow" src="https://cdn.example.com/analytics.js" async defer></script>
 </head>
 <body>
     <div class="home">
         <h1>{siteName}</h1>
         <p>Items: {itemCount}</p>
     </div>
+    <script jay-script="allow">window.__brand = "A & B <ok>";</script>
 </body>
 </html>

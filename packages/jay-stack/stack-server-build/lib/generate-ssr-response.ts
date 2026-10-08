@@ -15,7 +15,11 @@ import { asyncSwapScript, type ServerRenderContext } from '@jay-framework/ssr-ru
 import type { ViteDevServer } from 'vite';
 import type { HeadTag } from '@jay-framework/fullstack-component';
 import type { DevServerPagePart } from './load-page-parts';
-import { mergeHeadTags, serializeHeadTags } from '@jay-framework/stack-server-runtime';
+import {
+    mergeHeadTags,
+    serializeHeadTags,
+    serializeScripts,
+} from '@jay-framework/stack-server-runtime';
 import type { TrackByMap } from '@jay-framework/view-state-merge';
 import {
     buildPageReloadHmrScript,
@@ -391,24 +395,6 @@ ${headExtras ? headExtras + '\n' : ''}    <style>
  * The compiler calculates import paths relative to the source jay-html directory,
  * but the generated server-element file lives in a different directory (build/pre-rendered/{routeDir}/).
  */
-function serializeScripts(scripts: JayHtmlScript[] | undefined, position: 'head' | 'body'): string {
-    if (!scripts) return '';
-    const filtered = scripts.filter((s) => s.position === position);
-    if (filtered.length === 0) return '';
-    return filtered
-        .map((s) => {
-            const attrs = Object.entries(s.attributes)
-                .map(([k, v]) => (v === '' ? k : `${k}="${v}"`))
-                .join(' ');
-            const attrStr = attrs ? ' ' + attrs : '';
-            if (s.src) {
-                return `    <script src="${s.src}"${attrStr}></script>`;
-            }
-            return `    <script${attrStr}>${s.inline}</script>`;
-        })
-        .join('\n');
-}
-
 function rebaseRelativeImports(code: string, fromDir: string, toDir: string): string {
     return code.replace(/from "(\.\.\/[^"]+)"/g, (_match, relPath) => {
         const absolutePath = path.resolve(fromDir, relPath);

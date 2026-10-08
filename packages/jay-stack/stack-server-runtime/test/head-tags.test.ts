@@ -1,5 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
-import { tagIdentityKey, mergeHeadTags, serializeHeadTags } from '../lib/head-tags';
+import {
+    tagIdentityKey,
+    mergeHeadTags,
+    serializeHeadTags,
+    serializeScripts,
+    type JayHtmlScript,
+} from '../lib/head-tags';
 import type { HeadTag } from '@jay-framework/fullstack-component';
 
 describe('tagIdentityKey', () => {
@@ -203,5 +209,48 @@ describe('serializeHeadTags', () => {
     it('renders non-void element without children as empty', () => {
         const result = serializeHeadTags([{ tag: 'style' }]);
         expect(result).toBe('    <style></style>');
+    });
+});
+
+describe('serializeScripts (DL#149 passthrough)', () => {
+    const scripts: JayHtmlScript[] = [
+        {
+            src: 'https://cdn.example.com/analytics.js',
+            attributes: { async: '', defer: '' },
+            position: 'head',
+        },
+        {
+            inline: 'window.__brand = "A & B <ok>";',
+            attributes: {},
+            position: 'body',
+        },
+    ];
+
+    it('returns empty string for undefined scripts', () => {
+        expect(serializeScripts(undefined, 'head')).toBe('');
+    });
+
+    it('returns empty string when no script matches the position', () => {
+        expect(serializeScripts([scripts[0]], 'body')).toBe('');
+    });
+
+    it('renders a src script with boolean attributes preserved', () => {
+        expect(serializeScripts(scripts, 'head')).toBe(
+            '    <script src="https://cdn.example.com/analytics.js" async defer></script>',
+        );
+    });
+
+    it('renders an inline body script un-escaped', () => {
+        expect(serializeScripts(scripts, 'body')).toBe(
+            '    <script>window.__brand = "A & B <ok>";</script>',
+        );
+    });
+
+    it('renders key="value" attributes for non-boolean attrs', () => {
+        const result = serializeScripts(
+            [{ src: '/x.js', attributes: { type: 'module', nonce: 'abc' }, position: 'head' }],
+            'head',
+        );
+        expect(result).toBe('    <script src="/x.js" type="module" nonce="abc"></script>');
     });
 });

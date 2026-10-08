@@ -456,6 +456,9 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
                     entry.noIndex = true;
                 }
             }
+            if (seResult.scripts?.length) {
+                entry.scripts = seResult.scripts;
+            }
 
             logger.important(`[Build] Route server element: ${routeDir}`);
         } catch (err: any) {
