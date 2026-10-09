@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/compiler-inline-composition",
-  "version": "0.25.0",
+  "version": "0.25.1",
   "description": "DL#196 validated inline composition — region/source differ (facet-addressable), materialiser and sync",
   "license": "Apache-2.0",
   "author": "",
