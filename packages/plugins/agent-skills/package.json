@@ -1,0 +1,48 @@
+{
+  "name": "@jay-framework/agent-skills",
+  "version": "0.25.0",
+  "type": "module",
+  "description": "Publishes agent skills at /.well-known/agent-skills/ (agent-skills-discovery v0.2.0) for Jay Framework — creation CLI + freshness validator",
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "files": [
+    "dist",
+    "plugin.yaml",
+    "publish-skills.jay-command",
+    "agent-kit"
+  ],
+  "exports": {
+    ".": "./dist/index.js",
+    "./tools": "./dist/tools.js",
+    "./plugin.yaml": "./plugin.yaml",
+    "./publish-skills.jay-command": "./publish-skills.jay-command"
+  },
+  "scripts": {
+    "build": "npm run clean && npm run build:server && npm run build:types && npm run validate",
+    "validate": "jay-stack-cli validate-plugin",
+    "build:server": "vite build --ssr",
+    "build:types": "tsup lib/index.ts lib/tools.ts --dts-only --format esm",
+    "build:check-types": "tsc",
+    "clean": "rimraf dist",
+    "confirm": "npm run clean && npm run build && npm run test",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@jay-framework/fullstack-component": "workspace:^",
+    "yaml": "^2.3.4"
+  },
+  "peerDependencies": {
+    "@jay-framework/compiler-shared": "workspace:^"
+  },
+  "devDependencies": {
+    "@jay-framework/compiler-shared": "workspace:^",
+    "@jay-framework/dev-environment": "workspace:^",
+    "@jay-framework/jay-stack-cli": "workspace:^",
+    "@types/node": "^22.15.21",
+    "rimraf": "^5.0.5",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11",
+    "vitest": "^1.2.1"
+  }
+}

@@ -12,6 +12,14 @@ export interface ProductionContext {
     tsConfigFilePath: string;
     /** Site base URL from .jay config (site.baseUrl), used for sitemap generation. */
     siteBaseUrl?: string;
+    /** Full site identity from .jay config (site.*), used for Organization/WebSite JSON-LD (DL#213). */
+    site?: {
+        name?: string;
+        baseUrl?: string;
+        logo?: string;
+        description?: string;
+        sameAs?: string[];
+    };
 }
 
 export async function resolveProductionContext(
@@ -23,10 +31,12 @@ export async function resolveProductionContext(
     const jayConfigPath = path.join(resolvedPath, '.jay');
     let pagesBase = './src/pages';
     let siteBaseUrl: string | undefined;
+    let site: ProductionContext['site'];
     try {
         const jayConfig = YAML.parse(await fs.readFile(jayConfigPath, 'utf-8'));
         pagesBase = jayConfig?.devServer?.pagesBase || pagesBase;
         siteBaseUrl = jayConfig?.site?.baseUrl;
+        site = jayConfig?.site;
     } catch {
         // No .jay config, use defaults
     }
@@ -40,6 +50,7 @@ export async function resolveProductionContext(
         version,
         tsConfigFilePath: path.join(resolvedPath, 'tsconfig.json'),
         siteBaseUrl,
+        site,
     };
 }
 
@@ -93,6 +104,7 @@ export async function runBuild(
         tsConfigFilePath: ctx.tsConfigFilePath,
         minify: options.minify,
         siteBaseUrl: ctx.siteBaseUrl,
+        site: ctx.site,
     });
 }
 
@@ -200,6 +212,7 @@ export async function runRebuild(
         target,
         tsConfigFilePath: ctx.tsConfigFilePath,
         siteBaseUrl: ctx.siteBaseUrl,
+        site: ctx.site,
     });
 
     if (result.errors.length > 0) {

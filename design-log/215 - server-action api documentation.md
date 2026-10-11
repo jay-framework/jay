@@ -6,17 +6,17 @@ Began as the OpenAPI item for the ora.ai Access checks (0/7); investigation refr
 
 > ✅ **2026-10-11 DECISION (supersedes everything below).** Exposing agent-facing API surfaces
 > (**MCP, REST**) is the **space of plugins, not the core framework**. The core framework's only
-> job is to **support** such plugins (see *Core-side support* below). Target architecture:
+> job is to **support** such plugins (see _Core-side support_ below). Target architecture:
 >
-> **core framework support  +  MCP plugin  +  REST plugin**
+> **core framework support + MCP plugin + REST plugin**
 >
 > We are **not building the MCP/REST plugins now**, so this discussion is **parked**. No core
 > code lands from this DL yet either — the core-support items are noted so that whoever builds
-> the first exposure plugin knows what hooks to add. ora's *OpenAPI 0/7* is accepted as
+> the first exposure plugin knows what hooks to add. ora's _OpenAPI 0/7_ is accepted as
 > deferred until a REST plugin exists; the agent-callable gap is otherwise addressed by the
 > `webmcp` plugin (already shipped) + `.well-known/ard.json` discovery (DL#214).
 >
-> ⚠️ The 2026-10-09 investigation (below) still stands as the *rationale* — actions are not a
+> ⚠️ The 2026-10-09 investigation (below) still stands as the _rationale_ — actions are not a
 > clean base for a blanket OpenAPI (not a public/private boundary; RPC-not-REST envelope; no
 > per-call auth). It is **why** exposure belongs in plugins, not core. See
 > **[Investigation Results](#investigation-results-2026-10-09)**. Everything between here and
@@ -33,7 +33,7 @@ the map:
 - **Server-route registration for plugins** — a plugin must be able to mount its own HTTP
   handler (e.g. `/mcp`, `/api/*`, `/openapi.json`). Verify/extend the plugin route mechanism.
 - **Action metadata access** — read the exposed set + schemas: `ActionMetadata { name,
-  description, inputSchema, outputSchema }` (`stack-server-build/lib/action-metadata.ts`) and
+description, inputSchema, outputSchema }` (`stack-server-build/lib/action-metadata.ts`) and
   the runtime `getActionsWithMetadata()` (`stack-server-runtime/lib/action-registry.ts`).
   Method is derivable (`makeJayAction`→POST, `makeJayQuery`→GET). ✅ exists today.
 - **Per-call auth/context into actions** — the current gap: `execute(name, input)` →
@@ -41,7 +41,7 @@ the map:
   authenticated or mutating exposure needs core to thread per-call context to actions. Likely
   its **own DL** before a REST/MCP plugin can expose non-public actions.
 - **An exposure opt-in marker** — `.jay-action` has no `public`/`scope` field (✅ verified), and
-  `.jay-action` is *not* a public/private boundary (aiditor ships internal `readFile`/
+  `.jay-action` is _not_ a public/private boundary (aiditor ships internal `readFile`/
   `writePluginSource` actions). A plugin needs a reliable signal for which actions are safe to
   expose; core should own that marker so every exposure plugin reads the same boundary.
 
@@ -49,7 +49,7 @@ the map:
 
 - **The hard parts already exist — this is mostly a renderer.** The framework already:
   - parses each `.jay-action` into `ActionMetadata { name, description, inputSchema,
-    outputSchema }` where **input/output are already JSON Schema**
+outputSchema }` where **input/output are already JSON Schema**
     (`stack-server-build/lib/action-metadata.ts` → `jayTypeToJsonSchema`), explicitly "for
     consumers (AI agent tool builders)";
   - exposes each action at a **known endpoint** `/_jay/actions/<actionName>`
@@ -64,7 +64,7 @@ the map:
 - **OPEN (Q1) — the one thing to decide**: output format. OpenAPI JSON (what ora scores and
   tools consume) vs. curated markdown (top-level + per-category) vs. **both from one source**.
   Recommendation: **both** — same `ActionMetadata`, two thin renderers. OpenAPI for the score
-  + machine consumption; markdown for humans/agents browsing. Decide before building.
+  - machine consumption; markdown for humans/agents browsing. Decide before building.
 - **Needs confirmation (⚠️)**: the HTTP **method** per action. `ActionMetadata` (from
   `.jay-action`) has no `method` field; the handler reads `action.method` at runtime
   (`fetch-action-handler.ts:45`). Find where method is declared/registered and thread it into
@@ -91,17 +91,18 @@ checks score 0/7 despite the data existing.
 
 ## Prior Art / Adjacent Mechanisms (verified)
 
-| Mechanism                       | Where                                                                       | Relation                                                        |
-| ------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `.jay-action` → `ActionMetadata` | `stack-server-build/lib/action-metadata.ts` (`parseActionMetadata`)       | ✅ supplies name/description/input+output **JSON Schema**       |
-| JayType → JSON Schema           | `compiler-shared/lib/jay-type-to-json-schema.ts` (`jayTypeToJsonSchema`)   | ✅ the hard conversion is done; OpenAPI schemas ⊃ JSON Schema   |
-| Action endpoint convention      | `production-server/lib/serve/fetch-action-handler.ts:9` (`/_jay/actions/`) | ✅ the OpenAPI `path` per action                                |
-| Curation boundary               | action-metadata.ts header: "no `.jay-action` ⇒ not exposed to AI agents"   | ✅ resolves "expose all?" — only declared actions are public    |
-| Action registry w/ metadata     | `stack-server-runtime/lib/action-registry.ts` (`getActionsWithMetadata()`) | runtime source of the exposed set; mirrors the build view      |
-| Action HTTP method              | `fetch-action-handler.ts:45` reads `action.method`                        | ⚠️ not in `ActionMetadata` — confirm its declared source       |
-| Manifest `ActionEntry`          | `production-server/lib/types.ts` (`actionNames`, `serverModule`, `isPlugin`) | slim; richer per-action docs come from re-reading `.jay-action` |
+| Mechanism                        | Where                                                                        | Relation                                                        |
+| -------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `.jay-action` → `ActionMetadata` | `stack-server-build/lib/action-metadata.ts` (`parseActionMetadata`)          | ✅ supplies name/description/input+output **JSON Schema**       |
+| JayType → JSON Schema            | `compiler-shared/lib/jay-type-to-json-schema.ts` (`jayTypeToJsonSchema`)     | ✅ the hard conversion is done; OpenAPI schemas ⊃ JSON Schema   |
+| Action endpoint convention       | `production-server/lib/serve/fetch-action-handler.ts:9` (`/_jay/actions/`)   | ✅ the OpenAPI `path` per action                                |
+| Curation boundary                | action-metadata.ts header: "no `.jay-action` ⇒ not exposed to AI agents"     | ✅ resolves "expose all?" — only declared actions are public    |
+| Action registry w/ metadata      | `stack-server-runtime/lib/action-registry.ts` (`getActionsWithMetadata()`)   | runtime source of the exposed set; mirrors the build view       |
+| Action HTTP method               | `fetch-action-handler.ts:45` reads `action.method`                           | ⚠️ not in `ActionMetadata` — confirm its declared source        |
+| Manifest `ActionEntry`           | `production-server/lib/types.ts` (`actionNames`, `serverModule`, `isPlugin`) | slim; richer per-action docs come from re-reading `.jay-action` |
 
 **Load-bearing claims:**
+
 - ✅ verified — `ActionMetadata` carries `inputSchema` (JSON-Schema object) and `outputSchema`
   (JSON Schema); produced via `jayTypeToJsonSchema`.
 - ✅ verified — actions are served at `/_jay/actions/<name>`.
@@ -112,26 +113,27 @@ checks score 0/7 despite the data existing.
 
 **Q1 (OPEN — user-flagged). OpenAPI spec, curated per-category docs, or both?**
 A. Three framings, same source data:
-   - **OpenAPI JSON** (`/openapi.json`): directly what ora scores; consumable by agent
-     tooling, Swagger UI, codegen. Cheap — a renderer over `ActionMetadata` + endpoint + method.
-   - **Curated markdown** (one top-level `api.md` + one doc per action category/plugin): more
-     human/agent-browsable, groups by plugin/namespace (`cart.add`, `cart.remove` → "cart").
-   - **Both** (recommended): render OpenAPI _and_ markdown from the same `ActionMetadata`
-     pass. The user's concern about over-exposure is already handled by the `.jay-action`
-     boundary, so there's no curation cost to generating the full (already-curated) spec.
-   **Decision needed before implementation.** Default to both unless told otherwise.
+
+- **OpenAPI JSON** (`/openapi.json`): directly what ora scores; consumable by agent
+  tooling, Swagger UI, codegen. Cheap — a renderer over `ActionMetadata` + endpoint + method.
+- **Curated markdown** (one top-level `api.md` + one doc per action category/plugin): more
+  human/agent-browsable, groups by plugin/namespace (`cart.add`, `cart.remove` → "cart").
+- **Both** (recommended): render OpenAPI _and_ markdown from the same `ActionMetadata`
+  pass. The user's concern about over-exposure is already handled by the `.jay-action`
+  boundary, so there's no curation cost to generating the full (already-curated) spec.
+  **Decision needed before implementation.** Default to both unless told otherwise.
 
 **Q2. Per-category grouping — by what key?**
 A. Action names are namespaced (`cart.add`). Group by the segment before the first `.`
-   (or by owning plugin). Yields natural per-category docs and OpenAPI tags.
+(or by owning plugin). Yields natural per-category docs and OpenAPI tags.
 
 **Q3. Where does it emit / where is it served?**
 A. Beside sitemap/llms.txt (DL#214) in the production output dir, served at a stable path
-   (`/openapi.json`, `/api.md`). Same build-time emission step.
+(`/openapi.json`, `/api.md`). Same build-time emission step.
 
 **Q4. Plugin actions vs page actions — both documented?**
 A. Any action with a `.jay-action` is documented regardless of origin (`isPlugin` just
-   becomes a tag/section). Non-`.jay-action` actions stay private.
+becomes a tag/section). Non-`.jay-action` actions stay private.
 
 ## Design (pending Q1)
 
@@ -192,12 +194,12 @@ I am not sure actions are the right base for an open API."_ The audit confirms t
 
 Surveyed every `.jay-action` under `~/work/jay/{wix,golf,…}` (non-node_modules). Three natures:
 
-| Nature | Examples | Expose publicly? |
-| ------ | -------- | ---------------- |
-| Read-only catalog **queries** (`makeJayQuery`/GET) | `wix-stores` searchProducts/getProductBySlug/getCollections/getCategories/getVariantStock; `wix-bookings` listServices/listSlots; `wix-data` queryItems/getItemBySlug/getCategories; `wix-forms` getFormSummary | ✅ the only clean fit |
-| **Mutations** (`makeJayAction`/POST) | `wix-bookings` createBooking; `wix-forms` submitForm | ⚠️ need auth/validation — unsafe to document as callable |
-| **Internal editor RPC** | `aiditor` (~35): `readFileAction` ("read a file from the project filesystem"), `writePluginSourceAction`, run-publish, submit-task, cancel-agent-task | ❌ must never be public |
-| Stateful agent protocol (streaming) | `gemini-agent` sendMessage, submitToolResults (ndjson) | ❌ not a REST resource |
+| Nature                                             | Examples                                                                                                                                                                                                        | Expose publicly?                                         |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Read-only catalog **queries** (`makeJayQuery`/GET) | `wix-stores` searchProducts/getProductBySlug/getCollections/getCategories/getVariantStock; `wix-bookings` listServices/listSlots; `wix-data` queryItems/getItemBySlug/getCategories; `wix-forms` getFormSummary | ✅ the only clean fit                                    |
+| **Mutations** (`makeJayAction`/POST)               | `wix-bookings` createBooking; `wix-forms` submitForm                                                                                                                                                            | ⚠️ need auth/validation — unsafe to document as callable |
+| **Internal editor RPC**                            | `aiditor` (~35): `readFileAction` ("read a file from the project filesystem"), `writePluginSourceAction`, run-publish, submit-task, cancel-agent-task                                                           | ❌ must never be public                                  |
+| Stateful agent protocol (streaming)                | `gemini-agent` sendMessage, submitToolResults (ndjson)                                                                                                                                                          | ❌ not a REST resource                                   |
 
 ### Three verified blockers to "actions → OpenAPI"
 
@@ -233,17 +235,18 @@ question put to the user):
   MCP server cards (`application/mcp-server-card+json`) referenced from `.well-known/ard.json`
   (DL#214 Q7) and/or WebMCP tool descriptors. This is arguably what agent-usability wants more
   than OpenAPI, reuses #214 infra, and sidesteps the envelope/auth mismatch. Cost: does not
-  directly recover ora's *OpenAPI* checks (it recovers usability/discovery instead).
+  directly recover ora's _OpenAPI_ checks (it recovers usability/discovery instead).
 - **C — Reserve OpenAPI for a hand-authored REST surface.** Drop auto-from-actions; only emit
   an OpenAPI if/when the project defines deliberate REST endpoints. Lowest framework surface;
   defers the score.
 
 **Resolved (2026-10-11):** none of A/B/C land in core. The surface audit (MCP, WebMCP, REST,
 schema.org actions — see the surface map in the DL thread) concluded that **exposing** any of
-these is **plugin work**; core only provides the hooks in *Core-side support* at the top. So:
+these is **plugin work**; core only provides the hooks in _Core-side support_ at the top. So:
+
 - **MCP / REST** → future plugins (not built; parked).
 - **WebMCP** → already a plugin (`packages/plugins/webmcp`).
 - **Discovery** (what points at these surfaces) → `.well-known/ard.json` + `llms.txt` (DL#214),
   JSON-LD (DL#213).
-This DL is **parked** until the first exposure plugin is built; the Design/Implementation
-sections above are not pursued.
+  This DL is **parked** until the first exposure plugin is built; the Design/Implementation
+  sections above are not pursued.

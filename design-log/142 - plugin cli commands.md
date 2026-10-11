@@ -393,3 +393,18 @@ data:
 6. Unknown plugin/command prints helpful error with available commands
 7. Exit code 0 on success, 1 on failure
 8. `--verbose` flag passed through to handler context
+
+## Implementation Note — command metadata must be exported (2026-10-11)
+
+A published (NPM) plugin that declares `commands` ships its `.jay-command` files
+via the `files` array, but the `exports` map must also list each one — the same
+requirement already enforced for `plugin.yaml` and contract files. Without the
+export entry the file is packaged but not resolvable as a subpath, mirroring the
+`plugin.yaml` resolution gap.
+
+- **Fix**: `@jay-framework/agent-skills` now exports `./publish-skills.jay-command`.
+- **Prevention (validation-first)**: `validatePackageJson` (plugin-validator)
+  now errors `command metadata file "<name>" not exported in package.json` for
+  any `commands[].command` missing from `exports`, with suggestion
+  `Add "./<name>": "./<name>" to exports field`. Local plugins (no package.json)
+  are unaffected — exports only matter for published packages.

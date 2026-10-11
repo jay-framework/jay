@@ -1,12 +1,14 @@
 <html>
   <head>
     <script type="application/jay-data" contract="./page.jay-contract"></script>
+    <title>Shopping Cart — Fake Shop</title>
+    <meta name="description" content="Review the items in your shopping cart before checkout.">
   </head>
   <body>
-    <div>
+    <main>
       <h1>Shopping Cart</h1>
       <!-- Cart implementation to be added -->
       <p>Your cart is empty</p>
-    </div>
+    </main>
   </body>
 </html>

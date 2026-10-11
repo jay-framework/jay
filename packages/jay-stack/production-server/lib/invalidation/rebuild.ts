@@ -1,6 +1,7 @@
 import type { RouteManifest, RouteEntry, InstanceEntry, BuildMetadata } from '../types';
 import { rebuildInstance } from './rebuild-instance';
 import { generateSitemap } from '../builder/generate-sitemap';
+import { generateLlmsTxt } from '../builder/generate-llms-txt';
 import { matchRequest } from '../serve/route-matcher';
 import { initializeServices } from '../shared/init-services';
 import { getLogger } from '@jay-framework/logger';
@@ -22,6 +23,8 @@ export interface RebuildOptions {
     minify?: boolean;
     /** Site base URL for sitemap regeneration (e.g. "https://example.com"). */
     siteBaseUrl?: string;
+    /** Full site identity for llms.txt regeneration (DL#214). `name` drives the llms.txt H1. */
+    site?: { name?: string; description?: string; baseUrl?: string };
 }
 
 export interface RebuildResult {
@@ -154,6 +157,15 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
             const sitemapPath = path.join(frontendDir, 'sitemap.xml');
             const urlCount = await generateSitemap(manifest, options.siteBaseUrl, sitemapPath);
             logger.info(`[Rebuild] Sitemap regenerated: ${urlCount} URLs`);
+        }
+
+        // Regenerate llms.txt after successful rebuild (DL#214) — titles/descriptions may have
+        // changed. Requires site.name (the H1); regenerated unconditionally, like the sitemap.
+        const site = options.site ?? (options.siteBaseUrl ? { baseUrl: options.siteBaseUrl } : {});
+        if (site.name) {
+            const llmsPath = path.join(frontendDir, 'llms.txt');
+            const count = await generateLlmsTxt(manifest, site, backendDir, llmsPath);
+            logger.info(`[Rebuild] llms.txt regenerated: ${count} pages`);
         }
 
         // Append orphaned files to cleanup manifest

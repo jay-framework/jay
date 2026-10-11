@@ -90,6 +90,25 @@ function escapeHtml(value: string): string {
     return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+/**
+ * Breakout-safe escaping for JSON-LD script bodies (DL#213).
+ *
+ * A `<script type="application/ld+json">` body is raw text, so HTML-escaping it
+ * (`&`→`&amp;` etc.) would corrupt the JSON — the entities are never decoded and
+ * `JSON.parse` fails. Instead we keep the JSON valid and prevent a `</script>`
+ * breakout by escaping `<`, `>`, `&` as their JSON `\uXXXX` unicode escapes — the
+ * standard safe-JSON-LD technique. Shared by every JSON-LD emission path so all
+ * targets (dev SSR, production) are byte-identical.
+ */
+export function escapeJsonLd(json: string): string {
+    return json.replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
+}
+
+/** True for a `<script type="application/ld+json">` HeadTag (structured data, not executable JS). */
+export function isJsonLdScript(tag: HeadTag): boolean {
+    return tag.tag.toLowerCase() === 'script' && tag.attrs?.type === 'application/ld+json';
+}
+
 /** Tags that are self-closing (void elements). */
 const VOID_ELEMENTS = new Set(['meta', 'link', 'base', 'br', 'hr', 'img', 'input']);
 
@@ -168,7 +187,9 @@ export interface JayHtmlScript {
 
 /**
  * Serialize passthrough scripts for one position (`head` or `body`) into an HTML string.
- * Inline bodies are emitted un-escaped (the author opted in via `jay-script="allow"`).
+ * Inline bodies are emitted un-escaped (the author opted in via `jay-script="allow"`), except
+ * `type="application/ld+json"` structured data, which is first-class (no opt-in) and emitted
+ * breakout-safe with the same escaping as serializeHeadTags (DL#213).
  * Shared by the dev SSR path and the production server so both render identically (DL#149).
  */
 export function serializeScripts(
@@ -187,7 +208,11 @@ export function serializeScripts(
             if (s.src) {
                 return `    <script src="${s.src}"${attrStr}></script>`;
             }
-            return `    <script${attrStr}>${s.inline}</script>`;
+            const body =
+                s.attributes.type === 'application/ld+json'
+                    ? escapeJsonLd(s.inline ?? '')
+                    : (s.inline ?? '');
+            return `    <script${attrStr}>${body}</script>`;
         })
         .join('\n');
 }
@@ -206,6 +231,10 @@ export function serializeHeadTags(tags: HeadTag[]): string {
                 : '';
             if (VOID_ELEMENTS.has(t)) {
                 return `    <${t}${attrs} />`;
+            }
+            // JSON-LD is raw-text data, not HTML — escape it breakout-safe, not HTML-escaped (DL#213).
+            if (isJsonLdScript(tag)) {
+                return `    <${t}${attrs}>${escapeJsonLd(tag.children ?? '')}</${t}>`;
             }
             const children = tag.children ? escapeHtml(tag.children) : '';
             return `    <${t}${attrs}>${children}</${t}>`;

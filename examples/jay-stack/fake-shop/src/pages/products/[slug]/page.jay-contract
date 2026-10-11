@@ -1,4 +1,7 @@
 name: Page
+params:
+  - name: slug
+    kind: required
 tags:
   # Static product information - loaded at build time
   - tag: name

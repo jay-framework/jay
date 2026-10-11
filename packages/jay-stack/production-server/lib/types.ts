@@ -1,4 +1,5 @@
 import type { JayHtmlHeadMeta, JayHtmlScript } from '@jay-framework/stack-server-runtime';
+import type { HeadTag } from '@jay-framework/fullstack-component';
 
 export interface RouteManifest {
     version: string;
@@ -7,6 +8,12 @@ export interface RouteManifest {
     routes: RouteEntry[];
     actions: ActionEntry[];
     plugins: PluginEntry[];
+    /**
+     * Site-level JSON-LD (Organization + WebSite) head tags, generated once at build from
+     * `.jay` `site` config and injected into every served page's `<head>` (DL#213). Empty/absent
+     * when `site.name` is not configured.
+     */
+    siteHeadTags?: HeadTag[];
 }
 
 export interface RouteSegment {
@@ -89,6 +96,14 @@ export interface BuildOptions {
     minify?: boolean;
     /** Site base URL for sitemap generation (e.g. "https://example.com"). */
     siteBaseUrl?: string;
+    /** Site identity for Organization + WebSite JSON-LD generation (DL#213). */
+    site?: {
+        name?: string;
+        baseUrl?: string;
+        logo?: string;
+        description?: string;
+        sameAs?: string[];
+    };
 }
 
 export interface ServerElementModule {

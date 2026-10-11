@@ -949,6 +949,21 @@ function validateAndCollectScripts(
         const inline = script.textContent?.trim();
         const isInHead = !!script.closest('head');
 
+        // JSON-LD is first-class structured DATA, not executable JS (DL#213): collect it without
+        // requiring jay-script="allow" and without the inline-script warning. The body is emitted
+        // breakout-safe (serializeScripts applies the same escaping as serializeHeadTags). Empty
+        // blocks are still collected so Tier-1 validation can flag them (checkJsonLdScripts).
+        if (type === 'application/ld+json' && !src) {
+            const attributes = { ...script.attributes };
+            delete attributes['jay-script'];
+            scripts.push({
+                inline: inline ?? '',
+                attributes,
+                position: isInHead ? 'head' : 'body',
+            });
+            continue;
+        }
+
         if (src && isLocalSrc(src)) {
             validations.push(
                 `Local script imports are not supported in jay-html. Move the script logic into page.ts with makeJayStackComponent. See designer/script-tags.md.`,

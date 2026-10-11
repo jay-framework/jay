@@ -56,13 +56,18 @@ import {
     loadBuildManifest,
     buildBuildOracle,
     loadSlowViewState,
+    loadCarryForward,
     checkTemplateLinksAgainstBuild,
     checkContentLinks,
     checkInstanceMeta,
+    checkBuildJsonLd,
+    checkInstanceJsonLd,
+    jsonLdBodyError,
     isBuildStale,
     newestSourceMtime,
     type BuildOutputFinding,
 } from './check-build-output';
+import { checkArdFiles } from './validate-ard';
 
 export interface ValidateOptions {
     path?: string;
@@ -412,6 +417,24 @@ interface RefElementInfo {
 }
 
 /** @internal Exported for testing */
+/**
+ * Validate template-authored `<script type="application/ld+json">` blocks (DL#213).
+ * JSON-LD is first-class structured data, so a page can declare it directly in `<head>`. A
+ * malformed body silently ships broken structured data (invisible to types), so we check at
+ * build/validation time that each block parses as JSON and carries `@context` + `@type`.
+ */
+export function checkJsonLdScripts(jayHtml: JayHtmlSourceFile): string[] {
+    const errors: string[] = [];
+    for (const script of jayHtml.scripts ?? []) {
+        if (script.attributes?.type !== 'application/ld+json') continue;
+        const err = jsonLdBodyError(script.inline);
+        if (err) {
+            errors.push(`<script type="application/ld+json">: ${err} See designer/seo-guide.md.`);
+        }
+    }
+    return errors;
+}
+
 export function checkRefElementTypes(jayHtml: JayHtmlSourceFile, file: string): string[] {
     const imports = jayHtml.headlessImports;
     const keyMap = new Map<string, number>();
@@ -2111,6 +2134,11 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                 });
             }
 
+            // DL#213 — template-authored JSON-LD must be valid structured data.
+            for (const message of checkJsonLdScripts(parsedFile.val!)) {
+                errors.push({ file: relativePath, message, stage: 'generate' });
+            }
+
             // DL#200 — prefer design-system elements: nudge hand-authored regions that could be linked, and
             // linked regions drifting into their own variant. Also tally for the project NO-DESIGN-SYSTEM rule.
             regionsSeen += collectRegionElements(parsedFile.val!.body).length;
@@ -2291,8 +2319,57 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
         });
     }
 
+    // DL#213 — site identity drives the auto-emitted Organization/WebSite JSON-LD.
+    if (!config.site?.name) {
+        warnings.push({
+            file: '.jay',
+            message:
+                'site.name not configured — Organization/WebSite JSON-LD and llms.txt will not be emitted, reducing how well search engines and agents understand the site.',
+            suggestion:
+                'Add to .jay config:\n  site:\n    name: Your Site Name\n    logo: /logo.png\n    description: What your site is about',
+        });
+    }
+
+    // DL#214 — agent-discovery: /.well-known/ard.json is author/agent responsibility. Warn on
+    // absence; validate the ARD v0.91 shape when present (handles the ai-catalog.json alias).
+    // A site with no agent resources to advertise suppresses the nudge via `.jay` `validations:
+    // allow-no-ard: true` — a project-level file governs a project-level concern (not a page's
+    // `application/jay-validations` script, which is for page/region-scoped rules).
+    const allowNoArd = config.validations?.['allow-no-ard'] === true;
+    const ardResult = await checkArdFiles(projectRoot);
+    if (ardResult.absent) {
+        if (!allowNoArd) {
+            warnings.push({
+                file: 'public/.well-known/ard.json',
+                message:
+                    'public/.well-known/ard.json not found — agents cannot discover this site’s resources/APIs via Agentic Resource Discovery.',
+                suggestion:
+                    'Author public/.well-known/ard.json (ARD v0.91), or suppress with `validations: { allow-no-ard: true }` in .jay if the site has no agent resources to advertise. See developer/seo-guide.md.',
+            });
+        }
+    } else {
+        for (const finding of ardResult.findings) {
+            if (finding.severity === 'error') {
+                errors.push({
+                    file: 'public/.well-known/ard.json',
+                    message: finding.message,
+                    stage: 'generate',
+                    suggestion: finding.suggestion,
+                });
+            } else {
+                warnings.push({
+                    file: 'public/.well-known/ard.json',
+                    message: finding.message,
+                    suggestion: finding.suggestion,
+                });
+            }
+        }
+    }
+
     // --- DL#200 — prefer design-system elements (project-level rules) ---
-    // Project-wide suppression lists are read from any page's `application/jay-validations` script.
+    // These page/region-scoped suppressions live in a page's `application/jay-validations` script
+    // (read from any page, applied project-wide) — unlike `allow-no-ard`, which is a project-file
+    // concern and lives in `.jay`.
     const allowNoTemplate = new Set<string>();
     let allowNoDesignSystem = false;
     for (const { parsed } of parsedFiles) {
@@ -2484,7 +2561,10 @@ async function runBuildOutputValidation(args: {
         }),
     );
 
-    // Checks 2 + 3 — per concrete instance: rendered-content links + meta/SEO.
+    // Check 4 — site-level + template JSON-LD baked into the manifest (DL#213).
+    findings.push(...checkBuildJsonLd(loaded.manifest));
+
+    // Checks 2 + 3 + 5 — per concrete instance: rendered-content links + meta/SEO + component JSON-LD.
     for (const instance of oracle.instances) {
         const slowViewState = await loadSlowViewState(instance.cacheAbsPath);
         findings.push(
@@ -2503,6 +2583,8 @@ async function runBuildOutputValidation(args: {
                 slowViewState,
             }),
         );
+        const carryForward = await loadCarryForward(instance.cacheAbsPath);
+        findings.push(...checkInstanceJsonLd({ instanceUrl: instance.url, carryForward }));
     }
 
     for (const finding of findings) {

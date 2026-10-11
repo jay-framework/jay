@@ -16,6 +16,7 @@ import {
     checkRegionOverrideNonContent,
     checkComponentNoTemplate,
     checkNoDesignSystem,
+    checkJsonLdScripts,
 } from '../lib/validate';
 import { parseJayFile, JAY_IMPORT_RESOLVER } from '@jay-framework/compiler-jay-html';
 import { JayEnumType, JayAtomicType } from '@jay-framework/compiler-shared';
@@ -264,6 +265,62 @@ describe('checkRefElementTypes', () => {
         expect(warnings[1]).toEqual(
             'Ref "widget.items.isSelected" is on a <button> (HTMLButtonElement) but the contract declares HTMLInputElement',
         );
+    });
+});
+
+describe('checkJsonLdScripts (DL#213)', () => {
+    async function parsePage(headInner: string) {
+        const content = [
+            `<html>`,
+            `<head>`,
+            `<script type="application/jay-data">data: {}</script>`,
+            headInner,
+            `</head>`,
+            `<body><div>hi</div></body>`,
+            `</html>`,
+        ].join('\n');
+        const parsed = await parseJayFile(content, 'page', '.', {}, JAY_IMPORT_RESOLVER, '.');
+        expect(parsed.validations).toHaveLength(0);
+        return parsed.val!;
+    }
+
+    it('passes a valid JSON-LD block with @context and @type', async () => {
+        const jayHtml = await parsePage(
+            `<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Acme"}</script>`,
+        );
+        expect(checkJsonLdScripts(jayHtml)).toEqual([]);
+    });
+
+    it('errors on invalid JSON', async () => {
+        const jayHtml = await parsePage(`<script type="application/ld+json">{ not json }</script>`);
+        const errors = checkJsonLdScripts(jayHtml);
+        expect(errors).toHaveLength(1);
+        expect(errors[0]).toEqual(expect.stringContaining('Invalid JSON'));
+    });
+
+    it('errors when @context or @type is missing', async () => {
+        const jayHtml = await parsePage(
+            `<script type="application/ld+json">{"name":"Acme"}</script>`,
+        );
+        const errors = checkJsonLdScripts(jayHtml);
+        expect(errors).toHaveLength(1);
+        expect(errors[0]).toEqual(expect.stringContaining('missing @context or @type'));
+    });
+
+    it('errors on an empty JSON-LD block', async () => {
+        const jayHtml = await parsePage(`<script type="application/ld+json"></script>`);
+        const errors = checkJsonLdScripts(jayHtml);
+        expect(errors).toHaveLength(1);
+        expect(errors[0]).toEqual(expect.stringContaining('Empty'));
+    });
+
+    it('validates each object in a JSON-LD array', async () => {
+        const jayHtml = await parsePage(
+            `<script type="application/ld+json">[{"@context":"https://schema.org","@type":"Organization","name":"Acme"},{"name":"NoType"}]</script>`,
+        );
+        const errors = checkJsonLdScripts(jayHtml);
+        expect(errors).toHaveLength(1);
+        expect(errors[0]).toEqual(expect.stringContaining('missing @context or @type'));
     });
 });
 

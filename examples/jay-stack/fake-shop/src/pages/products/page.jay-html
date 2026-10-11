@@ -1,9 +1,11 @@
 <html>
   <head>
     <script type="application/jay-data" contract="./page.jay-contract"></script>
+    <title>Products — Fake Shop</title>
+    <meta name="description" content="Browse all products available in the Fake Shop demo store.">
   </head>
   <body>
-    <div>
+    <main>
       <h1>Products</h1>
       <ul>
         <li foreach="products" trackby="id">
@@ -14,6 +16,6 @@
           </a>
         </li>
       </ul>
-    </div>
+    </main>
   </body>
 </html>

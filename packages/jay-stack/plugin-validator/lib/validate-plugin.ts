@@ -1336,6 +1336,23 @@ async function validatePackageJson(
             });
         }
 
+        // Check that each command's .jay-command metadata file is exported
+        // (required for plugin resolution, same as plugin.yaml)
+        if (context.manifest.commands) {
+            for (const cmd of context.manifest.commands) {
+                if (!cmd.command) continue;
+                const exportKey = `./${cmd.command}`;
+                if (!packageJson.exports || !packageJson.exports[exportKey]) {
+                    result.errors.push({
+                        type: 'export-mismatch',
+                        message: `command metadata file "${cmd.command}" not exported in package.json (required for plugin resolution)`,
+                        location: packageJsonPath,
+                        suggestion: `Add "${exportKey}": "${exportKey}" to exports field`,
+                    });
+                }
+            }
+        }
+
         // Check that agent-kit directory is included in files if it exists
         const agentKitDir = path.join(context.pluginPath, 'agent-kit');
         if (fs.existsSync(agentKitDir) && fs.statSync(agentKitDir).isDirectory()) {

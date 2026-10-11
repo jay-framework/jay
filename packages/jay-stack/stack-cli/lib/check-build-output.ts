@@ -209,6 +209,114 @@ export async function loadSlowViewState(cacheAbsPath: string): Promise<object> {
     }
 }
 
+/** Load one instance's carryForward from its cache file. Returns {} when unreadable. */
+export async function loadCarryForward(cacheAbsPath: string): Promise<any> {
+    try {
+        const cache: CacheEntry = JSON.parse(await fsp.readFile(cacheAbsPath, 'utf8'));
+        return cache.carryForward ?? {};
+    } catch {
+        return {};
+    }
+}
+
+/**
+ * Validate a JSON-LD body string (DL#213). Returns a human-readable error message, or null if the
+ * body is valid JSON carrying `@context` + `@type` on every object. Shared by Tier-1 template checks
+ * (validate.ts `checkJsonLdScripts`) and Tier-2 build-output checks so both report consistently.
+ */
+export function jsonLdBodyError(body: string | undefined): string | null {
+    const text = body?.trim();
+    if (!text) return 'Empty JSON-LD block — add structured data or remove the tag.';
+    let parsed: unknown;
+    try {
+        parsed = JSON.parse(text);
+    } catch (e: any) {
+        return `Invalid JSON: ${e.message}`;
+    }
+    const objs = Array.isArray(parsed) ? parsed : [parsed];
+    for (const obj of objs) {
+        if (!obj || typeof obj !== 'object') {
+            return 'JSON-LD must be an object (or array of objects) with @context and @type.';
+        }
+        if (!('@context' in obj) || !('@type' in obj)) {
+            return 'JSON-LD is missing @context or @type.';
+        }
+    }
+    return null;
+}
+
+/** True for a `<script type="application/ld+json">` HeadTag in a built manifest. */
+function isLdJsonHeadTag(tag: any): boolean {
+    return tag?.tag?.toLowerCase?.() === 'script' && tag?.attrs?.type === 'application/ld+json';
+}
+
+/**
+ * Tier-2 — validate JSON-LD baked into the build manifest (DL#213): the site-level Organization/
+ * WebSite tags (`siteHeadTags`) and each route's template-authored `<script type="application/ld+json">`
+ * (`route.scripts`). Catches JSON-LD that shipped malformed even if the source was never re-validated.
+ */
+export function checkBuildJsonLd(manifest: RouteManifest): BuildOutputFinding[] {
+    const findings: BuildOutputFinding[] = [];
+    for (const tag of manifest.siteHeadTags ?? []) {
+        if (!isLdJsonHeadTag(tag)) continue;
+        const err = jsonLdBodyError((tag as any).children);
+        if (err) {
+            findings.push({
+                file: '.jay (site.*)',
+                message: `Site JSON-LD: ${err}`,
+                severity: 'error',
+                source: 'build-output',
+            });
+        }
+    }
+    for (const route of manifest.routes) {
+        for (const script of route.scripts ?? []) {
+            if (script.attributes?.type !== 'application/ld+json') continue;
+            const err = jsonLdBodyError(script.inline);
+            if (err) {
+                findings.push({
+                    file: route.pattern,
+                    message: `Template JSON-LD: ${err}`,
+                    severity: 'error',
+                    source: 'build-output',
+                });
+            }
+        }
+    }
+    return findings;
+}
+
+/**
+ * Tier-2 — validate component-emitted JSON-LD carried on an instance's `carryForward.__slowHeadTags`
+ * (DL#213). This is the slow-phase `headTags` a `page.ts` returned (e.g. via `jsonLd()`), serialized
+ * into the cache; a malformed body here ships to every request for that instance.
+ */
+export function checkInstanceJsonLd(args: {
+    instanceUrl: string;
+    carryForward: any;
+}): BuildOutputFinding[] {
+    const { instanceUrl, carryForward } = args;
+    const findings: BuildOutputFinding[] = [];
+    const slowHeadTags = carryForward?.__slowHeadTags;
+    if (!Array.isArray(slowHeadTags)) return findings;
+    for (const source of slowHeadTags) {
+        if (!Array.isArray(source)) continue;
+        for (const tag of source) {
+            if (!isLdJsonHeadTag(tag)) continue;
+            const err = jsonLdBodyError(tag?.children);
+            if (err) {
+                findings.push({
+                    file: instanceUrl,
+                    message: `Component JSON-LD: ${err}`,
+                    severity: 'error',
+                    source: 'build-output',
+                });
+            }
+        }
+    }
+    return findings;
+}
+
 /**
  * Check 1′ — template links that Check 1 DEFERRED (matched a dynamic pattern) against the concrete URL set.
  *

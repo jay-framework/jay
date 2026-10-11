@@ -4,3 +4,9 @@ devServer:
   publicFolder: './public'
 site:
   baseUrl: https://fake-shop.example.com
+  name: Fake Shop
+  logo: /logo.svg
+  description: A demo storefront built with Jay Stack showcasing server-side services dependency injection.
+validations:
+  # This demo exposes no agent-callable resources/APIs, so it ships no /.well-known/ard.json (DL#214).
+  allow-no-ard: true

@@ -242,6 +242,66 @@ describe('validatePlugin — tools entry (./tools) requirement', () => {
     });
 });
 
+describe('validatePlugin — command metadata (.jay-command) export requirement', () => {
+    const commandPluginYaml = `name: test-plugin\ncommands:\n  - name: publish\n    command: publish.jay-command\n`;
+
+    it('errors when a command metadata file is not exported', async () => {
+        const dir = createTempPluginWithSource({
+            pluginYaml: commandPluginYaml,
+            packageJson: {
+                name: '@jay-framework/test-plugin',
+                exports: {
+                    '.': './dist/index.js',
+                    './tools': './dist/tools.js',
+                    './plugin.yaml': './plugin.yaml',
+                },
+            },
+            sourceFiles: {
+                'dist/index.js': `export {};\n`,
+                'dist/tools.js': `export {};\n`,
+                'publish.jay-command': `description: Publish\n`,
+            },
+        });
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        const cmdError = result.errors.find((e) =>
+            e.message.includes('command metadata file "publish.jay-command" not exported'),
+        );
+        expect(cmdError).toBeDefined();
+        expect(cmdError!.suggestion).toEqual(
+            'Add "./publish.jay-command": "./publish.jay-command" to exports field',
+        );
+    });
+
+    it('passes when the command metadata file is exported', async () => {
+        const dir = createTempPluginWithSource({
+            pluginYaml: commandPluginYaml,
+            packageJson: {
+                name: '@jay-framework/test-plugin',
+                exports: {
+                    '.': './dist/index.js',
+                    './tools': './dist/tools.js',
+                    './plugin.yaml': './plugin.yaml',
+                    './publish.jay-command': './publish.jay-command',
+                },
+            },
+            sourceFiles: {
+                'dist/index.js': `export {};\n`,
+                'dist/tools.js': `export {};\n`,
+                'publish.jay-command': `description: Publish\n`,
+            },
+        });
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        const cmdError = result.errors.find((e) =>
+            e.message.includes('command metadata file'),
+        );
+        expect(cmdError).toBeUndefined();
+    });
+});
+
 describe('validatePlugin — client entry (./client) interactive gating', () => {
     const contractYaml = [
         'name: test-plugin',

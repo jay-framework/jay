@@ -18,6 +18,10 @@ const MIME_TYPES: Record<string, string> = {
     '.webp': 'image/webp',
     '.xml': 'application/xml',
     '.txt': 'text/plain',
+    // Agent-readiness resources (DL#217): SKILL.md + packaged skill archives.
+    '.md': 'text/markdown',
+    '.gz': 'application/gzip', // `.tar.gz` resolves via its last extension `.gz`
+    '.tar': 'application/x-tar',
 };
 
 export async function fetchStaticFile(
@@ -40,13 +44,18 @@ export async function fetchStaticFile(
                 ? 'public, max-age=31536000, immutable'
                 : 'public, max-age=3600';
 
-            return new Response(new Uint8Array(content), {
-                headers: {
-                    'Content-Type': contentType,
-                    'Content-Length': String(content.length),
-                    'Cache-Control': cacheControl,
-                },
-            });
+            const headers: Record<string, string> = {
+                'Content-Type': contentType,
+                'Content-Length': String(content.length),
+                'Cache-Control': cacheControl,
+            };
+            // Agent-readiness resources under /.well-known/ are read cross-origin by agents
+            // (agent-skills-discovery, api-catalog). Serve them CORS-open (DL#217).
+            if (pathname.startsWith('/.well-known/')) {
+                headers['Access-Control-Allow-Origin'] = '*';
+            }
+
+            return new Response(new Uint8Array(content), { headers });
         } catch {
             // Not found at this path, try next
         }

@@ -5,9 +5,11 @@
           plugin="product-rating"
           contract="product-rating"
           key="rating"></script>
+  <title>{name} — Fake Shop</title>
+  <meta name="description" content="Product details, pricing, availability, and customer ratings.">
 </head>
 <body>
-<div>
+<main>
   <div>
     product page
   </div>
@@ -31,11 +33,11 @@
   <div class="rate-product">
     <p>Rate this product:</p>
     <div class="stars">
-      <button ref="rating.star1" class="star">★</button>
-      <button ref="rating.star2" class="star">★</button>
-      <button ref="rating.star3" class="star">★</button>
-      <button ref="rating.star4" class="star">★</button>
-      <button ref="rating.star5" class="star">★</button>
+      <button ref="rating.star1" class="star" aria-label="Rate 1 star"><span aria-hidden="true">★</span></button>
+      <button ref="rating.star2" class="star" aria-label="Rate 2 stars"><span aria-hidden="true">★</span></button>
+      <button ref="rating.star3" class="star" aria-label="Rate 3 stars"><span aria-hidden="true">★</span></button>
+      <button ref="rating.star4" class="star" aria-label="Rate 4 stars"><span aria-hidden="true">★</span></button>
+      <button ref="rating.star5" class="star" aria-label="Rate 5 stars"><span aria-hidden="true">★</span></button>
     </div>
     <p>Your rating: {rating.userRating} stars</p>
     <button ref="rating.submitButton">Submit Rating</button>
@@ -44,6 +46,6 @@
   <div if="inStock">
     <button ref="add-to-cart">add to cart</button>
   </div>
-</div>
+</main>
 </body>
 </html>

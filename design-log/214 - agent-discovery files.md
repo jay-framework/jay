@@ -58,7 +58,7 @@ Discovery "agent-discovery files" checks from the ora.ai scan.
     robots.txt check at `validate.ts:2274`); when present, validate against the ARD schema.
   - **Agent-kit guide** carries the schema + a worked example and instructs the agent to author
     it. ⚠️ v0.91 is "Proposal" status (dated Aug 26 2026) — a moving target; pin the version.
-  - **Now-feasible (open, Q7)**: a *hybrid scaffold* — derive `identifier`/`type`/`url` entries
+  - **Now-feasible (open, Q7)**: a _hybrid scaffold_ — derive `identifier`/`type`/`url` entries
     from `.jay-action` (DL#215) + `webmcp` descriptors, author enriches the editorial fields.
     Keeps the user's "author owns it" default while removing the blank-page cost. Decide in impl.
 - **Each generated file gets a paired validation** (prevention): present + well-formed, and
@@ -89,19 +89,20 @@ capability manifest, costing the Discovery category.
 
 ## Prior Art / Adjacent Mechanisms (verified)
 
-| Mechanism                         | Where                                                                   | Relation                                                          |
-| --------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| Sitemap generation                | `generate-sitemap.ts` → `generateSitemap(manifest, baseUrl, path)`     | ✅ exact precedent: build-time file from manifest + baseUrl       |
-| Sitemap call sites                | `build-pipeline.ts:657`, `rebuild.ts:155`                              | the two homes for the new emission step                          |
-| robots.txt validation             | `validate.ts:2274` (warn if `public/robots.txt` missing)              | ⚠️ validate-only — upgrade to generate-if-absent                 |
-| Dev "don't clobber" convention    | `server.ts:53` (serve placeholder only if no static `sitemap.xml`)   | pattern for "generate only when author hasn't provided"          |
-| `RouteManifest` / `RouteEntry`    | `production-server/lib/types.ts` (`pattern`, `instances`, `headMeta`, `noIndex`, `devOnly`) | ✅ supplies titles/descriptions/URLs for llms.txt  |
-| `.jay` `site` config              | `stack-cli/lib/config.ts` (`baseUrl`; `name`/`description` added in #213) | site name/summary for llms.txt H1 + robots Sitemap line        |
-| webmcp tool descriptors           | `packages/plugins/webmcp` (`ToolDescriptor`, `ModelContextContainer`) | candidate source for a `.well-known` agent/tool card            |
-| **Dev** static serving            | `stack-cli/lib/server.ts:66` — `express.static(publicPath)` (no opts) | ❌ Express default `dotfiles: 'ignore'` ⇒ `/.well-known/*` **404s in dev** |
-| **Prod** static serving           | `production-server/lib/serve/fetch-static-handler.ts` (`fetchStaticFile`) | ✅ no dotfile filter; `.json`→`application/json` ⇒ serves `/.well-known/*` if the file reached the served root |
+| Mechanism                      | Where                                                                                       | Relation                                                                                                       |
+| ------------------------------ | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Sitemap generation             | `generate-sitemap.ts` → `generateSitemap(manifest, baseUrl, path)`                          | ✅ exact precedent: build-time file from manifest + baseUrl                                                    |
+| Sitemap call sites             | `build-pipeline.ts:657`, `rebuild.ts:155`                                                   | the two homes for the new emission step                                                                        |
+| robots.txt validation          | `validate.ts:2274` (warn if `public/robots.txt` missing)                                    | ⚠️ validate-only — upgrade to generate-if-absent                                                               |
+| Dev "don't clobber" convention | `server.ts:53` (serve placeholder only if no static `sitemap.xml`)                          | pattern for "generate only when author hasn't provided"                                                        |
+| `RouteManifest` / `RouteEntry` | `production-server/lib/types.ts` (`pattern`, `instances`, `headMeta`, `noIndex`, `devOnly`) | ✅ supplies titles/descriptions/URLs for llms.txt                                                              |
+| `.jay` `site` config           | `stack-cli/lib/config.ts` (`baseUrl`; `name`/`description` added in #213)                   | site name/summary for llms.txt H1 + robots Sitemap line                                                        |
+| webmcp tool descriptors        | `packages/plugins/webmcp` (`ToolDescriptor`, `ModelContextContainer`)                       | candidate source for a `.well-known` agent/tool card                                                           |
+| **Dev** static serving         | `stack-cli/lib/server.ts:66` — `express.static(publicPath)` (no opts)                       | ❌ Express default `dotfiles: 'ignore'` ⇒ `/.well-known/*` **404s in dev**                                     |
+| **Prod** static serving        | `production-server/lib/serve/fetch-static-handler.ts` (`fetchStaticFile`)                   | ✅ no dotfile filter; `.json`→`application/json` ⇒ serves `/.well-known/*` if the file reached the served root |
 
 **Load-bearing claims:**
+
 - ✅ verified — `generateSitemap` is invoked at `build-pipeline.ts:657` and `rebuild.ts:155`
   with `(manifest, siteBaseUrl, sitemapPath)`; new emitters slot in beside both.
 - ✅ verified — `RouteEntry` carries `headMeta` (title/meta), `noIndex`, `devOnly`, `pattern`,
@@ -153,22 +154,23 @@ root. After that, author/plugin `.well-known/*` files "just work" at both dev an
 
 **Q6. Can't we auto-generate `ard.json`?**
 A. Default: no — author/agent owns it (user's call). But now the schema is pinned, the
-*structure* IS derivable even if the *content* isn't fully: an entry is `{identifier, type,
+_structure_ IS derivable even if the _content_ isn't fully: an entry is `{identifier, type,
 url}` + editorial fields. The required/mechanical trio maps onto data we already hold (actions,
 webmcp cards); only `displayName`/`description`/`representativeQueries`/`tags` need a human.
 Hence Q7's hybrid, not full auto-generation.
 
 **Q7 (OPEN — decide in impl). Scaffold `ard.json` from actions + webmcp, or warn-only?**
 A. Two options, user default = B:
-   - **A (hybrid scaffold)**: generate a starter `/.well-known/ard.json` with one entry per
-     exposed `.jay-action` (DL#215) / `webmcp` tool card — fills `identifier` (URN from
-     publisher+action name), `type` (`application/mcp-server-card+json`), `url` (the action
-     endpoint / card). Author enriches editorial fields. Generate-if-absent (never clobber).
-   - **B (warn-only)**: no generation; validation warns on absence, agent-kit guide drives
-     authoring. Matches the user's stated decision.
-   Recommendation: ship **B** now; keep **A** as a fast follow once DL#215's action metadata
-   lands (its `ActionMetadata` is the exact source for the scaffold). Avoids coupling #214 to
-   #215's timeline.
+
+- **A (hybrid scaffold)**: generate a starter `/.well-known/ard.json` with one entry per
+  exposed `.jay-action` (DL#215) / `webmcp` tool card — fills `identifier` (URN from
+  publisher+action name), `type` (`application/mcp-server-card+json`), `url` (the action
+  endpoint / card). Author enriches editorial fields. Generate-if-absent (never clobber).
+- **B (warn-only)**: no generation; validation warns on absence, agent-kit guide drives
+  authoring. Matches the user's stated decision.
+  Recommendation: ship **B** now; keep **A** as a fast follow once DL#215's action metadata
+  lands (its `ActionMetadata` is the exact source for the scaffold). Avoids coupling #214 to
+  #215's timeline.
 
 ## Design
 
@@ -278,7 +280,7 @@ only scaffold, never overwrite an author file), but removes the blank page. Deci
    static/dynamic/noIndex/devOnly routes.
 2. **`robots.txt` generate-if-absent** at the same step; fixture for absent vs author-provided.
 3. **`.well-known` serving fix** (framework, dev only): dev `express.static(publicPath,
-   { dotfiles: 'allow' })` at `server.ts:66` (prod + build-copy already handle it); test that a
+{ dotfiles: 'allow' })` at `server.ts:66` (prod + build-copy already handle it); test that a
    `public/.well-known/x.json` fixture is served in both dev and prod.
 4. **`ard.json` validation**: presence warning on missing `public/.well-known/ard.json` (mirror
    `validate.ts:2274`); when present, validate against the **bundled ARD v0.91 JSON Schema**
@@ -335,3 +337,72 @@ only scaffold, never overwrite an author file), but removes the blank page. Deci
   `.well-known` root + RFC 8615 base. Designed as **validation + an agent-invoked creation tool**
   (plugin), not a build generator; depends on this DL's `.well-known` serving fix.
 - JSON-LD → DL#213. Action/API docs (MCP/REST exposure) → DL#215 (parked, plugin-space).
+
+## Implementation Results
+
+Implemented on branch `DL212-216-agent-readability-impl`. `yarn build:check-types` passes; all new tests green.
+
+### llms.txt (plan item 1)
+
+- `production-server/lib/builder/generate-llms-txt.ts` (new): `generateLlmsTxt(manifest, site, backendDir, outputPath)`. Skips `devOnly`/`noIndex`; for each instance loads the slow ViewState from `backendDir/<instance.cachePath>` and resolves `headMeta` via `headMetaToHeadTags` to get the real `<title>`/`<meta description>` (bound `{…}` that can't resolve is dropped, never emitted literally). Grouped into `##` sections by top-level path segment. Requires `site.name` (the H1).
+- Wired at **both** call sites: `production-build/build-pipeline.ts` (generate-if-absent — `public/llms.txt` wins) and `production-server/invalidation/rebuild.ts` (regenerates unconditionally, like the sitemap; needs `site` threaded — added `RebuildOptions.site`, passed from `run-production.ts`).
+- Tests: `production-server/test/generate-llms-txt.test.ts` (2) — grouped index with resolved bound titles, devOnly/noIndex skipped.
+
+### robots.txt (plan item 2)
+
+- `production-server/lib/builder/generate-robots-txt.ts` (new): `generateRobotsTxtIfAbsent(outputPath, baseUrl)` — writes default allow-all + `Sitemap:` line (only when `baseUrl` set); returns false without clobbering an author file. Wired into `build-pipeline.ts` after the public/ copy (so an author `public/robots.txt` already present is respected).
+- Tests: `production-server/test/generate-robots-txt.test.ts` (3).
+
+### .well-known serving fix (plan item 3)
+
+- `stack-cli/lib/server.ts`: dev static mount → `express.static(publicPath, { dotfiles: 'allow' })`. Prod + build-copy already handled dotdirs (verified in design); no change there.
+- Tests: `stack-cli/test/well-known-serving.test.ts` (2) — locks in that `dotfiles:'allow'` serves `/.well-known/*` and the Express default 404s it.
+
+### ard.json validation (plan item 4, option B — no generator)
+
+- `stack-cli/lib/validate-ard.ts` (new): `validateArdDocument(doc)` structurally validates the ARD v0.91 shape (entries array; per-entry URN `identifier`, `displayName`, IANA-media-type `type`, exactly-one-of `url`/`data`; `representativeQueries` 2–5 = SHOULD → warning). `checkArdFiles(projectRoot)` handles the `ai-catalog.json` alias (canonical `ard.json`; warn if only alias / if both differ) and reports absence. Validated structurally rather than bundling a JSON-Schema validator dependency (v0.91 is a moving target; rules are small and explicit).
+- Wired into `validate.ts` project-level section (beside the robots.txt/site.baseUrl checks): absence → warning; present → errors/warnings from the validator.
+- Tests: `stack-cli/test/validate-ard.test.ts` (7).
+
+### Validation nudges (plan item 5)
+
+- `site.name` absent warning (added in #213) extended to mention llms.txt. `site.baseUrl` absent warning already existed (sitemap).
+
+### agent-kit (plan item 7)
+
+- `developer/seo-guide.md`: new "Agent-Discovery Files (DL#214)" section — the generated-files table (sitemap/llms.txt/robots.txt + override-via-public), the `.well-known`-just-works note, and the **author-it** `ard.json` guide with the pinned v0.91 schema, a worked example, the URN format, and the `ai-catalog.json` alias instruction.
+
+### Deferred (as designed)
+
+- **Q7/A hybrid `ard.json` scaffold** from `.jay-action` + `webmcp` cards → fast-follow after DL#215 (not in first cut).
+- Optional generated `.well-known` MCP server card → same (folds into Q7/A).
+- `llms-full.txt` → follow-up (Q1).
+
+### Deviations from design
+
+- `RebuildOptions` gained a `site?` field (design only mentioned `siteBaseUrl`) so rebuild can regenerate llms.txt with the H1/description. Minor, additive.
+- llms.txt on **rebuild** regenerates unconditionally (parallel to the sitemap), so a rebuild will overwrite an author `public/llms.txt`. Build-time generation still respects the author file. Acceptable (rebuild is for generated content); noted here as a known limitation.
+
+### Follow-up — `allow-no-ard` suppression (2026-10-11)
+
+While fixing validation in `examples/jay-stack/fake-shop`, the ARD absent **nudge** had no escape
+hatch: a site with no agent-callable resources (e.g. the fake-shop, whose only agent surface is the
+in-page WebMCP plugin — no served server-card URL) was stuck with a permanent warning.
+
+**Where the suppression lives (reviewed decision).** First cut mirrored the DL#200 composition
+overrides — `allow-no-ard: true` in a page's `application/jay-validations` script, read from any page
+and applied project-wide. Review flagged a scope mismatch: unlike `allow-no-template` /
+`allow-no-design-system` (which are *about* page/region composition), `allow-no-ard` governs a single
+**project-level file** (`public/.well-known/ard.json`), so pinning it to an arbitrary page is wrong
+(which page? and it silently vanishes if that page is deleted). Moved it to **`.jay`** under a new
+`validations:` section — a project-level file governs a project-level concern. Page/region overrides
+stay in `application/jay-validations`; project-file overrides go in `.jay`. The split is by *scope of
+the thing suppressed*, not by one uniform mechanism.
+
+- `config.ts`: `JayConfig.validations?: { 'allow-no-ard'?: boolean }`; `loadConfig` passes it through.
+- `validate.ts`: `allowNoArd = config.validations?.['allow-no-ard'] === true` gates the absent-warning.
+- Docs: `developer/seo-guide.md` ARD section. Tests:
+  `stack-cli/test/validate-ard-suppression.test.ts` (2 — warns when absent + unset; silent when the
+  `ard-suppressed` fixture ships a `.jay`).
+- The fake-shop now sets `validations: { allow-no-ard: true }` in `.jay` (+ `site.name`/`logo`/
+  `description`, which clears the JSON-LD/llms.txt nudge from #213/#214).

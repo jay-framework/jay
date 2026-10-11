@@ -13,6 +13,23 @@ export interface JayConfig {
     };
     site?: {
         baseUrl?: string;
+        /** Site/organization name — drives Organization + WebSite JSON-LD (DL#213). */
+        name?: string;
+        /** Logo URL (absolute or baseUrl-relative) for the Organization JSON-LD (DL#213). */
+        logo?: string;
+        /** Short site description for the Organization JSON-LD (DL#213). */
+        description?: string;
+        /** Social/profile URLs for the Organization `sameAs` (DL#213). */
+        sameAs?: string[];
+    };
+    /** Project-wide validation suppressions for project-level concerns (DL#214). */
+    validations?: {
+        /**
+         * Suppress the `/.well-known/ard.json` absence nudge — for sites with no agent-callable
+         * resources/APIs to advertise. Lives in `.jay` (not a page's `application/jay-validations`
+         * script) because it governs a single project-level file, not any page's markup.
+         */
+        'allow-no-ard'?: boolean;
     };
 }
 
@@ -43,6 +60,7 @@ export function loadConfig(projectRoot?: string): JayConfig {
                 ...userConfig.devServer,
             },
             site: userConfig.site,
+            validations: userConfig.validations,
         };
     } catch (error) {
         getLogger().warn(`Failed to parse .jay YAML config file, using defaults: ${error}`);

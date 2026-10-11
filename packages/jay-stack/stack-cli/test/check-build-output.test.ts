@@ -13,6 +13,9 @@ import {
     resolveContentHref,
     checkContentLinks,
     checkInstanceMeta,
+    checkBuildJsonLd,
+    checkInstanceJsonLd,
+    jsonLdBodyError,
     isBuildStale,
 } from '../lib/check-build-output';
 
@@ -262,6 +265,116 @@ describe('checkInstanceMeta', () => {
 
     it('returns nothing when the route has no headMeta', () => {
         expect(checkInstanceMeta({ instanceUrl: '/x', slowViewState: {} })).toEqual([]);
+    });
+});
+
+describe('jsonLdBodyError (DL#213)', () => {
+    it('returns null for valid JSON-LD', () => {
+        expect(
+            jsonLdBodyError('{"@context":"https://schema.org","@type":"Organization","name":"A"}'),
+        ).toBe(null);
+    });
+
+    it('flags empty, invalid JSON, and missing @context/@type', () => {
+        expect(jsonLdBodyError('')).toEqual(expect.stringContaining('Empty'));
+        expect(jsonLdBodyError('{ nope }')).toEqual(expect.stringContaining('Invalid JSON'));
+        expect(jsonLdBodyError('{"name":"A"}')).toEqual(
+            expect.stringContaining('missing @context or @type'),
+        );
+    });
+});
+
+describe('checkBuildJsonLd (DL#213)', () => {
+    function manifestWith(
+        siteHeadTags: any[] | undefined,
+        routeScripts: any[] | undefined,
+    ): RouteManifest {
+        return {
+            version: '1',
+            projectRoot: '/x',
+            sharedManifest: {},
+            routes: [
+                {
+                    pattern: '/p',
+                    segments: [],
+                    serverModule: 'm',
+                    instances: [],
+                    scripts: routeScripts,
+                } as any,
+            ],
+            actions: [],
+            plugins: [],
+            ...(siteHeadTags ? { siteHeadTags } : {}),
+        } as RouteManifest;
+    }
+
+    it('passes valid site + template JSON-LD', () => {
+        const manifest = manifestWith(
+            [
+                {
+                    tag: 'script',
+                    attrs: { type: 'application/ld+json' },
+                    children: '{"@context":"https://schema.org","@type":"Organization","name":"A"}',
+                },
+            ],
+            [
+                {
+                    inline: '{"@context":"https://schema.org","@type":"Product","name":"P"}',
+                    attributes: { type: 'application/ld+json' },
+                    position: 'head',
+                },
+            ],
+        );
+        expect(checkBuildJsonLd(manifest)).toEqual([]);
+    });
+
+    it('flags malformed site JSON-LD', () => {
+        const manifest = manifestWith(
+            [{ tag: 'script', attrs: { type: 'application/ld+json' }, children: '{ bad }' }],
+            undefined,
+        );
+        const findings = checkBuildJsonLd(manifest);
+        expect(findings).toHaveLength(1);
+        expect(findings[0].file).toBe('.jay (site.*)');
+        expect(findings[0].message).toEqual(expect.stringContaining('Invalid JSON'));
+    });
+
+    it('flags malformed template JSON-LD on the route', () => {
+        const manifest = manifestWith(undefined, [
+            {
+                inline: '{"name":"NoType"}',
+                attributes: { type: 'application/ld+json' },
+                position: 'head',
+            },
+        ]);
+        const findings = checkBuildJsonLd(manifest);
+        expect(findings).toHaveLength(1);
+        expect(findings[0].file).toBe('/p');
+        expect(findings[0].message).toEqual(expect.stringContaining('missing @context or @type'));
+    });
+});
+
+describe('checkInstanceJsonLd (DL#213)', () => {
+    it('validates component JSON-LD on carryForward.__slowHeadTags', () => {
+        const carryForward = {
+            __slowHeadTags: [
+                [
+                    {
+                        tag: 'script',
+                        attrs: { type: 'application/ld+json' },
+                        children: '{"name":"NoType"}',
+                    },
+                ],
+            ],
+        };
+        const findings = checkInstanceJsonLd({ instanceUrl: '/blog/hello', carryForward });
+        expect(findings).toHaveLength(1);
+        expect(findings[0].file).toBe('/blog/hello');
+        expect(findings[0].message).toEqual(expect.stringContaining('Component JSON-LD'));
+    });
+
+    it('returns [] when no __slowHeadTags present', () => {
+        expect(checkInstanceJsonLd({ instanceUrl: '/x', carryForward: {} })).toEqual([]);
     });
 });
 

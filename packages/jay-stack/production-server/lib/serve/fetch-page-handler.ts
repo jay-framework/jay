@@ -114,8 +114,11 @@ export async function fetchPageRequest(
         url: { path: requestUrl.pathname },
     };
 
-    // Merge head tags: component tags (defaults) then jay-html <head> (template wins silently, DL#148)
+    // Merge head tags: site identity (DL#213), component tags (defaults), then jay-html <head>
+    // (template wins silently, DL#148).
     const headTagSources: HeadTag[][] = [];
+    if (manifest.siteHeadTags && manifest.siteHeadTags.length > 0)
+        headTagSources.push(manifest.siteHeadTags);
     const slowHeadTags = cf.__slowHeadTags;
     if (slowHeadTags) headTagSources.push(...slowHeadTags);
     if (fastResult.headTags) headTagSources.push(fastResult.headTags);

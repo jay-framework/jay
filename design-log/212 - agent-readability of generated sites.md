@@ -56,12 +56,12 @@ same spirit as DL#211's build-output validation, but from outside the build.
 `jay-framework.dev` scored **59/100**. The scan's own headline: _"JAY-Framework offers
 full payment processing, but lacks an OpenAPI specification."_ Category breakdown:
 
-| Category   | Score    | Reading                                              |
-| ---------- | -------- | --------------------------------------------------- |
-| Discovery  | 11/20    | no JSON-LD/schema.org, no agent-discovery files     |
-| Access     | 16–17/30 | **OpenAPI 0/7** — nothing generates a spec          |
-| Usability  | 20–22/40 | **WebMCP 0/5**; a11y/semantic-HTML checks ~100%     |
-| Payments   | 10/10    | ✅ UCP complete                                      |
+| Category  | Score    | Reading                                         |
+| --------- | -------- | ----------------------------------------------- |
+| Discovery | 11/20    | no JSON-LD/schema.org, no agent-discovery files |
+| Access    | 16–17/30 | **OpenAPI 0/7** — nothing generates a spec      |
+| Usability | 20–22/40 | **WebMCP 0/5**; a11y/semantic-HTML checks ~100% |
+| Payments  | 10/10    | ✅ UCP complete                                 |
 
 Strong existing scores confirm the framework's bones are good: content-without-JS 3/3,
 welcome-agents/robots/crawler access strong, a11y/semantic HTML ~100%, payments 100.
@@ -69,19 +69,20 @@ The deficits are all **missing machine-discoverable output**, not broken HTML.
 
 ## Prior Art / Adjacent Mechanisms (what already exists — verified)
 
-| Mechanism                         | Where (verified)                                                      | Covers?                                                                 |
-| --------------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| Sitemap generation                | `production-server/lib/builder/generate-sitemap.ts`; DL#175          | ✅ sitemap.xml emitted                                                 |
-| robots.txt                        | validated only — `stack-cli/lib/validate.ts:2274` warns if missing   | ⚠️ **validated, not generated**                                        |
-| Head meta: title/desc/OG/canonical | DL#127/#148/#175; `stack-server-runtime/lib/head-tags.ts`           | ✅ supported in head-tags infra                                        |
-| noindex robots meta → manifest    | `production-build/lib/builder/build-pipeline.ts:450`                 | ✅ per-page robots meta flows to manifest                              |
-| SEO validator (alt/h1/CLS/`<main>`) | `packages/plugins/seo-validator/lib/validators/seo-validator.ts`    | ✅ a11y/semantic HTML                                                  |
-| schema.org / JSON-LD              | **agent-kit docs only** — `developer/seo-guide.md`, `plugin/seo-guide.md` | ❌ **documented, never generated**                                 |
-| WebMCP bridge/tools               | `packages/plugins/webmcp` (`setupWebMCP`, `ModelContextContainer`)  | ✅ plugin exists — ❌ not used by the website; no discoverable manifest |
-| OpenAPI / swagger                 | _nothing in framework code_ (verified grep)                         | ❌ absent                                                              |
-| llms.txt / .well-known / ard.json | _nothing in framework code_ (verified grep)                         | ❌ absent                                                              |
+| Mechanism                           | Where (verified)                                                          | Covers?                                                                 |
+| ----------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Sitemap generation                  | `production-server/lib/builder/generate-sitemap.ts`; DL#175               | ✅ sitemap.xml emitted                                                  |
+| robots.txt                          | validated only — `stack-cli/lib/validate.ts:2274` warns if missing        | ⚠️ **validated, not generated**                                         |
+| Head meta: title/desc/OG/canonical  | DL#127/#148/#175; `stack-server-runtime/lib/head-tags.ts`                 | ✅ supported in head-tags infra                                         |
+| noindex robots meta → manifest      | `production-build/lib/builder/build-pipeline.ts:450`                      | ✅ per-page robots meta flows to manifest                               |
+| SEO validator (alt/h1/CLS/`<main>`) | `packages/plugins/seo-validator/lib/validators/seo-validator.ts`          | ✅ a11y/semantic HTML                                                   |
+| schema.org / JSON-LD                | **agent-kit docs only** — `developer/seo-guide.md`, `plugin/seo-guide.md` | ❌ **documented, never generated**                                      |
+| WebMCP bridge/tools                 | `packages/plugins/webmcp` (`setupWebMCP`, `ModelContextContainer`)        | ✅ plugin exists — ❌ not used by the website; no discoverable manifest |
+| OpenAPI / swagger                   | _nothing in framework code_ (verified grep)                               | ❌ absent                                                               |
+| llms.txt / .well-known / ard.json   | _nothing in framework code_ (verified grep)                               | ❌ absent                                                               |
 
 **Load-bearing claims:**
+
 - ✅ verified — no `openapi`/`swagger` anywhere in `packages/compiler` or `packages/jay-stack`.
 - ✅ verified — `json-?ld`/`schema.org` appears only in the two `seo-guide.md` agent-kit docs.
 - ✅ verified — no `llms.txt`/`.well-known`/`ard.json`/`agent-skills` generation anywhere.
@@ -90,16 +91,16 @@ The deficits are all **missing machine-discoverable output**, not broken HTML.
 
 ## Category → fix map
 
-| # | Gap (ora)                     | Fix type                     | Home     |
-| - | ----------------------------- | ---------------------------- | -------- |
-| 1 | JSON-LD / schema.org          | **framework generator** + validation (promote from doc → generated) | **DL#213** |
-| 2 | llms.txt                      | framework generator (static) | **DL#214** |
-| 3 | `/.well-known` serving        | **framework fix** (dev serves dotdirs) + optional gated generator | **DL#214** |
-| 4 | ard.json                      | **validation warning + agent-kit** (agent authors it; not generated) | **DL#214** |
-| 5 | robots.txt                    | upgrade validator → generator with sitemap line | **DL#214** |
-| 6 | WebMCP discoverable           | **website-only** — add existing `webmcp` plugin to `jay-framework.dev` | website repo |
-| 7 | OpenAPI / action docs         | **parked** — exposing MCP/REST is **plugin space, not core** (core = support only: plugin routes, action metadata, per-call auth, exposure opt-in); `webmcp` plugin already ships | **DL#215** |
-| 8 | Agent-skills publishing       | validation + agent-invoked creation tool (plugin); `.well-known/agent-skills` per RFC v0.2.0 | **DL#216** |
+| #   | Gap (ora)               | Fix type                                                                                                                                                                          | Home         |
+| --- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| 1   | JSON-LD / schema.org    | **framework generator** + validation (promote from doc → generated)                                                                                                               | **DL#213**   |
+| 2   | llms.txt                | framework generator (static)                                                                                                                                                      | **DL#214**   |
+| 3   | `/.well-known` serving  | **framework fix** (dev serves dotdirs) + optional gated generator                                                                                                                 | **DL#214**   |
+| 4   | ard.json                | **validation warning + agent-kit** (agent authors it; not generated)                                                                                                              | **DL#214**   |
+| 5   | robots.txt              | upgrade validator → generator with sitemap line                                                                                                                                   | **DL#214**   |
+| 6   | WebMCP discoverable     | **website-only** — add existing `webmcp` plugin to `jay-framework.dev`                                                                                                            | website repo |
+| 7   | OpenAPI / action docs   | **parked** — exposing MCP/REST is **plugin space, not core** (core = support only: plugin routes, action metadata, per-call auth, exposure opt-in); `webmcp` plugin already ships | **DL#215**   |
+| 8   | Agent-skills publishing | validation + agent-invoked creation tool (plugin); `.well-known/agent-skills` per RFC v0.2.0                                                                                      | **DL#216**   |
 
 ## Agent-readiness spec catalog (specification.website)
 
@@ -109,31 +110,31 @@ Added 2026-10-11. The full **Agent Readiness** category from
 🔲 **candidate gap** (no DL yet — spin on demand). **No new DLs created from this table** (user
 decision); it is the scope-pre-mortem map against a real catalog.
 
-| Agent-readiness spec | Artifact / path | Status | Owner / note |
-| -------------------- | --------------- | ------ | ------------ |
-| Structured data for agents | JSON-LD, schema.org | ✅ | **DL#213** |
-| llms.txt (**v2**) | `/llms.txt` | ✅ | **DL#214** — confirm we target **v2** |
-| llms-full.txt | `/llms-full.txt` | 🔲 | #214 Q1 defers it; candidate |
-| Per-page Markdown source endpoints | `.md` / content-negotiation | 🔲 | strong fit for three-phase SSG; candidate |
-| robots.txt | `/robots.txt` (RFC 9309) | ✅ | **DL#214** (generate-if-absent) |
-| robots.txt for AI crawlers | named AI user-agents | 🔲 | extends #214 robots; candidate |
-| Content Signals in robots.txt | search/ingest/train perms | 🔲 | extends #214 robots; candidate |
-| Agent Skills discovery | `/.well-known/agent-skills/` | ✅ | **DL#216** (pinned v0.2.0) |
-| Agentic Resource Discovery (ARD) | `/.well-known/ard.json` (+ `ai-catalog.json` alias) | ✅ | **DL#214** (warn + author; alias decided) |
-| MCP & tool discovery | JSON-RPC MCP server | 🅿️ | **DL#215** — MCP plugin space |
-| WebMCP | `navigator.modelContext` | 🟢 | `packages/plugins/webmcp` ships; website adopts |
-| A2A agent cards | `/.well-known/agent-card.json` | 🔲 | plugin-space like MCP; candidate |
-| auth.md — agent registration | `/auth.md` | 🔲 | ties to #215 parked API/auth work; candidate |
-| HTTP Link headers for discovery | `Link:` rel advertisements | 🔲 | cross-cuts #214/#216; candidate to centralize |
-| Machine-readable formats | JSON/RSS/markdown alongside HTML | 🔲 | overlaps markdown endpoints + feeds; candidate |
-| Stable URLs | persistent routes | 🟢 | Jay routing principle |
-| Server-side rendering | content in initial HTML | 🟢 | Jay three-phase core |
-| TDM reservation (TDMRep) | header/meta/`tdmrep.json` | 🔲 | rights reservation; likely defer |
-| Web Bot Auth | signed requests (RFC 9421) | 🔲 | inbound bot auth; heavy, defer |
-| DNS for AI Discovery (DNS-AID) | SVCB/HTTPS DNS records | 🔲 | infra/DNS; defer |
-| NLWeb | `/ask` endpoint, `rel="nlweb"` | 🔲 | conversational endpoint; defer |
-| OKF bundle | OKF Markdown bundle | 🔲 | knowledge-base export; overlaps llms-full; candidate |
-| Schemamap | `/schemamap.xml` → JSON-LD per resource | 🔲 | overlaps #213 JSON-LD; candidate |
+| Agent-readiness spec               | Artifact / path                                     | Status | Owner / note                                         |
+| ---------------------------------- | --------------------------------------------------- | ------ | ---------------------------------------------------- |
+| Structured data for agents         | JSON-LD, schema.org                                 | ✅     | **DL#213**                                           |
+| llms.txt (**v2**)                  | `/llms.txt`                                         | ✅     | **DL#214** — confirm we target **v2**                |
+| llms-full.txt                      | `/llms-full.txt`                                    | 🔲     | #214 Q1 defers it; candidate                         |
+| Per-page Markdown source endpoints | `.md` / content-negotiation                         | 🔲     | strong fit for three-phase SSG; candidate            |
+| robots.txt                         | `/robots.txt` (RFC 9309)                            | ✅     | **DL#214** (generate-if-absent)                      |
+| robots.txt for AI crawlers         | named AI user-agents                                | 🔲     | extends #214 robots; candidate                       |
+| Content Signals in robots.txt      | search/ingest/train perms                           | 🔲     | extends #214 robots; candidate                       |
+| Agent Skills discovery             | `/.well-known/agent-skills/`                        | ✅     | **DL#216** (pinned v0.2.0)                           |
+| Agentic Resource Discovery (ARD)   | `/.well-known/ard.json` (+ `ai-catalog.json` alias) | ✅     | **DL#214** (warn + author; alias decided)            |
+| MCP & tool discovery               | JSON-RPC MCP server                                 | 🅿️     | **DL#215** — MCP plugin space                        |
+| WebMCP                             | `navigator.modelContext`                            | 🟢     | `packages/plugins/webmcp` ships; website adopts      |
+| A2A agent cards                    | `/.well-known/agent-card.json`                      | 🔲     | plugin-space like MCP; candidate                     |
+| auth.md — agent registration       | `/auth.md`                                          | 🔲     | ties to #215 parked API/auth work; candidate         |
+| HTTP Link headers for discovery    | `Link:` rel advertisements                          | 🔲     | cross-cuts #214/#216; candidate to centralize        |
+| Machine-readable formats           | JSON/RSS/markdown alongside HTML                    | 🔲     | overlaps markdown endpoints + feeds; candidate       |
+| Stable URLs                        | persistent routes                                   | 🟢     | Jay routing principle                                |
+| Server-side rendering              | content in initial HTML                             | 🟢     | Jay three-phase core                                 |
+| TDM reservation (TDMRep)           | header/meta/`tdmrep.json`                           | 🔲     | rights reservation; likely defer                     |
+| Web Bot Auth                       | signed requests (RFC 9421)                          | 🔲     | inbound bot auth; heavy, defer                       |
+| DNS for AI Discovery (DNS-AID)     | SVCB/HTTPS DNS records                              | 🔲     | infra/DNS; defer                                     |
+| NLWeb                              | `/ask` endpoint, `rel="nlweb"`                      | 🔲     | conversational endpoint; defer                       |
+| OKF bundle                         | OKF Markdown bundle                                 | 🔲     | knowledge-base export; overlaps llms-full; candidate |
+| Schemamap                          | `/schemamap.xml` → JSON-LD per resource             | 🔲     | overlaps #213 JSON-LD; candidate                     |
 
 **Adjacent categories, already strong (not in #212 scope):** SEO (sitemap 🟢 DL#175, canonical
 🟢, meta robots 🟢, breadcrumbs 🔲 via #213), Accessibility (~100% on ora scan 🟢), plus

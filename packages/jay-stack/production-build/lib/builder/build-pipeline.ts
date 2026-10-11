@@ -9,7 +9,12 @@ import { buildSharedChunks } from './shared-chunks-build';
 import { buildInstance, type InstanceBuildContext } from './instance-pipeline';
 import { loadProductionPageParts } from './load-production-parts';
 import { buildRouteEntry, discoverActions, writeRouteManifest } from './route-manifest';
-import { generateSitemap } from '@jay-framework/production-server';
+import {
+    generateSitemap,
+    generateSiteJsonLd,
+    generateLlmsTxt,
+    generateRobotsTxtIfAbsent,
+} from '@jay-framework/production-server';
 import { scanPluginRoutes } from './plugin-routes';
 import { compileRouteServerElement, compileRouteHydrateScript } from './server-element-compile';
 import { generateRouteHydrationEntry } from './hydration-entry-gen';
@@ -630,6 +635,13 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
 
     // ── Phase 2: Finalize ──
 
+    // Site-level Organization + WebSite JSON-LD (DL#213) — generated once from site config,
+    // carried on the manifest, injected into every served page's <head>. Falls back to the
+    // sitemap's baseUrl when only siteBaseUrl is threaded.
+    const siteConfig =
+        options.site ?? (options.siteBaseUrl ? { baseUrl: options.siteBaseUrl } : undefined);
+    const siteHeadTags = generateSiteJsonLd(siteConfig);
+
     const manifest: RouteManifest = {
         version: options.version,
         projectRoot: options.projectRoot,
@@ -637,6 +649,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         routes: routeEntries.map((r) => r.entry),
         actions,
         plugins,
+        ...(siteHeadTags.length > 0 && { siteHeadTags }),
     };
 
     await writeRouteManifest(manifest, backendDir);
@@ -656,6 +669,31 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         const sitemapPath = path.join(frontendDir, 'sitemap.xml');
         const urlCount = await generateSitemap(manifest, options.siteBaseUrl, sitemapPath);
         logger.important(`[Build] Sitemap generated: ${urlCount} URLs`);
+    }
+
+    // robots.txt — generate a default only when the author hasn't shipped one (DL#214). The
+    // public/ copy above already placed any author file into frontendDir, so this never clobbers.
+    const robotsWritten = await generateRobotsTxtIfAbsent(
+        path.join(frontendDir, 'robots.txt'),
+        siteConfig?.baseUrl,
+    );
+    if (robotsWritten) logger.important('[Build] robots.txt generated');
+
+    // llms.txt — a markdown index of the site for LLMs (DL#214). Requires site.name (the H1);
+    // like the sitemap, generate-if-absent so an author file in public/ wins.
+    if (siteConfig?.name) {
+        const llmsPath = path.join(frontendDir, 'llms.txt');
+        let authored = false;
+        try {
+            await fs.access(llmsPath);
+            authored = true; // author shipped public/llms.txt — don't clobber
+        } catch {
+            // absent — generate
+        }
+        if (!authored) {
+            const count = await generateLlmsTxt(manifest, siteConfig, backendDir, llmsPath);
+            logger.important(`[Build] llms.txt generated: ${count} pages`);
+        }
     }
 
     const sourceHash = await computeBuildHash(buildDir);

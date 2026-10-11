@@ -15,7 +15,10 @@ export type {
     PageModule,
 } from './types';
 
-export { generateSitemap } from './builder/generate-sitemap';
+export { generateSitemap, buildUrlFromManifest } from './builder/generate-sitemap';
+export { generateSiteJsonLd, type SiteJsonLdConfig } from './builder/generate-site-json-ld';
+export { generateLlmsTxt, type LlmsTxtSiteConfig } from './builder/generate-llms-txt';
+export { generateRobotsTxtIfAbsent } from './builder/generate-robots-txt';
 
 export { startMainServer, type MainServerOptions } from './serve/main-server';
 export { startRendererServer, type RendererServerOptions } from './renderer/renderer-server';

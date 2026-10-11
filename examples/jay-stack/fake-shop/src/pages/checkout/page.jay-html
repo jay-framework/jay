@@ -1,11 +1,13 @@
 <html>
   <head>
     <script type="application/jay-data" contract="./page.jay-contract"></script>
+    <title>Checkout — Fake Shop</title>
+    <meta name="description" content="Complete your purchase securely at the Fake Shop demo store.">
   </head>
   <body>
-    <div>
+    <main>
       <h1>Checkout</h1>
       <!-- Checkout form implementation to be added -->
-    </div>
+    </main>
   </body>
 </html>

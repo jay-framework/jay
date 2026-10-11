@@ -1,0 +1,5 @@
+name: publish-skills
+description: Package authored skills into /.well-known/agent-skills/ with fresh sha256 digests
+inputSchema:
+  folder?: string
+  config?: string

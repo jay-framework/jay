@@ -2530,6 +2530,30 @@ data:
                 expect.stringContaining('Local script imports are not supported'),
             ]);
         });
+
+        it('should collect JSON-LD without jay-script="allow" and without warning (DL#213)', async () => {
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |`,
+                    `<body><div>hello</div></body>`,
+                    `<script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Acme"}</script>`,
+                ),
+                'Page',
+                '.',
+                {},
+                defaultImportResolver,
+                '',
+            );
+            expect(jayFile.validations).toEqual([]);
+            expect(jayFile.val!.scripts).toEqual([
+                {
+                    inline: '{"@context":"https://schema.org","@type":"Organization","name":"Acme"}',
+                    attributes: { type: 'application/ld+json' },
+                    position: 'head',
+                },
+            ]);
+        });
     });
 });
 

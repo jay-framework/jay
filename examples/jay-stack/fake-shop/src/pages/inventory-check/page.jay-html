@@ -9,9 +9,11 @@
       .out-of-stock { color: red }
     </style>
     <script type="application/jay-data" contract="./page.jay-contract"></script>
+    <title>Inventory Check — Fake Shop</title>
+    <meta name="description" content="Live stock status for all products, streamed with makeJayStream.">
   </head>
   <body>
-    <div class="inventory-page">
+    <main class="inventory-page">
       <h1>Inventory Check</h1>
       <p>Stream stock status for all products using <code>makeJayStream</code>.</p>
 
@@ -29,6 +31,6 @@
           <span if="!inStock" class="out-of-stock">Out of Stock</span>
         </div>
       </div>
-    </div>
+    </main>
   </body>
 </html>

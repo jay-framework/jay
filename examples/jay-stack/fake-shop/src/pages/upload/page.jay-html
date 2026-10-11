@@ -10,9 +10,11 @@
       button { padding: 8px 16px; cursor: pointer; }
     </style>
     <script type="application/jay-data" contract="./page.jay-contract"></script>
+    <title>File Upload Demo — Fake Shop</title>
+    <meta name="description" content="Single and streaming multi-file upload examples built with Jay Stack.">
   </head>
   <body>
-    <div class="upload-page">
+    <main class="upload-page">
       <h1>File Upload Demo (DL#131)</h1>
 
       <div class="section">
@@ -42,6 +44,6 @@
         <button ref="streamBtn">Upload &amp; Process</button>
         <div class="result" if="streamLog">{streamLog}</div>
       </div>
-    </div>
+    </main>
   </body>
 </html>

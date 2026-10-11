@@ -92,3 +92,23 @@ export function partialRender<ViewState extends object, CarryForward>(
 ): PhaseOutput<ViewState, CarryForward> {
     return phaseOutput(rendered, carryForward);
 }
+
+// ============================================================================
+// Structured data (JSON-LD) — Design Log #213
+// ============================================================================
+
+/**
+ * Build a `<script type="application/ld+json">` HeadTag for schema.org structured data.
+ *
+ * Use from a `page.ts` phase: `phaseOutput(vs, cf, { headTags: [jsonLd(product)] })`.
+ * The serializer emits the body breakout-safe (`serializeHeadTags`, DL#213) — do not
+ * pre-escape. This is a thin helper over `JSON.stringify`; authors layer their own
+ * schema.org typing if wanted (DL#213 Q2 — no schema-dts dependency).
+ */
+export function jsonLd(data: object): HeadTag {
+    return {
+        tag: 'script',
+        attrs: { type: 'application/ld+json' },
+        children: JSON.stringify(data),
+    };
+}

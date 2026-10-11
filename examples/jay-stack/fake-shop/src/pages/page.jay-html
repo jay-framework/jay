@@ -22,12 +22,17 @@
       .section {margin: 20px 0; padding: 10px; border: 1px solid #ddd}
     </style>
     <script type="application/jay-data" contract="./page.jay-contract"></script>
+    <!-- Services-DI demo, not a design-system demo — pages don't share flattened templates (DL#200). -->
+    <script type="application/jay-validations">
+      jay-stack:
+        allow-no-design-system: true
+    </script>
       <title>fake shop home</title>
       <meta name="description" content="fake shop example home">
-      <link rel="canonical" href="/">
+      <link rel="canonical" href="https://fake-shop.example.com/">
   </head>
   <body>
-    <div class="main">
+    <main class="main">
       <h1>homepage</h1>
 
       <!-- Mood Tracker (key-based headless component) -->
@@ -103,6 +108,6 @@
         </div>
       </div>
 
-    </div>
+    </main>
   </body>
 </html>

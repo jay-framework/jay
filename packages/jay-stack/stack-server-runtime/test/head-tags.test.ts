@@ -4,6 +4,8 @@ import {
     mergeHeadTags,
     serializeHeadTags,
     serializeScripts,
+    escapeJsonLd,
+    isJsonLdScript,
     type JayHtmlScript,
 } from '../lib/head-tags';
 import type { HeadTag } from '@jay-framework/fullstack-component';
@@ -212,6 +214,59 @@ describe('serializeHeadTags', () => {
     });
 });
 
+describe('JSON-LD serialization (DL#213)', () => {
+    it('isJsonLdScript detects application/ld+json scripts', () => {
+        expect(isJsonLdScript({ tag: 'script', attrs: { type: 'application/ld+json' } })).toBe(
+            true,
+        );
+        expect(isJsonLdScript({ tag: 'script', attrs: { type: 'text/javascript' } })).toBe(false);
+        expect(isJsonLdScript({ tag: 'script' })).toBe(false);
+        expect(isJsonLdScript({ tag: 'title', children: 'x' })).toBe(false);
+    });
+
+    it('escapeJsonLd escapes < > & as unicode escapes, not HTML entities', () => {
+        expect(escapeJsonLd('a & b < c > d')).toBe('a \\u0026 b \\u003c c \\u003e d');
+    });
+
+    it('does NOT HTML-escape JSON-LD script bodies (the DL#213 bug)', () => {
+        const json = '{"@context":"https://schema.org","url":"https://x.com/?a=1&b=2"}';
+        const result = serializeHeadTags([
+            { tag: 'script', attrs: { type: 'application/ld+json' }, children: json },
+        ]);
+        expect(result).toBe(
+            '    <script type="application/ld+json">{"@context":"https://schema.org","url":"https://x.com/?a=1\\u0026b=2"}</script>',
+        );
+    });
+
+    it('emitted JSON-LD body round-trips through JSON.parse with the & preserved', () => {
+        const data = { '@context': 'https://schema.org', url: 'https://x.com/?a=1&b=2' };
+        const result = serializeHeadTags([
+            {
+                tag: 'script',
+                attrs: { type: 'application/ld+json' },
+                children: JSON.stringify(data),
+            },
+        ]);
+        const body = result.slice(result.indexOf('>') + 1, result.lastIndexOf('</script>'));
+        expect(JSON.parse(body)).toEqual(data);
+    });
+
+    it('is breakout-safe: a </script> in data cannot close the tag', () => {
+        const data = { evil: '</script><script>alert(1)</script>' };
+        const result = serializeHeadTags([
+            {
+                tag: 'script',
+                attrs: { type: 'application/ld+json' },
+                children: JSON.stringify(data),
+            },
+        ]);
+        // No literal </script> except the real closing tag at the very end.
+        const closings = result.split('</script>').length - 1;
+        expect(closings).toBe(1);
+        expect(result.endsWith('</script>')).toBe(true);
+    });
+});
+
 describe('serializeScripts (DL#149 passthrough)', () => {
     const scripts: JayHtmlScript[] = [
         {
@@ -252,5 +307,28 @@ describe('serializeScripts (DL#149 passthrough)', () => {
             'head',
         );
         expect(result).toBe('    <script src="/x.js" type="module" nonce="abc"></script>');
+    });
+
+    it('emits an inline application/ld+json body breakout-safe (DL#213)', () => {
+        const result = serializeScripts(
+            [
+                {
+                    inline: '{"@type":"Organization","name":"A & B","x":"</script><b>"}',
+                    attributes: { type: 'application/ld+json' },
+                    position: 'head',
+                },
+            ],
+            'head',
+        );
+        expect(result).toBe(
+            '    <script type="application/ld+json">{"@type":"Organization","name":"A \\u0026 B","x":"\\u003c/script\\u003e\\u003cb\\u003e"}</script>',
+        );
+        // The emitted body (between the script tags) is still valid, equivalent JSON.
+        const body = result.slice(result.indexOf('>') + 1, result.lastIndexOf('</script>'));
+        expect(JSON.parse(body)).toEqual({
+            '@type': 'Organization',
+            name: 'A & B',
+            x: '</script><b>',
+        });
     });
 });

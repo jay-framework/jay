@@ -79,18 +79,19 @@ Jay's head pipeline (DL#127/#148) already lets a component return `headTags` fro
 
 ## Prior Art / Adjacent Mechanisms (verified)
 
-| Mechanism                          | Where                                                                 | Relation                                                             |
-| ---------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| `headTags` from `phaseOutput`      | `full-stack-component/lib/jay-stack-types.ts:130` (`HeadTag`)        | ✅ per-page JSON-LD already expressible — no new surface needed      |
-| `serializeHeadTags`                | `stack-server-runtime/lib/head-tags.ts`                             | ⚠️ **the bug lives here**; shared by dev + prod                     |
-| `.jay` `site.baseUrl`              | `stack-cli/lib/config.ts` (`JayConfig.site`)                        | ✅ config home exists; extend with `name`/`logo`/`description`/`sameAs` |
-| Sitemap generation                 | `production-server/lib/builder/generate-sitemap.ts` (`baseUrl` arg) | precedent: build-time emission driven by `site` config              |
-| schema.org in docs                 | `developer/seo-guide.md:56`, `plugin/seo-guide.md`                  | documented, never generated — this DL promotes it to generated      |
-| DL#149 passthrough script raw-emit | `serializeScripts` in same file                                     | precedent: scripts whose bodies are emitted **un-escaped** on purpose |
-| slow `headTags` persistence        | `slowly-changing-runner.ts:156` (`carryForward.__slowHeadTags`)     | ✅ where per-page JSON-LD lands in the build → Tier-2-visible          |
+| Mechanism                          | Where                                                                | Relation                                                                   |
+| ---------------------------------- | -------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| `headTags` from `phaseOutput`      | `full-stack-component/lib/jay-stack-types.ts:130` (`HeadTag`)        | ✅ per-page JSON-LD already expressible — no new surface needed            |
+| `serializeHeadTags`                | `stack-server-runtime/lib/head-tags.ts`                              | ⚠️ **the bug lives here**; shared by dev + prod                            |
+| `.jay` `site.baseUrl`              | `stack-cli/lib/config.ts` (`JayConfig.site`)                         | ✅ config home exists; extend with `name`/`logo`/`description`/`sameAs`    |
+| Sitemap generation                 | `production-server/lib/builder/generate-sitemap.ts` (`baseUrl` arg)  | precedent: build-time emission driven by `site` config                     |
+| schema.org in docs                 | `developer/seo-guide.md:56`, `plugin/seo-guide.md`                   | documented, never generated — this DL promotes it to generated             |
+| DL#149 passthrough script raw-emit | `serializeScripts` in same file                                      | precedent: scripts whose bodies are emitted **un-escaped** on purpose      |
+| slow `headTags` persistence        | `slowly-changing-runner.ts:156` (`carryForward.__slowHeadTags`)      | ✅ where per-page JSON-LD lands in the build → Tier-2-visible              |
 | Tier 2 build-output validation     | `stack-cli/lib/check-build-output.ts` (reads `*.cache.json`; DL#211) | ✅ home for presence/validity checks; currently reads `slowViewState` only |
 
 **Load-bearing claims:**
+
 - ✅ verified — `serializeHeadTags` escapes script children (`head-tags.ts`, quoted above).
 - ✅ verified — `HeadTag = { tag; attrs?; children? }`; no dedup key for `script`
   (`tagIdentityKey` returns `undefined` for script) — multiple JSON-LD blocks are allowed.
@@ -153,12 +154,12 @@ In `serializeHeadTags`, special-case JSON-LD scripts:
 
 ```typescript
 function escapeJsonLd(json: string): string {
-    // Keep valid JSON; prevent </script> breakout. Standard safe-JSON-LD escaping.
-    return json.replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
+  // Keep valid JSON; prevent </script> breakout. Standard safe-JSON-LD escaping.
+  return json.replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
 }
 // in serializeHeadTags, before the generic children path:
 if (t === 'script' && tag.attrs?.type === 'application/ld+json') {
-    return `    <script type="application/ld+json">${escapeJsonLd(tag.children ?? '')}</script>`;
+  return `    <script type="application/ld+json">${escapeJsonLd(tag.children ?? '')}</script>`;
 }
 ```
 
@@ -189,7 +190,7 @@ injected into every page head via the existing head pipeline.
 
 ```typescript
 export function jsonLd(data: object): HeadTag {
-    return { tag: 'script', attrs: { type: 'application/ld+json' }, children: JSON.stringify(data) };
+  return { tag: 'script', attrs: { type: 'application/ld+json' }, children: JSON.stringify(data) };
 }
 ```
 
@@ -201,11 +202,11 @@ A page can be **jay-html-only** — `route.componentExport` is optional (guarded
 with `if (route.componentExport)`), so there may be no `page.ts` slow phase to return
 `headTags`. Such a page has three ways to carry JSON-LD:
 
-| Path | Mechanism | Needs `page.ts`? | Serializer |
-| --- | --- | --- | --- |
-| **A. Site-level (auto)** | `.jay` `site.*` → Organization+WebSite on every page (Part 2) | no | `serializeHeadTags` |
-| **B. `page.ts` slow phase** | `headTags: [jsonLd(data)]` → persisted as `__slowHeadTags` | **yes** | `serializeHeadTags` |
-| **C. In the jay-html `<head>`** | `<script type="application/ld+json">{…}</script>` | no | `serializeScripts` (DL#149) |
+| Path                            | Mechanism                                                     | Needs `page.ts`? | Serializer                  |
+| ------------------------------- | ------------------------------------------------------------- | ---------------- | --------------------------- |
+| **A. Site-level (auto)**        | `.jay` `site.*` → Organization+WebSite on every page (Part 2) | no               | `serializeHeadTags`         |
+| **B. `page.ts` slow phase**     | `headTags: [jsonLd(data)]` → persisted as `__slowHeadTags`    | **yes**          | `serializeHeadTags`         |
+| **C. In the jay-html `<head>`** | `<script type="application/ld+json">{…}</script>`             | no               | `serializeScripts` (DL#149) |
 
 Path C is the only page-specific option for a jay-html-only page, but today it's awkward:
 `validateAndCollectScripts` (`jay-html-parser.ts`) treats _any_ inline script as "not
@@ -231,6 +232,7 @@ Net: a static jay-html-only page adds structured data by just writing
 ### Part 5 — Validation (two tiers)
 
 JSON-LD comes from three sources (Part 4) with different visibility:
+
 - **Path C (template `<script type="application/ld+json">`)** is in **source** → checkable in
   **Tier 1**.
 - **Path B (slow-phase `headTags`)** is **not in source** — only in the build as
@@ -249,6 +251,7 @@ mean the site has an `Organization`/`WebSite` identity. So this is a **project-l
 > Add to `.jay`: `site:\n  name: …\n  baseUrl: …`
 
 **Tier 1 — `validate` (source-only, always-on):**
+
 - **warning (project-level)**: missing site identity, as above (`!config.site?.name`).
 - **error (per-page)**: any template `application/ld+json` block (path C) whose body is not
   valid JSON parsing to an object with `@context` + `@type`. Source-visible, caught pre-build.
@@ -261,6 +264,7 @@ collapse to concrete instances, so **one check covers both** (answers Q-static +
 above). Extend `check-build-output.ts` to read **both** `cache.carryForward.__slowHeadTags`
 (path B — same cache file it already opens via `loadSlowViewState`; today it reads only
 `slowViewState`) **and** `route.scripts` (path C) for `application/ld+json` entries:
+
 - **validity (error, per instance)**: every emitted `application/ld+json` body is valid JSON
   parsing to an object with `@context` + `@type`. This catches malformed `jsonLd()` payloads
   (path B) **in the actual built output** — the only place the resolved slow JSON exists.
@@ -352,3 +356,48 @@ in both role kits — with a clear decision tree for the three paths:
 - Per-page rich types (Article/Product/BreadcrumbList) auto-inference → **own DL** if wanted.
 - schema-dts typing of the helper → deliberately out (Q2).
 - OpenAPI / action docs → DL#215. Agent-discovery files → DL#214.
+
+## Implementation Results
+
+Implemented on branch `DL212-216-agent-readability-impl`. All five parts landed with tests; full `yarn build:check-types` passes.
+
+### Part 1 — breakout-safe serialization (core bug fix)
+
+- `stack-server-runtime/lib/head-tags.ts`: added `escapeJsonLd()` (escapes `<`,`>`,`&` → `\uXXXX`) and `isJsonLdScript()`. `serializeHeadTags` now emits `application/ld+json` bodies via `escapeJsonLd` instead of `escapeHtml` (which corrupted the JSON). Shared by every serving path (dev SSR + production), so all targets are byte-identical.
+- Tests: `test/head-tags.test.ts` — `describe('JSON-LD serialization (DL#213)')` (5 tests) + a `serializeScripts` breakout-safe test. 37/37 pass.
+
+### Part 2 — site-level Organization/WebSite JSON-LD
+
+- `production-server/lib/builder/generate-site-json-ld.ts` (new): `generateSiteJsonLd(site)` → `[]` when `!site.name`, else Organization + WebSite HeadTags; `resolveUrl` keeps absolute URLs, joins relative against `baseUrl`.
+- `production-server/lib/types.ts`: `RouteManifest.siteHeadTags?: HeadTag[]`, `BuildOptions.site?`.
+- `production-build/lib/builder/build-pipeline.ts`: computes `siteHeadTags` and spreads onto the manifest (persists across incremental rebuilds via the manifest JSON round-trip — no rebuild.ts change needed).
+- `production-server/lib/serve/fetch-page-handler.ts`: prepends `manifest.siteHeadTags` to the head-tag sources (lowest precedence; component then template still win).
+- Config plumbing: `.jay` `site.*` → `JayConfig.site` (stack-cli/lib/config.ts) → `ProductionContext.site` (run-production.ts) → `BuildOptions.site`.
+- Dev-server intentionally does **not** inject site JSON-LD (production artifact, like sitemap.xml).
+- Tests: `production-server/test/generate-site-json-ld.test.ts` (5). Pass.
+
+### Part 3 — `jsonLd()` helper
+
+- `full-stack-component/lib/render-results.ts`: `jsonLd(data)` → the correct `HeadTag`. Exported via `lib/index.ts`.
+- Tests: `full-stack-component/test/json-ld.test.ts` (2). Pass.
+
+### Part 4 — template-authored `ld+json` first-class
+
+- `compiler-jay-html/lib/jay-target/jay-html-parser.ts` `validateAndCollectScripts`: `type="application/ld+json"` with no `src` is collected **without** `jay-script="allow"` and **without** the inline-script warning. Empty blocks are still collected (as `inline: ''`) so Tier-1 validation can flag them.
+- `stack-server-runtime/lib/head-tags.ts` `serializeScripts`: `application/ld+json` inline bodies emitted breakout-safe (same `escapeJsonLd`); all other passthrough scripts unchanged (still un-escaped, author opted in).
+- Tests: `compiler-jay-html/test/jay-target/parse-jay-file.unit.test.ts` — new DL#213 case under "script tag validation".
+
+### Part 5 — validation
+
+- **Tier 1** (`stack-cli/lib/validate.ts`): `checkJsonLdScripts(jayHtml)` → per-page error on invalid-JSON / missing `@context`+`@type` / empty `ld+json` blocks (called in the per-file loop). Project-level warning when `.jay` `site.name` is absent (beside the existing `site.baseUrl` warning).
+- **Tier 2** (`stack-cli/lib/check-build-output.ts`): `checkBuildJsonLd(manifest)` validates `siteHeadTags` + each route's template `ld+json`; `checkInstanceJsonLd({carryForward})` validates component-emitted `__slowHeadTags` (the `jsonLd()` slow output). Wired into `runBuildOutputValidation` as Checks 4 + 5.
+- Shared core: `jsonLdBodyError(body)` in check-build-output.ts is the single JSON-LD validity oracle, reused by Tier 1 `checkJsonLdScripts` (names the shared cause — one validator, two tiers).
+- Tests: `validate.test.ts` `describe('checkJsonLdScripts (DL#213)')` (5); `check-build-output.test.ts` `jsonLdBodyError`/`checkBuildJsonLd`/`checkInstanceJsonLd` (7). Pass.
+
+### agent-kit
+
+- `developer/seo-guide.md`: added "Structured Data (JSON-LD)" — 3-path decision table (site config / `jsonLd()` / template `<script>`), `.jay` `site.*` reference, validation notes.
+
+### Deviations from design
+
+- None material. The empty-`ld+json` case became a collected-but-flagged block (parser change) rather than a silently-dropped one, so Tier-1 can report it.

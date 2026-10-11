@@ -1,11 +1,13 @@
 <html>
   <head>
     <script type="application/jay-data" contract="./page.jay-contract"></script>
+    <title>Thank You — Fake Shop</title>
+    <meta name="description" content="Your order has been placed. Thank you for shopping at the Fake Shop demo store.">
   </head>
   <body>
-    <div>
+    <main>
       <h1>Thank You for Your Order!</h1>
       <!-- Order confirmation details to be added -->
-    </div>
+    </main>
   </body>
 </html>

@@ -1,0 +1,11 @@
+name: agent-skills
+description: Publishes agent skills at /.well-known/agent-skills/ (agent-skills-discovery v0.2.0) and validates their freshness
+
+commands:
+  - name: publish-skills
+    command: publish-skills.jay-command
+
+validators:
+  - name: agent-skills
+    handler: validate
+    description: Checks the published /.well-known/agent-skills/ tree — index schema, frontmatter, and sha256 digest freshness
