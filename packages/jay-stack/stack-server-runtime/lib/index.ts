@@ -12,3 +12,4 @@ export * from './plugin-init-discovery';
 export * from './plugin-scanner';
 export * from './head-tags';
 export * from './cookies';
+export * from './error-view-state';

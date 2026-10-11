@@ -1,6 +1,10 @@
 import { build as viteBuild } from 'vite';
 import { jayStackCompiler, type JayRollupConfig } from '@jay-framework/compiler-jay-stack';
-import { scanRoutes, type JayRoute } from '@jay-framework/stack-route-scanner';
+import {
+    scanRoutes,
+    type JayRoute,
+    type JayErrorPages,
+} from '@jay-framework/stack-route-scanner';
 import { getLogger } from '@jay-framework/logger';
 import path from 'node:path';
 import fs from 'node:fs/promises';
@@ -54,10 +58,13 @@ export interface ServerBuildResult {
 export async function discoverServerEntries(
     projectRoot: string,
     pagesRoot: string,
-): Promise<{ entries: ServerBuildEntries; routes: JayRoute[] }> {
+): Promise<{ entries: ServerBuildEntries; routes: JayRoute[]; errorPages: JayErrorPages }> {
     const logger = getLogger();
 
-    const routes = await scanRoutes(pagesRoot, {
+    // DL#218 — error pages are reserved top-level status-token folders, resolved by status rather
+    // than URL. They are compiled by a dedicated pass (buildErrorPages); their page.ts (if any) is
+    // compiled here alongside navigable routes so the error-page client bundle can import it.
+    const { routes, errorPages } = await scanRoutes(pagesRoot, {
         jayHtmlFilename: 'page.jay-html',
         compFilename: 'page.ts',
     });
@@ -68,6 +75,13 @@ export async function discoverServerEntries(
             const relativePath = path.relative(projectRoot, route.compPath);
             const entryName = relativePath.replace(/^src\//, '').replace(/\.ts$/, '');
             pages[entryName] = route.compPath;
+        }
+    }
+    for (const errorPage of errorPages) {
+        if (errorPage.compPath) {
+            const relativePath = path.relative(projectRoot, errorPage.compPath);
+            const entryName = relativePath.replace(/^src\//, '').replace(/\.ts$/, '');
+            pages[entryName] = errorPage.compPath;
         }
     }
 
@@ -125,10 +139,10 @@ export async function discoverServerEntries(
     const entries: ServerBuildEntries = { init, pages, actions };
 
     logger.info(
-        `[Build] Discovered: ${Object.keys(pages).length} pages, ${Object.keys(actions).length} actions, init: ${init ? 'yes' : 'no'}`,
+        `[Build] Discovered: ${Object.keys(pages).length} pages, ${Object.keys(actions).length} actions, ${errorPages.length} error pages, init: ${init ? 'yes' : 'no'}`,
     );
 
-    return { entries, routes };
+    return { entries, routes, errorPages };
 }
 
 export async function buildServerCode(

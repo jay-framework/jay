@@ -104,6 +104,8 @@ export interface ServerError5xx {
     status: number;
     message?: string;
     code?: string;
+    /** Human-facing heading rendered on the error page (Design Log #218). */
+    title?: string;
     details?: Record<string, unknown>;
 }
 
@@ -112,6 +114,8 @@ export interface ClientError4xx {
     status: number;
     message?: string;
     code?: string;
+    /** Human-facing heading rendered on the error page (Design Log #218). */
+    title?: string;
     details?: Record<string, unknown>;
 }
 

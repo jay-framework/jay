@@ -13,6 +13,7 @@ import type { HeadTag } from '@jay-framework/fullstack-component';
 import { deepMergeViewStates } from '@jay-framework/view-state-merge';
 import { asyncSwapScript } from '@jay-framework/ssr-runtime';
 import { buildImportMap } from './import-map';
+import { renderErrorPage } from './render-error-page';
 import {
     loadPagePartsFromConfig,
     type ProductionPageParts,
@@ -89,8 +90,15 @@ export async function fetchPageRequest(
         });
     }
     if (fastResult.kind === 'ServerError' || fastResult.kind === 'ClientError') {
-        return new Response(fastResult.message || 'Error', {
+        // DL#218 — a component/plugin returned an error outcome: render the matching error page
+        // (exact → family → plain text). `title`/`code`/`details` flow through to the page.
+        return renderErrorPage(manifest, artifacts, staticBaseUrl, {
             status: fastResult.status,
+            url: requestUrl.pathname,
+            title: (fastResult as any).title,
+            message: fastResult.message,
+            code: (fastResult as any).code,
+            details: (fastResult as any).details,
         });
     }
 

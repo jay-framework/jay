@@ -593,6 +593,35 @@ describe('Smoke Test', () => {
             expect(body).toMatch(/Tag Two/);
             expect(body.match(/>x<\/button>/g)?.length).toBe(2); // one free-ref button per tag row
         });
+
+        // DL#218 — an unmatched URL renders the branded pages/404 with status 404 and the injected
+        // `error` ViewState (default title/message for a 404).
+        it('/does-not-exist — unmatched URL renders the branded 404 (DL#218)', async () => {
+            const { status, body } = await fetchPage(server.url, '/does-not-exist/');
+            expect(status).toBe(404);
+            expectPage(body);
+            expect(body).toMatch(/404 — Page Not Found/);
+            expect(body).toMatch(/<title>Page Not Found<\/title>/);
+            expect(body).toMatch(/Go home/);
+        });
+
+        // DL#218 — the reserved status folders are not navigable routes; visiting /404 directly is
+        // itself a miss and resolves through the 404 error page (status 404), not a 200 page render.
+        it('/404 — reserved status folder is not a navigable route (DL#218)', async () => {
+            const { status } = await fetchPage(server.url, '/404/');
+            expect(status).toBe(404);
+        });
+
+        // DL#218 — a page whose fast phase returns serverError5xx(500) resolves through the branded
+        // pages/5xx (family fallback) with status 500 and the injected `error` ViewState.
+        it('/error-500 — fast-phase serverError5xx(500) renders the branded 5xx page (DL#218)', async () => {
+            const { status, body } = await fetchPage(server.url, '/error-500/');
+            expect(status).toBe(500);
+            expectPage(body);
+            expect(body).toMatch(/500 — Something went wrong/);
+            expect(body).toMatch(/This page always fails at request time\./);
+            expect(body).not.toMatch(/did not return a 500/); // the page's own body must not render
+        });
     });
 
     describe('production self-hosted', () => {
@@ -820,6 +849,36 @@ describe('Smoke Test', () => {
             expect(text).toMatch(/\/phases/);
             expect(text).toMatch(/\/dynamic\/item-a/);
             expect(text).toMatch(/\/dynamic\/item-b/);
+        });
+
+        // DL#218 — the production server renders the branded pages/404 (resolved by status, from the
+        // manifest's errorPages) with status 404 for an unmatched URL.
+        it('/does-not-exist — unmatched URL renders the branded 404 (DL#218)', async () => {
+            const { status, body } = await fetchPage(server.url, '/does-not-exist/');
+            expect(status).toBe(404);
+            expect(body).toMatch(/404 — Page Not Found/);
+            expect(body).toMatch(/<title>Page Not Found<\/title>/);
+            expect(body).toMatch(/Go home/);
+        });
+
+        // DL#218 — reserved status folders never become navigable routes and stay out of the sitemap.
+        it('/404 and /5xx — reserved folders are not navigable and absent from the sitemap (DL#218)', async () => {
+            const notFound = await fetchPage(server.url, '/404/');
+            expect(notFound.status).toBe(404);
+
+            const sitemap = await (await fetch(`${server.url}/sitemap.xml`)).text();
+            expect(sitemap).not.toMatch(/<loc>[^<]*\/404<\/loc>/);
+            expect(sitemap).not.toMatch(/<loc>[^<]*\/5xx<\/loc>/);
+        });
+
+        // DL#218 — a fast-phase serverError5xx(500) renders the branded pages/5xx (family fallback)
+        // with status 500 in production.
+        it('/error-500 — fast-phase serverError5xx(500) renders the branded 5xx page (DL#218)', async () => {
+            const { status, body } = await fetchPage(server.url, '/error-500/');
+            expect(status).toBe(500);
+            expect(body).toMatch(/500 — Something went wrong/);
+            expect(body).toMatch(/This page always fails at request time\./);
+            expect(body).not.toMatch(/did not return a 500/);
         });
     });
 

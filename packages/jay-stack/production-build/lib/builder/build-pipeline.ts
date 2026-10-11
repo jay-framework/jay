@@ -5,6 +5,7 @@ import type {
     RouteEntry,
 } from '@jay-framework/production-server';
 import { discoverServerEntries, buildServerCode } from './server-code-build';
+import { buildErrorPages } from './error-pages-build';
 import { buildSharedChunks } from './shared-chunks-build';
 import { buildInstance, type InstanceBuildContext } from './instance-pipeline';
 import { loadProductionPageParts } from './load-production-parts';
@@ -134,8 +135,11 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
 
     // ── Phase 0: Shared Artifacts ──
 
-    // 0a. Discover entries + scan routes
-    const { entries, routes } = await discoverServerEntries(options.projectRoot, options.pagesRoot);
+    // 0a. Discover entries + scan routes (+ reserved error pages, DL#218)
+    const { entries, routes, errorPages } = await discoverServerEntries(
+        options.projectRoot,
+        options.pagesRoot,
+    );
 
     // 0b. Compile server code (Vite SSR build) → backend/server/
     const serverOutputDir = path.join(backendDir, 'server');
@@ -633,6 +637,26 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         }
     }
 
+    // ── Phase 1b: Error pages (DL#218) ──
+    // Compiled like single-instance routes into the _errors/<token>/ subtree, recorded on the
+    // manifest's errorPages map (resolved by status, never by URL — hence not in routes[]).
+    let errorPageEntries: RouteManifest['errorPages'];
+    if (errorPages.length > 0) {
+        errorPageEntries = await buildErrorPages(
+            errorPages,
+            instanceCtx,
+            options.projectRoot,
+            options.pagesRoot,
+            options.tsConfigFilePath,
+            options.minify ?? true,
+            sharedManifest,
+            buildDir,
+        );
+        logger.important(
+            `[Build] Error pages compiled: ${Object.keys(errorPageEntries).join(', ')}`,
+        );
+    }
+
     // ── Phase 2: Finalize ──
 
     // Site-level Organization + WebSite JSON-LD (DL#213) — generated once from site config,
@@ -650,6 +674,8 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
         actions,
         plugins,
         ...(siteHeadTags.length > 0 && { siteHeadTags }),
+        ...(errorPageEntries &&
+            Object.keys(errorPageEntries).length > 0 && { errorPages: errorPageEntries }),
     };
 
     await writeRouteManifest(manifest, backendDir);

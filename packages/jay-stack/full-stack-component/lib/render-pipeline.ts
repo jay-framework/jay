@@ -9,6 +9,7 @@ import {
 import {
     badRequest,
     clientError4xx,
+    type ErrorOptions,
     forbidden,
     notFound,
     phaseOutput,
@@ -73,29 +74,29 @@ export interface PipelineFactory<TargetVS extends object, TargetCF extends objec
     // Error entry points
     notFound(
         message?: string,
-        details?: Record<string, unknown>,
+        opts?: ErrorOptions,
     ): RenderPipeline<never, TargetVS, TargetCF>;
     badRequest(
         message?: string,
-        details?: Record<string, unknown>,
+        opts?: ErrorOptions,
     ): RenderPipeline<never, TargetVS, TargetCF>;
     unauthorized(
         message?: string,
-        details?: Record<string, unknown>,
+        opts?: ErrorOptions,
     ): RenderPipeline<never, TargetVS, TargetCF>;
     forbidden(
         message?: string,
-        details?: Record<string, unknown>,
+        opts?: ErrorOptions,
     ): RenderPipeline<never, TargetVS, TargetCF>;
     serverError(
         status: number,
         message?: string,
-        details?: Record<string, unknown>,
+        opts?: ErrorOptions,
     ): RenderPipeline<never, TargetVS, TargetCF>;
     clientError(
         status: number,
         message?: string,
-        details?: Record<string, unknown>,
+        opts?: ErrorOptions,
     ): RenderPipeline<never, TargetVS, TargetCF>;
     redirect(status: number, location: string): RenderPipeline<never, TargetVS, TargetCF>;
 }
@@ -188,40 +189,40 @@ export class RenderPipeline<
 
             notFound(
                 message?: string,
-                details?: Record<string, unknown>,
+                opts?: ErrorOptions,
             ): RenderPipeline<never, TargetVS, TargetCF> {
                 return new RenderPipeline<never, TargetVS, TargetCF>(
-                    notFound(message, details),
+                    notFound(message, opts),
                     false,
                 );
             },
 
             badRequest(
                 message?: string,
-                details?: Record<string, unknown>,
+                opts?: ErrorOptions,
             ): RenderPipeline<never, TargetVS, TargetCF> {
                 return new RenderPipeline<never, TargetVS, TargetCF>(
-                    badRequest(message, details),
+                    badRequest(message, opts),
                     false,
                 );
             },
 
             unauthorized(
                 message?: string,
-                details?: Record<string, unknown>,
+                opts?: ErrorOptions,
             ): RenderPipeline<never, TargetVS, TargetCF> {
                 return new RenderPipeline<never, TargetVS, TargetCF>(
-                    unauthorized(message, details),
+                    unauthorized(message, opts),
                     false,
                 );
             },
 
             forbidden(
                 message?: string,
-                details?: Record<string, unknown>,
+                opts?: ErrorOptions,
             ): RenderPipeline<never, TargetVS, TargetCF> {
                 return new RenderPipeline<never, TargetVS, TargetCF>(
-                    forbidden(message, details),
+                    forbidden(message, opts),
                     false,
                 );
             },
@@ -229,10 +230,10 @@ export class RenderPipeline<
             serverError(
                 status: number,
                 message?: string,
-                details?: Record<string, unknown>,
+                opts?: ErrorOptions,
             ): RenderPipeline<never, TargetVS, TargetCF> {
                 return new RenderPipeline<never, TargetVS, TargetCF>(
-                    serverError5xx(status, message, details),
+                    serverError5xx(status, message, opts),
                     false,
                 );
             },
@@ -240,10 +241,10 @@ export class RenderPipeline<
             clientError(
                 status: number,
                 message?: string,
-                details?: Record<string, unknown>,
+                opts?: ErrorOptions,
             ): RenderPipeline<never, TargetVS, TargetCF> {
                 return new RenderPipeline<never, TargetVS, TargetCF>(
-                    clientError4xx(status, message, details),
+                    clientError4xx(status, message, opts),
                     false,
                 );
             },

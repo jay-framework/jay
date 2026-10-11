@@ -108,6 +108,26 @@ describe('Jay HTML with Contract References', () => {
         });
     });
 
+    describe('with built-in error contract (DL#218)', () => {
+        it('generates error?: ErrorViewState from plugin="jay-stack" contract="error"', async () => {
+            // The compiler special-cases the built-in Error contract: no plugin/module resolution,
+            // the `error` key is typed from the in-memory contract and imported from
+            // @jay-framework/fullstack-component.
+            const folder = 'contracts/page-with-error-contract';
+            const parsedFile = await readAndParseJayFile(folder, 'page');
+
+            expect(parsedFile.validations).toEqual([]);
+
+            const definitionFile = generateElementDefinitionFile(parsedFile);
+            expect(definitionFile.validations).toEqual([]);
+
+            const generated = await prettify(definitionFile.val);
+            const expected = await readFixtureElementDefinitionFile(folder, 'page.jay-html.d.ts');
+
+            expect(generated).toEqual(expected);
+        });
+    });
+
     describe('with recursive reference', () => {
         it('should handle recursive references in jay-html.d.ts when using contract reference', async () => {
             // This test verifies that recursive type references ($/data) are properly resolved

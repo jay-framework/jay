@@ -265,3 +265,26 @@ describe('actions', () => {
         expect(res.status).toBe(404);
     });
 });
+
+describe('error pages (DL#218)', () => {
+    it('renders the branded 404 page for an unmatched URL', async () => {
+        const res = await fetch('/this-page-does-not-exist');
+        expect(res.status).toBe(404);
+        expect(res.headers['content-type']).toMatch(/text\/html/);
+        // Status + default title/message injected from the error ViewState.
+        expect(res.body).toMatch(/404/);
+        expect(res.body).toMatch(/Page Not Found/);
+        expect(res.body).toMatch(/could not be found/);
+    });
+
+    it('binds the error status into the 404 template heading', async () => {
+        const res = await fetch('/nope/also-missing');
+        expect(res.status).toBe(404);
+        expect(res.body).toMatch(/404 — Page Not Found/);
+    });
+
+    it('sets the title tag from the error template', async () => {
+        const res = await fetch('/missing');
+        expect(res.body).toMatch(/<title>Page Not Found<\/title>/);
+    });
+});

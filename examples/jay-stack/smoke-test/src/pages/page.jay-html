@@ -32,6 +32,7 @@
         <li><a href="/free-ref/">Free Ref</a> — DL#198 D-1: free ref on a single region</li>
         <li><a href="/free-ref-collection/">Free Ref Collection</a> — DL#198 Case 1: free ref on a collection of regions</li>
         <li><a href="/free-ref-in-foreach/">Free Ref In ForEach</a> — DL#198 Case 2: free ref inside a region-internal forEach</li>
+        <li><a href="/error-500/">Error 500</a> — DL#218: fast phase returns serverError5xx(500), renders the branded 5xx page</li>
       </ul>
     </nav>
   </div>

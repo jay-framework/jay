@@ -47,6 +47,7 @@ import {
     type DiffEntry,
 } from '@jay-framework/compiler-inline-composition';
 import { parse as parseHtml, HTMLElement, NodeType } from 'node-html-parser';
+import { scanRoutes } from '@jay-framework/stack-route-scanner';
 import { loadConfig, getConfigWithDefaults } from './config';
 import { buildMaterialiseOptions } from './materialise-context';
 import { extractScopeBlock, splitScopeBlocks } from './scope-css';
@@ -2363,6 +2364,32 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                     suggestion: finding.suggestion,
                 });
             }
+        }
+    }
+
+    // DL#218 — minimum error pages: a production site should ship at least a branded `404` and a
+    // `5xx` page so authored errors render with the site's chrome instead of the plain-text fallback.
+    // Resolution is by status (exact → family), so `5xx` covers every 500-class response and `404`
+    // the most common 4xx. A site that accepts the plain-text fallback suppresses the nudge via `.jay`
+    // `validations: { allow-no-error-pages: true }` — a project-tree concern, not a single page's markup.
+    const allowNoErrorPages = config.validations?.['allow-no-error-pages'] === true;
+    if (!allowNoErrorPages) {
+        const { errorPages } = await scanRoutes(scanDir, {
+            jayHtmlFilename: 'page.jay-html',
+            compFilename: 'page.ts',
+        });
+        const tokens = new Set(errorPages.map((ep) => ep.token));
+        // `404` is covered by an exact page or the `4xx` family; `5xx` only by a `5xx` family page.
+        const missing: string[] = [];
+        if (!tokens.has('404') && !tokens.has('4xx')) missing.push('404');
+        if (!tokens.has('5xx')) missing.push('5xx');
+        if (missing.length > 0) {
+            warnings.push({
+                file: 'src/pages',
+                message: `No branded error page for ${missing.join(' and ')} — these responses fall back to plain text instead of your site's layout.`,
+                suggestion:
+                    'Add pages/404/page.jay-html and pages/5xx/page.jay-html importing the `error` headless contract, or suppress with `validations: { allow-no-error-pages: true }` in .jay. See designer/error-pages-guide.md.',
+            });
         }
     }
 

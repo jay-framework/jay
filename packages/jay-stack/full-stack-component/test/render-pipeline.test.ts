@@ -60,7 +60,7 @@ describe('RenderPipeline', () => {
             const Pipeline = RenderPipeline.for<TestViewState, TestCarryForward>();
 
             const notFoundResult = await Pipeline.notFound('Not found', {
-                resource: 'test',
+                details: { resource: 'test' },
             }).toPhaseOutput(() => ({
                 viewState: { name: '', value: 0 },
                 carryForward: { id: '' },

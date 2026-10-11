@@ -1,5 +1,6 @@
 export * from './render-results';
 export * from './jay-stack-types';
+export * from './error-contract';
 export * from './jay-stack-builder';
 export * from './contract-generator-builder';
 export * from './render-pipeline';

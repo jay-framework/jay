@@ -36,6 +36,11 @@ import { SourceFileFormat } from '@jay-framework/compiler-shared';
 import { JayImportLink, JayImportName } from '@jay-framework/compiler-shared';
 import { JayYamlStructure } from './jay-yaml-structure';
 import { Contract, ContractTag, RenderingPhase } from '../contract';
+import {
+    ERROR_CONTRACT,
+    ERROR_CONTRACT_MODULE,
+    isBuiltInErrorContract,
+} from '../contract';
 
 import {
     JayHeadlessImports,
@@ -713,7 +718,17 @@ async function parseHeadlessImports(
         let contractTagName: string = contractAttr;
 
         try {
-            if (pluginAttr) {
+            if (isBuiltInErrorContract(pluginAttr, contractAttr)) {
+                // DL#218 — built-in Error contract. No plugin/module resolution: the contract is
+                // compiled in-memory and its ViewState/Refs types ship from ERROR_CONTRACT_MODULE.
+                // The `error` ViewState is injected at render time (no component instance runs), so
+                // this import contributes only typing — it is never used as a `<jay:error>` region.
+                loadedContract = ERROR_CONTRACT;
+                contractFile = ERROR_CONTRACT_MODULE;
+                name = pascalCase(ERROR_CONTRACT.name);
+                module = ERROR_CONTRACT_MODULE;
+                contractTagName = paramCase(ERROR_CONTRACT.name);
+            } else if (pluginAttr) {
                 // Resolve plugin to actual paths using the resolver
                 const resolveResult = importResolver.resolvePluginComponent(
                     pluginAttr,
@@ -823,8 +838,13 @@ async function parseHeadlessImports(
                     }),
                 );
 
-                // Make contract path relative to the jay-html file for imports
-                const relativeContractPath = toRelativeModule(contractFile);
+                // Make contract path relative to the jay-html file for imports. A built-in
+                // contract (DL#218) is imported from a bare package specifier, not a file path,
+                // so it must not be relativized.
+                const relativeContractPath =
+                    contractFile === ERROR_CONTRACT_MODULE
+                        ? contractFile
+                        : toRelativeModule(contractFile);
 
                 const enumsFromContract = enumsToImportRelativeToJayHtml
                     .filter((_) => _.declaringModule === relativeContractPath)

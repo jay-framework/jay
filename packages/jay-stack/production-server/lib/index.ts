@@ -6,6 +6,7 @@ export type {
     RouteEntry,
     RouteSegment,
     InstanceEntry,
+    ErrorPageEntry,
     CacheEntry,
     ActionEntry,
     PluginEntry,
@@ -37,6 +38,7 @@ export type { ArtifactStore } from './serve/artifact-store';
 export { FilesystemArtifactStore } from './serve/artifact-store';
 export { matchRequest, type MatchResult } from './serve/route-matcher';
 export { fetchPageRequest } from './serve/fetch-page-handler';
+export { renderErrorPage } from './serve/render-error-page';
 export {
     fetchActionRequest,
     isActionRequest,

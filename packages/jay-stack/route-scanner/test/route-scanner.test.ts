@@ -4,13 +4,14 @@ import {
     scanRoutes,
     sortRoutesByPriority,
     createRoute,
+    isStatusToken,
 } from '../lib';
 import path from 'path';
 
 describe('RouteScanner', () => {
     const options: ScanFilesOptions = { jayHtmlFilename: 'page.jay-html', compFilename: 'page.ts' };
     it('should scan for static routes', async () => {
-        const routes = await scanRoutes('./test/fixtures/segment1', options);
+        const { routes } = await scanRoutes('./test/fixtures/segment1', options);
         // More specific routes (longer) come first due to priority sorting
         expect(routes).toEqual([
             {
@@ -29,7 +30,7 @@ describe('RouteScanner', () => {
     });
 
     it('should scan for optional routes', async () => {
-        const routes = await scanRoutes('./test/fixtures/segment2', options);
+        const { routes } = await scanRoutes('./test/fixtures/segment2', options);
         // Optional param comes after root (dynamic after static/empty)
         expect(routes).toEqual([
             {
@@ -48,7 +49,7 @@ describe('RouteScanner', () => {
     });
 
     it('should scan for param routes', async () => {
-        const routes = await scanRoutes('./test/fixtures/segment3', options);
+        const { routes } = await scanRoutes('./test/fixtures/segment3', options);
         // Single param comes after root (dynamic after static/empty)
         expect(routes).toEqual([
             {
@@ -67,7 +68,7 @@ describe('RouteScanner', () => {
     });
 
     it('should scan for catch all routes', async () => {
-        const routes = await scanRoutes('./test/fixtures/segment4', options);
+        const { routes } = await scanRoutes('./test/fixtures/segment4', options);
         // Catch-all comes after root (dynamic after static/empty)
         expect(routes).toEqual([
             {
@@ -86,7 +87,7 @@ describe('RouteScanner', () => {
     });
 
     it('should sort routes by priority (static before dynamic)', async () => {
-        const routes = await scanRoutes('./test/fixtures/priority', options);
+        const { routes } = await scanRoutes('./test/fixtures/priority', options);
         const rawRoutes = routes.map((r) => r.rawRoute);
 
         // Expected order:
@@ -103,7 +104,7 @@ describe('RouteScanner', () => {
     });
 
     it('should ensure static routes match before dynamic at same level', async () => {
-        const routes = await scanRoutes('./test/fixtures/priority', options);
+        const { routes } = await scanRoutes('./test/fixtures/priority', options);
 
         // Verify ceramic-flower-vase comes before [slug]
         const vaseIndex = routes.findIndex((r) => r.rawRoute === '/products/ceramic-flower-vase');
@@ -113,14 +114,14 @@ describe('RouteScanner', () => {
     });
 
     it('should read explicit params from headless component props', async () => {
-        const routes = await scanRoutes('./test/fixtures/priority', options);
+        const { routes } = await scanRoutes('./test/fixtures/priority', options);
 
         const vaseRoute = routes.find((r) => r.rawRoute === '/products/ceramic-flower-vase');
         expect(vaseRoute?.inferredParams).toEqual({ slug: 'ceramic-flower-vase' });
     });
 
     it('should not have params for routes without headless props', async () => {
-        const routes = await scanRoutes('./test/fixtures/priority', options);
+        const { routes } = await scanRoutes('./test/fixtures/priority', options);
 
         const slugRoute = routes.find((r) => r.rawRoute === '/products/[slug]');
         expect(slugRoute?.inferredParams).toBeUndefined();
@@ -200,21 +201,69 @@ describe('headless props parsing (DL#156)', () => {
     const options: ScanFilesOptions = { jayHtmlFilename: 'page.jay-html', compFilename: 'page.ts' };
 
     it('should parse props from headless component YAML body', async () => {
-        const routes = await scanRoutes('./test/fixtures/jay-params', options);
+        const { routes } = await scanRoutes('./test/fixtures/jay-params', options);
         const route = routes.find((r) => r.rawRoute === '/with-params');
         expect(route?.inferredParams).toEqual({ slug: 'my-product', category: 'electronics' });
     });
 
     it('should handle jay-html without headless props', async () => {
-        const routes = await scanRoutes('./test/fixtures/jay-params', options);
+        const { routes } = await scanRoutes('./test/fixtures/jay-params', options);
         const route = routes.find((r) => r.rawRoute === '/no-params');
         expect(route?.inferredParams).toBeUndefined();
     });
 
     it('should handle jay-html without head tag', async () => {
-        const routes = await scanRoutes('./test/fixtures/jay-params', options);
+        const { routes } = await scanRoutes('./test/fixtures/jay-params', options);
         const route = routes.find((r) => r.rawRoute === '/no-head');
         expect(route?.inferredParams).toBeUndefined();
+    });
+});
+
+describe('error pages — reserved status-token folders (DL#218)', () => {
+    const options: ScanFilesOptions = { jayHtmlFilename: 'page.jay-html', compFilename: 'page.ts' };
+
+    it('isStatusToken recognizes exact codes and families, rejects others', () => {
+        for (const ok of ['404', '500', '502', '504', '4xx', '5xx', '1xx', '201']) {
+            expect(isStatusToken(ok)).toBe(true);
+        }
+        for (const no of ['600', '6xx', '40', '4040', 'xx4', 'about', '0xx', 'products']) {
+            expect(isStatusToken(no)).toBe(false);
+        }
+    });
+
+    it('collects top-level status folders as error pages, not routes', async () => {
+        const { routes, errorPages } = await scanRoutes('./test/fixtures/error-pages', options);
+
+        // Top-level 404/5xx/502 are reserved — never navigable routes.
+        const rawRoutes = routes.map((r) => r.rawRoute).sort();
+        expect(rawRoutes).toEqual(['', '/blog/404']);
+
+        // Error pages collected with token + resolved paths; 404 has a co-located page.ts, 5xx/502 don't.
+        expect([...errorPages].sort((a, b) => a.token.localeCompare(b.token))).toEqual([
+            {
+                token: '404',
+                jayHtmlPath: resolveFixture('error-pages/404/page.jay-html'),
+                compPath: resolveFixture('error-pages/404/page.ts'),
+            },
+            {
+                token: '502',
+                jayHtmlPath: resolveFixture('error-pages/502/page.jay-html'),
+                compPath: '',
+            },
+            {
+                token: '5xx',
+                jayHtmlPath: resolveFixture('error-pages/5xx/page.jay-html'),
+                compPath: '',
+            },
+        ]);
+    });
+
+    it('does not reserve status-named folders nested below the top level', async () => {
+        const { routes, errorPages } = await scanRoutes('./test/fixtures/error-pages', options);
+
+        // pages/blog/404 is a normal route; it must NOT be treated as an error page.
+        expect(routes.some((r) => r.rawRoute === '/blog/404')).toBe(true);
+        expect(errorPages.some((e) => e.jayHtmlPath.includes('blog'))).toBe(false);
     });
 });
 

@@ -30,6 +30,13 @@ export interface JayConfig {
          * script) because it governs a single project-level file, not any page's markup.
          */
         'allow-no-ard'?: boolean;
+        /**
+         * Suppress the minimum-error-pages nudge — for sites that intentionally ship no branded
+         * `404`/`5xx` pages and accept the plain-text fallback. Lives in `.jay` (not a page's
+         * `application/jay-validations` script) because it governs the project's `pages/` tree as a
+         * whole, not any single page's markup (DL#218).
+         */
+        'allow-no-error-pages'?: boolean;
     };
 }
 

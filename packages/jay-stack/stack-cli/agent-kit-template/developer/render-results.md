@@ -87,6 +87,22 @@ return clientError4xx(429, 'Rate limit exceeded');
 return serverError5xx(500, 'Database connection failed');
 ```
 
+Each error constructor takes an optional options bag — `{ title?, code?, details? }` — after the
+message. These surface as `error.title` / `error.code` / `error.details` on the error page:
+
+```typescript
+return notFound('This product may have been removed.', { title: 'Product not found' });
+
+return serverError5xx(504, 'Upstream timed out', {
+  title: 'This is taking too long',
+  details: { upstream: 'inventory-service', waitedMs: '10000' },
+});
+```
+
+The matching **error page** (`src/pages/404/`, `src/pages/5xx/`, …) renders these fields. See
+[error-pages-guide.md](error-pages-guide.md) for the full field reference and status resolution, and
+`../designer/error-pages-guide.md` for authoring the page markup.
+
 ## Redirects
 
 ```typescript

@@ -51,7 +51,7 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
 
     const log = getLogger();
 
-    const { server, viteServer, routes, service } = await mkDevServer({
+    const { server, viteServer, routes, service, errorPageHandler } = await mkDevServer({
         pagesRootFolder: path.resolve(resolvedConfig.devServer.pagesBase),
         projectRootFolder: process.cwd(),
         publicBaseUrlPath: '/',
@@ -86,15 +86,20 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
         log.important(`⚠️  Public folder not found: ${resolvedConfig.devServer.publicFolder}`);
     }
 
-    // Serve HTML — initial routes; new routes register via service.refreshRoutes()
+    // Serve HTML — initial routes; new routes register via service.refreshRoutes().
+    // Mount page routes on a dedicated Router (DL#218): the Router occupies one position in the app
+    // stack (before the catch-all), so routes added at runtime are still matched ahead of the 404
+    // catch-all that is registered last.
+    const pageRouter = express.Router();
     routes.forEach((route) => {
-        app.get(route.path, route.handler);
+        pageRouter.get(route.path, route.handler);
     });
     service.attachRouteRegistrar((added) => {
         added.forEach((route) => {
-            app.get(route.path, route.handler);
+            pageRouter.get(route.path, route.handler);
         });
     });
+    app.use(pageRouter);
 
     void (async () => {
         await generatePageDefinitionFiles(
@@ -157,6 +162,11 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
             }, options.timeout * 1000);
         }
     }
+
+    // DL#218 — designed 404 for any unmatched path. Registered last (after page routes and the
+    // test-mode endpoints) so it only fires when nothing else matched; Express has no built-in
+    // 404 page. The handler falls back to plain text when no 404/4xx error page exists.
+    app.use(errorPageHandler(404));
 
     process.on('SIGTERM', shutdown);
     process.on('SIGINT', shutdown);

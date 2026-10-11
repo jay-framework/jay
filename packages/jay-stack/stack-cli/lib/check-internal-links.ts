@@ -86,10 +86,11 @@ function routeToRegex(route: JayRoute): RegExp {
 export async function buildRouteOracle(pagesBase: string): Promise<RouteOracle> {
     let routes: JayRoute[] = [];
     try {
-        routes = await scanRoutes(pagesBase, {
+        // DL#218 — error pages are not URLs; internal-link checking only considers navigable routes.
+        ({ routes } = await scanRoutes(pagesBase, {
             jayHtmlFilename: 'page.jay-html',
             compFilename: 'page.ts',
-        });
+        }));
     } catch {
         routes = [];
     }

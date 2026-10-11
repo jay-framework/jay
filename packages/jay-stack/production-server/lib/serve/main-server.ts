@@ -5,6 +5,7 @@ import { getLogger } from '@jay-framework/logger';
 import { FilesystemArtifactStore } from './artifact-store';
 import { matchRequest } from './route-matcher';
 import { fetchPageRequest } from './fetch-page-handler';
+import { renderErrorPage } from './render-error-page';
 import {
     isActionRequest,
     fetchActionRequest,
@@ -125,8 +126,12 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
             const match = matchRequest(currentManifest, url.pathname);
 
             if (!match) {
-                res.writeHead(404);
-                res.end('Not Found');
+                // DL#218 — no route matched: render the 404 error page (plain-text fallback inside).
+                const response = await renderErrorPage(currentManifest, artifacts, staticBaseUrl, {
+                    status: 404,
+                    url: url.pathname,
+                });
+                await pipeFetchResponse(response, res);
                 return;
             }
 
@@ -144,8 +149,20 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
             logger.error(`[Server] Error handling ${url.pathname}: ${err.message}`);
             if (err.stack) logger.error(err.stack);
             if (!res.headersSent) {
-                res.writeHead(500);
-                res.end('Internal Server Error');
+                // DL#218 — uncaught exception: render the 5xx error page (plain-text fallback inside).
+                try {
+                    const currentManifest = await artifacts.readManifest();
+                    const response = await renderErrorPage(
+                        currentManifest,
+                        artifacts,
+                        staticBaseUrl,
+                        { status: 500, url: url.pathname, message: err?.message },
+                    );
+                    await pipeFetchResponse(response, res);
+                } catch {
+                    res.writeHead(500);
+                    res.end('Internal Server Error');
+                }
             }
         }
     });

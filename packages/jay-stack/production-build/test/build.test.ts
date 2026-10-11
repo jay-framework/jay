@@ -384,3 +384,52 @@ describe('rebuild target resolution (DL#134c)', () => {
         expect(Object.keys(match!.params).length).toBe(0);
     });
 });
+
+describe('error pages (DL#218)', () => {
+    it('records compiled error pages on the manifest keyed by status token', () => {
+        expect(Object.keys(manifest.errorPages ?? {}).sort()).toEqual(['404', '5xx']);
+    });
+
+    it('compiles each error page like a single-instance route (server + hydrate + client)', () => {
+        for (const token of ['404', '5xx']) {
+            const entry = manifest.errorPages![token];
+            expect(entry.token).toBe(token);
+            expect(entry.serverElementPath).toBeTruthy();
+            expect(entry.routeHydratePath).toBeTruthy();
+            expect(entry.routeClientBundlePath).toBeTruthy();
+        }
+    });
+
+    it('emits error-page artifacts under the _errors/<token>/ subtree', async () => {
+        for (const token of ['404', '5xx']) {
+            const entry = manifest.errorPages![token];
+            expect(entry.serverElementPath.startsWith(path.join('pre-rendered', '_errors', token))).toBe(
+                true,
+            );
+            const serverFileExists = await fs
+                .access(path.join(backendDir, entry.serverElementPath))
+                .then(() => true)
+                .catch(() => false);
+            expect(serverFileExists).toBe(true);
+
+            const hydrateExists = await fs
+                .access(path.join(frontendDir, entry.routeHydratePath!))
+                .then(() => true)
+                .catch(() => false);
+            expect(hydrateExists).toBe(true);
+        }
+    });
+
+    it('does not expose error pages as navigable routes', () => {
+        expect(manifest.routes.some((r) => r.pattern === '/404')).toBe(false);
+        expect(manifest.routes.some((r) => r.pattern === '/5xx')).toBe(false);
+        expect(matchRequest(manifest, '/404')).toBeUndefined();
+        expect(matchRequest(manifest, '/5xx')).toBeUndefined();
+    });
+
+    it('captures the error page head metadata from its template', () => {
+        // The 404 template declares <title>{error.title}</title> + a description meta.
+        const entry = manifest.errorPages!['404'];
+        expect(entry.headMeta).toBeDefined();
+    });
+});

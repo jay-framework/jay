@@ -14,6 +14,45 @@ export interface RouteManifest {
      * when `site.name` is not configured.
      */
     siteHeadTags?: HeadTag[];
+    /**
+     * Compiled error pages keyed by status token (`"404"`, `"502"`, `"5xx"`, …) (DL#218).
+     * Resolved by status (exact → family), never by URL — kept out of `routes[]` so they are
+     * non-navigable and excluded from sitemap/llms.txt/robots/internal-link validation.
+     */
+    errorPages?: Record<string, ErrorPageEntry>;
+}
+
+/**
+ * A compiled error page (DL#218). Mirrors the per-route compiled refs of a single-instance
+ * route, minus URL/param machinery: an error page is resolved by status, not by matching a URL.
+ */
+export interface ErrorPageEntry {
+    /** Status token this page serves — exact (`"404"`, `"502"`) or family (`"4xx"`, `"5xx"`). */
+    token: string;
+    /** Per-page server element path (relative to backend dir). */
+    serverElementPath: string;
+    /** Per-page CSS file path (relative to frontend dir). */
+    routeCssPath?: string;
+    /** Per-page hydrate script path (relative to frontend dir). */
+    routeHydratePath?: string;
+    /** Per-page client bundle path (relative to frontend dir). */
+    routeClientBundlePath?: string;
+    /** External @import URLs extracted from CSS at build time. */
+    cssImports?: string[];
+    /** Head metadata from the error page's jay-html <head>. */
+    headMeta?: JayHtmlHeadMeta;
+    /** Passthrough `<script jay-script="allow">` tags from the template. */
+    scripts?: JayHtmlScript[];
+    /** Shared chunk package names this page's hydrate/client bundle imports (DL#177). */
+    sharedDeps?: string[];
+    /** trackBy map threaded to the client hydration entry. */
+    trackByMap?: Record<string, string>;
+    /**
+     * Optional pre-rendered slow (static chrome) ViewState. Unused in v1 — an error page is a
+     * pass-through of the injected `error` ViewState (DL#218 Q6); its static chrome renders
+     * from the template without slow data. The renderer merges `slowCache?.slowViewState ?? {}`.
+     */
+    slowCache?: CacheEntry;
 }
 
 export interface RouteSegment {

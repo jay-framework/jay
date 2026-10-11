@@ -40,6 +40,34 @@ export type JayRoute = {
 };
 export type JayRoutes = JayRoute[];
 
+/**
+ * A reserved top-level error-page folder (Design Log #218). `pages/404/`, `pages/5xx/`, etc. are
+ * not routable; they are collected here instead of in {@link JayRoutes}.
+ */
+export type JayErrorPage = {
+    /** HTTP status token: exact (`404`, `502`) or family (`4xx`, `5xx`). */
+    token: string;
+    jayHtmlPath: string;
+    compPath: string;
+};
+export type JayErrorPages = JayErrorPage[];
+
+/** Result of a route scan: navigable routes plus reserved error pages (DL#218). */
+export interface ScanResult {
+    routes: JayRoutes;
+    errorPages: JayErrorPages;
+}
+
+// DL#218 — status-token grammar for reserved top-level error-page folders:
+//   exact  := [1-5][0-9][0-9]   (404, 500, 502, 504)
+//   family := [1-5] "xx"        (4xx, 5xx)
+const STATUS_TOKEN = /^([1-5][0-9]{2}|[1-5]xx)$/;
+
+/** True when a top-level folder name is a reserved HTTP status token (DL#218). */
+export function isStatusToken(name: string): boolean {
+    return STATUS_TOKEN.test(name);
+}
+
 // Regex pattern:
 // ^\[        - Starts with [
 // (\[)?      - Optional second [ (for optional params)
@@ -98,8 +126,10 @@ async function scanDirectory(
     BASE_DIR: string,
     directory: string,
     options: ScanFilesOptions,
-): Promise<JayRoutes> {
+    depth: number = 0,
+): Promise<ScanResult> {
     let routes: JayRoutes = [];
+    let errorPages: JayErrorPages = [];
     const items = await fs.readdir(directory, { withFileTypes: true });
 
     for (const item of items) {
@@ -107,7 +137,18 @@ async function scanDirectory(
 
         if (item.isDirectory()) {
             if (IGNORED_DIRS.has(item.name)) continue;
-            routes = [...routes, ...(await scanDirectory(BASE_DIR, fullPath, options))];
+            // DL#218 — a top-level (depth 0) folder named with a status token is a reserved error
+            // page: collect its page.jay-html as an error page and do NOT recurse into it (it is
+            // not routable, and nested content under it is not emitted as routes). A status-named
+            // folder deeper in the tree (depth > 0) is a normal route (e.g. /blog/404).
+            if (depth === 0 && isStatusToken(item.name)) {
+                const errorPage = toErrorPage(item.name, fullPath, options);
+                if (errorPage) errorPages.push(errorPage);
+                continue;
+            }
+            const nested = await scanDirectory(BASE_DIR, fullPath, options, depth + 1);
+            routes = [...routes, ...nested.routes];
+            errorPages = [...errorPages, ...nested.errorPages];
         } else if (item.name === options.jayHtmlFilename) {
             const route = convertToRoutePath(BASE_DIR, fullPath, options);
             const { params, validations } = await parseHeadlessProps(fullPath);
@@ -142,7 +183,24 @@ async function scanDirectory(
             routes.push(route);
         }
     }
-    return routes;
+    return { routes, errorPages };
+}
+
+/**
+ * Build a {@link JayErrorPage} from a reserved status-token folder (DL#218), resolving its
+ * `page.jay-html` and optional co-located component. Returns undefined when the folder has no
+ * `page.jay-html` (an empty/invalid error folder — ignored by the scanner).
+ */
+function toErrorPage(
+    token: string,
+    folderPath: string,
+    { jayHtmlFilename, compFilename }: ScanFilesOptions,
+): JayErrorPage | undefined {
+    const jayHtmlPath = path.join(folderPath, jayHtmlFilename);
+    if (!existsSync(jayHtmlPath)) return undefined;
+    const candidateCompPath = path.join(folderPath, compFilename);
+    const compPath = existsSync(candidateCompPath) ? candidateCompPath : '';
+    return { token, jayHtmlPath, compPath };
 }
 
 /**
@@ -319,11 +377,16 @@ export function createRoute(
     };
 }
 
-export async function scanRoutes(baseDir: string, options: ScanFilesOptions): Promise<JayRoutes> {
+/**
+ * Scan a pages directory for navigable routes and reserved error pages (DL#218).
+ *
+ * Returns `{ routes, errorPages }`. Callers that only need routes destructure `{ routes }`.
+ */
+export async function scanRoutes(baseDir: string, options: ScanFilesOptions): Promise<ScanResult> {
     // Normalize base directory path
     const BASE_DIR = path.resolve(baseDir);
 
-    const routes = await scanDirectory(BASE_DIR, BASE_DIR, options);
+    const { routes, errorPages } = await scanDirectory(BASE_DIR, BASE_DIR, options);
     const sortedRoutes = sortRoutesByPriority(routes);
 
     // Log explicit params for debugging
@@ -335,5 +398,5 @@ export async function scanRoutes(baseDir: string, options: ScanFilesOptions): Pr
         }
     }
 
-    return sortedRoutes;
+    return { routes: sortedRoutes, errorPages };
 }

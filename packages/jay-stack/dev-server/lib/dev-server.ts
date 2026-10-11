@@ -31,6 +31,9 @@ import {
     renderFastChangingData,
     mergeHeadTags,
     parseCookies,
+    buildErrorViewState,
+    resolveErrorPageToken,
+    type ErrorInfo,
 } from '@jay-framework/stack-server-runtime';
 import { loadPageParts } from '@jay-framework/stack-server-build';
 import {
@@ -76,10 +79,29 @@ import { registerService } from '@jay-framework/stack-server-runtime';
 let _watchLinkedFiles: (files: string[], route?: JayRoute) => void = () => {};
 
 async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
-    return await scanRoutes(pagesBaseFolder, {
+    // DL#218 — error pages are consumed separately (Phase 5); initRoutes yields navigable routes only.
+    const { routes } = await scanRoutes(pagesBaseFolder, {
         jayHtmlFilename: 'page.jay-html',
         compFilename: 'page.ts',
     });
+    return routes;
+}
+
+/**
+ * Scan the reserved top-level error-page folders (DL#218) into a `token → JayRoute` map. The
+ * synthetic route path (`/_errors/<token>`) is never registered for navigation — it only carries
+ * the jay-html/page.ts locations so the dev render pipeline can compile the page on the fly.
+ */
+async function initErrorPages(pagesBaseFolder: string): Promise<Map<string, JayRoute>> {
+    const { errorPages } = await scanRoutes(pagesBaseFolder, {
+        jayHtmlFilename: 'page.jay-html',
+        compFilename: 'page.ts',
+    });
+    const map = new Map<string, JayRoute>();
+    for (const ep of errorPages) {
+        map.set(ep.token, createRoute(`/_errors/${ep.token}`, ep.jayHtmlPath, ep.compPath));
+    }
+    return map;
 }
 
 /**
@@ -286,17 +308,130 @@ export interface DevServer {
     freezeStore?: FreezeStore;
     /** Public API for design board applications and CLI (DL#128) */
     service: DevServerService;
+    /**
+     * Express handler that renders the designed error page for a status (DL#218). Mount
+     * `errorPageHandler(404)` as a catch-all **after** all route registrations so unmatched paths
+     * get the branded 404 instead of Express's default. Falls back to plain text when no error page
+     * matches the status.
+     */
+    errorPageHandler: (status: number) => RequestHandler;
 }
 
-function handleOtherResponseCodes(
+/**
+ * Render the designed error page for an {@link ErrorInfo} (DL#218). Installed by `mkDevServer`
+ * once the error-page routes and render dependencies exist; until then (and for projects with no
+ * error pages) it emits the built-in plain-text fallback. Module-level so the request handlers and
+ * exception catch below can reach it without threading render context through every signature —
+ * the same pattern as `_watchLinkedFiles`.
+ */
+let _renderDevErrorPage: (res: Response, info: ErrorInfo) => Promise<void> = async (res, info) => {
+    if (!res.headersSent)
+        res.status(info.status)
+            .type('text/plain')
+            .send(info.message || info.title || 'Error');
+};
+
+/**
+ * Dev error renderer: resolve the error page by status (exact → family), compile it on the fly
+ * through the normal dev render pipeline, and inject the `error` ViewState (no author phases run —
+ * an error page is a pass-through, Q6). Falls back to plain text when no page matches or rendering
+ * throws, so error handling can never itself crash the response.
+ */
+async function renderDevErrorPage(
+    vite: ViteDevServer,
+    options: DevServerOptions,
+    errorRoutes: Map<string, JayRoute>,
+    projectInit: ProjectClientInitInfo | undefined,
+    allPluginsWithInit: PluginWithInit[],
+    allPluginClientInits: PluginClientInitInfo[],
+    res: Response,
+    info: ErrorInfo,
+): Promise<void> {
+    const plainText = () => {
+        if (!res.headersSent)
+            res.status(info.status)
+                .type('text/plain')
+                .send(info.message || info.title || 'Error');
+    };
+
+    try {
+        const token = resolveErrorPageToken(errorRoutes.keys(), info.status);
+        if (!token) return plainText();
+        const route = errorRoutes.get(token)!;
+
+        const partsResult = await loadPageParts(
+            vite,
+            route,
+            options.pagesRootFolder!,
+            options.projectRootFolder!,
+            options.jayRollupConfig,
+        );
+        if (!partsResult.val) {
+            getLogger().warn(
+                `[DevServer] Error page "${token}" failed to load: ${partsResult.validations.join('; ')}`,
+            );
+            return plainText();
+        }
+
+        const { parts, clientTrackByMap, usedPackages, scripts } = partsResult.val;
+        const pluginsForPage = filterPluginsForPage(
+            allPluginClientInits,
+            allPluginsWithInit,
+            usedPackages,
+        );
+
+        // An error page has no author slow/fast phase — inject the error details as the ViewState.
+        const fullViewState = buildErrorViewState(info, {});
+
+        await sendResponse(
+            vite,
+            res,
+            info.url,
+            route.jayHtmlPath,
+            route.jayHtmlPath,
+            parts,
+            fullViewState,
+            {},
+            clientTrackByMap,
+            projectInit,
+            pluginsForPage,
+            options,
+            routeToExpressRoute(route),
+            getRouteDir(route),
+            {},
+            undefined,
+            undefined,
+            undefined,
+            scripts,
+            info.status,
+        );
+    } catch (err: any) {
+        getLogger().error(
+            `[DevServer] Error page render failed (${info.status} ${info.url}): ${err?.message}`,
+        );
+        plainText();
+    }
+}
+
+async function handleOtherResponseCodes(
     res: Response,
     renderedResult: ServerError5xx | ClientError4xx | Redirect3xx,
+    url: string,
 ) {
-    if (renderedResult.kind === `ServerError`)
-        res.status(renderedResult.status).end('server error');
-    else if (renderedResult.kind === `ClientError`)
-        res.status(renderedResult.status).end('client error');
-    else res.status(renderedResult.status).end('redirect to ' + renderedResult.location);
+    if (renderedResult.kind === `Redirect`) {
+        res.status(renderedResult.status).end('redirect to ' + renderedResult.location);
+        return;
+    }
+    // DL#218 — a component/plugin returned an error outcome: render the matching error page
+    // (exact → family → plain text). `title`/`code`/`details` flow through to the page.
+    await _renderDevErrorPage(res, {
+        status: renderedResult.status,
+        url,
+        message: renderedResult.message,
+        title: (renderedResult as ServerError5xx | ClientError4xx).title,
+        code: (renderedResult as ServerError5xx | ClientError4xx).code,
+        details: (renderedResult as ServerError5xx | ClientError4xx).details,
+    });
 }
 
 /**
@@ -471,7 +606,13 @@ function mkRoute(
         } catch (e) {
             vite?.ssrFixStacktrace(e);
             getLogger().error(e.stack);
-            res.status(500).end(e.stack);
+            // DL#218 — uncaught exception: render the 5xx error page (stack stays in the dev log).
+            const errUrl = (req.originalUrl || req.url || '/').split('?')[0];
+            await _renderDevErrorPage(res, {
+                status: 500,
+                url: errUrl,
+                message: e.message,
+            });
             timing?.end();
         }
     };
@@ -566,7 +707,7 @@ async function handleCachedRequest(
     timing?.recordFastRender(Date.now() - fastStart);
 
     if (renderedFast.kind !== 'PhaseOutput') {
-        handleOtherResponseCodes(res, renderedFast);
+        await handleOtherResponseCodes(res, renderedFast, url);
         timing?.end();
         return;
     }
@@ -687,7 +828,7 @@ async function handlePreRenderRequest(
 
     if (renderedSlowly.kind !== 'PhaseOutput') {
         timing?.recordSlowRender(Date.now() - slowStart);
-        handleOtherResponseCodes(res, renderedSlowly);
+        await handleOtherResponseCodes(res, renderedSlowly, url);
         timing?.end();
         return;
     }
@@ -840,7 +981,7 @@ async function handleClientOnlyRequest(
 
     if (renderedSlowly.kind !== 'PhaseOutput') {
         timing?.recordSlowRender(Date.now() - slowStart);
-        handleOtherResponseCodes(res, renderedSlowly);
+        await handleOtherResponseCodes(res, renderedSlowly, url);
         timing?.end();
         return;
     }
@@ -867,7 +1008,7 @@ async function handleClientOnlyRequest(
     timing?.recordFastRender(Date.now() - fastStart);
 
     if (renderedFast.kind !== 'PhaseOutput') {
-        handleOtherResponseCodes(res, renderedFast);
+        await handleOtherResponseCodes(res, renderedFast, url);
         timing?.end();
         return;
     }
@@ -952,6 +1093,7 @@ async function sendResponse(
     preLoadedContent?: string,
     headTags?: HeadTag[],
     scripts?: JayHtmlScript[],
+    statusCode: number = 200,
 ): Promise<void> {
     let pageHtml: string;
 
@@ -1026,7 +1168,7 @@ async function sendResponse(
     const compiledPageHtml = await vite.transformIndexHtml(!!url ? url : '/', pageHtml);
     timing?.recordViteClient(Date.now() - viteStart);
 
-    res.status(200).set({ 'Content-Type': 'text/html' }).send(compiledPageHtml);
+    res.status(statusCode).set({ 'Content-Type': 'text/html' }).send(compiledPageHtml);
     timing?.end();
 }
 
@@ -1330,6 +1472,10 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
         ? projectRoutes.filter((route) => !route.jayHtmlPath.startsWith(buildFolder))
         : projectRoutes;
 
+    // DL#218 — reserved top-level status folders (pages/404, pages/5xx, …). Not navigable routes;
+    // compiled on demand by the dev error renderer, resolved by status (exact → family).
+    const errorRoutes = await initErrorPages(pagesRootFolder);
+
     // Scan plugin routes and merge — project routes take precedence (DL#130)
     const pluginRoutes = await scanPluginRoutes(projectRootFolder, filteredProjectRoutes);
     const routes = [...filteredProjectRoutes, ...pluginRoutes];
@@ -1353,6 +1499,20 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     const projectInit = lifecycleManager.getProjectInit() ?? undefined;
     const pluginsWithInit = lifecycleManager.getPluginsWithInit();
     const pluginClientInits = preparePluginClientInits(pluginsWithInit);
+
+    // Install the dev error renderer (DL#218) now that render dependencies exist. The request
+    // handlers and the exception catch reach it via the module-level `_renderDevErrorPage`.
+    _renderDevErrorPage = (res, info) =>
+        renderDevErrorPage(
+            vite,
+            options,
+            errorRoutes,
+            projectInit,
+            pluginsWithInit,
+            pluginClientInits,
+            res,
+            info,
+        );
 
     // Set up page freeze (DL#127)
     const freezeStore = buildFolder ? new FreezeStore(buildFolder) : undefined;
@@ -1438,6 +1598,12 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
         lifecycleManager,
         freezeStore,
         service,
+        errorPageHandler:
+            (status: number): RequestHandler =>
+            async (req: Request, res: Response) => {
+                const url = (req.originalUrl || req.url || '/').split('?')[0];
+                await _renderDevErrorPage(res, { status, url });
+            },
     };
 }
 

@@ -1,0 +1,14 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+</head>
+<body>
+<div class="hand-authored">
+    <h1>{title}</h1>
+    <p>Ships 4xx and 5xx family error pages — 404 is covered by the 4xx family.</p>
+</div>
+</body>
+</html>

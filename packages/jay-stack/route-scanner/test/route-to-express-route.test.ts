@@ -3,7 +3,7 @@ import { routeToExpressRoute, ScanFilesOptions, scanRoutes } from '../lib';
 describe('route-to-express-route', () => {
     const options: ScanFilesOptions = { jayHtmlFilename: 'page.jay-html', compFilename: 'page.ts' };
     it('should convert routes to express routes', async () => {
-        const routes = await scanRoutes('./test/fixtures/', options);
+        const { routes } = await scanRoutes('./test/fixtures/', options);
         const expressRoutes = new Set(routes.map((route) => routeToExpressRoute(route)));
         expect(expressRoutes).toEqual(
             new Set([
@@ -25,6 +25,13 @@ describe('route-to-express-route', () => {
                 '/jay-params/with-params',
                 '/jay-params/no-params',
                 '/jay-params/no-head',
+                // Error-pages fixtures (DL#218): "error-pages" is not a top-level status token here,
+                // so its children are ordinary nested routes — including the nested /blog/404.
+                '/error-pages',
+                '/error-pages/404',
+                '/error-pages/5xx',
+                '/error-pages/502',
+                '/error-pages/blog/404',
             ]),
         );
     });

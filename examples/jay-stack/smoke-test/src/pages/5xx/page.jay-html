@@ -1,0 +1,16 @@
+<html>
+<head>
+  <script type="application/jay-headless" plugin="jay-stack" contract="error" key="error"></script>
+  <script type="application/jay-data">
+    data:
+  </script>
+  <title>{error.title}</title>
+</head>
+<body>
+  <main class="error-page">
+    <h1>{error.status} — {error.title}</h1>
+    <p>{error.message}</p>
+    <a href="/">Go home</a>
+  </main>
+</body>
+</html>

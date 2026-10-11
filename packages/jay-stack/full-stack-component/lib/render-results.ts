@@ -10,46 +10,61 @@ import {
 // Error Constructors
 // ============================================================================
 
+/**
+ * Options for the human-facing / structured fields of an error outcome (Design Log #218).
+ * `title` renders as the error page's heading (`error.title`); `message` as `error.message`;
+ * `details` is projected to the forEach-able `error.details` key/value list.
+ */
+export interface ErrorOptions {
+    title?: string;
+    code?: string;
+    details?: Record<string, unknown>;
+}
+
 export function serverError5xx(
     status: number,
     message?: string,
-    details?: Record<string, unknown>,
+    opts?: ErrorOptions,
 ): ServerError5xx {
     return {
         kind: 'ServerError',
         status,
         message,
-        details,
+        ...(opts?.title !== undefined && { title: opts.title }),
+        ...(opts?.code !== undefined && { code: opts.code }),
+        ...(opts?.details !== undefined && { details: opts.details }),
     };
 }
 
 export function clientError4xx(
     status: number,
     message?: string,
-    details?: Record<string, unknown>,
+    opts?: ErrorOptions,
 ): ClientError4xx {
     return {
         kind: 'ClientError',
         status,
         message,
-        details,
+        ...(opts?.title !== undefined && { title: opts.title }),
+        ...(opts?.code !== undefined && { code: opts.code }),
+        ...(opts?.details !== undefined && { details: opts.details }),
     };
 }
 
-export function notFound(message?: string, details?: Record<string, unknown>): ClientError4xx {
-    return clientError4xx(404, message, details);
+export function notFound(message?: string, opts?: ErrorOptions): ClientError4xx {
+    return clientError4xx(404, message, opts);
 }
 
-export function badRequest(message?: string, details?: Record<string, unknown>): ClientError4xx {
-    return clientError4xx(400, message, details);
+export function badRequest(message?: string, opts?: ErrorOptions): ClientError4xx {
+    return clientError4xx(400, message, opts);
 }
 
-export function unauthorized(message?: string, details?: Record<string, unknown>): ClientError4xx {
-    return clientError4xx(401, message, details);
+export function unauthorized(message?: string, opts?: ErrorOptions): ClientError4xx {
+    return clientError4xx(401, message, opts);
 }
 
-export function forbidden(message?: string, details?: Record<string, unknown>): ClientError4xx {
-    return clientError4xx(403, message, details);
+export function forbidden(message?: string, opts?: ErrorOptions): ClientError4xx {
+    return clientError4xx(403, message, opts);
 }
 
 export function redirect3xx(status: number, location: string, message?: string): Redirect3xx {
