@@ -612,15 +612,33 @@ describe('Smoke Test', () => {
             expect(status).toBe(404);
         });
 
-        // DL#218 — a page whose fast phase returns serverError5xx(500) resolves through the branded
-        // pages/5xx (family fallback) with status 500 and the injected `error` ViewState.
-        it('/error-500 — fast-phase serverError5xx(500) renders the branded 5xx page (DL#218)', async () => {
-            const { status, body } = await fetchPage(server.url, '/error-500/');
+        // DL#218 — the throw-error page fails at request time with a caller-chosen status (?status=,
+        // default 500). The default 500 and a 503 both resolve through the pages/5xx family page.
+        it('/throw-error — default fast error resolves through the pages/5xx family page (DL#218)', async () => {
+            const { status, body } = await fetchPage(server.url, '/throw-error/');
             expect(status).toBe(500);
             expectPage(body);
-            expect(body).toMatch(/500 — Something went wrong/);
-            expect(body).toMatch(/This page always fails at request time\./);
-            expect(body).not.toMatch(/did not return a 500/); // the page's own body must not render
+            expect(body).toMatch(/500 — Requested server failure/);
+            expect(body).toMatch(/This page was asked to fail with status 500\./);
+            expect(body).not.toMatch(/did not return an error/); // the page's own body must not render
+        });
+
+        it('/throw-error?status=503 — a 503 falls back to the pages/5xx family page (DL#218)', async () => {
+            const { status, body } = await fetchPage(server.url, '/throw-error/?status=503');
+            expect(status).toBe(503);
+            expectPage(body);
+            expect(body).toMatch(/503 — Requested server failure/);
+            expect(body).not.toMatch(/dedicated 504 Gateway Timeout page/); // not the 504-exact page
+        });
+
+        // Exact status folder wins over the family page: ?status=504 renders the dedicated pages/504.
+        it('/throw-error?status=504 — the exact pages/504 page wins over pages/5xx (DL#218)', async () => {
+            const { status, body } = await fetchPage(server.url, '/throw-error/?status=504');
+            expect(status).toBe(504);
+            expectPage(body);
+            expect(body).toMatch(/504 — Requested server failure/);
+            expect(body).toMatch(/dedicated 504 Gateway Timeout page/); // only on the exact 504 page
+            expect(body).toMatch(/requested: 504/); // forEach="error.details" projects the detail
         });
     });
 
@@ -871,14 +889,22 @@ describe('Smoke Test', () => {
             expect(sitemap).not.toMatch(/<loc>[^<]*\/5xx<\/loc>/);
         });
 
-        // DL#218 — a fast-phase serverError5xx(500) renders the branded pages/5xx (family fallback)
-        // with status 500 in production.
-        it('/error-500 — fast-phase serverError5xx(500) renders the branded 5xx page (DL#218)', async () => {
-            const { status, body } = await fetchPage(server.url, '/error-500/');
+        // DL#218 — in production, the throw-error page's fast error resolves by status against the
+        // manifest's errorPages: default 500 → pages/5xx (family), ?status=504 → pages/504 (exact).
+        it('/throw-error — default fast error resolves through the pages/5xx family page (DL#218)', async () => {
+            const { status, body } = await fetchPage(server.url, '/throw-error/');
             expect(status).toBe(500);
-            expect(body).toMatch(/500 — Something went wrong/);
-            expect(body).toMatch(/This page always fails at request time\./);
-            expect(body).not.toMatch(/did not return a 500/);
+            expect(body).toMatch(/500 — Requested server failure/);
+            expect(body).toMatch(/This page was asked to fail with status 500\./);
+            expect(body).not.toMatch(/did not return an error/);
+        });
+
+        it('/throw-error?status=504 — the exact pages/504 page wins over pages/5xx (DL#218)', async () => {
+            const { status, body } = await fetchPage(server.url, '/throw-error/?status=504');
+            expect(status).toBe(504);
+            expect(body).toMatch(/504 — Requested server failure/);
+            expect(body).toMatch(/dedicated 504 Gateway Timeout page/);
+            expect(body).toMatch(/requested: 504/);
         });
     });
 

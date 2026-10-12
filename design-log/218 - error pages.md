@@ -673,14 +673,20 @@ fixtures/tests (`page-with-error-contract/page.jay-html.d.ts`, `builtin-error-co
   `expectPage` (valid doctype, no raw "client/server error" leak). Reserved folders are confirmed
   non-navigable: `/404/` itself resolves through the error page as a 404 (not a 200 page render), and
   the production sitemap excludes `/404` and `/5xx`.
-- **5xx trigger page** (`src/pages/error-500/`): a page whose slow phase renders static chrome and
-  whose **fast phase returns `serverError5xx(500, …, { title, details })`**, so every request resolves
-  through `pages/5xx` (family fallback) with status 500 — exercising criterion 2's "renders for
-  `serverError5xx`" path end-to-end. Linked from the home-page nav. Dev + prod smoke tests assert
-  status 500, the branded `500 — Something went wrong`, the custom message, and that the page's own
-  body never renders.
-- Results: full smoke suite **77/77** (dev + prod self-hosted + prod CDN, real build + spawned
-  servers). Confirms verification criteria 1, 2, 4 end-to-end across dev and prod targets.
+- **Parameterized error-trigger page** (`src/pages/throw-error/`): slow phase renders static chrome;
+  **fast phase reads `props.query.status`** (default 500) and returns `clientError4xx` for a 4xx or
+  `serverError5xx` for a 5xx, with `title`/`details`. So `?status=` lets one page exercise every error
+  path at request time: `/throw-error/` → 500 → `pages/5xx`; `?status=503` → 503 → `pages/5xx`;
+  `?status=504` → 504 → the **exact** `pages/504` page. Linked from the home-page nav.
+- **Exact-wins fixture** (`src/pages/504/page.jay-html`): a dedicated 504 page (distinct marker text +
+  `forEach="error.details"`) proves **exact → family** precedence (criterion 3) end-to-end — a 504
+  renders it, a 503 falls back to `pages/5xx`.
+- Dev + prod smoke tests assert status + branded title (`<n> — Requested server failure`) + custom
+  message, that the trigger page's own body never renders, that `?status=504` hits the exact page (its
+  "dedicated 504 Gateway Timeout page" marker + `requested: 504` detail row), and that `?status=503`
+  does not.
+- Results: full smoke suite **80/80** (dev + prod self-hosted + prod CDN, real build + spawned
+  servers). Confirms verification criteria 1, 2, 3, 4 end-to-end across dev and prod targets.
 - **Deviation:** the DL sketched the example test as `toEqual(prettifyHtml(...))` on the full HTML.
   Implemented as the smoke test's established live-server `toMatch`-on-response-body pattern instead:
   a live SSR response carries per-build hydration-bundle hashes and runtime glue, so full-document

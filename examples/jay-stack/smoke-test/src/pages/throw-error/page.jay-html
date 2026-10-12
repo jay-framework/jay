@@ -6,7 +6,7 @@
 <body>
   <div>
     <h1>{title}</h1>
-    <p>If you can see this, the fast phase did not return a 500 — which would be a bug.</p>
+    <p>If you can see this, the fast phase did not return an error — which would be a bug.</p>
   </div>
 </body>
 </html>
