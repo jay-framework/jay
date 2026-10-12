@@ -5,7 +5,13 @@ import { getLogger } from '@jay-framework/logger';
 
 export async function runValidate(
     scanPath: string | undefined,
-    options: { verbose?: boolean; json?: boolean; tier2?: boolean; buildDir?: string },
+    options: {
+        verbose?: boolean;
+        json?: boolean;
+        tier2?: boolean;
+        buildDir?: string;
+        compileOnly?: boolean;
+    },
 ): Promise<void> {
     const result = await validateJayFiles({
         path: scanPath,
@@ -13,6 +19,7 @@ export async function runValidate(
         json: options.json,
         tier2: options.tier2,
         buildDir: options.buildDir,
+        compileOnly: options.compileOnly,
     });
 
     printJayValidationResult(result, options);

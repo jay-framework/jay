@@ -79,6 +79,11 @@ export interface ValidateOptions {
     tier2?: boolean;
     /** DL#211 — explicit build backend dir or build root for Tier 2 (default: highest build version dir). */
     buildDir?: string;
+    /**
+     * Parse + client/SSR generate only — no project rules (links, DOM lint, design-system, plugins).
+     * For plugin route source trees during `validate:templates`.
+     */
+    compileOnly?: boolean;
 }
 
 export interface ValidationError {
@@ -1916,7 +1921,9 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
 
     // Find all jay files (pages + components)
     const pageJayHtmlFiles = await findJayFiles(scanDir);
-    const componentJayHtmlFiles = await findJayFiles(componentsDir).catch(() => [] as string[]);
+    const componentJayHtmlFiles = options.compileOnly
+        ? []
+        : await findJayFiles(componentsDir).catch(() => [] as string[]);
     const jayHtmlFiles = [...pageJayHtmlFiles, ...componentJayHtmlFiles];
     // DL#200 — component source templates (a DL#196 composite like section/gallery/card) hand-author their
     // child `<jay:X>` regions with contract-only imports by design: they are the flatten *source*, and the
@@ -1924,12 +1931,14 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
     // REGION-NOT-LINKED is scoped to pages — firing it on component sources would warn on every nested
     // design-system component, which is exactly the authoring pattern we want.
     const componentJayHtmlFileSet = new Set(componentJayHtmlFiles);
-    const componentContractFiles = await findContractFiles(componentsDir).catch(
-        () => [] as string[],
-    );
+    const componentContractFiles = options.compileOnly
+        ? []
+        : await findContractFiles(componentsDir).catch(() => [] as string[]);
     // DL#207 — every component under the components tree is part of the catalogued template universe.
     for (const cf of componentContractFiles) cataloguedContractFiles.add(cf);
-    const contractFiles = [...(await findContractFiles(scanDir)), ...componentContractFiles];
+    const contractFiles = options.compileOnly
+        ? []
+        : [...(await findContractFiles(scanDir)), ...componentContractFiles];
     // DL#200 — parsed contract names by file (for COMPONENT-NO-TEMPLATE messaging/suppression).
     const contractNameByFile = new Map<string, string>();
 
@@ -2007,6 +2016,37 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
             }
 
             parsedFiles.push({ relativePath, parsed: parsedFile.val! });
+
+            if (options.compileOnly) {
+                const generatedFile = generateElementFile(
+                    parsedFile.val!,
+                    RuntimeMode.MainTrusted,
+                    GenerateTarget.jay,
+                );
+                for (const validation of generatedFile.validations) {
+                    errors.push({
+                        file: relativePath,
+                        message: validation,
+                        stage: 'generate',
+                    });
+                }
+                const serverElementFile = generateServerElementFile(parsedFile.val!);
+                for (const validation of serverElementFile.validations) {
+                    errors.push({
+                        file: relativePath,
+                        message: `[SSR] ${validation}`,
+                        stage: 'generate',
+                    });
+                }
+                if (options.verbose) {
+                    const failed = generatedFile.validations.length > 0 ||
+                        serverElementFile.validations.length > 0;
+                    getLogger().info(
+                        failed ? chalk.red(`❌ ${relativePath}`) : chalk.green(`✓ ${relativePath}`),
+                    );
+                }
+                continue;
+            }
 
             // Check for removed jay-params (DL#156) — it is silently ignored by the
             // route scanner, so treat it as an error rather than a warning.
@@ -2299,6 +2339,25 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
         }
     }
 
+    if (options.compileOnly) {
+        return {
+            valid: errors.length === 0,
+            jayHtmlFilesScanned: jayHtmlFiles.length,
+            contractFilesScanned: contractFiles.length,
+            errors,
+            warnings,
+            coverage,
+            pluginValidators: [],
+            designSystemCoverage,
+            designSystemReuse: {
+                perTemplate: {},
+                catalogued: 0,
+                reusedMoreThanOnce: 0,
+                reusedOfCatalogued: 0,
+            },
+        };
+    }
+
     // --- Project-level validations (DL#175) ---
     const robotsTxtPath = path.resolve(projectRoot, 'public/robots.txt');
     if (!fs.existsSync(robotsTxtPath)) {
@@ -2374,10 +2433,11 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
     // `validations: { allow-no-error-pages: true }` — a project-tree concern, not a single page's markup.
     const allowNoErrorPages = config.validations?.['allow-no-error-pages'] === true;
     if (!allowNoErrorPages) {
-        const { errorPages } = await scanRoutes(scanDir, {
+        const scanResult = await scanRoutes(scanDir, {
             jayHtmlFilename: 'page.jay-html',
             compFilename: 'page.ts',
         });
+        const errorPages = scanResult.errorPages ?? [];
         const tokens = new Set(errorPages.map((ep) => ep.token));
         // `404` is covered by an exact page or the `4xx` family; `5xx` only by a `5xx` family page.
         const missing: string[] = [];

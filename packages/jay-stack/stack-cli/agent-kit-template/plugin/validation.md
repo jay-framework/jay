@@ -42,6 +42,15 @@ jay-stack validate-plugin -v
 - Contract files referenced in `plugin.yaml` exist
 - Component export names are valid strings (not file paths)
 - Action metadata files (`.jay-action`) exist
+- Each `routes[].jayHtml` file **parses and compiles** (same generate stage as `jay-stack validate` — catches invalid template expressions before the dev server)
+
+During plugin development, also compile-check **source** templates (paths under `lib/`, not only `dist/`):
+
+```bash
+jay-stack validate -p lib/pages/my-route --compile-only
+```
+
+`--compile-only` skips project rules (broken links, DOM lint, design system) so it is safe inside a plugin package `validate` script alongside `validate-plugin`.
 
 ### Capability-aware structure
 
