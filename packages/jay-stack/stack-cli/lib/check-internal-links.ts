@@ -134,6 +134,20 @@ export async function collectPublicAssets(publicFolder: string): Promise<Set<str
     return assets;
 }
 
+/**
+ * The element's opening tag without its children — e.g. `<a href="/" class="logo">` — so a finding
+ * identifies *which* anchor is at fault (a page can carry several links to the same URL). Whitespace in
+ * the raw attributes is collapsed to keep the tag on one line, and compiler-injected `jay-*` attributes
+ * (e.g. `jay-coordinate-base`) are dropped so the tag reflects the author's source, not internals.
+ */
+function openingTag(el: HTMLElement): string {
+    const attrs = el.rawAttrs
+        ?.replace(/\s+jay-[\w-]+(="[^"]*"|='[^']*')?/g, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+    return attrs ? `<${el.rawTagName} ${attrs}>` : `<${el.rawTagName}>`;
+}
+
 function originOf(baseUrl: string): string | undefined {
     try {
         return new URL(baseUrl).origin;
@@ -210,10 +224,12 @@ export function checkInternalLinks(options: CheckInternalLinksOptions): LinkFind
             const verdict = classifyHref(raw, baseUrl);
             if (verdict.kind === 'skip') continue;
 
+            const tag = openingTag(anchor);
+
             if (verdict.kind === 'degenerate') {
                 findings.push({
                     file: relativePath,
-                    message: `Anchor has a placeholder href "${raw}" — it links nowhere and ships as a dead link.`,
+                    message: `Anchor ${tag} has a placeholder href "${raw}" — it links nowhere and ships as a dead link.`,
                     suggestion: `Point the link at a real page, use <button> for a JS-driven action, or ${SUPPRESS_HINT}.`,
                 });
                 continue;
@@ -224,7 +240,7 @@ export function checkInternalLinks(options: CheckInternalLinksOptions): LinkFind
             if (ownUrl !== undefined && target === ownUrl) {
                 findings.push({
                     file: relativePath,
-                    message: `Link points to the page's own route "${target}" — a self-link goes nowhere.`,
+                    message: `Anchor ${tag} points to the page's own route "${target}" — a self-link goes nowhere.`,
                     suggestion: `Remove the link, use "#" within-page navigation, or point it at a different page.`,
                 });
                 continue;
@@ -236,7 +252,7 @@ export function checkInternalLinks(options: CheckInternalLinksOptions): LinkFind
 
             findings.push({
                 file: relativePath,
-                message: `Broken internal link "${raw}" — no page or public asset produces the URL "${target}".`,
+                message: `Broken internal link in anchor ${tag} — no page or public asset produces the URL "${target}".`,
                 suggestion: `Create a placeholder page/route for "${target}", or remove the link. Otherwise ${SUPPRESS_HINT}.`,
             });
         }

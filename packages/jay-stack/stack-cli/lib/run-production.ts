@@ -3,6 +3,9 @@ import YAML from 'yaml';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { setDevLogger, createDevLogger, getLogger, type LogLevel } from '@jay-framework/logger';
+import { surfaceValidationIssues } from './run-validate';
+import { generatePageDefinitionFiles } from './generate-page-definition-files';
+import { generateContractDefinitionFiles } from './generate-contract-definition-files';
 
 export interface ProductionContext {
     resolvedPath: string;
@@ -82,7 +85,6 @@ export async function runBuild(
     // DL#189 — fail the build on jay-html validation errors (e.g. a phase-binding mismatch that
     // would render '' at SSR) before doing the expensive build work. The exit lives here (a real
     // call site) rather than inside surfaceValidationIssues so Rollup can't fold the gate away.
-    const { surfaceValidationIssues } = await import('./run-validate');
     const valid = await surfaceValidationIssues(projectPath, { verbose: options.verbose });
     if (!valid) {
         process.exit(1);
@@ -115,9 +117,6 @@ export async function runBuild(
  */
 async function generateDefinitionFiles(ctx: ProductionContext): Promise<void> {
     const { glob } = await import('glob');
-    const { generatePageDefinitionFiles } = await import('./generate-page-definition-files');
-    const { generateContractDefinitionFiles } =
-        await import('./generate-contract-definition-files');
 
     const jayHtmlPaths = await glob('**/page.jay-html', {
         cwd: ctx.pagesRoot,

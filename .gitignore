@@ -1,5 +1,5 @@
 node_modules
-docs/blog/
+blog/
 dist
 dist-secure
 build

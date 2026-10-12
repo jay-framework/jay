@@ -116,8 +116,8 @@ describe('checkInternalLinks', () => {
         });
 
         expect(findings.map((f) => f.message)).toEqual([
-            'Anchor has a placeholder href "#" — it links nowhere and ships as a dead link.',
-            'Broken internal link "/does-not-exist" — no page or public asset produces the URL "/does-not-exist".',
+            'Anchor <a href="#"> has a placeholder href "#" — it links nowhere and ships as a dead link.',
+            'Broken internal link in anchor <a href="/does-not-exist"> — no page or public asset produces the URL "/does-not-exist".',
         ]);
     });
 
@@ -140,7 +140,7 @@ describe('checkInternalLinks', () => {
             projectRoot,
         });
         expect(findings.map((f) => f.message)).toEqual([
-            `Link points to the page's own route "/about" — a self-link goes nowhere.`,
+            `Anchor <a href="/about"> points to the page's own route "/about" — a self-link goes nowhere.`,
         ]);
     });
 
@@ -174,17 +174,17 @@ describe('validateJayFiles — DL#210 integration', () => {
             [
                 {
                     file: path.join('pages', 'about', 'page.jay-html'),
-                    message: `Link points to the page's own route "/about" — a self-link goes nowhere.`,
+                    message: `Anchor <a href="/about"> points to the page's own route "/about" — a self-link goes nowhere.`,
                 },
                 {
                     file: path.join('pages', 'page.jay-html'),
                     message:
-                        'Anchor has a placeholder href "#" — it links nowhere and ships as a dead link.',
+                        'Anchor <a href="#"> has a placeholder href "#" — it links nowhere and ships as a dead link.',
                 },
                 {
                     file: path.join('pages', 'page.jay-html'),
                     message:
-                        'Broken internal link "/does-not-exist" — no page or public asset produces the URL "/does-not-exist".',
+                        'Broken internal link in anchor <a href="/does-not-exist"> — no page or public asset produces the URL "/does-not-exist".',
                 },
             ].sort((a, b) => (a.file + a.message).localeCompare(b.file + b.message)),
         );
