@@ -28,7 +28,8 @@ export interface ValidationError {
         | 'component-contract-mismatch'
         | 'type-generation-failed'
         | 'add-menu-catalog'
-        | 'compiler-leak';
+        | 'compiler-leak'
+        | 'jay-html-compile';
     message: string;
     location?: string;
     suggestion?: string;

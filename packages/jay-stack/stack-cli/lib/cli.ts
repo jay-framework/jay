@@ -135,9 +135,17 @@ program
         '--build-dir <dir>',
         'Build backend dir or build root for Tier 2 (default: highest build/v*)',
     )
+    .option(
+        '--compile-only',
+        'Parse and compile .jay-html only (no project rules — for plugin route source checks)',
+    )
     .action(async (options) => {
         try {
-            await runValidate(options.path, { ...options, tier2: options.tier2 || options.t2 });
+            await runValidate(options.path, {
+                ...options,
+                tier2: options.tier2 || options.t2,
+                compileOnly: options.compileOnly,
+            });
         } catch (error: any) {
             if (options.json) {
                 getLogger().important(

@@ -630,3 +630,77 @@ describe('validatePlugin — compiler leak scan', () => {
         expect(leak).toBeUndefined();
     });
 });
+
+describe('validatePlugin — route jay-html compile', () => {
+    const routePageContract = [
+        'name: route-page',
+        'tags:',
+        '  - tag: title',
+        '    type: data',
+        '    dataType: string',
+    ].join('\n');
+
+    function routePageJayHtml(bodyInner: string) {
+        return [
+            '<html>',
+            '<head>',
+            '  <script type="application/jay-data" contract="./page.jay-contract"></script>',
+            '</head>',
+            '<body>',
+            bodyInner,
+            '</body>',
+            '</html>',
+            '',
+        ].join('\n');
+    }
+
+    function routePluginFixture(bodyInner: string) {
+        return {
+            pluginYaml: [
+                'name: test-plugin',
+                'routes:',
+                '  - path: /aiditor',
+                '    jayHtml: ./pages/aiditor/page.jay-html',
+                '    component: aiditorPage',
+            ].join('\n'),
+            packageJson: {
+                name: '@jay-framework/test-plugin',
+                exports: {
+                    '.': './dist/index.js',
+                    './client': './dist/index.client.js',
+                    './plugin.yaml': './plugin.yaml',
+                    './pages/aiditor/page.jay-html': './pages/aiditor/page.jay-html',
+                },
+            },
+            sourceFiles: {
+                'dist/index.js': `export const aiditorPage = {};\n`,
+                'dist/index.client.js': `export const aiditorPage = {};\n`,
+                'pages/aiditor/page.jay-contract': routePageContract,
+                'pages/aiditor/page.jay-html': routePageJayHtml(bodyInner),
+            },
+        };
+    }
+
+    it('does not report jay-html-compile when route template is valid', async () => {
+        const dir = createTempPluginWithSource(
+            routePluginFixture('  <h1>{title}</h1>\n'),
+        );
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        const compileErr = result.errors.find((e) => e.type === 'jay-html-compile');
+        expect(compileErr).toBeUndefined();
+    });
+
+    it('reports jay-html-compile when route template has invalid class expression', async () => {
+        const dir = createTempPluginWithSource(
+            routePluginFixture('  <div class="box {@@@ ? on-class}"></div>\n'),
+        );
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        const compileErr = result.errors.find((e) => e.type === 'jay-html-compile');
+        expect(compileErr).toBeDefined();
+        expect(compileErr!.message).toMatch(/failed to compile/i);
+    });
+});

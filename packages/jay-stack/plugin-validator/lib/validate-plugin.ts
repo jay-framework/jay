@@ -12,6 +12,7 @@ import type { ValidatePluginOptions, ValidationResult, PluginContext } from './t
 import { checkComponentPropsAndParams } from './check-component-contract';
 import { validateAddMenuCatalog } from './validate-add-menu-catalog';
 import { validateAiditorSettings } from './validate-aiditor-settings';
+import { validateRouteJayHtmlTemplates } from './validate-route-jay-html-templates';
 
 /**
  * Validates a Jay Stack plugin package or local plugin directory.
@@ -116,6 +117,9 @@ async function validatePluginPackage(
 
     // 9. Leak scan (DL#179): serve entry `.` must be compiler-free
     validateNoCompilerLeak(context, result);
+
+    // 10. Route jay-html compile (Tier 1 generate stage — DL#73)
+    await validateRouteJayHtmlTemplates(context, result);
 
     // Final result
     result.valid = result.errors.length === 0;
