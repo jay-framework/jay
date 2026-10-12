@@ -135,11 +135,6 @@ export async function scaffoldProject(
 
     writeFile(projectDir, 'CLAUDE.md', readTemplate('CLAUDE.md'));
 
-    const jaySkillPath = path.join(templatesDir(), 'jay-skill.md');
-    if (fs.existsSync(jaySkillPath)) {
-        writeFile(projectDir, 'jay-skill.md', fs.readFileSync(jaySkillPath, 'utf-8'));
-    }
-
     const hasDesignValidator = selectedPlugins.some(
         (p) => p.name === '@jay-framework/design-system-validator',
     );

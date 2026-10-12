@@ -340,3 +340,63 @@ All code + tests landed on branch `DL212-216-agent-readability-impl`. Plugin tes
 - Inaugural "build a website with Jay" skill — authored in the **website repo**
   (`src/skills/jay/SKILL.md` from get-started / existing `jay-skill.md`), per scope.
 - `Link: rel="agent-skills"` response header (optional; `api-catalog` is the static advertisement).
+
+---
+
+## Follow-up (2026-10-12) — Q8 reversed: canonical skill home = `create-jay`, website only consumes + publishes
+
+**Decision (user).** The inaugural "build a website with Jay" skill's _logical home_ is the
+**`create-jay`** package, not the website. `create-jay` is literally what creates a new Jay project,
+so the skill teaching how to build one belongs there (it already ships
+`create-jay/templates/jay-skill.md`, `name: jay` frontmatter, scaffolded into every new project). This
+**reverses Q8/Decision** ("the skill is authored in the website repo"): the website now _authors
+nothing_ — it **consumes** the canonical skill from `create-jay` and **publishes** it via this plugin.
+
+**Also (user).** `create-jay` must tell the agent that using the **AIditor** (`/aiditor`,
+`@jay-framework/aiditor`) requires **Claude Code installed locally with an API key** — the AIditor runs
+its agent server-side via the Claude Agent SDK, whose auth matches Claude Code (`ANTHROPIC_API_KEY` or
+`claude login`; ✅ verified in `aiditor/packages/aiditor/README.md`).
+
+**Refinement (user, same day).** The published skill must **not** be the create-jay _template_ and
+must **not** be an alternative to the in-project `CLAUDE.md` + agent-kit. The old
+`templates/jay-skill.md` was exactly that — a scaffolded getting-started overview (roles / CLI /
+project structure) duplicating the agent-kit. The published skill is instead a **focused "create a new
+Jay project" playbook** (preconditions + scaffolding), in the spirit of Wix's
+`skills/wix-headless/references/managed/CREATE.md`: an ordered bootstrap that hands off to the
+in-project docs rather than restating them. The AIditor/Claude-Code precondition lives **in this skill**
+(a precondition) and in `templates/CLAUDE.md` (in-project).
+
+### What changed
+
+**jay repo — `create-jay` (canonical skill home, outside the scaffold template):**
+
+- **Removed `templates/jay-skill.md`** and its scaffold write (`scaffold.ts`) — new projects no longer
+  ship a redundant third copy of CLAUDE.md/agent-kit guidance.
+- **New `skills/jay/SKILL.md`** — the canonical published skill: a bootstrapping playbook
+  (§0 preconditions incl. Node ≥20, package manager, and Claude Code + API key for the AIditor;
+  §1 scaffold via `npm create jay` interactive/non-interactive; §2 what's generated; §3 first run;
+  §4 hand-off to CLAUDE.md + agent-kit). `name: jay`. Added `skills` to package `files`.
+- `templates/CLAUDE.md` — dropped the now-dead `/jay skill` references (points to agent-kit as the
+  authoritative in-project guidance) and keeps a **self-contained** AIditor precondition note.
+
+**jay-website repo — consume + publish (follows the existing `scripts/sync-*.cjs` convention):**
+
+- `scripts/sync-skill.cjs` — reads the canonical skill from
+  `../jay/packages/jay-stack/create-jay/skills/jay/SKILL.md` → writes `src/skills/jay/SKILL.md`
+  (authors nothing; guards the required `name`/`description` frontmatter).
+- `package.json` — added `@jay-framework/agent-skills` devDep + `sync:skill` / `publish:skills`
+  scripts; wired `publish:skills` into `build:production` **before** `build` so the generated
+  `public/.well-known/agent-skills/**` is picked up by the static copy (DL#214).
+
+### Verified end-to-end (✅)
+
+- `sync:skill` places the focused CREATE skill at `src/skills/jay/SKILL.md` from create-jay.
+- `jay-stack run agent-skills/publish-skills` emits `public/.well-known/agent-skills/index.json`
+  (`$schema` + one `skills[]` entry: `name`/`type`/`description`/`url`/`digest`) + `jay/SKILL.md`;
+  recomputed sha256 of the served bytes matches the entry `digest`.
+- `create-jay` rebuilds clean after dropping the scaffolded skill.
+
+### Still deferred
+
+- The stray repo-root `jay/jay-skill.md` (old overview duplicate) — out of scope here; the published
+  skill now sources only from `create-jay/skills/jay/SKILL.md`.
