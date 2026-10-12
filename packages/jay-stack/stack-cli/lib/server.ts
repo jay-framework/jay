@@ -15,7 +15,10 @@ import { getLogger, type LogLevel } from '@jay-framework/logger';
  * `text/markdown` and skill archives (`.gz`) as `application/gzip`. Exported so the dev-serving
  * test guards the real behavior rather than a copy.
  */
-export function setWellKnownHeaders(res: { setHeader(name: string, value: string): void }, filePath: string): void {
+export function setWellKnownHeaders(
+    res: { setHeader(name: string, value: string): void },
+    filePath: string,
+): void {
     if (filePath.includes(`${path.sep}.well-known${path.sep}`)) {
         res.setHeader('Access-Control-Allow-Origin', '*');
         if (filePath.endsWith('.md')) res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
@@ -79,9 +82,7 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
     // (agent/tool manifests, ard.json) is served in dev — Express defaults to 'ignore', which
     // 404s dotdirs while production's static handler serves them (DL#214).
     if (fs.existsSync(publicPath)) {
-        app.use(
-            express.static(publicPath, { dotfiles: 'allow', setHeaders: setWellKnownHeaders }),
-        );
+        app.use(express.static(publicPath, { dotfiles: 'allow', setHeaders: setWellKnownHeaders }));
     } else {
         log.important(`⚠️  Public folder not found: ${resolvedConfig.devServer.publicFolder}`);
     }

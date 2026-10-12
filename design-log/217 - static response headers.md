@@ -36,7 +36,7 @@ production, with **zero config**.
 
 ## Problem
 
-DL#214 fixed *serving* `/.well-known/*` in dev (`dotfiles: 'allow'`) but not the *headers*. A
+DL#214 fixed _serving_ `/.well-known/*` in dev (`dotfiles: 'allow'`) but not the _headers_. A
 compliant agent reads these resources **cross-origin** and keys on content-type:
 
 - Without `Access-Control-Allow-Origin: *`, a browser-based agent's fetch is blocked by CORS.

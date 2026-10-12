@@ -403,9 +403,9 @@ describe('error pages (DL#218)', () => {
     it('emits error-page artifacts under the _errors/<token>/ subtree', async () => {
         for (const token of ['404', '5xx']) {
             const entry = manifest.errorPages![token];
-            expect(entry.serverElementPath.startsWith(path.join('pre-rendered', '_errors', token))).toBe(
-                true,
-            );
+            expect(
+                entry.serverElementPath.startsWith(path.join('pre-rendered', '_errors', token)),
+            ).toBe(true);
             const serverFileExists = await fs
                 .access(path.join(backendDir, entry.serverElementPath))
                 .then(() => true)

@@ -1,10 +1,6 @@
 import { build as viteBuild } from 'vite';
 import { jayStackCompiler, type JayRollupConfig } from '@jay-framework/compiler-jay-stack';
-import {
-    scanRoutes,
-    type JayRoute,
-    type JayErrorPages,
-} from '@jay-framework/stack-route-scanner';
+import { scanRoutes, type JayRoute, type JayErrorPages } from '@jay-framework/stack-route-scanner';
 import { getLogger } from '@jay-framework/logger';
 import path from 'node:path';
 import fs from 'node:fs/promises';

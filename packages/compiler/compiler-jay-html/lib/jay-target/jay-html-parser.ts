@@ -36,11 +36,7 @@ import { SourceFileFormat } from '@jay-framework/compiler-shared';
 import { JayImportLink, JayImportName } from '@jay-framework/compiler-shared';
 import { JayYamlStructure } from './jay-yaml-structure';
 import { Contract, ContractTag, RenderingPhase } from '../contract';
-import {
-    ERROR_CONTRACT,
-    ERROR_CONTRACT_MODULE,
-    isBuiltInErrorContract,
-} from '../contract';
+import { ERROR_CONTRACT, ERROR_CONTRACT_MODULE, isBuiltInErrorContract } from '../contract';
 
 import {
     JayHeadlessImports,

@@ -2039,7 +2039,8 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                     });
                 }
                 if (options.verbose) {
-                    const failed = generatedFile.validations.length > 0 ||
+                    const failed =
+                        generatedFile.validations.length > 0 ||
                         serverElementFile.validations.length > 0;
                     getLogger().info(
                         failed ? chalk.red(`❌ ${relativePath}`) : chalk.green(`✓ ${relativePath}`),

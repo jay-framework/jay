@@ -22,17 +22,13 @@ export async function validateRouteJayHtmlTemplates(
             continue;
         }
 
-        const compileErrors = await compileValidateRouteJayHtml(
-            absolutePath,
-            context.pluginPath,
-        );
+        const compileErrors = await compileValidateRouteJayHtml(absolutePath, context.pluginPath);
         const relPath = path.relative(context.pluginPath, absolutePath);
 
         for (const message of compileErrors) {
             result.errors.push({
                 type: 'jay-html-compile',
-                message:
-                    `Route "${route.path}" jayHtml failed to compile: ${message}`,
+                message: `Route "${route.path}" jayHtml failed to compile: ${message}`,
                 location: relPath,
                 suggestion:
                     'Fix the template syntax or run `jay-stack validate -p <dir>` on the source page during development. See agent-kit/designer/jay-html-template-syntax.md',

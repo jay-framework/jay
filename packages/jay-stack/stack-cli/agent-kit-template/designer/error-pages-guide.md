@@ -46,9 +46,14 @@ Import the built-in `error` headless contract and bind its fields. No plugin ins
 ```html
 <html>
   <head>
-    <script type="application/jay-headless" plugin="jay-stack" contract="error" key="error"></script>
+    <script
+      type="application/jay-headless"
+      plugin="jay-stack"
+      contract="error"
+      key="error"
+    ></script>
     <script type="application/jay-data">
-data:
+      data:
     </script>
     <title>{error.title}</title>
     <meta name="description" content="{error.message}" />
@@ -68,13 +73,13 @@ data:
 
 ### Available bindings
 
-| Binding            | Type                       | Meaning                                                    |
-| ------------------ | -------------------------- | --------------------------------------------------------- |
-| `{error.status}`   | number                     | The HTTP status (e.g. `404`, `503`).                      |
-| `{error.title}`    | string                     | Short headline — supplied by logic or a sensible default. |
-| `{error.message}`  | string                     | Longer explanation — supplied or defaulted.               |
-| `{error.code}`     | string                     | App-specific error code; `''` when none.                  |
-| `error.details`    | `{ key, value }[]`         | Key/value pairs for `forEach` — empty when none.          |
+| Binding           | Type               | Meaning                                                   |
+| ----------------- | ------------------ | --------------------------------------------------------- |
+| `{error.status}`  | number             | The HTTP status (e.g. `404`, `503`).                      |
+| `{error.title}`   | string             | Short headline — supplied by logic or a sensible default. |
+| `{error.message}` | string             | Longer explanation — supplied or defaulted.               |
+| `{error.code}`    | string             | App-specific error code; `''` when none.                  |
+| `error.details`   | `{ key, value }[]` | Key/value pairs for `forEach` — empty when none.          |
 
 `error.title` and `error.message` always have a value: when the developer's code supplies none, Jay
 fills a per-status default (e.g. `404 → "Page Not Found"`). You can rely on them being present.
@@ -94,7 +99,7 @@ nudge in `.jay`:
 
 ```yaml
 validations:
-    allow-no-error-pages: true
+  allow-no-error-pages: true
 ```
 
 ## See also

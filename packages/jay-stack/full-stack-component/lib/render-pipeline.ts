@@ -72,22 +72,10 @@ export interface PipelineFactory<TargetVS extends object, TargetCF extends objec
     ): RenderPipeline<T, TargetVS, TargetCF>;
 
     // Error entry points
-    notFound(
-        message?: string,
-        opts?: ErrorOptions,
-    ): RenderPipeline<never, TargetVS, TargetCF>;
-    badRequest(
-        message?: string,
-        opts?: ErrorOptions,
-    ): RenderPipeline<never, TargetVS, TargetCF>;
-    unauthorized(
-        message?: string,
-        opts?: ErrorOptions,
-    ): RenderPipeline<never, TargetVS, TargetCF>;
-    forbidden(
-        message?: string,
-        opts?: ErrorOptions,
-    ): RenderPipeline<never, TargetVS, TargetCF>;
+    notFound(message?: string, opts?: ErrorOptions): RenderPipeline<never, TargetVS, TargetCF>;
+    badRequest(message?: string, opts?: ErrorOptions): RenderPipeline<never, TargetVS, TargetCF>;
+    unauthorized(message?: string, opts?: ErrorOptions): RenderPipeline<never, TargetVS, TargetCF>;
+    forbidden(message?: string, opts?: ErrorOptions): RenderPipeline<never, TargetVS, TargetCF>;
     serverError(
         status: number,
         message?: string,

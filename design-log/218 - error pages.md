@@ -8,9 +8,9 @@ Status: **[Design]**
    `page.jay-html` living in a **top-level** folder whose name is an HTTP status token:
    - exact code — `pages/404/`, `pages/500/`, `pages/502/`, `pages/504/`
    - family — `pages/4xx/`, `pages/5xx/`
-   These folder names are **reserved** (not routable — `/404` is *not* a navigable URL).
-   Reservation applies **only at the top level** of the pages root; a nested
-   `pages/blog/404/page.jay-html` is a normal route `/blog/404`.
+     These folder names are **reserved** (not routable — `/404` is _not_ a navigable URL).
+     Reservation applies **only at the top level** of the pages root; a nested
+     `pages/blog/404/page.jay-html` is a normal route `/blog/404`.
 2. **Resolution is exact → family → built-in.** For an outcome with status `S`:
    look up `String(S)` → look up `${first-digit}xx` → fall back to the current
    hardcoded plain-text response. So `502` renders `pages/502` if present, else
@@ -65,16 +65,16 @@ There is **no static HTML emission** — the server renders every page. ✅ veri
 
 Error/status responses today are **hardcoded plain text**:
 
-| Case | Current response | Site (✅ verified) |
-| --- | --- | --- |
-| No route match (prod) | `404` `"Not Found"` | `production-server/.../main-server.ts:127-131` |
-| Component error outcome (prod) | `status` + `message \|\| "Error"` | `fetch-page-handler.ts:85-95` |
-| Uncaught exception (prod) | `500` `"Internal Server Error"` | `main-server.ts:143-150` |
-| Component error outcome (dev) | `status` + `"server error"` / `"client error"` | `dev-server.ts:291-300` |
-| Uncaught exception (dev) | `500` + stack | `dev-server.ts:471-476` |
-| Unknown path (dev) | **no 404** — falls to Express default | — (`dev-server.ts` registers `app.get(route.path,…)` per route) |
+| Case                           | Current response                               | Site (✅ verified)                                              |
+| ------------------------------ | ---------------------------------------------- | --------------------------------------------------------------- |
+| No route match (prod)          | `404` `"Not Found"`                            | `production-server/.../main-server.ts:127-131`                  |
+| Component error outcome (prod) | `status` + `message \|\| "Error"`              | `fetch-page-handler.ts:85-95`                                   |
+| Uncaught exception (prod)      | `500` `"Internal Server Error"`                | `main-server.ts:143-150`                                        |
+| Component error outcome (dev)  | `status` + `"server error"` / `"client error"` | `dev-server.ts:291-300`                                         |
+| Uncaught exception (dev)       | `500` + stack                                  | `dev-server.ts:471-476`                                         |
+| Unknown path (dev)             | **no 404** — falls to Express default          | — (`dev-server.ts` registers `app.get(route.path,…)` per route) |
 
-The error *states* already exist: `ServerError5xx` / `ClientError4xx` / `Redirect3xx`
+The error _states_ already exist: `ServerError5xx` / `ClientError4xx` / `Redirect3xx`
 carry `status`, `message`, `code`, `details`. ✅ verified (`jay-stack-types.ts:102-123`).
 What is missing is a way to render a **designed** page for them.
 
@@ -92,27 +92,27 @@ inconsistent with the site, and carries no author-controlled messaging. We want:
 
 Enumerated before designing (methodology §3); each is reused rather than reinvented where possible.
 
-| Mechanism | Where | Verdict for this design |
-| --- | --- | --- |
-| **Route scanner** — `page.jay-html` → route; `IGNORED_DIRS`; dynamic `[slug]` brackets; specificity sort | `route-scanner.ts` (scanDirectory:97, convertToRoutePath:57, line 111 filename gate) ✅ | **Extend.** No reserved names exist today; add top-level status-token reservation that diverts matching folders out of `routes[]` into an error-page set. |
-| **RouteManifest / RouteEntry** | `production-server/lib/types.ts:4-62` ✅ | **Extend.** Add `errorPages?: Record<token, ErrorPageEntry>`; `ErrorPageEntry` mirrors the compiled refs of a single-instance route (serverElementPath, routeClientBundlePath, routeHydratePath, routeCssPath, cssImports, headMeta, scripts). |
-| **`__jay` synthetic ViewState** injected at render, read via reserved `jay.` prefix | inject `fetch-page-handler.ts:112-115`, `dev-server.ts:1552-1558`; prefix `expression-compiler.ts:131-134` ✅ | **Reuse pattern.** Error info is injected exactly like `__jay`. Also extend `__jay.error` for the untyped `jay.error.*` convenience. |
-| **Keyed headless parts** merge under `viewState[key]` | `fast-changing-runner.ts:64` ✅ | **Reuse the shape, not the runner.** The `error` key lands in ViewState the same way a keyed part does, but is injected (not produced by running a component). |
-| **Contract → ViewState types** | `contract-to-view-state-and-refs.ts`; example `page-with-headless-and-contract` fixture ✅ | **Reuse.** The built-in Error contract compiles to `ErrorViewState` exactly like any headless contract, giving `error: ErrorViewState` typing on the page. |
-| **`RenderResult` error constructors** | `render-results.ts:13-62`; types `jay-stack-types.ts:102-123`; pipeline `render-pipeline.ts:74-100,189-256` ✅ | **Extend.** Add `title?` to the two error interfaces (they already carry `message?`/`code?`/`details?`) and their constructors/pipeline factories. |
-| **`.jay` `validations` suppression** (`allow-no-ard`) | DL#214 / this-session config.ts + validate.ts | **Reuse.** Add `allow-no-error-pages`. |
-| **DL#54 render-result monads**; **DL#34 jay stack rendering phases**; **DL#213 site head tags** | — | Context; error pages inherit head-tag merging (site identity + template). |
+| Mechanism                                                                                                | Where                                                                                                          | Verdict for this design                                                                                                                                                                                                                        |
+| -------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Route scanner** — `page.jay-html` → route; `IGNORED_DIRS`; dynamic `[slug]` brackets; specificity sort | `route-scanner.ts` (scanDirectory:97, convertToRoutePath:57, line 111 filename gate) ✅                        | **Extend.** No reserved names exist today; add top-level status-token reservation that diverts matching folders out of `routes[]` into an error-page set.                                                                                      |
+| **RouteManifest / RouteEntry**                                                                           | `production-server/lib/types.ts:4-62` ✅                                                                       | **Extend.** Add `errorPages?: Record<token, ErrorPageEntry>`; `ErrorPageEntry` mirrors the compiled refs of a single-instance route (serverElementPath, routeClientBundlePath, routeHydratePath, routeCssPath, cssImports, headMeta, scripts). |
+| **`__jay` synthetic ViewState** injected at render, read via reserved `jay.` prefix                      | inject `fetch-page-handler.ts:112-115`, `dev-server.ts:1552-1558`; prefix `expression-compiler.ts:131-134` ✅  | **Reuse pattern.** Error info is injected exactly like `__jay`. Also extend `__jay.error` for the untyped `jay.error.*` convenience.                                                                                                           |
+| **Keyed headless parts** merge under `viewState[key]`                                                    | `fast-changing-runner.ts:64` ✅                                                                                | **Reuse the shape, not the runner.** The `error` key lands in ViewState the same way a keyed part does, but is injected (not produced by running a component).                                                                                 |
+| **Contract → ViewState types**                                                                           | `contract-to-view-state-and-refs.ts`; example `page-with-headless-and-contract` fixture ✅                     | **Reuse.** The built-in Error contract compiles to `ErrorViewState` exactly like any headless contract, giving `error: ErrorViewState` typing on the page.                                                                                     |
+| **`RenderResult` error constructors**                                                                    | `render-results.ts:13-62`; types `jay-stack-types.ts:102-123`; pipeline `render-pipeline.ts:74-100,189-256` ✅ | **Extend.** Add `title?` to the two error interfaces (they already carry `message?`/`code?`/`details?`) and their constructors/pipeline factories.                                                                                             |
+| **`.jay` `validations` suppression** (`allow-no-ard`)                                                    | DL#214 / this-session config.ts + validate.ts                                                                  | **Reuse.** Add `allow-no-error-pages`.                                                                                                                                                                                                         |
+| **DL#54 render-result monads**; **DL#34 jay stack rendering phases**; **DL#213 site head tags**          | —                                                                                                              | Context; error pages inherit head-tag merging (site identity + template).                                                                                                                                                                      |
 
 ### Null-hypothesis check (methodology §4)
 
-- *Why not reuse `__jay` only (no new contract)?* It is untyped (string-typed via the
+- _Why not reuse `__jay` only (no new contract)?_ It is untyped (string-typed via the
   `jay.` prefix) and the user wants an importable, typed contract/headless component for
   error info. We still get `jay.error.*` for free, but the typed `error` key is primary.
-- *Why not a framework render-timeout for 504?* Not needed — 504 originates from a
+- _Why not a framework render-timeout for 504?_ Not needed — 504 originates from a
   plugin/component returning that status. No new runtime surface.
-- *Why not static `404.html` emission (SSG)?* Jay serves every page via its own server;
+- _Why not static `404.html` emission (SSG)?_ Jay serves every page via its own server;
   there is no static HTML target today. Deferred (see Scope pre-mortem).
-- *Why a new manifest section instead of a flag on `RouteEntry`?* Error pages are resolved
+- _Why a new manifest section instead of a flag on `RouteEntry`?_ Error pages are resolved
   by status, not by URL match; keeping them out of `routes[]` avoids polluting the
   URL-matching path and prevents accidental navigability.
 
@@ -166,10 +166,12 @@ Resolution for an outcome status `S` (pseudocode):
 
 ```ts
 function resolveErrorPage(errorPages, S) {
-    if (S < 400 || S > 599) return undefined;      // v1: only 4xx/5xx get a page
-    return errorPages[String(S)]                   // exact, e.g. "502"
-        ?? errorPages[`${Math.floor(S / 100)}xx`]; // family, e.g. "5xx"
-    // caller falls back to built-in plain text when undefined
+  if (S < 400 || S > 599) return undefined; // v1: only 4xx/5xx get a page
+  return (
+    errorPages[String(S)] ?? // exact, e.g. "502"
+    errorPages[`${Math.floor(S / 100)}xx`]
+  ); // family, e.g. "5xx"
+  // caller falls back to built-in plain text when undefined
 }
 ```
 
@@ -205,16 +207,16 @@ Ship a canonical contract compiled to `ErrorViewState`:
 # built-in — conceptually:
 name: Error
 tags:
-  - { tag: status,  type: data, dataType: number, phase: fast }
-  - { tag: title,   type: data, dataType: string, phase: fast }
+  - { tag: status, type: data, dataType: number, phase: fast }
+  - { tag: title, type: data, dataType: string, phase: fast }
   - { tag: message, type: data, dataType: string, phase: fast }
-  - { tag: url,     type: data, dataType: string, phase: fast }
-  - tag: details                 # optional, forEach-able structured detail
+  - { tag: url, type: data, dataType: string, phase: fast }
+  - tag: details # optional, forEach-able structured detail
     type: sub-contract
     repeated: true
     phase: fast
     tags:
-      - { tag: key,   type: data, dataType: string }
+      - { tag: key, type: data, dataType: string }
       - { tag: value, type: data, dataType: string }
 ```
 
@@ -234,19 +236,20 @@ New helper, used by both targets at the error-render site:
 
 ```ts
 function buildErrorViewState(entry: ErrorPageEntry, info: ErrorInfo): object {
-    const vs = { ...(entry.slowCache?.slowViewState ?? {}) };   // static chrome, if any
-    const error = {
-        status: info.status,
-        title: info.title ?? defaultTitle(info.status),
-        message: info.message ?? defaultMessage(info.status),
-        url: info.url,
-        details: Object.entries(info.details ?? {}).map(
-            ([key, value]) => ({ key, value: String(value) }),
-        ),
-    };
-    (vs as any).error = error;
-    (vs as any).__jay = { params: {}, url: { path: info.url }, error };
-    return vs;
+  const vs = { ...(entry.slowCache?.slowViewState ?? {}) }; // static chrome, if any
+  const error = {
+    status: info.status,
+    title: info.title ?? defaultTitle(info.status),
+    message: info.message ?? defaultMessage(info.status),
+    url: info.url,
+    details: Object.entries(info.details ?? {}).map(([key, value]) => ({
+      key,
+      value: String(value),
+    })),
+  };
+  (vs as any).error = error;
+  (vs as any).__jay = { params: {}, url: { path: info.url }, error };
+  return vs;
 }
 ```
 
@@ -263,12 +266,12 @@ Render = load the error page's compiled server element and
 
 ```ts
 export interface ServerError5xx {
-    kind: 'ServerError';
-    status: number;
-    message?: string;      // existing — descriptive text, surfaces as error.message
-    code?: string;         // existing — kept (not exposed in the Error contract)
-    title?: string;        // NEW — human-facing heading, surfaces as error.title
-    details?: Record<string, unknown>;  // existing — projected to error.details [{key,value}]
+  kind: 'ServerError';
+  status: number;
+  message?: string; // existing — descriptive text, surfaces as error.message
+  code?: string; // existing — kept (not exposed in the Error contract)
+  title?: string; // NEW — human-facing heading, surfaces as error.title
+  details?: Record<string, unknown>; // existing — projected to error.details [{key,value}]
 }
 // ClientError4xx: same new `title?` field.
 ```
@@ -294,19 +297,21 @@ Mirror in `RenderPipeline` factories (`render-pipeline.ts:189-256`).
   pre-rendered `slowCache` (slow ViewState only; no instances/params).
 - The build compiles each error page like a one-instance route, emitting under
   `backend/pre-rendered/_errors/<token>/` and `frontend/pages/_errors/<token>/` (the `_errors`
-  subtree only names the *output* location; the *source* lives at top-level `pages/<token>/`).
+  subtree only names the _output_ location; the _source_ lives at top-level `pages/<token>/`).
 - Error pages are excluded from sitemap/llms.txt/robots and from internal-link validation
   (they are not URLs).
 
 ### 7. Server wiring
 
 **Production:**
+
 - `main-server.ts:127-131` (no match) → `renderErrorPage(404, …)` → plain text fallback.
 - `fetch-page-handler.ts:85-95`: `ServerError`/`ClientError` → `renderErrorPage(status, …)` →
   plain text fallback. `Redirect` unchanged.
 - `main-server.ts:143-150` (catch) → `renderErrorPage(500, …)` → plain text fallback.
 
 **Dev:**
+
 - Add an Express catch-all (after all route registrations) → `renderErrorPage(404, …)`.
 - `dev-server.ts:291-300` `handleOtherResponseCodes` → `renderErrorPage(status, …)`.
 - `dev-server.ts:471-476` (catch) → `renderErrorPage(500, …)` (keep stack in logs/dev detail).
@@ -354,9 +359,14 @@ Dev compiles the error page on the fly (like any dev page render); prod loads fr
 ```html
 <html>
   <head>
-    <script type="application/jay-headless" plugin="jay-stack" contract="error" key="error"></script>
+    <script
+      type="application/jay-headless"
+      plugin="jay-stack"
+      contract="error"
+      key="error"
+    ></script>
     <title>{error.title}</title>
-    <meta name="description" content="{error.message}">
+    <meta name="description" content="{error.message}" />
   </head>
   <body>
     <main>
@@ -377,7 +387,7 @@ Developer returning enriched errors from a page/plugin:
 
 ```ts
 return notFound('The product you are looking for may have been removed.', {
-    title: 'Product not found',
+  title: 'Product not found',
 });
 // → renders pages/404 (or pages/4xx); error.title / error.message bound.
 ```
@@ -386,22 +396,22 @@ A timeout-measuring plugin:
 
 ```ts
 return serverError5xx(504, 'Upstream timed out', {
-    title: 'This is taking too long',
-    details: { upstream: 'inventory-service', waitedMs: '10000' },
+  title: 'This is taking too long',
+  details: { upstream: 'inventory-service', waitedMs: '10000' },
 });
 // → renders pages/504 if present, else pages/5xx; error.details lists the key/value pairs.
 ```
 
 ## Trade-offs
 
-| Aspect | Benefit | Cost |
-| --- | --- | --- |
-| Top-level reserved status folders | Zero new file type; obvious location; designer-authored | Top-level folders named `100`–`599` / `Nxx` are no longer routable |
-| Exact → family resolution | One `5xx` covers everything; override precisely where it matters | Two lookups per error; authors must learn the precedence |
-| Reserved `error` headless key (typed) | Typed bindings; reuses contract→ViewState + keyed-part shape | Compiler must special-case a built-in plugin/contract |
-| Inject `error` (don't run a component) | No request-time failure from running a component during error handling | Error page can't compute its own fast data in v1 |
-| `title` on RenderResult (+ `details` projection) | Author messaging flows from logic to UI | Constructor signature churn (acceptable; no back-compat) |
-| Validation + agent-kit | Minimum pages caught at build; guidance prevents misuse | One more suppression flag to document |
+| Aspect                                           | Benefit                                                                | Cost                                                               |
+| ------------------------------------------------ | ---------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Top-level reserved status folders                | Zero new file type; obvious location; designer-authored                | Top-level folders named `100`–`599` / `Nxx` are no longer routable |
+| Exact → family resolution                        | One `5xx` covers everything; override precisely where it matters       | Two lookups per error; authors must learn the precedence           |
+| Reserved `error` headless key (typed)            | Typed bindings; reuses contract→ViewState + keyed-part shape           | Compiler must special-case a built-in plugin/contract              |
+| Inject `error` (don't run a component)           | No request-time failure from running a component during error handling | Error page can't compute its own fast data in v1                   |
+| `title` on RenderResult (+ `details` projection) | Author messaging flows from logic to UI                                | Constructor signature churn (acceptable; no back-compat)           |
+| Validation + agent-kit                           | Minimum pages caught at build; guidance prevents misuse                | One more suppression flag to document                              |
 
 ## Verification Criteria
 
@@ -530,14 +540,14 @@ relative-path-into-node_modules. An anti-drift compiler test locks the contract/
 
 While wiring Phase 4 the generated error-type import failed to resolve in the real build with
 `Plugin "jay-stack" not found` — surfaced only once a production build actually compiled an error
-page (the Phase 2 tests compare generated *text* to fixtures, so a wrong-but-consistent module
+page (the Phase 2 tests compare generated _text_ to fixtures, so a wrong-but-consistent module
 name passed). Root cause: Phase 2 set `ERROR_CONTRACT_MODULE = '@jay-framework/full-stack-component'`
 (hyphenated) but the package is actually **`@jay-framework/fullstack-component`** (no hyphen).
 Fixed the constant in `builtin-contracts.ts`, `error-contract.ts`'s doc comment, and the Phase 2
 fixtures/tests (`page-with-error-contract/page.jay-html.d.ts`, `builtin-error-contract.test.ts`,
 `jay-html-contract-ref.test.ts`). Phase 2 compiler tests re-pass (9) against the corrected name.
 **Lesson (methodology §Boundary):** a text-only fixture comparison doesn't verify module
-*resolution* — the live build in Phase 4 is what caught it, reinforcing "live example up front."
+_resolution_ — the live build in Phase 4 is what caught it, reinforcing "live example up front."
 
 ### Phase 4 — manifest + build pipeline ✅
 

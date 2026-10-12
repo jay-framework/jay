@@ -392,12 +392,12 @@ in-page WebMCP plugin — no served server-card URL) was stuck with a permanent 
 **Where the suppression lives (reviewed decision).** First cut mirrored the DL#200 composition
 overrides — `allow-no-ard: true` in a page's `application/jay-validations` script, read from any page
 and applied project-wide. Review flagged a scope mismatch: unlike `allow-no-template` /
-`allow-no-design-system` (which are *about* page/region composition), `allow-no-ard` governs a single
+`allow-no-design-system` (which are _about_ page/region composition), `allow-no-ard` governs a single
 **project-level file** (`public/.well-known/ard.json`), so pinning it to an arbitrary page is wrong
 (which page? and it silently vanishes if that page is deleted). Moved it to **`.jay`** under a new
 `validations:` section — a project-level file governs a project-level concern. Page/region overrides
-stay in `application/jay-validations`; project-file overrides go in `.jay`. The split is by *scope of
-the thing suppressed*, not by one uniform mechanism.
+stay in `application/jay-validations`; project-file overrides go in `.jay`. The split is by _scope of
+the thing suppressed_, not by one uniform mechanism.
 
 - `config.ts`: `JayConfig.validations?: { 'allow-no-ard'?: boolean }`; `loadConfig` passes it through.
 - `validate.ts`: `allowNoArd = config.validations?.['allow-no-ard'] === true` gates the absent-warning.

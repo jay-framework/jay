@@ -26,24 +26,24 @@ For `{productPage.productName}` the agent can find the tag, but not: which **rec
 
 ## Prior Art / Adjacent Mechanisms
 
-| Mechanism | Verdict |
-| --- | --- |
-| `jay-coordinate` (DL#103/#106/#126) | Identifies DOM position; conditional emission, no tag/record mapping → **constrains**, insufficient alone |
-| `runtime-automation` `getPageState()` | ViewState + refs only; no data-bound text/images → **extend**, not replace |
-| Freeze postMessage (DL#128) | **Reuse pattern** for the inspector |
-| Plugin `actions[]` / `.jay-action` | **Reuse as write path**; no tag↔action link today |
-| `ContractTag.meta` | Unstructured strings → insufficient for a nested block |
-| `plugins-index.yaml` / agent-kit (DL#85/#125) | **Reuse as discovery** |
-| DL#215 (MCP/REST = plugin space) | Constrains: no core MCP in v1 |
+| Mechanism                                     | Verdict                                                                                                   |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `jay-coordinate` (DL#103/#106/#126)           | Identifies DOM position; conditional emission, no tag/record mapping → **constrains**, insufficient alone |
+| `runtime-automation` `getPageState()`         | ViewState + refs only; no data-bound text/images → **extend**, not replace                                |
+| Freeze postMessage (DL#128)                   | **Reuse pattern** for the inspector                                                                       |
+| Plugin `actions[]` / `.jay-action`            | **Reuse as write path**; no tag↔action link today                                                         |
+| `ContractTag.meta`                            | Unstructured strings → insufficient for a nested block                                                    |
+| `plugins-index.yaml` / agent-kit (DL#85/#125) | **Reuse as discovery**                                                                                    |
+| DL#215 (MCP/REST = plugin space)              | Constrains: no core MCP in v1                                                                             |
 
 **Null hypothesis checked:** match the pointed element's text against ViewState values (no compiler change). Rejected: duplicates (`price` = `salePrice`), images, `forEach` items are ambiguous. Binding markers are cheap and exact.
 
 ## Questions and Answers
 
-1. **Name?** Source Editing. (Reverse lookup = the resolver only; CMS implies Jay owns storage.) — *Answered.*
-2. **Dashboard URL home?** Declared with the contract, emitted into `plugins-index.yaml`. — *Answered.*
-3. **Site-level `editUrl` placeholders (`{siteId}`)** — from project config or plugin service? — *Open.*
-4. **Image writes:** `kind: image` passes a media URL; upload via the plugin's own command (e.g. `wix-media upload-public`). Confirm per plugin. — *Open.*
+1. **Name?** Source Editing. (Reverse lookup = the resolver only; CMS implies Jay owns storage.) — _Answered._
+2. **Dashboard URL home?** Declared with the contract, emitted into `plugins-index.yaml`. — _Answered._
+3. **Site-level `editUrl` placeholders (`{siteId}`)** — from project config or plugin service? — _Open._
+4. **Image writes:** `kind: image` passes a media URL; upload via the plugin's own command (e.g. `wix-media upload-public`). Confirm per plugin. — _Open._
 
 ## Design
 
@@ -52,9 +52,9 @@ For `{productPage.productName}` the agent can find the tag, but not: which **rec
 name: product-page
 editing:
   entity: product
-  id: "{productId}"            # expression over ViewState/params identifying the record
-  write: updateProduct         # plugin action: { id, field, value }
-  editUrl: "https://www.wix.com/dashboard/{siteId}/store/products/{id}"
+  id: '{productId}' # expression over ViewState/params identifying the record
+  write: updateProduct # plugin action: { id, field, value }
+  editUrl: 'https://www.wix.com/dashboard/{siteId}/store/products/{id}'
 tags:
   - tag: productName
     editing: { field: name, kind: text }

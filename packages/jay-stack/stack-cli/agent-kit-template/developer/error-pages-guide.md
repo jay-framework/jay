@@ -9,8 +9,14 @@ covers how to return enriched errors from `page.ts` so they surface well on the 
 Return an error result from any render phase to stop rendering and show an error page:
 
 ```typescript
-import { notFound, badRequest, unauthorized, forbidden, serverError5xx, clientError4xx }
-    from '@jay-framework/fullstack-component';
+import {
+  notFound,
+  badRequest,
+  unauthorized,
+  forbidden,
+  serverError5xx,
+  clientError4xx,
+} from '@jay-framework/fullstack-component';
 
 if (!product) return notFound('The product you are looking for may have been removed.');
 
@@ -35,26 +41,26 @@ These map directly onto the `error.*` bindings the error page can render.
 
 ```typescript
 return notFound('The product you are looking for may have been removed.', {
-    title: 'Product not found',
+  title: 'Product not found',
 });
 // → error.title = "Product not found", error.message = "The product…"
 
 return serverError5xx(504, 'Upstream timed out', {
-    title: 'This is taking too long',
-    code: 'UPSTREAM_TIMEOUT',
-    details: { upstream: 'inventory-service', waitedMs: '10000' },
+  title: 'This is taking too long',
+  code: 'UPSTREAM_TIMEOUT',
+  details: { upstream: 'inventory-service', waitedMs: '10000' },
 });
 // → renders pages/504 if present, else pages/5xx;
 //   error.details lists the key/value pairs via forEach="error.details".
 ```
 
-| Field     | Binding           | Notes                                                           |
-| --------- | ----------------- | -------------------------------------------------------------- |
-| status    | `{error.status}`  | The numeric status you pass (`notFound` → 404).               |
-| message   | `{error.message}` | First positional arg; defaulted per status when omitted.       |
-| `title`   | `{error.title}`   | Short headline; defaulted per status when omitted.             |
-| `code`    | `{error.code}`    | App-specific code; `''` on the page when omitted.              |
-| `details` | `error.details`   | `Record<string, unknown>` → stringified `{ key, value }[]`.     |
+| Field     | Binding           | Notes                                                       |
+| --------- | ----------------- | ----------------------------------------------------------- |
+| status    | `{error.status}`  | The numeric status you pass (`notFound` → 404).             |
+| message   | `{error.message}` | First positional arg; defaulted per status when omitted.    |
+| `title`   | `{error.title}`   | Short headline; defaulted per status when omitted.          |
+| `code`    | `{error.code}`    | App-specific code; `''` on the page when omitted.           |
+| `details` | `error.details`   | `Record<string, unknown>` → stringified `{ key, value }[]`. |
 
 ## Which page renders
 
@@ -70,8 +76,8 @@ The pipeline factory methods mirror the constructors and accept the same options
 const P = RenderPipeline.for<SlowViewState, CarryForward>();
 
 return P.try(() => db.getProduct(props.slug))
-    .map((product) => product ?? P.notFound('Product not found', { title: 'Product not found' }))
-    .toPhaseOutput((product) => ({ viewState: { title: product.name }, carryForward: {} }));
+  .map((product) => product ?? P.notFound('Product not found', { title: 'Product not found' }))
+  .toPhaseOutput((product) => ({ viewState: { title: product.name }, carryForward: {} }));
 ```
 
 ## See also

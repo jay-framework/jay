@@ -295,9 +295,7 @@ describe('validatePlugin — command metadata (.jay-command) export requirement'
 
         const result = await validatePlugin({ pluginPath: dir });
 
-        const cmdError = result.errors.find((e) =>
-            e.message.includes('command metadata file'),
-        );
+        const cmdError = result.errors.find((e) => e.message.includes('command metadata file'));
         expect(cmdError).toBeUndefined();
     });
 });
@@ -682,9 +680,7 @@ describe('validatePlugin — route jay-html compile', () => {
     }
 
     it('does not report jay-html-compile when route template is valid', async () => {
-        const dir = createTempPluginWithSource(
-            routePluginFixture('  <h1>{title}</h1>\n'),
-        );
+        const dir = createTempPluginWithSource(routePluginFixture('  <h1>{title}</h1>\n'));
 
         const result = await validatePlugin({ pluginPath: dir });
 
