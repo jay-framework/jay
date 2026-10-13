@@ -61,6 +61,7 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
         jayRollupConfig: jayOptions,
         logLevel: options.logLevel,
         httpServer,
+        allowedHosts: resolvedConfig.devServer.allowedHosts,
     });
 
     app.use(server);

@@ -291,6 +291,7 @@ function defaults(options: DevServerOptions): DevServerOptions {
             buildFolder,
         },
         httpServer: options.httpServer,
+        allowedHosts: options.allowedHosts,
     };
 }
 
@@ -1449,6 +1450,7 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
         jayRollupConfig,
         logLevel: viteLogLevel,
         httpServer: options.httpServer,
+        allowedHosts: options.allowedHosts,
     });
 
     // Set the Vite server and initialize services

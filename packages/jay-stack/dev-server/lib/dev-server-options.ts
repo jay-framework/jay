@@ -31,4 +31,10 @@ export interface DevServerOptions {
     logLevel?: LogLevel;
     /** HTTP server for HMR WebSocket attachment (avoids default port 24678 collision) */
     httpServer?: Server;
+    /**
+     * Hosts the dev server's Vite host-check accepts, beyond localhost (DL#220). A list of hosts
+     * (Vite host-suffix syntax, e.g. `.example.dev`), or `true` to disable the check entirely — for
+     * cloud preview proxies. Merged with the `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS` env var.
+     */
+    allowedHosts?: string[] | true;
 }

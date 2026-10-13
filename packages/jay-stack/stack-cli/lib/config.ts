@@ -10,6 +10,14 @@ export interface JayConfig {
         componentsBase?: string;
         publicFolder?: string;
         configBase?: string;
+        /**
+         * Hosts the dev server's Vite host-check accepts, beyond localhost. Use Vite's host-suffix
+         * syntax (`.example.dev` matches any subdomain), or `true` to disable the check entirely
+         * (dev only — e.g. cloud preview sandboxes). Merged with the
+         * `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS` env var. Absent → Vite's localhost-only default.
+         * (DL#220)
+         */
+        allowedHosts?: string[] | true;
     };
     site?: {
         baseUrl?: string;
@@ -86,6 +94,8 @@ export function getConfigWithDefaults(
                 config.devServer?.componentsBase || DEFAULT_CONFIG.devServer!.componentsBase!,
             publicFolder: config.devServer?.publicFolder || DEFAULT_CONFIG.devServer!.publicFolder!,
             configBase: config.devServer?.configBase || DEFAULT_CONFIG.devServer!.configBase!,
+            // No default — absent means Vite's localhost-only host check (DL#220).
+            allowedHosts: config.devServer?.allowedHosts,
         },
         site: config.site,
     };

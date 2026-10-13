@@ -23,6 +23,21 @@ guides). After scaffolding, read those.
   server-side via the Claude Agent SDK. Its authentication matches Claude Code: install the `claude`
   CLI, then either set `ANTHROPIC_API_KEY` in the environment **or** run `claude login`. Without this
   the project still scaffolds, builds, and runs — only the `/aiditor` route's agent won't run.
+- **For any Wix plugin (`wix-stores` / `wix-members` / `wix-media` / `wix-data` / `wix-deploy`): a Wix
+  account + a browser login.** All Wix plugins share one credential owner,
+  `@jay-framework/wix-server-client`, which is pulled in automatically when you select any `wix-*`
+  plugin. Its setup is **interactive** — during `setup` it shells out to the Wix CLI
+  (`npx @wix/cli login`, opening a browser for OAuth) and, if the project isn't connected to a site yet,
+  runs `npm create @wix/new init` to connect one. From there it fetches the app secret and writes
+  `config/.wix.yaml` for you — you are **not** prompted for an API key, site ID, or client ID (those are
+  derived or fetched). Notes:
+  - This step **requires interactive mode.** In non-interactive / CI runs it is skipped with a
+    `needs-config` note; re-run `yarn setup` in a terminal to complete it.
+  - **`wix-deploy` additionally needs a live Wix login at deploy time** (`yarn wix:deploy`) — it uses
+    the Wix CLI session in `~/.wix`. If that session is missing it errors with "Run `wix login` first";
+    just run `npx @wix/cli login` again.
+  - **API key is optional / manual.** The default flow uses the auto-fetched app secret; only hand-edit
+    an `apiKey` into `config/.wix.yaml` if you deliberately choose the API-key strategy.
 
 ## 1 · Scaffold the project
 
@@ -53,6 +68,38 @@ The scaffolder then, in order: creates `./<name>/`, installs dependencies, gener
 (`npx jay-stack-cli agent-kit`), and runs plugin setup (`npx jay-stack-cli setup`). A step that can't
 complete non-interactively (e.g. a plugin needing credentials) is skipped with a note and can be re-run
 later with `yarn setup`.
+
+### Completing setup non-interactively (agents / CI)
+
+`jay-stack-cli setup` has three input modes:
+
+- `--interactive` — prompts a human in the terminal.
+- `--answers <file>` — reads answers from a YAML file (for agents).
+- *(neither)* — surfaces every needed answer instead of prompting.
+
+When a plugin needs a value it can't get, setup does **not** hang or guess — it prints a structured,
+machine-readable block and exits that plugin:
+
+```
+setup-needs-answer:
+  plugin: @jay-framework/some-plugin
+  key: apiKey
+  type: input
+  message: "Enter your API key"
+  choices:          # only present for select-type questions
+    - us: United States
+```
+
+**The loop for an agent:** run `yarn setup` → for each `setup-needs-answer:` block, add a line
+`<key>: "<value>"` to an `answers.yaml` → re-run `jay-stack-cli setup --answers answers.yaml`. Any value
+still missing surfaces again as another `setup-needs-answer:`; repeat until none remain. The `key` is the
+stable join field between the question and your answer.
+
+**Exception — Wix login is not answerable via file.** The Wix plugins' credential setup shells out to
+the Wix CLI for a browser-based OAuth login (`npx @wix/cli login`). In non-interactive mode it returns a
+`needs-config` note ("requires interactive mode"), **not** a `setup-needs-answer:` — there is no key you
+can put in `answers.yaml` for it. A human must run `yarn setup` in a real terminal once to complete the
+Wix login; everything else (app secret, client ID, site ID) is fetched/derived automatically after that.
 
 ## 2 · What you get
 

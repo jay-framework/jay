@@ -25,6 +25,33 @@ export interface CreateViteServerOptions {
     clearScreen?: boolean;
     /** HTTP server for HMR WebSocket (avoids default port 24678 collision) */
     httpServer?: Server;
+    /**
+     * Hosts Vite's dev-server host-check accepts, beyond localhost (DL#220). A list of hosts (Vite
+     * host-suffix syntax, e.g. `.example.dev`), or `true` to disable the check entirely. Merged with
+     * the `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS` env var. `undefined`/empty → Vite's default.
+     */
+    allowedHosts?: string[] | true;
+}
+
+/**
+ * Resolves Vite's `server.allowedHosts` from the `.jay` config value and the
+ * `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS` env var (Vite's own convention — honored natively only in
+ * Vite 6, so the nested Vite 5.4 needs us to read it). Returns `true` (disable check) if either source
+ * says so, a de-duplicated merged list otherwise, or `undefined` when neither is set (Vite keeps its
+ * localhost-only default). (DL#220)
+ */
+export function resolveAllowedHosts(
+    fromConfig: string[] | true | undefined,
+    env: string | undefined,
+): string[] | true | undefined {
+    if (fromConfig === true) return true;
+    const envHosts = (env ?? '')
+        .split(',')
+        .map((host) => host.trim())
+        .filter(Boolean);
+    if (envHosts.includes('true')) return true;
+    const merged = [...(fromConfig ?? []), ...envHosts];
+    return merged.length ? Array.from(new Set(merged)) : undefined;
 }
 
 /**
@@ -42,7 +69,13 @@ export async function createViteServer(options: CreateViteServerOptions): Promis
         logLevel = 'info',
         clearScreen = true,
         httpServer,
+        allowedHosts,
     } = options;
+
+    const resolvedAllowedHosts = resolveAllowedHosts(
+        allowedHosts,
+        process.env.__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS,
+    );
 
     const vite = await createServer({
         // Don't start HTTP server - we use middleware mode
@@ -50,6 +83,8 @@ export async function createViteServer(options: CreateViteServerOptions): Promis
             middlewareMode: true,
             hmr: httpServer ? { server: httpServer } : undefined,
             watch: { ignored: ['**/build/**'] },
+            // Omit the key entirely when unset so Vite keeps its localhost-only default (DL#220).
+            ...(resolvedAllowedHosts !== undefined && { allowedHosts: resolvedAllowedHosts }),
         },
         // Use Jay Stack compiler for .jay-html and other custom transforms
         plugins: [

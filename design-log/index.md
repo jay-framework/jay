@@ -330,6 +330,7 @@ Each entry's description leads with a **status tag**: **[Design]** (approved/in-
 | 97  | [Contract-based tool descriptions for gemini agent](97%20-%20contract-based%20tool%20descriptions%20for%20gemini%20agent)             | Semantic tool descriptions from .jay-contract via server action, not embedded in HTML     |
 | 132 | [ui-kit headless primitives](132%20-%20ui-kit%20headless%20primitives)                                                                | Popover menu, scroll carousel, tab switcher, clipboard copy — thin JS over HTML/CSS       |
 | 142 | [ui-kit Add Menu contribution](142%20-%20ui-kit-add-menu-contribution)                                                                | M19.3 add-menu yaml; U1–U3 done; ships with aiditor smoke                                 |
+| 220 | [dev-server allowed hosts](220%20-%20dev-server%20allowed%20hosts.md)                                                                 | **[Implemented]** — `.jay` `devServer.allowedHosts` (`string[] \| true`) + `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS` env passthrough → Vite `server.allowedHosts`, so cloud preview proxies (Base44 etc.) work without a hand-written `src/pages/vite.config.ts` |
 
 ---
 

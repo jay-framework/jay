@@ -133,7 +133,11 @@ export async function scaffoldProject(
     writeFile(projectDir, 'vite.config.ts', readTemplate('vite.config.ts'));
     writeFile(projectDir, 'tsconfig.json', readTemplate('tsconfig.json'));
 
-    writeFile(projectDir, 'CLAUDE.md', readTemplate('CLAUDE.md'));
+    // CLAUDE.md and agents.md are mirrors from one template so non-Claude agents (anything following
+    // the agents.md convention) get identical guidance. Single source → no drift between the two.
+    const agentGuidance = readTemplate('CLAUDE.md');
+    writeFile(projectDir, 'CLAUDE.md', agentGuidance);
+    writeFile(projectDir, 'agents.md', agentGuidance);
 
     const hasDesignValidator = selectedPlugins.some(
         (p) => p.name === '@jay-framework/design-system-validator',
