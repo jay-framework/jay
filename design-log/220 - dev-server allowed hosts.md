@@ -104,21 +104,21 @@ check; the broader intent should not be silently narrowed.
 
 ```ts
 export interface JayConfig {
-    devServer?: {
-        portRange?: [number, number];
-        pagesBase?: string;
-        componentsBase?: string;
-        publicFolder?: string;
-        configBase?: string;
-        /**
-         * Hosts the dev server's Vite host-check accepts, beyond localhost. Use Vite's host-suffix
-         * syntax (`.example.dev` matches any subdomain). Set `true` to disable the check entirely
-         * (dev only — e.g. cloud preview sandboxes). Merged with the
-         * `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS` env var. (DL#220)
-         */
-        allowedHosts?: string[] | true;
-    };
-    // ...unchanged
+  devServer?: {
+    portRange?: [number, number];
+    pagesBase?: string;
+    componentsBase?: string;
+    publicFolder?: string;
+    configBase?: string;
+    /**
+     * Hosts the dev server's Vite host-check accepts, beyond localhost. Use Vite's host-suffix
+     * syntax (`.example.dev` matches any subdomain). Set `true` to disable the check entirely
+     * (dev only — e.g. cloud preview sandboxes). Merged with the
+     * `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS` env var. (DL#220)
+     */
+    allowedHosts?: string[] | true;
+  };
+  // ...unchanged
 }
 ```
 
@@ -132,17 +132,17 @@ A small pure function resolves the final value, used by the dev server:
 ```ts
 // returns string[] | true | undefined
 function resolveAllowedHosts(
-    fromConfig: string[] | true | undefined,
-    env: string | undefined, // process.env.__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS
+  fromConfig: string[] | true | undefined,
+  env: string | undefined, // process.env.__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS
 ): string[] | true | undefined {
-    if (fromConfig === true) return true;
-    const envHosts = (env ?? '')
-        .split(',')
-        .map((h) => h.trim())
-        .filter(Boolean);
-    if (envHosts.includes('true')) return true; // allow env to disable too
-    const merged = [...(fromConfig ?? []), ...envHosts];
-    return merged.length ? Array.from(new Set(merged)) : undefined;
+  if (fromConfig === true) return true;
+  const envHosts = (env ?? '')
+    .split(',')
+    .map((h) => h.trim())
+    .filter(Boolean);
+  if (envHosts.includes('true')) return true; // allow env to disable too
+  const merged = [...(fromConfig ?? []), ...envHosts];
+  return merged.length ? Array.from(new Set(merged)) : undefined;
 }
 ```
 
@@ -182,7 +182,7 @@ flowchart LR
    unconfigured one is rejected — host-check behavior is invisible to types/validation (DL#195 boundary
    rule).
 6. **Docs** — devops `INSTRUCTIONS.md`: new "Running in cloud/remote environments" section (config + env
-   + `true`), and remove the `vite.config.ts` workaround guidance everywhere.
+   - `true`), and remove the `vite.config.ts` workaround guidance everywhere.
 
 ### Scope pre-mortem (what this does NOT handle)
 
@@ -200,9 +200,9 @@ flowchart LR
 ```yaml
 # .jay
 devServer:
-    portRange: [3000, 3000]
-    allowedHosts:
-        - .mysandbox.dev
+  portRange: [3000, 3000]
+  allowedHosts:
+    - .mysandbox.dev
 ```
 
 ✅ Disable the check for an ephemeral preview (dev only):
@@ -210,7 +210,7 @@ devServer:
 ```yaml
 # .jay
 devServer:
-    allowedHosts: true
+  allowedHosts: true
 ```
 
 ✅ Zero-config on a platform that sets the Vite env var (e.g. Base44) — no `.jay` change, no file:

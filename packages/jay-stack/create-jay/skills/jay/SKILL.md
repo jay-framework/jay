@@ -75,7 +75,7 @@ later with `yarn setup`.
 
 - `--interactive` — prompts a human in the terminal.
 - `--answers <file>` — reads answers from a YAML file (for agents).
-- *(neither)* — surfaces every needed answer instead of prompting.
+- _(neither)_ — surfaces every needed answer instead of prompting.
 
 When a plugin needs a value it can't get, setup does **not** hang or guess — it prints a structured,
 machine-readable block and exits that plugin:

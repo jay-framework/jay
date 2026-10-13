@@ -81,10 +81,10 @@ isn't `localhost` ("Blocked request. This host is not allowed."). Allow the exte
 ```yaml
 # .jay
 devServer:
-    allowedHosts:
-        - .mysandbox.dev # Vite host-suffix syntax — matches any subdomain
-    # or, to disable the check entirely (dev only):
-    # allowedHosts: true
+  allowedHosts:
+    - .mysandbox.dev # Vite host-suffix syntax — matches any subdomain
+  # or, to disable the check entirely (dev only):
+  # allowedHosts: true
 ```
 
 Platforms that already set Vite's `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS` env var (comma-separated
