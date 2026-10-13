@@ -7,7 +7,8 @@
   "main": "dist/index.js",
   "files": [
     "dist",
-    "plugin.yaml"
+    "plugin.yaml",
+    "agent-kit"
   ],
   "exports": {
     ".": "./dist/index.js",
