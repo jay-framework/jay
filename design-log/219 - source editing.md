@@ -4,115 +4,123 @@ Status: **[Design]**
 
 ## Decisions for the Implementer (TL;DR)
 
-1. **Feature = Source Editing.** When a user points at text/image bound via a contract, the agent can (a) write the new value at the source via a plugin action, or (b) hand the user a deep link to the source system's editor. Static (unbound) content keeps today's flow: the agent edits jay-html.
-2. **Contracts declare editability** in a first-class `editing:` block (contract root, tag-level override). Not `ContractTag.meta` — it is `Record<string,string>`, untyped, and unread. ✅ (`contract.ts:25`)
-3. **`editing:` flows into `plugins-index.yaml`** (agent-kit generation, DL#85/#125). That is the agent's only discovery channel; no new agent-side mechanism.
-4. **Binding inspector = dev-only embed-mode postMessage API**, same pattern as freeze: parent sends `jay:inspectPoint`, page replies `jay:inspectResult`. Returns the bindings under the point, the contract nesting, and ViewState ids (`trackBy` values) — not just a coordinate. ✅ pattern (`generate-client-script.ts:225-240`)
-5. **Dev-mode markers are required.** `jay-coordinate` is emitted only where interactivity/Kindergarten needs it, not on every bound element. ✅ (`jay-html-compiler-server.ts:74`) So dev mode must also emit a binding marker (`jay-bind`) on every element with a data binding.
-6. **v1 write path = existing server actions** (`.jay-action`) invoked from the agent's Bash via the dev-server action endpoint, with a user-visible confirm (old → new, record). MCP exposure is plugin space (DL#215), deferred.
-7. **Prevention first:** validate that `editing.write` names a declared plugin action and that `editing` field/tag names exist in the contract.
-8. **Slow phase is a non-issue:** dev mode renders from jay-html before slow resolution (confirmed by author).
-9. **AIditor side is a companion DL in the aiditor repo** (marker → inspect → "Bound data" prompt block → confirm UI). This DL covers only the jay repo.
+1. **Dev-mode only.** When a user points at content, the agent decides: **static** (unbound) → edit `page.jay-html`; **bound** → edit at the source via the region's plugin.
+2. **Inspector** = dev-only, embed-mode postMessage API. A point or a rectangle resolves to a **jay-html source fragment + a structural stack** (not a pre-resolved binding list). The agent reads the fragment to decide static-vs-bound and to find the binding expression.
+3. **Editing is one primitive: a per-contract guide** (markdown) shipped by the region's plugin. It is the single entry point; it references `devOnly` actions (to write, and/or a URL-returning action to open a window) and may offer the agent options. No `editing:` contract block; no reserved action names.
+4. **Validation (prevention-first):** each contract declares its editing story — a guide, or explicit `readonly`.
+5. **No new framework syntax.** Reuse: freeze-style postMessage, agent-kit guides, `actions[].devOnly`, and a coverage validation rule.
 
----
+## Why
 
-## Background
-
-AIditor (`/Users/yoav/work/jay/aiditor`) gives the agent a marker screenshot + the agent-kit; the agent edits jay-html well. A marker carries only a normalized viewport position (`aiditor-notes.ts`); the agent infers bindings from jay-html + screenshot. ⚠️ (sampled, `page.ts` not read in full)
-
-## Problem
-
-For `{productPage.productName}` the agent can find the tag, but not: which **record** it is, what the **source system's write path** is, or where the **editor URL** is. Editing the jay-html would hard-code content the contract owns.
+For `{productPage.productName}` the agent can find the tag in the jay-html but not which **record** it is, what the **write path** is, or where the **editor URL** is. Editing the jay-html would hard-code content the contract owns. So the runtime does the one thing only it can — map a pixel to its jay-html source node and structural context — and the agent does what it is good at: read that source, decide static-vs-bound, and (if bound) follow the plugin's guide. Everything bound-specific lives in the plugin as docs + ordinary actions, so there is no declarative editing grammar to maintain and nothing for the inspector to keep in sync with the template syntax.
 
 ## Prior Art / Adjacent Mechanisms
 
-| Mechanism                                     | Verdict                                                                                                   |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `jay-coordinate` (DL#103/#106/#126)           | Identifies DOM position; conditional emission, no tag/record mapping → **constrains**, insufficient alone |
-| `runtime-automation` `getPageState()`         | ViewState + refs only; no data-bound text/images → **extend**, not replace                                |
-| Freeze postMessage (DL#128)                   | **Reuse pattern** for the inspector                                                                       |
-| Plugin `actions[]` / `.jay-action`            | **Reuse as write path**; no tag↔action link today                                                         |
-| `ContractTag.meta`                            | Unstructured strings → insufficient for a nested block                                                    |
-| `plugins-index.yaml` / agent-kit (DL#85/#125) | **Reuse as discovery**                                                                                    |
-| DL#215 (MCP/REST = plugin space)              | Constrains: no core MCP in v1                                                                             |
+| Mechanism                               | Verdict                                                           |
+| --------------------------------------- | ---------------------------------------------------------------- |
+| `jay-coordinate` (DL#103/#106/#126)     | DOM position only, conditionally emitted → insufficient alone    |
+| `runtime-automation` `getPageState()`   | ViewState + refs only; no bound text/images → extend, not reuse  |
+| Freeze postMessage (DL#128)             | **Reuse pattern** for the inspector                              |
+| Plugin `actions[]` / `actions[].devOnly`| **Reuse** as the write/URL path and the dev-only gate            |
+| `plugins-index.yaml` / agent-kit (#85)  | **Reuse** as the discovery channel for per-contract guides        |
+| DL#215 (MCP/REST = plugin space)        | Constrains: no core MCP in v1                                    |
 
-**Null hypothesis checked:** match the pointed element's text against ViewState values (no compiler change). Rejected: duplicates (`price` = `salePrice`), images, `forEach` items are ambiguous. Binding markers are cheap and exact.
-
-## Questions and Answers
-
-1. **Name?** Source Editing. (Reverse lookup = the resolver only; CMS implies Jay owns storage.) — _Answered._
-2. **Dashboard URL home?** Declared with the contract, emitted into `plugins-index.yaml`. — _Answered._
-3. **Site-level `editUrl` placeholders (`{siteId}`)** — from project config or plugin service? — _Open._
-4. **Image writes:** `kind: image` passes a media URL; upload via the plugin's own command (e.g. `wix-media upload-public`). Confirm per plugin. — _Open._
+**Null hypothesis checked:** match the pointed element's text against ViewState values (no inspector) — rejected (duplicates like `price`=`salePrice`, images, `forEach` ambiguity). A source-node marker is cheap and exact.
 
 ## Design
 
-```yaml
-# product-page.jay-contract
-name: product-page
-editing:
-  entity: product
-  id: '{productId}' # expression over ViewState/params identifying the record
-  write: updateProduct # plugin action: { id, field, value }
-  editUrl: 'https://www.wix.com/dashboard/{siteId}/store/products/{id}'
-tags:
-  - tag: productName
-    editing: { field: name, kind: text }
-  - tag: mediaGallery
-    editing: { field: media, kind: image }
+### 1. Inspect — point/rect → jay-html source fragment
+
+Dev-only, embed-mode postMessage. Input coordinates are in the iframe's native CSS-pixel space.
+
+```
+// jay:inspectPoint { x, y, requestId }  → jay:inspectResult     { requestId, result:  InspectResult }
+// jay:inspectRect  { x, y, w, h, requestId } → jay:inspectRectResult { requestId, results: InspectResult[] }
+
+InspectResult {
+  file,                             // source file for this frame (AIditor hosts several files/frames)
+  lines:  { from, to },             // 1-based line range of the matched element in `file`
+  rect:   { x, y, width, height },  // matched element's box
+  scroll: { x, y },                 // iframe scroll offset at measure time
+  node:   "<jay-html of the matched element + ~1 level of children>",  // SOURCE, not rendered DOM
+  ancestors: [                      // innermost → outermost; only semantic wrappers
+    { kind: "forEach", collection: "{products}", itemId: "sku-123" },
+    { kind: "if",      condition:  "{isOnSale}" },
+    { kind: "region",  name: "jay:card" },   // the tag as written; resolve via import
+  ],
+  params,                           // route params of the current page
+  // rect results only:
+  containment: "full" | "partial",  // "full" = wholly inside the rect
+  coverage:    0..1,                // self-coverage: area(el ∩ rect) / area(el)
+}
 ```
 
-```mermaid
-sequenceDiagram
-  participant U as User (marker)
-  participant A as AIditor
-  participant P as Page iframe
-  participant G as Agent
-  U->>A: point + instruction
-  A->>P: jay:inspectPoint {x,y,requestId}
-  P-->>A: jay:inspectResult {bindings, nesting, ids}
-  A->>G: screenshot + "Bound data" + plugins-index
-  alt has write + user confirms
-    G->>G: call write action
-  else no write / review
-    G-->>U: deep link (editUrl)
-  end
+- `node` is the **source** fragment (expressions, `if`, `forEach` intact) — the DOM has lost them. `lines` index into `file`.
+- `ancestors` carries only `forEach` / `if` / `region`; plain layout is elided. `forEach` `itemId`s come from live ViewState (the one runtime-data marker). `region.name` is the tag as written — resolved by the agent, not the runtime (see §2).
+
+**Rect selection rule.** Metric is **self-coverage** = `area(el ∩ rect) / area(el)` (how much of _the element_ is selected) — not rect-coverage, which would re-select the whole page.
+
+```
+hits = elements where self-coverage ≥ 0.8        (full containment is the 100% case)
+if hits:  return the SHALLOWEST hits — a hit whose PARENT is not a hit — in document order
+else:     return the single tightest element that ENCLOSES the rect
 ```
 
-**Inspect result** (per binding under the point, innermost first):
-`{ expr, kind: text|attr:<name>|if|forEach, contract, key, tagPath, instancePath: [{contract,key,trackBy}], value }`. Multi-field elements (`{price} {currency}`) return all bindings; the agent decides.
+This excludes the page/section (low self-coverage when partially grabbed), auto-collapses N children to their parent (the parent becomes the shallowest hit), and handles a small marquee inside one block (the `else` branch). All elements are source-mapped, so it is purely geometric.
 
-**Marker:** dev-only `jay-bind="<expr>;…"` on every element with a data binding (text, attributes); ancestors' `forEach` items supply `trackBy` ids. Resolver walks up from `elementFromPoint`.
+**Coordinate contract — the page is zoom/scroll-agnostic.** Everything crossing postMessage is in the iframe's native CSS-pixel space (`elementFromPoint` / `getBoundingClientRect`). **AIditor owns zoom and scroll:** it un-applies zoom (and maps to iframe coords) on the way in, re-applies zoom to `rect` on the way out. `scroll` is returned so AIditor can convert the viewport-relative `rect` to content space once and keep the selection pinned across subsequent scroll without a round-trip.
 
-**Agent decision rule** (agent-kit guide): static text → edit jay-html; bound + `editing.write` → write action after confirm; bound without `write` → `editUrl`; bound without either → say read-only and name the source.
+### 2. Resolve — region name → contract + code
+
+The runtime does not resolve `region.name`. The region's **import statement in `page.jay-html`** links the name (e.g. `jay:card`) to its contract and code files, so the agent resolves it via that import. (With regions, a frame's sources are all in one `page.jay-html`.)
+
+### 3. Edit — the per-contract guide
+
+Decision rule: static text → edit `page.jay-html` at `lines`. Bound → resolve the region → contract → its **editing guide**.
+
+The guide (markdown, shipped by the plugin, surfaced via `plugins-index.yaml` / agent-kit) is the **single entry point**. It tells the agent what to do — call an action to **write** the source, call an action that returns a URL and **open a window**, or offer **several options** and let the agent choose. Any action it names is ordinary (`getEditUrl` is not reserved; the framework knows nothing of it).
+
+The guide is **per-contract** because record identity differs per contract. Example — `wix-stores`:
+
+| Contract         | Record key (from inspect result) | guide instructs                          |
+| ---------------- | -------------------------------- | ---------------------------------------- |
+| `product-page`   | `slug` (route param)             | `getEditUrl(slug)` → fetch slug→productId |
+| `product-search` | `productId` (`forEach` `itemId`) | `getEditUrl(productId)`                   |
+
+Both open the same editor; only the key/translation differs. The guide documents which key to pull from the inspect result, so guide + actions are a self-documenting per-contract pair. `siteId` is fetched internally by the action.
+
+**Dev-only.** Editing actions (write, URL-returning) are `actions[].devOnly: true`: handlers in the `./tools` entry (`lib/tools.ts`), registered by the dev server, **excluded from production** (`validate-plugin` leak-scans for compiler imports in prod). ✅ `agent-kit-template/plugin/actions-guide.md:10-13`.
+
+### 4. Validate — per-contract coverage
+
+Each contract provided by a plugin must declare its editing story as exactly one of: an **editing guide**, or explicit **`readonly`** (+ reason). So read-only is intentional, the agent always has an answer (edit here / open a window / read-only because X), and there are no silent gaps. A guide is opaque prose referencing ordinary actions — no bespoke write-schema validation.
 
 ## Implementation Plan
 
-1. `editing` in contract types + parser + docs (`compiler-jay-html/lib/contract/`), `contract-file-format.md`.
-2. Validation: `write` ∈ plugin actions; tag/field names exist.
-3. `plugins-index.yaml` emits `editing` (stack-cli agent-kit).
-4. Dev-mode `jay-bind` emission (server + hydrate + element targets).
-5. Inspector in client script (`generate-client-script.ts`, embed mode only).
-6. Agent-kit guide `source-editing.md` (designer + plugin roles).
-7. Prototype: `updateProduct` + `editing` for `wix-stores` (wix repo, own DL) and a live onsko-shop example.
-8. Companion DL in aiditor.
+1. Dev-mode **node-identity marker** (DOM element → source node) across element/hydrate/server targets, plus `forEach` `itemId` capture on rendered list items.
+2. **Inspector** in the client script (embed mode only): slice the parsed jay-html for `node`/`lines`, walk ancestors, measure `rect`/`scroll`, implement the rect rule. (⚠️ verify the dev server retains the jay-html AST/source to slice.)
+3. **Per-contract editing guides** + `devOnly` actions in the prototype plugin (`wix-stores`, own repo DL); agent-kit surfaces them via `plugins-index.yaml`.
+4. **Coverage validation** in `jay-stack validate` (stack-cli / plugin-validator).
+5. Agent-kit guide `source-editing.md` (designer + plugin roles): the decision rule, region→contract resolution, guide discovery.
+6. Live example (onsko-shop): edit a product name via the guide's write action; get the deep link when the guide offers a URL action.
+7. Companion DL in the aiditor repo (marker → inspect → "Bound data" prompt block → confirm UI).
 
-## Scope pre-mortem (not handled)
+## Scope — not handled
 
-Production-mode editing (dev only); rich-text field kinds beyond a `kind` tag (defer); per-call auth/permissions on write actions (DL#215 hooks); Wix write actions themselves (wix repo DL); composed/computed bindings beyond returning all contributing bindings (defer).
+Production-mode editing (dev only); rich-text field kinds (defer to the guide's prose); per-call auth/permissions on write actions (DL#215); Wix write actions themselves (wix repo DL); composed/computed bindings beyond returning the fragment (the agent reads all contributing bindings from `node`).
 
 ## Verification
 
-- Compiler fixtures: dev output with `jay-bind`, `toEqual` + `prettifyHtml` across element/server/hydrate targets.
-- Parser + validate tests for `editing` (fixtures in `test/fixtures/`).
-- Dev-server test: `jay:inspectPoint` on text, image, `forEach` item, nested headless instance.
-- Live example: onsko-shop — change a product name via write action; get the deep link when `write` is absent.
+- Compiler fixtures: dev output carries the node-identity marker + `forEach` ids across element/server/hydrate targets (`toEqual` + `prettifyHtml`).
+- Dev-server tests: `jay:inspectPoint` and `jay:inspectRect` on text, image, `forEach` item, nested region — asserting `node`/`lines`/`ancestors`/`rect`/rect-rule results.
+- Validation tests: a contract with no guide and no `readonly` fails; guide-only and `readonly` pass.
+- Live: onsko-shop product name edited via guide action; deep link returned when the guide offers a URL action.
 
 ## Trade-offs
 
-First-class `editing:` adds contract surface but gets validation and typing; `meta` would be free but unchecked. Dev markers add dev-only DOM noise in exchange for exact resolution. Bash-invoked actions are the smallest v1 but need the confirm step to stay safe.
+Dev-only markers add dev DOM noise for exact resolution. Moving editing into plugin guides + ordinary `devOnly` actions costs validation-of-internals (a guide is prose) but gains unbounded expressiveness (text/image/URL flows) with zero new framework surface. The rect rule's `0.8` threshold is a tunable constant.
 
 ## Claims
 
-✅ verified: `meta` type; freeze postMessage; conditional `jay-coordinate`.
-⚠️ assumed (verify before implementing): `forEach` `trackBy` recoverable from ancestors in dev DOM; hydrate target can carry `jay-bind`; dev-server action endpoint is callable from the worker's Bash.
+✅ verified: freeze postMessage pattern; conditional `jay-coordinate`; `actions[].devOnly` dev-only/prod-exclusion (`actions-guide.md:10-13`).
+⚠️ assumed (verify before implementing): `forEach` `itemId` recoverable from live list items in dev; hydrate target can carry the node-identity marker; dev server retains the jay-html AST/source to slice fragments; `region.name` is the right field exposed by regions for import resolution.
