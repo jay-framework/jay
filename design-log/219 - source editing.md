@@ -113,15 +113,15 @@ On every source-derived element:
 Runtime-identity markers, only where the renderer knows what the source cannot:
 
 - **`jay-dev-item="<trackById>"`** on each `forEach` item root — the live record id (the shared coordinate cannot distinguish items).
-- **`jay-dev-props='{…}'`** on each region/headless instance root — the region's **primitive props** (string/number/boolean) as name→value, serialized.
+- **`jay-dev-prop-<name>="<value>"`** — one attribute per **primitive prop** (string/number/boolean) on each region/headless instance root; the inspector reassembles them into `{name: value}`. (Per-prop rather than one JSON blob so each is a clean single binding — see How — Part 2.)
 
 ### Regions have props, not a key
 
-A region has zero-to-many data props, bound from parent values and possibly updated by interactive inputs; a prop may be any JS object (e.g. a coded region taking a product list). **Assumption: only primitive props are identities relevant to data editing** — so we stamp primitives only and skip objects/arrays. The region's name/import is read from source at its `jay-dev-src` lines; the runtime supplies the live primitive prop values (e.g. `{ "productId": "3" }`). Because props can change interactively, the stamped value must reflect the **current** value at inspect time — keeping it live is a how-detail (re-stamp on prop update, or read from the live component instance). ⚠️ revisit if a non-primitive prop is ever the only available identity.
+A region has zero-to-many data props, bound from parent values and possibly updated by interactive inputs; a prop may be any JS object (e.g. a coded region taking a product list). **Assumption: only primitive props are identities relevant to data editing** — so we stamp primitives only and skip objects/arrays. The region's name/import is read from source at its `jay-dev-src` lines; the runtime supplies the live primitive prop values (e.g. `productId="3"`). Because the props are emitted as **bound** attributes (How — Part 2), the value is always current at inspect time with no re-stamping — the compiler's reactivity keeps it live. ⚠️ revisit if a non-primitive prop is ever the only available identity.
 
 ### The full nested stack
 
-`forEach` and regions nest arbitrarily and interleave, and the whole chain matters. The inspector **walks up the DOM** from `elementFromPoint`, collecting each ancestor's `jay-dev-src` (→ `lines`), `jay-dev-item` (→ `forEach` `itemId`), and `jay-dev-props` (→ region `props`), innermost → outermost, with no depth limit. Each level contributes its runtime identity; the agent reads each level's static role (collection / region name / `if` condition) from source at its `lines`.
+`forEach` and regions nest arbitrarily and interleave, and the whole chain matters. The inspector **walks up the DOM** from `elementFromPoint`, collecting each ancestor's `jay-dev-src` (→ `lines`), `jay-dev-item` (→ `forEach` `itemId`), and `jay-dev-prop-*` (→ region `props`), innermost → outermost, with no depth limit. Each level contributes its runtime identity; the agent reads each level's static role (collection / region name / `if` condition) from source at its `lines`.
 
 ### Client-only inspector; agent reads the fragment
 
@@ -131,76 +131,91 @@ Because the markers are self-contained, the inspector runs **entirely in the bro
 
 Markers drift only if source changes without a re-render; dev HMR re-renders on edit, so markers match the live source within any inspect→edit cycle. Dev-only, so the added attributes are acceptable noise.
 
-## How — Part 2: Runtime / dev-server emission
+## How — Part 2: Dev-mode source transform (single seam)
 
-Where each marker is stamped, per target. Two gates: a **compile-time dev flag** (threaded to the jay-html compilers / pre-render, precedent `GenerateClientScriptOptions.enableAutomation` "default true in dev" — `generate-client-script.ts:40-56`) and a **runtime global flag** set by the dev-server-injected script (e.g. `window.__JAY_DEV_MARKERS__`), for the two markers whose values are only known while rendering.
+**One dev-only source-to-source transform injects all three markers into the jay-html; the existing compiler then carries them to every target and keeps the bound ones live.** No per-target runtime stamps, no server codegen, no `window.__JAY_DEV_MARKERS__` runtime flag — the earlier three-mechanism design is dropped. The markers become ordinary jay-html: `jay-dev-src` a static attribute, `jay-dev-item`/`jay-dev-prop-*` **bound** attributes. A bound value is, by definition, available for binding in whichever phase renders it, so slow/fast/interactive and reactive updates are all covered for free.
 
-### `jay-dev-src` (line range) — compile-time, all targets via the template
+### Why not the vite-plugin loader
 
-`.range` is populated on every `node-html-parser` node (`node.d.ts:11`), **but** the markup that reaches `assignCoordinates` is frequently the slow-render **re-serialized** string (`slow-render-transform.ts:505/816/936`) — offsets there map to transformed markup (reordered attrs, synthesized `display:contents` wrappers at `assign-coordinates.ts:~239`), not the author's file. So lines captured at that stage would be wrong.
+The natural "loader" (the `jayRuntime` `transform` hook, `rollup-plugin/lib/runtime/runtime-compiler.ts:115-130`, cached once at `get-jay-file-structure.ts:53`) is **too late for `jay-dev-src`**: the hydrate target imports `page.jay-html?jay-hydrate` pointing at the **pre-rendered** file (`generate-ssr-response.ts:584`), and the SSR server element parses the pre-rendered content too (`generate-ssr-response.ts:425`) — both are the slow-render **re-serialized** output (`slow-render-transform.ts:505/816/936`), where `.range` offsets map to transformed markup, not the author's file. It would also miss SSR entirely (no `?jay-server` branch — SSR bypasses the plugin). The transform must run on the **original on-disk source, before slow-render**, which is read in exactly one place.
 
-→ **Stamp `jay-dev-src` in a dev-only pre-pass on the raw on-disk `page.jay-html`, before any transform:** parse the raw source, convert each element's `.range` → `{from,to}` against the raw text, `setAttribute('jay-dev-src', 'from:to')`, re-serialize, feed downstream. Because offsets are taken against the raw file, the **values are correct on-disk lines**, and they ride through slow-render / `assignCoordinates` / all three compilers as an ordinary attribute (surviving nodes keep it; synthetic wrappers simply lack it).
+### The seam: dev-server pre-render input
 
-✅ **Passthrough is free — no allowlist edit.** All three targets render attributes via a **deny-list** (`DIRECTIVE_ATTRIBUTES`, `jay-html-compiler-shared.ts:120-137`) plus a generic `else` that emits any remaining attribute verbatim: element `renderAttributes` else (`jay-html-compiler.ts:240-246`), server `renderServerAttributes` else (`jay-html-compiler-server.ts:460-476`, mirror `:721-733`), hydrate via SSR for adopted nodes (`renderDynamicAttributes` intentionally skips re-setting static attrs, `shared.ts:258-308`) and via `renderAttributes` for created forEach/if nodes. Since `jay-dev-*` are none of {directive, `class`, `style`, `propertyMapping` entry}, they hit the `else` and pass through unchanged. **The one rule: do NOT add `jay-dev-*` to `DIRECTIVE_ATTRIBUTES`** — that set is exactly why `jay-coordinate-base`/`jay-scope` are stripped-and-renamed to `jay-coordinate` (`shared.ts:248-260`, server open-tag `:386`); a dev attr wants the opposite (verbatim passthrough), so it just stays out of the set.
+`dev-server.ts` reads the original source once (`:1290` `fs.readFile(route.jayHtmlPath)`), then `slowRenderTransform` (`:1306`) → `assignCoordinatesToJayHtml` (`:1332`) → `preRenderedJayHtml` (`:1324`), cached and consumed by **both** the hydrate client (plugin compiles the pre-rendered file) and the SSR server element. Insert `injectDevMarkers(originalJayHtml): string` **immediately after the read, before `slowRenderTransform`**. Everything downstream inherits the markers; the transform is inherently dev-only (this is the dev-server pipeline — the prod SSG build uses a separate entry). Gating is "did the dev-server run the transform," so no plugin/runtime flag is needed. ⚠️ confirm every dev page render funnels through this pre-render (no fast path that skips it); ⚠️ confirm `slowRenderTransform` passes unknown bound attributes through untouched rather than trying to resolve `{id}`/`{expr}` as slow bindings.
 
-### `jay-dev-item` (trackBy value) — render-time, per target
+### `jay-dev-src="from:to"` — static, in `injectDevMarkers`
 
-trackBy is in scope at the item-root emission in all three targets:
+Parse the original source, convert each element's `.range` → `{from,to}` lines against the raw text (`.range` on every `node-html-parser` node, `html.d.ts:65`), `setAttribute`. Because offsets are taken against the original file, line values are on-disk-accurate; they ride through slow-render / coordinates / all compilers as a plain attribute.
 
-- **element:** runtime `element.ts` `mkUpdateCollection` — item built at `:483` `child.elemCreator(item, id)` (`id` = trackBy); stamp on `created.dom` behind the runtime flag.
-- **hydrate:** runtime `hydrate.ts` `hydrateForEach` — adopt path `itemDom` at `:530`, create path at `:607` (`id` = trackBy); stamp behind the runtime flag.
-- **server (SSR string):** compiler `jay-html-compiler-server.ts` forEach branch — `trackByExpr` at `:164`, open tag at `:172` (`renderServerOpenTag` / coordinate append `:175-177`); inject `jay-dev-item="${itemVar}.${trackBy}"` into the open tag behind the compile flag.
+✅ **Passthrough is free — no allowlist edit.** All targets render attributes via a **deny-list** (`DIRECTIVE_ATTRIBUTES`, `jay-html-compiler-shared.ts:120-137`) plus a generic `else` emitting any remaining attribute verbatim: element `renderAttributes` else (`jay-html-compiler.ts:240-246`), server `renderServerAttributes` else (`jay-html-compiler-server.ts:460-476`), hydrate via SSR for adopted nodes + `renderAttributes` for created forEach/if nodes (`shared.ts:258-308`). `jay-dev-*` are none of {directive, class, style, `propertyMapping`}, so they fall through. **The one rule: never add `jay-dev-*` to `DIRECTIVE_ATTRIBUTES`** — that set is exactly why `jay-coordinate-base`/`jay-scope` get stripped-and-renamed to `jay-coordinate`; a dev attr wants the opposite.
 
-(Alternative for element/hydrate: inject a dynamic attr `item[trackBy]` in the compiler `renderForEach`/`createBody` codegen instead of a runtime stamp. Runtime stamp is more central and keeps codegen untouched; chosen as primary.)
+### `jay-dev-item="{<trackBy>}"` — bound, in `injectDevMarkers`
 
-### `jay-dev-props` (primitive props) — render-time, per target
+On each `forEach` element (which *is* the item root, `assign-coordinates.ts:171`), inject `jay-dev-item="{<trackByProp>}"` bound to the item-scope trackBy property. The compiler emits it as a dynamic attribute on every target and re-evaluates it per item and on list updates — no runtime stamp. Reuse the `trackBy` attribute already present on the element for the property name.
 
-Props = `getProps(context.currData)`; instance root = `childComp.element.dom`. Serialize **primitives only** (skip objects/arrays) to JSON.
+### `jay-dev-prop-*="{<expr>}"` — bound, in `assign-coordinates` (not the loader)
 
-- **element:** runtime `element.ts` `childComp` — props at `:63`, root at `:91`; stamp on `childComp.element.dom` behind the runtime flag. Props are reactive here, so **re-stamp on update** to keep the value live (addresses the interactive-prop concern from How — Part 1).
-- **hydrate:** runtime `hydrate.ts` `childCompHydrate` — props at `:685`, root at `:713`; same.
-- **server (SSR string):** compiler `jay-html-compiler-server.ts` `renderServerHeadlessInstance` (`:209-316`, root-child open tag ~`:291-316`); emit a render-time snapshot behind the compile flag (client re-stamps on hydrate/update).
+The hard case. Region props are **not** HTML attributes: on `<jay:card title="{p.name}" price="{p.price}">` they are component-prop bindings (`renderChildCompProps`), and the region's rendered root is the **synthesized** `display:contents` wrapper that `assign-coordinates` creates (`:238`) — which does not exist yet at `injectDevMarkers` time. So props can't be a pure loader output.
 
-A small `primitivesOnly(props)` helper (new) is shared by the runtime sites; the compile site emits the equivalent for the known primitive inputs.
+→ Handle them in **`assign-coordinates`**, the single shared pre-processor that already (a) runs for all targets, (b) identifies regions, and (c) creates the wrapper. When it wraps a region, copy each scalar-looking prop binding onto the wrapper as a **separate** bound attribute `jay-dev-prop-<name>="{<expr>}"`. Per-prop attributes (vs. one JSON blob) keep each a clean single binding — no fragile JSON-with-interpolations escaping — and each stays live in the parent scope where `{p.name}` is valid. The inspector reassembles `{name: value}` from the `jay-dev-prop-*` attributes on the region root.
 
-### Inspector + flag in the dev-server client script
+- **Change to Part 1:** `jay-dev-props='{…}'` (one JSON attr) → **`jay-dev-prop-<name>="{expr}"`** (one bound attr per primitive prop). Rationale above.
+- ⚠️ **Primitiveness without types:** `assign-coordinates` has the binding *expression*, not the contract *type*, so it can't prove a prop is primitive. Options: (a) include all single-expression prop bindings and let the inspector drop values that render as `[object Object]`; (b) feed the region's contract types into the coordinate pass to filter to primitives. (a) is simpler and client-correct; decide at implementation.
 
-The injected inline module script is the host — `generate-client-script.ts` `buildFreezeScript` (`:178-258`) / `buildAutomationWrap` (`:260`), reused by the SSR/hydrate page via `generate-ssr-response.ts` (`:581-602`). Embed gating (`_jay_embed` URL param → cookie, `__jayEmbedMode`) already lives there (`:183-186`). Add, alongside freeze: (a) set `window.__JAY_DEV_MARKERS__` when dev/embed, and (b) the `jay:inspectPoint` / `jay:inspectRect` handlers (fully client-side — walk `jay-dev-src`/`jay-dev-item`/`jay-dev-props`, measure `rect`/`scroll`, read `params`). Dev-server wiring that picks the target and injects per route: `dev-server.ts` (`generateClientScript` at `:1040/:1135`, `generateSSRPageHtml` at `:1106`).
+### Inspector + enabling the markers in the dev-server client script
+
+The markers are static DOM; the inspector is pure client code. Host it in the injected inline module — `generate-client-script.ts` `buildFreezeScript` (`:178-258`) / `buildAutomationWrap` (`:260`), reused by the SSR/hydrate page via `generate-ssr-response.ts` (`:581-602`), where `_jay_embed` gating already lives (`:183-186`). Add the `jay:inspectPoint` / `jay:inspectRect` handlers: `elementFromPoint` → read `jay-dev-src`, walk ancestors for `jay-dev-item`/`jay-dev-prop-*`, measure `rect`/`scroll`, read `params`, apply the rect rule. (The markers themselves are already in the DOM from the transform — the client script only *reads* them.)
 
 ### Summary of changes
 
-| Marker          | element            | hydrate             | server (SSR)             | gate          |
-| --------------- | ------------------ | ------------------- | ------------------------ | ------------- |
-| `jay-dev-src`   | dev pre-pass (template-wide, all targets) |                     |                          | compile       |
-| `jay-dev-item`  | `element.ts:483`   | `hydrate.ts:530/607`| compiler `server.ts:172` | runtime / compile |
-| `jay-dev-props` | `element.ts:63/91` | `hydrate.ts:685/713`| compiler `server.ts:~291`| runtime / compile |
+| Marker            | injected where                       | kind   | targets covered via      |
+| ----------------- | ------------------------------------ | ------ | ------------------------ |
+| `jay-dev-src`     | `injectDevMarkers` (pre-render input)| static | pre-rendered jay-html → hydrate + SSR |
+| `jay-dev-item`    | `injectDevMarkers` (pre-render input)| bound  | compiler dynamic attr, all targets    |
+| `jay-dev-prop-*`  | `assign-coordinates` (wrapper create)| bound  | compiler dynamic attr, all targets    |
+
+Net vs. the dropped design: **two code sites** (`injectDevMarkers` + a few lines in `assign-coordinates`) instead of per-target runtime stamps in `element.ts`/`hydrate.ts` and server codegen, and **no runtime flag**.
 
 ## Implementation Plan
 
 Ordered so each phase is independently testable (compiler fixtures / runtime tests) before the inspector consumes it. **Part A** is this DL's scope (runtime / dev-server emission); **Part B** is the consumer side, mostly its own DLs.
 
-### Part A — Runtime / dev-server emission
+### Part A — Dev-mode source transform + inspector
 
-**Phase A1 — `jay-dev-src` compile-time pre-pass.**
-- Add a dev-only pre-pass (`compiler-jay-html`) that parses the raw on-disk `page.jay-html`, converts each element's `.range` → `{from,to}` lines against the raw text, `setAttribute('jay-dev-src', 'from:to')`, re-serializes, and feeds the stamped string downstream — **before** slow-render / `assignCoordinates`, so offsets are on-disk-accurate.
-- Thread a compile-time dev flag (precedent `enableAutomation`, `generate-client-script.ts:40-56`) to gate it; wire the call into the stack pre-render pipeline.
-- No `DIRECTIVE_ATTRIBUTES` edit — passthrough is automatic (✅ confirmed). Add a guard test that would fail if `jay-dev-*` were ever added to that set.
-- Fixtures (`toEqual` + `prettifyHtml`): element/hydrate/server dev output carries `jay-dev-src` on every source element; slow-resolved/removed branches leave surviving nodes with correct on-disk lines; synthetic `display:contents` wrappers carry none.
+**Phase A1 — `injectDevMarkers` (static `jay-dev-src` + bound `jay-dev-item`).**
+- New dev-only string→string transform: parse the original jay-html, `setAttribute('jay-dev-src', 'from:to')` from `.range` on every element, and `setAttribute('jay-dev-item', '{<trackBy>}')` on every `forEach` element (reusing its `trackBy` attr for the property name).
+- Wire it into the dev-server pre-render **immediately after the source read (`dev-server.ts:1290`) and before `slowRenderTransform` (`:1306`)**, so offsets are on-disk-accurate and the markers flow into `preRenderedJayHtml` → hydrate + SSR. Inherently dev-only (dev-server pipeline); no flag.
+- No `DIRECTIVE_ATTRIBUTES` edit (✅ passthrough confirmed). Add a guard test that fails if `jay-dev-*` is ever added to that set.
+- ⚠️ Verify first: `.range` populated under the parse options; `slowRenderTransform` leaves unknown bound attrs (`{id}`) untouched; every dev render funnels through this pre-render.
+- Fixtures (`toEqual` + `prettifyHtml`): hydrate + SSR dev output carry accurate `jay-dev-src` lines and a `jay-dev-item` bound to trackBy on `forEach` roots; `jay-dev-item` re-evaluates per item and on list update.
 
-**Phase A2 — runtime stamps (`jay-dev-item`, `jay-dev-props`) for element + hydrate.**
-- Add a runtime dev-marker flag accessor in `@jay-framework/runtime` (reads `window.__JAY_DEV_MARKERS__`); all stamps below are no-ops when false (prod-safe).
-- `jay-dev-item`: stamp the trackBy id on the item root in `element.ts` `mkUpdateCollection` (`:483`) and `hydrate.ts` `hydrateForEach` adopt (`:530`) + create (`:607`).
-- `jay-dev-props`: new shared `primitivesOnly(props)` helper; stamp `JSON.stringify(...)` on the instance root in `element.ts` `childComp` (`:63/:91`) and `hydrate.ts` `childCompHydrate` (`:685/:713`); **re-stamp on reactive update** so the value stays live across interactive prop changes.
+**Phase A2 — `jay-dev-prop-*` in `assign-coordinates`.**
+- Where `assign-coordinates` wraps a region (`:238`), copy each single-expression prop binding from the `<jay:…>` tag onto the wrapper as `jay-dev-prop-<name>="{<expr>}"` (bound, parent scope).
+- Primitiveness: start with option (a) — include all single-expression bindings, inspector drops `[object Object]`; revisit feeding contract types if needed.
+- Runs for all targets via the shared pass; fixtures assert the bound prop attrs on the region root across hydrate + SSR and that they update on interactive prop change.
 
-**Phase A3 — server (SSR string) codegen for `jay-dev-item`, `jay-dev-props`.**
-- Gated by the compile-time dev flag; emits a render-time snapshot (client re-stamps on hydrate/update).
-- `jay-dev-item`: inject into the item-root open tag in `jay-html-compiler-server.ts` forEach branch (`:172`).
-- `jay-dev-props`: inject primitive-props JSON into the instance-root open tag in `renderServerHeadlessInstance` (`~:291`).
-
-**Phase A4 — dev-server flag + inspector host.**
-- Set `window.__JAY_DEV_MARKERS__` in `buildFreezeScript` / `buildAutomationWrap` (`generate-client-script.ts:178-260`) when dev/embed; reuse the existing `_jay_embed` gating.
-- Add `jay:inspectPoint` / `jay:inspectRect` postMessage handlers (fully client-side): `elementFromPoint` → read `jay-dev-src`, walk ancestors for `jay-dev-item`/`jay-dev-props`, measure `rect`/`scroll`, read `params`, implement the rect rule. No AST/source at inspect time.
+**Phase A3 — inspector in the dev-server client script.**
+- Add `jay:inspectPoint` / `jay:inspectRect` handlers in `buildFreezeScript` / `buildAutomationWrap` (`generate-client-script.ts:178-260`), reusing the existing `_jay_embed` gating — fully client-side: `elementFromPoint` → read `jay-dev-src`, walk ancestors for `jay-dev-item`/`jay-dev-prop-*`, measure `rect`/`scroll`, read `params`, implement the rect rule. No AST/source at inspect time.
 - Wire per-target injection in `dev-server.ts` (`generateClientScript` `:1040/:1135`, `generateSSRPageHtml` `:1106`).
+
+#### Unit tests — the transforms are pure `string → string`
+
+`injectDevMarkers` and the `assign-coordinates` prop step are both source-to-source, so they get full fixture coverage **without** the dev-server, compiler, or a browser. Per testing standards: fixtures under `test/fixtures/dev-markers/` as `*.input.jay-html` / `*.expected.jay-html`, compared with `toEqual(prettifyHtml(...))`; one test file per module; **no `toContain`**.
+
+`injectDevMarkers` (`compiler-jay-html`) cases:
+- **Line accuracy (the point of the pre-pass):** `jay-dev-src="from:to"` maps to the **original** file lines — including indented, blank-line-separated, and multi-line-open-tag elements. Assert the exact ranges, not just presence.
+- **Nesting:** every element gets its own range; a parent's range spans its children.
+- **Non-elements untouched:** comments and text nodes get no marker; `<head>`/`<script type="application/jay-data">` are out of scope.
+- **`forEach`:** the `forEach` element gets `jay-dev-item="{<trackBy>}"` (property read from its `trackBy` attr) **plus** `jay-dev-src`; nested `forEach` each get their own `jay-dev-item`.
+- **Region tag:** `<jay:card …>` gets `jay-dev-src` only here; its prop attributes are left untouched (props are Phase A2's job).
+- **Conditionals:** an `if="…"` element still gets `jay-dev-src` (static attr survives even when the branch is later slow-resolved).
+- **Preservation + idempotency:** existing attributes/order preserved; running twice does not double-inject.
+- **Directive guard:** a unit assertion that `jay-dev-src`/`jay-dev-item`/`jay-dev-prop-*` are **absent** from `DIRECTIVE_ATTRIBUTES` (fails loudly if anyone adds them, which would silence passthrough).
+
+`assign-coordinates` prop step cases (extend the existing `assign-coordinates` fixtures):
+- Region with primitive prop bindings → wrapper carries `jay-dev-prop-<name>="{expr}"` for each, in the parent scope.
+- Region with an object/array prop → under option (a), still emitted (fixture documents the accepted behavior that the inspector drops `[object Object]`).
+- Ref-less vs explicit-ref region, and a region inside a `forEach` → prop attrs land on the correct wrapper without disturbing coordinate/scope assignment.
 
 ### Part B — Consumers (separate DLs / later)
 
@@ -212,20 +227,20 @@ Ordered so each phase is independently testable (compiler fixtures / runtime tes
 
 ## Scope — not handled
 
-Production-mode editing (dev only); rich-text field kinds (defer to the guide's prose); per-call auth/permissions on write actions (DL#215); Wix write actions themselves (wix repo DL); composed/computed bindings beyond returning the fragment (the agent reads all contributing bindings from `node`).
+Production-mode editing (dev only); rich-text field kinds (defer to the guide's prose); per-call auth/permissions on write actions (DL#215); Wix write actions themselves (wix repo DL); composed/computed bindings beyond returning the fragment (the agent reads all contributing bindings from `node`); **type-accurate primitiveness for `jay-dev-prop-*`** — deliberately deferred: ship option (a) (emit all single-expression prop bindings, inspector drops `[object Object]`); upgrade to contract-type filtering only if a real case needs it.
 
 ## Verification
 
-- Compiler fixtures: dev output carries the node-identity marker + `forEach` ids across element/server/hydrate targets (`toEqual` + `prettifyHtml`).
+- Compiler/transform fixtures (`toEqual` + `prettifyHtml`): dev output carries accurate `jay-dev-src` lines, `jay-dev-item` bound to trackBy on `forEach` roots, and `jay-dev-prop-*` on region roots — across hydrate + SSR; bound markers re-evaluate on list/prop update.
 - Dev-server tests: `jay:inspectPoint` and `jay:inspectRect` on text, image, `forEach` item, nested region — asserting `node`/`lines`/`ancestors`/`rect`/rect-rule results.
 - Validation tests: a contract with no guide and no `readonly` fails; guide-only and `readonly` pass.
 - Live: onsko-shop product name edited via guide action; deep link returned when the guide offers a URL action.
 
 ## Trade-offs
 
-Dev-only markers add dev DOM noise for exact resolution. Moving editing into plugin guides + ordinary `devOnly` actions costs validation-of-internals (a guide is prose) but gains unbounded expressiveness (text/image/URL flows) with zero new framework surface. The rect rule's `0.8` threshold is a tunable constant.
+Dev-only markers add dev DOM noise for exact resolution. Emitting them as a single dev-mode source transform (markers as jay-html attributes/bindings) rather than per-target runtime stamps keeps all phase/update behavior on the existing compiler + reactivity — at the cost of one subtlety: `jay-dev-prop-*` can't be pure loader output (region props aren't HTML attrs, the root is synthesized), so it lives in `assign-coordinates`. Moving editing into plugin guides + ordinary `devOnly` actions costs validation-of-internals (a guide is prose) but gains unbounded expressiveness (text/image/URL flows) with zero new framework surface. The rect rule's `0.8` threshold is a tunable constant.
 
 ## Claims
 
-✅ verified: freeze postMessage pattern; `jay-coordinate` is source-positional, scoped per forEach/headless, and emitted conditionally (`assign-coordinates.ts`; fake-shop dev output); `actions[].devOnly` dev-only/prod-exclusion (`actions-guide.md:10-13`); `node-html-parser` nodes expose `range` offsets (`html.d.ts:65`); **attribute rendering is deny-list based — unknown attributes pass through verbatim on all three targets** (element `jay-html-compiler.ts:240-246`, server `jay-html-compiler-server.ts:460-476`, hydrate `shared.ts:258-308` + `renderAttributes`), so `jay-dev-*` reach output with no allowlist edit, provided they are NOT added to `DIRECTIVE_ATTRIBUTES` (`shared.ts:120-137`); the slow-render re-serialization caveat (`slow-render-transform.ts:505/816/936`) is the reason `jay-dev-src` is stamped in a raw-source pre-pass rather than from the coordinate pass.
-⚠️ assumed (verify before implementing): `node-html-parser` `range` is populated under the pre-pass parse options (not currently read in our code); `forEach` trackBy value is reachable at the stamp sites (`element.ts:483`, `hydrate.ts:530/607`, server `:172`); region **primitive props** are a sufficient editing identity (non-primitive props excluded); region props can be re-stamped live on reactive update (`element.ts childComp`, `hydrate childCompHydrate`); `region.name` is read from source at the region's `jay-dev-src` lines for import resolution.
+✅ verified: freeze postMessage pattern; `jay-coordinate` is source-positional, scoped per forEach/headless, and emitted conditionally (`assign-coordinates.ts`; fake-shop dev output); `actions[].devOnly` dev-only/prod-exclusion (`actions-guide.md:10-13`); `node-html-parser` nodes expose `range` offsets (`html.d.ts:65`); **attribute rendering is deny-list based — unknown attributes pass through verbatim on all three targets** (element `jay-html-compiler.ts:240-246`, server `jay-html-compiler-server.ts:460-476`, hydrate `shared.ts:258-308` + `renderAttributes`), so `jay-dev-*` reach output with no allowlist edit, provided they are NOT added to `DIRECTIVE_ATTRIBUTES` (`shared.ts:120-137`); **the original on-disk source is read once in dev, at the pre-render input (`dev-server.ts:1290`, before `slowRenderTransform` `:1306`)**, and both hydrate (`?jay-hydrate` of the pre-rendered file, `generate-ssr-response.ts:584`) and SSR (`parseJayFile` of pre-rendered content, `:425`) consume the resulting `preRenderedJayHtml` — so a single transform there covers all dev targets; the vite-plugin `transform` hook sees only the pre-rendered (slow-render re-serialized, `slow-render-transform.ts:505/816/936`) jay-html, so it is too late for accurate `jay-dev-src` lines; `assign-coordinates` is the shared pre-processor that creates the region wrapper (`:238`) and runs for all targets.
+⚠️ assumed (verify before implementing): `node-html-parser` `range` is populated under the parse options used by `injectDevMarkers`; `slowRenderTransform` passes unknown bound attributes (`jay-dev-item="{id}"`) through untouched (does not try to resolve them as slow bindings); every dev page render funnels through the `dev-server.ts:1290` pre-render (no fast path skipping it); region prop bindings on `<jay:…>` can be read in `assign-coordinates` and primitiveness filtered there (option (a): render-then-drop `[object Object]`, or feed contract types); `region.name` is read from source at the region's `jay-dev-src` lines for import resolution.
