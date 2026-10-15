@@ -13,6 +13,7 @@ import { checkComponentPropsAndParams } from './check-component-contract';
 import { validateAddMenuCatalog } from './validate-add-menu-catalog';
 import { validateAiditorSettings } from './validate-aiditor-settings';
 import { validateRouteJayHtmlTemplates } from './validate-route-jay-html-templates';
+import { validateValidatorFindingContract } from './validate-validator-findings';
 
 /**
  * Validates a Jay Stack plugin package or local plugin directory.
@@ -120,6 +121,9 @@ async function validatePluginPackage(
 
     // 10. Route jay-html compile (Tier 1 generate stage — DL#73)
     await validateRouteJayHtmlTemplates(context, result);
+
+    // 11. Validator warnings must include suppressKey (DL#220 — plugin author surface)
+    await validateValidatorFindingContract(context, result, options.strict === true);
 
     // Final result
     result.valid = result.errors.length === 0;

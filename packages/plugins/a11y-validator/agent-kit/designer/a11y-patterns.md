@@ -204,6 +204,30 @@ Avoid positive `tabindex` — it disrupts natural tab order. Use `tabindex="0"` 
 <button>Second</button>
 ```
 
+## Hover-only disclosure (CSS)
+
+Flyout menus and panels that appear only on `:hover` are unreachable by keyboard unless you mirror the rule for focus.
+
+```css
+/* Invalid: keyboard users cannot open the submenu */
+.nav li:hover > ul {
+  display: block;
+}
+
+/* Valid: paired focus path */
+.nav li:hover > ul,
+.nav li:focus-within > ul {
+  display: block;
+}
+
+/* Valid: single rule */
+.nav li:is(:hover, :focus-within) > ul {
+  display: block;
+}
+```
+
+Prefer `<details>`, the Popover API, or explicit button controls when the pattern is interactive. Suppress per page with `a11y: { allow-hover-only-disclosure: true }` in jay-validations when intentional.
+
 ## Viewport Zoom
 
 Don't disable user zooming:

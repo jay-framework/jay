@@ -14,7 +14,17 @@ import {
     type JayType,
     type JayHtmlValidationContext,
     type JayHtmlValidatorFn,
+    type JayHtmlValidationFinding,
+    type ComponentScript,
+    type ScriptCache,
+    resolveComponentScript,
 } from '@jay-framework/compiler-shared';
+import {
+    computeRuleCounts,
+    createLineTextResolver,
+    formatWarningLocation,
+    isFindingSuppressed,
+} from './validation-findings';
 import { scanPlugins } from '@jay-framework/stack-server-runtime';
 import {
     hasTemplateForContractFile,
@@ -92,6 +102,9 @@ export interface ValidationError {
     stage: 'parse' | 'generate' | 'plugin';
     source?: string;
     suggestion?: string;
+    ruleId?: string;
+    location?: { file?: string; line: number };
+    suppressKey?: string;
 }
 
 export interface ValidationWarning {
@@ -99,6 +112,9 @@ export interface ValidationWarning {
     message: string;
     source?: string;
     suggestion?: string;
+    ruleId?: string;
+    location?: { file?: string; line: number };
+    suppressKey?: string;
 }
 
 export interface ContractCoverage {
@@ -152,6 +168,8 @@ export interface ValidationResult {
     // DL#207 — report-only design-system scorecard.
     designSystemCoverage: DesignSystemCoverage[];
     designSystemReuse: DesignSystemReuse;
+    /** Findings after suppression, counted per ruleId (missing ruleId → `(unidentified)`). */
+    ruleCounts: Record<string, number>;
 }
 
 async function findJayFiles(dir: string): Promise<string[]> {
@@ -575,19 +593,12 @@ export function checkRefElementTypes(jayHtml: JayHtmlSourceFile, file: string): 
 
 // --- Page component export check ---
 
-function checkPageComponentExport(jayHtmlPath: string): string | null {
-    const dirname = path.dirname(jayHtmlPath);
-    const compPath = path.join(dirname, 'page.ts');
-    if (!fs.existsSync(compPath)) return null;
-
-    let content: string;
-    try {
-        content = fs.readFileSync(compPath, 'utf-8');
-    } catch {
-        return null;
-    }
+/** @internal Exported for tests (DL#220). */
+export function checkPageComponentExport(script: ComponentScript | undefined): string | null {
+    if (!script) return null;
 
     const exportName = 'page';
+    const content = script.text;
     const patterns = [
         new RegExp(`export\\s*\\{[^}]*\\b${exportName}\\b[^}]*\\}`, 'm'),
         new RegExp(`export\\s+(?:async\\s+)?function\\s+${exportName}\\b`),
@@ -596,8 +607,9 @@ function checkPageComponentExport(jayHtmlPath: string): string | null {
 
     if (patterns.some((p) => p.test(content))) return null;
 
+    const compName = path.basename(script.filePath);
     return (
-        `${path.relative(dirname, compPath)} exists but does not export "${exportName}". ` +
+        `${compName} exists but does not export "${exportName}". ` +
         `Remove the file or add the export.`
     );
 }
@@ -614,41 +626,70 @@ const DOCUMENT_ACCESS_PATTERNS = [
     /document\.addEventListener\b/,
 ];
 
-const DOM_SUPPRESS_COMMENT = 'jay-dom: allow';
+const DOM_SUPPRESS_NAMESPACE = 'jay-dom';
+const DOM_SUPPRESS_COMMENT = `${DOM_SUPPRESS_NAMESPACE}: allow`;
+const DOM_RULE_ID = 'jay-dom/direct-document-access';
 
-function checkDirectDocumentAccess(jayHtmlPath: string): string[] {
-    const dirname = path.dirname(jayHtmlPath);
-    const basename = path.basename(jayHtmlPath, JAY_EXTENSION);
-    const candidates = [path.join(dirname, `${basename}.ts`), path.join(dirname, 'page.ts')];
-    const compPath = candidates.find((p) => fs.existsSync(p));
-    if (!compPath) return [];
-    const compName = path.basename(compPath);
+/** @internal Exported for tests (DL#220). */
+export function checkDirectDocumentAccess(
+    script: ComponentScript | undefined,
+): JayHtmlValidationFinding[] {
+    if (!script) return [];
 
-    let content: string;
-    try {
-        content = fs.readFileSync(compPath, 'utf-8');
-    } catch {
-        return [];
-    }
-
-    const warnings: string[] = [];
-    const lines = content.split('\n');
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        if (line.includes(DOM_SUPPRESS_COMMENT)) continue;
+    const compName = path.basename(script.filePath);
+    const findings: JayHtmlValidationFinding[] = [];
+    const lines = script.text.split('\n');
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        const line = lines[lineIndex];
         for (const pattern of DOCUMENT_ACCESS_PATTERNS) {
             const match = pattern.exec(line);
             if (match) {
-                warnings.push(
-                    `${compName}:${i + 1} — Direct DOM access "${match[0]}" — use Jay refs instead. ` +
+                findings.push({
+                    severity: 'warning',
+                    ruleId: DOM_RULE_ID,
+                    location: { file: script.filePath, line: lineIndex + 1 },
+                    suppressKey: 'allow-direct-document-access',
+                    message:
+                        `${compName}:${lineIndex + 1} — Direct DOM access "${match[0]}" — use Jay refs instead. ` +
                         `Suppress with // ${DOM_SUPPRESS_COMMENT} on the same line. ` +
                         `See agent-kit/developer/component-refs.md`,
-                );
+                });
                 break;
             }
         }
     }
-    return warnings;
+    return findings;
+}
+
+function pushCoreFinding(
+    templateRelativePath: string,
+    finding: JayHtmlValidationFinding,
+    errors: ValidationError[],
+    warnings: ValidationWarning[],
+    validationOverrides: Record<string, Record<string, boolean | string[]>> | undefined,
+    resolveLineText: ReturnType<typeof createLineTextResolver>,
+): void {
+    if (
+        finding.severity === 'warning' &&
+        isFindingSuppressed(finding, templateRelativePath, validationOverrides, resolveLineText)
+    ) {
+        return;
+    }
+
+    const base = {
+        file: templateRelativePath,
+        message: finding.message,
+        suggestion: finding.suggestion,
+        ruleId: finding.ruleId,
+        location: finding.location,
+        suppressKey: finding.suppressKey,
+    };
+
+    if (finding.severity === 'error') {
+        errors.push({ ...base, stage: 'generate' });
+    } else {
+        warnings.push(base);
+    }
 }
 
 // Same regex as route-scanner: matches [param], [[optional]], [...catchAll]
@@ -1749,6 +1790,8 @@ async function runPluginValidators(
     parsedFiles: Array<{ relativePath: string; parsed: JayHtmlSourceFile }>,
     errors: ValidationError[],
     warnings: ValidationWarning[],
+    scriptCache: ScriptCache,
+    resolveLineText: ReturnType<typeof createLineTextResolver>,
 ): Promise<string[]> {
     const scannedPlugins = await scanPlugins({ projectRoot, includeDevDeps: true });
     const loadedValidators: string[] = [];
@@ -1855,26 +1898,38 @@ async function runPluginValidators(
                     }),
                     projectRoot,
                     validationOverrides: parsed.validationOverrides,
+                    script: resolveComponentScript(relativePath, projectRoot, scriptCache),
                 };
 
                 try {
                     const findings = await validatorFn(ctx);
                     for (const finding of findings) {
+                        if (
+                            finding.severity === 'warning' &&
+                            isFindingSuppressed(
+                                finding,
+                                relativePath,
+                                parsed.validationOverrides,
+                                resolveLineText,
+                            )
+                        ) {
+                            continue;
+                        }
+
+                        const entry = {
+                            file: relativePath,
+                            message: finding.message,
+                            source,
+                            suggestion: finding.suggestion,
+                            ruleId: finding.ruleId,
+                            location: finding.location,
+                            suppressKey: finding.suppressKey,
+                        };
+
                         if (finding.severity === 'error') {
-                            errors.push({
-                                file: relativePath,
-                                message: finding.message,
-                                stage: 'plugin',
-                                source,
-                                suggestion: finding.suggestion,
-                            });
+                            errors.push({ ...entry, stage: 'plugin' });
                         } else {
-                            warnings.push({
-                                file: relativePath,
-                                message: finding.message,
-                                source,
-                                suggestion: finding.suggestion,
-                            });
+                            warnings.push(entry);
                         }
                     }
                 } catch (runErr: any) {
@@ -1905,6 +1960,8 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
 
     const errors: ValidationError[] = [];
     const warnings: ValidationWarning[] = [];
+    const scriptCache: ScriptCache = new Map();
+    const resolveLineText = createLineTextResolver(projectRoot);
     const coverage: FileCoverage[] = [];
     const parsedFiles: Array<{ relativePath: string; parsed: JayHtmlSourceFile }> = [];
     // DL#200 — project-wide tallies for NO-DESIGN-SYSTEM.
@@ -2062,20 +2119,30 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                 });
             }
 
-            // Check page.ts exports the expected component
-            const pageExportError = checkPageComponentExport(jayFile);
-            if (pageExportError) {
-                errors.push({
-                    file: relativePath,
-                    message: pageExportError,
-                    stage: 'generate',
-                });
+            const script = resolveComponentScript(jayFile, projectRoot, scriptCache);
+
+            // Check page.ts exports the expected component (page.jay-html only, DL#220 Q5)
+            if (path.basename(jayFile) === 'page.jay-html') {
+                const pageExportError = checkPageComponentExport(script);
+                if (pageExportError) {
+                    errors.push({
+                        file: relativePath,
+                        message: pageExportError,
+                        stage: 'generate',
+                    });
+                }
             }
 
-            // Check page.ts for direct document access
-            const domWarnings = checkDirectDocumentAccess(jayFile);
-            for (const msg of domWarnings) {
-                warnings.push({ file: relativePath, message: msg });
+            // Check component script for direct document access
+            for (const finding of checkDirectDocumentAccess(script)) {
+                pushCoreFinding(
+                    relativePath,
+                    finding,
+                    errors,
+                    warnings,
+                    parsedFile.val!.validationOverrides,
+                    resolveLineText,
+                );
             }
 
             // Check route params match contract params (contract→route)
@@ -2356,6 +2423,7 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                 reusedMoreThanOnce: 0,
                 reusedOfCatalogued: 0,
             },
+            ruleCounts: computeRuleCounts(errors, warnings),
         };
     }
 
@@ -2560,7 +2628,14 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
     }
 
     // --- Plugin validators (DL#145) ---
-    const pluginValidators = await runPluginValidators(projectRoot, parsedFiles, errors, warnings);
+    const pluginValidators = await runPluginValidators(
+        projectRoot,
+        parsedFiles,
+        errors,
+        warnings,
+        scriptCache,
+        resolveLineText,
+    );
 
     return {
         valid: errors.length === 0,
@@ -2572,6 +2647,7 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
         pluginValidators,
         designSystemCoverage,
         designSystemReuse,
+        ruleCounts: computeRuleCounts(errors, warnings),
     };
 }
 
@@ -2728,7 +2804,8 @@ export function printJayValidationResult(result: ValidationResult, options: Vali
         }
     }
     for (const warning of coreWarnings) {
-        logger.important(chalk.yellow(`   ⚠ ${warning.file}`));
+        const loc = formatWarningLocation(warning.location);
+        logger.important(chalk.yellow(`   ⚠ ${warning.file}${loc ? ` (${loc})` : ''}`));
         logger.important(chalk.gray(`     ${warning.message}`));
         if (warning.suggestion) {
             logger.important(chalk.blue(`     Suggestion: ${warning.suggestion}`));

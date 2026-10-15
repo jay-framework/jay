@@ -4,6 +4,7 @@ import type {
     JayHtmlValidationContext,
 } from '@jay-framework/compiler-shared';
 import { walkElements } from '@jay-framework/compiler-shared';
+import { checkHoverOnlyDisclosureCss } from './hover-only-disclosure-css.js';
 
 const A11Y_GUIDE = '\nSee: agent-kit/designer/a11y-patterns.md';
 
@@ -313,6 +314,12 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
 
     // --- Rule: interactive elements must not be nested ---
     checkNestedInteractive(ctx.body, findings);
+
+    if (!isSuppressed(ctx, 'allow-hover-only-disclosure')) {
+        for (const finding of checkHoverOnlyDisclosureCss(ctx)) {
+            pushFinding(findings, finding);
+        }
+    }
 
     // --- Head metadata checks ---
     if (ctx.head) {

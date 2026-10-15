@@ -78,6 +78,7 @@ Package: `@jay-framework/a11y-validator` (monorepo, dev dependency)
 | Multiple controls in `<label>` | warning  | `<label>`                           | 1.3.1 | More than one labelable control nested in one label (DL#166)                          |
 | Orphan `label[for]`            | warning  | `<label>`                           | 1.3.1 | `for` points to an `id` that does not exist in the file (DL#166)                      |
 | Adjacent duplicate text        | warning  | any                                 | —     | Adjacent siblings with identical visible text (screen readers announce twice)         |
+| Hover-only disclosure (CSS)    | warning  | stylesheet (`ctx.css`)              | 2.1.1 | `:hover` on an ancestor reveals content without a `:focus-within` / `:focus-visible` twin |
 
 The form label rule skips `type="hidden"`, `type="submit"`, `type="button"`, and `type="reset"` inputs. Labelable inputs include `checkbox` and `radio` (DL#166). Empty `aria-label` / unresolved `aria-labelledby` do not count as an accessible name.
 
@@ -101,6 +102,21 @@ itself — DL#188). Applies to page files only (`/pages/`); component files inhe
 
 Design-system suppression keys live under the `design-system:` namespace in
 `<script type="application/jay-validations">`. See DL#176.
+
+### code-review-validator / css-first
+
+Package: `@jay-framework/code-review-validator` (monorepo, opt-in dev dependency — DL#221)
+
+Family `css-first` — **5** automated rules (template + bare scroll-reveal import in component script; hover disclosure is `a11y/allow-hover-only-disclosure`). Additional patterns are guidance in `css-first-patterns.md` only (DL#221 review pass). Suppress per rule under
+`css-first:` or with `// css-first: allow` on a script line.
+
+| Rule | Severity | What it checks |
+| ---- | -------- | -------------- |
+| `allow-inline-event-handlers` | warning | Static `on*` on native HTML elements |
+| `bound-inline-event-handler` | error | `on*` value binds ViewState (unsuppressible) |
+| `allow-javascript-url` | warning | `javascript:` URLs |
+| `allow-js-lazy-load` | warning | `data-src` / `data-srcset` with no real `src` |
+| `allow-scroll-reveal-library` | warning | Scroll-reveal library markup, bare imports, `data-aos` / `data-wow-*` |
 
 ## Rule Overlap
 

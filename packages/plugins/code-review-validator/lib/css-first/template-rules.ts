@@ -1,25 +1,38 @@
 import type { JayHtmlValidationContext, JayHtmlValidationFinding } from '@jay-framework/compiler-shared';
-import { resolveBinding, walkElements } from '@jay-framework/compiler-shared';
-import { parseTemplateParts } from '@jay-framework/compiler-jay-html';
-import { bindingPathsFromExpression } from '../shared/binding-paths.js';
+import { JayObjectType, resolveBinding, walkElements } from '@jay-framework/compiler-shared';
+import {
+    parseAccessor,
+    parseTemplateParts,
+    Variables,
+} from '@jay-framework/compiler-jay-html';
 import { cssFirstError, cssFirstWarning } from './findings.js';
 import {
     matchesScrollRevealAttribute,
     matchesScrollRevealScriptSrc,
 } from './scroll-reveal-libraries.js';
+import { isHtmlEventHandlerAttribute } from '../shared/html-event-handler-attributes.js';
 
-const ALLOWED_SCRIPT_TYPES = new Set([
-    'application/ld+json',
-    'importmap',
-    'speculationrules',
-]);
+function isJavascriptUrl(value: string | undefined): boolean {
+    if (!value) return false;
+    return value.trim().toLowerCase().startsWith('javascript:');
+}
 
-function isExecutableScriptType(typeAttr: string | undefined): boolean {
-    if (!typeAttr) return true;
-    const trimmed = typeAttr.trim().toLowerCase();
-    if (ALLOWED_SCRIPT_TYPES.has(trimmed)) return false;
-    if (trimmed.startsWith('application/jay-')) return false;
-    return true;
+function isNativeHtmlElement(rawTagName: string | undefined): boolean {
+    if (!rawTagName || rawTagName.includes(':')) return false;
+    return rawTagName === rawTagName.toLowerCase();
+}
+
+const bindingParseVars = new Variables(new JayObjectType('data', {}));
+
+function bindingPathFromJayExpression(expression: string): string | undefined {
+    const trimmed = expression.trim();
+    const accessor = parseAccessor(trimmed, bindingParseVars);
+    if (accessor.validations.some((message) => message.includes('Failed to parse'))) {
+        return undefined;
+    }
+    if (accessor.terms.length === 0) return undefined;
+    if (accessor.terms.length === 1 && accessor.terms[0] === '.') return undefined;
+    return accessor.terms.join('.');
 }
 
 function attributeBindingsResolveToContractTag(
@@ -30,10 +43,10 @@ function attributeBindingsResolveToContractTag(
         const parts = parseTemplateParts(value);
         for (const part of parts) {
             if (part.kind !== 'binding') continue;
-            for (const path of bindingPathsFromExpression(part.value)) {
-                const resolved = resolveBinding(path, scope);
-                if (resolved.tag) return true;
-            }
+            const path = bindingPathFromJayExpression(part.value);
+            if (!path) continue;
+            const resolved = resolveBinding(path, scope);
+            if (resolved.tag) return true;
         }
     } catch {
         return false;
@@ -41,89 +54,107 @@ function attributeBindingsResolveToContractTag(
     return false;
 }
 
-function isJavascriptUrl(value: string | undefined): boolean {
-    if (!value) return false;
-    return value.trim().toLowerCase().startsWith('javascript:');
+function elementDescriptor(el: {
+    rawTagName?: string;
+    getAttribute?: (name: string) => string;
+}): string {
+    const tag = el.rawTagName?.toLowerCase() ?? 'element';
+    const ref = el.getAttribute?.('ref');
+    const id = el.getAttribute?.('id');
+    const firstClass = el.getAttribute?.('class')?.split(/\s+/).find(Boolean);
+    const hint = ref
+        ? `ref="${ref}"`
+        : id
+          ? `id="${id}"`
+          : firstClass
+            ? `class="${firstClass}"`
+            : '';
+    return hint ? `<${tag} ${hint}>` : `<${tag}>`;
+}
+
+function isJsLazyLoadImg(el: { getAttribute?: (name: string) => string }): boolean {
+    const dataSrc = el.getAttribute?.('data-src');
+    const dataSrcset = el.getAttribute?.('data-srcset');
+    if (!dataSrc && !dataSrcset) return false;
+    const src = el.getAttribute?.('src');
+    if (!src || src.trim() === '') return true;
+    return src.trim().toLowerCase().startsWith('data:');
 }
 
 export function runTemplateRules(ctx: JayHtmlValidationContext): JayHtmlValidationFinding[] {
     const findings: JayHtmlValidationFinding[] = [];
+    const emittedForElement = new Set<string>();
+
+    const pushOncePerElement = (
+        elementKey: string,
+        ruleKey: string,
+        finding: JayHtmlValidationFinding,
+    ) => {
+        const dedupeKey = `${ruleKey}:${elementKey}`;
+        if (emittedForElement.has(dedupeKey)) return;
+        emittedForElement.add(dedupeKey);
+        findings.push(finding);
+    };
 
     walkElements(ctx.body, ctx, (el, scope) => {
-        const tag: string | undefined = el.rawTagName?.toLowerCase();
+        const rawTagName = el.rawTagName;
+        const tag: string | undefined = rawTagName?.toLowerCase();
         if (!tag) return;
 
+        const elementKey = elementDescriptor(el);
+
         if (tag === 'script') {
-            const typeAttr = el.getAttribute?.('type');
             const src = el.getAttribute?.('src');
-            if (isExecutableScriptType(typeAttr) && (src || el.textContent?.trim())) {
-                findings.push(
-                    cssFirstWarning(
-                        'allow-executable-script',
-                        'Executable <script> in the page body — move behavior to CSS or the component script',
-                        'Use transitions, native elements, or component refs instead of inline scripts',
-                    ),
-                );
-            }
             if (src && matchesScrollRevealScriptSrc(src)) {
-                findings.push(
+                pushOncePerElement(
+                    elementKey,
+                    'allow-scroll-reveal-library',
                     cssFirstWarning(
                         'allow-scroll-reveal-library',
-                        `Scroll-reveal library script "${src}" — CSS can animate on scroll`,
+                        `Scroll-reveal library script "${src}" on ${elementKey}`,
                         'Prefer @keyframes with animation-timeline: view() and an @supports fallback',
+                        { element: elementKey },
                     ),
                 );
             }
         }
 
-        if (tag === 'img') {
-            if (el.getAttribute?.('data-src') || el.getAttribute?.('data-srcset')) {
-                findings.push(
-                    cssFirstWarning(
-                        'allow-js-lazy-load',
-                        '<img> uses data-src lazy-loading — native loading="lazy" is sufficient',
-                        'Add loading="lazy" and remove the data-src pattern',
-                    ),
-                );
-            }
-        }
-
-        const attrs: Record<string, string> = el.attributes ?? {};
-        for (const [attrName] of Object.entries(attrs)) {
-            const lower = attrName.toLowerCase();
-            if (matchesScrollRevealAttribute(lower)) {
-                findings.push(
-                    cssFirstWarning(
-                        'allow-scroll-reveal-library',
-                        `Scroll-reveal attribute ${lower} — CSS view() animations can replace this library`,
-                        'Use @keyframes + animation-timeline: view()',
-                    ),
-                );
-            }
-        }
-
-        if (isCustomDialogElement(el)) {
-            findings.push(
+        if (tag === 'img' && isJsLazyLoadImg(el)) {
+            pushOncePerElement(
+                elementKey,
+                'allow-js-lazy-load',
                 cssFirstWarning(
-                    'allow-custom-dialog',
-                    'Custom dialog markup — prefer native <dialog>',
-                    'Use <dialog> with commandfor / command="show-modal" where supported',
+                    'allow-js-lazy-load',
+                    `${elementKey} uses data-src lazy-loading without a real src — native loading="lazy" is sufficient`,
+                    'Add loading="lazy" and use src for the default image',
+                    { element: elementKey },
                 ),
             );
         }
 
-        if (tag === 'div' || tag === 'button') {
-            const role = el.getAttribute?.('role')?.toLowerCase();
-            if (role === 'switch') {
-                findings.push(
-                    cssFirstWarning(
-                        'allow-div-switch',
-                        `<${tag} role="switch"> — use <input type="checkbox" role="switch"> in a <label>`,
-                        'See UI Kit toggle-switch.md',
-                    ),
-                );
+        const attrs: Record<string, string> = el.attributes ?? {};
+        let scrollRevealOnElement = false;
+        for (const [attrName] of Object.entries(attrs)) {
+            const lower = attrName.toLowerCase();
+            if (matchesScrollRevealAttribute(lower)) {
+                scrollRevealOnElement = true;
+                break;
             }
         }
+        if (scrollRevealOnElement) {
+            pushOncePerElement(
+                elementKey,
+                'allow-scroll-reveal-library',
+                cssFirstWarning(
+                    'allow-scroll-reveal-library',
+                    `Scroll-reveal attributes on ${elementKey} — CSS view() animations can replace this library`,
+                    'Use @keyframes + animation-timeline: view()',
+                    { element: elementKey },
+                ),
+            );
+        }
+
+        if (!isNativeHtmlElement(rawTagName)) return;
 
         for (const [attrName, attrValue] of Object.entries(attrs)) {
             const lowerName = attrName.toLowerCase();
@@ -137,28 +168,31 @@ export function runTemplateRules(ctx: JayHtmlValidationContext): JayHtmlValidati
                     findings.push(
                         cssFirstWarning(
                             'allow-javascript-url',
-                            `${lowerName} uses a javascript: URL`,
+                            `${lowerName} on ${elementKey} uses a javascript: URL`,
                             'Use <button type="button">, popovertarget, or <details>. If you still need custom behavior, use a ref in the component script instead of a javascript: URL',
+                            { element: elementKey, attribute: lowerName },
                         ),
                     );
                 }
             }
 
-            if (lowerName.startsWith('on') && attrValue) {
+            if (isHtmlEventHandlerAttribute(lowerName) && attrValue) {
                 if (attributeBindingsResolveToContractTag(attrValue, scope)) {
                     findings.push(
                         cssFirstError(
                             'bound-inline-event-handler',
-                            `Bound inline event handler ${lowerName} interpolates ViewState into executable markup`,
+                            `Bound inline event handler ${lowerName} on ${elementKey} interpolates ViewState into executable markup`,
                             'Move the handler to a ref in the component script',
+                            { element: elementKey, attribute: lowerName },
                         ),
                     );
                 } else {
                     findings.push(
                         cssFirstWarning(
                             'allow-inline-event-handlers',
-                            `Inline event handler ${lowerName} on <${tag}>`,
+                            `Inline event handler ${lowerName} on ${elementKey}`,
                             'Use CSS for presentation and ref handlers for application logic',
+                            { element: elementKey, attribute: lowerName },
                         ),
                     );
                 }
@@ -167,16 +201,4 @@ export function runTemplateRules(ctx: JayHtmlValidationContext): JayHtmlValidati
     });
 
     return findings;
-}
-
-function isCustomDialogElement(el: {
-    rawTagName?: string;
-    getAttribute?: (n: string) => string;
-}): boolean {
-    const tag = el.rawTagName?.toLowerCase();
-    if (tag === 'dialog') return false;
-    const role = el.getAttribute?.('role')?.toLowerCase();
-    if (role === 'dialog' || role === 'alertdialog') return true;
-    const ariaModal = el.getAttribute?.('aria-modal')?.toLowerCase();
-    return ariaModal === 'true';
 }

@@ -25,6 +25,10 @@
     "confirm": "npm run clean && npm run build && npm run test",
     "test": "vitest run"
   },
+  "dependencies": {
+    "postcss": "^8.5.6",
+    "postcss-selector-parser": "^7.1.0"
+  },
   "peerDependencies": {
     "@jay-framework/compiler-shared": "workspace:^"
   },

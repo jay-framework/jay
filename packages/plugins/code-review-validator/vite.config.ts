@@ -15,7 +15,7 @@ export default defineConfig({
             formats: ['es'],
         },
         rollupOptions: {
-            external: [/^@jay-framework\/compiler-/],
+            external: [/^@jay-framework\//],
         },
     },
     test: {

@@ -39,6 +39,7 @@
   },
   "devDependencies": {
     "@jay-framework/a11y-validator": "workspace:^",
+    "@jay-framework/code-review-validator": "workspace:^",
     "@jay-framework/dev-environment": "workspace:^",
     "@jay-framework/jay-cli": "workspace:^",
     "@jay-framework/seo-validator": "workspace:^",

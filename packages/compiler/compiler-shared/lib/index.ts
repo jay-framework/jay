@@ -14,6 +14,8 @@ export * from './errors';
 export * from './prettify';
 export * from './plugin-resolution';
 export * from './plugin-validators';
+export { resolveComponentScript } from './component-script';
+export * from './validator-finding-contract';
 export * from './validator-utils';
 export * from './coordinates';
 export * from './case-utils';

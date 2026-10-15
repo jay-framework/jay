@@ -41,6 +41,14 @@ export const PLUGINS: PluginEntry[] = [
         isDep: false,
     },
     {
+        name: '@jay-framework/code-review-validator',
+        label: 'Code review validator',
+        description: 'Flags UI reimplemented in JavaScript that HTML or CSS provide natively',
+        group: 'Jay Framework',
+        checked: false,
+        isDep: false,
+    },
+    {
         name: '@jay-framework/markdown',
         label: 'Markdown',
         description: 'Render markdown files as pages — documentation, blogs, changelogs',

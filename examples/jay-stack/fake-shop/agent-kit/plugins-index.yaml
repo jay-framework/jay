@@ -71,4 +71,7 @@ plugins:
   - name: seo-validator
     path: ./../../../packages/plugins/seo-validator
     contracts: []
+  - name: code-review-validator
+    path: ./../../../packages/plugins/code-review-validator
+    contracts: []
 designSystemIndex: ./design-system-index.yaml

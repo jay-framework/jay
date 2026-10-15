@@ -29,11 +29,16 @@ describe('matchesScrollRevealScriptSrc', () => {
 });
 
 describe('matchesScrollRevealImport', () => {
-    it('matches package specifiers and path suffixes', () => {
+    it('matches bare package specifiers only', () => {
         expect(matchesScrollRevealImport('aos')).toBe(true);
         expect(matchesScrollRevealImport('scrollreveal')).toBe(true);
-        expect(matchesScrollRevealImport('node_modules/wow.js/dist/wow.js')).toBe(true);
+        expect(matchesScrollRevealImport('wow.js')).toBe(true);
         expect(matchesScrollRevealImport('lodash')).toBe(false);
+    });
+
+    it('does not match relative paths', () => {
+        expect(matchesScrollRevealImport('./aos')).toBe(false);
+        expect(matchesScrollRevealImport('./effects/wow.js')).toBe(false);
     });
 });
 
@@ -44,5 +49,9 @@ describe('matchesScrollRevealAttribute', () => {
         expect(matchesScrollRevealAttribute('data-wow-delay')).toBe(true);
         expect(matchesScrollRevealAttribute('data-sr-id')).toBe(true);
         expect(matchesScrollRevealAttribute('data-custom')).toBe(false);
+    });
+
+    it('does not match screen-reader-only conventions', () => {
+        expect(matchesScrollRevealAttribute('data-sr-only')).toBe(false);
     });
 });

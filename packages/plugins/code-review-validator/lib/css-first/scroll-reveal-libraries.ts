@@ -1,16 +1,32 @@
 /** Shared list for markup, import, and script-src halves of allow-scroll-reveal-library. */
 export const SCROLL_REVEAL_IMPORT_SPECIFIERS = ['aos', 'wow.js', 'wowjs', 'scrollreveal'] as const;
 
+/** Exact attribute names or prefixes (not broad regexes that match unrelated data-* attrs). */
 export const SCROLL_REVEAL_ATTRIBUTES = [
-    /^data-aos(?:-|$)/i,
-    /^data-wow-/i,
-    /^data-sr(?:-|$)/i,
+    'data-aos',
+    'data-sr',
+    'data-sr-id',
 ] as const;
 
+const SCROLL_REVEAL_ATTRIBUTE_PREFIXES = ['data-aos-', 'data-wow-'] as const;
+
+function isBarePackageSpecifier(specifier: string): boolean {
+    const normalized = specifier.replace(/\\/g, '/').trim();
+    if (!normalized || normalized.startsWith('.') || normalized.startsWith('/')) {
+        return false;
+    }
+    if (normalized.includes('://')) return false;
+    const segment = normalized.split('/')[0] ?? '';
+    return segment.length > 0 && !segment.startsWith('.');
+}
+
 export function matchesScrollRevealImport(specifier: string): boolean {
-    const normalized = specifier.replace(/\\/g, '/').toLowerCase();
+    if (!isBarePackageSpecifier(specifier)) {
+        return false;
+    }
+    const packageName = specifier.replace(/\\/g, '/').trim().split('/')[0]?.toLowerCase() ?? '';
     return SCROLL_REVEAL_IMPORT_SPECIFIERS.some(
-        (entry) => normalized === entry || normalized.endsWith(`/${entry}`),
+        (entry) => packageName === entry || packageName === entry.replace('.js', ''),
     );
 }
 
@@ -32,10 +48,6 @@ function scriptSrcPathSegments(src: string): string[] {
     return withoutQuery.split('/').filter((part) => part.length > 0);
 }
 
-/** 
- * Check if the segment matches a javascript scroll library.
- * Meaning the code is using javascript for scrolling and might use css for scrolling with better native support and performance.
- * Path segment or filename must match — not a substring anywhere in the URL. */
 function segmentMatchesScrollRevealScript(segment: string): boolean {
     if (segment === 'aos' || /^aos(\.min)?\.js$/.test(segment) || /^aos@[\d.]/.test(segment)) {
         return true;
@@ -53,11 +65,6 @@ function segmentMatchesScrollRevealScript(segment: string): boolean {
     return false;
 }
 
-/**
- * Check if the script src matches a javascript scroll library.
- * Meaning the code is using javascript for scrolling and might use css for scrolling with better native support and performance.
- * Path segment or filename must match — not a substring anywhere in the URL.
- */
 export function matchesScrollRevealScriptSrc(src: string): boolean {
     if (!src.trim()) {
         return false;
@@ -66,5 +73,9 @@ export function matchesScrollRevealScriptSrc(src: string): boolean {
 }
 
 export function matchesScrollRevealAttribute(name: string): boolean {
-    return SCROLL_REVEAL_ATTRIBUTES.some((pattern) => pattern.test(name));
+    const lower = name.toLowerCase();
+    if ((SCROLL_REVEAL_ATTRIBUTES as readonly string[]).includes(lower)) {
+        return true;
+    }
+    return SCROLL_REVEAL_ATTRIBUTE_PREFIXES.some((prefix) => lower.startsWith(prefix));
 }

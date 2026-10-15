@@ -165,3 +165,9 @@ Choose the fix by what the container holds:
       allow-viewport-height: true
   </script>
   ```
+
+## CSS-first code review (optional plugin)
+
+When `@jay-framework/code-review-validator` is installed, `jay-stack validate` runs **css-first** rules that
+flag presentation reimplemented in JavaScript (scroll listeners, timer animations, inline handlers, and similar).
+See `code-review-validator` agent-kit → `css-first-patterns.md` for replacements and patterns that are guidance-only (not validator rules).

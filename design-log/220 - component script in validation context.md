@@ -1,6 +1,6 @@
 # Design Log #220 — Component Script in the Validation Context
 
-**Status:** Design. Foundation for DL#221 (code-review validator).
+**Status:** Implemented. Foundation for DL#221 (code-review validator).
 
 ## Decisions for the Implementer (TL;DR)
 
@@ -277,3 +277,11 @@ Steps 1, 2, 5 are the prerequisites DL#221 Phase 2 needs; step 6 is the prerequi
 - **The host now owns a TypeScript parse.** Lazy and cached, so pages whose validators don't touch the script pay nothing.
 - **Optional fields mean mixed findings during migration** — some rules carry `ruleId`, older ones don't. Accepted over a breaking type; the console output works either way.
 - **"Sibling only" will miss logic in helper modules.** Deliberate; the sibling is where page behavior lives today.
+
+## Implementation Results
+
+- **compiler-shared** — `ComponentScript`, `ScriptCache`, extended `JayHtmlValidationFinding` / `JayHtmlValidationContext`, `resolveComponentScript()` with lazy `text` / `sourceFile` (`lib/component-script.ts`). Tests: `test/component-script.test.ts` (5/5).
+- **stack-cli** — `validation-findings.ts` (line + page suppression, `ruleCounts`); core `checkDirectDocumentAccess` / `checkPageComponentExport` on resolved script; page export only for `page.jay-html`; plugin findings through host suppression. Tests: `test/validation-findings.test.ts` (4/4).
+- **suppressKey contract (review fix)** — End-user `validate` no longer errors when a third-party plugin emits warnings without `suppressKey` (site authors cannot fix plugin code). `findingsMissingSuppressKey()` in compiler-shared; `validate-plugin` runs a **smoke** probe on built `./tools` handlers (load/handler failures and missing `suppressKey`: warning by default, error with `--strict`; handler loading matches stack-cli). Full gate: plugin unit tests. Line suppression accepts `namespace: allow` in block or line comments.
+- **Review pass v2 (2026-10-14)** — `component-script` and css-first script rules parse through `@jay-framework/typescript-bridge`; code-review-validator externalizes all `@jay-framework/*` and lists the bridge as a peer dependency.
+- **Corpus** — `examples/jay-stack/fake-shop` `validate --json` includes `ruleCounts`; zero `css-first` warnings with code-review-validator enabled.
