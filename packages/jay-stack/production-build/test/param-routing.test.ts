@@ -4,6 +4,7 @@ import {
     computeSpecificity,
     materializeRouteParams,
     dedupeByUrl,
+    loadParamsCacheKey,
     type RouteInfo,
 } from '@jay-framework/production-build';
 
@@ -390,5 +391,21 @@ describe('dedupeByUrl', () => {
     it('should handle no duplicates', () => {
         const result = dedupeByUrl([]);
         expect(result).toEqual([]);
+    });
+});
+
+describe('loadParamsCacheKey', () => {
+    it("keeps each page's own params apart: two item routes enumerate their own items", () => {
+        const page = {};
+        expect(loadParamsCacheKey('/post/[slug]', page)).not.toBe(loadParamsCacheKey('/service-page/[slug]', page));
+        expect(loadParamsCacheKey('/post/[slug]', page)).toBe(loadParamsCacheKey('/post/[slug]', {}));
+    });
+
+    it('shares a headless part with the same props across routes, and not with other props', () => {
+        const part = { key: 'productPage', headlessProps: { category: 'a' } };
+        expect(loadParamsCacheKey('/shop/[slug]', part)).toBe(loadParamsCacheKey('/sale/[slug]', { ...part }));
+        expect(loadParamsCacheKey('/shop/[slug]', part)).not.toBe(
+            loadParamsCacheKey('/shop/[slug]', { key: 'productPage', headlessProps: { category: 'b' } }),
+        );
     });
 });
