@@ -1,0 +1,6 @@
+name: code-review-validator
+
+validators:
+  - name: css-first
+    handler: validateCssFirst
+    description: Flags UI features implemented in JavaScript that HTML or CSS provide natively
