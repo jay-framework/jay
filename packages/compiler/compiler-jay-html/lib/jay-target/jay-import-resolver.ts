@@ -1,6 +1,6 @@
 import { Contract, parseContract } from '../contract';
 import {
-    analyzeExportedTypes,
+    createTypeAnalyzer,
     ResolveTsConfigOptions,
 } from '@jay-framework/compiler-analyze-exported-types';
 import {
@@ -21,42 +21,48 @@ const require = createRequire(import.meta.url);
 export type { PluginComponentResolution };
 
 /**
- * Cache for {@link JAY_IMPORT_RESOLVER.analyzeExportedTypes}. The TS type analysis (`ts.createProgram`)
- * costs ~hundreds of ms per component file, and `parseJayFile` re-analyzes every local `src=` import on
- * every call — once per SSR request in the dev server (DL — "dev-server SSR perf"). A page composing
- * local components was ~400–1500ms of pure re-analysis per request. Keyed by resolved file path + mtime,
- * so an edit to the analyzed file busts its entry; also speeds the production build (a component imported
- * by many pages is analyzed once). Caveat: keyed on the analyzed file's own mtime — a change to a *type
- * it imports* (e.g. a regenerated contract .d.ts) without touching the component file is not detected;
- * restart the dev server in that rare case.
+ * Owns type-analysis state for one scope (DL#225). The TS type analysis (`ts.createProgram` inside
+ * `analyzeExportedTypes`) costs ~hundreds of ms per component file, and `parseJayFile` re-analyzes every
+ * local `src=` import on every call — once per SSR request in the dev server. A context memoizes results
+ * so repeat requests (and a component imported by many pages at build time) don't re-analyze.
+ *
+ * A context is created per owner (dev-server session, build run, CLI command, or **test**) and threaded
+ * through the resolver — not a module global — so the state's lifetime is the owner's and tests are
+ * isolated. DL#225 Phase 3 will make the context own a persistent `ts.LanguageService` here.
  */
-const exportedTypesCache = new Map<string, JayType[]>();
-
-/**
- * Clear the {@link JAY_IMPORT_RESOLVER.analyzeExportedTypes} cache. The dev server calls this when a
- * `.ts` / `.d.ts` / `.jay-contract` changes: the cache keys on the analyzed file's own mtime, so a change
- * to a *type it imports* (e.g. a regenerated contract `.d.ts`) without touching the component is otherwise
- * not detected. Clearing is cheap — the next request re-analyzes only the pages it renders.
- */
-export function clearExportedTypesCache(): void {
-    exportedTypesCache.clear();
+export interface AnalysisContext {
+    analyzeExportedTypes(fullPath: string, options: ResolveTsConfigOptions): JayType[];
+    /**
+     * Invalidate after a `.ts` / `.d.ts` / `.jay-contract` change. The cache keys on the analyzed file's
+     * own mtime (busts a direct edit), but a change to a *type it imports* (e.g. a regenerated contract
+     * `.d.ts`) without touching the component is not seen by mtime — so the dev-server watcher calls this.
+     * Currently clears everything (cheap; next request re-analyzes only the pages it renders).
+     */
+    noteFileChanged(changedPath?: string): void;
+    /** Clear all cached analysis. */
+    clear(): void;
 }
 
-/** A cache key from the analyzed file's resolved path + mtime + tsconfig, or undefined if unstattable. */
-function exportedTypesCacheKey(
-    fullPath: string,
-    options: ResolveTsConfigOptions,
-): string | undefined {
-    // `fullPath` may be extensionless (analyzeExportedTypes' autoAddExtension appends .ts) — stat the
-    // real file so mtime busts the entry on edit.
-    for (const candidate of [fullPath, `${fullPath}.ts`, `${fullPath}.tsx`]) {
-        try {
-            return `${candidate}::${fs.statSync(candidate).mtimeMs}::${options.relativePath ?? ''}`;
-        } catch {
-            // try the next candidate extension
-        }
-    }
-    return undefined;
+/**
+ * Create a fresh {@link AnalysisContext}. Each owner creates its own; callers thread it via the resolver.
+ * Backed by a persistent `ts.LanguageService` (DL#225) so repeat/incremental analysis is near-free and the
+ * cold `createProgram` cost is shared across a session.
+ */
+export function createAnalysisContext(): AnalysisContext {
+    const analyzer = createTypeAnalyzer();
+    return {
+        analyzeExportedTypes(fullPath: string, options: ResolveTsConfigOptions): JayType[] {
+            return analyzer.analyze(fullPath, options);
+        },
+        noteFileChanged(changedPath?: string): void {
+            // A specific edit → bump that file's version (incremental). No path → full reset.
+            if (changedPath) analyzer.noteFileChanged(changedPath);
+            else analyzer.clear();
+        },
+        clear(): void {
+            analyzer.clear();
+        },
+    };
 }
 
 export interface JayImportResolver {
@@ -100,17 +106,11 @@ export interface JayImportResolver {
     ): { content: string; componentDir: string; filePath: string } | null;
 }
 
-export const JAY_IMPORT_RESOLVER: JayImportResolver = {
-    analyzeExportedTypes(fullPath: string, options: ResolveTsConfigOptions): JayType[] {
-        const key = exportedTypesCacheKey(fullPath, options);
-        if (key) {
-            const cached = exportedTypesCache.get(key);
-            if (cached) return cached;
-        }
-        const result = analyzeExportedTypes(fullPath, options);
-        if (key) exportedTypesCache.set(key, result);
-        return result;
-    },
+/**
+ * The resolver methods that are stateless (everything except `analyzeExportedTypes`, which is bound to an
+ * {@link AnalysisContext} in {@link createJayImportResolver}).
+ */
+const baseResolverMethods: Omit<JayImportResolver, 'analyzeExportedTypes'> = {
     loadContract(fullPath: string): WithValidations<Contract> {
         const content = fs.readFileSync(fullPath).toString();
         return parseContract(content, fullPath);
@@ -234,3 +234,41 @@ export const JAY_IMPORT_RESOLVER: JayImportResolver = {
         }
     },
 };
+
+/**
+ * Create a resolver bound to an {@link AnalysisContext} (DL#225). Owners (dev-server session, build run,
+ * CLI command, test) create one — and typically one context — and thread it through `parseJayFile(…,
+ * resolver, …)`. Defaults to a fresh private context when none is passed.
+ */
+export function createJayImportResolver(
+    context: AnalysisContext = createAnalysisContext(),
+): JayImportResolver {
+    return {
+        ...baseResolverMethods,
+        analyzeExportedTypes: (fullPath, options) =>
+            context.analyzeExportedTypes(fullPath, options),
+    };
+}
+
+/**
+ * Process-wide default context + resolver, for callers that don't yet thread their own (DL#225 keeps this as
+ * a lazy default during the incremental migration). `clearExportedTypesCache` invalidates it — the dev
+ * server calls it from its file watcher.
+ */
+const defaultAnalysisContext = createAnalysisContext();
+export const JAY_IMPORT_RESOLVER: JayImportResolver =
+    createJayImportResolver(defaultAnalysisContext);
+
+/** Fully reset the default resolver's analysis state. */
+export function clearExportedTypesCache(): void {
+    defaultAnalysisContext.clear();
+}
+
+/**
+ * Note a changed file on the default context (dev-server watcher). Bumps just that file's version so the
+ * LanguageService re-reads it and re-checks dependents — incremental, keeping the rest of the program warm
+ * (vs a full reset). A dev server is one process = one default context, so this stays naturally scoped.
+ */
+export function noteExportedTypesFileChanged(changedPath: string): void {
+    defaultAnalysisContext.noteFileChanged(changedPath);
+}

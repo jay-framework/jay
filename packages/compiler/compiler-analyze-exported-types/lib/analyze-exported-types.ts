@@ -12,6 +12,11 @@ const {
     isPropertySignature,
     convertCompilerOptionsFromJson,
     createProgram,
+    createLanguageService,
+    createDocumentRegistry,
+    ScriptSnapshot,
+    getDefaultLibFilePath,
+    sys,
     isImportDeclaration,
     isInterfaceDeclaration,
     isNamedImports,
@@ -245,11 +250,18 @@ export function analyzeExportedTypes(
     filename: string,
     options: ResolveTsConfigOptions = {},
 ): JayType[] {
-    // let tsConfigPath = resolveTsConfig(options);
-    let compilerOptions = loadTSCompilerOptions(options);
-
+    const compilerOptions = loadTSCompilerOptions(options);
     filename = autoAddExtension(filename);
     const program = createProgram([filename], compilerOptions);
+    return extractExportedTypes(program, filename);
+}
+
+/**
+ * Extract Jay types from a source file of an already-built program. Shared by the one-shot
+ * {@link analyzeExportedTypes} (fresh `createProgram` per call) and the reusable {@link createTypeAnalyzer}
+ * (persistent `LanguageService`), so both produce identical output (DL#225).
+ */
+export function extractExportedTypes(program: ts.Program, filename: string): JayType[] {
     const sourceFile = program.getSourceFile(filename);
     const tsTypeChecker = program.getTypeChecker();
 
@@ -330,4 +342,93 @@ export function analyzeExportedTypes(
         } else types.push(JayUnknown);
     }
     return types;
+}
+
+/**
+ * A reusable type analyzer (DL#225). Owns a persistent `ts.LanguageService` (one per resolved tsconfig)
+ * so `lib.d.ts` + sources stay parsed across calls — the cold `createProgram`-per-call cost is paid once,
+ * and re-analysis after an edit is incremental. Created per owner (dev-server session / build run / test),
+ * never module-global, so lifetimes are scoped and tests are isolated.
+ *
+ * Invalidation: `noteFileChanged` bumps the file's LanguageService version (so the service re-reads it and
+ * re-checks dependents — catching transitive edits the file's own mtime can't) and a global generation (so
+ * the result cache drops). The dev server calls it from its file watcher; the build is one-shot.
+ */
+export interface TypeAnalyzer {
+    analyze(filename: string, options?: ResolveTsConfigOptions): JayType[];
+    noteFileChanged(filename: string): void;
+    clear(): void;
+}
+
+export function createTypeAnalyzer(): TypeAnalyzer {
+    interface Service {
+        ls: ts.LanguageService;
+        roots: Set<string>;
+        versions: Map<string, number>;
+    }
+    const services = new Map<string, Service>(); // key: resolved tsconfig path ('' when none)
+    const resultCache = new Map<string, JayType[]>(); // key: `${filename}::${generation}`
+    let generation = 0;
+
+    function getService(options: ResolveTsConfigOptions): Service {
+        const key = resolveTsConfig(options) ?? '';
+        let svc = services.get(key);
+        if (!svc) {
+            const compilerOptions = loadTSCompilerOptions(options);
+            const roots = new Set<string>();
+            const versions = new Map<string, number>();
+            const host: ts.LanguageServiceHost = {
+                getScriptFileNames: () => [...roots],
+                getScriptVersion: (f) => String(versions.get(f) ?? 0),
+                getScriptSnapshot: (f) => {
+                    try {
+                        return ScriptSnapshot.fromString(fs.readFileSync(f, 'utf8'));
+                    } catch {
+                        return undefined;
+                    }
+                },
+                getCurrentDirectory: () => process.cwd(),
+                getCompilationSettings: () => compilerOptions,
+                getDefaultLibFileName: (o) => getDefaultLibFilePath(o),
+                fileExists: sys.fileExists,
+                readFile: sys.readFile,
+                readDirectory: sys.readDirectory,
+                directoryExists: sys.directoryExists,
+                getDirectories: sys.getDirectories,
+            };
+            svc = { ls: createLanguageService(host, createDocumentRegistry()), roots, versions };
+            services.set(key, svc);
+        }
+        return svc;
+    }
+
+    return {
+        analyze(filename: string, options: ResolveTsConfigOptions = {}): JayType[] {
+            filename = autoAddExtension(filename);
+            const cacheKey = `${filename}::${generation}`;
+            const cached = resultCache.get(cacheKey);
+            if (cached) return cached;
+            const svc = getService(options);
+            if (!svc.roots.has(filename)) {
+                svc.roots.add(filename);
+                if (!svc.versions.has(filename)) svc.versions.set(filename, 0);
+            }
+            const program = svc.ls.getProgram();
+            const result = program ? extractExportedTypes(program, filename) : [];
+            resultCache.set(cacheKey, result);
+            return result;
+        },
+        noteFileChanged(filename: string): void {
+            const f = autoAddExtension(filename);
+            generation++;
+            for (const svc of services.values()) {
+                svc.versions.set(f, (svc.versions.get(f) ?? 0) + 1);
+            }
+        },
+        clear(): void {
+            services.clear();
+            resultCache.clear();
+            generation++;
+        },
+    };
 }

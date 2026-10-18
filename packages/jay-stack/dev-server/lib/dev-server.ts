@@ -55,7 +55,7 @@ import {
     HeadlessContractInfo,
     Contract,
     JAY_IMPORT_RESOLVER,
-    clearExportedTypesCache,
+    noteExportedTypesFileChanged,
     discoverHeadlessInstances,
     assignCoordinatesToJayHtml,
     injectDevMarkers,
@@ -1817,7 +1817,9 @@ function setupSlowRenderCacheInvalidation(
         // one (e.g. a regenerated contract .d.ts while the component .ts is untouched). Clear it here so
         // the next request re-analyzes. (jay-html template edits don't change exported types.)
         if (/\.(ts|tsx|jay-contract)$/.test(changedPath)) {
-            clearExportedTypesCache();
+            // Incremental (DL#225): bump just this file's version so the LanguageService re-reads it and
+            // re-checks dependents, keeping the rest of the program warm.
+            noteExportedTypesFileChanged(changedPath);
         }
 
         // CSS or component files linked from jay-html.

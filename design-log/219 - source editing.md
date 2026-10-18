@@ -435,6 +435,7 @@ Decision rule for the agent: `contentFromBinding` → the content is a bound val
 **Decision (user-approved): no — keep inspect locator-only; the agent resolves.** This upholds §2 ("the runtime does not resolve `region.name`; the agent resolves it via the import") and TL;DR #2 ("a source fragment + structural stack, not a pre-resolved binding list").
 
 Rationale:
+
 - The inspector is **client-only** — it has DOM markers, not contract paths / plugin guides. Eager resolution would force a dev-server round-trip (killing the client-only property) or bake page-level static info (contract/guide paths) onto every element, duplicating the source import and `plugins-index.yaml`.
 - The agent already has a **cheap, deterministic** path: a region frame carries `name` (contract) → `plugins-index.yaml` → guide (one hop); a page-level binding (`{post.content}`) is resolved by reading the binding at `node.lines` + the page's `<script type="application/jay-…">` imports → contract → guide. Resolving in the framework would **duplicate agent-kit** and couple the inspector to import/plugin layout.
 - Contract→guide resolution is **Part B** (consumer side); folding it into the inspector pulls Part B into Part A prematurely, against the DL's bet (runtime does pixel→source; agent reads source + follows the guide).

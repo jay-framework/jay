@@ -3,6 +3,7 @@ import fs from 'fs';
 import { WithValidations } from '@jay-framework/compiler-shared';
 import {
     JAY_IMPORT_RESOLVER,
+    createJayImportResolver,
     JayImportResolver,
     PluginComponentResolution,
 } from '../../lib/jay-target/jay-import-resolver';
@@ -12,9 +13,13 @@ import { Contract } from '../../lib';
 /**
  * Test resolver that extends the default resolver with test plugin support.
  * This should ONLY be used in tests.
+ *
+ * DL#225: built over its own analysis context (`createJayImportResolver()`), not the module-global
+ * `JAY_IMPORT_RESOLVER`, so a test's type-analysis state (a persistent LanguageService) is isolated and
+ * doesn't leak across test files.
  */
 export const TEST_IMPORT_RESOLVER: JayImportResolver = {
-    ...JAY_IMPORT_RESOLVER,
+    ...createJayImportResolver(),
     loadPluginContract(
         pluginName: string,
         contractName: string,

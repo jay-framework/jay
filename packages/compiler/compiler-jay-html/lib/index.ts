@@ -41,8 +41,14 @@ export {
 } from './expressions/expression-compiler';
 export * from './contract';
 export * from './action';
-export { type JayImportResolver } from './jay-target/jay-import-resolver';
-export { JAY_IMPORT_RESOLVER, clearExportedTypesCache } from './jay-target/jay-import-resolver';
+export { type JayImportResolver, type AnalysisContext } from './jay-target/jay-import-resolver';
+export {
+    JAY_IMPORT_RESOLVER,
+    clearExportedTypesCache,
+    noteExportedTypesFileChanged,
+    createJayImportResolver,
+    createAnalysisContext,
+} from './jay-target/jay-import-resolver';
 
 // Slow rendering
 export {
