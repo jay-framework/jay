@@ -23,6 +23,7 @@ import { buildInstanceClient } from './instance-client-build';
 import { runLoadParams } from '@jay-framework/stack-server-runtime';
 import {
     crossProductParams,
+    loadParamsCacheKey,
     materializeRouteParams,
     dedupeByUrl,
     type RouteInfo,
@@ -377,8 +378,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
 
         const paramParts: ParamPart[] = [];
         for (const part of partsWithLoadParams) {
-            const propsKey = JSON.stringify(part.headlessProps ?? {});
-            const cacheKey = `${part.key ?? ''}:${propsKey}`;
+            const cacheKey = loadParamsCacheKey(route.rawRoute, part);
             if (!loadParamsCache.has(cacheKey)) {
                 logger.important(`[Build] Loading params for ${route.rawRoute}...`);
                 const partParams: Record<string, string>[] = [];
