@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/agent-skills",
-  "version": "0.25.4",
+  "version": "0.25.5",
   "type": "module",
   "description": "Publishes agent skills at /.well-known/agent-skills/ (agent-skills-discovery v0.2.0) for Jay Framework — creation CLI + freshness validator",
   "license": "Apache-2.0",
