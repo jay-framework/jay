@@ -169,7 +169,7 @@ Shipped (uncommitted pending review):
 - **dev-server:** the watcher calls `noteExportedTypesFileChanged(changedPath)` (incremental) instead of a full clear.
 - **tests:** `TEST_IMPORT_RESOLVER` is built over its own `createJayImportResolver()` context — isolated per test module, not the global.
 
-**Parity + perf (verified):** `extractExportedTypes` output is byte-identical old-vs-LS for banner/section/button/inner-block. Cold analysis of the *first* component ~420ms (one-time `lib.d.ts` parse); each *subsequent* component ~60ms (was ~400ms — shared lib/sources); repeats ~0ms. Live dev server: warmed at startup (page-definition generation), so first request ~28ms, repeats ~2ms, and an edit re-analyzes incrementally (~51ms, program stays warm). Full `yarn confirm` green across the monorepo.
+**Parity + perf (verified):** `extractExportedTypes` output is byte-identical old-vs-LS for banner/section/button/inner-block. Cold analysis of the _first_ component ~420ms (one-time `lib.d.ts` parse); each _subsequent_ component ~60ms (was ~400ms — shared lib/sources); repeats ~0ms. Live dev server: warmed at startup (page-definition generation), so first request ~28ms, repeats ~2ms, and an edit re-analyzes incrementally (~51ms, program stays warm). Full `yarn confirm` green across the monorepo.
 
 ### Deviation from the plan — production owners kept on the default context (not threaded through the loader chain)
 
