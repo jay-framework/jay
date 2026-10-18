@@ -1052,6 +1052,7 @@ async function handleClientOnlyRequest(
         {
             enableAutomation: !options.disableAutomation,
             routePattern: routeToExpressRoute(route),
+            sourceFile: path.relative(options.projectRootFolder!, route.jayHtmlPath),
         },
     );
 
@@ -1101,6 +1102,10 @@ async function sendResponse(
 ): Promise<void> {
     let pageHtml: string;
 
+    // DL#219: project-relative path of the page's jay-html, so the inspector can report which file
+    // the matched `lines` live in (the agent edits this file).
+    const sourceFile = path.relative(options.projectRootFolder!, sourceJayHtmlPath);
+
     try {
         // SSR: compile from original jay-html with merged ViewState (DL#144)
         const jayHtmlDir = path.dirname(jayHtmlPath);
@@ -1132,6 +1137,7 @@ async function sendResponse(
                 enableAutomation: !options.disableAutomation,
                 slowViewState,
                 routePattern,
+                sourceFile,
             },
             undefined,
             headTags,
@@ -1153,6 +1159,7 @@ async function sendResponse(
                 enableAutomation: !options.disableAutomation,
                 slowViewState,
                 routePattern,
+                sourceFile,
             },
         );
     }

@@ -24,6 +24,24 @@ import { HTMLElement, NodeType, parse } from 'node-html-parser';
 
 export const DEV_SRC_ATTR = 'jay-dev-src';
 export const DEV_ITEM_ATTR = 'jay-dev-item';
+/** Contract name of a headless region (`<jay:NAME …>`), stamped on the region tag. */
+export const DEV_REGION_ATTR = 'jay-dev-region';
+/** JSON of a region's STATIC (non-bound, non-directive) props — the live identity values the
+ *  inspector can surface without reading source. Bound props stay source-only (parent-scoped). */
+export const DEV_REGION_PROPS_ATTR = 'jay-dev-region-props';
+
+/** Region-tag attributes that are directives, not data props — excluded from the props snapshot. */
+const REGION_NON_PROP_ATTRS = new Set([
+    'ref',
+    'if',
+    'foreach',
+    'trackby',
+    'key',
+    DEV_SRC_ATTR,
+    DEV_ITEM_ATTR,
+    DEV_REGION_ATTR,
+    DEV_REGION_PROPS_ATTR,
+]);
 
 /**
  * Inject dev-mode source markers into a jay-html string and return the serialized result.
@@ -63,6 +81,27 @@ function markElement(element: HTMLElement, lineStarts: number[]): void {
     const trackBy = element.getAttribute('trackBy');
     if (forEach && trackBy && !element.getAttribute(DEV_ITEM_ATTR)) {
         element.setAttribute(DEV_ITEM_ATTR, `{${trackBy}}`);
+    }
+
+    // A headless region `<jay:NAME …>`: stamp its contract name and a snapshot of its static props.
+    // assign-coordinates later moves these onto the region's rendered root (the display:contents
+    // wrapper it synthesizes) so the inspector can report `{ kind:'region', name, props }`.
+    const tagName = (element.rawTagName || '').toLowerCase();
+    if (tagName.startsWith('jay:') && !element.getAttribute(DEV_REGION_ATTR)) {
+        element.setAttribute(DEV_REGION_ATTR, tagName.slice(4));
+        const props: Record<string, string> = {};
+        for (const [key, value] of Object.entries(element.attributes)) {
+            if (REGION_NON_PROP_ATTRS.has(key.toLowerCase())) continue;
+            // Static props only — a bound value (`{expr}`) is parent-scoped and can't be resolved
+            // on the child-scoped wrapper (see DL#219 Phase A2); the agent reads it from source.
+            if (typeof value === 'string' && !value.includes('{')) props[key] = value;
+        }
+        if (Object.keys(props).length > 0) {
+            // URL-encode: a raw `{` in the value would make the compiler treat the attribute as a
+            // binding expression and try to parse the JSON as Jay syntax (`doParse` failure). The
+            // client `decodeURIComponent`s then `JSON.parse`s.
+            element.setAttribute(DEV_REGION_PROPS_ATTR, encodeURIComponent(JSON.stringify(props)));
+        }
     }
 
     for (const child of element.childNodes) {

@@ -349,3 +349,43 @@ The reply carries **source locators, not resolved bindings** (per TL;DR #2): `no
 ### Stack scope — significant frames only (refinement)
 
 Initial `stack` included every ancestor element (plain `<div>`/`<section>` wrappers and all). Refined to carry **only the semantically significant enclosing frames** — forEach item roots (`jay-dev-item` → record id) and region/headless boundaries (`display:contents` wrapper → `ref`) — innermost → outermost, each tagged `kind: 'forEach' | 'region'`. Rationale: those are the only frames that change what the agent edits (which record, which contract); the plain wrapper chain is noise the agent can reconstruct from the source file via `node.src`. Verified: list item → `stack: [{ tag:'ul', src:'10:12', item:'s1', kind:'forEach' }]`; a `<section>` outside any scope → `stack: []`.
+
+### Final `InspectResult` shape — reconciled (supersedes the §1 sketch and the A3 draft)
+
+The §1 original sketch (`file` / `lines:{from,to}` / `ancestors[]` with `kind`/`collection`/`name`/`props`/`condition`) and the first A3 implementation (`node.src` string / `stack` of `{tag,src,item,region,ref}`) had drifted apart. Settled, implemented shape:
+
+```
+InspectResult {
+  file,                                                    // project-relative page jay-html path (where the lines live)
+  route, routePattern,                                     // agent derives route params from these
+  node: { lines: {from,to}, tag, text, rect, attrs? } | null,  // the clicked element: source loc, live text, on-screen box
+  stack: [                                                 // significant enclosing scopes, innermost → outermost
+    { kind: 'forEach', lines: {from,to}, itemId },         // itemId = runtime trackBy record id
+    { kind: 'region',  lines: {from,to}, name, props? },   // name = contract; props = static primitive props
+  ],
+}
+```
+
+Decisions that shaped it:
+- **`lines: {from,to}`** everywhere (was `src:"from:to"` string) — matches the §1 intent; the client parses the `jay-dev-src` attribute into the object.
+- **`rect` lives under `node`** (was top-level) — it is the matched element's on-screen box, so it belongs with the element it describes.
+- **`file` at top level** — the page's jay-html path (project-relative), threaded from the dev server (`sendResponse` / client-only path → `GenerateClientScriptOptions.sourceFile` → `buildFreezeScript`). All `node`/`stack` `lines` are in this file; the agent edits it. (`route`/`routePattern` stay too — the agent derives route params from them.)
+- **Split runtime vs source fields** (as §1 intended): the reply carries what only the runtime knows — `itemId` (forEach record), region `name` + **static** `props` — and the line ranges. Everything else the agent reads from source at those lines: the `forEach` collection expression, bound prop expressions, `if` conditions, contract import resolution.
+- **`if` frames dropped from the stack.** An `if` is conditional visibility, not a data-identity scope; it never changes which record/contract is edited. The clicked element still reports its own `lines`; the agent reads the `if` condition from source if needed.
+
+✅ verified live: `/foreach` `.slow-item` → `file:"src/pages/foreach/page.jay-html"`, `node:{lines:{11,11},tag:'li',text:'Slow Item 1',rect:{…}}`, `stack:[{kind:'forEach',lines:{10,12},itemId:'s1'}]`.
+
+### Region identity in the stack (`name` + static `props`) — issue fix
+
+A region only appeared in the stack when it had a `display:contents` wrapper, and even then carried no contract name or key. Two gaps fixed:
+
+1. **Ref-less single-child regions had no wrapper** (DL#206 only wraps explicit-ref or multi-child), so `<jay:test-widget itemId="alpha">` produced no region frame at all. `assign-coordinates` now **also synthesizes the wrapper when a region dev-marker is present** (i.e. source-editing is on) — prod behavior unchanged (no marker → no extra wrap). The wrapper is `display:contents` (no layout effect) and both SSR + hydrate produce it, so no mismatch.
+2. **No contract name / key.** `injectDevMarkers` now stamps `jay-dev-region="<contract>"` and `jay-dev-region-props="<url-encoded JSON of static props>"` on the `<jay:…>` tag; `assign-coordinates` moves both onto the wrapper (alongside `jay-dev-src`). The inspector reports `{ kind:'region', lines, name, props }`.
+   - **Static props only.** Bound props (`itemId="{x}"`) are parent-scoped and can't resolve on the child-scoped wrapper (the Phase A2 wall) — they stay source-only; the agent reads the expression. Static props (`itemId="alpha"`) are the common identity case and are surfaced live.
+   - **URL-encoded, not raw JSON.** A raw `{` in the attribute value makes the compiler treat it as a binding and run `doParse` on the JSON → `doParse is not a function` + SSR fallback. Caught live on `/headless`; fixed by `encodeURIComponent(JSON.stringify(props))` (client `JSON.parse(decodeURIComponent(...))`). `jay-dev-item="{trackBy}"` keeps its braces on purpose — that one *is* meant to be a binding.
+
+✅ verified live: `/headless` `.widget-label` → `node: span (15:15)`, `stack: [{ kind:'region', lines:{13,19}, name:'test-widget', props:{itemId:'alpha'} }]`. Unit tests added for both the region markers (`inject-dev-markers.test.ts`) and the ref-less wrap + marker move (`coordinate-preprocess.test.ts`); compiler-jay-html 750 pass.
+
+### Pre-existing bug found (not DL#219) — `nested-composition` hydration
+
+`/nested-composition` (4-level nested **passthrough** regions, `<jay:section>` → `<jay:card>` → `<jay:button>`) throws `compCreator is not a function` at `childComp` during client hydration. **Reproduces with `sourceEditing` off** (SSR renders, client hydrate crashes) — so it is independent of DL#219 (DL#196 passthrough-region territory). Flagged for a separate fix.

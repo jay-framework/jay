@@ -272,28 +272,39 @@
         );
       }
 
+      function fmtLines(lines) {
+        return lines ? lines.from + ':' + lines.to : null;
+      }
+
       function renderSummary(data) {
         const node = data.node;
         if (!node) {
           summaryEl.innerHTML = row('result', 'no marked element under the pointer');
           return;
         }
-        console.log(data);
         const items = (data.stack || [])
-          .filter((f) => f.item)
-          .map((f) => f.tag + ' #' + f.item)
+          .filter((f) => f.kind === 'forEach')
+          .map((f) => f.itemId)
           .join(', ');
         const regions = (data.stack || [])
-          .filter((f) => f.region)
-          .map((f) => f.ref || '(auto)')
+          .filter((f) => f.kind === 'region')
+          .map((f) => {
+            const props = f.props
+              ? ' (' + Object.entries(f.props).map(([k, v]) => k + '=' + v).join(', ') + ')'
+              : '';
+            return f.name + props;
+          })
           .join(', ');
+        const srcLabel = fmtLines(node.lines)
+          ? (data.file ? data.file + ':' : '') + fmtLines(node.lines)
+          : null;
         summaryEl.innerHTML =
           row('element', '<' + node.tag + '>', true) +
-          row('source', node.src ? 'lines ' + node.src : null, true) +
+          row('source', srcLabel, true) +
           row('route', data.route) +
           row('text', node.text) +
-          row('forEach item', items) +
-          row('region ref', regions) +
+          row('forEach record', items) +
+          row('region', regions) +
           row('enclosing scopes', (data.stack || []).length + ' (forEach/region only)');
       }
 
@@ -303,7 +314,7 @@
         if (d.requestId && d.requestId !== lastRequestId) return; // ignore stale replies
         jsonEl.textContent = JSON.stringify(d, null, 2);
         renderSummary(d);
-        showHighlight(d.rect);
+        showHighlight(d.node && d.node.rect);
       });
 
       // ---- controls --------------------------------------------------------------------

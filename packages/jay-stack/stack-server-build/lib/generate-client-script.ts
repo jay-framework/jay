@@ -48,6 +48,9 @@ export interface GenerateClientScriptOptions {
     slowViewState?: object;
     /** Route pattern (e.g., /products/kitan{/:category}) for freeze entries */
     routePattern?: string;
+    /** Project-relative path of the page's jay-html (DL#219) — reported by the source-editing
+     *  inspector as the file the matched `lines` live in. */
+    sourceFile?: string;
 }
 
 /**
@@ -175,8 +178,9 @@ export function buildPageReloadHmrScript(): string {
  * jay:requestFreeze from parent, posts jay:freeze back with the freeze ID.
  * Includes visual feedback: white flash + camera shutter sound.
  */
-function buildFreezeScript(routePattern?: string): string {
+function buildFreezeScript(routePattern?: string, sourceFile?: string): string {
     const routePatternLiteral = routePattern ? `'${routePattern}'` : 'undefined';
+    const sourceFileLiteral = sourceFile ? JSON.stringify(sourceFile) : 'undefined';
     return `
       // Page Freeze (DL#127, DL#128 iframe addendum)
       // Sticky embed mode: URL param sets a session cookie so in-iframe navigation preserves it
@@ -234,47 +238,49 @@ function buildFreezeScript(routePattern?: string): string {
       // Source-editing inspector (DL#219). Resolves a viewport point/rect to the jay-dev-* source
       // markers emitted when the dev server runs with sourceEditing on. Harmless without markers —
       // it simply finds no jay-dev-src and replies node:null. Reply carries source LOCATORS (line
-      // range + route), not resolved bindings: the agent reads the jay-html itself.
-      function __jayIsRegionWrapper(el) {
-        const style = (el.getAttribute && el.getAttribute('style')) || '';
-        return style.split(' ').join('').indexOf('display:contents') >= 0;
+      // ranges + route) plus runtime identities (forEach record id, region name + static props);
+      // the agent reads bound expressions / collection / if-conditions from the jay-html itself.
+      function __jayLines(el) {
+        const s = el.getAttribute('jay-dev-src');
+        if (!s) return null;
+        const parts = s.split(':');
+        return { from: parseInt(parts[0], 10), to: parseInt(parts[1], 10) };
       }
+      // A significant enclosing frame: a forEach item root or a region boundary. Returns null for
+      // plain wrapper elements (the agent reconstructs those from source via node.lines).
       function __jayFrame(el) {
-        const frame = { tag: el.tagName ? el.tagName.toLowerCase() : '' };
-        const src = el.getAttribute('jay-dev-src');
-        if (src) frame.src = src;
         const item = el.getAttribute('jay-dev-item');
-        if (item) { frame.item = item; frame.kind = 'forEach'; }
-        if (__jayIsRegionWrapper(el)) {
-          frame.region = true;
-          frame.kind = frame.kind || 'region';
-          const ref = el.getAttribute('class');
-          if (ref) frame.ref = ref;
+        if (item) return { kind: 'forEach', lines: __jayLines(el), itemId: item };
+        const region = el.getAttribute('jay-dev-region');
+        if (region) {
+          const frame = { kind: 'region', lines: __jayLines(el), name: region };
+          const rawProps = el.getAttribute('jay-dev-region-props');
+          if (rawProps) { try { frame.props = JSON.parse(decodeURIComponent(rawProps)); } catch (e) {} }
+          return frame;
         }
-        return frame;
+        return null;
       }
       function __jayResolveElement(el) {
         if (!el) return null;
-        // Walk el up to (but excluding) <body>, collecting source frames.
+        // Walk el up to (but excluding) <body>.
         const entries = [];
         let cur = el;
         while (cur && cur.nodeType === 1 && cur.tagName && cur.tagName.toLowerCase() !== 'body') {
-          entries.push({ el: cur, frame: __jayFrame(cur) });
+          entries.push(cur);
           cur = cur.parentElement;
         }
         // Target = nearest element at/above el carrying a source marker.
-        let targetIdx = -1;
+        let targetEl = null;
         for (let i = 0; i < entries.length; i++) {
-          if (entries[i].frame.src) { targetIdx = i; break; }
+          if (entries[i].getAttribute('jay-dev-src')) { targetEl = entries[i]; break; }
         }
-        if (targetIdx < 0) return null;
-        const targetEl = entries[targetIdx].el;
-        // Stack = only the semantically significant enclosing frames (forEach item roots and
-        // region/headless boundaries), innermost → outermost. Plain wrapper elements are omitted:
-        // the agent reads the full hierarchy from the source file via node.src.
-        const stack = entries
-          .map((e) => e.frame)
-          .filter((f) => f.item || f.region);
+        if (!targetEl) return null;
+        // Stack = only the significant enclosing frames (forEach + region), innermost → outermost.
+        const stack = [];
+        for (let i = 0; i < entries.length; i++) {
+          const f = __jayFrame(entries[i]);
+          if (f) stack.push(f);
+        }
         const r = targetEl.getBoundingClientRect();
         const attrs = {};
         ['src', 'href', 'value'].forEach((name) => {
@@ -282,12 +288,14 @@ function buildFreezeScript(routePattern?: string): string {
           if (v != null) attrs[name] = v;
         });
         const node = {
-          src: entries[targetIdx].frame.src,
-          tag: entries[targetIdx].frame.tag,
+          lines: __jayLines(targetEl),
+          tag: targetEl.tagName ? targetEl.tagName.toLowerCase() : '',
           text: ((targetEl.textContent || '').trim()).slice(0, 200),
+          // rect belongs to the node (its on-screen box), for the parent to overlay a highlight.
+          rect: { x: r.x, y: r.y, width: r.width, height: r.height },
         };
         if (Object.keys(attrs).length) node.attrs = attrs;
-        return { node, stack, rect: { x: r.x, y: r.y, width: r.width, height: r.height } };
+        return { node, stack };
       }
       function __jayInspectPoint(x, y) {
         return __jayResolveElement(document.elementFromPoint(x, y));
@@ -332,11 +340,11 @@ function buildFreezeScript(routePattern?: string): string {
             window.parent.postMessage({
               type: 'jay:inspectResult',
               requestId: d.requestId,
-              node: result ? result.node : null,
-              stack: result ? result.stack : [],
+              file: ${sourceFileLiteral},
               route: window.location.pathname,
               routePattern: ${routePatternLiteral},
-              rect: result ? result.rect : null,
+              node: result ? result.node : null,   // node.rect is the matched element's on-screen box
+              stack: result ? result.stack : [],
             }, '*');
           }
         });
@@ -372,7 +380,7 @@ export function buildAutomationWrap(
 
     const appendLine = appendDom ? `\n      target.appendChild(wrapped.element.dom);` : '';
 
-    const freezeScript = buildFreezeScript(options.routePattern);
+    const freezeScript = buildFreezeScript(options.routePattern, options.sourceFile);
 
     if (hasSlowViewState) {
         return `

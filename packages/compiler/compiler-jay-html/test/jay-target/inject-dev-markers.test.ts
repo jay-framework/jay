@@ -196,9 +196,31 @@ describe('injectDevMarkers', () => {
             const card = body.querySelector('jay\\:card')!;
             expect(src(card)).toBe('4:4');
             expect(card.getAttribute(DEV_ITEM_ATTR)).toBeFalsy();
-            // Region props stay untouched — the inspector reads them from the source fragment.
+            // Region props stay untouched — the inspector reads bound props from the source fragment.
             expect(card.getAttribute('title')).toBe('{p.name}');
             expect(card.getAttribute('count')).toBe('{p.count}');
+            // Region identity: contract name is stamped; no static props here (both are bound).
+            expect(card.getAttribute('jay-dev-region')).toBe('card');
+            expect(card.getAttribute('jay-dev-region-props')).toBeFalsy();
+        });
+
+        it('captures a region contract name and its static props (skipping bound + directives)', () => {
+            const html = doc(
+                '<html>',
+                '<body>',
+                '<main>',
+                '  <jay:test-widget itemId="alpha" label="{title}" ref="w">inner</jay:test-widget>',
+                '</main>',
+                '</body>',
+                '</html>',
+            );
+            const body = bodyOf(injectDevMarkers(html));
+            const widget = body.querySelector('jay\\:test-widget')!;
+            expect(widget.getAttribute('jay-dev-region')).toBe('test-widget');
+            // Only the static `itemId` is snapshotted; the bound `label` and directive `ref` are skipped.
+            // Props are URL-encoded so the value carries no `{` (which would read as a binding).
+            const props = JSON.parse(decodeURIComponent(widget.getAttribute('jay-dev-region-props')!));
+            expect(props).toEqual({ itemId: 'alpha' });
         });
 
         it('marks a conditional element', () => {

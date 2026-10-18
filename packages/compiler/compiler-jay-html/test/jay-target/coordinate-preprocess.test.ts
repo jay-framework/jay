@@ -5,6 +5,8 @@ import { assignCoordinates } from '../../lib/jay-target/assign-coordinates';
 const COORD = 'jay-coordinate-base';
 const SCOPE = 'jay-scope';
 const DEV_SRC = 'jay-dev-src';
+const DEV_REGION = 'jay-dev-region';
+const DEV_REGION_PROPS = 'jay-dev-region-props';
 
 function getBody(html: string): HTMLElement {
     const root = parse(html);
@@ -255,11 +257,35 @@ describe('assignCoordinates', () => {
                 assignCoordinates(body, { headlessContractNames: headlessNames });
 
                 const jayTag = body.querySelector('jay\\:product-card')!;
-                // Ref-less single child → no wrapper synthesized.
+                // Ref-less single child with no region marker → no wrapper synthesized (prod behavior).
                 expect(jayTag.querySelector('div')).toBeFalsy();
                 expect(jayTag.getAttribute(DEV_SRC)).toBeFalsy();
                 // The child keeps its own marker — the region's source is recoverable from it.
                 expect(jayTag.querySelector('article')!.getAttribute(DEV_SRC)).toBe('5:5');
+            });
+
+            it('wraps a ref-less single-child region when a region marker is present, moving name + props', () => {
+                const encodedProps = encodeURIComponent(JSON.stringify({ productId: '123' }));
+                const body = getBody(`<body><div>
+                    <jay:product-card jay-dev-src="4:6" jay-dev-region="product-card" jay-dev-region-props="${encodedProps}">
+                        <article class="card" jay-dev-src="5:5"><h2>Product</h2></article>
+                    </jay:product-card>
+                </div></body>`);
+                assignCoordinates(body, { headlessContractNames: headlessNames });
+
+                const jayTag = body.querySelector('jay\\:product-card')!;
+                // With a region marker (source-editing on), a wrapper is synthesized as the region root.
+                const wrapper = jayTag.querySelector('div')!;
+                expect(wrapper.getAttribute('style')).toBe('display: contents');
+                expect(wrapper.getAttribute(DEV_SRC)).toBe('4:6');
+                expect(wrapper.getAttribute(DEV_REGION)).toBe('product-card');
+                expect(JSON.parse(decodeURIComponent(wrapper.getAttribute(DEV_REGION_PROPS)!))).toEqual({
+                    productId: '123',
+                });
+                // All markers stripped off the tag.
+                expect(jayTag.getAttribute(DEV_SRC)).toBeFalsy();
+                expect(jayTag.getAttribute(DEV_REGION)).toBeFalsy();
+                expect(jayTag.getAttribute(DEV_REGION_PROPS)).toBeFalsy();
             });
         });
     });
