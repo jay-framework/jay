@@ -443,3 +443,25 @@ Rationale:
 **If AIditor later wants server-side resolution**, add it as a **separate** dev-server API — `jay:resolveBinding { file, lines }` / `jay:resolveContract { name }` → `{ contractPath, plugin, guidePath }` — distinct from inspect, built against the real need. Not now (YAGNI).
 
 Cheap Part-B follow-up worth confirming when editing lands: that `plugins-index.yaml` surfaces the per-contract editing guide, so the agent's lookup is a single hop.
+
+### Part B2/B3 (partial) — config docs, usage guides, and coverage validation
+
+Pulled forward from the deferred Part B (docs + validation), implemented:
+
+- **Config docs (B / discoverability):** `devServer.sourceEditing` (and `allowedHosts`) documented in the
+  **developer** `configuration.md` options; a dedicated **devops** `source-editing.md` covers enabling it +
+  the AIditor usage.
+- **Usage guide (B3, devops):** `agent-kit-template/devops/source-editing.md` — enable `sourceEditing`, open
+  in `?_jay_embed`, the `jay:inspectPoint`/`jay:inspectRect` → `jay:inspectResult` protocol (the shipped shape:
+  `file`, `route`/`routePattern`, `node:{lines,tag,html,rect,contentFromBinding?}`, `stack:[forEach/region]`),
+  and the static-vs-bound decision rule. Linked from devops INSTRUCTIONS.
+- **Plugin guide (B1/B3, plugin):** `agent-kit-template/plugin/source-editing.md` — declare each contract's
+  editing story in `plugin.yaml` (`editingGuide: <path.md>` or `readonly: true`); what the guide contains
+  (identity from the inspector stack → `devOnly` write/URL action). Linked from plugin INSTRUCTIONS.
+- **Coverage validation (B2):** `plugin.yaml` contract entries gained optional `editingGuide` / `readonly`
+  (`PluginManifest.contracts[]` in `compiler-shared/plugin-resolution.ts`). `plugin-validator`'s
+  `validateContract` now emits a `source-editing-coverage` **warning** when a contract declares neither (and
+  checks the `editingGuide` file exists). Prevention-first: a nudge, not a build-blocker.
+
+Still deferred: surfacing `editingGuide` into `plugins-index.yaml` (agent reads it from `plugin.yaml` for now);
+the wix-stores reference example + the AIditor companion DL (B4/B5).

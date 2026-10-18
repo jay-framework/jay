@@ -879,6 +879,30 @@ async function validateContract(
 ): Promise<void> {
     result.contractsChecked = (result.contractsChecked || 0) + 1;
 
+    // DL#219 — source-editing coverage: a contract should declare how its bound data is edited, either an
+    // editing guide (markdown) or `readonly`. Prevention-first: warn (don't block) so an agent/AIditor
+    // knows whether/how to edit content bound to this contract.
+    const hasEditingGuide =
+        typeof contract.editingGuide === 'string' && contract.editingGuide.length > 0;
+    const isReadonly = contract.readonly === true;
+    if (!hasEditingGuide && !isReadonly) {
+        result.warnings.push({
+            type: 'source-editing-coverage',
+            message: `Contract "${contract.name}" declares no source-editing story. Add "editingGuide: <path.md>" (how to edit its bound data) or "readonly: true" (not editable in place).`,
+            location: `plugin.yaml contracts[${index}]`,
+            suggestion: 'See the plugin source-editing guide (DL#219).',
+        });
+    } else if (hasEditingGuide) {
+        const guideFullPath = path.resolve(context.pluginPath, contract.editingGuide);
+        if (!fs.existsSync(guideFullPath)) {
+            result.warnings.push({
+                type: 'source-editing-coverage',
+                message: `Contract "${contract.name}" editingGuide file not found: ${contract.editingGuide}`,
+                location: `plugin.yaml contracts[${index}]`,
+            });
+        }
+    }
+
     const contractPath = resolveContractFile(contract.contract, context);
 
     if (!contractPath) {
