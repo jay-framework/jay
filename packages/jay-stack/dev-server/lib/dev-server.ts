@@ -55,6 +55,7 @@ import {
     HeadlessContractInfo,
     Contract,
     JAY_IMPORT_RESOLVER,
+    clearExportedTypesCache,
     discoverHeadlessInstances,
     assignCoordinatesToJayHtml,
     injectDevMarkers,
@@ -1810,6 +1811,15 @@ function setupSlowRenderCacheInvalidation(
     };
 
     vite.watcher.on('change', (changedPath) => {
+        // Perf (DL#224): a change to a .ts / .d.ts / .jay-contract can alter a component's analyzed
+        // exported types — directly, or transitively via an imported type. The analyzeExportedTypes
+        // cache keys on the analyzed file's own mtime, which catches a direct edit but not a transitive
+        // one (e.g. a regenerated contract .d.ts while the component .ts is untouched). Clear it here so
+        // the next request re-analyzes. (jay-html template edits don't change exported types.)
+        if (/\.(ts|tsx|jay-contract)$/.test(changedPath)) {
+            clearExportedTypesCache();
+        }
+
         // CSS or component files linked from jay-html.
         // CSS content is inlined in the SSR output; component jay-html templates
         // are injected into pages. Both require cache invalidation on change.

@@ -42,7 +42,7 @@ export {
 export * from './contract';
 export * from './action';
 export { type JayImportResolver } from './jay-target/jay-import-resolver';
-export { JAY_IMPORT_RESOLVER } from './jay-target/jay-import-resolver';
+export { JAY_IMPORT_RESOLVER, clearExportedTypesCache } from './jay-target/jay-import-resolver';
 
 // Slow rendering
 export {

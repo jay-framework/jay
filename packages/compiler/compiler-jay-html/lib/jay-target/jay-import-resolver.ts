@@ -20,6 +20,45 @@ const require = createRequire(import.meta.url);
 
 export type { PluginComponentResolution };
 
+/**
+ * Cache for {@link JAY_IMPORT_RESOLVER.analyzeExportedTypes}. The TS type analysis (`ts.createProgram`)
+ * costs ~hundreds of ms per component file, and `parseJayFile` re-analyzes every local `src=` import on
+ * every call — once per SSR request in the dev server (DL — "dev-server SSR perf"). A page composing
+ * local components was ~400–1500ms of pure re-analysis per request. Keyed by resolved file path + mtime,
+ * so an edit to the analyzed file busts its entry; also speeds the production build (a component imported
+ * by many pages is analyzed once). Caveat: keyed on the analyzed file's own mtime — a change to a *type
+ * it imports* (e.g. a regenerated contract .d.ts) without touching the component file is not detected;
+ * restart the dev server in that rare case.
+ */
+const exportedTypesCache = new Map<string, JayType[]>();
+
+/**
+ * Clear the {@link JAY_IMPORT_RESOLVER.analyzeExportedTypes} cache. The dev server calls this when a
+ * `.ts` / `.d.ts` / `.jay-contract` changes: the cache keys on the analyzed file's own mtime, so a change
+ * to a *type it imports* (e.g. a regenerated contract `.d.ts`) without touching the component is otherwise
+ * not detected. Clearing is cheap — the next request re-analyzes only the pages it renders.
+ */
+export function clearExportedTypesCache(): void {
+    exportedTypesCache.clear();
+}
+
+/** A cache key from the analyzed file's resolved path + mtime + tsconfig, or undefined if unstattable. */
+function exportedTypesCacheKey(
+    fullPath: string,
+    options: ResolveTsConfigOptions,
+): string | undefined {
+    // `fullPath` may be extensionless (analyzeExportedTypes' autoAddExtension appends .ts) — stat the
+    // real file so mtime busts the entry on edit.
+    for (const candidate of [fullPath, `${fullPath}.ts`, `${fullPath}.tsx`]) {
+        try {
+            return `${candidate}::${fs.statSync(candidate).mtimeMs}::${options.relativePath ?? ''}`;
+        } catch {
+            // try the next candidate extension
+        }
+    }
+    return undefined;
+}
+
 export interface JayImportResolver {
     resolveLink(importingModuleDir: string, link: string): string;
     /** Load a contract from an absolute file path */
@@ -63,7 +102,14 @@ export interface JayImportResolver {
 
 export const JAY_IMPORT_RESOLVER: JayImportResolver = {
     analyzeExportedTypes(fullPath: string, options: ResolveTsConfigOptions): JayType[] {
-        return analyzeExportedTypes(fullPath, options);
+        const key = exportedTypesCacheKey(fullPath, options);
+        if (key) {
+            const cached = exportedTypesCache.get(key);
+            if (cached) return cached;
+        }
+        const result = analyzeExportedTypes(fullPath, options);
+        if (key) exportedTypesCache.set(key, result);
+        return result;
     },
     loadContract(fullPath: string): WithValidations<Contract> {
         const content = fs.readFileSync(fullPath).toString();
