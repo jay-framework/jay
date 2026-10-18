@@ -240,11 +240,13 @@ function buildFreezeScript(routePattern?: string, sourceFile?: string): string {
       // it simply finds no jay-dev-src and replies node:null. Reply carries source LOCATORS (line
       // ranges + route) plus runtime identities (forEach record id, region name + static props);
       // the agent reads bound expressions / collection / if-conditions from the jay-html itself.
-      function __jayLines(el) {
-        const s = el.getAttribute('jay-dev-src');
+      function __jayParseLines(s) {
         if (!s) return null;
         const parts = s.split(':');
         return { from: parseInt(parts[0], 10), to: parseInt(parts[1], 10) };
+      }
+      function __jayLines(el) {
+        return __jayParseLines(el.getAttribute('jay-dev-src'));
       }
       // A significant enclosing frame: a forEach item root or a region boundary. Returns null for
       // plain wrapper elements (the agent reconstructs those from source via node.lines).
@@ -253,12 +255,39 @@ function buildFreezeScript(routePattern?: string, sourceFile?: string): string {
         if (item) return { kind: 'forEach', lines: __jayLines(el), itemId: item };
         const region = el.getAttribute('jay-dev-region');
         if (region) {
-          const frame = { kind: 'region', lines: __jayLines(el), name: region };
+          // Region lines live in jay-dev-region-src (the <jay:…> tag's range), distinct from the
+          // root element's own jay-dev-src.
+          const frame = { kind: 'region', lines: __jayParseLines(el.getAttribute('jay-dev-region-src')), name: region };
           const rawProps = el.getAttribute('jay-dev-region-props');
           if (rawProps) { try { frame.props = JSON.parse(decodeURIComponent(rawProps)); } catch (e) {} }
           return frame;
         }
         return null;
+      }
+      // One-level HTML of an element: its open tag (authored attrs only, jay-* stripped), its direct
+      // children shown as empty tags (grandchildren elided with …), and its text — so the agent sees
+      // exactly what was clicked inside generated content without the whole subtree.
+      function __jayOneLevelHtml(el) {
+        if (!el || !el.tagName) return '';
+        const tag = el.tagName.toLowerCase();
+        let attrs = '';
+        for (let i = 0; i < el.attributes.length; i++) {
+          const a = el.attributes[i];
+          if (a.name.indexOf('jay-') === 0) continue; // strip jay-dev-* / jay-coordinate
+          attrs += ' ' + a.name + '="' + a.value + '"';
+        }
+        let inner = '';
+        const kids = el.childNodes || [];
+        for (let i = 0; i < kids.length; i++) {
+          const c = kids[i];
+          if (c.nodeType === 3) inner += (c.textContent || '');
+          else if (c.nodeType === 1) {
+            const ct = c.tagName.toLowerCase();
+            inner += '<' + ct + '>' + (c.childNodes && c.childNodes.length ? '…' : '') + '</' + ct + '>';
+          }
+        }
+        if (inner.length > 300) inner = inner.slice(0, 300) + '…';
+        return '<' + tag + attrs + '>' + inner + '</' + tag + '>';
       }
       function __jayResolveElement(el) {
         if (!el) return null;
@@ -269,32 +298,37 @@ function buildFreezeScript(routePattern?: string, sourceFile?: string): string {
           entries.push(cur);
           cur = cur.parentElement;
         }
-        // Target = nearest element at/above el carrying a source marker.
-        let targetEl = null;
+        // Source anchor = nearest element at/above el carrying a source marker (its line range).
+        let sourceEl = null;
         for (let i = 0; i < entries.length; i++) {
-          if (entries[i].getAttribute('jay-dev-src')) { targetEl = entries[i]; break; }
+          if (entries[i].getAttribute('jay-dev-src')) { sourceEl = entries[i]; break; }
         }
-        if (!targetEl) return null;
+        if (!sourceEl) return null;
         // Stack = only the significant enclosing frames (forEach + region), innermost → outermost.
         const stack = [];
         for (let i = 0; i < entries.length; i++) {
           const f = __jayFrame(entries[i]);
           if (f) stack.push(f);
         }
-        const r = targetEl.getBoundingClientRect();
-        const attrs = {};
-        ['src', 'href', 'value'].forEach((name) => {
-          const v = targetEl.getAttribute && targetEl.getAttribute(name);
-          if (v != null) attrs[name] = v;
-        });
+        // node describes the ACTUAL element el (what the pointer hit / the rect chose). html — a
+        // one-level rendering (open tag with authored attrs, direct children as empty tags, inline
+        // text; grandchildren + long text elided) — is the single content field: it carries the tag,
+        // attributes (src/href/value), and value, bounded in size. lines come from the source anchor;
+        // for bound/generated content (an html-string value) el has no jay-dev-src of its own, so
+        // lines point to the ENCLOSING binding (the editable source) and contentFromBinding flags it.
+        const r = el.getBoundingClientRect();
         const node = {
-          lines: __jayLines(targetEl),
-          tag: targetEl.tagName ? targetEl.tagName.toLowerCase() : '',
-          text: ((targetEl.textContent || '').trim()).slice(0, 200),
-          // rect belongs to the node (its on-screen box), for the parent to overlay a highlight.
+          lines: __jayLines(sourceEl),
+          tag: el.tagName ? el.tagName.toLowerCase() : '',
+          html: __jayOneLevelHtml(el),
           rect: { x: r.x, y: r.y, width: r.width, height: r.height },
         };
-        if (Object.keys(attrs).length) node.attrs = attrs;
+        const childEls = Array.prototype.slice.call(el.children || []);
+        const childrenGenerated =
+          childEls.length > 0 && childEls.every((c) => !c.getAttribute('jay-dev-src'));
+        if (!el.getAttribute('jay-dev-src') || childrenGenerated) {
+          node.contentFromBinding = true;
+        }
         return { node, stack };
       }
       function __jayInspectPoint(x, y) {

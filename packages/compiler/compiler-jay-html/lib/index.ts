@@ -27,6 +27,7 @@ export {
     DEV_ITEM_ATTR,
     DEV_REGION_ATTR,
     DEV_REGION_PROPS_ATTR,
+    DEV_REGION_SRC_ATTR,
 } from './jay-target/inject-dev-markers';
 export { parseJayFile, getJayHtmlImports } from './jay-target/jay-html-parser';
 

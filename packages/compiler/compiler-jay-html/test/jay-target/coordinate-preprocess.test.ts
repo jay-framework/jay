@@ -7,6 +7,7 @@ const SCOPE = 'jay-scope';
 const DEV_SRC = 'jay-dev-src';
 const DEV_REGION = 'jay-dev-region';
 const DEV_REGION_PROPS = 'jay-dev-region-props';
+const DEV_REGION_SRC = 'jay-dev-region-src';
 
 function getBody(html: string): HTMLElement {
     const root = parse(html);
@@ -210,14 +211,18 @@ describe('assignCoordinates', () => {
             expect(body.querySelector('p')!.getAttribute(COORD)).toBe('S0/0/1');
         });
 
-        // DL#219 — a region's dev source marker (`jay-dev-src`, a static line range injected on the
-        // <jay:…> tag) must move onto the region's rendered root (the scope-anchor wrapper) so the
-        // source-editing inspector can read it; and must be stripped from the tag so it is not emitted
-        // as a spurious component prop.
-        describe('jay-dev-src on regions (DL#219)', () => {
-            it('moves jay-dev-src from an explicit-ref region tag onto the wrapper div', () => {
+        // DL#219 — region dev markers (`jay-dev-region` + props + the region's own line range) are
+        // injected on the <jay:…> tag (a directive that never reaches the DOM). assign-coordinates
+        // moves them onto the region's EXISTING rendered root — the scope-anchor wrapper when one
+        // exists, else the single rendered child — WITHOUT adding a DOM level (an extra level desyncs
+        // SSR/hydrate coordinates for nested regions). The region's lines live in jay-dev-region-src,
+        // distinct from the root element's own jay-dev-src.
+        describe('region dev markers (DL#219)', () => {
+            const encodedProps = encodeURIComponent(JSON.stringify({ productId: '123' }));
+
+            it('attaches region markers to the scope-anchor wrapper of an explicit-ref region', () => {
                 const body = getBody(`<body><div>
-                    <jay:product-card productId="123" ref="hero" jay-dev-src="4:9">
+                    <jay:product-card ref="hero" jay-dev-src="4:9" jay-dev-region="product-card" jay-dev-region-props="${encodedProps}">
                         <article class="card"><h2>Product</h2></article>
                     </jay:product-card>
                 </div></body>`);
@@ -226,13 +231,21 @@ describe('assignCoordinates', () => {
                 const jayTag = body.querySelector('jay\\:product-card')!;
                 const wrapper = jayTag.querySelector('div')!;
                 expect(wrapper.getAttribute('style')).toBe('display: contents');
-                expect(wrapper.getAttribute(DEV_SRC)).toBe('4:9');
-                expect(jayTag.getAttribute(DEV_SRC)).toBeFalsy();
+                expect(wrapper.getAttribute(DEV_REGION)).toBe('product-card');
+                expect(wrapper.getAttribute(DEV_REGION_SRC)).toBe('4:9');
+                expect(
+                    JSON.parse(decodeURIComponent(wrapper.getAttribute(DEV_REGION_PROPS)!)),
+                ).toEqual({
+                    productId: '123',
+                });
+                // Markers stripped off the tag; the wrapper is not itself a `node` (no jay-dev-src).
+                expect(jayTag.getAttribute(DEV_REGION)).toBeFalsy();
+                expect(wrapper.getAttribute(DEV_SRC)).toBeFalsy();
             });
 
             it('is idempotent across two assignCoordinates passes', () => {
                 const body = getBody(`<body><div>
-                    <jay:product-card productId="123" ref="hero" jay-dev-src="4:9">
+                    <jay:product-card ref="hero" jay-dev-src="4:9" jay-dev-region="product-card">
                         <article class="card"><h2>Product</h2></article>
                     </jay:product-card>
                 </div></body>`);
@@ -244,28 +257,11 @@ describe('assignCoordinates', () => {
                     .querySelectorAll('div')
                     .filter((d) => (d.getAttribute('style') ?? '').includes('display: contents'));
                 expect(wrappers).toHaveLength(1);
-                expect(wrappers[0].getAttribute(DEV_SRC)).toBe('4:9');
-                expect(jayTag.getAttribute(DEV_SRC)).toBeFalsy();
+                expect(wrappers[0].getAttribute(DEV_REGION)).toBe('product-card');
+                expect(wrappers[0].getAttribute(DEV_REGION_SRC)).toBe('4:9');
             });
 
-            it('strips the tag marker for a ref-less single-child region and leaves the child intact', () => {
-                const body = getBody(`<body><div>
-                    <jay:product-card productId="123" jay-dev-src="4:6">
-                        <article class="card" jay-dev-src="5:5"><h2>Product</h2></article>
-                    </jay:product-card>
-                </div></body>`);
-                assignCoordinates(body, { headlessContractNames: headlessNames });
-
-                const jayTag = body.querySelector('jay\\:product-card')!;
-                // Ref-less single child with no region marker → no wrapper synthesized (prod behavior).
-                expect(jayTag.querySelector('div')).toBeFalsy();
-                expect(jayTag.getAttribute(DEV_SRC)).toBeFalsy();
-                // The child keeps its own marker — the region's source is recoverable from it.
-                expect(jayTag.querySelector('article')!.getAttribute(DEV_SRC)).toBe('5:5');
-            });
-
-            it('wraps a ref-less single-child region when a region marker is present, moving name + props', () => {
-                const encodedProps = encodeURIComponent(JSON.stringify({ productId: '123' }));
+            it('attaches region markers to the single child of a ref-less region without wrapping', () => {
                 const body = getBody(`<body><div>
                     <jay:product-card jay-dev-src="4:6" jay-dev-region="product-card" jay-dev-region-props="${encodedProps}">
                         <article class="card" jay-dev-src="5:5"><h2>Product</h2></article>
@@ -274,18 +270,21 @@ describe('assignCoordinates', () => {
                 assignCoordinates(body, { headlessContractNames: headlessNames });
 
                 const jayTag = body.querySelector('jay\\:product-card')!;
-                // With a region marker (source-editing on), a wrapper is synthesized as the region root.
-                const wrapper = jayTag.querySelector('div')!;
-                expect(wrapper.getAttribute('style')).toBe('display: contents');
-                expect(wrapper.getAttribute(DEV_SRC)).toBe('4:6');
-                expect(wrapper.getAttribute(DEV_REGION)).toBe('product-card');
-                expect(JSON.parse(decodeURIComponent(wrapper.getAttribute(DEV_REGION_PROPS)!))).toEqual({
+                // No wrapper — the single child is the region root (no extra coordinate level).
+                expect(jayTag.querySelector('div')).toBeFalsy();
+                const article = jayTag.querySelector('article')!;
+                expect(article.getAttribute(DEV_REGION)).toBe('product-card');
+                expect(article.getAttribute(DEV_REGION_SRC)).toBe('4:6');
+                expect(
+                    JSON.parse(decodeURIComponent(article.getAttribute(DEV_REGION_PROPS)!)),
+                ).toEqual({
                     productId: '123',
                 });
-                // All markers stripped off the tag.
-                expect(jayTag.getAttribute(DEV_SRC)).toBeFalsy();
+                // The child keeps its own element line range for `node` resolution.
+                expect(article.getAttribute(DEV_SRC)).toBe('5:5');
+                // Markers stripped off the tag.
                 expect(jayTag.getAttribute(DEV_REGION)).toBeFalsy();
-                expect(jayTag.getAttribute(DEV_REGION_PROPS)).toBeFalsy();
+                expect(jayTag.getAttribute(DEV_SRC)).toBeFalsy();
             });
         });
     });

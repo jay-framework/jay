@@ -1,6 +1,7 @@
 import Node from 'node-html-parser/dist/nodes/node';
 import { HTMLElement, NodeType, parse as parseHtml } from 'node-html-parser';
 import { Import, ImportName, WithValidations } from '@jay-framework/compiler-shared';
+import { htmlElementTagNameMap } from './html-element-tag-name-map';
 
 /** Convert kebab-case to camelCase: scroll-carousel → scrollCarousel */
 function kebabToCamel(str: string): string {
@@ -172,8 +173,12 @@ export function getComponentName(
         return { name: componentName, kind: 'unknown' };
     }
 
-    // Legacy syntax: plain element name matching an import
-    if (importedSymbols.has(tagName)) {
+    // Legacy syntax: plain element name matching an import — but NEVER a standard HTML element
+    // (DL#221). A component/region named after an HTML tag (e.g. `section`, `button`) adds its
+    // symbol to `importedSymbols`; without this guard a plain `<section>`/`<button>` in the template
+    // would be miscompiled as `childComp(section, …)`. HTML-named components are reachable only via
+    // `<jay:section>` (the jay-prefixed branch above).
+    if (importedSymbols.has(tagName) && !(tagName in htmlElementTagNameMap)) {
         return { name: tagName, kind: 'headful' };
     }
 

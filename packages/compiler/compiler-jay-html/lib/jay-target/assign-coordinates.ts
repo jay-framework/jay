@@ -10,7 +10,12 @@
  */
 
 import { HTMLElement, Node, NodeType, parse } from 'node-html-parser';
-import { DEV_SRC_ATTR, DEV_REGION_ATTR, DEV_REGION_PROPS_ATTR } from './inject-dev-markers';
+import {
+    DEV_SRC_ATTR,
+    DEV_REGION_ATTR,
+    DEV_REGION_PROPS_ATTR,
+    DEV_REGION_SRC_ATTR,
+} from './inject-dev-markers';
 
 const COORD_ATTR = 'jay-coordinate-base';
 export const SCOPE_ATTR = 'jay-scope';
@@ -236,32 +241,35 @@ function assignHeadlessInstance(
     const alreadyWrapped =
         significantTemplateChildren.length === 1 &&
         isScopeAnchorDiv(significantTemplateChildren[0]);
-    // DL#219 — dev-mode markers (`jay-dev-src` line range, `jay-dev-region` contract name,
-    // `jay-dev-region-props` static-prop snapshot) sit on the <jay:…> tag. The tag is a directive,
-    // not a rendered element: on the element target they ride along as spurious component props, on
-    // the server target they vanish — either way the region never reaches the DOM for the inspector.
-    // Move them onto the region's rendered root (the `display:contents` wrapper). They are static
-    // strings, so the wrapper's child scope is irrelevant (unlike bound props, see Phase A2). When
-    // a region marker is present (i.e. source-editing is on) a ref-less single-child region — which
-    // normally renders without a wrapper — gets one too, so every region has a boundary element the
-    // inspector can report as a `region` frame.
-    const devSrc = element.getAttribute(DEV_SRC_ATTR);
-    const devRegion = element.getAttribute(DEV_REGION_ATTR);
-    const devRegionProps = element.getAttribute(DEV_REGION_PROPS_ATTR);
-    if (
-        !alreadyWrapped &&
-        (explicitRef || significantTemplateChildren.length > 1 || !!devRegion)
-    ) {
+    if (!alreadyWrapped && (explicitRef || significantTemplateChildren.length > 1)) {
         const wrapper = parse('<div></div>').querySelector('div')!;
         if (explicitRef) wrapper.setAttribute('class', ref);
         wrapper.setAttribute('style', 'display: contents');
-        if (devSrc) wrapper.setAttribute(DEV_SRC_ATTR, devSrc);
-        if (devRegion) wrapper.setAttribute(DEV_REGION_ATTR, devRegion);
-        if (devRegionProps) wrapper.setAttribute(DEV_REGION_PROPS_ATTR, devRegionProps);
         const children = element.childNodes;
         element.innerHTML = '';
         children.forEach((child) => wrapper.appendChild(child as any));
         element.appendChild(wrapper as any);
+    }
+
+    // DL#219 — dev-mode region markers (`jay-dev-region` contract name, `jay-dev-region-props` static
+    // props, and the region's own line range) sit on the <jay:…> tag, which is a directive and never
+    // reaches the DOM. Attach them to the region's EXISTING rendered root — the scope-anchor wrapper
+    // if one was synthesized above, otherwise the single rendered child — WITHOUT adding a DOM level.
+    // (An earlier version wrapped ref-less single-child regions to host the markers; that extra
+    // coordinate level desynced SSR vs hydrate for nested regions, so markers now ride the existing
+    // root instead.) The region's line range lives in its own `jay-dev-region-src` so it does not
+    // clash with the root element's own `jay-dev-src`. Static strings → child scope is irrelevant.
+    const devSrc = element.getAttribute(DEV_SRC_ATTR);
+    const devRegion = element.getAttribute(DEV_REGION_ATTR);
+    const devRegionProps = element.getAttribute(DEV_REGION_PROPS_ATTR);
+    if (devRegion) {
+        const regionRoot = element.childNodes.find((n) => n.nodeType === NodeType.ELEMENT_NODE) as
+            HTMLElement | undefined;
+        if (regionRoot) {
+            regionRoot.setAttribute(DEV_REGION_ATTR, devRegion);
+            if (devRegionProps) regionRoot.setAttribute(DEV_REGION_PROPS_ATTR, devRegionProps);
+            if (devSrc) regionRoot.setAttribute(DEV_REGION_SRC_ATTR, devSrc);
+        }
     }
     // Strip the markers off the <jay:…> tag in every case so they are never emitted as props.
     if (devSrc) element.removeAttribute(DEV_SRC_ATTR);

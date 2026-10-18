@@ -29,6 +29,11 @@ export const DEV_REGION_ATTR = 'jay-dev-region';
 /** JSON of a region's STATIC (non-bound, non-directive) props — the live identity values the
  *  inspector can surface without reading source. Bound props stay source-only (parent-scoped). */
 export const DEV_REGION_PROPS_ATTR = 'jay-dev-region-props';
+/** The region's own `<jay:…>` line range, attached to the region's rendered root alongside
+ *  `jay-dev-region`. Distinct from that element's own `jay-dev-src` (which is the element's lines):
+ *  the region root is a shared element (the scope-anchor wrapper, or a ref-less region's single
+ *  child), so the region's source lives in its own attribute to avoid a dedicated DOM level. */
+export const DEV_REGION_SRC_ATTR = 'jay-dev-region-src';
 
 /** Region-tag attributes that are directives, not data props — excluded from the props snapshot. */
 const REGION_NON_PROP_ATTRS = new Set([

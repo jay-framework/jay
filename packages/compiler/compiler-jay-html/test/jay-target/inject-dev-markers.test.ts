@@ -219,7 +219,9 @@ describe('injectDevMarkers', () => {
             expect(widget.getAttribute('jay-dev-region')).toBe('test-widget');
             // Only the static `itemId` is snapshotted; the bound `label` and directive `ref` are skipped.
             // Props are URL-encoded so the value carries no `{` (which would read as a binding).
-            const props = JSON.parse(decodeURIComponent(widget.getAttribute('jay-dev-region-props')!));
+            const props = JSON.parse(
+                decodeURIComponent(widget.getAttribute('jay-dev-region-props')!),
+            );
             expect(props).toEqual({ itemId: 'alpha' });
         });
 

@@ -15,10 +15,18 @@
         --accent: #4aa3ff;
         --accent-soft: rgba(74, 163, 255, 0.18);
       }
-      * { box-sizing: border-box; }
+      * {
+        box-sizing: border-box;
+      }
       body {
         margin: 0;
-        font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        font:
+          14px/1.5 ui-sans-serif,
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          sans-serif;
         background: var(--bg);
         color: var(--ink);
       }
@@ -26,8 +34,15 @@
         padding: 14px 20px;
         border-bottom: 1px solid var(--line);
       }
-      header h1 { margin: 0 0 2px; font-size: 16px; }
-      header p { margin: 0; color: var(--muted); font-size: 12.5px; }
+      header h1 {
+        margin: 0 0 2px;
+        font-size: 16px;
+      }
+      header p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12.5px;
+      }
       .controls {
         display: flex;
         flex-wrap: wrap;
@@ -36,7 +51,10 @@
         padding: 12px 20px;
         border-bottom: 1px solid var(--line);
       }
-      .controls label { color: var(--muted); font-size: 12px; }
+      .controls label {
+        color: var(--muted);
+        font-size: 12px;
+      }
       select,
       input[type='text'],
       button {
@@ -47,21 +65,49 @@
         border-radius: 7px;
         padding: 6px 10px;
       }
-      input[type='text'] { min-width: 220px; }
-      button { cursor: pointer; }
-      button:hover { border-color: var(--accent); }
-      .toggle { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
+      input[type='text'] {
+        min-width: 220px;
+      }
+      button {
+        cursor: pointer;
+      }
+      button:hover {
+        border-color: var(--accent);
+      }
+      .toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--muted);
+      }
       main {
         display: grid;
         grid-template-columns: 1fr 420px;
         gap: 0;
         height: calc(100vh - 128px);
       }
-      .stage { position: relative; overflow: hidden; border-right: 1px solid var(--line); }
-      iframe { width: 100%; height: 100%; border: 0; background: #fff; display: block; }
+      .stage {
+        position: relative;
+        overflow: hidden;
+        border-right: 1px solid var(--line);
+      }
+      iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: #fff;
+        display: block;
+      }
       /* Transparent overlay captures pointer events so they never reach the iframe. */
-      .overlay { position: absolute; inset: 0; cursor: crosshair; }
-      .overlay.off { pointer-events: none; cursor: default; }
+      .overlay {
+        position: absolute;
+        inset: 0;
+        cursor: crosshair;
+      }
+      .overlay.off {
+        pointer-events: none;
+        cursor: default;
+      }
       .hl {
         position: absolute;
         border: 2px solid var(--accent);
@@ -77,25 +123,61 @@
         pointer-events: none;
         display: none;
       }
-      .result { padding: 14px 16px; overflow: auto; }
-      .result h2 { margin: 0 0 8px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
-      .summary { margin-bottom: 14px; }
-      .summary .row { display: flex; gap: 8px; padding: 3px 0; border-bottom: 1px solid var(--line); }
-      .summary .k { color: var(--muted); min-width: 92px; }
-      .summary .v { color: var(--ink); word-break: break-word; }
-      .summary .v.empty { color: #5f6b77; }
+      .result {
+        padding: 14px 16px;
+        overflow: auto;
+      }
+      .result h2 {
+        margin: 0 0 8px;
+        font-size: 13px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .summary {
+        margin-bottom: 14px;
+      }
+      .summary .row {
+        display: flex;
+        gap: 8px;
+        padding: 3px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .summary .k {
+        color: var(--muted);
+        min-width: 92px;
+      }
+      .summary .v {
+        color: var(--ink);
+        word-break: break-word;
+      }
+      .summary .v.empty {
+        color: #5f6b77;
+      }
       pre {
         margin: 0;
         padding: 12px;
         background: var(--panel);
         border: 1px solid var(--line);
         border-radius: 8px;
-        font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+        font:
+          12px/1.5 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
         white-space: pre-wrap;
         word-break: break-word;
       }
-      .hint { color: var(--muted); font-size: 12px; margin-top: 10px; }
-      code { background: var(--panel); padding: 1px 5px; border-radius: 4px; }
+      .hint {
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 10px;
+      }
+      code {
+        background: var(--panel);
+        padding: 1px 5px;
+        border-radius: 4px;
+      }
     </style>
   </head>
   <body>
@@ -103,9 +185,9 @@
       <h1>"What is this?" — Jay source inspector</h1>
       <p>
         Hover (or drag a box) over the page on the left. The parent posts
-        <code>jay:inspectPoint</code> / <code>jay:inspectRect</code> into the iframe; the reply maps the pixel
-        back to its <code>.jay-html</code> source (DL#219). Requires the dev server running with
-        <code>sourceEditing: true</code>.
+        <code>jay:inspectPoint</code> / <code>jay:inspectRect</code> into the iframe; the reply maps
+        the pixel back to its <code>.jay-html</code> source (DL#219). Requires the dev server
+        running with <code>sourceEditing: true</code>.
       </p>
     </header>
 
@@ -113,15 +195,29 @@
       <label for="preset">Page</label>
       <select id="preset">
         <option value="/">index (/)</option>
+        <option value="/actions">actions</option>
+        <option value="/async-data">async-data</option>
+        <option value="/dynamic/item-a">dynamic/item-a — params</option>
+        <option value="/dynamic/item-b">dynamic/item-b — params</option>
         <option value="/foreach" selected>foreach — list items (jay-dev-item)</option>
+        <option value="/free-ref">free-ref</option>
+        <option value="/free-ref-collection">free-ref-collection</option>
+        <option value="/free-ref-in-foreach">free-ref-in-foreach</option>
+        <option value="/headfull">headfull</option>
         <option value="/headless">headless — ref-less region</option>
         <option value="/headless-props">headless-props — region with props</option>
+        <option value="/html-string">html-string</option>
+        <option value="/markdown-live">markdown-live</option>
+        <option value="/markdown/hello">markdown/hello</option>
+        <option value="/markdown/second-page">markdown/second-page</option>
         <option value="/nested">nested</option>
         <option value="/nested-composition">nested-composition</option>
-        <option value="/free-ref-in-foreach">free-ref-in-foreach</option>
-        <option value="/dynamic/item-a">dynamic/item-a — params</option>
         <option value="/phases">phases</option>
-        <option value="/actions">actions</option>
+        <option value="/public-assets">public-assets</option>
+        <option value="/throw-error">throw-error</option>
+        <option value="/404">404</option>
+        <option value="/504">504</option>
+        <option value="/5xx">5xx</option>
       </select>
       <input id="path" type="text" value="/foreach" aria-label="Page path" />
       <button id="load">Load</button>
@@ -149,8 +245,8 @@
         <h2>Raw inspectResult</h2>
         <pre id="json">Move the pointer over the page…</pre>
         <p class="hint">
-          Drag to send <code>jay:inspectRect</code> (the "rect rule" picks the element the box mostly
-          encloses). Uncheck <em>Inspect mode</em> to click through to the page itself.
+          Drag to send <code>jay:inspectRect</code> (the "rect rule" picks the element the box
+          mostly encloses). Uncheck <em>Inspect mode</em> to click through to the page itself.
         </p>
       </div>
     </main>
@@ -290,7 +386,11 @@
           .filter((f) => f.kind === 'region')
           .map((f) => {
             const props = f.props
-              ? ' (' + Object.entries(f.props).map(([k, v]) => k + '=' + v).join(', ') + ')'
+              ? ' (' +
+                Object.entries(f.props)
+                  .map(([k, v]) => k + '=' + v)
+                  .join(', ') +
+                ')'
               : '';
             return f.name + props;
           })
@@ -302,7 +402,11 @@
           row('element', '<' + node.tag + '>', true) +
           row('source', srcLabel, true) +
           row('route', data.route) +
-          row('text', node.text) +
+          row('html', node.html, true) +
+          row(
+            'bound content',
+            node.contentFromBinding ? 'yes — edit at the binding source' : null,
+          ) +
           row('forEach record', items) +
           row('region', regions) +
           row('enclosing scopes', (data.stack || []).length + ' (forEach/region only)');
@@ -322,7 +426,9 @@
         pathEl.value = presetEl.value;
         loadPage(presetEl.value);
       });
-      document.getElementById('load').addEventListener('click', () => loadPage(pathEl.value.trim()));
+      document
+        .getElementById('load')
+        .addEventListener('click', () => loadPage(pathEl.value.trim()));
       pathEl.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') loadPage(pathEl.value.trim());
       });

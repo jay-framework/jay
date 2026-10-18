@@ -16,14 +16,14 @@ For `{productPage.productName}` the agent can find the tag in the jay-html but n
 
 ## Prior Art / Adjacent Mechanisms
 
-| Mechanism                               | Verdict                                                           |
-| --------------------------------------- | ---------------------------------------------------------------- |
-| `jay-coordinate` (DL#103/#106/#126)     | DOM position only, conditionally emitted → insufficient alone    |
-| `runtime-automation` `getPageState()`   | ViewState + refs only; no bound text/images → extend, not reuse  |
-| Freeze postMessage (DL#128)             | **Reuse pattern** for the inspector                              |
-| Plugin `actions[]` / `actions[].devOnly`| **Reuse** as the write/URL path and the dev-only gate            |
-| `plugins-index.yaml` / agent-kit (#85)  | **Reuse** as the discovery channel for per-contract guides        |
-| DL#215 (MCP/REST = plugin space)        | Constrains: no core MCP in v1                                    |
+| Mechanism                                | Verdict                                                         |
+| ---------------------------------------- | --------------------------------------------------------------- |
+| `jay-coordinate` (DL#103/#106/#126)      | DOM position only, conditionally emitted → insufficient alone   |
+| `runtime-automation` `getPageState()`    | ViewState + refs only; no bound text/images → extend, not reuse |
+| Freeze postMessage (DL#128)              | **Reuse pattern** for the inspector                             |
+| Plugin `actions[]` / `actions[].devOnly` | **Reuse** as the write/URL path and the dev-only gate           |
+| `plugins-index.yaml` / agent-kit (#85)   | **Reuse** as the discovery channel for per-contract guides      |
+| DL#215 (MCP/REST = plugin space)         | Constrains: no core MCP in v1                                   |
 
 **Null hypothesis checked:** match the pointed element's text against ViewState values (no inspector) — rejected (duplicates like `price`=`salePrice`, images, `forEach` ambiguity). A source-node marker is cheap and exact.
 
@@ -83,8 +83,8 @@ The guide (markdown, shipped by the plugin, surfaced via `plugins-index.yaml` / 
 
 The guide is **per-contract** because record identity differs per contract. Example — `wix-stores`:
 
-| Contract         | Record key (from inspect result) | guide instructs                          |
-| ---------------- | -------------------------------- | ---------------------------------------- |
+| Contract         | Record key (from inspect result) | guide instructs                           |
+| ---------------- | -------------------------------- | ----------------------------------------- |
 | `product-page`   | `slug` (route param)             | `getEditUrl(slug)` → fetch slug→productId |
 | `product-search` | `productId` (`forEach` `itemId`) | `getEditUrl(productId)`                   |
 
@@ -151,7 +151,7 @@ Parse the original source, convert each element's `.range` → `{from,to}` lines
 
 ### `jay-dev-item="{<trackBy>}"` — bound, in `injectDevMarkers`
 
-On each `forEach` element (which *is* the item root, `assign-coordinates.ts:171`), inject `jay-dev-item="{<trackByProp>}"` bound to the item-scope trackBy property. The compiler emits it as a dynamic attribute on every target and re-evaluates it per item and on list updates — no runtime stamp. Reuse the `trackBy` attribute already present on the element for the property name.
+On each `forEach` element (which _is_ the item root, `assign-coordinates.ts:171`), inject `jay-dev-item="{<trackByProp>}"` bound to the item-scope trackBy property. The compiler emits it as a dynamic attribute on every target and re-evaluates it per item and on list updates — no runtime stamp. Reuse the `trackBy` attribute already present on the element for the property name.
 
 ### `jay-dev-prop-*="{<expr>}"` — bound, in `assign-coordinates` (not the loader)
 
@@ -160,19 +160,19 @@ The hard case. Region props are **not** HTML attributes: on `<jay:card title="{p
 → Handle them in **`assign-coordinates`**, the single shared pre-processor that already (a) runs for all targets, (b) identifies regions, and (c) creates the wrapper. When it wraps a region, copy each scalar-looking prop binding onto the wrapper as a **separate** bound attribute `jay-dev-prop-<name>="{<expr>}"`. Per-prop attributes (vs. one JSON blob) keep each a clean single binding — no fragile JSON-with-interpolations escaping — and each stays live in the parent scope where `{p.name}` is valid. The inspector reassembles `{name: value}` from the `jay-dev-prop-*` attributes on the region root.
 
 - **Change to Part 1:** `jay-dev-props='{…}'` (one JSON attr) → **`jay-dev-prop-<name>="{expr}"`** (one bound attr per primitive prop). Rationale above.
-- ⚠️ **Primitiveness without types:** `assign-coordinates` has the binding *expression*, not the contract *type*, so it can't prove a prop is primitive. Options: (a) include all single-expression prop bindings and let the inspector drop values that render as `[object Object]`; (b) feed the region's contract types into the coordinate pass to filter to primitives. (a) is simpler and client-correct; decide at implementation.
+- ⚠️ **Primitiveness without types:** `assign-coordinates` has the binding _expression_, not the contract _type_, so it can't prove a prop is primitive. Options: (a) include all single-expression prop bindings and let the inspector drop values that render as `[object Object]`; (b) feed the region's contract types into the coordinate pass to filter to primitives. (a) is simpler and client-correct; decide at implementation.
 
 ### Inspector + enabling the markers in the dev-server client script
 
-The markers are static DOM; the inspector is pure client code. Host it in the injected inline module — `generate-client-script.ts` `buildFreezeScript` (`:178-258`) / `buildAutomationWrap` (`:260`), reused by the SSR/hydrate page via `generate-ssr-response.ts` (`:581-602`), where `_jay_embed` gating already lives (`:183-186`). Add the `jay:inspectPoint` / `jay:inspectRect` handlers: `elementFromPoint` → read `jay-dev-src`, walk ancestors for `jay-dev-item`/`jay-dev-prop-*`, measure `rect`/`scroll`, read `params`, apply the rect rule. (The markers themselves are already in the DOM from the transform — the client script only *reads* them.)
+The markers are static DOM; the inspector is pure client code. Host it in the injected inline module — `generate-client-script.ts` `buildFreezeScript` (`:178-258`) / `buildAutomationWrap` (`:260`), reused by the SSR/hydrate page via `generate-ssr-response.ts` (`:581-602`), where `_jay_embed` gating already lives (`:183-186`). Add the `jay:inspectPoint` / `jay:inspectRect` handlers: `elementFromPoint` → read `jay-dev-src`, walk ancestors for `jay-dev-item`/`jay-dev-prop-*`, measure `rect`/`scroll`, read `params`, apply the rect rule. (The markers themselves are already in the DOM from the transform — the client script only _reads_ them.)
 
 ### Summary of changes
 
-| Marker            | injected where                       | kind   | targets covered via      |
-| ----------------- | ------------------------------------ | ------ | ------------------------ |
-| `jay-dev-src`     | `injectDevMarkers` (pre-render input)| static | pre-rendered jay-html → hydrate + SSR |
-| `jay-dev-item`    | `injectDevMarkers` (pre-render input)| bound  | compiler dynamic attr, all targets    |
-| `jay-dev-prop-*`  | `assign-coordinates` (wrapper create)| bound  | compiler dynamic attr, all targets    |
+| Marker           | injected where                        | kind   | targets covered via                   |
+| ---------------- | ------------------------------------- | ------ | ------------------------------------- |
+| `jay-dev-src`    | `injectDevMarkers` (pre-render input) | static | pre-rendered jay-html → hydrate + SSR |
+| `jay-dev-item`   | `injectDevMarkers` (pre-render input) | bound  | compiler dynamic attr, all targets    |
+| `jay-dev-prop-*` | `assign-coordinates` (wrapper create) | bound  | compiler dynamic attr, all targets    |
 
 Net vs. the dropped design: **two code sites** (`injectDevMarkers` + a few lines in `assign-coordinates`) instead of per-target runtime stamps in `element.ts`/`hydrate.ts` and server codegen, and **no runtime flag**.
 
@@ -183,6 +183,7 @@ Ordered so each phase is independently testable (compiler fixtures / runtime tes
 ### Part A — Dev-mode source transform + inspector
 
 **Phase A1 — `injectDevMarkers` (static `jay-dev-src` + bound `jay-dev-item`).**
+
 - New dev-only string→string transform: parse the original jay-html, `setAttribute('jay-dev-src', 'from:to')` from `.range` on every element, and `setAttribute('jay-dev-item', '{<trackBy>}')` on every `forEach` element (reusing its `trackBy` attr for the property name).
 - Wire it into the dev-server pre-render **immediately after the source read (`dev-server.ts:1290`) and before `slowRenderTransform` (`:1306`)**, so offsets are on-disk-accurate and the markers flow into `preRenderedJayHtml` → hydrate + SSR. Inherently dev-only (dev-server pipeline); no flag.
 - No `DIRECTIVE_ATTRIBUTES` edit (✅ passthrough confirmed). Add a guard test that fails if `jay-dev-*` is ever added to that set.
@@ -190,11 +191,13 @@ Ordered so each phase is independently testable (compiler fixtures / runtime tes
 - Fixtures (`toEqual` + `prettifyHtml`): hydrate + SSR dev output carry accurate `jay-dev-src` lines and a `jay-dev-item` bound to trackBy on `forEach` roots; `jay-dev-item` re-evaluates per item and on list update.
 
 **Phase A2 — `jay-dev-prop-*` in `assign-coordinates`.**
+
 - Where `assign-coordinates` wraps a region (`:238`), copy each single-expression prop binding from the `<jay:…>` tag onto the wrapper as `jay-dev-prop-<name>="{<expr>}"` (bound, parent scope).
 - Primitiveness: start with option (a) — include all single-expression bindings, inspector drops `[object Object]`; revisit feeding contract types if needed.
 - Runs for all targets via the shared pass; fixtures assert the bound prop attrs on the region root across hydrate + SSR and that they update on interactive prop change.
 
 **Phase A3 — inspector in the dev-server client script.**
+
 - Add `jay:inspectPoint` / `jay:inspectRect` handlers in `buildFreezeScript` / `buildAutomationWrap` (`generate-client-script.ts:178-260`), reusing the existing `_jay_embed` gating — fully client-side: `elementFromPoint` → read `jay-dev-src`, walk ancestors for `jay-dev-item`/`jay-dev-prop-*`, measure `rect`/`scroll`, read `params`, implement the rect rule. No AST/source at inspect time.
 - Wire per-target injection in `dev-server.ts` (`generateClientScript` `:1040/:1135`, `generateSSRPageHtml` `:1106`).
 
@@ -203,6 +206,7 @@ Ordered so each phase is independently testable (compiler fixtures / runtime tes
 `injectDevMarkers` and the `assign-coordinates` prop step are both source-to-source, so they get full fixture coverage **without** the dev-server, compiler, or a browser. Per testing standards: fixtures under `test/fixtures/dev-markers/` as `*.input.jay-html` / `*.expected.jay-html`, compared with `toEqual(prettifyHtml(...))`; one test file per module; **no `toContain`**.
 
 `injectDevMarkers` (`compiler-jay-html`) cases:
+
 - **Line accuracy (the point of the pre-pass):** `jay-dev-src="from:to"` maps to the **original** file lines — including indented, blank-line-separated, and multi-line-open-tag elements. Assert the exact ranges, not just presence.
 - **Nesting:** every element gets its own range; a parent's range spans its children.
 - **Non-elements untouched:** comments and text nodes get no marker; `<head>`/`<script type="application/jay-data">` are out of scope.
@@ -213,6 +217,7 @@ Ordered so each phase is independently testable (compiler fixtures / runtime tes
 - **Directive guard:** a unit assertion that `jay-dev-src`/`jay-dev-item`/`jay-dev-prop-*` are **absent** from `DIRECTIVE_ATTRIBUTES` (fails loudly if anyone adds them, which would silence passthrough).
 
 `assign-coordinates` prop step cases (extend the existing `assign-coordinates` fixtures):
+
 - Region with primitive prop bindings → wrapper carries `jay-dev-prop-<name>="{expr}"` for each, in the parent scope.
 - Region with an object/array prop → under option (a), still emitted (fixture documents the accepted behavior that the inspector drops `[object Object]`).
 - Ref-less vs explicit-ref region, and a region inside a `forEach` → prop attrs land on the correct wrapper without disturbing coordinate/scope assignment.
@@ -255,7 +260,7 @@ Dev-only markers add dev DOM noise for exact resolution. Emitting them as a sing
 
 ### Deviation — gated behind a `sourceEditing` option (was: "no flag")
 
-The DL's recorded decision (Part 2 / Phase A1) was **"inherently dev-only (dev-server pipeline); no flag"** — gating is "did the dev-server run the transform." That gate proved **too coarse**: injecting on *every* dev render changes SSR output for all dev work, which broke the 68 SSR-fixture assertions in `dev-server/test/hydration.test.ts` (and would surprise every normal dev session with marker noise).
+The DL's recorded decision (Part 2 / Phase A1) was **"inherently dev-only (dev-server pipeline); no flag"** — gating is "did the dev-server run the transform." That gate proved **too coarse**: injecting on _every_ dev render changes SSR output for all dev work, which broke the 68 SSR-fixture assertions in `dev-server/test/hydration.test.ts` (and would surprise every normal dev session with marker noise).
 
 **Resolution:** added `DevServerOptions.sourceEditing?: boolean` (default `false`), threaded through `defaults()` → `handlePreRenderRequest` → `preRenderJayHtml`, which calls `injectDevMarkers` only when the flag is on (`dev-server.ts`, `dev-server-options.ts`). Markers are now emitted **only for AIditor / source-editing sessions**, not normal dev renders. With the gate off, all 711 hydration tests pass.
 
@@ -266,7 +271,7 @@ The planned Phase A2 (copy region prop bindings onto the `display:contents` wrap
 - A **bound attribute resolves in the scope of the element carrying it** — `renderAttributes` feeds the current-scope `variables` to the expression parser (`jay-html-compiler.ts:214-255`); `resolveAccessor` roots every accessor at the current scope's view state and has no implicit parent climb (`expression-compiler.ts:131-193`).
 - The wrapper div created at `assign-coordinates.ts:238` is **child-scoped** — `renderHeadlessInstance` renders the instance's children with `componentVariables` (the CHILD scope, `jay-html-compiler.ts:870`).
 - Region props (`{p.name}`) are **parent-scoped** — read by `renderChildCompProps` against the parent context and emitted as the `getProps` getter rooted at the parent var (`jay-html-compiler.ts:1064-1070`).
-- Therefore `jay-dev-prop-title="{p.name}"` on the wrapper makes the compiler resolve `p` in the *child* contract → hard validation error `the data field [p.name] not found in Jay data` (`expression-compiler.ts:182-189`). Not silently wrong — it breaks compilation.
+- Therefore `jay-dev-prop-title="{p.name}"` on the wrapper makes the compiler resolve `p` in the _child_ contract → hard validation error `the data field [p.name] not found in Jay data` (`expression-compiler.ts:182-189`). Not silently wrong — it breaks compilation.
 - `$parent` would climb but is **unsupported in the server (SSR) and React targets** (`expression-compiler.ts:524-537`), so it can't ride all three targets.
 - **There is no parent-scoped rendered DOM element for a region**: `<jay:card>` is a directive compiled to a `childComp(...)` call; the only parent-rooted channel is the `getProps` getter, not an attribute on a DOM element. Nothing to hang a parent-scoped DOM attribute on.
 
@@ -281,7 +286,7 @@ The drop above left a gap: a region's own `jay-dev-src` never reaches the DOM. `
 - **Location:** `assignHeadlessInstance`, at/after the wrapper-creation block (`assign-coordinates.ts:238-246`). Read `element.getAttribute('jay-dev-src')`; if present, `wrapper.setAttribute('jay-dev-src', …)` and `element.removeAttribute('jay-dev-src')`.
 - **Idempotency:** `assignCoordinates` runs more than once on a tree. The move happens only inside the wrapper-creation branch (guarded by `!alreadyWrapped`); on a later pass the wrapper exists (keeps its `jay-dev-src`) and the tag no longer carries the attr, so it's a no-op.
 - **Ref-less single-child region:** no wrapper is created (`:238` wraps only when `explicitRef || children > 1`). There we still `removeAttribute('jay-dev-src')` from the `<jay:card>` tag (kill the spurious prop); the region's source stays recoverable from the single child's own `jay-dev-src`. Accepted edge case.
-- **A1 unchanged:** `injectDevMarkers` keeps stamping `jay-dev-src` on `<jay:card>` (it is the source `assign-coordinates` moves it *from*). The A1 region test (`src(card) === '4:4'`) still holds for the transform's output; the move is a later, compiler-side step.
+- **A1 unchanged:** `injectDevMarkers` keeps stamping `jay-dev-src` on `<jay:card>` (it is the source `assign-coordinates` moves it _from_). The A1 region test (`src(card) === '4:4'`) still holds for the transform's output; the move is a later, compiler-side step.
 - **Tests:** extend `coordinate-preprocess.test.ts` — a region with `jay-dev-src` on the `<jay:...>` tag yields a wrapper div carrying that `jay-dev-src` and a tag with none; idempotent across two `assignCoordinates` runs; ref-less single-child region strips the tag's attr and leaves the child's intact.
 
 **Implemented.** `assign-coordinates.ts` (`assignHeadlessInstance`) now imports `DEV_SRC_ATTR`, sets it on the wrapper at creation (`!alreadyWrapped` branch), and `removeAttribute`s it from the `<jay:…>` tag in all cases. 3 tests added to `coordinate-preprocess.test.ts` (17 pass); full `compiler-jay-html` suite green (748 passed, 4 skipped). The move applies in real compilation because all three targets call this same `assignCoordinates` pass; an end-to-end compiled-output assertion (wrapper carries `jay-dev-src`, no component prop) is folded into the A3 live test.
@@ -296,10 +301,12 @@ Pinned before implementing (DL methodology; the return shape is a contract the A
 ### Messages
 
 Request (parent → iframe), handled in the embed-mode `message` listener:
+
 - `{ type: 'jay:inspectPoint', requestId, x, y }` — viewport coords of a click/hover.
 - `{ type: 'jay:inspectRect', requestId, x, y, width, height }` — a drag-selected rectangle (viewport coords).
 
 Reply (iframe → `window.parent`):
+
 ```
 { type: 'jay:inspectResult', requestId,
   node:  { src, tag, text, attrs } | null,   // src = "from:to" line range; text = trimmed rendered textContent (truncated); attrs = value-bearing only (src/href/value) when present
@@ -307,11 +314,13 @@ Reply (iframe → `window.parent`):
   route, routePattern,                        // agent maps route+pattern → jay-html file + params
   rect:  { x, y, width, height } }            // target's getBoundingClientRect, for parent overlay
 ```
+
 The reply carries **source locators, not resolved bindings** (per TL;DR #2): `node.src` + `route`/`routePattern` let the agent read the exact jay-html lines (incl. the enclosing `<jay:card …>` tag → contract + prop bindings); `stack[].item` gives the enclosing forEach record id(s); `node.text`/`attrs` are the live rendered values for correlation (replacing the dropped `jay-dev-prop-*`).
 
 ### Resolution algorithm
 
 `inspectPoint(x, y)`:
+
 1. `el = document.elementFromPoint(x, y)`; if null → reply `node: null`.
 2. Walk `el` → document root. For each element frame record `{ tag, src: getAttribute('jay-dev-src') || undefined, item: getAttribute('jay-dev-item') || undefined, region, ref }` where `region = true` + `ref = class` when the element is a `display:contents` wrapper (detect by inline style).
 3. `node` = nearest frame at/above `el` that has `src` (the deepest marked element); fill `tag`, `text`, `attrs`.
@@ -319,6 +328,7 @@ The reply carries **source locators, not resolved bindings** (per TL;DR #2): `no
 5. `rect` = node element's `getBoundingClientRect()`.
 
 `inspectRect(x, y, w, h)` — **the rect rule** (pick the element the drawn box means):
+
 - Candidates = marked elements (`[jay-dev-src]`) intersecting the selection.
 - For each, `overlap = intersectionArea(elRect, sel) / elRect.area` (**decided:** denominator is the element's own area — "the box mostly encloses this element"). Choose the **deepest** candidate with `overlap ≥ 0.8`. If none clears 0.8, fall back to `inspectPoint(center)`.
 - `0.8` is a tunable constant (noted in Trade-offs).
@@ -358,7 +368,7 @@ The §1 original sketch (`file` / `lines:{from,to}` / `ancestors[]` with `kind`/
 InspectResult {
   file,                                                    // project-relative page jay-html path (where the lines live)
   route, routePattern,                                     // agent derives route params from these
-  node: { lines: {from,to}, tag, text, rect, attrs? } | null,  // the clicked element: source loc, live text, on-screen box
+  node: { lines: {from,to}, tag, html, rect, contentFromBinding? } | null,  // the clicked element: source loc, one-level html, on-screen box
   stack: [                                                 // significant enclosing scopes, innermost → outermost
     { kind: 'forEach', lines: {from,to}, itemId },         // itemId = runtime trackBy record id
     { kind: 'region',  lines: {from,to}, name, props? },   // name = contract; props = static primitive props
@@ -367,13 +377,15 @@ InspectResult {
 ```
 
 Decisions that shaped it:
+
 - **`lines: {from,to}`** everywhere (was `src:"from:to"` string) — matches the §1 intent; the client parses the `jay-dev-src` attribute into the object.
 - **`rect` lives under `node`** (was top-level) — it is the matched element's on-screen box, so it belongs with the element it describes.
 - **`file` at top level** — the page's jay-html path (project-relative), threaded from the dev server (`sendResponse` / client-only path → `GenerateClientScriptOptions.sourceFile` → `buildFreezeScript`). All `node`/`stack` `lines` are in this file; the agent edits it. (`route`/`routePattern` stay too — the agent derives route params from them.)
 - **Split runtime vs source fields** (as §1 intended): the reply carries what only the runtime knows — `itemId` (forEach record), region `name` + **static** `props` — and the line ranges. Everything else the agent reads from source at those lines: the `forEach` collection expression, bound prop expressions, `if` conditions, contract import resolution.
 - **`if` frames dropped from the stack.** An `if` is conditional visibility, not a data-identity scope; it never changes which record/contract is edited. The clicked element still reports its own `lines`; the agent reads the `if` condition from source if needed.
+- **`node.html` is the single content field (no `text`, no `attrs`).** A one-level rendering of the clicked element carries its tag, authored attributes (so `src`/`href`/`value` ride along), and inline text — bounded (grandchildren → empty tags, inner text truncated). It subsumes the former `text` and `attrs`; dropping them removes redundancy and caps payload for long content. See the bound-content section below for the full rationale.
 
-✅ verified live: `/foreach` `.slow-item` → `file:"src/pages/foreach/page.jay-html"`, `node:{lines:{11,11},tag:'li',text:'Slow Item 1',rect:{…}}`, `stack:[{kind:'forEach',lines:{10,12},itemId:'s1'}]`.
+✅ verified live: `/foreach` `.slow-item` → `file:"src/pages/foreach/page.jay-html"`, `node:{lines:{11,11},tag:'li',html:"<li class=\"slow-item\">Slow Item 1</li>",rect:{…}}`, `stack:[{kind:'forEach',lines:{10,12},itemId:'s1'}]`.
 
 ### Region identity in the stack (`name` + static `props`) — issue fix
 
@@ -382,10 +394,36 @@ A region only appeared in the stack when it had a `display:contents` wrapper, an
 1. **Ref-less single-child regions had no wrapper** (DL#206 only wraps explicit-ref or multi-child), so `<jay:test-widget itemId="alpha">` produced no region frame at all. `assign-coordinates` now **also synthesizes the wrapper when a region dev-marker is present** (i.e. source-editing is on) — prod behavior unchanged (no marker → no extra wrap). The wrapper is `display:contents` (no layout effect) and both SSR + hydrate produce it, so no mismatch.
 2. **No contract name / key.** `injectDevMarkers` now stamps `jay-dev-region="<contract>"` and `jay-dev-region-props="<url-encoded JSON of static props>"` on the `<jay:…>` tag; `assign-coordinates` moves both onto the wrapper (alongside `jay-dev-src`). The inspector reports `{ kind:'region', lines, name, props }`.
    - **Static props only.** Bound props (`itemId="{x}"`) are parent-scoped and can't resolve on the child-scoped wrapper (the Phase A2 wall) — they stay source-only; the agent reads the expression. Static props (`itemId="alpha"`) are the common identity case and are surfaced live.
-   - **URL-encoded, not raw JSON.** A raw `{` in the attribute value makes the compiler treat it as a binding and run `doParse` on the JSON → `doParse is not a function` + SSR fallback. Caught live on `/headless`; fixed by `encodeURIComponent(JSON.stringify(props))` (client `JSON.parse(decodeURIComponent(...))`). `jay-dev-item="{trackBy}"` keeps its braces on purpose — that one *is* meant to be a binding.
+   - **URL-encoded, not raw JSON.** A raw `{` in the attribute value makes the compiler treat it as a binding and run `doParse` on the JSON → `doParse is not a function` + SSR fallback. Caught live on `/headless`; fixed by `encodeURIComponent(JSON.stringify(props))` (client `JSON.parse(decodeURIComponent(...))`). `jay-dev-item="{trackBy}"` keeps its braces on purpose — that one _is_ meant to be a binding.
 
 ✅ verified live: `/headless` `.widget-label` → `node: span (15:15)`, `stack: [{ kind:'region', lines:{13,19}, name:'test-widget', props:{itemId:'alpha'} }]`. Unit tests added for both the region markers (`inject-dev-markers.test.ts`) and the ref-less wrap + marker move (`coordinate-preprocess.test.ts`); compiler-jay-html 750 pass.
+
+#### Correction — the ref-less wrap broke nested-region coordinates; markers now ride the existing root
+
+The "synthesize a wrapper for ref-less single-child regions" above was **wrong**: the extra `display:contents` level it added (only when `sourceEditing` is on) desynced SSR vs hydrate coordinates for **nested** regions — `/nested-composition` then threw `[jay hydration] adoptText coordinate "S2/0/0" not found in DOM` (the card region's scope gained a level on one target but not the other). ✅ reproduced: crashes with `sourceEditing` on, clean with it off.
+
+**Revised (no new DOM level):** `assign-coordinates` no longer wraps ref-less regions. Region markers attach to the region's **existing** rendered root — the scope-anchor wrapper when one already exists (explicit-ref / multi-child, per DL#206), otherwise the single rendered child — via three attributes: `jay-dev-region` (name), `jay-dev-region-props` (static props), and **`jay-dev-region-src`** (the `<jay:…>` tag's line range, kept separate from the root element's own `jay-dev-src` since a ref-less region's child uses both). The inspector reads region-frame `lines` from `jay-dev-region-src`. Coordinates are now identical with and without source-editing → no hydration drift. ✅ verified live: `/nested-composition` hydrates clean with markers on (data threads through section→card→button); `/headless` still reports the `test-widget` region frame with `itemId:'alpha'`; hydration suite 711 pass.
 
 ### Pre-existing bug found (not DL#219) — `nested-composition` hydration
 
 `/nested-composition` (4-level nested **passthrough** regions, `<jay:section>` → `<jay:card>` → `<jay:button>`) throws `compCreator is not a function` at `childComp` during client hydration. **Reproduces with `sourceEditing` off** (SSR renders, client hydrate crashes) — so it is independent of DL#219 (DL#196 passthrough-region territory). Flagged for a separate fix.
+
+**Root-caused and fixed in [DL#221](221%20-%20html%20tag%20component%20name%20collision.md).** The component contracts are named `section`/`button`, which collide with the plain `<section>`/`<button>` HTML tags in the same template: `getComponentName`'s legacy bare-tag syntax matched them as components → `childComp(section, …)` where `section` is a `JayStackComponentDefinition`. Fix guards the legacy branch with `htmlElementTagNameMap`.
+
+### Bound / html-string content — `node` = the clicked element + `contentFromBinding` + one-level `node.html`
+
+A value rendered as rich HTML (`html-string`, e.g. `<div class="md">{post.content}</div>` from the markdown plugin) renders as **innerHTML**: the resulting `<h1>`/`<p>`/`<pre>`/`<span class="token …">` are generated at runtime and carry **no `jay-dev-src`** (only authored elements do).
+
+**`node` describes the ACTUAL clicked element, not the source anchor.** `__jayResolveElement` splits two roles:
+
+- **source anchor** = nearest ancestor (incl. the clicked el) with `jay-dev-src` → supplies `node.lines`.
+- **node identity** (`tag`, `html`, `rect`) = the element the pointer actually hit (`elementFromPoint`) / the rect chose.
+
+For authored content these coincide (the clicked element has its own `jay-dev-src`). For generated content they differ: clicking the `'hello'` token returns `node: { tag:'span', html:"<span class=\"token string\">'hello'</span>", lines:{18,18}, contentFromBinding:true }` — the clicked element, with lines pointing to the enclosing binding (the editable source). (An earlier version collapsed `node` to the binding container and listed the container's children — wrong: it then included **siblings** of what was clicked.)
+
+- **`node.html` is the single content field** (replaced `text` and `attrs`). A one-level HTML of the clicked element: open tag with authored attrs (`jay-*` stripped, so `src`/`href`/`value` ride along), direct children as empty tags (grandchildren elided with `…`), inline text (truncated). It carries tag + attributes + value in one bounded string — so it subsumes the former always-present `text` and the `src/href/value` `attrs`, with no unbounded long-text payload. (`text` + `html` were redundant for the common leaf case; `html` dominates — it adds the tag/attrs `text` lacked.)
+- **`contentFromBinding`** (client-side, no contract types): set when the clicked element has no `jay-dev-src` of its own, **or** when all its element children are unmarked (you clicked the binding container itself). Authored children always carry `jay-dev-src`, so authored content never trips it.
+
+Decision rule for the agent: `contentFromBinding` → the content is a bound value; read the binding at `node.lines` (`{post.content}`) and resolve it to its source (here the markdown-pages plugin, keyed `post` → the `.md` file in `contentDir` by route param) rather than editing the rendered markup. Finer pixel→markdown-line mapping would need the plugin to emit its own source-map markers (out of scope).
+
+✅ verified live: `/markdown/hello` click on the `'hello'` code token → `node.tag:'span'`, `node.html:"<span class=\"token string\">'hello'</span>"`, `contentFromBinding:true`, `lines:{18,18}`; authored `/foreach` `.slow-item` → `node.html:"<li class=\"slow-item\">Slow Item 1</li>"`, no flag, its own `lines:{11,11}`.
