@@ -13,6 +13,7 @@
     <p>Static page with no contract and no code</p>
     <nav>
       <ul>
+        <li><a href="/what-is-this.html">What is this?</a> — DL#219 source-editing inspector (point/drag over any page)</li>
         <li><a href="/phases/">Phases</a> — slow + fast + interactive</li>
         <li><a href="/headless/">Headless</a> — headless component from local plugin</li>
         <li><a href="/headfull/">Headfull</a> — headfull component with own jay-html</li>

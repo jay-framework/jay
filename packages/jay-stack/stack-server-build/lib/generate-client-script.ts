@@ -231,13 +231,114 @@ function buildFreezeScript(routePattern?: string): string {
           }
       }
 
+      // Source-editing inspector (DL#219). Resolves a viewport point/rect to the jay-dev-* source
+      // markers emitted when the dev server runs with sourceEditing on. Harmless without markers —
+      // it simply finds no jay-dev-src and replies node:null. Reply carries source LOCATORS (line
+      // range + route), not resolved bindings: the agent reads the jay-html itself.
+      function __jayIsRegionWrapper(el) {
+        const style = (el.getAttribute && el.getAttribute('style')) || '';
+        return style.split(' ').join('').indexOf('display:contents') >= 0;
+      }
+      function __jayFrame(el) {
+        const frame = { tag: el.tagName ? el.tagName.toLowerCase() : '' };
+        const src = el.getAttribute('jay-dev-src');
+        if (src) frame.src = src;
+        const item = el.getAttribute('jay-dev-item');
+        if (item) { frame.item = item; frame.kind = 'forEach'; }
+        if (__jayIsRegionWrapper(el)) {
+          frame.region = true;
+          frame.kind = frame.kind || 'region';
+          const ref = el.getAttribute('class');
+          if (ref) frame.ref = ref;
+        }
+        return frame;
+      }
+      function __jayResolveElement(el) {
+        if (!el) return null;
+        // Walk el up to (but excluding) <body>, collecting source frames.
+        const entries = [];
+        let cur = el;
+        while (cur && cur.nodeType === 1 && cur.tagName && cur.tagName.toLowerCase() !== 'body') {
+          entries.push({ el: cur, frame: __jayFrame(cur) });
+          cur = cur.parentElement;
+        }
+        // Target = nearest element at/above el carrying a source marker.
+        let targetIdx = -1;
+        for (let i = 0; i < entries.length; i++) {
+          if (entries[i].frame.src) { targetIdx = i; break; }
+        }
+        if (targetIdx < 0) return null;
+        const targetEl = entries[targetIdx].el;
+        // Stack = only the semantically significant enclosing frames (forEach item roots and
+        // region/headless boundaries), innermost → outermost. Plain wrapper elements are omitted:
+        // the agent reads the full hierarchy from the source file via node.src.
+        const stack = entries
+          .map((e) => e.frame)
+          .filter((f) => f.item || f.region);
+        const r = targetEl.getBoundingClientRect();
+        const attrs = {};
+        ['src', 'href', 'value'].forEach((name) => {
+          const v = targetEl.getAttribute && targetEl.getAttribute(name);
+          if (v != null) attrs[name] = v;
+        });
+        const node = {
+          src: entries[targetIdx].frame.src,
+          tag: entries[targetIdx].frame.tag,
+          text: ((targetEl.textContent || '').trim()).slice(0, 200),
+        };
+        if (Object.keys(attrs).length) node.attrs = attrs;
+        return { node, stack, rect: { x: r.x, y: r.y, width: r.width, height: r.height } };
+      }
+      function __jayInspectPoint(x, y) {
+        return __jayResolveElement(document.elementFromPoint(x, y));
+      }
+      function __jayInspectRect(x, y, w, h) {
+        const sel = { left: x, top: y, right: x + w, bottom: y + h };
+        const marked = Array.prototype.slice.call(document.querySelectorAll('[jay-dev-src]'));
+        let best = null, bestArea = -1;
+        for (let i = 0; i < marked.length; i++) {
+          const el = marked[i];
+          const r = el.getBoundingClientRect();
+          const elArea = r.width * r.height;
+          if (elArea <= 0) continue;
+          const ix = Math.max(0, Math.min(sel.right, r.right) - Math.max(sel.left, r.left));
+          const iy = Math.max(0, Math.min(sel.bottom, r.bottom) - Math.max(sel.top, r.top));
+          // Rect rule (DL#219): keep elements the box mostly encloses (overlap over the ELEMENT's
+          // own area >= 0.8), then pick the LARGEST — the element the box was drawn around. A tight
+          // box only clears the threshold for the small element; a big box clears it for the
+          // container too, and largest-area returns the container (not its first child).
+          if ((ix * iy) / elArea >= 0.8 && elArea > bestArea) {
+            bestArea = elArea;
+            best = el;
+          }
+        }
+        if (best) return __jayResolveElement(best);
+        return __jayInspectPoint(x + w / 2, y + h / 2);
+      }
+
       if (__jayEmbedMode) {
         // Notify parent of the current route on load (DL#128 route addendum)
         window.parent.postMessage({ type: 'jay:route', route: window.location.pathname, routePattern: ${routePatternLiteral} }, '*');
 
-        // Embed mode: parent triggers freeze via postMessage
+        // Embed mode: parent triggers freeze / inspect via postMessage
         window.addEventListener('message', (e) => {
-          if (e.data?.type === 'jay:requestFreeze') __jayDoFreeze();
+          const d = e.data;
+          if (!d) return;
+          if (d.type === 'jay:requestFreeze') { __jayDoFreeze(); return; }
+          if (d.type === 'jay:inspectPoint' || d.type === 'jay:inspectRect') {
+            const result = d.type === 'jay:inspectPoint'
+              ? __jayInspectPoint(d.x, d.y)
+              : __jayInspectRect(d.x, d.y, d.width, d.height);
+            window.parent.postMessage({
+              type: 'jay:inspectResult',
+              requestId: d.requestId,
+              node: result ? result.node : null,
+              stack: result ? result.stack : [],
+              route: window.location.pathname,
+              routePattern: ${routePatternLiteral},
+              rect: result ? result.rect : null,
+            }, '*');
+          }
         });
       } else {
         // Standalone: Alt+S / Option+S keyboard shortcut

@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jay — "What is this?" source inspector (DL#219)</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #0f1216;
+        --panel: #171b21;
+        --line: #2a313b;
+        --ink: #e7edf3;
+        --muted: #9aa7b4;
+        --accent: #4aa3ff;
+        --accent-soft: rgba(74, 163, 255, 0.18);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font: 14px/1.5 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+      }
+      header {
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--line);
+      }
+      header h1 { margin: 0 0 2px; font-size: 16px; }
+      header p { margin: 0; color: var(--muted); font-size: 12.5px; }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        padding: 12px 20px;
+        border-bottom: 1px solid var(--line);
+      }
+      .controls label { color: var(--muted); font-size: 12px; }
+      select,
+      input[type='text'],
+      button {
+        font: inherit;
+        background: var(--panel);
+        color: var(--ink);
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        padding: 6px 10px;
+      }
+      input[type='text'] { min-width: 220px; }
+      button { cursor: pointer; }
+      button:hover { border-color: var(--accent); }
+      .toggle { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
+      main {
+        display: grid;
+        grid-template-columns: 1fr 420px;
+        gap: 0;
+        height: calc(100vh - 128px);
+      }
+      .stage { position: relative; overflow: hidden; border-right: 1px solid var(--line); }
+      iframe { width: 100%; height: 100%; border: 0; background: #fff; display: block; }
+      /* Transparent overlay captures pointer events so they never reach the iframe. */
+      .overlay { position: absolute; inset: 0; cursor: crosshair; }
+      .overlay.off { pointer-events: none; cursor: default; }
+      .hl {
+        position: absolute;
+        border: 2px solid var(--accent);
+        background: var(--accent-soft);
+        pointer-events: none;
+        border-radius: 3px;
+        display: none;
+      }
+      .sel {
+        position: absolute;
+        border: 1px dashed var(--accent);
+        background: rgba(74, 163, 255, 0.08);
+        pointer-events: none;
+        display: none;
+      }
+      .result { padding: 14px 16px; overflow: auto; }
+      .result h2 { margin: 0 0 8px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+      .summary { margin-bottom: 14px; }
+      .summary .row { display: flex; gap: 8px; padding: 3px 0; border-bottom: 1px solid var(--line); }
+      .summary .k { color: var(--muted); min-width: 92px; }
+      .summary .v { color: var(--ink); word-break: break-word; }
+      .summary .v.empty { color: #5f6b77; }
+      pre {
+        margin: 0;
+        padding: 12px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .hint { color: var(--muted); font-size: 12px; margin-top: 10px; }
+      code { background: var(--panel); padding: 1px 5px; border-radius: 4px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>"What is this?" — Jay source inspector</h1>
+      <p>
+        Hover (or drag a box) over the page on the left. The parent posts
+        <code>jay:inspectPoint</code> / <code>jay:inspectRect</code> into the iframe; the reply maps the pixel
+        back to its <code>.jay-html</code> source (DL#219). Requires the dev server running with
+        <code>sourceEditing: true</code>.
+      </p>
+    </header>
+
+    <div class="controls">
+      <label for="preset">Page</label>
+      <select id="preset">
+        <option value="/">index (/)</option>
+        <option value="/foreach" selected>foreach — list items (jay-dev-item)</option>
+        <option value="/headless">headless — ref-less region</option>
+        <option value="/headless-props">headless-props — region with props</option>
+        <option value="/nested">nested</option>
+        <option value="/nested-composition">nested-composition</option>
+        <option value="/free-ref-in-foreach">free-ref-in-foreach</option>
+        <option value="/dynamic/item-a">dynamic/item-a — params</option>
+        <option value="/phases">phases</option>
+        <option value="/actions">actions</option>
+      </select>
+      <input id="path" type="text" value="/foreach" aria-label="Page path" />
+      <button id="load">Load</button>
+      <span class="toggle">
+        <input type="checkbox" id="inspectOn" checked />
+        <label for="inspectOn">Inspect mode</label>
+      </span>
+      <span class="toggle">
+        <input type="checkbox" id="liveOn" checked />
+        <label for="liveOn">Live hover</label>
+      </span>
+    </div>
+
+    <main>
+      <div class="stage">
+        <iframe id="frame" title="inspected page"></iframe>
+        <div class="overlay" id="overlay">
+          <div class="hl" id="hl"></div>
+          <div class="sel" id="sel"></div>
+        </div>
+      </div>
+      <div class="result">
+        <h2>What is this?</h2>
+        <div class="summary" id="summary"></div>
+        <h2>Raw inspectResult</h2>
+        <pre id="json">Move the pointer over the page…</pre>
+        <p class="hint">
+          Drag to send <code>jay:inspectRect</code> (the "rect rule" picks the element the box mostly
+          encloses). Uncheck <em>Inspect mode</em> to click through to the page itself.
+        </p>
+      </div>
+    </main>
+
+    <script>
+      const frame = document.getElementById('frame');
+      const overlay = document.getElementById('overlay');
+      const hl = document.getElementById('hl');
+      const sel = document.getElementById('sel');
+      const jsonEl = document.getElementById('json');
+      const summaryEl = document.getElementById('summary');
+      const presetEl = document.getElementById('preset');
+      const pathEl = document.getElementById('path');
+      const inspectOn = document.getElementById('inspectOn');
+      const liveOn = document.getElementById('liveOn');
+
+      let requestSeq = 0;
+      let lastRequestId = 0;
+
+      function loadPage(path) {
+        // _jay_embed activates embed mode in the page, which registers the inspect listener.
+        const sep = path.includes('?') ? '&' : '?';
+        frame.src = path + sep + '_jay_embed';
+        hideHighlight();
+        jsonEl.textContent = 'Loading ' + path + ' …';
+        summaryEl.innerHTML = '';
+      }
+
+      function send(message) {
+        if (!frame.contentWindow) return;
+        lastRequestId = ++requestSeq;
+        frame.contentWindow.postMessage({ ...message, requestId: lastRequestId }, '*');
+      }
+
+      function overlayPoint(e) {
+        const r = overlay.getBoundingClientRect();
+        return { x: e.clientX - r.left, y: e.clientY - r.top };
+      }
+
+      function hideHighlight() {
+        hl.style.display = 'none';
+      }
+
+      function showHighlight(rect) {
+        if (!rect) return hideHighlight();
+        hl.style.display = 'block';
+        hl.style.left = rect.x + 'px';
+        hl.style.top = rect.y + 'px';
+        hl.style.width = rect.width + 'px';
+        hl.style.height = rect.height + 'px';
+      }
+
+      // ---- pointer → inspect requests -------------------------------------------------
+      let rafPending = false;
+      let drag = null; // { x, y } in overlay coords
+
+      overlay.addEventListener('mousemove', (e) => {
+        if (drag) {
+          const p = overlayPoint(e);
+          const x = Math.min(drag.x, p.x);
+          const y = Math.min(drag.y, p.y);
+          const w = Math.abs(p.x - drag.x);
+          const h = Math.abs(p.y - drag.y);
+          sel.style.display = 'block';
+          sel.style.left = x + 'px';
+          sel.style.top = y + 'px';
+          sel.style.width = w + 'px';
+          sel.style.height = h + 'px';
+          return;
+        }
+        if (!liveOn.checked || rafPending) return;
+        rafPending = true;
+        const p = overlayPoint(e);
+        requestAnimationFrame(() => {
+          rafPending = false;
+          send({ type: 'jay:inspectPoint', x: p.x, y: p.y });
+        });
+      });
+
+      overlay.addEventListener('mousedown', (e) => {
+        drag = overlayPoint(e);
+      });
+
+      window.addEventListener('mouseup', (e) => {
+        if (!drag) return;
+        const start = drag;
+        drag = null;
+        sel.style.display = 'none';
+        const p = overlayPoint(e);
+        const w = Math.abs(p.x - start.x);
+        const h = Math.abs(p.y - start.y);
+        if (w < 5 && h < 5) {
+          // A click, not a drag → point inspect.
+          send({ type: 'jay:inspectPoint', x: p.x, y: p.y });
+        } else {
+          send({
+            type: 'jay:inspectRect',
+            x: Math.min(start.x, p.x),
+            y: Math.min(start.y, p.y),
+            width: w,
+            height: h,
+          });
+        }
+      });
+
+      // ---- replies ---------------------------------------------------------------------
+      function row(k, v, mono) {
+        const empty = v == null || v === '';
+        return (
+          '<div class="row"><span class="k">' +
+          k +
+          '</span><span class="v' +
+          (empty ? ' empty' : '') +
+          '"' +
+          (mono ? ' style="font-family:ui-monospace,Menlo,monospace"' : '') +
+          '>' +
+          (empty ? '—' : String(v).replace(/</g, '&lt;')) +
+          '</span></div>'
+        );
+      }
+
+      function renderSummary(data) {
+        const node = data.node;
+        if (!node) {
+          summaryEl.innerHTML = row('result', 'no marked element under the pointer');
+          return;
+        }
+        console.log(data);
+        const items = (data.stack || [])
+          .filter((f) => f.item)
+          .map((f) => f.tag + ' #' + f.item)
+          .join(', ');
+        const regions = (data.stack || [])
+          .filter((f) => f.region)
+          .map((f) => f.ref || '(auto)')
+          .join(', ');
+        summaryEl.innerHTML =
+          row('element', '<' + node.tag + '>', true) +
+          row('source', node.src ? 'lines ' + node.src : null, true) +
+          row('route', data.route) +
+          row('text', node.text) +
+          row('forEach item', items) +
+          row('region ref', regions) +
+          row('enclosing scopes', (data.stack || []).length + ' (forEach/region only)');
+      }
+
+      window.addEventListener('message', (e) => {
+        const d = e.data;
+        if (!d || d.type !== 'jay:inspectResult') return;
+        if (d.requestId && d.requestId !== lastRequestId) return; // ignore stale replies
+        jsonEl.textContent = JSON.stringify(d, null, 2);
+        renderSummary(d);
+        showHighlight(d.rect);
+      });
+
+      // ---- controls --------------------------------------------------------------------
+      presetEl.addEventListener('change', () => {
+        pathEl.value = presetEl.value;
+        loadPage(presetEl.value);
+      });
+      document.getElementById('load').addEventListener('click', () => loadPage(pathEl.value.trim()));
+      pathEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') loadPage(pathEl.value.trim());
+      });
+      inspectOn.addEventListener('change', () => {
+        overlay.classList.toggle('off', !inspectOn.checked);
+        hideHighlight();
+      });
+
+      loadPage(pathEl.value);
+    </script>
+  </body>
+</html>

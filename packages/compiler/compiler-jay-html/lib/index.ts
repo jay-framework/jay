@@ -21,6 +21,11 @@ export {
     type AssignCoordinatesOptions,
     type AssignCoordinatesResult,
 } from './jay-target/assign-coordinates';
+export {
+    injectDevMarkers,
+    DEV_SRC_ATTR,
+    DEV_ITEM_ATTR,
+} from './jay-target/inject-dev-markers';
 export { parseJayFile, getJayHtmlImports } from './jay-target/jay-html-parser';
 
 export { renderRefsType } from './jay-target/jay-html-compile-refs';

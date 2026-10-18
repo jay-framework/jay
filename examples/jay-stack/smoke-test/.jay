@@ -2,5 +2,7 @@ devServer:
   portRange: [3300, 3310]
   pagesBase: './src/pages'
   publicFolder: './public'
+  # DL#219 — inject source-editing markers so /what-is-this.html can inspect pages.
+  sourceEditing: true
 site:
   baseUrl: https://smoke-test.example.com

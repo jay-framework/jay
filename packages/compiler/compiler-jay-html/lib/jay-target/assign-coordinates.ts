@@ -10,6 +10,7 @@
  */
 
 import { HTMLElement, Node, NodeType, parse } from 'node-html-parser';
+import { DEV_SRC_ATTR } from './inject-dev-markers';
 
 const COORD_ATTR = 'jay-coordinate-base';
 export const SCOPE_ATTR = 'jay-scope';
@@ -235,15 +236,26 @@ function assignHeadlessInstance(
     const alreadyWrapped =
         significantTemplateChildren.length === 1 &&
         isScopeAnchorDiv(significantTemplateChildren[0]);
+    // DL#219 — a dev-mode source marker (`jay-dev-src`, a static line range) sits on the <jay:…> tag.
+    // The tag is a directive, not a rendered element: on the element target it would ride along as a
+    // spurious component prop, on the server target it vanishes — either way the region's source
+    // location never reaches the DOM. Move it onto the region's rendered root: the `display:contents`
+    // wrapper when one is synthesized, otherwise just strip it. Safe because it is a static string —
+    // unlike bound props, no accessor is resolved, so the wrapper's child scope is irrelevant.
+    const devSrc = element.getAttribute(DEV_SRC_ATTR);
     if (!alreadyWrapped && (explicitRef || significantTemplateChildren.length > 1)) {
         const wrapper = parse('<div></div>').querySelector('div')!;
         if (explicitRef) wrapper.setAttribute('class', ref);
         wrapper.setAttribute('style', 'display: contents');
+        if (devSrc) wrapper.setAttribute(DEV_SRC_ATTR, devSrc);
         const children = element.childNodes;
         element.innerHTML = '';
         children.forEach((child) => wrapper.appendChild(child as any));
         element.appendChild(wrapper as any);
     }
+    // Strip the marker off the <jay:…> tag in every case (incl. ref-less single-child regions with
+    // no wrapper, where the region's source stays recoverable from the single child's own marker).
+    if (devSrc) element.removeAttribute(DEV_SRC_ATTR);
 
     // Walk inline template children in the new scope.
     // The first child element starts a new coordinate path within the child scope.

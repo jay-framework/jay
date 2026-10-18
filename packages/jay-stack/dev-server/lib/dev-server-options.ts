@@ -37,4 +37,11 @@ export interface DevServerOptions {
      * cloud preview proxies. Merged with the `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS` env var.
      */
     allowedHosts?: string[] | true;
+    /**
+     * Enable source-editing dev markers (DL#219). When true, the pre-render pipeline injects
+     * `jay-dev-src` / `jay-dev-item` attributes so the source-editing inspector can map a rendered
+     * pixel back to its jay-html source. Off by default — the markers change rendered output, so
+     * they are only emitted for AIditor / source-editing sessions.
+     */
+    sourceEditing?: boolean;
 }

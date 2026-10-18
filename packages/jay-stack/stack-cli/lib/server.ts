@@ -62,6 +62,7 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
         logLevel: options.logLevel,
         httpServer,
         allowedHosts: resolvedConfig.devServer.allowedHosts,
+        sourceEditing: resolvedConfig.devServer.sourceEditing,
     });
 
     app.use(server);

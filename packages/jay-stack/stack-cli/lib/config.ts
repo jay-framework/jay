@@ -18,6 +18,12 @@ export interface JayConfig {
          * (DL#220)
          */
         allowedHosts?: string[] | true;
+        /**
+         * Inject source-editing dev markers (`jay-dev-src` / `jay-dev-item`) so the source-editing
+         * inspector can map a rendered pixel back to its jay-html source (DL#219). Off by default —
+         * the markers change rendered output, so enable only for AIditor / source-editing sessions.
+         */
+        sourceEditing?: boolean;
     };
     site?: {
         baseUrl?: string;
@@ -96,6 +102,8 @@ export function getConfigWithDefaults(
             configBase: config.devServer?.configBase || DEFAULT_CONFIG.devServer!.configBase!,
             // No default — absent means Vite's localhost-only host check (DL#220).
             allowedHosts: config.devServer?.allowedHosts,
+            // Default off — source-editing markers (DL#219) only for opt-in sessions.
+            sourceEditing: config.devServer?.sourceEditing,
         },
         site: config.site,
     };

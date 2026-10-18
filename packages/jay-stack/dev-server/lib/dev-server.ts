@@ -57,6 +57,7 @@ import {
     JAY_IMPORT_RESOLVER,
     discoverHeadlessInstances,
     assignCoordinatesToJayHtml,
+    injectDevMarkers,
     type JayHtmlScript,
 } from '@jay-framework/compiler-jay-html';
 import {
@@ -292,6 +293,7 @@ function defaults(options: DevServerOptions): DevServerOptions {
         },
         httpServer: options.httpServer,
         allowedHosts: options.allowedHosts,
+        sourceEditing: options.sourceEditing,
     };
 }
 
@@ -845,6 +847,7 @@ async function handlePreRenderRequest(
         partKeys,
         pageParams,
         pageProps,
+        options.sourceEditing,
     );
     timing?.recordSlowRender(Date.now() - slowStart);
 
@@ -1101,7 +1104,12 @@ async function sendResponse(
     try {
         // SSR: compile from original jay-html with merged ViewState (DL#144)
         const jayHtmlDir = path.dirname(jayHtmlPath);
-        const jayHtmlContent = preLoadedContent ?? (await fs.readFile(jayHtmlPath, 'utf-8'));
+        const rawContent = preLoadedContent ?? (await fs.readFile(jayHtmlPath, 'utf-8'));
+        // DL#219: SSR compiles from the original source (not the pre-rendered file), so inject the
+        // source-editing markers here too. Both callers pass the original path and injectDevMarkers
+        // is deterministic + idempotent, so these lines match the hydrate side's markers (from the
+        // pre-rendered file, also injected from the same original) — no hydration mismatch.
+        const jayHtmlContent = options.sourceEditing ? injectDevMarkers(rawContent) : rawContent;
 
         pageHtml = await generateSSRPageHtml(
             vite,
@@ -1286,8 +1294,15 @@ async function preRenderJayHtml(
     partKeys: string[] = [],
     pageParams: Record<string, string> = {},
     pageProps: PageProps = { language: 'en', url: '' },
+    sourceEditing: boolean = false,
 ): Promise<PreRenderResult | undefined> {
-    const jayHtmlWithTemplates = await fs.readFile(route.jayHtmlPath, 'utf-8');
+    // DL#219: inject dev-mode source-editing markers before slow-render, while line offsets
+    // still map to the author's on-disk file. All downstream dev targets (hydrate + SSR) read
+    // the resulting pre-rendered jay-html, so they inherit the markers. Gated behind the
+    // `sourceEditing` option (default off) because the markers change rendered output — they
+    // are only emitted for AIditor / source-editing sessions, not normal dev renders.
+    const rawJayHtml = await fs.readFile(route.jayHtmlPath, 'utf-8');
+    const jayHtmlWithTemplates = sourceEditing ? injectDevMarkers(rawJayHtml) : rawJayHtml;
     const sourceDir = path.dirname(route.jayHtmlPath);
 
     // slowRenderTransform still runs for the dev server's slow render cache.

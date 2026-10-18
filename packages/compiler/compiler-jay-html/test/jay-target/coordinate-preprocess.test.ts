@@ -4,6 +4,7 @@ import { assignCoordinates } from '../../lib/jay-target/assign-coordinates';
 
 const COORD = 'jay-coordinate-base';
 const SCOPE = 'jay-scope';
+const DEV_SRC = 'jay-dev-src';
 
 function getBody(html: string): HTMLElement {
     const root = parse(html);
@@ -205,6 +206,61 @@ describe('assignCoordinates', () => {
             expect(body.querySelector('h1')!.getAttribute(COORD)).toBe('S0/0/0');
             // jay:xxx doesn't increment counter
             expect(body.querySelector('p')!.getAttribute(COORD)).toBe('S0/0/1');
+        });
+
+        // DL#219 — a region's dev source marker (`jay-dev-src`, a static line range injected on the
+        // <jay:…> tag) must move onto the region's rendered root (the scope-anchor wrapper) so the
+        // source-editing inspector can read it; and must be stripped from the tag so it is not emitted
+        // as a spurious component prop.
+        describe('jay-dev-src on regions (DL#219)', () => {
+            it('moves jay-dev-src from an explicit-ref region tag onto the wrapper div', () => {
+                const body = getBody(`<body><div>
+                    <jay:product-card productId="123" ref="hero" jay-dev-src="4:9">
+                        <article class="card"><h2>Product</h2></article>
+                    </jay:product-card>
+                </div></body>`);
+                assignCoordinates(body, { headlessContractNames: headlessNames });
+
+                const jayTag = body.querySelector('jay\\:product-card')!;
+                const wrapper = jayTag.querySelector('div')!;
+                expect(wrapper.getAttribute('style')).toBe('display: contents');
+                expect(wrapper.getAttribute(DEV_SRC)).toBe('4:9');
+                expect(jayTag.getAttribute(DEV_SRC)).toBeFalsy();
+            });
+
+            it('is idempotent across two assignCoordinates passes', () => {
+                const body = getBody(`<body><div>
+                    <jay:product-card productId="123" ref="hero" jay-dev-src="4:9">
+                        <article class="card"><h2>Product</h2></article>
+                    </jay:product-card>
+                </div></body>`);
+                assignCoordinates(body, { headlessContractNames: headlessNames });
+                assignCoordinates(body, { headlessContractNames: headlessNames });
+
+                const jayTag = body.querySelector('jay\\:product-card')!;
+                const wrappers = jayTag
+                    .querySelectorAll('div')
+                    .filter((d) => (d.getAttribute('style') ?? '').includes('display: contents'));
+                expect(wrappers).toHaveLength(1);
+                expect(wrappers[0].getAttribute(DEV_SRC)).toBe('4:9');
+                expect(jayTag.getAttribute(DEV_SRC)).toBeFalsy();
+            });
+
+            it('strips the tag marker for a ref-less single-child region and leaves the child intact', () => {
+                const body = getBody(`<body><div>
+                    <jay:product-card productId="123" jay-dev-src="4:6">
+                        <article class="card" jay-dev-src="5:5"><h2>Product</h2></article>
+                    </jay:product-card>
+                </div></body>`);
+                assignCoordinates(body, { headlessContractNames: headlessNames });
+
+                const jayTag = body.querySelector('jay\\:product-card')!;
+                // Ref-less single child → no wrapper synthesized.
+                expect(jayTag.querySelector('div')).toBeFalsy();
+                expect(jayTag.getAttribute(DEV_SRC)).toBeFalsy();
+                // The child keeps its own marker — the region's source is recoverable from it.
+                expect(jayTag.querySelector('article')!.getAttribute(DEV_SRC)).toBe('5:5');
+            });
         });
     });
 
