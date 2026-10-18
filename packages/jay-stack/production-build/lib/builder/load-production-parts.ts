@@ -151,6 +151,10 @@ export async function loadProductionPageParts(
                 : undefined;
             parts.push({
                 key: headlessImport.key,
+                // DL#221 post-merge fix: the component's module is its global identity — keys the
+                // build-time loadParams cache so two routes reusing the same ref `key` for different
+                // components don't collide (the ref `key` is page-local).
+                modulePath,
                 compDefinition: headlessCompDef,
                 clientImport: '',
                 clientPart: '',

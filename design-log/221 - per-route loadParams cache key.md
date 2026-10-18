@@ -60,9 +60,12 @@ route in its key too. Deferred; see the scope list below.
 
 ```ts
 // lib/builder/param-routing.ts
-export function loadParamsCacheKey(rawRoute: string, part: { key?: string; headlessProps?: unknown }): string {
-    const propsKey = JSON.stringify(part.headlessProps ?? {});
-    return part.key ? `${part.key}:${propsKey}` : `page:${rawRoute}:${propsKey}`;
+export function loadParamsCacheKey(
+  rawRoute: string,
+  part: { key?: string; headlessProps?: unknown },
+): string {
+  const propsKey = JSON.stringify(part.headlessProps ?? {});
+  return part.key ? `${part.key}:${propsKey}` : `page:${rawRoute}:${propsKey}`;
 }
 ```
 
@@ -103,3 +106,39 @@ export function loadParamsCacheKey(rawRoute: string, part: { key?: string; headl
 - Deviations from the design: none.
 - Verified end to end with the change applied as a dist patch to a built site: a migrated Wix site with a blog
   and 86 Bookings service pages built every service page, and none answered 404.
+
+## Post-merge review — additional issues (found reviewing PR #199)
+
+A follow-up review of the merged change surfaced that the fix closed the page-part collision but left the **same collision class open for keyed parts**, plus smaller robustness gaps. Ranked:
+
+1. **[Fixing] Keyed parts still collide across routes by ref name.** `key` is the jay-html headless-import **ref name** (`load-production-parts.ts:153`), which is page-local, not a global component identity. Two routes that each declare a headless import with the same `key` and same props for **different components** (e.g. page A `key="products"` → shop plugin, page B `key="products"` → a different component) both produce `products:{}`; the second route reuses the first's `loadParams` → wrong params / 404 — the exact symptom this DL fixes for page parts. **Fix:** key keyed parts by the **component module identity** (`modulePath`), not the ref name. Same component + same props across routes still dedupes (the intended sharing); different components no longer collide.
+
+2. **[Won't fix — not reachable] Two unkeyed parts on one route.** In the production build the only unkeyed part is the page's own component (`load-production-parts.ts:71`); keyed parts are pushed only under `if (headlessImport.key)` (`:145`). So a route never has two unkeyed parts, and `page:<route>:{}` is unambiguous. Documented in case a future path pushes unkeyed headless parts.
+
+3. **[Minor, left as-is] `part.key ? …` vs `part.key ?? ''`.** The truthiness check sends an empty-string key (`key === ''`) down the `page:<route>` branch instead of the keyed branch. The #1 fix keeps the same `if (part.key)` gate, so this is unchanged — harmless in practice (ref keys are non-empty); documented only as a known edge.
+
+4. **[Minor/theoretical] Namespace mixing.** `page:<route>:…` shares the string space with real keyed keys; a keyed part literally named `page:/post/[slug]` could collide. Extremely unlikely (keys are ref names). The #1 fix (module path for the keyed branch) keeps the two namespaces structurally distinct (`headless:<modulePath>:…` vs `page:<route>:…`).
+
+5. **[Fixing] Test only covers the pure key function.** `param-routing.test.ts` asserts `loadParamsCacheKey` returns distinct/equal strings, but the bug lived in the `buildVersion` cache wiring. Add a case proving two keyed parts with the **same ref key but different module paths** get distinct keys (the #1 regression), and that the same module+props dedupes.
+
+### Fix for #1 — key keyed parts by `modulePath`
+
+```ts
+export function loadParamsCacheKey(
+  rawRoute: string,
+  part: { key?: string; modulePath?: string; headlessProps?: unknown },
+): string {
+  const propsKey = JSON.stringify(part.headlessProps ?? {});
+  // Keyed (headless/plugin) part: identity is the COMPONENT (its module), not the page-local ref
+  // `key` — two routes may reuse the same ref name for different components. Same module + props
+  // across routes still dedupes (intended sharing). Page parts (no key) stay per-route.
+  if (part.key) return `headless:${part.modulePath ?? part.key}:${propsKey}`;
+  return `page:${rawRoute}:${propsKey}`;
+}
+```
+
+Requires threading the keyed part's `modulePath` onto `DevServerPagePart` (it is in scope where the keyed part is pushed, `load-production-parts.ts:152`).
+
+### Scope note on route-context `loadParams` (#136)
+
+The original DL's deferred ⚠️ (a keyed part whose `loadParams` reads the route would need `rawRoute` in its key) is unchanged by this fix — still deferred until such a part exists.

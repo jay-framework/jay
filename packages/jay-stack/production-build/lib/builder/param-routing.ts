@@ -23,10 +23,19 @@ export interface MaterializedEntry<R extends RouteInfo = RouteInfo> {
  * Cache key of one part's loadParams results during a build. Headless parts (keyed) give the same params on every
  * route that uses them with the same props, so they load once. A page's own component has no key: its params are
  * its route's (two item routes, e.g. /post/[slug] and /service-page/[slug], each enumerate their own items).
+ *
+ * A keyed part is identified by its component's **module path**, not the page-local ref `key`: two routes may
+ * reuse the same `key` for different components (DL#221 post-merge fix). Same module + props across routes still
+ * dedupes (the intended sharing). `modulePath` falls back to `key` for parts with no module (shouldn't happen for
+ * a part that has `loadParams`).
  */
-export function loadParamsCacheKey(rawRoute: string, part: { key?: string; headlessProps?: unknown }): string {
+export function loadParamsCacheKey(
+    rawRoute: string,
+    part: { key?: string; modulePath?: string; headlessProps?: unknown },
+): string {
     const propsKey = JSON.stringify(part.headlessProps ?? {});
-    return part.key ? `${part.key}:${propsKey}` : `page:${rawRoute}:${propsKey}`;
+    if (part.key) return `headless:${part.modulePath ?? part.key}:${propsKey}`;
+    return `page:${rawRoute}:${propsKey}`;
 }
 
 export function crossProductParams(parts: ParamPart[]): Record<string, string>[] {

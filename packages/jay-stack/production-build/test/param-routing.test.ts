@@ -397,15 +397,44 @@ describe('dedupeByUrl', () => {
 describe('loadParamsCacheKey', () => {
     it("keeps each page's own params apart: two item routes enumerate their own items", () => {
         const page = {};
-        expect(loadParamsCacheKey('/post/[slug]', page)).not.toBe(loadParamsCacheKey('/service-page/[slug]', page));
-        expect(loadParamsCacheKey('/post/[slug]', page)).toBe(loadParamsCacheKey('/post/[slug]', {}));
+        expect(loadParamsCacheKey('/post/[slug]', page)).not.toBe(
+            loadParamsCacheKey('/service-page/[slug]', page),
+        );
+        expect(loadParamsCacheKey('/post/[slug]', page)).toBe(
+            loadParamsCacheKey('/post/[slug]', {}),
+        );
     });
 
-    it('shares a headless part with the same props across routes, and not with other props', () => {
-        const part = { key: 'productPage', headlessProps: { category: 'a' } };
-        expect(loadParamsCacheKey('/shop/[slug]', part)).toBe(loadParamsCacheKey('/sale/[slug]', { ...part }));
+    it('shares a headless part (same component + props) across routes, and not with other props', () => {
+        const part = {
+            key: 'productPage',
+            modulePath: '/plugins/shop/product-page.js',
+            headlessProps: { category: 'a' },
+        };
+        // Same component + props on two routes → one cache entry (loadParams runs once).
+        expect(loadParamsCacheKey('/shop/[slug]', part)).toBe(
+            loadParamsCacheKey('/sale/[slug]', { ...part }),
+        );
+        // Same component, different props → separate entries.
         expect(loadParamsCacheKey('/shop/[slug]', part)).not.toBe(
-            loadParamsCacheKey('/shop/[slug]', { key: 'productPage', headlessProps: { category: 'b' } }),
+            loadParamsCacheKey('/shop/[slug]', { ...part, headlessProps: { category: 'b' } }),
+        );
+    });
+
+    // DL#221 post-merge fix (finding #1): the page-local ref `key` is NOT a component identity.
+    it('does NOT collide two different components that reuse the same ref key', () => {
+        const shopProducts = {
+            key: 'products',
+            modulePath: '/plugins/shop/products.js',
+            headlessProps: {},
+        };
+        const blogFeatured = {
+            key: 'products', // same ref name, different component
+            modulePath: '/plugins/blog/featured.js',
+            headlessProps: {},
+        };
+        expect(loadParamsCacheKey('/shop/[slug]', shopProducts)).not.toBe(
+            loadParamsCacheKey('/blog/[slug]', blogFeatured),
         );
     });
 });
