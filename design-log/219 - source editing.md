@@ -427,3 +427,18 @@ For authored content these coincide (the clicked element has its own `jay-dev-sr
 Decision rule for the agent: `contentFromBinding` → the content is a bound value; read the binding at `node.lines` (`{post.content}`) and resolve it to its source (here the markdown-pages plugin, keyed `post` → the `.md` file in `contentDir` by route param) rather than editing the rendered markup. Finer pixel→markdown-line mapping would need the plugin to emit its own source-map markers (out of scope).
 
 ✅ verified live: `/markdown/hello` click on the `'hello'` code token → `node.tag:'span'`, `node.html:"<span class=\"token string\">'hello'</span>"`, `contentFromBinding:true`, `lines:{18,18}`; authored `/foreach` `.slow-item` → `node.html:"<li class=\"slow-item\">Slow Item 1</li>"`, no flag, its own `lines:{11,11}`.
+
+### Decision — contract/guide resolution stays agent-side (inspect stays locator-only)
+
+**Question:** when the pointed element is bound (`contentFromBinding`, a region frame, or a bound attribute), should the dev server resolve the contract — contract path + editing skill/guide — and return it (per-element, or for all contracts in the stack + page)?
+
+**Decision (user-approved): no — keep inspect locator-only; the agent resolves.** This upholds §2 ("the runtime does not resolve `region.name`; the agent resolves it via the import") and TL;DR #2 ("a source fragment + structural stack, not a pre-resolved binding list").
+
+Rationale:
+- The inspector is **client-only** — it has DOM markers, not contract paths / plugin guides. Eager resolution would force a dev-server round-trip (killing the client-only property) or bake page-level static info (contract/guide paths) onto every element, duplicating the source import and `plugins-index.yaml`.
+- The agent already has a **cheap, deterministic** path: a region frame carries `name` (contract) → `plugins-index.yaml` → guide (one hop); a page-level binding (`{post.content}`) is resolved by reading the binding at `node.lines` + the page's `<script type="application/jay-…">` imports → contract → guide. Resolving in the framework would **duplicate agent-kit** and couple the inspector to import/plugin layout.
+- Contract→guide resolution is **Part B** (consumer side); folding it into the inspector pulls Part B into Part A prematurely, against the DL's bet (runtime does pixel→source; agent reads source + follows the guide).
+
+**If AIditor later wants server-side resolution**, add it as a **separate** dev-server API — `jay:resolveBinding { file, lines }` / `jay:resolveContract { name }` → `{ contractPath, plugin, guidePath }` — distinct from inspect, built against the real need. Not now (YAGNI).
+
+Cheap Part-B follow-up worth confirming when editing lands: that `plugins-index.yaml` surfaces the per-contract editing guide, so the agent's lookup is a single hop.
