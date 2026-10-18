@@ -174,7 +174,7 @@ export function getComponentName(
     }
 
     // Legacy syntax: plain element name matching an import — but NEVER a standard HTML element
-    // (DL#221). A component/region named after an HTML tag (e.g. `section`, `button`) adds its
+    // (DL#223). A component/region named after an HTML tag (e.g. `section`, `button`) adds its
     // symbol to `importedSymbols`; without this guard a plain `<section>`/`<button>` in the template
     // would be miscompiled as `childComp(section, …)`. HTML-named components are reachable only via
     // `<jay:section>` (the jay-prefixed branch above).

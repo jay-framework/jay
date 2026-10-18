@@ -1,4 +1,6 @@
-# DL#221 — Bare HTML tags collide with same-named component/region imports
+# DL#223 — Bare HTML tags collide with same-named component/region imports
+
+> Renumbered from #221 → #223: PR #199 independently landed a different DL#221 (per-route loadParams cache key).
 
 ## Decisions for the Implementer (TL;DR)
 

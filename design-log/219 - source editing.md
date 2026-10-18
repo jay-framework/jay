@@ -408,7 +408,7 @@ The "synthesize a wrapper for ref-less single-child regions" above was **wrong**
 
 `/nested-composition` (4-level nested **passthrough** regions, `<jay:section>` → `<jay:card>` → `<jay:button>`) throws `compCreator is not a function` at `childComp` during client hydration. **Reproduces with `sourceEditing` off** (SSR renders, client hydrate crashes) — so it is independent of DL#219 (DL#196 passthrough-region territory). Flagged for a separate fix.
 
-**Root-caused and fixed in [DL#221](221%20-%20html%20tag%20component%20name%20collision.md).** The component contracts are named `section`/`button`, which collide with the plain `<section>`/`<button>` HTML tags in the same template: `getComponentName`'s legacy bare-tag syntax matched them as components → `childComp(section, …)` where `section` is a `JayStackComponentDefinition`. Fix guards the legacy branch with `htmlElementTagNameMap`.
+**Root-caused and fixed in [DL#223](223%20-%20html%20tag%20component%20name%20collision.md).** The component contracts are named `section`/`button`, which collide with the plain `<section>`/`<button>` HTML tags in the same template: `getComponentName`'s legacy bare-tag syntax matched them as components → `childComp(section, …)` where `section` is a `JayStackComponentDefinition`. Fix guards the legacy branch with `htmlElementTagNameMap`.
 
 ### Bound / html-string content — `node` = the clicked element + `contentFromBinding` + one-level `node.html`
 

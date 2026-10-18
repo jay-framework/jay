@@ -26,7 +26,7 @@ describe('getComponentName', () => {
             });
         });
 
-        // DL#221 — a component/region named after an HTML tag adds its symbol to importedSymbols;
+        // DL#223 — a component/region named after an HTML tag adds its symbol to importedSymbols;
         // a plain HTML element of that name must stay an HTML element, not a component.
         it('does NOT match a standard HTML tag even when a same-named symbol is imported', () => {
             expect(
