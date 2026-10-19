@@ -1114,12 +1114,12 @@ export function checkRegionCssScoping(jayHtml: JayHtmlSourceFile): RegionDriftFi
         }
         // DL#203 - fold the sorted `to (...)` boundary into the key: two blocks sharing a template and
         // body but with different donut boundaries stay separate, so they must not be flagged to coalesce.
-        const key = `${templates[0]} ${scopeBody(block)} ${[...to].sort().join(',')}`;
+        const key = `${templates[0]}\0${scopeBody(block)}\0${[...to].sort().join(',')}`;
         (groups.get(key) ?? groups.set(key, []).get(key)!).push(selectors.join(', '));
     }
     for (const [key, blockSelectors] of groups) {
         if (blockSelectors.length < 2) continue;
-        const template = key.split(' ')[0];
+        const template = key.split('\0')[0];
         warnings.push({
             message:
                 `${blockSelectors.length} @scope blocks (${blockSelectors.join(' ; ')}) share template ` +
