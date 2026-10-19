@@ -17,6 +17,10 @@ return phaseOutput(
 
 CarryForward is available in the next phase via `props.carryForward` but is not part of the ViewState.
 
+For query-param pages, use this to precompute the no-params default in the slow phase and
+forward it to the fast phase instead of querying on every request — see
+[query-param-pages.md](query-param-pages.md).
+
 ### Response Headers (fast phase only)
 
 The third parameter accepts `responseHeaders` to set HTTP headers on the page response:
