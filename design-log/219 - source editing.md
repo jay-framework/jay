@@ -465,3 +465,19 @@ Pulled forward from the deferred Part B (docs + validation), implemented:
 
 Still deferred: surfacing `editingGuide` into `plugins-index.yaml` (agent reads it from `plugin.yaml` for now);
 the wix-stores reference example + the AIditor companion DL (B4/B5).
+
+### Verification gaps closed — committed tests for the inspector + coverage validation
+
+The two verification bullets that had only been checked with throwaway scripts now have committed tests:
+
+- **Inspector (A3):** `dev-server/test/source-editing.test.ts` — spins the dev server with
+  `sourceEditing: true` for the `5c-page-headless-foreach` fixture (text + `forEach` + a `jay:widget`
+  region) and drives the real client inspector over Playwright: `inspectPoint` on authored text (source
+  lines, no `contentFromBinding`, empty stack), on a `forEach` item (`forEach` frame + record `itemId`),
+  on region content (`region` frame + contract `name`, nested under the `forEach`), and `inspectRect`
+  (returns a node with `rect` + one-level `html`). 4 tests pass.
+- **Coverage validation (B2):** `plugin-validator/test/source-editing-coverage.test.ts` — a contract with
+  neither `editingGuide` nor `readonly` warns; `readonly` and an existing `editingGuide` don't; a missing
+  `editingGuide` file warns. 4 tests pass.
+
+Both verified green in isolation; `node ... toContain` avoided per repo rule.
