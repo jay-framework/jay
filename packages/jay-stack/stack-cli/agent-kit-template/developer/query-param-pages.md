@@ -27,20 +27,25 @@ at build, for free. Paying a per-request query for it is wasted work on the most
 ## The carry-forward mechanism
 
 Every phase returns `phaseOutput(viewState, carryForward)`. The `carryForward` value is handed
-to the **next** phase as `props.carryForward`:
+to the **next** phase as a **positional argument** — not a field on `props`. The fast render
+receives it as its **second parameter**, before any services:
+`withFastRender(async (props, carryForward, ...services) => …)`. (The interactive phase receives
+it as its **fourth** parameter, after `props`, `refs` and the fast ViewState signals.)
 
 ```typescript
 .withSlowlyRender(async () => {
   const data = await loadDefault();          // free at build time
   return phaseOutput(data, { data });        // viewState + carry-forward payload
 })
-.withFastRender(async (props) => {
-  // props.carryForward.data is the slow phase's { data }
+.withFastRender(async (props, carryForward) => {
+  // carryForward.data is the slow phase's { data } — a positional arg, NOT props.carryForward
 })
 ```
 
-See [render-results.md](render-results.md) for `phaseOutput` and the carry-forward contract,
-and [page-components.md](page-components.md) for `props.carryForward` across phases.
+The carry-forward argument is present only when a slow phase is declared; with no slow phase the
+fast render is just `async (props, ...services)`. See [render-results.md](render-results.md) for
+`phaseOutput` and the carry-forward contract, and [page-components.md](page-components.md) for the
+positional carry-forward argument across phases.
 
 ## The pattern
 
@@ -61,11 +66,12 @@ export const page = makeJayStackComponent<ListingContract>()
     const results = await catalog.all();       // the "show everything" default — free at build
     return phaseOutput(results, { results });   // carry it forward
   })
-  .withFastRender(async (props, catalog) => {
+  // With a slow phase, carryForward is the 2nd arg — services follow it.
+  .withFastRender(async (props, carryForward, catalog) => {
     const q = props.query.q ?? '';
     if (!q) {
       // No search term: forward the precomputed default. No query, instant.
-      return phaseOutput(props.carryForward.results, {});
+      return phaseOutput(carryForward.results, {});
     }
     // A search term is present: this is the only path that must query per request.
     const results = await catalog.search(q);
@@ -93,9 +99,9 @@ show" view and only a present token needs a lookup:
 
 ```typescript
   .withSlowlyRender(async () => phaseOutput(EMPTY_VIEW, { default: EMPTY_VIEW }))
-  .withFastRender(async (props, store) => {
+  .withFastRender(async (props, carryForward, store) => {            // (props, carryForward, ...services)
     const token = props.query.share;
-    if (!token) return phaseOutput(props.carryForward.default, {});   // cacheable, instant
+    if (!token) return phaseOutput(carryForward.default, {});         // cacheable, instant
     const doc = await store.getByToken(token);                        // query only when asked
     return phaseOutput(
       render(doc),
@@ -119,9 +125,9 @@ dataset. Keep deriving that cheap, param-dependent bit in the fast phase, but st
     const items = await catalog.all();
     return phaseOutput({ items, view: 'grid' }, { items });
   })
-  .withFastRender(async (props) => {
+  .withFastRender(async (props, carryForward) => {
     const view = props.query.view === 'list' ? 'list' : 'grid';   // cheap, no query
-    return phaseOutput({ items: props.carryForward.items, view }, {});
+    return phaseOutput({ items: carryForward.items, view }, {});
   });
 ```
 
