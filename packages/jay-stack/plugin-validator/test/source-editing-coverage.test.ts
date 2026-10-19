@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { validatePlugin } from '../lib';
+import { validatePlugin, ValidationResult } from '../lib';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -31,8 +31,8 @@ function makePlugin(contractEntry: string, extraFiles: Record<string, string> = 
     return dir;
 }
 
-function coverageWarnings(warnings: { type: string }[]) {
-    return warnings.filter((w) => w.type === 'source-editing-coverage');
+function coverageWarnings(result: ValidationResult) {
+    return result.warnings.filter((w) => w.type === 'source-editing-coverage');
 }
 
 describe('plugin source-editing coverage validation (DL#219)', () => {
@@ -41,7 +41,7 @@ describe('plugin source-editing coverage validation (DL#219)', () => {
             `  - name: thing\n    contract: ./thing.jay-contract\n    component: thing\n`,
         );
         const result = await validatePlugin({ pluginPath: dir });
-        expect(coverageWarnings(result.warnings)).toHaveLength(1);
+        expect(coverageWarnings(result)).toHaveLength(1);
     });
 
     it('does not warn when the contract is readonly', async () => {
@@ -49,7 +49,7 @@ describe('plugin source-editing coverage validation (DL#219)', () => {
             `  - name: thing\n    contract: ./thing.jay-contract\n    component: thing\n    readonly: true\n`,
         );
         const result = await validatePlugin({ pluginPath: dir });
-        expect(coverageWarnings(result.warnings)).toHaveLength(0);
+        expect(coverageWarnings(result)).toHaveLength(0);
     });
 
     it('does not warn when an existing editingGuide is declared', async () => {
@@ -58,7 +58,7 @@ describe('plugin source-editing coverage validation (DL#219)', () => {
             { 'editing/thing.md': '# How to edit thing' },
         );
         const result = await validatePlugin({ pluginPath: dir });
-        expect(coverageWarnings(result.warnings)).toHaveLength(0);
+        expect(coverageWarnings(result)).toHaveLength(0);
     });
 
     it('warns when the declared editingGuide file is missing', async () => {
@@ -66,7 +66,7 @@ describe('plugin source-editing coverage validation (DL#219)', () => {
             `  - name: thing\n    contract: ./thing.jay-contract\n    component: thing\n    editingGuide: ./editing/missing.md\n`,
         );
         const result = await validatePlugin({ pluginPath: dir });
-        const w = coverageWarnings(result.warnings) as { message: string }[];
+        const w = coverageWarnings(result);
         expect(w).toHaveLength(1);
         expect(w[0].message.includes('not found')).toBe(true);
     });

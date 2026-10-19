@@ -86,12 +86,25 @@ describe('source-editing inspector (DL#219)', () => {
             return (await page.evaluate(
                 async ({ selector, kind }) => {
                     const el = document.querySelector(selector);
-                    if (!el) return { node: null, stack: [], error: 'not found: ' + selector } as any;
+                    if (!el)
+                        return { node: null, stack: [], error: 'not found: ' + selector } as any;
                     const r = el.getBoundingClientRect();
                     const msg =
                         kind === 'rect'
-                            ? { type: 'jay:inspectRect', requestId: 1, x: r.left, y: r.top, width: r.width, height: r.height }
-                            : { type: 'jay:inspectPoint', requestId: 1, x: r.left + r.width / 2, y: r.top + r.height / 2 };
+                            ? {
+                                  type: 'jay:inspectRect',
+                                  requestId: 1,
+                                  x: r.left,
+                                  y: r.top,
+                                  width: r.width,
+                                  height: r.height,
+                              }
+                            : {
+                                  type: 'jay:inspectPoint',
+                                  requestId: 1,
+                                  x: r.left + r.width / 2,
+                                  y: r.top + r.height / 2,
+                              };
                     return await new Promise((resolve) => {
                         const on = (e: MessageEvent) => {
                             if (e.data && e.data.type === 'jay:inspectResult') {
@@ -102,7 +115,10 @@ describe('source-editing inspector (DL#219)', () => {
                         window.addEventListener('message', on);
                         // standalone page: window.parent === window, so the reply lands here
                         window.postMessage(msg, '*');
-                        setTimeout(() => resolve({ node: null, stack: [], error: 'timeout' } as any), 3000);
+                        setTimeout(
+                            () => resolve({ node: null, stack: [], error: 'timeout' } as any),
+                            3000,
+                        );
                     });
                 },
                 { selector, kind },
