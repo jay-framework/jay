@@ -76,8 +76,9 @@ export const page = makeJayStackComponent<ProductPageContract>()
   .withSlowlyRender(async (props, db) => {
     // ... slow render
   })
-  .withFastRender(async (props, db) => {
-    // ... fast render
+  // With a slow phase, carryForward is the 2nd arg — the service (db) follows it.
+  .withFastRender(async (props, carryForward, db) => {
+    // ... fast render (use db for queries, carryForward for the slow phase's output)
   })
   // carryForward is the 4th positional arg: (props, refs, fastViewState, carryForward, ...contexts).
   .withInteractive(function ProductPage(props, refs, fastViewState, carryForward) {
