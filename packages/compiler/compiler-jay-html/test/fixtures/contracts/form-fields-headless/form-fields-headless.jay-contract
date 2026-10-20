@@ -1,0 +1,28 @@
+name: form-fields
+tags:
+  # Non-repeated sibling sub-contracts, each exposing a leaf interactive tag
+  # named `input`. All three share the leaf tag name, so the compiler derives
+  # the same generated const name (`refInput`) for each (DL#226).
+  - tag: firstName
+    type: sub-contract
+    phase: fast+interactive
+    tags:
+      - tag: input
+        type: interactive
+        elementType: HTMLInputElement
+
+  - tag: email
+    type: sub-contract
+    phase: fast+interactive
+    tags:
+      - tag: input
+        type: interactive
+        elementType: HTMLInputElement
+
+  - tag: message
+    type: sub-contract
+    phase: fast+interactive
+    tags:
+      - tag: input
+        type: interactive
+        elementType: HTMLTextAreaElement

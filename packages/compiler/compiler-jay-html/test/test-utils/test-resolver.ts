@@ -44,6 +44,10 @@ export const TEST_IMPORT_RESOLVER: JayImportResolver = {
                 dir: 'page-with-headless-foreach-template',
                 file: 'word-split',
             },
+            'test-form-fields:form-fields': {
+                dir: 'form-fields-headless',
+                file: 'form-fields-headless',
+            },
         };
 
         const key = `${pluginName}:${contractName}`;
@@ -191,6 +195,24 @@ export const TEST_IMPORT_RESOLVER: JayImportResolver = {
                         'contracts/page-with-headless-foreach-template/word-split',
                     ),
                     componentName: 'wordSplit',
+                    isNpmPackage: false,
+                },
+                [],
+            );
+        }
+
+        if (pluginName === 'test-form-fields' && contractName === 'form-fields') {
+            return new WithValidations(
+                {
+                    contractPath: path.resolve(
+                        projectRoot,
+                        'contracts/form-fields-headless/form-fields-headless.jay-contract',
+                    ),
+                    componentPath: path.resolve(
+                        projectRoot,
+                        'contracts/form-fields-headless/form-fields-headless',
+                    ),
+                    componentName: 'formFields',
                     isNpmPackage: false,
                 },
                 [],
