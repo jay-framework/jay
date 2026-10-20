@@ -324,10 +324,17 @@ export function renderElementRef(
     if (element.attributes.ref) {
         if (importedRefNameToRef.has(element.attributes.ref)) {
             const importedRef = importedRefNameToRef.get(element.attributes.ref);
-            // Generate a unique constName for this imported ref using the ref name generator
+            // Generate a unique constName for this imported ref using the ref name generator.
             // This ensures that refs with the same base name (e.g., "removeButton" in different
-            // branches like lineItems.removeButton and coupon.removeButton) get unique variable names
-            const uniqueConstName = refNameGenerator.newConstantName(importedRef.ref, variables);
+            // branches like lineItems.removeButton and coupon.removeButton) get unique variable
+            // names. The full template path is the ref's identity so that distinct sibling refs
+            // sharing a leaf tag name (e.g. form.firstName.input / form.email.input) in one scope
+            // are not mistaken for the same ref and collapsed to one const name (DL#226).
+            const uniqueConstName = refNameGenerator.newConstantName(
+                importedRef.ref,
+                variables,
+                element.attributes.ref,
+            );
             // Create a new ref with the unique constName so the declaration matches the usage
             // Set autoRef to false since this ref is explicitly used in the template
             // Use the full ref path from the template attribute as originalName for matching
@@ -488,9 +495,15 @@ export function renderChildCompRef(
 ): RenderFragment {
     if (importedRefNameToRef.has(element.attributes.ref)) {
         const importedRef = importedRefNameToRef.get(element.attributes.ref);
-        // Generate a unique constName for this imported ref using the ref name generator
-        // This ensures that refs with the same base name get unique variable names
-        const uniqueConstName = refNameGenerator.newConstantName(importedRef.ref, variables);
+        // Generate a unique constName for this imported ref using the ref name generator.
+        // This ensures that refs with the same base name get unique variable names. The full
+        // template path is the ref's identity so that distinct sibling refs sharing a leaf tag
+        // name in one scope are not collapsed to one const name (DL#226).
+        const uniqueConstName = refNameGenerator.newConstantName(
+            importedRef.ref,
+            variables,
+            element.attributes.ref,
+        );
         // Create a new ref with the unique constName so the declaration matches the usage
         // Set autoRef to false since this ref is explicitly used in the template
         // Use the full ref path from the template attribute as originalName for matching

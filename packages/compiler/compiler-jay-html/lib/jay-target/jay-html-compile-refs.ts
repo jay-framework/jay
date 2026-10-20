@@ -233,22 +233,37 @@ export function elementNameToJayType(element: HTMLElement): JayType {
 
 export class RefNameGenerator {
     private nextId: number = 1;
-    private constNamesToVariables: Map<string, Variables> = new Map();
+    private constNameOwners: Map<string, { variables: Variables; identity: string }> = new Map();
 
     newAutoRefNameGenerator() {
         return 'aR' + this.nextId++;
     }
 
-    newConstantName(refName: string, variables: Variables): string {
+    /**
+     * Allocate a unique local const name for a ref.
+     *
+     * A const name is reused (returned unchanged) only when the SAME ref is requested again in the
+     * same render scope — "same ref" being identified by `identity`, not by `refName`. `refName` is
+     * only the base used to build the const (e.g. `input` → `refInput`); `identity` is the ref's
+     * stable key, which for an imported/headless ref is its full template path (e.g.
+     * `form.firstName.input`). This distinguishes "one ref used by several elements" (reuse) from
+     * "two distinct refs that happen to share a leaf tag name" (DL#226) — the latter get distinct
+     * consts (`refInput`, `refInput2`, …) instead of colliding.
+     *
+     * `identity` defaults to `refName`, which preserves prior behavior for page-own refs where
+     * `refName` is already the full, unique ref path.
+     */
+    newConstantName(refName: string, variables: Variables, identity: string = refName): string {
         let suffix = 2;
         let constName = camelCase(`ref ${refName}`);
-        while (this.constNamesToVariables.has(constName)) {
-            if (this.constNamesToVariables.get(constName) === variables) {
+        while (this.constNameOwners.has(constName)) {
+            const owner = this.constNameOwners.get(constName)!;
+            if (owner.variables === variables && owner.identity === identity) {
                 return constName;
             }
             constName = camelCase(`ref ${refName}${suffix++}`);
         }
-        this.constNamesToVariables.set(constName, variables);
+        this.constNameOwners.set(constName, { variables, identity });
         return constName;
     }
 
@@ -256,7 +271,7 @@ export class RefNameGenerator {
     clone(): RefNameGenerator {
         const copy = new RefNameGenerator();
         copy.nextId = this.nextId;
-        copy.constNamesToVariables = new Map(this.constNamesToVariables);
+        copy.constNameOwners = new Map(this.constNameOwners);
         return copy;
     }
 }
