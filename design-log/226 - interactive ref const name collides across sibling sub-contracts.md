@@ -12,8 +12,8 @@ as-authored for context.
   generates the same ref const (`refInput`) multiple times:
   ```ts
   const [firstNameRefManager, [refInput]] = ReferencesManager.for(options, ['input'], [], [], []);
-  const [emailRefManager,     [refInput]] = ReferencesManager.for(options, ['input'], [], [], []);
-  const [messageRefManager,   [refInput]] = ReferencesManager.for(options, ['input'], [], [], []);
+  const [emailRefManager, [refInput]] = ReferencesManager.for(options, ['input'], [], [], []);
+  const [messageRefManager, [refInput]] = ReferencesManager.for(options, ['input'], [], [], []);
   ```
   esbuild then fails with `The symbol "refInput" has already been declared` and the page never
   hydrates.
@@ -36,9 +36,9 @@ as-authored for context.
   keep the ref's public name (the `'input'` string handed to `ReferencesManager.for`) as-is — only
   the local `const` variable needs disambiguating.
 - **Repro:** fixture `packages/compiler/compiler-jay-html/test/fixtures/contracts/duplicate-ref-sibling-inputs/`
-  + the two red tests named `generates a unique ref const per non-repeated sibling sub-contract (DL#226)`
-  in `generate-element.test.ts` and `generate-element-hydrate.test.ts`. Both are **expected to fail**
-  against today's compiler.
+  - the two red tests named `generates a unique ref const per non-repeated sibling sub-contract (DL#226)`
+    in `generate-element.test.ts` and `generate-element-hydrate.test.ts`. Both are **expected to fail**
+    against today's compiler.
 
 ## Background
 
@@ -101,11 +101,11 @@ interactive }`, bound on one page through a headless region keyed `form`, is eno
 Three de-duplication mechanisms exist in the ref pipeline. Each is verified against source; none
 disambiguates this case.
 
-| Mechanism | File:line | What it de-dups | Why it misses this case |
-| --- | --- | --- | --- |
+| Mechanism                          | File:line                          | What it de-dups                                      | Why it misses this case                                                                                                                                                |
+| ---------------------------------- | ---------------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `RefNameGenerator.newConstantName` | `jay-html-compile-refs.ts:242-253` | parse-time const names, by `(name, variables-scope)` | lines 246-247 reuse the name when the scope matches; non-repeated siblings share one scope, so the leaf `input` is judged "the same ref" and returned without a suffix |
-| `getUniqueRefConstName` | `jay-html-compile-refs.ts:654-677` | emit-time const names, **autoRef only** | lines 657-660 return non-autoRef const names unchanged; all three refs here are used in the template (non-autoRef) |
-| `getUniqueRefManagerName` | `jay-html-compile-refs.ts:635-652` | **manager** names | works — the managers are unique (`firstNameRefManager`/…); it does not touch the ref consts |
+| `getUniqueRefConstName`            | `jay-html-compile-refs.ts:654-677` | emit-time const names, **autoRef only**              | lines 657-660 return non-autoRef const names unchanged; all three refs here are used in the template (non-autoRef)                                                     |
+| `getUniqueRefManagerName`          | `jay-html-compile-refs.ts:635-652` | **manager** names                                    | works — the managers are unique (`firstNameRefManager`/…); it does not touch the ref consts                                                                            |
 
 The leaf-name path is reached because a **headless-import** ref binding (`ref="form.firstName.input"`)
 resolves through `importedRefNameToRef` and calls `newConstantName(importedRef.ref, variables)` with
@@ -213,7 +213,12 @@ tags:
 **Page** (`duplicate-ref-sibling-inputs.jay-html`):
 
 ```html
-<script type="application/jay-headless" plugin="test-form-fields" contract="form-fields" key="form"></script>
+<script
+  type="application/jay-headless"
+  plugin="test-form-fields"
+  contract="form-fields"
+  key="form"
+></script>
 ...
 <input ref="form.firstName.input" />
 <input ref="form.email.input" />
@@ -297,9 +302,9 @@ this branch" note at the top).
 
 Reproduced exactly as described. With the repro fixture, today's compiler emitted three
 `const [..., [refInput]]` declarations in one scope. The bug is the **proximate cause** (#2 in Root
-Cause): `RefNameGenerator.newConstantName` keyed its same-scope *reuse* check only on the render
+Cause): `RefNameGenerator.newConstantName` keyed its same-scope _reuse_ check only on the render
 scope (`variables`), so two **distinct** imported refs that share a leaf tag name (`input`) in one
-scope were mistaken for *the same ref used twice* and collapsed to one const.
+scope were mistaken for _the same ref used twice_ and collapsed to one const.
 
 ### The fix (naming-layer, minimal)
 
@@ -310,7 +315,7 @@ difference between "same ref reused" and "distinct refs sharing a leaf name":
 
 - `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compile-refs.ts` —
   `newConstantName(refName, variables, identity = refName)` now reuses a const name only when
-  **both** the render scope *and* the ref **identity** match. `identity` is the ref's stable key;
+  **both** the render scope _and_ the ref **identity** match. `identity` is the ref's stable key;
   it defaults to `refName`, so page-own refs (whose `refName` is already the full, unique ref path)
   are unchanged.
 - `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts` — the two
@@ -341,7 +346,7 @@ the validation only when the framework cannot itself guarantee correctness; here
 
 - The two repro tests `generates a unique ref const per non-repeated sibling sub-contract (DL#226)`
   in `generate-element.test.ts` and `generate-element-hydrate.test.ts` are now **green**.
-- Added a **reuse-case** guard: fixture `contracts/reused-ref-same-import` binds the *same* imported
+- Added a **reuse-case** guard: fixture `contracts/reused-ref-same-import` binds the _same_ imported
   ref (`form.firstName.input`) on two elements in one scope, and the two
   `reuses a single ref const when the same imported ref is bound twice (DL#226)` tests assert it
   yields exactly **one** const (`refInput`) reused by both usages. This proves the identity-based

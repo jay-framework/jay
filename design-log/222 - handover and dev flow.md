@@ -25,16 +25,16 @@ Jay's contract separates design from logic. AIditor lets a human drive an agent 
 
 ## Prior Art / Adjacent Mechanisms
 
-| Mechanism                                                            | Verdict                                                                                                                                                                                 |
-| -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Pluggable jay-html validation (DL#145)                               | **Reuse** as the rule engine. ✅ read: per-file, parsed DOM, findings carry agent-friendly `suggestion`, `--json` output, per-finding `error`/`warn` severity. **Gap:** no diff awareness (no base/head) — needs a diff-aware rule kind (§4). The `error`/`warn` severity is reused as-is; the policy adds none. |
-| `design-system-validator`, `a11y-validator`, `seo-validator` plugins | **Reuse** as the global `correctness` plugins a designer switches on.                                                                                                                   |
+| Mechanism                                                                            | Verdict                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pluggable jay-html validation (DL#145)                                               | **Reuse** as the rule engine. ✅ read: per-file, parsed DOM, findings carry agent-friendly `suggestion`, `--json` output, per-finding `error`/`warn` severity. **Gap:** no diff awareness (no base/head) — needs a diff-aware rule kind (§4). The `error`/`warn` severity is reused as-is; the policy adds none.                                                                                                                                                                                                 |
+| `design-system-validator`, `a11y-validator`, `seo-validator` plugins                 | **Reuse** as the global `correctness` plugins a designer switches on.                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | Content classification (DL#200 `REGION-OVERRIDE-NON-CONTENT`, DL#202 content marker) | **Reuse** the `content`-vs-`design` line. ✅ read, **fully implemented**: `CONTENT_TAGS` allowlist (`stack-cli/lib/validate.ts:1256`), `isNonContentOverride` (`:1335`), `checkRegionOverrideNonContent(…, contentTags = CONTENT_TAGS)` (`:1428`), over the `addedElementTags` facet (`compiler-inline-composition/lib/facet.ts`). ⚠️ `CONTENT_TAGS` is **module-local** — promote it to a shared export so this rule imports the same constant (no fork). This DL only adds `aria-*` to the content attributes. |
-| Agent-kit guides (DL#85, #125)                                       | **Reuse** as the channel for guidelines. Policy guidelines are an overlay folder in the agent-kit.                                                                                      |
-| Source editing / inspector (DL#219)                                  | **Reuse** for visual merge: ✅ read: pixel/rect → jay-html source fragment + structural stack via embed postMessage. (DL#219 is still [Design]; merge depends on A1.)                   |
-| `devOnly` actions                                                    | **Reuse** to keep policy-authoring and merge actions out of production. ✅ per DL#219 §Dev-only.                                                                                        |
-| Wix dev-machine infra, git-like storage                              | **Reuse**, per the brief. ⚠️ assumed: supports branches, per-branch checkouts, ACL per path or per ref, and a server-side pre-publish hook. Must be confirmed (Q1).                     |
-| Freeze / embed postMessage (DL#128)                                  | **Reuse** pattern for the side-by-side iframes. ⚠️ not re-read.                                                                                                                         |
+| Agent-kit guides (DL#85, #125)                                                       | **Reuse** as the channel for guidelines. Policy guidelines are an overlay folder in the agent-kit.                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Source editing / inspector (DL#219)                                                  | **Reuse** for visual merge: ✅ read: pixel/rect → jay-html source fragment + structural stack via embed postMessage. (DL#219 is still [Design]; merge depends on A1.)                                                                                                                                                                                                                                                                                                                                            |
+| `devOnly` actions                                                                    | **Reuse** to keep policy-authoring and merge actions out of production. ✅ per DL#219 §Dev-only.                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Wix dev-machine infra, git-like storage                                              | **Reuse**, per the brief. ⚠️ assumed: supports branches, per-branch checkouts, ACL per path or per ref, and a server-side pre-publish hook. Must be confirmed (Q1).                                                                                                                                                                                                                                                                                                                                              |
+| Freeze / embed postMessage (DL#128)                                                  | **Reuse** pattern for the side-by-side iframes. ⚠️ not re-read.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 **Null hypothesis for the merge UI:** use plain git text merge and conflict markers. Rejected for the designer persona: jay-html conflicts are unreadable, and non-conflicting textual merges can still be visually wrong. We keep git for storage and history, and add a visual layer on top, not a new VCS.
 
@@ -109,14 +109,14 @@ jay-policy.md
 
 A selector names a **location**; the most-specific matching selector wins (a cascade). File-class rules at a route scope bind to the files backing those routes (e.g. the page folder); at `*` they bind project-wide.
 
-| Selector               | Matches                                                                   |
-| ---------------------- | ------------------------------------------------------------------------- |
-| `*`                    | the whole project                                                         |
-| `/campaigns/**`        | a folder — every page under `/campaigns` (recursive); `/*` = one level     |
-| `/about`               | one page, by route (no `page.jay-html` suffix)                             |
-| `/products/[slug]`     | a dynamic page (route with params)                                         |
-| `/about #hero`         | a **section** — an element marked `jay-policy-section="hero"` on that page  |
-| `/about #hero #cta`    | an inner section (descendant combinator)                                   |
+| Selector            | Matches                                                                    |
+| ------------------- | -------------------------------------------------------------------------- |
+| `*`                 | the whole project                                                          |
+| `/campaigns/**`     | a folder — every page under `/campaigns` (recursive); `/*` = one level     |
+| `/about`            | one page, by route (no `page.jay-html` suffix)                             |
+| `/products/[slug]`  | a dynamic page (route with params)                                         |
+| `/about #hero`      | a **section** — an element marked `jay-policy-section="hero"` on that page |
+| `/about #hero #cta` | an inner section (descendant combinator)                                   |
 
 Specificity: `*` < `/x/**` < `/x/*` < `/route` ≈ `/route/[p]` < `/route #sec` < `/route #sec #inner`. A bare `#hero` (no route) matches that section on any page.
 
@@ -124,19 +124,19 @@ Specificity: `*` < `/x/**` < `/x/*` < `/route` ≈ `/route/[p]` < `/route #sec` 
 
 **Every rule may be set at any selector and cascades downward — most-specific wins.** Setting `createSections: from-template` (or `addContract`, `overrideRoute`, `content`, `publish`, …) at `*` is the project default; a folder, page, or section selector overrides it for its subtree. The "Scope note" column records only where a rule is _meaningful_ or _fires_ — not where it may be declared (it may be declared anywhere above that).
 
-| Rule                              | Values                       | Means / scope note                                                                      |
-| --------------------------------- | ---------------------------- | -------------------------------------------------------------------------------------- |
-| `code` / `css` / `dependencies`   | `yes` \| `no`                | file-class: `.ts`·`.js` / `.css`+`style=` / `package.json`·lockfile. Set at `*` or folder — a page/section scope has no such files to govern |
-| `createPages`                     | `any` \| `from-template` \| `no` | create new pages; `from-template` = from `src/components/pages/`. Set at `*`/folder (the area new pages land in) |
-| `createSections`                  | `any` \| `from-template` \| `no` | add a section; `from-template` = from `src/components/sections/`. Cascades `*` → folder → page → section |
-| `addContract`                     | `yes` \| `no`                | add a contract (wire a plugin / headless component) to a page. Cascades `*` → folder → page |
-| `overrideRoute`                   | `any` \| `from-template` \| `no` | create a higher-priority **concrete override** of a dynamic route. Settable at `*`/folder as the default; **fires only where a `[param]` route exists** |
-| `content`                         | `yes` \| `no`                | edit **content facets** (see below) — no structural change. Cascades to any level           |
-| `design`                          | `yes` \| `no`                | any non-content change: `class`/`style`, layout, net-new non-content tags. Cascades to any level |
-| `designSystemOnly`                | `yes` \| `no`                | modifier on `design`: non-content elements must be design-system elements; content free     |
-| `edit`                            | `no`                         | shorthand — lock every rule at this selector (and below)                                     |
-| `publish`                         | `direct` \| `review`         | **disposition** of a _clean_ change: publish directly (default), or force a change request   |
-| `onViolation`                     | `review` \| `block`          | **disposition** of an _edit-permission_ violation: change request (default), or hard-stop    |
+| Rule                            | Values                           | Means / scope note                                                                                                                                      |
+| ------------------------------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `code` / `css` / `dependencies` | `yes` \| `no`                    | file-class: `.ts`·`.js` / `.css`+`style=` / `package.json`·lockfile. Set at `*` or folder — a page/section scope has no such files to govern            |
+| `createPages`                   | `any` \| `from-template` \| `no` | create new pages; `from-template` = from `src/components/pages/`. Set at `*`/folder (the area new pages land in)                                        |
+| `createSections`                | `any` \| `from-template` \| `no` | add a section; `from-template` = from `src/components/sections/`. Cascades `*` → folder → page → section                                                |
+| `addContract`                   | `yes` \| `no`                    | add a contract (wire a plugin / headless component) to a page. Cascades `*` → folder → page                                                             |
+| `overrideRoute`                 | `any` \| `from-template` \| `no` | create a higher-priority **concrete override** of a dynamic route. Settable at `*`/folder as the default; **fires only where a `[param]` route exists** |
+| `content`                       | `yes` \| `no`                    | edit **content facets** (see below) — no structural change. Cascades to any level                                                                       |
+| `design`                        | `yes` \| `no`                    | any non-content change: `class`/`style`, layout, net-new non-content tags. Cascades to any level                                                        |
+| `designSystemOnly`              | `yes` \| `no`                    | modifier on `design`: non-content elements must be design-system elements; content free                                                                 |
+| `edit`                          | `no`                             | shorthand — lock every rule at this selector (and below)                                                                                                |
+| `publish`                       | `direct` \| `review`             | **disposition** of a _clean_ change: publish directly (default), or force a change request                                                              |
+| `onViolation`                   | `review` \| `block`              | **disposition** of an _edit-permission_ violation: change request (default), or hard-stop                                                               |
 
 A value at `*` or a folder is the **default** inherited downward and overridden by any more specific selector (`correctness` is the one exception — it is global and not scopeable).
 
@@ -153,7 +153,7 @@ Correctness is not steerable here: a **correctness error always BLOCKs** (it is 
 
 The gate resolves one disposition per publish; across a changeset the **strictest wins** (BLOCK > REVIEW > PUBLISH):
 
-| Situation                                                    | Disposition |
+| Situation                                                   | Disposition |
 | ----------------------------------------------------------- | ----------- |
 | any correctness error                                       | **BLOCK**   |
 | edit-permission violation, in an `onViolation: block` scope | **BLOCK**   |
@@ -165,30 +165,35 @@ The gate resolves one disposition per publish; across a changeset the **strictes
 
 ```markdown
 <!-- jay-policy.md -->
+
 ---
+
 version: 1
 
 # Correctness — global, every role, every file/page. Violations are errors.
+
 correctness: [design-system-validator, a11y-validator, seo-validator]
 
 # New pages/sections/overrides come from templates under the components folder:
-#   src/components/pages/   src/components/sections/
+
+# src/components/pages/ src/components/sections/
+
 # 'from-template' = any template in that area (nothing is listed here).
 
 roles:
-  client:
-    '*': # whole project — these are the defaults every page/section inherits
-      code: no
-      css: no
-      dependencies: no
-      createPages: from-template
-      createSections: no # project default; a folder/page/section can grant it
-      addContract: no # project default; a page can grant it
-      overrideRoute: no # project default; a dynamic page can grant it
-      content: yes
-      design: no
-      publish: direct # clean changes auto-publish (disposition default)
-      onViolation: review # violations become a change request, not a dead-end
+client:
+'*': # whole project — these are the defaults every page/section inherits
+code: no
+css: no
+dependencies: no
+createPages: from-template
+createSections: no # project default; a folder/page/section can grant it
+addContract: no # project default; a page can grant it
+overrideRoute: no # project default; a dynamic page can grant it
+content: yes
+design: no
+publish: direct # clean changes auto-publish (disposition default)
+onViolation: review # violations become a change request, not a dead-end
 
     '/campaigns/**': # a folder — design freedom within the design system
       design: yes
@@ -214,6 +219,7 @@ roles:
     '/checkout/**': # locked hard — not editable, not even via a PR
       edit: no
       onViolation: block
+
 ---
 
 # Working on this site
@@ -256,13 +262,13 @@ Not in the framework: no policy-level severity, no new template syntax (the `jay
 
 Small stateful service (Wix-side):
 
-| API                                                | Does                                                                                                        |
-| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `handover(project, client, mode)`                  | §2 steps (a)–(d)                                                                                            |
+| API                                                | Does                                                                                                                                                                                                             |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `handover(project, client, mode)`                  | §2 steps (a)–(d)                                                                                                                                                                                                 |
 | `publish(project, branch, commit)`                 | spin a clean checkout, run `validate --policy --role <role> --json`, then act on the disposition: PUBLISH → fast-forward `main` + production build; REVIEW → `createChangeRequest`; BLOCK → refuse with findings |
-| `createChangeRequest(project, branch)`             | cut `variation/<id>`, attach findings, notify designer                                                      |
-| `resolveChangeRequest(id, mergedCommit \| reject)` | land or close                                                                                               |
-| `workspace(project, branch, user)`                 | get or provision a dev machine from the Wix infra                                                           |
+| `createChangeRequest(project, branch)`             | cut `variation/<id>`, attach findings, notify designer                                                                                                                                                           |
+| `resolveChangeRequest(id, mergedCommit \| reject)` | land or close                                                                                                                                                                                                    |
+| `workspace(project, branch, user)`                 | get or provision a dev machine from the Wix infra                                                                                                                                                                |
 
 Authority lives here, not in the workspace: the workspace is a convenience and is assumed hostile for policy purposes.
 
@@ -278,27 +284,27 @@ Opened on a change request in the designer's workspace, which checks out three t
 
 ## Implementation Plan
 
-| Phase | Scope                                                                                            | Outcome                                         |
-| ----- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------- |
-| P0    | Confirm infra constraints (Q1, Q2) with the Wix dev-machine and storage owners                   | Go / no-go on branches, hooks, ACLs             |
-| P1    | `jay-policy.md` (frontmatter `correctness` + `roles → selectors → rules`; markdown guidelines body), loader + selector engine, diff-aware edit rules (`code`/`css`/`dependencies`/`content`/`design`/`designSystemOnly`/`createPages`/`createSections`/`addContract`), disposition resolver (`publish`/`onViolation` → PUBLISH/REVIEW/BLOCK), `validate --policy [--role] [--base] --json`, guidelines overlay in agent-kit | Policy works locally, agent can see what a publish would do |
-| P2    | Handover service: `handover`, `workspace`, `publish` with gate; unmanaged + managed happy path   | The 2-step flow in the diagram works end to end |
-| P3    | Change requests + variation branches; designer inbox                                             | Client can request changes                      |
-| P4    | Visual merge (hunks, side-by-side, apply)                                                        | Designer can merge visually                     |
-| P5    | `#section` selectors (`jay-policy-section` mapping) + `overrideRoute` (dynamic-route shadowing), client-branch updates from `main`, merge-conflict flow for client | Policy covers sections + dynamic overrides; long-lived clients |
+| Phase | Scope                                                                                                                                                                                                                                                                                                                                                                                                                       | Outcome                                                        |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| P0    | Confirm infra constraints (Q1, Q2) with the Wix dev-machine and storage owners                                                                                                                                                                                                                                                                                                                                              | Go / no-go on branches, hooks, ACLs                            |
+| P1    | `jay-policy.md` (frontmatter `correctness` + `roles → selectors → rules`; markdown guidelines body), loader + selector engine, diff-aware edit rules (`code`/`css`/`dependencies`/`content`/`design`/`designSystemOnly`/`createPages`/`createSections`/`addContract`), disposition resolver (`publish`/`onViolation` → PUBLISH/REVIEW/BLOCK), `validate --policy [--role] [--base] --json`, guidelines overlay in agent-kit | Policy works locally, agent can see what a publish would do    |
+| P2    | Handover service: `handover`, `workspace`, `publish` with gate; unmanaged + managed happy path                                                                                                                                                                                                                                                                                                                              | The 2-step flow in the diagram works end to end                |
+| P3    | Change requests + variation branches; designer inbox                                                                                                                                                                                                                                                                                                                                                                        | Client can request changes                                     |
+| P4    | Visual merge (hunks, side-by-side, apply)                                                                                                                                                                                                                                                                                                                                                                                   | Designer can merge visually                                    |
+| P5    | `#section` selectors (`jay-policy-section` mapping) + `overrideRoute` (dynamic-route shadowing), client-branch updates from `main`, merge-conflict flow for client                                                                                                                                                                                                                                                          | Policy covers sections + dynamic overrides; long-lived clients |
 
 ## Scope Pre-mortem (not handled, with decision)
 
-| Gap                                                                                       | Decision                                                                                 |
-| ----------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| Policy over **data** the client edits via plugins (CMS items, products) — not in the repo | Defer; own DL. Repo policy only governs repo content.                                    |
-| Multiple clients/editors on one draft                                                     | Defer: one draft per user, merged via the same machinery.                                |
-| Policy evolution when it conflicts with already-published client work                     | Defer: policy applies to the next publish; no retroactive failure.                       |
-| Visual merge of **logic** changes (`page.ts`)                                             | Out of scope; file-level diff only.                                                      |
-| Agent circumventing rules by crafted edits that pass validate but violate intent          | Residual risk; mitigate with guidelines + `publish: review` on sensitive scopes so even a passing change gets designer eyes. |
-| Approvals / billing / roles beyond designer & client                                      | Defer.                                                                                   |
-| Cross-target rendering of three trees (element/hydrate/SSR)                               | Merge previews use the dev-server only; production-build parity checked at publish gate. |
-| Content-tag allowlist (`CONTENT_TAGS`) is DL#200 module-local, not exported                | Dependency, not deferred: promote `CONTENT_TAGS` (`stack-cli/lib/validate.ts:1256`) to a shared export so this rule reuses DL#200's constant. No forked list. |
+| Gap                                                                                       | Decision                                                                                                                                                      |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Policy over **data** the client edits via plugins (CMS items, products) — not in the repo | Defer; own DL. Repo policy only governs repo content.                                                                                                         |
+| Multiple clients/editors on one draft                                                     | Defer: one draft per user, merged via the same machinery.                                                                                                     |
+| Policy evolution when it conflicts with already-published client work                     | Defer: policy applies to the next publish; no retroactive failure.                                                                                            |
+| Visual merge of **logic** changes (`page.ts`)                                             | Out of scope; file-level diff only.                                                                                                                           |
+| Agent circumventing rules by crafted edits that pass validate but violate intent          | Residual risk; mitigate with guidelines + `publish: review` on sensitive scopes so even a passing change gets designer eyes.                                  |
+| Approvals / billing / roles beyond designer & client                                      | Defer.                                                                                                                                                        |
+| Cross-target rendering of three trees (element/hydrate/SSR)                               | Merge previews use the dev-server only; production-build parity checked at publish gate.                                                                      |
+| Content-tag allowlist (`CONTENT_TAGS`) is DL#200 module-local, not exported               | Dependency, not deferred: promote `CONTENT_TAGS` (`stack-cli/lib/validate.ts:1256`) to a shared export so this rule reuses DL#200's constant. No forked list. |
 
 ## Questions and Answers
 
