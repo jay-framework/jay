@@ -48,9 +48,9 @@ export type DuplicateRefSiblingInputsContract = JayContract<
 >;
 
 export function render(options?: RenderElementOptions): DuplicateRefSiblingInputsElementPreRender {
-    const [firstNameRefManager, [refFirstNameInput]] = ReferencesManager.for(options, ['input'], [], [], []);
-    const [emailRefManager, [refEmailInput]] = ReferencesManager.for(options, ['input'], [], [], []);
-    const [messageRefManager, [refMessageInput]] = ReferencesManager.for(options, ['input'], [], [], []);
+    const [firstNameRefManager, [refInput]] = ReferencesManager.for(options, ['input'], [], [], []);
+    const [emailRefManager, [refInput2]] = ReferencesManager.for(options, ['input'], [], [], []);
+    const [messageRefManager, [refInput3]] = ReferencesManager.for(options, ['input'], [], [], []);
     const [formRefManager, []] = ReferencesManager.for(options, [], [], [], [], {
         firstName: firstNameRefManager,
         email: emailRefManager,
@@ -63,9 +63,9 @@ export function render(options?: RenderElementOptions): DuplicateRefSiblingInput
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
                 e('h1', {}, [dt((vs) => vs.title)]),
-                e('input', {}, [], refFirstNameInput()),
-                e('input', {}, [], refEmailInput()),
-                e('textarea', {}, [], refMessageInput()),
+                e('input', {}, [], refInput()),
+                e('input', {}, [], refInput2()),
+                e('textarea', {}, [], refInput3()),
             ]),
         ) as DuplicateRefSiblingInputsElement;
     return [refManager.getPublicAPI() as DuplicateRefSiblingInputsElementRefs, render];

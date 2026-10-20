@@ -54,9 +54,9 @@ export function hydrate(
     rootElement: Element,
     options?: RenderElementOptions,
 ): DuplicateRefSiblingInputsElementPreRender {
-    const [firstNameRefManager, [refFirstNameInput]] = ReferencesManager.for(options, ['input'], [], [], []);
-    const [emailRefManager, [refEmailInput]] = ReferencesManager.for(options, ['input'], [], [], []);
-    const [messageRefManager, [refMessageInput]] = ReferencesManager.for(options, ['input'], [], [], []);
+    const [firstNameRefManager, [refInput]] = ReferencesManager.for(options, ['input'], [], [], []);
+    const [emailRefManager, [refInput2]] = ReferencesManager.for(options, ['input'], [], [], []);
+    const [messageRefManager, [refInput3]] = ReferencesManager.for(options, ['input'], [], [], []);
     const [formRefManager, []] = ReferencesManager.for(options, [], [], [], [], {
         firstName: firstNameRefManager,
         email: emailRefManager,
@@ -69,9 +69,9 @@ export function hydrate(
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('S0/0', {}, [
                 adoptText('S0/0/0', (vs) => vs.title),
-                adoptElement('S0/0/1', {}, [], refFirstNameInput()),
-                adoptElement('S0/0/2', {}, [], refEmailInput()),
-                adoptElement('S0/0/3', {}, [], refMessageInput()),
+                adoptElement('S0/0/1', {}, [], refInput()),
+                adoptElement('S0/0/2', {}, [], refInput2()),
+                adoptElement('S0/0/3', {}, [], refInput3()),
             ]),
         ) as DuplicateRefSiblingInputsElement;
     return [refManager.getPublicAPI() as DuplicateRefSiblingInputsElementRefs, render];

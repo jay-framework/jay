@@ -251,22 +251,30 @@ describe('generate jay-html element', () => {
         });
 
         /**
-         * Bug: non-repeated sibling sub-contracts that each expose a leaf interactive tag
-         *      with the same name (`input`), all bound on one page, generate the SAME ref
-         *      const name (`refInput`) three times in one render scope, producing
-         *      `const [..., [refInput]] = ReferencesManager.for(...)` x3 -> esbuild fails with
-         *      "The symbol \"refInput\" has already been declared" and the page never hydrates.
-         * Found in: design-log/226 - interactive ref const name collides across sibling sub-contracts.md
-         * Root cause: contract-to-view-state-and-refs.ts:240-241 derives the const name from the
-         *      leaf tag name only (discarding the sub-contract path), and
-         *      jay-html-compile-refs.ts getUniqueRefConstName (~654-677) does not de-duplicate
-         *      non-autoRef refs.
-         * Expected: a unique const per ref path (refFirstNameInput / refEmailInput / refMessageInput).
-         * Actual (today): refInput declared three times -> duplicate-symbol collision.
-         * This test is EXPECTED TO FAIL (red) until the compiler is fixed.
+         * DL#226: non-repeated sibling sub-contracts that each expose a leaf interactive tag with
+         * the same name (`input`), all bound on one page, must each get a DISTINCT ref const
+         * (`refInput` / `refInput2` / `refInput3`) rather than colliding on one `refInput` — which
+         * previously produced `const [..., [refInput]] = ReferencesManager.for(...)` x3 and the
+         * esbuild error "The symbol \"refInput\" has already been declared", so the page never
+         * hydrated. Fixed by identifying refs by their full template path in
+         * RefNameGenerator.newConstantName.
+         * See design-log/226 - interactive ref const name collides across sibling sub-contracts.md
          */
         it('generates a unique ref const per non-repeated sibling sub-contract (DL#226)', async () => {
             const folder = 'contracts/duplicate-ref-sibling-inputs';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
+        /**
+         * DL#226 companion (the reuse case): binding the SAME imported ref
+         * (`form.firstName.input`) on two elements in one scope is ONE ref, so it must yield
+         * exactly ONE const (`refInput`) reused by both usages — not two consts. Guards against the
+         * identity-based disambiguation over-firing and splitting a genuinely-shared ref.
+         */
+        it('reuses a single ref const when the same imported ref is bound twice (DL#226)', async () => {
+            const folder = 'contracts/reused-ref-same-import';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));

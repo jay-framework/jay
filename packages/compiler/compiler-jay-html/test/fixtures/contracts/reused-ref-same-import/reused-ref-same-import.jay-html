@@ -1,0 +1,22 @@
+<html>
+<head>
+    <script type="application/jay-headless"
+            plugin="test-form-fields"
+            contract="form-fields"
+            key="form"></script>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+</head>
+<body>
+<div>
+    <h1>{title}</h1>
+    <!-- The SAME imported ref (form.firstName.input) is bound on two elements in  -->
+    <!-- one scope. It is one ref, so it must yield exactly ONE const on the ref   -->
+    <!-- manager, reused by both usages (reuse case, companion to DL#226).         -->
+    <input ref="form.firstName.input" />
+    <input ref="form.firstName.input" />
+</div>
+</body>
+</html>
