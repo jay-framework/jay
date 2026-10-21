@@ -15,7 +15,7 @@ import { asyncSwapScript } from '@jay-framework/ssr-runtime';
 import { buildImportMap } from './import-map';
 import { renderErrorPage } from './render-error-page';
 import { getPageParts } from './page-parts';
-import { classify, applyFreshness, type FreshnessState } from './freshness';
+import { classify, applyFreshness, FRESHNESS_HEADER, type FreshnessState } from './freshness';
 import type { InstanceRenderer } from './instance-renderer';
 import type { CacheEntry } from '../types';
 
@@ -210,6 +210,16 @@ export async function fetchPageRequest(
         .join('\n');
 
     const encoder = new TextEncoder();
+    // DL#226 — compute the freshness-adjusted response headers once, up front, so the access log can
+    // report the same jay-freshness value the response carries.
+    const responseHeaders = applyFreshness(
+        fastResult.responseHeaders || {},
+        cached,
+        freshnessState,
+        Date.now(),
+        { freshnessHeader: freshnessHeaderEnabled() },
+    );
+    const freshnessLog = responseHeaders[FRESHNESS_HEADER];
     const stream = new ReadableStream({
         async start(controller) {
             const write = (s: string) => controller.enqueue(encoder.encode(s));
@@ -287,17 +297,11 @@ ${headParts}
                 `load: ${tLoadMs}ms`,
                 `ssr: ${serverTiming.ssr}ms`,
             ];
+            if (freshnessLog) timingParts.push(`${freshnessLog}`);
             console.log(`GET ${match.pathname} [${timingParts.join(' | ')}] ${tTotal}ms`);
         },
     });
 
-    const responseHeaders = applyFreshness(
-        fastResult.responseHeaders || {},
-        cached,
-        freshnessState,
-        Date.now(),
-        { freshnessHeader: freshnessHeaderEnabled() },
-    );
     return new Response(stream, {
         headers: { 'Content-Type': 'text/html; charset=utf-8', ...responseHeaders },
     });
