@@ -211,7 +211,10 @@ export async function buildInstance(
     // (no site-header / cart data). Key by the URL-visible params so build and serve agree.
     const dynamicParamNames = new Set(
         route.segments
-            .filter((s): s is Extract<JayRoute['segments'][number], { name: string }> => typeof s !== 'string')
+            .filter(
+                (s): s is Extract<JayRoute['segments'][number], { name: string }> =>
+                    typeof s !== 'string',
+            )
             .map((s) => s.name),
     );
     const urlParams = Object.fromEntries(

@@ -272,6 +272,10 @@ export interface PagePartsConfig {
         propBindings: Record<string, string>;
         coordinateSuffix: string;
     }>;
+    // DL#227: static headless-instance placements (coordinates) discovered from the jay-html at build.
+    // Persisted so a serve-time slow RE-render (stale-while-revalidate refresh / render-on-miss) can
+    // render the same instances the build did — otherwise the re-render drops site-header/cart etc.
+    discoveredInstances?: DiscoveredHeadlessInstance[];
 }
 
 export function buildPagePartsConfig(
@@ -329,6 +333,7 @@ export function buildPagePartsConfig(
     return {
         parts,
         instanceComponents,
+        discoveredInstances: pageParts.discoveredInstances,
         forEachInstances: pageParts.forEachInstances.map((fi) => ({
             contractName: fi.contractName,
             forEachPath: fi.forEachPath,
@@ -398,7 +403,7 @@ export async function loadPagePartsFromConfig(
         parts,
         headlessContracts: [],
         headlessInstanceComponents,
-        discoveredInstances: [],
+        discoveredInstances: config.discoveredInstances ?? [],
         forEachInstances: config.forEachInstances as ForEachHeadlessInstance[],
         keyedPartModules: [],
         headlessModuleInfos: [],

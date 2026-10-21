@@ -353,3 +353,36 @@ region rendered empty), green after. Suites: production-build 103, production-se
 **Operational note.** Existing builds (e.g. `wix/examples/store-light`) carry the bad `page.cache.json`
 on disk; they must be **rebuilt** with the fixed `@jay-framework/production-build` to regenerate the
 override caches with instance data.
+
+### Bug + fix (2) — serve-side re-render dropped headless instances (refresh / render-on-miss)
+
+**Symptom.** After the instance-key fix (1), the _build_ served the override correctly, but once the page
+went **stale and refreshed** (DL#226 stale-while-revalidate) the "no server data" error for
+`site-header` / `cart-indicator` returned. The same would hit any genuine **render-on-miss**.
+
+**Root cause.** The serve-side slow re-render (`production-server/lib/serve/render-instance.ts`, used by
+both refresh and render-on-miss) renders headless instances only when `pageParts.discoveredInstances`
+is non-empty (gate at `render-instance.ts:94-98`). But `discoveredInstances` (the static instance
+placements/coordinates discovered from the jay-html at build) was **never persisted to
+`page-parts.json`**, and the serve-side loader hardcoded `discoveredInstances: []`. So every slow
+re-render discovered no instances → wrote an instance-less cache. Cache-_hit_ serving was fine because
+it reads `__instances` from the stored cache; only a re-render regenerates it, which is why the bug only
+appeared after the first refresh.
+
+**Fix.** Persist `discoveredInstances` in `page-parts.json` and load it at serve:
+
+- `production-build/.../load-production-parts.ts` — `buildPagePartsConfig` serializes `discoveredInstances`;
+  `PagePartsConfig` gains the field.
+- `production-server/.../load-production-parts.ts` (the serve-side copy) — `loadPagePartsFromConfig`
+  returns `config.discoveredInstances ?? []` instead of `[]`; its `PagePartsConfig` gains the field.
+  Now the refresh / render-on-miss re-render renders the same instances the build did.
+
+Note: there are two copies of `load-production-parts.ts` — the build serializer lives in
+`production-build`, the serve loader in `production-server`; both had to change.
+
+**Regression test.** `production-build/test/serve.test.ts` → "serve-side re-render keeps headless
+instances (DL#227 render-on-miss / refresh)": fixture `shop/[slug]` (renders any slug, has
+`<jay:site-header>`/`<jay:cart-badge>`); requesting an un-prebuilt slug exercises render-on-miss (the
+same `renderInstance` path as refresh) and asserts the served HTML embeds the instance view states.
+Verified red before the fix (the region rendered empty), green after. Suites: production-build 104,
+production-server 92.

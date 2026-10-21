@@ -35,6 +35,9 @@ export interface PagePartsConfig {
         propBindings: Record<string, string>;
         coordinateSuffix: string;
     }>;
+    // DL#227: discovered static instance placements, persisted by the build so a serve-time slow
+    // RE-render (refresh / render-on-miss) renders the same instances the build did.
+    discoveredInstances?: any[];
 }
 
 interface ServeTimeContract {
@@ -106,7 +109,7 @@ export async function loadPagePartsFromConfig(
         parts,
         headlessContracts: [],
         headlessInstanceComponents,
-        discoveredInstances: [],
+        discoveredInstances: config.discoveredInstances ?? [],
         forEachInstances: config.forEachInstances as ForEachHeadlessInstance[],
         keyedPartModules: [],
         headlessModuleInfos: [],

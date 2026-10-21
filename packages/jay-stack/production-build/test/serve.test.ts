@@ -228,6 +228,23 @@ describe('static override of a dynamic route (DL#227 instance-key)', () => {
     });
 });
 
+// DL#227 — the serve-side slow RE-render (stale-while-revalidate refresh and render-on-miss, both via
+// `renderInstance`) must render the page's headless instances just like the build did. That needs the
+// discovered instance placements, which are now persisted in page-parts.json and reloaded at serve
+// (previously the serve loader hardcoded `discoveredInstances: []`, so every re-render dropped
+// site-header / cart-badge and wrote an instance-less cache). `/shop/<unbuilt-slug>` renders via
+// render-on-miss (shop/[slug] renders any slug), exercising that path.
+describe('serve-side re-render keeps headless instances (DL#227 render-on-miss / refresh)', () => {
+    it('render-on-miss embeds the shared headless instance data', async () => {
+        const res = await fetch('/shop/not-prebuilt');
+        expect(res.status).toBe(200);
+        expect(res.body).toMatch(/Shop not-prebuilt/);
+        expect(res.body).toMatch(/site-header:header/);
+        expect(res.body).toMatch(/Test Shop/);
+        expect(res.body).toMatch(/cart-badge/);
+    });
+});
+
 describe('static assets', () => {
     it('serves shared chunks', async () => {
         const manifest = JSON.parse(
