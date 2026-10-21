@@ -173,7 +173,7 @@ interface Refresher {
 ```
 
 - **One slow render for N concurrent requests of the same instance** (same route + params → same `cachePath`; e.g. 5 requests for one product): the first request `start`s the refresh, the other four get `joined` and share the **same** promise — one slow render, one slot, one `cache.json` write. In `expired` state all of them await that one promise, each within its own `JAY_STALE_WAIT_MS` budget. Followers never consume a slot and are never `busy`. The in-flight registry is the same one render-on-miss uses (DL#227), keyed by `cachePath`.
-- **Single-flight** per `cachePath`: if a refresh for the same key is *running*, `start` returns `joined` with the in-flight promise — joining does not consume a slot. If the key is in failure backoff, `start` returns `skipped`.
+- **Single-flight** per `cachePath`: if a refresh for the same key is _running_, `start` returns `joined` with the in-flight promise — joining does not consume a slot. If the key is in failure backoff, `start` returns `skipped`.
 - **Fixed slots, no queue, fail fast:** one **shared slow-render pool**, `JAY_SLOW_RENDER_CONCURRENCY` (default **5**; sensible range 5–10), used by background refreshes **and** by render-on-miss (DL#227). When all slots are taken by other keys, `start` returns **`busy` immediately**: nothing is started and **nothing is queued**. The request is served from the old entry (`no-store`, `jay-freshness: stale|expired, <age>ms`) — even in `expired` state — and the next request for that instance tries again (traffic is the trigger). For render-on-miss the same condition returns `503` (see #227). No queue means no backlog of slow renders and no work for data nobody is asking for any more.
 - **Only a running refresh is awaited:** `started`/`joined` can be awaited, and only up to `JAY_STALE_WAIT_MS`; `busy`/`skipped` are served from old data immediately.
 - `busy` is **not a failure**: no backoff; debug-level logging plus a counter (`busy`) for monitoring.
@@ -238,17 +238,17 @@ flowchart TD
 
 ## Scope Pre-mortem (not handled)
 
-| Gap                                                                              | Decision                                                                                                                                                          |
-| -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Gap                                                                              | Decision                                                                                                                                                                                            |
+| -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Refreshing data that never changed (low-traffic sites waste a render per expiry) | **Defer.** Optional plugin "last updated"/version probe to skip the render; until then every refresh writes `renderedAt` even when data is identical (A4). Wait budget keeps it correct, not cheap. |
-| SEO signal for "stale, retry later"                                              | No standard header exists. Serve stale as `200`; use `503` + `Retry-After` only when there is nothing to serve (see #227 overload).                               |
-| New items (render-on-miss) / deleted items                                       | **Moved to DL#227** (render-on-miss, instance index behind `ArtifactStore` — per-instance DB items on Wix, 10-min negative cache).                                |
-| Multi-instance filesystem deployments diverge in freshness                       | **Accepted** (decision 6). Each serves ≤ its own TTL window of stale data and sends `no-store` while stale, so no shared cache pins it.                           |
-| Cross-instance lease to avoid duplicate renders on Wix                           | **Defer.** Shared-first read mitigates; add a lease item only if load shows a problem.                                                                            |
-| TTL on list/search pages that depend on many items                               | TTL is per instance — fine; fine-grained dependency tracking remains DL#134c future work.                                                                         |
-| Source-code staleness (`sourceHash`)                                             | Out of scope — code changes still need build/redeploy.                                                                                                            |
-| Read-only filesystem for `FilesystemArtifactStore`                               | Startup log warning; refresh disabled, stale data keeps being served (with `no-store`). Documented in the devops agent-kit.                                                                    |
-| `sitemap.xml` / `llms.txt` derived from slow data                                | Not regenerated by SWR refresh (they're build artifacts; webhook `rebuild` still regenerates them).                                                               |
+| SEO signal for "stale, retry later"                                              | No standard header exists. Serve stale as `200`; use `503` + `Retry-After` only when there is nothing to serve (see #227 overload).                                                                 |
+| New items (render-on-miss) / deleted items                                       | **Moved to DL#227** (render-on-miss, instance index behind `ArtifactStore` — per-instance DB items on Wix, 10-min negative cache).                                                                  |
+| Multi-instance filesystem deployments diverge in freshness                       | **Accepted** (decision 6). Each serves ≤ its own TTL window of stale data and sends `no-store` while stale, so no shared cache pins it.                                                             |
+| Cross-instance lease to avoid duplicate renders on Wix                           | **Defer.** Shared-first read mitigates; add a lease item only if load shows a problem.                                                                                                              |
+| TTL on list/search pages that depend on many items                               | TTL is per instance — fine; fine-grained dependency tracking remains DL#134c future work.                                                                                                           |
+| Source-code staleness (`sourceHash`)                                             | Out of scope — code changes still need build/redeploy.                                                                                                                                              |
+| Read-only filesystem for `FilesystemArtifactStore`                               | Startup log warning; refresh disabled, stale data keeps being served (with `no-store`). Documented in the devops agent-kit.                                                                         |
+| `sitemap.xml` / `llms.txt` derived from slow data                                | Not regenerated by SWR refresh (they're build artifacts; webhook `rebuild` still regenerates them).                                                                                                 |
 
 ## Agent-Kit (prevention-first; no new validation rules)
 
@@ -331,6 +331,7 @@ Updates to `packages/jay-stack/stack-cli/agent-kit-template/`:
 **Q3:** Should the first request after a cold start/deploy treat build-time data as fresh? Build-time `renderedAt` is old, so if `ttl` is short, every instance is immediately stale after deploy → thundering herd. Proposal: ±10% jitter, plus the shared-first read on Wix.
 
 **A3:** No special handling, no jitter.
+
 - After a deploy (which follows a build) all instances are fresh, unless `ttl` is very low.
 - After a cold start most instances will probably be `expired` regardless of jitter, and refresh is triggered by traffic — which is fine.
 - Event-based updates (webhooks/`invalidate`, DL#134c) are expected to keep the system up to date in parallel; with them, even expired data is actually correct. Keeping TTL/SWR as a fallback alongside events makes the system resilient.
@@ -364,10 +365,10 @@ Updates to `packages/jay-stack/stack-cli/agent-kit-template/`:
 ## Verification Criteria
 
 1. No `ttl` → behavior and headers identical to today; existing tests unchanged.
-1a. `combineFreshness`: parts `[{ttl:60}, {ttl:600, grace:3600}]` → `ttl 60, grace 3600`; `[{ttl:0}, {ttl:null}, {ttl:300}]` → `ttl 300, grace 43200` (default `max(12 h, ttl)`); `[{ttl:5}]` → `ttl 10` (floor), `grace 43200`; `[{ttl:0}, {}]` → no `ttl` (never stale); `[{ttl:600}, {grace:100}]` → `ttl 600, grace 100` clamped to 600 by `classify()`.
+   1a. `combineFreshness`: parts `[{ttl:60}, {ttl:600, grace:3600}]` → `ttl 60, grace 3600`; `[{ttl:0}, {ttl:null}, {ttl:300}]` → `ttl 300, grace 43200` (default `max(12 h, ttl)`); `[{ttl:5}]` → `ttl 10` (floor), `grace 43200`; `[{ttl:0}, {}]` → no `ttl` (never stale); `[{ttl:600}, {grace:100}]` → `ttl 600, grace 100` clamped to 600 by `classify()`.
 2. `stale` (`ttl ≤ age < grace`): request returns stored data immediately with `Cache-Control: no-store` (fast-render `public, max-age=…` overridden); next request returns refreshed data.
    2a. `expired` (`age ≥ grace`): request waits for the refresh (≤ `JAY_STALE_WAIT_MS`) and returns **fresh** data with normal headers; if the refresh exceeds the budget, the key is in backoff (`skipped`) or all slots are taken (`busy`), returns stored data with `no-store` — immediately for `busy`/`skipped`, never waiting longer than the budget otherwise.
-2d. With all 5 slots taken by other instances, a request for a *different* instance gets `busy`: it is served from old data at once (no added latency), **nothing is queued**, and the next request for it tries again; a request for an instance whose refresh is already running `joined`s it without needing a slot; `busy` does not start backoff.
+   2d. With all 5 slots taken by other instances, a request for a _different_ instance gets `busy`: it is served from old data at once (no added latency), **nothing is queued**, and the next request for it tries again; a request for an instance whose refresh is already running `joined`s it without needing a slot; `busy` does not start backoff.
    2c. `jay-freshness` header: `fresh, <age>ms` / `stale, <age>ms` / `expired, <age>ms` reflects the entry actually served (an `expired` entry refreshed within budget reports `fresh` with the new age); age = `now - renderedAt` in integer ms; absent when no `ttl`, on redirects/errors, and when `JAY_FRESHNESS_HEADER=off`.
    2b. Fast-render `ETag`/`Last-Modified` are preserved on stale responses; any derived validator changes after a refresh (`renderedAt` in the tag), so an old `If-None-Match` never yields `304` for refreshed content.
 3. Fresh request: `max-age`/`s-maxage` clamped to remaining TTL; `stale-while-revalidate` stripped; `private`/`no-store` preserved.
@@ -397,7 +398,7 @@ Built together with DL#227 on branch `feat/slow-render-swr-and-render-on-miss` (
 **Deviations**
 
 - Rebuild no longer produces suffixed files + `cleanup-manifest.json` entries: with deterministic cache paths (DL#227) an instance rebuild overwrites in place atomically, so nothing is orphaned. `cleanupOrphanedFiles` is kept for older builds.
-- Wix: a stale *local* `/tmp` copy is re-checked against the collection (at most once per 5 s per file) instead of the server always trusting its local copy, so a refresh done by another server is adopted.
+- Wix: a stale _local_ `/tmp` copy is re-checked against the collection (at most once per 5 s per file) instead of the server always trusting its local copy, so a refresh done by another server is adopted.
 - `readCacheDataFresh` is an optional `ArtifactStore` method (implemented by `WixDataArtifactStore`).
 
 **Tests** — new: `stack-server-runtime/test/freshness.test.ts` (9), `production-server/test/{freshness,instance-renderer,caches}.test.ts` (11 + 12 + 8). **Vitest could not be run in the authoring sandbox** (macOS-only `node_modules`); these files were type-checked with `tsc` and executed through a small assertion shim — 48/48 passed there. `yarn confirm` has to be run locally.

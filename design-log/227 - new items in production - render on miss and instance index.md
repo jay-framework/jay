@@ -12,7 +12,7 @@
 4. **Any request whose route matches but whose instance doesn't exist triggers one slow render** (no `onMiss`, no allow-list). First visitor blocks.
 5. **Validation = the slow render itself:** `ClientError 404` means the item doesn't exist (e.g. `Pipeline.clientError(404, 'Product not found')`, `wix-stores-v1/product-page.ts:266`). No `loadParams` call.
 6. **Real 404 → negative cache, TTL 10 min**, in memory per instance, LRU-bounded. Errors/timeouts are never cached negatively (→ `503`).
-6a. **Miss renders share the slow-render concurrency cap with background refreshes (#226).** No free slot for an unknown param → `503 Retry-After: 2` (we can't tell whether it is a real item; no queueing for a waiting visitor).
+   6a. **Miss renders share the slow-render concurrency cap with background refreshes (#226).** No free slot for an unknown param → `503 Retry-After: 2` (we can't tell whether it is a real item; no queueing for a waiting visitor).
 7. **Sitemap (`/_wix/pages.json`) uses `listInstances`**, cached in memory with TTL + serve-and-revalidate; forced fresh variant available.
 8. **One form of manifest, everywhere: no instances in `route-manifest.json`** (build, filesystem, Wix). The filesystem store uses the same model as Wix: `cache.json` carries `route`/`params` and is its own index entry; `getInstance` = `stat` of the derived path; `listInstances` = directory scan (TTL-cached). Per-instance disk, independent — as decided in #226.
 9. **Race handling is idempotency, not locking:** concurrent creators insert the same `_id`; the duplicate-key loser adopts the winner's item.
@@ -47,7 +47,7 @@ New items (new product/post) 404 until a build/renderer run, because the instanc
 | `streamPagesJson(manifest)` (wix `build-entry.ts`)                            | ✅ Switch to `store.listInstances`. Sitemap becomes correct automatically.                                                                                                                     |
 | Dropped design (rev. 1): manifest revisions + insert-CAS                      | ✗ Replaced: needed whole-manifest rewrites, retries, pruning, TTL reads, and ran into the unverified item-size limit and insert-duplicate semantics. The per-instance model has none of these. |
 
-**Null hypothesis (why not keep instances in the manifest?):** it works for a build-time snapshot, but any runtime change (new/deleted items, refresh) then needs a shared, mutable, lock-protected list — on Wix across replicas, on disk across processes. Per-instance records need no list to coordinate, and having *one* manifest form (routes only) removes the dual model.
+**Null hypothesis (why not keep instances in the manifest?):** it works for a build-time snapshot, but any runtime change (new/deleted items, refresh) then needs a shared, mutable, lock-protected list — on Wix across replicas, on disk across processes. Per-instance records need no list to coordinate, and having _one_ manifest form (routes only) removes the dual model.
 
 ## Design
 
@@ -105,7 +105,7 @@ params:   string                  // JSON of params (stable key order)        (n
 - `cache.json` carries `route` and `params` next to `slowViewState`/`carryForward`/freshness (written by the build pipeline and by refresh/miss).
 - `getInstance` = `stat` of the derived `cachePath` (exists ⇒ instance), O(1), no in-memory index to maintain.
 - `listInstances(route)` = scan `pre-rendered/<route>/*.cache.json`, read `params` from each, cached in memory per route with `LIST_TTL_MS` (same TTL + serve-and-revalidate as Wix; `{fresh:true}` rescans). Only sitemap-like consumers use it (see Q3), so the scan cost is acceptable.
-- `writeCacheData` = write `*.cache.json` (tmp + rename): that single atomic write creates *or* updates the instance. `removeInstance` = unlink. **No manifest write, no mutex, no `build-metadata.json` bump** for instance changes — `readManifest` only changes with a new build.
+- `writeCacheData` = write `*.cache.json` (tmp + rename): that single atomic write creates _or_ updates the instance. `removeInstance` = unlink. **No manifest write, no mutex, no `build-metadata.json` bump** for instance changes — `readManifest` only changes with a new build.
 - Each server instance is independent (per-instance disk, as decided in #226).
 - Build-time consumers (`generate-sitemap`, `generate-llms-txt`, `check-build-output`) get instance params from the build pipeline results or `store.listInstances` over the build dir — not from a manifest.
 
@@ -157,17 +157,17 @@ class NegativeCache {
 
 ## Scope Pre-mortem (not handled)
 
-| Gap                                                                          | Decision                                                                                                                                                                                                      |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Enumerating very large catalogs** (10k+ items = many paged queries)        | **Accepted (A1):** reading the DB in pages is fine; no compact listing item. |
-| **Splitting large sitemaps** (sitemap spec limits per file: 50k URLs / 50 MB → sitemap index + multiple files) | **Out of scope** for this work. |
-| Negative-cache staleness (item created within 10 min stays 404)              | **Accepted** (user decision). Optional later: webhook/`invalidate` clears the key.                                                                                                                            |
-| Duplicate renders across replicas for the same new item                      | **Accepted.** Idempotent insert + adopt; add a lease only if load shows need.                                                                                                                                 |
-| Plugins that don't 404 for missing items → junk instances                    | **Agent-kit rule** (plugin + developer guides, see "Agent-Kit"): slow render for param routes MUST return `clientError(404)` for unknown params. No validation rule.                                               |
-| Query-string / non-param variability                                         | **N/A by definition:** slow render receives no query params, so the instance (and its cache) is keyed by route params only; query strings can never create or vary an instance. |
-| `llms.txt` / static `sitemap.xml` build artifacts                            | Not regenerated by the miss path; `/_wix/pages.json` is dynamic. Webhook `rebuild` regeneration uses `listInstances`. **Deferred:** a rebuild of `sitemap.xml`/`llms.txt` on a 24 h TTL could be added later. |
-| Version overlap during deploys                                               | Items are `version`-scoped; a new version starts with its build-time instances and rebuilds runtime-added ones on demand (self-heals via the miss path).                                                      |
-| `RouteEntry.instances` removed from the manifest type and `route-manifest.json` | Done in the same change (no backward-compat shims, per CLAUDE.md): build pipeline stops writing instances, `rebuild.ts` stops mutating/rewriting the manifest for instance changes, `check-build-output`/sitemap/llms generators read via the pipeline results or `listInstances`. |
+| Gap                                                                                                            | Decision                                                                                                                                                                                                                                                                           |
+| -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Enumerating very large catalogs** (10k+ items = many paged queries)                                          | **Accepted (A1):** reading the DB in pages is fine; no compact listing item.                                                                                                                                                                                                       |
+| **Splitting large sitemaps** (sitemap spec limits per file: 50k URLs / 50 MB → sitemap index + multiple files) | **Out of scope** for this work.                                                                                                                                                                                                                                                    |
+| Negative-cache staleness (item created within 10 min stays 404)                                                | **Accepted** (user decision). Optional later: webhook/`invalidate` clears the key.                                                                                                                                                                                                 |
+| Duplicate renders across replicas for the same new item                                                        | **Accepted.** Idempotent insert + adopt; add a lease only if load shows need.                                                                                                                                                                                                      |
+| Plugins that don't 404 for missing items → junk instances                                                      | **Agent-kit rule** (plugin + developer guides, see "Agent-Kit"): slow render for param routes MUST return `clientError(404)` for unknown params. No validation rule.                                                                                                               |
+| Query-string / non-param variability                                                                           | **N/A by definition:** slow render receives no query params, so the instance (and its cache) is keyed by route params only; query strings can never create or vary an instance.                                                                                                    |
+| `llms.txt` / static `sitemap.xml` build artifacts                                                              | Not regenerated by the miss path; `/_wix/pages.json` is dynamic. Webhook `rebuild` regeneration uses `listInstances`. **Deferred:** a rebuild of `sitemap.xml`/`llms.txt` on a 24 h TTL could be added later.                                                                      |
+| Version overlap during deploys                                                                                 | Items are `version`-scoped; a new version starts with its build-time instances and rebuilds runtime-added ones on demand (self-heals via the miss path).                                                                                                                           |
+| `RouteEntry.instances` removed from the manifest type and `route-manifest.json`                                | Done in the same change (no backward-compat shims, per CLAUDE.md): build pipeline stops writing instances, `rebuild.ts` stops mutating/rewriting the manifest for instance changes, `check-build-output`/sitemap/llms generators read via the pipeline results or `listInstances`. |
 
 ## Agent-Kit (prevention-first; no new validation rules)
 
@@ -248,19 +248,20 @@ Updates to `packages/jay-stack/stack-cli/agent-kit-template/`:
 
 ## Trade-offs
 
-| Decision                                       | Pro                                                                                | Con                                                                                       |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| No `onMiss` opt-in                             | New content "just works"                                                           | Any matching URL can trigger an API call → needs caps, negative cache, 503 path           |
-| Slow-render 404 as validator                   | No `loadParams` cost; authoritative                                                | Relies on plugins returning 404 for unknown params                                        |
-| Instances out of manifest, behind the store    | No shared mutable blob; no CAS/size limit; O(1) lookup; one write to create/delete | Enumeration = DB queries (TTL-cached); schema change (`route`, `params`); interface grows |
-| Per-instance item = index entry                | Index can't disagree with data; deletes/creates are single-item                    | Listing depends on a queryable `route` field                                              |
-| Idempotent insert + adopt (no lock)            | Simple; no retry loops                                                             | Possible duplicate renders (accepted)                                                     |
-| In-memory negative cache (10 min)              | Cheap; protects the API                                                            | Per-replica; created-then-requested item stays 404 up to 10 min                           |
+| Decision                                                             | Pro                                                                                                     | Con                                                                                                               |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| No `onMiss` opt-in                                                   | New content "just works"                                                                                | Any matching URL can trigger an API call → needs caps, negative cache, 503 path                                   |
+| Slow-render 404 as validator                                         | No `loadParams` cost; authoritative                                                                     | Relies on plugins returning 404 for unknown params                                                                |
+| Instances out of manifest, behind the store                          | No shared mutable blob; no CAS/size limit; O(1) lookup; one write to create/delete                      | Enumeration = DB queries (TTL-cached); schema change (`route`, `params`); interface grows                         |
+| Per-instance item = index entry                                      | Index can't disagree with data; deletes/creates are single-item                                         | Listing depends on a queryable `route` field                                                                      |
+| Idempotent insert + adopt (no lock)                                  | Simple; no retry loops                                                                                  | Possible duplicate renders (accepted)                                                                             |
+| In-memory negative cache (10 min)                                    | Cheap; protects the API                                                                                 | Per-replica; created-then-requested item stays 404 up to 10 min                                                   |
 | One manifest form (no instances), filesystem also per-instance files | One model for all stores; no manifest rewrites or mutex for instance changes; `getInstance` is a `stat` | `listInstances` on disk = directory scan + JSON parse (TTL-cached, sitemap-only use); build output format changes |
 
 ## Verification Criteria
 
 1a. 5 concurrent requests for the same unknown route + params → exactly one slow render and one slot; all five receive the same outcome (page / 404 / 503); a full pool does not 503 the four followers.
+
 1. Unknown params on a param route → one slow render; success → page served, instance item persisted with `route`/`params`; 404/5xx/timeout behave as specified.
 2. Real 404 is negative-cached 10 min (second request doesn't call slow render); 5xx/timeout are not.
 3. Fall-through: a 404 on route R still lets a later matching route (e.g. catch-all) serve.
@@ -291,7 +292,7 @@ Built together with DL#226 on branch `feat/slow-render-swr-and-render-on-miss`.
 
 **Deviations**
 
-- Wix `writeCacheData` on duplicate id adopts the existing item only if its `renderedAt` ≥ the new entry's, otherwise overwrites with `save` — plain "adopt" would make a *refresh* of an existing item impossible, since refresh and create share the same write.
+- Wix `writeCacheData` on duplicate id adopts the existing item only if its `renderedAt` ≥ the new entry's, otherwise overwrites with `save` — plain "adopt" would make a _refresh_ of an existing item impossible, since refresh and create share the same write.
 - `matchRequest` is replaced by `matchRoutes` (yields all matching routes + params) and `resolveRequest`; no compatibility shim (per project rules).
 - Sitemap / llms.txt generators take the store (`listInstances`) instead of reading `manifest.routes[].instances`.
 - `renderer-server` `/_jay/status` reports `instanceCount` from `build-metadata.json` (a build statistic).
@@ -306,11 +307,11 @@ Built together with DL#226 on branch `feat/slow-render-swr-and-render-on-miss`.
 
 A returned (not thrown) slow-render result maps as follows, mirroring the build, which skips every `ClientError` / `Redirect`:
 
-| Slow render returns                              | Miss result                                           |
-| ------------------------------------------------ | ----------------------------------------------------- |
-| 404, 410, 400, 422 and other deterministic 4xx   | `404`, in-memory negative cache (10 min)              |
-| 401, 403, 408, 429                               | `503` + `Retry-After`, backoff, never cached          |
-| 5xx, thrown errors, timeouts, no free slot       | `503` + `Retry-After`, backoff (no slot: no backoff)  |
-| `Redirect`                                       | the redirect, remembered in memory for 10 min         |
+| Slow render returns                            | Miss result                                          |
+| ---------------------------------------------- | ---------------------------------------------------- |
+| 404, 410, 400, 422 and other deterministic 4xx | `404`, in-memory negative cache (10 min)             |
+| 401, 403, 408, 429                             | `503` + `Retry-After`, backoff, never cached         |
+| 5xx, thrown errors, timeouts, no free slot     | `503` + `Retry-After`, backoff (no slot: no backoff) |
+| `Redirect`                                     | the redirect, remembered in memory for 10 min        |
 
 Rationale: slow render has no request (no cookies/query), so a 4xx describes the item, not the visitor; 401/403/408/429 are credential / rate-limit problems that must not poison URLs. A known instance whose refresh now redirects keeps serving its stored data (backoff). Thrown `ClientError`s stay generic errors (the 404 contract is return-based). Tests: `render-instance.test.ts`, `instance-renderer-redirect.test.ts`.

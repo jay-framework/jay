@@ -11,9 +11,9 @@ _No template yet (COMPONENT-NO-TEMPLATE) — this component can't be flattened u
 
 ## Button
 
-| Variant | Title | Template |
-| --- | --- | --- |
-| (default) |  | ./src/components/button/button.jay-html |
+| Variant   | Title | Template                                |
+| --------- | ----- | --------------------------------------- |
+| (default) |       | ./src/components/button/button.jay-html |
 
 ```html
 <script
@@ -29,9 +29,9 @@ Then run `jay-stack sync` to flatten it.
 
 ## Card
 
-| Variant | Title | Template |
-| --- | --- | --- |
-| (default) |  | ./src/components/card/card.jay-html |
+| Variant      | Title        | Template                                    |
+| ------------ | ------------ | ------------------------------------------- |
+| (default)    |              | ./src/components/card/card.jay-html         |
 | card.feature | Feature card | ./src/components/card/card.feature.jay-html |
 
 ```html
@@ -48,9 +48,9 @@ Then run `jay-stack sync` to flatten it.
 
 ## Gallery
 
-| Variant | Title | Template |
-| --- | --- | --- |
-| (default) |  | ./src/components/gallery/gallery.jay-html |
+| Variant   | Title | Template                                  |
+| --------- | ----- | ----------------------------------------- |
+| (default) |       | ./src/components/gallery/gallery.jay-html |
 
 ```html
 <script
@@ -66,9 +66,9 @@ Then run `jay-stack sync` to flatten it.
 
 ## Section
 
-| Variant | Title | Template |
-| --- | --- | --- |
-| (default) |  | ./src/components/section/section.jay-html |
+| Variant   | Title | Template                                  |
+| --------- | ----- | ----------------------------------------- |
+| (default) |       | ./src/components/section/section.jay-html |
 
 ```html
 <script
