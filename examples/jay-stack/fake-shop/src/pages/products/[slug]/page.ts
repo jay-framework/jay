@@ -49,6 +49,7 @@ async function renderSlowlyChanging(
     productsDb: ProductsDatabaseService,
 ) {
     const Pipeline = RenderPipeline.for<PageSlowViewState, ProductsCarryForward>();
+    console.log('[page slow render] runs for', props.slug)
 
     return Pipeline.try(() => productsDb.getProductBySlug(props.slug))
         .recover(() => Pipeline.serverError(503, 'Database unavailable'))
@@ -64,6 +65,8 @@ async function renderSlowlyChanging(
                 type: Type.physical,
             },
             carryForward: { productId: product.id },
+            ttl: 10,
+            grace: 20
         }));
 }
 
