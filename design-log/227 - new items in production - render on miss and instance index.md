@@ -315,3 +315,41 @@ A returned (not thrown) slow-render result maps as follows, mirroring the build,
 | `Redirect`                                     | the redirect, remembered in memory for 10 min        |
 
 Rationale: slow render has no request (no cookies/query), so a 4xx describes the item, not the visitor; 401/403/408/429 are credential / rate-limit problems that must not poison URLs. A known instance whose refresh now redirects keeps serving its stored data (backoff). Thrown `ClientError`s stay generic errors (the 404 contract is return-based). Tests: `render-instance.test.ts`, `instance-renderer-redirect.test.ts`.
+
+### Bug + fix — static override of a dynamic route served with no instance data
+
+**Symptom (production serve only).** A static page that shadows a dynamic route and carries its param
+inline — e.g. `src/pages/products/ceramic-flower-vase/page.jay-html` next to `products/[slug]/`, with
+`<script type="application/jay-headless" ... key="productPage">slug: ceramic-flower-vase</script>` —
+rendered its own content but its **shared headless instances** (`site-header`, `cart-indicator`) had no
+server data. The client logged `[Jay] Headless instance "S0/0/site-header:header" has no server data and
+no clientDefaults` and then `wix_cart_client` crashed destructuring `undefined`. Dev was fine; other
+pages were fine.
+
+**Root cause — build and serve disagreed on the instance key.** Because the page declares a keyed
+headless part with inline `headlessProps` (and shadows `[slug]`), the build materialized it with
+`params: { slug: ... }` and wrote its cache under `deriveCachePath(route, { slug })` =
+`page_<hash>.cache.json` (`instance-pipeline.ts`). But the route has **no dynamic URL segment**, so at
+serve `route-matcher` extracts `params: {}` and `getInstance` looks up `page.cache.json` (`hashParams({}) = ''`).
+Miss → DL#227 render-on-miss ran with `params: {}`, which does not discover/render the page's instance
+components, produced an **instance-less** `page.cache.json`, served it (200), and cached it. Evidence: the
+served `page.cache.json` had `carryForward.__instances = {}` while a sibling `page_<hash>.cache.json`
+(params `{slug}`) had them populated.
+
+**Fix.** An instance's identity is the params **serve** extracts from the URL — the route's dynamic
+`[segment]` params only. Inferred params and inline headless props are _render inputs_, not key
+dimensions. `instance-pipeline.ts` now keys the cache (and the stored index `params`) by the
+URL-visible params (`{}` for a static override → `page.cache.json`), while still **rendering** with the
+full params. Build and serve now resolve the same instance; the override's `page.cache.json` carries its
+instance data and no render-on-miss fires. Dynamic-route instances are unaffected (their params _are_
+URL segments).
+
+**Regression test.** `production-build/test/serve.test.ts` → "static override of a dynamic route
+(DL#227 instance-key)": fixture `items/special` (static page with a keyed inline-param headless part +
+`<jay:site-header>`/`<jay:cart-badge>`) shadowing `items/[slug]`; asserts the served HTML embeds the
+`site-header:header` / `cart-badge` instance view states. Verified red before the fix (the `<jay:site-header>`
+region rendered empty), green after. Suites: production-build 103, production-server 92; type-check clean.
+
+**Operational note.** Existing builds (e.g. `wix/examples/store-light`) carry the bad `page.cache.json`
+on disk; they must be **rebuilt** with the fixed `@jay-framework/production-build` to regenerate the
+override caches with instance data.

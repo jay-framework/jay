@@ -202,10 +202,25 @@ export async function buildInstance(
     const freshness = resolveFreshness(
         mergeFreshness([{ ttl: slowResult.ttl, grace: slowResult.grace }, instanceFreshness]),
     );
-    const cachePath = path.join(ctx.backendDir, deriveCachePath(route.rawRoute, params));
+    // DL#227: an instance's identity is the params SERVE extracts from the URL — i.e. the route's
+    // dynamic `[segment]` params only. Inferred params (a static override of a dynamic route, e.g.
+    // `/products/ceramic-flower-vase` shadowing `/products/[slug]`) and inline headless props are
+    // render inputs, not key dimensions. Keying by the full `params` here wrote the cache under
+    // `page_<hash(slug)>.cache.json`, but the static route matches at serve with `{}` →
+    // `page.cache.json`, so `getInstance` missed it and render-on-miss served an instance-less page
+    // (no site-header / cart data). Key by the URL-visible params so build and serve agree.
+    const dynamicParamNames = new Set(
+        route.segments
+            .filter((s): s is Extract<JayRoute['segments'][number], { name: string }> => typeof s !== 'string')
+            .map((s) => s.name),
+    );
+    const urlParams = Object.fromEntries(
+        Object.entries(params).filter(([k]) => dynamicParamNames.has(k)),
+    );
+    const cachePath = path.join(ctx.backendDir, deriveCachePath(route.rawRoute, urlParams));
     await fs.writeFile(
         cachePath,
-        serializeCacheEntry({ pattern: route.rawRoute }, params, {
+        serializeCacheEntry({ pattern: route.rawRoute }, urlParams, {
             slowViewState,
             carryForward,
             renderedAt: Date.now(),
@@ -227,7 +242,7 @@ export async function buildInstance(
     // 4. Client bundle is compiled per-route (DL#144), skip per-instance
 
     const instanceEntry: InstanceEntry = {
-        params,
+        params: urlParams,
         cachePath: path.relative(ctx.backendDir, cachePath),
         serverElementPath: path.relative(ctx.backendDir, serverElementPath),
         clientBundlePath: routeClientBundlePath || '',
