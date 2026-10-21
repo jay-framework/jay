@@ -341,3 +341,69 @@ fixture gains a self-link on `/about`). All green; `build:check-types` + `build`
 **Live re-verify (jay-website)** — 33 placeholder `#`, **12 self-links** (active nav items in the shared
 header/footer linking to the current page), **0** false "Broken internal link" errors (`/design-log/wix/index`
 still correctly deferred to the dynamic matcher).
+
+---
+
+## Refinement v2 — severity tiers, TODO links, per-anchor self-link suppression, fragment anchors
+
+**Status: [Implemented]** — user-directed follow-up (decisions captured from a Q&A round). Introduces a
+`severity` on each finding and three behaviour changes. The per-finding behaviour matrix is now:
+
+| Link kind                   | Example                                               | Severity                | Suppressible?       | Mechanism                                            |
+| --------------------------- | ----------------------------------------------------- | ----------------------- | ------------------- | ---------------------------------------------------- |
+| Broken link (no page/asset) | `/typo`                                               | **error**               | yes                 | per-page `jay-stack: allow-broken-links` (unchanged) |
+| Degenerate placeholder      | `href="#"`, empty                                     | **error**               | yes                 | per-page `allow-broken-links` (unchanged)            |
+| **Self-link**               | `/about` on the `/about` page                         | **warning** (was error) | **yes, per-anchor** | `<a … jay-allow-self-link>`                          |
+| **TODO link**               | `href="todo: build pricing"` / `href="todo:/pricing"` | **warning**             | **no**              | — (intentional nag)                                  |
+| **Missing fragment anchor** | `#team` with no `id="team"`                           | **error**               | **no**              | —                                                    |
+
+### Decisions (from the Q&A)
+
+1. **Severity is now first-class.** `LinkFinding` gains `severity: 'error' | 'warning'`. `validate.ts` routes
+   `error` findings into `errors` and `warning` findings into `warnings` (so warnings never fail `valid` /
+   block `--strict`). This is the clean split the original DL lacked (everything was an error).
+2. **Self-link → warning, suppressed _per anchor_** via a `jay-allow-self-link` boolean attribute on the `<a>`
+   — not the per-page key. Rationale (user): "in some cases it makes sense to use it" and suppression should be
+   local to the one intentional anchor, not a page-wide switch. ✅ verified the attribute survives `parseJayFile`
+   (no parse error; present in `rawAttrs`). The old per-page `allow-broken-links` no longer silences self-links
+   (self-links are not broken links).
+3. **TODO link = `href="todo:…"`.** Everything after `todo:` is free text — a note of what should go there, or
+   the intended path (`todo:/pricing`). Emits a **warning every validate**, echoing the note, with **no
+   suppression** (including immunity to `allow-broken-links`). Purpose: a placeholder you can ship in-progress
+   that keeps reminding you. ✅ verified `todo:` hrefs survive `parseJayFile` verbatim.
+4. **Fragment anchors (`#name`) are validated**, closing the DL#210 "fragment target existence" blind spot
+   (previously parked, `classifyHref` returned `skip` for `#frag`).
+   - **Same-page** `#team` → the current page must contain an element with `id="team"` (or `<a name="team">`).
+   - **Cross-page** `/about#team` → the target page (if a known, parsed static page) must contain `id="team"`.
+   - `#` alone stays **degenerate** (error); `#top` and an empty fragment are allowed (browser scroll-to-top /
+     no-op), never flagged.
+   - Severity **error, non-suppressible** (user: "this is an error"). Fragment checks on **dynamic-pattern**
+     targets, **assets**, or pages we did not parse are **skipped** (can't know their ids) — so a missing
+     anchor is only reported when we can prove absence.
+
+### Implementation notes
+
+- `classifyHref` gains verdicts `{kind:'todo', note}` and `{kind:'localFragment', fragment}`, and `check` now
+  carries an optional `fragment` (the `#…` part, preserved instead of dropped). `normalizePath` still strips the
+  hash for path matching; the fragment is extracted separately.
+- `checkInternalLinks` builds an `idsByUrl: Map<url, Set<id>>` from `parsedFiles` (resolving each file to its
+  URL via `oracle.selfUrlByPath`), collecting `[id]` and `<a name>` from each page body. Same-page fragments
+  resolve against the current page's id set; cross-page against `idsByUrl.get(targetPath)`.
+- The per-page `allow-broken-links` early-`continue` is removed; suppression is applied **per finding kind** so
+  that TODO and fragment checks still run on a page that suppresses broken links.
+
+### Known blind spot (⚠️ accepted, flagged)
+
+Ids inside **non-flattened keyed components** are invisible to source-level validate (same blind spot the DL
+already documents for links). Because missing-fragment is a **non-suppressible error**, a `#frag` whose target
+`id` lives in such a component would be a false error with no escape hatch. Mitigation in v2: fragment
+enforcement runs **only** against pages we actually parsed and whose path is statically known; dynamic/asset/
+unparsed targets are skipped. If real projects hit false positives from non-flattened components, revisit
+whether missing-fragment needs a per-anchor escape hatch (e.g. `jay-allow-missing-anchor`).
+
+### Tests / verification
+
+- `test/check-internal-links.test.ts` extended: `classifyHref` for `todo:` + `#frag`; self-link downgraded to
+  warning + `jay-allow-self-link` suppression; TODO warning (and non-suppression under `allow-broken-links`);
+  same-page and cross-page fragment resolution (hit + miss); `#top`/empty allowed. Integration test asserts the
+  new `severity` routing (self-link/TODO in `warnings`, broken/fragment in `errors`).

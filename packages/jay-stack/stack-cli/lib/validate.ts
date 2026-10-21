@@ -2536,13 +2536,23 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
         projectRoot,
     });
     for (const finding of linkFindings) {
-        errors.push({
-            file: finding.file,
-            message: finding.message,
-            stage: 'generate',
-            source: 'internal-links',
-            suggestion: finding.suggestion,
-        });
+        // DL#210 v2 — route by severity: errors block the project; warnings (self-link, TODO) are advisory.
+        if (finding.severity === 'warning') {
+            warnings.push({
+                file: finding.file,
+                message: finding.message,
+                source: 'internal-links',
+                suggestion: finding.suggestion,
+            });
+        } else {
+            errors.push({
+                file: finding.file,
+                message: finding.message,
+                stage: 'generate',
+                source: 'internal-links',
+                suggestion: finding.suggestion,
+            });
+        }
     }
 
     // --- DL#211 — Tier 2: Build-Output Validation (opt-in: validate against an existing build) ---
