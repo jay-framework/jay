@@ -279,7 +279,7 @@ ${headParts}
             };
 
             write(`
-    <script>console.log('[jay] server: cache=${serverTiming.cache}ms parts=${serverTiming.parts}ms fast=${serverTiming.fast}ms load=${serverTiming.load}ms ssr=${serverTiming.ssr}ms total=${serverTiming.total}ms')</script>
+    <script>console.log('[jay] server: cache=${serverTiming.cache}ms parts=${serverTiming.parts}ms fast=${serverTiming.fast}ms load=${serverTiming.load}ms ssr=${serverTiming.ssr}ms total=${serverTiming.total}ms${freshnessLog ? ` freshness=${freshnessLog}` : ''}')</script>
     <script type="module">
       import { init } from '${clientBundleUrl}';
       const _t=performance.now();
