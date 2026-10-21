@@ -11,7 +11,7 @@ Status: **[Design]** — questions open, no implementation started.
 5. **Two rule types; the file is `role → selector → rules`.** _Correctness_ rules are global (every role, every file/page): a list of validator plugins that must pass. _Edit_ rules say **what can be edited where**, organized by **route-based CSS-like selectors** — `*` (project), `/campaigns/**` (folder), `/about` (page), `/products/[slug]` (dynamic page), `/about #hero #cta` (section / inner section via `jay-policy-section`). **Every rule may be set at any selector and cascades downward; most-specific wins.** Edit rules: `code` / `css` / `dependencies` (file-class), `content` / `design` (+ `designSystemOnly` modifier), `createPages` / `createSections` / `overrideRoute` (tri-state `any | from-template | no`; templates live under `src/components/pages|sections/`), and `addContract`. `edit: no` locks every rule at a selector and below. Set a rule at `*` for a project default, override it per folder/page/section.
 6. **The gate resolves a disposition: PUBLISH / REVIEW / BLOCK** — a _workflow_ decision, separate from a finding's `error`/`warn` severity (this is **not** a new severity level). A clean change → **PUBLISH** (fast-forward `main`), or **REVIEW** if the scope sets `publish: review`. An edit-permission violation → **REVIEW**, or **BLOCK** if the scope sets `onViolation: block`. A correctness error → always **BLOCK** (agent must fix; waive only by editing the versioned policy). `warn` never blocks. Strictest disposition wins across the changeset. Defaults: `publish: direct`, `onViolation: review`. **REVIEW = a variation branch + a change request** (base, head, findings) the designer approves/merges — the same object whether it came from a violation or a forced review.
 7. **Visual merge = 3-way merge of jay-html trees, rendered side by side.** Base / client / designer-current are rendered in iframes; the designer picks per-hunk; the result is written to the designer's branch. Reuses the DL#219 inspector (pixel ↔ jay-html node).
-8. **Infra reuse:** Wix dev machines = workspaces (one per user per branch); Wix git-like file storage = repo. New: one thin **Handover service** (control plane). No new runtime/compiler surface.
+8. **Infra reuse (Wix dev machine v2 + code store, §7).** Workspaces are **ephemeral dev-machine sandboxes** (30 min idle, 3.5 h hard cap) — state lives in code-store checkpoints, not on the pod. **One code-store project per principal:** the designer's project holds `main`; the client gets its own project seeded from it. Credentials are per project, so the client's pod can never write `main` — no per-branch ACL, no custom git gateway. The **publish gate is a Job** (`RunJob`) in a sandbox of the designer's project. New: one **Handover app** (Wix-side) that opens AIditor, runs handover, and makes every remote-machine + code-store API call. A new **`JAY` image** (base + Claude Code + jay-stack) and `ProjectType` are the main onboarding cost. No new runtime/compiler surface.
 
 ## Background
 
@@ -33,7 +33,7 @@ Jay's contract separates design from logic. AIditor lets a human drive an agent 
 | Agent-kit guides (DL#85, #125)                                                       | **Reuse** as the channel for guidelines. Policy guidelines are an overlay folder in the agent-kit.                                                                                                                                                                                                                                                                                                                                                                                                               |
 | Source editing / inspector (DL#219)                                                  | **Reuse** for visual merge: ✅ read: pixel/rect → jay-html source fragment + structural stack via embed postMessage. (DL#219 is still [Design]; merge depends on A1.)                                                                                                                                                                                                                                                                                                                                            |
 | `devOnly` actions                                                                    | **Reuse** to keep policy-authoring and merge actions out of production. ✅ per DL#219 §Dev-only.                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| Wix dev-machine infra, git-like storage                                              | **Reuse**, per the brief. ⚠️ assumed: supports branches, per-branch checkouts, ACL per path or per ref, and a server-side pre-publish hook. Must be confirmed (Q1).                                                                                                                                                                                                                                                                                                                                              |
+| Wix dev-machine infra, git-like storage                                              | **Reuse**, per the brief. ✅ from the dev-machine docs + Q8–Q13: code store = git in S3 (git-remote-s3), credentials **per project**, multiple branches, ephemeral sandboxes, `RunJob` for untrusted execution, `WIX_TOKEN` = site + user. **No per-ref ACL and no hook** → repo-per-principal + gate Job (§7). Remaining ⚠️: Q10, Q14–Q16.                                                                                                                                                                      |
 | Freeze / embed postMessage (DL#128)                                                  | **Reuse** pattern for the side-by-side iframes. ⚠️ not re-read.                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 **Null hypothesis for the merge UI:** use plain git text merge and conflict markers. Rejected for the designer persona: jay-html conflicts are unreadable, and non-conflicting textual merges can still be visually wrong. We keep git for storage and history, and add a visual layer on top, not a new VCS.
@@ -45,11 +45,12 @@ Jay's contract separates design from logic. AIditor lets a human drive an agent 
 ### 1. Entities
 
 ```
-Project        { id, repo, ownerId, mode: 'unmanaged' | 'managed' }
-Branch         main (published) · designer/* · client/<user>/draft · variation/<id>
+Project        { id, designerRepo, clientRepo?, ownerId, mode: 'unmanaged' | 'managed' }   # a repo = one code-store project
+Branch         designer repo: main (published) · designer/* · incoming/<id> (transient) · variation/<id>
+               client repo:   draft/<user> · upstream (copy of main)
 Policy         jay-policy.md in repo (frontmatter rules + markdown guidelines), pinned by commit  (see §3)
 Role           named persona a client is handed over as; selects a rule set in jay-policy.md (e.g. client, content-editor)
-Workspace      dev machine bound to (user, branch, role): dev-server + AIditor + agent
+Workspace      ephemeral dev-machine sandbox bound to (user, client repo, role): dev-server + AIditor + Claude Code agent; disposable — state = code-store checkpoints
 ChangeRequest  { id, variation branch, base, head, findings[], status: open|approved|rejected|merged }
 ```
 
@@ -58,33 +59,37 @@ ChangeRequest  { id, variation branch, base, head, findings[], status: open|appr
 ```mermaid
 sequenceDiagram
   participant D as Designer workspace
-  participant H as Handover service
-  participant R as Repo (git-like)
-  participant C as Client workspace
-  D->>R: commit site + jay-policy.md to main
-  D->>H: handover(project, client, mode)
-  H->>R: create client/<u>/draft from main (policy pinned)
-  H->>C: provision workspace (policy mounted read-only, guidelines injected)
-  C->>C: agent edits, runs validate --policy
-  C->>H: publish(draft head)
-  H->>R: checkout head, run policy rules (authoritative), resolve disposition
+  participant H as Handover app
+  participant R as Designer repo (code store)
+  participant K as Client repo (code store)
+  participant C as Client workspace (sandbox)
+  participant G as Gate job (sandbox)
+  D->>R: checkpoint site + jay-policy.md on main
+  D->>H: handover(project, client, role, mode)
+  H->>K: create client project, seed from R (full history; policy pinned)
+  H->>C: create + init sandbox (loadProjectFiles from K, guidelines overlay)
+  C->>C: agent edits, runs validate --policy, checkpoints to K
+  C->>H: publish(draft head) [WIX_TOKEN = site + user]
+  H->>R: import draft head as incoming/<id>
+  H->>G: RunJob in R's project: validate --policy --role --base main incoming/<id>
+  G-->>H: findings + disposition
   alt PUBLISH (clean + publish:direct)
-    H->>R: fast-forward main, trigger production build
+    H->>R: fast-forward main from incoming/<id>, trigger production build
   else REVIEW (edit violation w/ onViolation:review, or clean + publish:review)
-    H->>R: variation/<id> = draft head
+    H->>R: incoming/<id> becomes variation/<id>
     H->>D: notify (change request, with findings if any)
     D->>H: open visual merge
-    D->>R: merge result → main (or reject)
+    D->>R: merge result to main (or reject)
   else BLOCK (correctness error, or onViolation:block)
     H-->>C: refused, findings returned to the agent to fix
   end
 ```
 
-**Handover** (idempotent action in the Handover service): (a) record owner/mode **and the client's role**; (b) create the client's draft branch from `main`; (c) pin the policy commit; (d) provision workspace. In unmanaged mode the repo ownership transfers outright and step (c) is skipped. The role selects which rule set in `jay-policy.md` applies (§3).
+**Handover** (idempotent action in the Handover service): (a) record owner/mode **and the client's role**; (b) create the client's code-store project and **seed it from the designer repo** (full history, so merge bases exist); (c) pin the policy commit (a sha recorded by the Handover app); (d) create + init the client sandbox (§7.2). In unmanaged mode the site's project transfers to the client outright and steps (b)–(c) are skipped. The role selects which rule set in `jay-policy.md` applies (§3).
 
-**After handover, `main` has a single writer in managed mode: the Handover service** (on a passing publish or an approved merge). The designer continues on `designer/*` and publishes to `main` through the same gate (no policy applied to the designer).
+**After handover, in managed mode `main` is writable only by the designer's own workspace and the Handover app** (on a PUBLISH disposition or an approved merge). The client's sandbox holds credentials for the client repo only (§7.1). The designer publishes to `main` through the same gate with no policy applied.
 
-**Client branch updates:** when the designer changes `main`, the client draft is rebased/merged on next session start; conflicts are handled by the same visual merge, shown to the client's agent first (it resolves, then re-publishes).
+**Client branch updates:** when the designer changes `main`, the Handover app copies `main` into the client repo as `upstream`, and the client draft is merged from it on next session start; conflicts are handled by the same visual merge, shown to the client's agent first (it resolves, then re-publishes).
 
 ### 3. Policy
 
@@ -260,35 +265,73 @@ Not in the framework: no policy-level severity, no new template syntax (the `jay
 
 ### 5. Handover service (control plane, outside the framework)
 
-Small stateful service (Wix-side):
+A Wix-side application (the **Handover app**): it opens AIditor, owns handover, and makes every call to the remote-machine v2 API and the code store (§7). End users never call those APIs directly.
 
-| API                                                | Does                                                                                                                                                                                                             |
-| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `handover(project, client, mode)`                  | §2 steps (a)–(d)                                                                                                                                                                                                 |
-| `publish(project, branch, commit)`                 | spin a clean checkout, run `validate --policy --role <role> --json`, then act on the disposition: PUBLISH → fast-forward `main` + production build; REVIEW → `createChangeRequest`; BLOCK → refuse with findings |
-| `createChangeRequest(project, branch)`             | cut `variation/<id>`, attach findings, notify designer                                                                                                                                                           |
-| `resolveChangeRequest(id, mergedCommit \| reject)` | land or close                                                                                                                                                                                                    |
-| `workspace(project, branch, user)`                 | get or provision a dev machine from the Wix infra                                                                                                                                                                |
+| API                                                | Does                                                                                                                                                                                                                             |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `handover(project, client, mode)`                  | §2 steps (a)–(d)                                                                                                                                                                                                                 |
+| `publish(project, branch, commit)`                 | import the head as `incoming/<id>`, run the gate Job (§7.3), then act on the disposition: PUBLISH → fast-forward `main` + production build; REVIEW → `createChangeRequest`; BLOCK → delete `incoming/<id>`, refuse with findings |
+| `createChangeRequest(project, branch)`             | turn `incoming/<id>` into `variation/<id>`, attach findings, notify designer                                                                                                                                                     |
+| `resolveChangeRequest(id, mergedCommit \| reject)` | land or close                                                                                                                                                                                                                    |
+| `workspace(project, branch, user)`                 | get or create + init a sandbox, restoring from the latest client-repo checkpoint (§7.2)                                                                                                                                          |
 
-Authority lives here, not in the workspace: the workspace is a convenience and is assumed hostile for policy purposes.
+Authority lives here, not in the workspace: the workspace is a convenience and is assumed hostile for policy purposes. Callers (sandbox and designer UI) authenticate with `WIX_TOKEN` (site + logged-in user); the app resolves the role (§7.4).
 
 ### 6. Visual merge (designer)
 
 Opened on a change request in the designer's workspace, which checks out three trees: **base**, **theirs** (variation), **ours** (designer's current `main`).
 
 1. **Diff unit = jay-html node, per page.** Parse the three versions (node-html-parser, as in DL#145), match nodes by `ref`/`jay-coordinate`/tree position + similarity, and produce **hunks**: {added, removed, moved, attribute/text changed}. ⚠️ assumed: node identity is stable enough; fallback is tree-position + content hash. See Q4.
-2. **Layout:** three iframes (base optional, theirs, ours) from three dev-server instances (or one dev-server with three worktrees), plus a **merged preview** pane driven by the current selection.
+2. **Layout:** three iframes (base optional, theirs, ours) from three sandboxes, or one sandbox with three git worktrees and three dev-server ports (⚠️ port exposure unconfirmed, Q2), plus a **merged preview** pane driven by the current selection.
 3. **Hunk selection:** each hunk has accept-theirs / keep-ours. Clicking a region in either preview calls the DL#219 inspector → jay-html fragment → highlights the owning hunk. Hunks that touch the same node on both sides = conflict, shown in both previews with the agent's offer to propose a resolution.
 4. **Apply:** the chosen hunks are applied to the jay-html AST and written, so the merged tree is plain jay-html on `designer/merge-<id>`; run `validate` (no policy for designer), commit, `resolveChangeRequest`.
 5. **Non-jay-html changes** (contracts, `.ts`, assets) in the variation: listed as file-level diffs with standard text diff, accept/reject per file. Visual merge covers pages first.
+
+### 7. Infrastructure on Wix (dev machine v2 + code store)
+
+Maps the flow onto the Wix dev-machine platform. ✅ = from the dev-machine docs or the author's answers (Q8–Q13); ⚠️ = assumed, tracked in Q&A.
+
+**Facts we build on**
+
+- ✅ A **sandbox** is an ephemeral pod: idle timeout 1–60 min (default 30), **hard 3.5 h lifetime cap**, stateful only within its life. A **Job** (`RunJob`) provisions, runs one execution, and tears down (2 min grace; results via task `data`/stdout ≤ 1 MB and a webhook).
+- ✅ Storage is the **code store**: a **checkpoint** is a git commit in S3 (git-remote-s3). Tools: `loadProjectFiles`, `createCheckpoint`, `restoreCheckpoint`. Wix refreshes the pod's S3 credentials (`refreshCheckpointsCredentials`). The base image has Node 24, git, git-remote-s3, AWS CLI.
+- ✅ Credentials are scoped **per project** (Q8); a project holds **multiple branches** (Q9). Inside one project a pod can write any branch.
+- ✅ `WIX_TOKEN` in the sandbox = the **project (site) + logged-in user** (Q11).
+- ✅ The v2 API needs `WIX_CODE.REMOTE_MACHINE_*` permissions; only the Handover app calls it (Q12).
+- ✅ Each consumer needs its own image, a `ProjectType`, and a pre-warmed Grid segment; a POC can use the shared Vanilla segment.
+
+**7.1 One code-store project per principal (replaces per-branch ACLs).** Credentials are per project, so `main` is protected only by never giving the client's pod credentials for the project that holds it.
+
+- **Designer repo** = the site's code-store project: `main`, `designer/*`, and transient `incoming/<id>` / `variation/<id>`.
+- **Client repo** = a second code-store project, created at handover and seeded from the designer repo (full history → merge bases exist). Client sandboxes get credentials for it only; inside it branches need no ACL because the client owns the whole repo.
+- The **Handover app** is the only party with credentials for both. It copies refs between repos: client draft → designer `incoming/<id>`; designer `main` → client `upstream`. ⚠️ Copy = `git fetch` + `git push` through git-remote-s3 with each project's credentials (Q10, Q15).
+- **Unmanaged:** the site's project transfers to the client; there is no second repo.
+
+**7.2 Workspaces are disposable.** A sandbox is a cache of the latest client-repo checkpoint.
+
+- **Start:** `CreateSandbox` → `InitSandbox` with a `setup_execution` (`loadProjectFiles`, write the guidelines overlay from the pinned `jay-policy.md` body, `npm install`) and a post-setup background `runDevServer` (live preview + HMR).
+- **Save:** `createCheckpoint` after **every agent turn**, not only at teardown. `teardown_execution` = checkpoint as a safety net (⚠️ does it run at the 3.5 h cap? Q16).
+- **Expiry:** at the idle timeout or the 3.5 h cap, AIditor re-creates the sandbox and restores the latest checkpoint; the UI session survives.
+- **Agent:** Claude Code in our base image, driven by AIditor through the Claude SDK (Q13). It runs in the pod and is assumed hostile for policy purposes — it holds client-repo credentials only.
+
+**7.3 The publish gate is a Job.** Running the client's code and validators is untrusted execution — what the platform is built for.
+
+1. The Handover app imports the client's draft head into the designer repo as `incoming/<id>`.
+2. `RunJob` in the **designer repo's project** gets two checkouts, `main` and `incoming/<id>` — the `RevisionPair` of §4 Build shape (3); the default git-worktree implementation applies unchanged. It runs `jay-stack validate --policy --role <role> --base main --json`. ⚠️ `loadProjectFiles` may load only the default ref; the job can run `git fetch`/`checkout` itself (Q15).
+3. Policy is read from the pinned commit on `main` in that checkout, never from the client's branch.
+4. The result returns as task `data` and a webhook; the Handover app acts on the disposition (PUBLISH → fast-forward `main` + production build; REVIEW → `incoming/<id>` becomes `variation/<id>` + change request; BLOCK → delete `incoming/<id>`, return findings).
+
+**7.4 Identity.** Sandboxes and the designer UI call the Handover app with `WIX_TOKEN`. The app resolves the role from the site's collaborator roles (designer, or the client role chosen at handover) and authorizes every action. There is no per-site or per-user IAM to configure.
+
+**7.5 New image and ProjectType.** A `JAY` image wraps the remote-machine base: Node 24, `jay-stack` + agent-kit, Claude Code, the AIditor runtime. It needs a `ProjectType` enum value, a Grid segment, and GA via Grid Manager. Prototype on the Vanilla segment first (Q14).
 
 ## Implementation Plan
 
 | Phase | Scope                                                                                                                                                                                                                                                                                                                                                                                                                       | Outcome                                                        |
 | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| P0    | Confirm infra constraints (Q1, Q2) with the Wix dev-machine and storage owners                                                                                                                                                                                                                                                                                                                                              | Go / no-go on branches, hooks, ACLs                            |
+| P0    | Confirm remaining infra assumptions (Q2, Q10, Q14–Q16) with the Wix dev-machine owners; POC on the shared Vanilla segment while the `JAY` image and `ProjectType` are onboarded                                                                                                                                                                                                                                             | Go / no-go on cross-repo copy, port exposure, image onboarding |
 | P1    | `jay-policy.md` (frontmatter `correctness` + `roles → selectors → rules`; markdown guidelines body), loader + selector engine, diff-aware edit rules (`code`/`css`/`dependencies`/`content`/`design`/`designSystemOnly`/`createPages`/`createSections`/`addContract`), disposition resolver (`publish`/`onViolation` → PUBLISH/REVIEW/BLOCK), `validate --policy [--role] [--base] --json`, guidelines overlay in agent-kit | Policy works locally, agent can see what a publish would do    |
-| P2    | Handover service: `handover`, `workspace`, `publish` with gate; unmanaged + managed happy path                                                                                                                                                                                                                                                                                                                              | The 2-step flow in the diagram works end to end                |
+| P2    | Handover app: `handover`, `workspace`, `publish` with the gate Job (§7); `JAY` image with Claude Code + jay-stack; unmanaged + managed happy path                                                                                                                                                                                                                                                                           | The 2-step flow in the diagram works end to end                |
 | P3    | Change requests + variation branches; designer inbox                                                                                                                                                                                                                                                                                                                                                                        | Client can request changes                                     |
 | P4    | Visual merge (hunks, side-by-side, apply)                                                                                                                                                                                                                                                                                                                                                                                   | Designer can merge visually                                    |
 | P5    | `#section` selectors (`jay-policy-section` mapping) + `overrideRoute` (dynamic-route shadowing), client-branch updates from `main`, merge-conflict flow for client                                                                                                                                                                                                                                                          | Policy covers sections + dynamic overrides; long-lived clients |
@@ -305,14 +348,23 @@ Opened on a change request in the designer's workspace, which checks out three t
 | Approvals / billing / roles beyond designer & client                                      | Defer.                                                                                                                                                        |
 | Cross-target rendering of three trees (element/hydrate/SSR)                               | Merge previews use the dev-server only; production-build parity checked at publish gate.                                                                      |
 | Content-tag allowlist (`CONTENT_TAGS`) is DL#200 module-local, not exported               | Dependency, not deferred: promote `CONTENT_TAGS` (`stack-cli/lib/validate.ts:1256`) to a shared export so this rule reuses DL#200's constant. No forked list. |
+| Sandbox hard cap (3.5 h) and idle timeout (30 min) lose unsaved work                      | Mitigated: checkpoint after every agent turn; teardown checkpoint as a safety net; AIditor re-provisions transparently (§7.2).                                |
+| Each publish copies the client's objects into the designer repo (`incoming/<id>`)         | Accept: small text repos; revisit if repos or branch counts grow (bundle-per-branch cost).                                                                    |
+| Two repos can drift apart over time                                                       | `upstream` import at session start + the same visual merge; no continuous sync.                                                                               |
 
 ## Questions and Answers
 
 **Q1.** Does the Wix git-like storage support: branches, three-way merge base lookup, per-ref write ACLs, a server-side pre-publish hook, and **checking out two revisions as real trees** (the `RevisionPair` the policy engine needs — §4 Build shape (3))? _Needs answer (P0)._ If no per-ref ACL, the Handover service holds the only credential for `main` (works without it). If it can't produce two trees, the service clones/exports base + head to temp dirs and feeds those to `validate --policy`.
 
+**A (resolved).** Branches ✅ (multiple per project, Q9). Merge base ✅ (full git history in the clone). Per-ref write ACL ✗ — credentials are per project (Q8), so protection is **repo-per-principal** (§7.1), not per-ref. Pre-publish hook: not needed — replaced by the gate Job (§7.3). Two real trees ✅ — the gate sandbox holds `main` and `incoming/<id>` and uses the default git-worktree `RevisionPair`.
+
 **Q2.** Dev machine: can one machine mount three branch checkouts (merge view), or do we need three machines? _Needs answer._ Affects merge latency/cost.
 
+**A (partial).** A sandbox is a shell, so one sandbox with three git worktrees is feasible; whether it can expose three dev-server ports is unconfirmed. Fallback: three sandboxes.
+
 **Q3.** Is "publish" = "fast-forward `main` + production build", or does the client's site deploy from their own branch? _Assumed the former._ Confirm with the product owner.
+
+**A.** Still open. §7.3 assumes the former: the Handover app fast-forwards `main` and triggers the production build through the existing deploy path (⚠️ `buildAndDeployProject` / `DeployCheckpoint` not verified).
 
 **Q4.** Node identity across edits: does the agent rewrite whole fragments (identity lost) or patch? If lost, hunks degrade to coarse regions. _Spike in P4: run 10 realistic client edits and measure hunk quality._
 
@@ -322,12 +374,32 @@ Opened on a change request in the designer's workspace, which checks out three t
 
 **Q7.** When a publish is refused, should the client _preview_ their change live (draft URL) while a change request is open? _Default yes, via draft-branch preview; not published._
 
+**Q8.** What scope do the code-store credentials a sandbox holds have? **A:** per **project**.
+
+**Q9.** Does a code-store project support multiple branches? **A:** yes.
+
+**Q10.** Can a new code-store project be seeded from an existing project's history? **A:** not sure, but we can do it ourselves (fetch + push with git-remote-s3). ⚠️ Needs the Handover app to obtain credentials for both projects (Q15).
+
+**Q11.** What does `WIX_TOKEN` represent? **A:** the project (website) and the logged-in user.
+
+**Q12.** Who calls the dev-machine and code-store APIs? **A:** our service — a new Wix application that opens AIditor, handles handover, and makes all remote-machine and code-store calls.
+
+**Q13.** Where does the agent run? **A:** inside the pod: Claude Code is part of our base image, and AIditor drives it through the Claude SDK.
+
+**Q14.** How long does onboarding a new image, `ProjectType`, and Grid segment take? **A:** unknown. _Open (P0)._
+
+**Q15.** Can the Handover app obtain and refresh code-store credentials for two projects, and does `loadProjectFiles` accept a branch or commit (or must the job `git fetch` itself)? _Open (P0)._
+
+**Q16.** Does `teardown_execution` run when the 3.5 h lifetime cap fires? _Open; mitigated by per-turn checkpoints._
+
 ## Trade-offs
 
 - **Gate at publish, not at write:** friendlier for the agent and client; the cost is that some wasted edits happen before a refusal. Mitigated by guidelines.
 - **Policy in the repo:** simple, versioned, portable; the cost is that the Handover service must read it from the pinned commit to be tamper-proof.
 - **Jay-html tree merge vs. text merge:** more work, but the only approach the designer can use visually; falls back to text for non-page files.
-- **Thin service, no new VCS:** reuses Wix infra; the cost is dependence on Q1 answers.
+- **Thin app, no new VCS, no git gateway:** reuses the code store and dev machines; the cost is dependence on Q10, Q14–Q16.
+- **Repo per principal:** gives a hard `main` boundary with no ACL configuration; the cost is two repos that can drift and a ref copy on every publish and upstream sync.
+- **Disposable workspaces:** no state to protect or migrate; the cost is checkpoint-per-turn discipline and re-provisioning at the 3.5 h cap.
 
 ## Verification Criteria
 
@@ -339,3 +411,6 @@ Opened on a change request in the designer's workspace, which checks out three t
 6. Disposition resolves correctly: a correctness error → BLOCK; an edit violation → REVIEW by default but BLOCK under `onViolation: block`; a clean change → PUBLISH by default but REVIEW under `publish: review`; across a mixed changeset the strictest disposition wins. A `publish: review` scope forces a change request even with zero findings.
 7. Fixture-based tests (`toEqual`, no `toContain`) for: `jay-policy.md` frontmatter+body parsing, scope resolution (page/folder/section), diff-aware rules per option, disposition resolution per the §3 table, hunk computation on jay-html fixtures.
 8. A live example (designer + client + variation) running before P4 closes.
+9. Managed: the client sandbox's credentials cannot read or write the designer repo (fixture: attempt a push to `main` from a client sandbox and expect failure); only the Handover app and designer workspace can write `main`.
+10. A sandbox killed at the idle timeout or the 3.5 h cap loses at most the in-flight agent turn: the re-created sandbox restores the latest checkpoint and the AIditor session continues.
+11. The gate Job runs from the Handover app against `incoming/<id>` and `main`, returns the disposition by webhook, and the app acts on it for all three outcomes.
