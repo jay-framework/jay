@@ -301,3 +301,16 @@ Built together with DL#226 on branch `feat/slow-render-swr-and-render-on-miss`.
 - ⚠️ Wix assumptions still to confirm against a live collection: duplicate-id error code (`WDE0074`), not-found code (`WDE0073`), and that `route` is filterable without extra index setup.
 - ⚠️ `yarn confirm` (vitest, full type-check, prettier) has not been run — see DL#226 note.
 - Example projects' generated `agent-kit/` copies are refreshed by `jay-stack setup`, not edited here.
+
+### Update — slow-render outcomes on a miss
+
+A returned (not thrown) slow-render result maps as follows, mirroring the build, which skips every `ClientError` / `Redirect`:
+
+| Slow render returns                              | Miss result                                           |
+| ------------------------------------------------ | ----------------------------------------------------- |
+| 404, 410, 400, 422 and other deterministic 4xx   | `404`, in-memory negative cache (10 min)              |
+| 401, 403, 408, 429                               | `503` + `Retry-After`, backoff, never cached          |
+| 5xx, thrown errors, timeouts, no free slot       | `503` + `Retry-After`, backoff (no slot: no backoff)  |
+| `Redirect`                                       | the redirect, remembered in memory for 10 min         |
+
+Rationale: slow render has no request (no cookies/query), so a 4xx describes the item, not the visitor; 401/403/408/429 are credential / rate-limit problems that must not poison URLs. A known instance whose refresh now redirects keeps serving its stored data (backoff). Thrown `ClientError`s stay generic errors (the 404 contract is return-based). Tests: `render-instance.test.ts`, `instance-renderer-redirect.test.ts`.

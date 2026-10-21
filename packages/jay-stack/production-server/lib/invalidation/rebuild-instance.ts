@@ -28,6 +28,9 @@ export async function rebuildInstance(
     if (outcome.kind === 'notFound') {
         return { status: 'skipped', reason: 'ClientError 404' };
     }
+    if (outcome.kind === 'redirect') {
+        return { status: 'skipped', reason: `Redirect ${outcome.status} ${outcome.location}` };
+    }
     if (outcome.kind === 'error') {
         return { status: 'skipped', reason: outcome.reason };
     }

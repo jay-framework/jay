@@ -85,6 +85,12 @@ export function createJayFetchHandler(
         const manifest = await artifacts.readManifest();
         const resolved = await resolveRequest(manifest, url.pathname, artifacts, renderer);
 
+        if (resolved.kind === 'redirect') {
+            return new Response(null, {
+                status: resolved.status,
+                headers: { Location: resolved.location },
+            });
+        }
         if (resolved.kind === 'unavailable') {
             return new Response('Service Unavailable', {
                 status: 503,

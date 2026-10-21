@@ -13,13 +13,22 @@ import {
  * Outcome of running the slow phase for one instance (Design Log #226/#227).
  *
  * - `rendered` — a fresh cache entry (with `renderedAt` / `ttl` / `grace`). Nothing is persisted here.
- * - `notFound` — slow render answered a real 404: the item does not exist.
- * - `error` — anything else (server error, redirect, other 4xx, thrown): transient, never negative-cached.
+ * - `notFound` — slow render answered a deterministic client error (404, 410, 400, 422, …): the item
+ *   cannot be rendered for these params, exactly like the build, which skips them.
+ * - `redirect` — slow render returned a redirect (e.g. a renamed slug): served as that redirect.
+ * - `error` — anything else (5xx, 401/403/408/429, thrown): transient, never negative-cached.
  */
 export type RenderInstanceOutcome =
     | { kind: 'rendered'; entry: CacheEntry }
     | { kind: 'notFound' }
+    | { kind: 'redirect'; status: number; location: string }
     | { kind: 'error'; reason: string };
+
+/**
+ * 4xx statuses that mean "not now" (credentials, timeout, rate limit) rather than "this item does
+ * not exist". They are transient: 503 + backoff, never negative-cached.
+ */
+const TRANSIENT_CLIENT_ERRORS = new Set([401, 403, 408, 429]);
 
 export type RenderInstanceFn = (
     route: RouteEntry,
@@ -60,8 +69,15 @@ export const renderInstance: RenderInstanceFn = async (route, params, artifacts,
     }
 
     if (slowResult.kind !== 'PhaseOutput') {
-        if (slowResult.kind === 'ClientError' && slowResult.status === 404) {
+        if (slowResult.kind === 'ClientError' && !TRANSIENT_CLIENT_ERRORS.has(slowResult.status)) {
             return { kind: 'notFound' };
+        }
+        if (slowResult.kind === 'Redirect') {
+            return {
+                kind: 'redirect',
+                status: slowResult.status,
+                location: slowResult.location,
+            };
         }
         const detail = `${(slowResult as any).status ?? ''} ${(slowResult as any).message ?? ''}`;
         return {

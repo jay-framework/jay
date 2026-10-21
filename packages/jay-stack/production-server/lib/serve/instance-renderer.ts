@@ -27,8 +27,10 @@ export type RefreshStart =
 /** Result of render-on-miss for an instance that does not exist yet (Design Log #227). */
 export type MissOutcome =
     | { kind: 'rendered'; instance: InstanceEntry }
-    /** The item does not exist (slow render answered a real 404). */
+    /** The item does not exist (slow render answered a deterministic 4xx, e.g. 404). */
     | { kind: 'notFound' }
+    /** Slow render redirected (e.g. renamed slug): respond with this redirect. */
+    | { kind: 'redirect'; status: number; location: string }
     /** Could not render now: no free slot, timeout, error, or backoff. Respond 503 + Retry-After. */
     | { kind: 'unavailable'; retryAfterSeconds: number };
 
@@ -45,7 +47,20 @@ export interface InstanceRendererOptions {
 }
 
 type FlightResult =
-    { kind: 'rendered'; entry: CacheEntry } | { kind: 'notFound' } | { kind: 'error' };
+    | { kind: 'rendered'; entry: CacheEntry }
+    | { kind: 'notFound' }
+    | { kind: 'redirect'; status: number; location: string }
+    | { kind: 'error' };
+
+interface RedirectEntry {
+    status: number;
+    location: string;
+    expiresAt: number;
+}
+
+/** Redirects are remembered like 404s so a crawled redirecting URL does not cost a slow render per hit. */
+const REDIRECT_TTL_MS = 10 * 60_000;
+const REDIRECT_MAX_ENTRIES = 1_000;
 
 interface Backoff {
     failures: number;
@@ -67,7 +82,8 @@ function envNumber(name: string, fallback: number): number {
  *   by other instances a refresh answers `busy` (the caller serves the old data) and a miss answers
  *   `unavailable` (the caller responds 503). Nothing is ever queued.
  * - **Backoff**: a failed render puts the instance into exponential backoff.
- * - **Negative cache**: a real 404 is remembered (10 min); transient errors never are.
+ * - **Negative cache**: a deterministic 4xx (404, 410, 400, 422, …) and redirects are remembered
+ *   (10 min); transient errors (401/403/408/429, 5xx, thrown) never are.
  *
  * Persisting goes through the {@link ArtifactStore} (`writeCacheData` / `removeInstance`), so the
  * same code serves the filesystem and shared stores.
@@ -81,6 +97,7 @@ export class InstanceRenderer {
     private readonly render: RenderInstanceFn;
     private readonly flights = new Map<string, Promise<FlightResult>>();
     private readonly backoff = new Map<string, Backoff>();
+    private readonly redirects = new Map<string, RedirectEntry>();
     private slotsInUse = 0;
     private busyCount = 0;
 
@@ -140,6 +157,10 @@ export class InstanceRenderer {
     async renderMissing(route: RouteEntry, params: Record<string, string>): Promise<MissOutcome> {
         const key = instanceKey(route.pattern, params);
         if (this.negativeCache.has(key, this.now())) return { kind: 'notFound' };
+        const known = this.redirects.get(key);
+        if (known && known.expiresAt > this.now()) {
+            return { kind: 'redirect', status: known.status, location: known.location };
+        }
         // Read-only store: cannot persist new instances — behave like a build-time-only deployment.
         if (!this.canWrite) return { kind: 'notFound' };
 
@@ -158,6 +179,9 @@ export class InstanceRenderer {
             return { kind: 'rendered', instance: synthesizeInstance(route, params) };
         }
         if (result.kind === 'notFound') return { kind: 'notFound' };
+        if (result.kind === 'redirect') {
+            return { kind: 'redirect', status: result.status, location: result.location };
+        }
         return this.unavailable();
     }
 
@@ -212,6 +236,17 @@ export class InstanceRenderer {
                 if (existing) await this.store.removeInstance?.(route, params);
                 return { kind: 'notFound' };
             }
+            if (outcome.kind === 'redirect') {
+                if (!existing) {
+                    this.backoff.delete(key);
+                    this.rememberRedirect(key, outcome.status, outcome.location);
+                    return { kind: 'redirect', status: outcome.status, location: outcome.location };
+                }
+                // A known instance that now redirects: keep serving its stored data, retry later.
+                this.recordFailure(key);
+                logger.warn(`[Refresh] ${key}: slow render now redirects to ${outcome.location}`);
+                return { kind: 'error' };
+            }
             this.recordFailure(key);
             logger.warn(`[Refresh] ${key}: ${outcome.reason}`);
             return { kind: 'error' };
@@ -219,6 +254,14 @@ export class InstanceRenderer {
             this.recordFailure(key);
             logger.warn(`[Refresh] ${key}: ${err?.message ?? err}`);
             return { kind: 'error' };
+        }
+    }
+
+    private rememberRedirect(key: string, status: number, location: string): void {
+        this.redirects.delete(key);
+        this.redirects.set(key, { status, location, expiresAt: this.now() + REDIRECT_TTL_MS });
+        while (this.redirects.size > REDIRECT_MAX_ENTRIES) {
+            this.redirects.delete(this.redirects.keys().next().value as string);
         }
     }
 

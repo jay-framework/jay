@@ -7,6 +7,8 @@ export type ResolveResult =
     | { kind: 'matched'; match: MatchResult }
     /** No route/instance matches (and none could be rendered): respond with the 404 page. */
     | { kind: 'notFound' }
+    /** The slow render of an unknown instance redirected: respond with this redirect. */
+    | { kind: 'redirect'; status: number; location: string }
     /**
      * An unknown instance could not be rendered right now (no free slow-render slot, timeout, error):
      * respond `503` with `Retry-After`. Never cached — we cannot tell whether the item exists.
@@ -41,6 +43,9 @@ export async function resolveRequest(
                 kind: 'matched',
                 match: { route, instance: outcome.instance, params, pathname },
             };
+        }
+        if (outcome.kind === 'redirect') {
+            return { kind: 'redirect', status: outcome.status, location: outcome.location };
         }
         if (outcome.kind === 'unavailable') {
             return { kind: 'unavailable', retryAfterSeconds: outcome.retryAfterSeconds };

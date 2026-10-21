@@ -132,6 +132,12 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
                 renderer,
             );
 
+            if (resolved.kind === 'redirect') {
+                res.writeHead(resolved.status, { Location: resolved.location });
+                res.end();
+                return;
+            }
+
             if (resolved.kind === 'unavailable') {
                 // DL#227 — unknown item could not be rendered now: retryable, never cached.
                 res.writeHead(503, {
