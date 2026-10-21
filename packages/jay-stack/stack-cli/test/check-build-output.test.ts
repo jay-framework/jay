@@ -25,6 +25,13 @@ import {
 const fixture = path.resolve('./test/fixtures/validate/build-output');
 const backendV2 = path.join(fixture, 'build', 'v0.2.0', 'backend');
 const backendV1 = path.join(fixture, 'build', 'v0.1.0', 'backend');
+const helloCache = path.join(
+    backendV2,
+    'pre-rendered',
+    'blog',
+    '[slug]',
+    'page_7d3eb17e.cache.json',
+);
 
 describe('discoverBuildBackendDir', () => {
     it('picks the highest build version backend under the project', async () => {
@@ -60,24 +67,20 @@ describe('loadBuildManifest', () => {
 describe('buildBuildOracle', () => {
     it('collects concrete URLs and per-instance entries', async () => {
         const loaded = await loadBuildManifest(backendV2);
-        const oracle = buildBuildOracle(loaded!.manifest, backendV2);
+        const oracle = await buildBuildOracle(loaded!.manifest, backendV2);
 
         expect([...oracle.urls].sort()).toEqual(['/', '/about', '/blog/hello', '/blog/world']);
         expect(oracle.instances.map((i) => i.url).sort()).toEqual(['/blog/hello', '/blog/world']);
 
         const hello = oracle.instances.find((i) => i.url === '/blog/hello')!;
-        expect(hello.cacheAbsPath).toBe(
-            path.join(backendV2, 'pre-rendered', 'blog-hello.cache.json'),
-        );
+        expect(hello.cacheAbsPath).toBe(helloCache);
         expect(hello.headMeta?.title?.[0]).toEqual({ kind: 'binding', value: 'post.title' });
     });
 });
 
 describe('loadSlowViewState', () => {
     it('reads slowViewState from a cache file', async () => {
-        const vs = await loadSlowViewState(
-            path.join(backendV2, 'pre-rendered', 'blog-hello.cache.json'),
-        );
+        const vs = await loadSlowViewState(helloCache);
         expect(vs).toEqual({
             post: { title: 'Hello World' },
             body: '<p>Links: <a href="/blog/world">next</a> and <a href="/blog/ghost">missing</a></p>',
@@ -298,7 +301,6 @@ describe('checkBuildJsonLd (DL#213)', () => {
                     pattern: '/p',
                     segments: [],
                     serverModule: 'm',
-                    instances: [],
                     scripts: routeScripts,
                 } as any,
             ],

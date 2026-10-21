@@ -15,6 +15,7 @@ import type {
 } from './types';
 export type { ForEachHeadlessInstance } from './types';
 import { resolveServices } from './services';
+import { mergeFreshness, type FreshnessInput } from './freshness';
 import {
     type InstanceBindingContext,
     enclosingInstanceViewState,
@@ -59,6 +60,8 @@ export interface InstanceSlowRenderResult {
     slowViewStates: Record<string, object>;
     /** Phase data for the fast render phase */
     instancePhaseData: InstancePhaseData;
+    /** Merged freshness requested by the instances' slow renders (Design Log #226; raw, seconds). */
+    freshness: FreshnessInput;
 }
 
 /**
@@ -81,6 +84,7 @@ export async function slowRenderInstances(
     const slowViewStates: Record<string, object> = {};
     const discoveredForFast: InstancePhaseData['discovered'] = [];
     const carryForwards: Record<string, object> = {};
+    const freshnessInputs: FreshnessInput[] = [];
 
     for (const instance of discovered) {
         const comp = componentByContractName.get(instance.contractName);
@@ -131,6 +135,7 @@ export async function slowRenderInstances(
 
                 slowViewStates[coordKey] = slowResult.rendered;
                 carryForwards[coordKey] = slowResult.carryForward;
+                freshnessInputs.push({ ttl: slowResult.ttl, grace: slowResult.grace });
             }
         }
     }
@@ -143,5 +148,6 @@ export async function slowRenderInstances(
         resolvedData,
         slowViewStates,
         instancePhaseData: { discovered: discoveredForFast, carryForwards, slowViewStates },
+        freshness: mergeFreshness(freshnessInputs),
     };
 }

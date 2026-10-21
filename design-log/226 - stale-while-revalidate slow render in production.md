@@ -378,3 +378,26 @@ Updates to `packages/jay-stack/stack-cli/agent-kit-template/`:
 8. Wix: refresh of an existing instance writes exactly one DB item (no manifest/index blob touched); redeploy to a new version never serves previous-version `/tmp` entries.
 9. ⚠️→✅ Confirm in code: server element and client bundle are route-level for all instances, so in-place `cache.json` overwrite is safe; confirm slow phase is bundled in `entry.mjs`.
 10. Fixture-based tests; no `toContain` on code files.
+
+---
+
+## Implementation Results
+
+Built together with DL#227 on branch `feat/slow-render-swr-and-render-on-miss` (jay + wix repos).
+
+**What was built**
+
+- `PhaseOutput.ttl` / `grace` (seconds) through `phaseOutput(..., { ttl, grace })` and `RenderPipeline.toPhaseOutput` (`full-stack-component`).
+- `stack-server-runtime/lib/freshness.ts`: `mergeFreshness` (min positive ttl / min positive grace over page, keyed headless parts and headless instances), `resolveFreshness` / `combineFreshness` (10 s ttl floor, grace default `max(12h, ttl)`, grace never below ttl). Wired into `slowly-changing-runner.ts` and `instance-slow-render.ts`.
+- `production-server/lib/serve/freshness.ts`: `classify` (fresh / stale / expired) and `applyFreshness` (`no-store` for old data, `Expires` dropped, validators kept, ETag + `-<renderedAt>`, `max-age` / `s-maxage` clamped to remaining ttl, `stale-*` directives removed, `jay-freshness: <state>, <age>ms`).
+- `serve/instance-renderer.ts` (`InstanceRenderer`): single-flight per instance, shared slot pool (`JAY_SLOW_RENDER_CONCURRENCY`, default 5), **no queue** (`busy` → serve old data), exponential failure backoff. `fetch-page-handler.ts` uses it: stale → background refresh, expired → await up to `JAY_STALE_WAIT_MS` (2000). `JAY_FRESHNESS_HEADER=off` disables the header.
+- Build (`instance-pipeline.ts`) and rebuild write `renderedAt`, `ttl`, `grace` into `cache.json`.
+- Agent-kit: developer + plugin `render-results.md`, devops `serving-modes.md`.
+
+**Deviations**
+
+- Rebuild no longer produces suffixed files + `cleanup-manifest.json` entries: with deterministic cache paths (DL#227) an instance rebuild overwrites in place atomically, so nothing is orphaned. `cleanupOrphanedFiles` is kept for older builds.
+- Wix: a stale *local* `/tmp` copy is re-checked against the collection (at most once per 5 s per file) instead of the server always trusting its local copy, so a refresh done by another server is adopted.
+- `readCacheDataFresh` is an optional `ArtifactStore` method (implemented by `WixDataArtifactStore`).
+
+**Tests** — new: `stack-server-runtime/test/freshness.test.ts` (9), `production-server/test/{freshness,instance-renderer,caches}.test.ts` (11 + 12 + 8). **Vitest could not be run in the authoring sandbox** (macOS-only `node_modules`); these files were type-checked with `tsc` and executed through a small assertion shim — 48/48 passed there. `yarn confirm` has to be run locally.

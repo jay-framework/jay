@@ -34,7 +34,7 @@ build/v{n}/
 │           └── logo.png
 │
 ├── backend/                         # Server-only artifacts (→ container)
-│   ├── route-manifest.json          # All routes, instances, action registry
+│   ├── route-manifest.json          # Routes (no instances), action registry
 │   ├── build-metadata.json          # Version, timestamp, instance count
 │   ├── server/                      # Compiled server code
 │   │   ├── init.js
@@ -63,10 +63,15 @@ The build is **environment-agnostic**. The same output serves any deployment mod
 
 `backend/route-manifest.json` contains:
 
-- **routes** — pattern, segments, server module path, instances with params
-- **instances** — `preRenderedPath` and `serverElementPath` (relative to `backend/`), `clientBundlePath` and `clientCssPath` (relative to `frontend/`)
+- **routes** — pattern, segments, server module path, route-level `serverElementPath`, `routeClientBundlePath` and `routeCssPath`. The manifest holds **routes only** — it does not list instances.
 - **actions** — server module paths, action names
 - **sharedManifest** — maps package names to hashed filenames in `frontend/shared/`
+
+## Instances
+
+An instance (one set of route params) is identified by its data file, `backend/pre-rendered/{route}/page[_{hash}].cache.json`. The path is derived from the route pattern and the params (`_` + first 8 hex of the md5 of the sorted-params JSON), and the file carries `route`, `params` and the freshness fields (`renderedAt`, `ttl`, `grace`) itself — it is its own index entry.
+
+The `ArtifactStore` lists a route's instances (sitemap, llms.txt, rebuild) from those files, so new instances created after the build — by [render-on-miss](serving-modes.md#fresh-data-and-new-items) or a rebuild — appear without touching the manifest.
 
 ## Project Structure Requirements
 

@@ -2635,7 +2635,7 @@ async function runBuildOutputValidation(args: {
         });
     }
 
-    const oracle = buildBuildOracle(loaded.manifest, backendDir);
+    const oracle = await buildBuildOracle(loaded.manifest, backendDir);
     const findings: BuildOutputFinding[] = [];
 
     // Check 1′ — template links Check 1 deferred, resolved against the concrete URL set.

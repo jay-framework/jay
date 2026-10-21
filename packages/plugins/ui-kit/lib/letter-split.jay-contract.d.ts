@@ -1,12 +1,13 @@
-import { JayContract } from '@jay-framework/runtime';
+import {JayContract} from "@jay-framework/runtime";
+
 
 export interface LetterOfLetterSplitViewState {
-    index: number;
-    text: string;
+  index: number,
+  text: string
 }
 
 export interface LetterSplitViewState {
-    letters: Array<LetterOfLetterSplitViewState>;
+  letters: Array<LetterOfLetterSplitViewState>
 }
 
 export type LetterSplitSlowViewState = {};
@@ -24,14 +25,7 @@ export interface LetterSplitRefs {}
 export interface LetterSplitRepeatedRefs {}
 
 export interface LetterSplitProps {
-    text?: string;
+  text?: string;
 }
 
-export type LetterSplitContract = JayContract<
-    LetterSplitViewState,
-    LetterSplitRefs,
-    LetterSplitSlowViewState,
-    LetterSplitFastViewState,
-    LetterSplitInteractiveViewState,
-    LetterSplitProps
->;
+export type LetterSplitContract = JayContract<LetterSplitViewState, LetterSplitRefs, LetterSplitSlowViewState, LetterSplitFastViewState, LetterSplitInteractiveViewState, LetterSplitProps>

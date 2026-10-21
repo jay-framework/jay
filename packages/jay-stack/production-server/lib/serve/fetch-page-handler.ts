@@ -14,31 +14,55 @@ import { deepMergeViewStates } from '@jay-framework/view-state-merge';
 import { asyncSwapScript } from '@jay-framework/ssr-runtime';
 import { buildImportMap } from './import-map';
 import { renderErrorPage } from './render-error-page';
-import {
-    loadPagePartsFromConfig,
-    type ProductionPageParts,
-} from '../builder/load-production-parts';
-import type { RouteEntry } from '../types';
-import path from 'node:path';
+import { getPageParts } from './page-parts';
+import { classify, applyFreshness, type FreshnessState } from './freshness';
+import type { InstanceRenderer } from './instance-renderer';
+import type { CacheEntry } from '../types';
 
-const pagePartsCache = new Map<string, ProductionPageParts>();
+/** Max time a request waits for the refresh of an `expired` instance (env `JAY_STALE_WAIT_MS`). */
+function staleWaitMs(): number {
+    const value = Number(process.env.JAY_STALE_WAIT_MS);
+    return Number.isFinite(value) && value >= 0 && process.env.JAY_STALE_WAIT_MS !== undefined
+        ? value
+        : 2000;
+}
 
-async function getPageParts(
-    route: RouteEntry,
-    artifacts: ArtifactStore,
-    cachePath: string,
-): Promise<ProductionPageParts> {
-    const cacheKey = route.pattern;
-    const cached = pagePartsCache.get(cacheKey);
-    if (cached) return cached;
+function freshnessHeaderEnabled(): boolean {
+    return process.env.JAY_FRESHNESS_HEADER !== 'off';
+}
 
-    const routeDir = path.dirname(cachePath);
-    const configRelPath = path.join(routeDir, 'page-parts.json');
+async function waitFor<T>(promise: Promise<T>, ms: number): Promise<T | undefined> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<undefined>((resolve) => {
+        timer = setTimeout(() => resolve(undefined), ms);
+    });
+    try {
+        return await Promise.race([promise, timeout]);
+    } finally {
+        if (timer) clearTimeout(timer);
+    }
+}
 
-    const parts = await loadPagePartsFromConfig(configRelPath, artifacts);
+/**
+ * Decide which entry to render from (Design Log #226): `fresh` → as is; `stale` → serve now and
+ * refresh in the background; `expired` → await the refresh (bounded), else serve the old data.
+ * `state` is the state of the data actually served.
+ */
+async function resolveEntry(
+    cached: CacheEntry,
+    match: MatchResult,
+    renderer: InstanceRenderer | undefined,
+): Promise<{ entry: CacheEntry; state: FreshnessState }> {
+    const now = Date.now();
+    const state = classify(cached, now);
+    if (state === 'fresh' || !renderer) return { entry: cached, state };
 
-    pagePartsCache.set(cacheKey, parts);
-    return parts;
+    const refresh = renderer.refresh(match.route, match.params);
+    if (state === 'expired' && (refresh.kind === 'started' || refresh.kind === 'joined')) {
+        const renewed = await waitFor(refresh.done, staleWaitMs());
+        if (renewed) return { entry: renewed, state: 'fresh' };
+    }
+    return { entry: cached, state };
 }
 
 export async function fetchPageRequest(
@@ -48,22 +72,28 @@ export async function fetchPageRequest(
     artifacts: ArtifactStore,
     staticBaseUrl: string,
     cookies: Record<string, string> = {},
+    renderer?: InstanceRenderer,
 ): Promise<Response> {
     const { route, instance } = match;
     const t0 = Date.now();
 
     let tCache = 0,
         tParts = 0;
-    const [cached, pageParts] = await Promise.all([
+    const [storedEntry, pageParts] = await Promise.all([
         artifacts.readCacheData(instance.cachePath).then((r) => {
             tCache = Date.now() - t0;
             return r;
         }),
-        getPageParts(route, artifacts, instance.cachePath).then((r) => {
+        getPageParts(route, artifacts).then((r) => {
             tParts = Date.now() - t0;
             return r;
         }),
     ]);
+    const { entry: cached, state: freshnessState } = await resolveEntry(
+        storedEntry,
+        match,
+        renderer,
+    );
     const tData = Date.now();
 
     const query = Object.fromEntries(requestUrl.searchParams.entries());
@@ -261,7 +291,13 @@ ${headParts}
         },
     });
 
-    const responseHeaders = fastResult.responseHeaders || {};
+    const responseHeaders = applyFreshness(
+        fastResult.responseHeaders || {},
+        cached,
+        freshnessState,
+        Date.now(),
+        { freshnessHeader: freshnessHeaderEnabled() },
+    );
     return new Response(stream, {
         headers: { 'Content-Type': 'text/html; charset=utf-8', ...responseHeaders },
     });

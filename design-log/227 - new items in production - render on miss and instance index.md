@@ -273,3 +273,31 @@ Updates to `packages/jay-stack/stack-cli/agent-kit-template/`:
 10. Single `hashParams` used by build, rebuild and miss path (test asserts identical `cachePath`).
 11. ⚠️→✅ Confirm: `items.insert` duplicate-id error and queryable `route` on `jay-backend-files`.
 12. Fixture-based tests; no `toContain` on code files.
+
+---
+
+## Implementation Results
+
+Built together with DL#226 on branch `feat/slow-render-swr-and-render-on-miss`.
+
+**What was built**
+
+- Manifest holds routes only: `RouteEntry.instances` removed everywhere (build, rebuild, sitemap, llms.txt, renderer status, `check-build-output`, fetch-handler, Wix `build-entry`).
+- `shared/instance-key.ts`: `deriveCachePath` (`pre-rendered/<routeDir>/page[_md5(sorted params)[0..8]].cache.json`), `instanceKey`, `synthesizeInstance`; used by build, rebuild, refresh and miss.
+- `ArtifactStore`: `getInstance`, `listInstances({fresh})`, optional `writeCacheData` / `removeInstance` / `readCacheDataFresh`; `CacheNotFoundError`. `FilesystemArtifactStore`: stat / directory scan (TTL `SwrCache`, 10 min) / tmp+rename / unlink. `cache.json` carries `route` + `params`.
+- `matchRoutes` + `resolveRequest`: render-on-miss through `InstanceRenderer.renderMissing` (single-flight, shared slots, no queue); real 404 (`ClientError 404`) → in-memory LRU negative cache (10 min) and fall-through to the next matching route; anything else → `503` + `Retry-After: 2`, never cached.
+- `renderInstance` extracted (shared by rebuild, refresh and miss) with page-parts cache in `serve/page-parts.ts`.
+- Wix `WixDataArtifactStore`: `category: 'instance'` items with `route` / `params`; `getInstance` (single `get`, only a real not-found → undefined), `listInstances` (paged query + `SwrCache`), `writeCacheData` (`insert`; duplicate id → adopt winner), `removeInstance`; `upload-backend` sends each `*.cache.json` as an instance item; `build-entry` uses `resolveRequest` + `InstanceRenderer` and lists instances for `/_wix/pages.json`; `setup` creates the `route` / `params` fields; deployment guide updated.
+
+**Deviations**
+
+- Wix `writeCacheData` on duplicate id adopts the existing item only if its `renderedAt` ≥ the new entry's, otherwise overwrites with `save` — plain "adopt" would make a *refresh* of an existing item impossible, since refresh and create share the same write.
+- `matchRequest` is replaced by `matchRoutes` (yields all matching routes + params) and `resolveRequest`; no compatibility shim (per project rules).
+- Sitemap / llms.txt generators take the store (`listInstances`) instead of reading `manifest.routes[].instances`.
+- `renderer-server` `/_jay/status` reports `instanceCount` from `build-metadata.json` (a build statistic).
+
+**Not verified / open**
+
+- ⚠️ Wix assumptions still to confirm against a live collection: duplicate-id error code (`WDE0074`), not-found code (`WDE0073`), and that `route` is filterable without extra index setup.
+- ⚠️ `yarn confirm` (vitest, full type-check, prettier) has not been run — see DL#226 note.
+- Example projects' generated `agent-kit/` copies are refreshed by `jay-stack setup`, not edited here.

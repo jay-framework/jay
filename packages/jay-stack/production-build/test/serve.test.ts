@@ -229,7 +229,7 @@ describe('static assets', () => {
             await fs.readFile(path.join(buildRoot, 'v1/backend/route-manifest.json'), 'utf-8'),
         );
         const index = routeManifest.routes.find((r: any) => r.pattern === '');
-        const res = await fetch(`/${index.instances[0].clientBundlePath}`);
+        const res = await fetch(`/${index.routeClientBundlePath}`);
         expect(res.status).toBe(200);
     });
 

@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
-import path from 'node:path';
 import { headMetaToHeadTags } from '@jay-framework/stack-server-runtime';
 import type { RouteManifest, RouteEntry } from '../types';
+import type { ArtifactStore } from '../serve/artifact-store';
 import { buildUrlFromManifest } from './generate-sitemap';
 
 /**
@@ -27,11 +27,13 @@ function hasUnresolved(value: string | undefined): boolean {
     return !!value && UNRESOLVED_BINDING.test(value);
 }
 
-/** Load an instance's slow ViewState from its (backend-relative) cache path. {} when unreadable. */
-async function loadSlowViewState(backendDir: string, cachePath: string): Promise<object> {
+/** Load an instance's slow ViewState from its cache path. {} when unreadable. */
+async function loadSlowViewState(
+    store: Pick<ArtifactStore, 'readCacheData'>,
+    cachePath: string,
+): Promise<object> {
     try {
-        const raw = await fs.readFile(path.join(backendDir, cachePath), 'utf8');
-        return JSON.parse(raw).slowViewState ?? {};
+        return (await store.readCacheData(cachePath)).slowViewState ?? {};
     } catch {
         return {};
     }
@@ -58,26 +60,27 @@ function resolveTitleAndDescription(
 async function collectPageLinks(
     manifest: RouteManifest,
     base: string,
-    backendDir: string,
+    store: Pick<ArtifactStore, 'listInstances' | 'readCacheData'>,
 ): Promise<PageLink[]> {
     const links: PageLink[] = [];
 
     for (const route of manifest.routes) {
         if (route.devOnly || route.noIndex) continue;
 
-        if (route.instances.length === 0) {
-            const hasDynamic = route.segments.some((s) => s.type !== 'static');
-            if (hasDynamic) continue; // dynamic route with no built instances — nothing to list
-            const urlPath = route.pattern === '/' ? '/' : route.pattern;
-            const { title, description } = resolveTitleAndDescription(route, {});
+        let count = 0;
+        for await (const instance of store.listInstances(route)) {
+            count++;
+            const urlPath = buildUrlFromManifest(route.pattern, instance.params);
+            const viewState = await loadSlowViewState(store, instance.cachePath);
+            const { title, description } = resolveTitleAndDescription(route, viewState);
             links.push({ title: title ?? urlPath, url: `${base}${urlPath}`, description });
-            continue;
         }
 
-        for (const instance of route.instances) {
-            const urlPath = buildUrlFromManifest(route.pattern, instance.params);
-            const viewState = await loadSlowViewState(backendDir, instance.cachePath);
-            const { title, description } = resolveTitleAndDescription(route, viewState);
+        if (count === 0) {
+            const hasDynamic = route.segments.some((s) => s.type !== 'static');
+            if (hasDynamic) continue; // dynamic route with no instances — nothing to list
+            const urlPath = route.pattern === '/' ? '/' : route.pattern;
+            const { title, description } = resolveTitleAndDescription(route, {});
             links.push({ title: title ?? urlPath, url: `${base}${urlPath}`, description });
         }
     }
@@ -102,12 +105,12 @@ function sectionOf(url: string, base: string): string {
  */
 export async function generateLlmsTxt(
     manifest: RouteManifest,
+    store: Pick<ArtifactStore, 'listInstances' | 'readCacheData'>,
     site: LlmsTxtSiteConfig,
-    backendDir: string,
     outputPath: string,
 ): Promise<number> {
     const base = (site.baseUrl ?? '').replace(/\/$/, '');
-    const links = await collectPageLinks(manifest, base, backendDir);
+    const links = await collectPageLinks(manifest, base, store);
 
     const lines: string[] = [`# ${site.name}`, ''];
     if (site.description) {

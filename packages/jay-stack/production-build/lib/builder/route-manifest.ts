@@ -39,7 +39,6 @@ export function buildRouteEntry(route: JayRoute, serverModulePath: string): Rout
         segments: convertSegments(route.segments),
         serverModule: serverModulePath,
         componentExport: route.componentExport,
-        instances: [],
         ...(route.devOnly && { devOnly: true }),
     };
 }
@@ -112,7 +111,5 @@ export async function discoverActions(
 export async function writeRouteManifest(manifest: RouteManifest, buildDir: string): Promise<void> {
     const manifestPath = path.join(buildDir, 'route-manifest.json');
     await fs.writeFile(manifestPath, JSON.stringify(manifest, null, 2));
-    getLogger().info(
-        `[Build] Route manifest written: ${manifest.routes.length} routes, ${manifest.routes.reduce((n, r) => n + r.instances.length, 0)} instances`,
-    );
+    getLogger().info(`[Build] Route manifest written: ${manifest.routes.length} routes`);
 }

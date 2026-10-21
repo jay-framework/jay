@@ -2,10 +2,11 @@ import path from 'path';
 import { promises as fsp } from 'fs';
 import { parse } from 'node-html-parser';
 import { headMetaToHeadTags, type JayHtmlHeadMeta } from '@jay-framework/stack-server-runtime';
+import { FilesystemArtifactStore } from '@jay-framework/production-server';
 import type {
     RouteManifest,
     RouteEntry,
-    InstanceEntry,
+    InstanceRef,
     BuildMetadata,
     CacheEntry,
 } from '@jay-framework/production-server';
@@ -82,7 +83,7 @@ function buildUrlFromManifest(pattern: string, params: Record<string, string>): 
 }
 
 /** Concrete URL for a single route instance (static route with no instances → its pattern). */
-function routeInstanceUrl(route: RouteEntry, instance: InstanceEntry): string {
+function routeInstanceUrl(route: RouteEntry, instance: InstanceRef): string {
     return normalizePath(buildUrlFromManifest(route.pattern, instance.params));
 }
 
@@ -170,21 +171,24 @@ export async function loadBuildManifest(
     return { manifest, metadata };
 }
 
-/** Partition the manifest into the concrete URL set + the per-instance list. */
-export function buildBuildOracle(manifest: RouteManifest, backendDir: string): BuildOracle {
+/**
+ * Partition the manifest routes × the store's instance listing into the concrete URL set + the
+ * per-instance list (Design Log #227: the manifest holds routes only).
+ */
+export async function buildBuildOracle(
+    manifest: RouteManifest,
+    backendDir: string,
+): Promise<BuildOracle> {
+    const store = new FilesystemArtifactStore(backendDir);
     const urls = new Set<string>();
     const instances: BuildInstance[] = [];
 
     for (const route of manifest.routes) {
         const hasDynamic = route.segments.some((s) => s.type !== 'static');
+        let count = 0;
 
-        if (route.instances.length === 0) {
-            // Static route with no instances — its pattern is the URL (mirrors generate-sitemap.ts:20-28).
-            if (!hasDynamic) urls.add(normalizePath(route.pattern));
-            continue;
-        }
-
-        for (const instance of route.instances) {
+        for await (const instance of store.listInstances(route, { fresh: true })) {
+            count++;
             const url = routeInstanceUrl(route, instance);
             urls.add(url);
             instances.push({
@@ -194,6 +198,9 @@ export function buildBuildOracle(manifest: RouteManifest, backendDir: string): B
                 headMeta: route.headMeta,
             });
         }
+
+        // Static route with no instances — its pattern is the URL (mirrors generate-sitemap.ts).
+        if (count === 0 && !hasDynamic) urls.add(normalizePath(route.pattern));
     }
 
     return { urls, instances };

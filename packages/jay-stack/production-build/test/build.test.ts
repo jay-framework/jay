@@ -1,11 +1,16 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { buildVersion } from '@jay-framework/production-build';
 import { resolveContractToRoutes } from '@jay-framework/production-server';
-import { matchRequest } from '@jay-framework/production-server';
+import {
+    matchRoutes,
+    resolveRequest,
+    FilesystemArtifactStore,
+    synthesizeInstance,
+} from '@jay-framework/production-server';
 import { setDevLogger, createDevLogger } from '@jay-framework/logger';
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import type { RouteManifest, RouteEntry } from '@jay-framework/production-server';
+import type { RouteManifest, RouteEntry, InstanceEntry } from '@jay-framework/production-server';
 
 const fixtureRoot = path.resolve(__dirname, 'fixtures/basic-project');
 const buildRoot = path.join(fixtureRoot, 'build');
@@ -19,6 +24,17 @@ function findRoute(pattern: string): RouteEntry {
     const route = manifest.routes.find((r) => r.pattern === pattern);
     if (!route) throw new Error(`Route not found: ${pattern}`);
     return route;
+}
+
+/** Instances of a route, resolved through the store (the manifest holds routes only, DL#227). */
+async function instancesOf(pattern: string): Promise<InstanceEntry[]> {
+    const route = findRoute(pattern);
+    const store = new FilesystemArtifactStore(backendDir);
+    const instances: InstanceEntry[] = [];
+    for await (const ref of store.listInstances(route, { fresh: true })) {
+        instances.push(synthesizeInstance(route, ref.params));
+    }
+    return instances;
 }
 
 beforeAll(async () => {
@@ -83,32 +99,43 @@ describe('build artifacts', () => {
 });
 
 describe('route manifest', () => {
-    it('includes index page route', () => {
-        const index = findRoute('');
-        expect(index.instances.length).toBe(1);
-        expect(index.instances[0].params).toEqual({});
+    it('includes index page route', async () => {
+        const instances = await instancesOf('');
+        expect(instances.length).toBe(1);
+        expect(instances[0].params).toEqual({});
     });
 
-    it('includes home page route', () => {
-        const home = findRoute('/home');
-        expect(home.instances.length).toBe(1);
+    it('includes home page route', async () => {
+        expect((await instancesOf('/home')).length).toBe(1);
     });
 
-    it('includes featured page route (flattened headless region)', () => {
-        const featured = findRoute('/featured');
-        expect(featured.instances.length).toBe(1);
+    it('includes featured page route (flattened headless region)', async () => {
+        expect((await instancesOf('/featured')).length).toBe(1);
     });
 
-    it('includes catalog page route (headless instance)', () => {
-        const catalog = findRoute('/catalog');
-        expect(catalog.instances.length).toBe(1);
+    it('includes catalog page route (headless instance)', async () => {
+        expect((await instancesOf('/catalog')).length).toBe(1);
     });
 
-    it('includes dynamic items route with params', () => {
-        const items = findRoute('/items/[slug]');
-        expect(items.instances.length).toBe(2);
-        const slugs = items.instances.map((i) => i.params.slug).sort();
+    it('includes dynamic items route with params', async () => {
+        const instances = await instancesOf('/items/[slug]');
+        expect(instances.length).toBe(2);
+        const slugs = instances.map((i) => i.params.slug).sort();
         expect(slugs).toEqual(['widget-a', 'widget-b']);
+    });
+
+    it('keeps instances out of the manifest (DL#227)', () => {
+        for (const route of manifest.routes) {
+            expect('instances' in route).toBe(false);
+        }
+    });
+
+    it('stores route, params and freshness fields in each cache file (DL#226/#227)', async () => {
+        const [inst] = await instancesOf('/home');
+        const cache = JSON.parse(await fs.readFile(path.join(backendDir, inst.cachePath), 'utf-8'));
+        expect(cache.route).toBe('/home');
+        expect(cache.params).toEqual({});
+        expect(typeof cache.renderedAt).toBe('number');
     });
 
     it('persists jay-script="allow" passthrough scripts into the manifest (DL#149)', () => {
@@ -140,8 +167,7 @@ describe('route manifest', () => {
 
 describe('per-instance artifacts', () => {
     it('produces artifacts for index page', async () => {
-        const index = findRoute('');
-        const inst = index.instances[0];
+        const inst = (await instancesOf(''))[0];
         expect(
             await fs.access(path.join(backendDir, inst.cachePath)).then(
                 () => true,
@@ -159,8 +185,7 @@ describe('per-instance artifacts', () => {
     });
 
     it('produces artifacts for home page', async () => {
-        const home = findRoute('/home');
-        const inst = home.instances[0];
+        const inst = (await instancesOf('/home'))[0];
         expect(
             await fs.access(path.join(backendDir, inst.cachePath)).then(
                 () => true,
@@ -173,8 +198,7 @@ describe('per-instance artifacts', () => {
     });
 
     it('produces artifacts for featured page (flattened headless region)', async () => {
-        const featured = findRoute('/featured');
-        const inst = featured.instances[0];
+        const inst = (await instancesOf('/featured'))[0];
         expect(
             await fs.access(path.join(backendDir, inst.cachePath)).then(
                 () => true,
@@ -187,8 +211,7 @@ describe('per-instance artifacts', () => {
     });
 
     it('produces artifacts for catalog page (headless instance)', async () => {
-        const catalog = findRoute('/catalog');
-        const inst = catalog.instances[0];
+        const inst = (await instancesOf('/catalog'))[0];
         expect(
             await fs.access(path.join(backendDir, inst.cachePath)).then(
                 () => true,
@@ -201,9 +224,9 @@ describe('per-instance artifacts', () => {
     });
 
     it('stores different slow ViewState per slug', async () => {
-        const items = findRoute('/items/[slug]');
-        const widgetA = items.instances.find((i) => i.params.slug === 'widget-a')!;
-        const widgetB = items.instances.find((i) => i.params.slug === 'widget-b')!;
+        const items = await instancesOf('/items/[slug]');
+        const widgetA = items.find((i) => i.params.slug === 'widget-a')!;
+        const widgetB = items.find((i) => i.params.slug === 'widget-b')!;
 
         const cacheA = JSON.parse(
             await fs.readFile(path.join(backendDir, widgetA.cachePath), 'utf-8'),
@@ -219,9 +242,9 @@ describe('per-instance artifacts', () => {
     });
 
     it('populates props.url with the concrete route path at the slow phase (DL#163)', async () => {
-        const items = findRoute('/items/[slug]');
-        const widgetA = items.instances.find((i) => i.params.slug === 'widget-a')!;
-        const widgetB = items.instances.find((i) => i.params.slug === 'widget-b')!;
+        const items = await instancesOf('/items/[slug]');
+        const widgetA = items.find((i) => i.params.slug === 'widget-a')!;
+        const widgetB = items.find((i) => i.params.slug === 'widget-b')!;
 
         const cacheA = JSON.parse(
             await fs.readFile(path.join(backendDir, widgetA.cachePath), 'utf-8'),
@@ -235,8 +258,8 @@ describe('per-instance artifacts', () => {
     });
 
     it('server element renders index page HTML', async () => {
-        const index = findRoute('');
-        const mod = await import(path.join(backendDir, index.instances[0].serverElementPath));
+        const index = (await instancesOf(''))[0];
+        const mod = await import(path.join(backendDir, index.serverElementPath));
         const chunks: string[] = [];
         mod.renderToStream(
             { welcomeMessage: 'Welcome to Test Shop' },
@@ -247,8 +270,8 @@ describe('per-instance artifacts', () => {
     });
 
     it('server element renders home page HTML', async () => {
-        const home = findRoute('/home');
-        const mod = await import(path.join(backendDir, home.instances[0].serverElementPath));
+        const home = (await instancesOf('/home'))[0];
+        const mod = await import(path.join(backendDir, home.serverElementPath));
         const chunks: string[] = [];
         mod.renderToStream(
             { siteName: 'Test Shop', itemCount: 5 },
@@ -347,29 +370,31 @@ describe('contracts field (DL#134c)', () => {
 });
 
 describe('rebuild target resolution (DL#134c)', () => {
-    it('resolves route pattern to exact route', () => {
+    const store = () => new FilesystemArtifactStore(backendDir);
+
+    it('resolves route pattern to exact route', async () => {
         const route = manifest.routes.find((r) => r.pattern === '/items/[slug]');
         expect(route).toBeDefined();
-        expect(route!.instances.length).toBe(2);
+        expect((await instancesOf('/items/[slug]')).length).toBe(2);
     });
 
-    it('resolves URL to route and params via matchRequest', () => {
-        const match = matchRequest(manifest, '/items/widget-a');
+    it('resolves URL to route and params via matchRoutes', () => {
+        const match = matchRoutes(manifest, '/items/widget-a').next().value;
         expect(match).toBeDefined();
         expect(match!.route.pattern).toBe('/items/[slug]');
         expect(match!.params).toEqual({ slug: 'widget-a' });
     });
 
-    it('resolves URL to correct instance', () => {
-        const match = matchRequest(manifest, '/items/widget-b');
-        expect(match).toBeDefined();
-        expect(match!.instance).toBeDefined();
-        expect(match!.instance.params.slug).toBe('widget-b');
+    it('resolves URL to the stored instance', async () => {
+        const result = await resolveRequest(manifest, '/items/widget-b', store());
+        expect(result.kind).toBe('matched');
+        expect(result.kind === 'matched' && result.match.instance.params.slug).toBe('widget-b');
     });
 
-    it('returns undefined for unknown URL', () => {
-        const match = matchRequest(manifest, '/items/nonexistent');
-        expect(match).toBeUndefined();
+    it('does not resolve an unknown item without a renderer', async () => {
+        expect(await resolveRequest(manifest, '/items/nonexistent', store())).toEqual({
+            kind: 'notFound',
+        });
     });
 
     it('returns undefined for unknown route pattern', () => {
@@ -377,11 +402,11 @@ describe('rebuild target resolution (DL#134c)', () => {
         expect(route).toBeUndefined();
     });
 
-    it('resolves static route URL', () => {
-        const match = matchRequest(manifest, '/home');
-        expect(match).toBeDefined();
-        expect(match!.route.pattern).toBe('/home');
-        expect(Object.keys(match!.params).length).toBe(0);
+    it('resolves static route URL', async () => {
+        const result = await resolveRequest(manifest, '/home', store());
+        expect(result.kind).toBe('matched');
+        expect(result.kind === 'matched' && result.match.route.pattern).toBe('/home');
+        expect(result.kind === 'matched' && Object.keys(result.match.params).length).toBe(0);
     });
 });
 
@@ -423,8 +448,8 @@ describe('error pages (DL#218)', () => {
     it('does not expose error pages as navigable routes', () => {
         expect(manifest.routes.some((r) => r.pattern === '/404')).toBe(false);
         expect(manifest.routes.some((r) => r.pattern === '/5xx')).toBe(false);
-        expect(matchRequest(manifest, '/404')).toBeUndefined();
-        expect(matchRequest(manifest, '/5xx')).toBeUndefined();
+        expect([...matchRoutes(manifest, '/404')]).toEqual([]);
+        expect([...matchRoutes(manifest, '/5xx')]).toEqual([]);
     });
 
     it('captures the error page head metadata from its template', () => {

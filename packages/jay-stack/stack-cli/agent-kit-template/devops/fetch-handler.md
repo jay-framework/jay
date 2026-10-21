@@ -106,8 +106,29 @@ interface ArtifactStore {
   loadModule(modulePath: string, local?: boolean): Promise<any>;
   getAssetPath(relativePath: string): string;
   getBuildDir(): string;
+
+  // Instances — the manifest holds routes only; the store owns the instance index
+  getInstance(
+    route: RouteEntry,
+    params: Record<string, string>,
+  ): Promise<InstanceEntry | undefined>;
+  listInstances(route: RouteEntry, options?: { fresh?: boolean }): AsyncIterable<InstanceRef>;
+
+  // Optional — implement to enable stale refresh and render-on-miss (omit for a read-only store)
+  writeCacheData?(
+    route: RouteEntry,
+    params: Record<string, string>,
+    entry: CacheEntry,
+  ): Promise<void>;
+  removeInstance?(route: RouteEntry, params: Record<string, string>): Promise<void>;
+  readCacheDataFresh?(relativePath: string): Promise<CacheEntry>;
 }
 ```
+
+- `readCacheData` must throw `CacheNotFoundError` (exported from `/serve`) when the instance has no data.
+- `getInstance` returns `undefined` only for a real "does not exist" — other errors must throw (they are not a 404).
+- `writeCacheData` upserts the data at the path derived by `deriveCachePath(route.pattern, params)` and keeps the index consistent (the item itself is the index entry). Race handling should be idempotent (adopt a concurrent winner), not a lock.
+- `listInstances` may serve a TTL-cached listing (`SwrCache`, default 10 minutes); `fresh: true` re-reads. Page through the backend's own page-size limit.
 
 `loadModule` handles all module loading — server elements, page components, headless components. The `local` flag indicates whether the path is relative to the build directory (`true`) or an npm package (`false`). For filesystem deployments, local modules resolve from `basePath` and npm modules use bare `import()`. BaaS implementations resolve all modules from their pre-bundled registry, ignoring the `local` flag.
 
