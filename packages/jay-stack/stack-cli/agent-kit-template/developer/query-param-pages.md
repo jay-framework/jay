@@ -1,5 +1,17 @@
 # Fast Query-Param Pages — Precompute the Default in the Slow Phase
 
+> **Rendering phases — read this first.** Jay pages use three phases: **slow** (build-time static
+> generation), **fast** (per-request server rendering), and **interactive** (client after hydration).
+> Put only **slow-changing** data in the slow phase — content that is safe to fetch once, serialize into
+> `page.cache.json`, and replay until the next build or republish. **Fast-changing** data (live
+> availability, per-user or session state, real-time status, token lookups, anything that must be fresh
+> on every visit) belongs in **fast** or **interactive**, not in the slow carry. Examples later in this
+> guide (catalog shells, marker lists) assume CMS-backed data that changes on publish, not volatile
+> inventory counts. For how phases work on pages, see [page-components.md](page-components.md); for the
+> builder API and phase hooks, see [Component Structure](../plugin/component-structure.md); for
+> choosing `slow` vs `fast` on contract tags, see the [Contract Authoring Guide](../contracts/GUIDE.md)
+> decision checklist.
+
 Search pages, listing pages, filter pages and shareable-link pages read query parameters
 (`props.query`) to decide what to render. The common mistake is to do **all** the work in the
 fast phase and query on **every** request — including the request that has **no** query
@@ -88,14 +100,18 @@ fast render is just `async (props, ...services)`. See [render-results.md](render
 `phaseOutput` and the carry-forward contract, and [page-components.md](page-components.md) for the
 positional carry-forward argument across phases.
 
-### Carry raw data, render in fast — avoid duplicating the view in slow
+### Carry raw data, render in fast — do not duplicate between slots
 
-On hybrid slow+fast pages, prefer:
+On hybrid slow+fast pages, split output by **role**, not “always empty slow ViewState”:
 
-- **Slow `viewState`:** `{}` when `PageSlowViewState` is empty (nothing to bake into slow HTML
-  that fast will replace).
-- **`carryForward`:** query-independent **source data** (`PageData` from `loadData()`), not a
-  second copy of the full `buildView` output unless the default view is a true constant.
+- **Slow `viewState`:** whatever `PageSlowViewState` requires — slow-phase contract tags bound in
+  jay-html. Use `{}` only when `PageSlowViewState` is `{}` (all tags are `phase: fast`).
+- **`carryForward`:** query-independent **source data** for the fast phase (`PageData` from
+  `loadData()`), not a second copy of the same fields already in slow `viewState`, and not a
+  duplicate of the full `buildView` output unless the default view is a true constant.
+
+In both `viewState` and `carryForward`, ship only what the next phase or your jay-html bindings
+actually use — drop extra fields that are never read or bound.
 
 Fast phase always runs `buildView(carry, query)` so markup that depends on `props.query` stays
 in one pure function for server and client.
@@ -254,8 +270,6 @@ Params like `?view=list` vs map, opening brand/collection, or phone sheet height
 - In fast, only run `buildView(carry, query)` — derive `view` / `viewSwitchMarkup` / server-side
   opening state inside `buildView`.
 - Do **not** call `loadData()` again because `props.query` is non-empty.
-- URL **filters** that the interactive phase reads from `location.search` never belong in the fast
-  phase; the server ships the full list and the client narrows it.
 
 ```typescript
 .withFastRender(async (props, carry: PageData) => {
@@ -264,6 +278,30 @@ Params like `?view=list` vs map, opening brand/collection, or phone sheet height
   return phaseOutput(buildView(carry, query), {}); // view=list changes markup only
 });
 ```
+
+## Filters and pagination
+
+Do not confuse **re-querying** in fast (usually wrong for filter params) with **applying** filter
+or page params in fast (often required for correct first paint).
+
+Shared links like `?brand=x` or `?page=3` must match the **first HTML** (SEO, no flash of wrong
+content). When the full dataset already lives in slow `carryForward`, fast should run the same
+pure `buildView(carry, props.query)` and **filter or slice in memory** — zero CMS calls.
+**Interactive** then owns filter/page changes after load (read `location.search`, update URL with
+`history` APIs, optionally call actions). Applying filters only in interactive, with no fast pass
+over `props.query`, is wrong for deep links.
+
+| Dataset | First load (`props.query` in fast) | After hydration (interactive) |
+| ------- | ---------------------------------- | ----------------------------- |
+| Small, fully carried | `buildView` filters or paginates over carry (no CMS) | Same logic on carry, or DOM narrow; sync URL |
+| Large or over cache budget | Query with filter + limit/offset (or cursor); `no-store` if volatile | Action for page/filter changes; sync URL if shareable |
+
+**Large catalogs:** “ship the full list” does not scale — slow `page.cache.json` caps (see below)
+and client download cost. Server-side filter/pagination is required; filtering only the current
+page on the client is wrong (you would filter page *N*, not the whole result set).
+
+**Security:** client hide/show is not access control — never put rows the user must not see in
+carry or ViewState.
 
 ## Pages with no query params at all
 
@@ -319,8 +357,8 @@ find build -path '*/pre-rendered/*/*.cache.json' -size +512k -print   # hard (51
 
 **Keep the cache small when over budget:**
 
-- Use **empty slow `viewState` + `carryForward` only** — do not duplicate the full fast view in
-  both slots.
+- Put slow-phase fields in **slow `viewState`** or in **`carryForward`**, not both — never duplicate
+  the same payload across slots; both serialize into `page.cache.json`.
 - Carry only what rebuilds the **default** view; defer the rest.
 - Re-read [production-build.md](../devops/production-build.md).
 
@@ -369,14 +407,16 @@ Choose per page:
       in slow; fast uses `buildView(carry, query)`.
 - [ ] Is the default data independent of `props.query`? → `loadData()` in slow, typed
       `carryForward`.
-- [ ] Is `PageSlowViewState` `{}`? → slow `viewState: {}`; do not duplicate the full fast view in
-      both `viewState` and `carryForward`.
+- [ ] Slow `viewState` matches `PageSlowViewState` (may be `{}` when every tag is `fast`); same data
+      must not also sit in `carryForward`.
 - [ ] Are `PageSlowViewState`, `PageFastViewState`, and `buildView`’s return type imported from
       `page.jay-contract`?
 - [ ] Does `Object.keys(props.query).length > 0` trigger a CMS call? → replace with a named
       `needsFresh…(query)` for live params only.
 - [ ] Is `Cache-Control: no-store` on the no-params default? → restrict to live param branches.
 - [ ] Does a markup-only param trigger a re-query? → derive in `buildView`, forward carry.
+- [ ] Shared filter/page URLs: does fast `buildView(carry, props.query)` apply them in memory (small
+      carry) or query the server (large set)? Interactive-only apply → wrong first paint.
 - [ ] Phase tests: slow carry populated, fast default zero CMS calls, markup param zero CMS calls.
 - [ ] After production build, run **`jay-stack validate --tier-2`** (or `wc -c` on each
       `*.cache.json`); **under 300 KiB** OK for full carry; **soft** → warn and propose deferral;
