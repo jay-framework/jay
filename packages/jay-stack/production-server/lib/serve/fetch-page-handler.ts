@@ -89,6 +89,9 @@ export async function fetchPageRequest(
             return r;
         }),
     ]);
+    // On the expired path this awaits the stale re-render (up to JAY_STALE_WAIT_MS) — the dominant
+    // cost of a refresh request (DL#226); measure it so the timing log accounts for `total`.
+    const tBeforeResolve = Date.now();
     const { entry: cached, state: freshnessState } = await resolveEntry(
         storedEntry,
         match,
@@ -271,6 +274,7 @@ ${headParts}
             const serverTiming = {
                 cache: tCache,
                 parts: tParts,
+                refresh: tData - tBeforeResolve,
                 data: tData - t0,
                 fast: tFast - tData,
                 load: tLoadMs,
@@ -279,7 +283,7 @@ ${headParts}
             };
 
             write(`
-    <script>console.log('[jay] server: cache=${serverTiming.cache}ms parts=${serverTiming.parts}ms fast=${serverTiming.fast}ms load=${serverTiming.load}ms ssr=${serverTiming.ssr}ms total=${serverTiming.total}ms${freshnessLog ? ` freshness=${freshnessLog}` : ''}')</script>
+    <script>console.log('[jay] server: cache=${serverTiming.cache}ms parts=${serverTiming.parts}ms refresh=${serverTiming.refresh}ms fast=${serverTiming.fast}ms load=${serverTiming.load}ms ssr=${serverTiming.ssr}ms total=${serverTiming.total}ms${freshnessLog ? ` freshness=${freshnessLog}` : ''}')</script>
     <script type="module">
       import { init } from '${clientBundleUrl}';
       const _t=performance.now();
@@ -293,6 +297,7 @@ ${headParts}
             const timingParts = [
                 `cache: ${tCache}ms`,
                 `parts: ${tParts}ms`,
+                `refresh: ${serverTiming.refresh}ms`,
                 `fast: ${serverTiming.fast}ms`,
                 `load: ${tLoadMs}ms`,
                 `ssr: ${serverTiming.ssr}ms`,
