@@ -51,5 +51,18 @@
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "resolutions": {
+    "proxy-addr": "^2.0.8",
+    "shell-quote": "^1.11.0",
+    "undici": "^8.10.2",
+    "compression": "^1.8.2",
+    "follow-redirects": "^1.16.1",
+    "fast-uri": "^3.1.8",
+    "underscore": "^1.13.8",
+    "source-map-js": "^1.2.2",
+    "qs": "^6.16.0",
+    "launch-editor": "^2.14.2",
+    "colord": "^2.9.4"
   }
 }
