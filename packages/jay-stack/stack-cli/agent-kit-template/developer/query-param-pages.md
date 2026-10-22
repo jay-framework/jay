@@ -5,9 +5,11 @@
 > Put only **slow-changing** data in the slow phase — content that is safe to fetch once, serialize into
 > `page.cache.json`, and replay until the next build or republish. **Fast-changing** data (live
 > availability, per-user or session state, real-time status, token lookups, anything that must be fresh
-> on every visit) belongs in **fast** or **interactive**, not in the slow carry. Examples later in this
-> guide (catalog shells, marker lists) assume CMS-backed data that changes on publish, not volatile
-> inventory counts. For how phases work on pages, see [page-components.md](page-components.md); for the
+> on every visit) belongs in **fast** or **interactive**, not in the slow carry. **Hybrid pages** may
+> still keep a **publish-time snapshot** in slow when the default URL is allowed to be stale until
+> rebuild; named query params then trigger a live re-read in fast (see Hybrid freshness). Examples
+> later assume CMS-backed data that changes on publish, not volatile counts. For how phases work on
+> pages, see [page-components.md](page-components.md); for the
 > builder API and phase hooks, see [Component Structure](../plugin/component-structure.md); for
 > choosing `slow` vs `fast` on contract tags, see the [Contract Authoring Guide](../contracts/GUIDE.md)
 > decision checklist.
@@ -18,8 +20,8 @@ fast phase and query on **every** request — including the request that has **n
 parameters, whose result is a fixed default that never changes per request.
 
 A second mistake is to treat **any** non-empty `props.query` as a reason to re-query the CMS.
-Many params only change **markup** (map vs list, opening band, sheet height) while the **data**
-is unchanged. Re-fetching on `?view=list` wastes work and breaks cacheability.
+Many params only change **markup** (layout mode, which panel is open, sheet height) while the
+**data** is unchanged. Re-fetching on `?view=list` wastes work and breaks cacheability.
 
 This guide shows how to make those pages load fast: precompute query-independent data in the
 **slow** phase (free at build time), carry it forward, and in the fast phase either forward
@@ -38,12 +40,12 @@ Two axes apply on every page — do not confuse them:
 is needed for first paint, **fetch it in the slow phase and carry it forward**. No extra client
 or per-request reads on the common path.
 
-**Defer only when size forces it** (see Wix thresholds below) or when the data is genuinely
-not on the critical path (e.g. a tab the user has not opened yet). Lazy loading and smaller
-carries are **optimizations under budget pressure**, not the starting point.
+**Defer** when data is not on the critical path (e.g. a tab the user has not opened yet). **Shrink
+carry** when [slow-phase cache size](#slow-phase-cache-size-pagecachejson) exceeds the soft budget
+— that section is the source of truth for byte limits and deferral under size pressure.
 
-Teach agents to classify each field: _visible on load_ → slow/fast carry; _hover-only, other tab,
-or N×M URL explosion_ → candidate for deferral once the soft size warning fires.
+Classify each field: _visible on load_ → slow/fast carry; _hover-only, other tab, or N×M URL
+explosion_ → candidate for deferral once tier-2 reports a soft warning.
 
 ## Why the slow phase is the right place for the default
 
@@ -133,7 +135,7 @@ type PageData = Awaited<ReturnType<typeof loadData>>;
 
 function buildView(
   { inventory, marks }: PageData,
-  query: Record<string, string> | undefined,
+  query: Record<string, string>,
 ): PageFastViewState {
   const view = viewFromQuery(query) ?? 'map';
   return { ...inventory, ...marksToViewState(marks), ...viewSwitchMarkup(view) };
@@ -149,10 +151,9 @@ export const page = makeJayStackComponent<PageContract>()
         carryForward: data,
       })),
   )
-  .withFastRender(async (props, carry: PageData) => {
-    const query = Object.keys(props.query).length > 0 ? props.query : undefined;
-    return phaseOutput(buildView(carry, query), {});
-  });
+  .withFastRender(async (props, carry: PageData) =>
+    phaseOutput(buildView(carry, props.query), {}),
+  );
 ```
 
 **Tests:** assert `slow.rendered` is `{}`, data lives on `slow.carryForward`, fast with no CMS
@@ -163,9 +164,12 @@ only markup fields.
 
 ```
 slow  → load query-independent data once → viewState {} (if contract says so), carryForward: PageData
-fast  → buildView(carry, query) — no CMS unless a specific param needs live data
+fast  → buildView(carry, props.query) — no CMS unless a specific param needs live data
        → param branch that needs freshness → query + optional no-store
 ```
+
+Snippets below use `phaseOutput` directly; the main example uses `RenderPipeline` in slow when you
+want typed error handling — both return the same `viewState` / `carryForward` shape.
 
 ### ✅ Do — default data in slow, `buildView` in fast, query only on relevant params
 
@@ -199,7 +203,7 @@ fast  → buildView(carry, query) — no CMS unless a specific param needs live 
     const data = await loadData(); // wrong for ?view=list — markup-only param
     return phaseOutput(buildView(data, props.query), {});
   }
-  return phaseOutput(buildView(carry, undefined), {});
+  return phaseOutput(buildView(carry, props.query), {});
 });
 ```
 
@@ -240,22 +244,29 @@ cacheable.
 ### ✅ Do — hybrid freshness (slow default + live branch for specific params)
 
 Some pages need **mostly** build-time data but a **live** read when certain query params appear
-(e.g. reschedule flow, share token). Carry the slow snapshot; re-query only inside an explicit
+(e.g. share token, a booking-change flow). Carry a **snapshot** in slow that is safe to show
+**stale on the default path** (no live param); re-query only inside an explicit
 `needsFresh…(props.query)` helper — not `Object.keys(props.query).length > 0`.
 
 ```typescript
-function needsFreshRules(query: Record<string, string> | undefined): boolean {
-  if (!query) return false;
-  if (query.reschedule?.trim()) return true;
-  return Boolean(query.experience?.trim());
+function needsFreshRules(query: Record<string, string>): boolean {
+  return Boolean(query.live?.trim() || query.bookingId?.trim());
+}
+
+function rulesToPhaseOutput(
+  rules: VisitRules,
+  query: Record<string, string>,
+  responseHeaders?: Record<string, string>,
+) {
+  return phaseOutput(buildViewFromRules(rules, query), {}, { responseHeaders });
 }
 
 .withFastRender(async (props, carry: { rules: VisitRules }) => {
   if (needsFreshRules(props.query)) {
     const rules = await getVisitRules({});
-    return renderFromRules(rules, props, { 'Cache-Control': 'no-store' });
+    return rulesToPhaseOutput(rules, props.query, { 'Cache-Control': 'no-store' });
   }
-  return renderFromRules(carry.rules, props);
+  return rulesToPhaseOutput(carry.rules, props.query);
 });
 ```
 
@@ -263,8 +274,8 @@ Document which params are markup-only vs live in a comment next to the helper.
 
 ## When a query param only changes markup, not data
 
-Params like `?view=list` vs map, opening brand/collection, or phone sheet height select
-**presentation**. The inventory (or rules shell) is the same.
+Params like `?view=list` vs map, which collection or item is open, or sheet/panel layout select
+**presentation**. The underlying dataset is the same.
 
 - Keep **data** on `carryForward` from slow (or from the last full `loadData` on live branches).
 - In fast, only run `buildView(carry, query)` — derive `view` / `viewSwitchMarkup` / server-side
@@ -272,11 +283,9 @@ Params like `?view=list` vs map, opening brand/collection, or phone sheet height
 - Do **not** call `loadData()` again because `props.query` is non-empty.
 
 ```typescript
-.withFastRender(async (props, carry: PageData) => {
-  const query =
-    Object.keys(props.query).length > 0 ? props.query : undefined;
-  return phaseOutput(buildView(carry, query), {}); // view=list changes markup only
-});
+.withFastRender(async (props, carry: PageData) =>
+  phaseOutput(buildView(carry, props.query), {}), // ?view=list changes markup only
+);
 ```
 
 ## Filters and pagination
@@ -306,8 +315,8 @@ carry or ViewState.
 ## Pages with no query params at all
 
 If the route never reads `props.query`, do **not** add a fast phase just for freshness. Put the
-whole CMS read in `withSlowlyRender` and omit `withFastRender` (home, static listings, chronotype
-wall, contact form idle state). Rely on platform rebuild / republish when content changes.
+whole CMS read in `withSlowlyRender` and omit `withFastRender` (home page, static listings, static
+content walls, idle form shells). Rely on platform rebuild / republish when content changes.
 
 ```typescript
 .withSlowlyRender(async () => {
@@ -317,29 +326,38 @@ wall, contact form idle state). Rely on platform rebuild / republish when conten
 // no withFastRender — tests should expect page.fastRender === undefined
 ```
 
-## Slow-phase `*.cache.json` size thresholds
+## Slow-phase cache size (`page.cache.json`)
 
 Each route’s slow-phase snapshot is written as
 `build/<version>/backend/pre-rendered/<route>/page.cache.json` (slow `viewState` +
-`carryForward` serialized together). Hosted backends often store that blob as a single row with a
-**512 KiB (524 288 byte)** content cap — the same limits enforced by **`jay-stack validate --tier-2`**
-(DL#211 Check 6: soft **307 200** bytes / 300 KiB, hard **524 288** bytes / 512 KiB).
+`carryForward` serialized together).
 
-Payloads are usually **URLs and text**, not image blobs — but **many markers × many units × many
-slides** still blows the limit.
+**Jay enforces carry budgets in CI and pre-deploy:** `jay-stack validate --tier-2` measures each
+`*.cache.json` and reports a **soft warning** at **307 200 bytes (300 KiB)** and a **hard error**
+at **524 288 bytes (512 KiB)**. Those limits match common hosted deploy storage caps for a single
+pre-rendered row; staying under them keeps local validation aligned with production. See
+[validation-tier-2-guide.md](../designer/validation-tier-2-guide.md) for tier-2 output.
+
+Payloads are usually **URLs and text**, not image blobs — but dense lists (many markers × many
+preview fields) still blow the limit.
 
 ### Soft vs hard limits (agent behavior)
 
-| Tier                                                                                          | Bytes                       | Meaning                                                  |
-| --------------------------------------------------------------------------------------------- | --------------------------- | -------------------------------------------------------- |
-| **OK**                                                                                        | Under **307 200** (300 KiB) | Prefer **full slow carry** for all first-paint data.     |
-| **Soft warning**                                                                              | **307 200 – 524 287**       | Deploy may still work. Agent **must** report sizes after |
-| `build:production`, **warn** in chat or AIditor, and **propose** deferral (smaller carry,     |
-| tab-scoped fetch, post-hydration lazy enrich — see pattern below). Do not ship only a silent  |
-| product trim (e.g. fewer slides) without calling it out.                                      |
-| **Hard**                                                                                      | **≥ 524 288** (512 KiB)     | **Must** reduce carry before merge: defer non-critical   |
-| fields, lazy enrich after hydration, or split via a platform-supported mechanism. Do not rely |
-| on skipping the slow phase entirely.                                                          |
+| Tier | Bytes | Meaning |
+| ---- | ----- | ------- |
+| **OK** | Under **307 200** (300 KiB) | Prefer full slow carry for first-paint data. |
+| **Soft warning** | **307 200 – 524 287** | Tier 2 warns; deploy may still work on some hosts. |
+| **Hard** | **≥ 524 288** (512 KiB) | Tier 2 errors; shrink carry before merge. |
+
+After a production build, agents **must** run tier-2 (or `wc -c` on each cache file), **surface**
+the sizes, and **propose** deferral when soft — smaller carry, tab-scoped fetch, post-hydration
+enrich (see pattern below). Do not silently trim user-visible data without calling it out.
+
+On **hard** limit: defer non-critical fields, lazy enrich after hydration, or split via a
+platform-supported mechanism. **Do not** move the entire dataset to fast-only rendering just to
+avoid the cache file — you lose the build-time default path and pay per-request cost instead.
+
+### Verify size
 
 **After `npm run build:production` (or `jay-stack build`), run Tier 2 validation:**
 
@@ -364,27 +382,13 @@ find build -path '*/pre-rendered/*/*.cache.json' -size +512k -print   # hard (51
 
 Local dev is more forgiving; **verify on a production build** before deploying to a size-capped host.
 
-### Example pattern: map or list previews — minimal carry, enrich after hydration
+### Example pattern: dense lists — minimal carry, enrich after hydration
 
-On pages with **many markers or rows** (maps, dense catalogs): full preview galleries for every
-item are usually **not** first-paint critical, but the **first** image (or card summary) per
-item often should feel instant.
-
-Recommended product + engineering shape:
-
-1. **Slow carry (SSR):** each preview carries **one slide** (hero image + fields needed for the
-   popup or row). Shell data (position, label, counts) stays in carry.
-2. **After interactive hydration:** automatically start fetching **additional slides** per marker
-   (Jay query or batched action) — **do not** wait for hover to begin the fetch.
-3. **UI:** no loading spinner. **Hide** gallery arrows until at least one extra slide has
-   arrived; then show arrows so the user can see more. If only one image ever exists, arrows
-   stay hidden.
-4. **Restore full gallery depth** in the deferred payload (e.g. up to six slides), not in
-   `page.cache.json`.
-
-Wire fetches in `withInteractive` once the component is live; merge into ViewState or DOM via
-refs per [component-refs.md](component-refs.md). Document the action contract in the page or
-plugin agent-kit.
+On pages with **many markers or rows** (maps, dense catalogs): put **first-paint** preview
+fields in slow carry (e.g. one thumbnail + labels per item); fetch heavier media or extra fields
+in `withInteractive` via actions or client queries — start those fetches after hydration, not only
+on hover. Keep the full gallery or detail payload out of `page.cache.json`. Merge deferred data
+into ViewState or the DOM via refs per [component-refs.md](component-refs.md).
 
 ## Trade-off: freshness
 
@@ -420,6 +424,5 @@ Choose per page:
 - [ ] Phase tests: slow carry populated, fast default zero CMS calls, markup param zero CMS calls.
 - [ ] After production build, run **`jay-stack validate --tier-2`** (or `wc -c` on each
       `*.cache.json`); **under 300 KiB** OK for full carry; **soft** → warn and propose deferral;
-      **hard (≥ 512 KiB)** → must defer/shrink before deploy.
-- [ ] Map previews: one image in carry; extra slides after hydration (not hover-gated); arrows
-      only when more slides are loaded; no loading gif.
+      **hard (≥ 512 KiB)** → must defer/shrink before deploy (not fast-only to dodge the cap).
+- [ ] Dense lists/maps: minimal preview in slow carry; defer heavy fields to interactive/actions.
