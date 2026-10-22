@@ -63,6 +63,8 @@
     "source-map-js": "^1.2.2",
     "qs": "^6.16.0",
     "launch-editor": "^2.14.2",
-    "colord": "^2.9.4"
+    "colord": "^2.9.4",
+    "@types/node": "^22.20.1",
+    "vite": "^6.4.4"
   }
 }

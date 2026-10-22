@@ -32,7 +32,7 @@
     "@jay-framework/stack-server-runtime": "workspace:^",
     "@jay-framework/view-state-merge": "workspace:^",
     "@jay-framework/vite-plugin": "workspace:^",
-    "vite": "^5.0.11"
+    "vite": "^6.4.4"
   },
   "devDependencies": {
     "@jay-framework/dev-environment": "workspace:^",
@@ -40,6 +40,6 @@
     "rimraf": "^5.0.5",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3",
-    "vitest": "^1.2.1"
+    "vitest": "^4.1.11"
   }
 }

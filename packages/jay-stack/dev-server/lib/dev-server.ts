@@ -1066,7 +1066,7 @@ async function handleClientOnlyRequest(
     }
 
     const viteStart = Date.now();
-    const compiledPageHtml = await vite.transformIndexHtml(!!url ? url : '/', pageHtml);
+    const compiledPageHtml = await vite.transformIndexHtml(url?.split('?')[0] || '/', pageHtml);
     timing?.recordViteClient(Date.now() - viteStart);
 
     res.status(200).set({ 'Content-Type': 'text/html' }).send(compiledPageHtml);
@@ -1182,7 +1182,7 @@ async function sendResponse(
     }
 
     const viteStart = Date.now();
-    const compiledPageHtml = await vite.transformIndexHtml(!!url ? url : '/', pageHtml);
+    const compiledPageHtml = await vite.transformIndexHtml(url?.split('?')[0] || '/', pageHtml);
     timing?.recordViteClient(Date.now() - viteStart);
 
     res.status(statusCode).set({ 'Content-Type': 'text/html' }).send(compiledPageHtml);
@@ -1257,7 +1257,7 @@ async function handleFrozenRequest(
         }
 
         if (injectDevHmr) {
-            const compiledHtml = await vite.transformIndexHtml(url || '/', html);
+            const compiledHtml = await vite.transformIndexHtml(url?.split('?')[0] || '/', html);
             res.status(200).set(headers).send(compiledHtml);
         } else {
             res.status(200).set(headers).send(html);
