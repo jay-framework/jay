@@ -410,3 +410,16 @@ are superseded by this note):
   `agent-kit-template/designer/validation-tier-2-guide.md`; `validation-guide.md` now keeps only a short Tier 1
   description + a pointer to the Tier 2 guide. `cli-commands.md` gained the `--tier-2` example + pointer.
 - Tests updated to `tier2: true`; full suite still green (170/170), types clean.
+
+### Check 6 — per-instance `*.cache.json` byte size (2026-10-22)
+
+Tier 2 now includes **Check 6** (`checkPageCacheFileSizes` in `stack-cli/lib/check-build-output.ts`), wired from `validate.ts` over every manifest-declared `*.cache.json`.
+
+| Threshold   | Bytes                  | Severity |
+| ----------- | ---------------------- | -------- |
+| Soft budget | `300 × 1024` (307 200) | warning  |
+| Hard limit  | `512 × 1024` (524 288) | error    |
+
+**Why in the generic CLI:** the check validates **built artifacts** (slow-phase carry size), not a vendor SDK. The numeric caps match a common hosted-row limit documented in agent-kit `developer/query-param-pages.md`; the framework does not import deploy plugins. Messages use the relative cache path (`pre-rendered/<route>/page.cache.json`), not a hard-coded filename. Missing/unreadable cache files produce an **error** (manifest/cache mismatch). Agent-kit thresholds and CLI constants share one source of truth (`PAGE_CACHE_*_BYTES`).
+
+Tests: three cases (under soft, at soft / at hard boundaries, over hard + missing file) in `check-build-output.test.ts`.
