@@ -29,7 +29,7 @@ The developer sets up the project, configures plugins, creates page-level compon
 | [page-contracts.md](page-contracts.md)                       | Page-level contracts (page.jay-contract)                                                        |
 | [Contract Authoring Guide](../contracts/GUIDE.md)            | Writing contracts: syntax, page/component/linked contracts, examples                            |
 | [page-components.md](page-components.md)                     | page.ts: makeJayStackComponent for pages                                                        |
-| [query-param-pages.md](query-param-pages.md)                 | Fast query-param pages: precompute the no-params default in the slow phase and carry it forward |
+| [query-param-pages.md](query-param-pages.md)                 | Page load performance for query-param pages: slow-phase default, carry-forward, scoped fast queries |
 | [design-system-guide.md](../designer/design-system-guide.md) | Shared components as design-system elements: ship a template, flatten, drift, `sync`            |
 | [component-structure.md](../plugin/component-structure.md)   | Builder API for shared/headless components: `.withProps()`, phases, render results              |
 | [component-state.md](component-state.md)                     | createSignal, createMemo, createEffect, createDerivedArray                                      |
