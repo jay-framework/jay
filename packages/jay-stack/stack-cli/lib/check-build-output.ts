@@ -96,11 +96,11 @@ export async function checkPageCacheFileSizes(args: {
 }): Promise<BuildOutputFinding[]> {
     const { cacheAbsPath, routePattern } = args;
     const findings: BuildOutputFinding[] = [];
+    const rel = path.basename(path.dirname(cacheAbsPath)) + '/' + path.basename(cacheAbsPath);
     let bytes: number;
     try {
         bytes = (await fsp.stat(cacheAbsPath)).size;
     } catch (err: unknown) {
-        const rel = path.basename(path.dirname(cacheAbsPath)) + '/' + path.basename(cacheAbsPath);
         const detail = err instanceof Error ? err.message : String(err);
         findings.push({
             file: routePattern,
@@ -112,25 +112,23 @@ export async function checkPageCacheFileSizes(args: {
         return findings;
     }
 
-    const rel = path.basename(path.dirname(cacheAbsPath)) + '/' + path.basename(cacheAbsPath);
-    const hardKiB = PAGE_CACHE_HARD_BYTES / 1024;
-    const softKiB = PAGE_CACHE_SOFT_BYTES / 1024;
-
     if (bytes >= PAGE_CACHE_HARD_BYTES) {
+        const hardKiB = PAGE_CACHE_HARD_BYTES / 1024;
         findings.push({
             file: routePattern,
             message: `${rel} is ${bytes} bytes (≥ ${PAGE_CACHE_HARD_BYTES} bytes / ${hardKiB} KiB hard limit). Shrink slow-phase carry before deploy.`,
             suggestion:
-                'Shrink slow-phase carryForward (defer interaction-gated data, post-hydration client fetch). See agent-kit developer/query-param-pages.md.',
+                'Reduce slow-phase carryForward in this cache file before deploy (smaller payloads, defer non-first-paint data). See agent-kit developer/query-param-pages.md — cache size thresholds.',
             severity: 'error',
             source: 'build-output',
         });
     } else if (bytes >= PAGE_CACHE_SOFT_BYTES) {
+        const softKiB = PAGE_CACHE_SOFT_BYTES / 1024;
         findings.push({
             file: routePattern,
             message: `${rel} is ${bytes} bytes (≥ ${PAGE_CACHE_SOFT_BYTES} bytes / ${softKiB} KiB soft budget). Consider deferring non-critical carry data.`,
             suggestion:
-                'Review carryForward payload; prefer one image per map preview + lazy enrich after hydration. See agent-kit developer/query-param-pages.md.',
+                'Review carryForward size: keep only what the default view needs for first paint; defer the rest (per-request fetch or post-hydration load). Oversize caches often need product decisions about what loads when — see agent-kit developer/query-param-pages.md.',
             severity: 'warning',
             source: 'build-output',
         });

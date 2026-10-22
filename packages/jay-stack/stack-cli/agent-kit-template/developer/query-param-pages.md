@@ -326,15 +326,16 @@ find build -path '*/pre-rendered/*/*.cache.json' -size +512k -print   # hard (51
 
 Local dev is more forgiving; **verify on a production build** before deploying to a size-capped host.
 
-### Pattern: map preview — one image in carry, enrich after hydration
+### Example pattern: map or list previews — minimal carry, enrich after hydration
 
-For estate-map markers (listing pages): preview galleries are **not** first-paint critical for
-every unit at once, but the **first** image per point should feel instant.
+On pages with **many markers or rows** (maps, dense catalogs): full preview galleries for every
+item are usually **not** first-paint critical, but the **first** image (or card summary) per
+item often should feel instant.
 
-Recommended product + engineering shape (e.g. Starkdale `/all-residences`, `/explore`):
+Recommended product + engineering shape:
 
-1. **Slow carry (SSR):** each map preview has **one slide** (hero image + card fields needed for
-   the popup). Marker shell (position, label, counts) stays in carry.
+1. **Slow carry (SSR):** each preview carries **one slide** (hero image + fields needed for the
+   popup or row). Shell data (position, label, counts) stays in carry.
 2. **After interactive hydration:** automatically start fetching **additional slides** per marker
    (Jay query or batched action) — **do not** wait for hover to begin the fetch.
 3. **UI:** no loading spinner. **Hide** gallery arrows until at least one extra slide has
