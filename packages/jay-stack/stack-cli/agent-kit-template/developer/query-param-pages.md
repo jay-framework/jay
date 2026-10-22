@@ -151,9 +151,7 @@ export const page = makeJayStackComponent<PageContract>()
         carryForward: data,
       })),
   )
-  .withFastRender(async (props, carry: PageData) =>
-    phaseOutput(buildView(carry, props.query), {}),
-  );
+  .withFastRender(async (props, carry: PageData) => phaseOutput(buildView(carry, props.query), {}));
 ```
 
 **Tests:** assert `slow.rendered` is `{}`, data lives on `slow.carryForward`, fast with no CMS
@@ -300,14 +298,14 @@ pure `buildView(carry, props.query)` and **filter or slice in memory** — zero 
 `history` APIs, optionally call actions). Applying filters only in interactive, with no fast pass
 over `props.query`, is wrong for deep links.
 
-| Dataset | First load (`props.query` in fast) | After hydration (interactive) |
-| ------- | ---------------------------------- | ----------------------------- |
-| Small, fully carried | `buildView` filters or paginates over carry (no CMS) | Same logic on carry, or DOM narrow; sync URL |
+| Dataset                    | First load (`props.query` in fast)                                   | After hydration (interactive)                         |
+| -------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------- |
+| Small, fully carried       | `buildView` filters or paginates over carry (no CMS)                 | Same logic on carry, or DOM narrow; sync URL          |
 | Large or over cache budget | Query with filter + limit/offset (or cursor); `no-store` if volatile | Action for page/filter changes; sync URL if shareable |
 
 **Large catalogs:** “ship the full list” does not scale — slow `page.cache.json` caps (see below)
 and client download cost. Server-side filter/pagination is required; filtering only the current
-page on the client is wrong (you would filter page *N*, not the whole result set).
+page on the client is wrong (you would filter page _N_, not the whole result set).
 
 **Security:** client hide/show is not access control — never put rows the user must not see in
 carry or ViewState.
@@ -343,11 +341,11 @@ preview fields) still blow the limit.
 
 ### Soft vs hard limits (agent behavior)
 
-| Tier | Bytes | Meaning |
-| ---- | ----- | ------- |
-| **OK** | Under **307 200** (300 KiB) | Prefer full slow carry for first-paint data. |
-| **Soft warning** | **307 200 – 524 287** | Tier 2 warns; deploy may still work on some hosts. |
-| **Hard** | **≥ 524 288** (512 KiB) | Tier 2 errors; shrink carry before merge. |
+| Tier             | Bytes                       | Meaning                                            |
+| ---------------- | --------------------------- | -------------------------------------------------- |
+| **OK**           | Under **307 200** (300 KiB) | Prefer full slow carry for first-paint data.       |
+| **Soft warning** | **307 200 – 524 287**       | Tier 2 warns; deploy may still work on some hosts. |
+| **Hard**         | **≥ 524 288** (512 KiB)     | Tier 2 errors; shrink carry before merge.          |
 
 After a production build, agents **must** run tier-2 (or `wc -c` on each cache file), **surface**
 the sizes, and **propose** deferral when soft — smaller carry, tab-scoped fetch, post-hydration
