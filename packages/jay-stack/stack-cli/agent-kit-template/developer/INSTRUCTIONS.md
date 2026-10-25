@@ -21,21 +21,22 @@ The developer sets up the project, configures plugins, creates page-level compon
 
 ## Guides
 
-| File                                                         | Topic                                                                                |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
-| [project-structure.md](project-structure.md)                 | Directory layout, configuration files                                                |
-| [routing.md](routing.md)                                     | Directory-based routing, dynamic routes                                              |
-| [configuration.md](configuration.md)                         | .jay file, plugin config, init.ts                                                    |
-| [page-contracts.md](page-contracts.md)                       | Page-level contracts (page.jay-contract)                                             |
-| [Contract Authoring Guide](../contracts/GUIDE.md)            | Writing contracts: syntax, page/component/linked contracts, examples                 |
-| [page-components.md](page-components.md)                     | page.ts: makeJayStackComponent for pages                                             |
-| [design-system-guide.md](../designer/design-system-guide.md) | Shared components as design-system elements: ship a template, flatten, drift, `sync` |
-| [component-structure.md](../plugin/component-structure.md)   | Builder API for shared/headless components: `.withProps()`, phases, render results   |
-| [component-state.md](component-state.md)                     | createSignal, createMemo, createEffect, createDerivedArray                           |
-| [component-refs.md](component-refs.md)                       | Refs, collection refs, element types                                                 |
-| [component-data.md](component-data.md)                       | Immutable data, JSON Patch, patching                                                 |
-| [render-results.md](render-results.md)                       | phaseOutput, RenderPipeline, errors, redirects                                       |
-| [error-pages-guide.md](error-pages-guide.md)                 | Returning enriched errors (title/code/details) and which error page renders          |
-| [seo-guide.md](seo-guide.md)                                 | SEO head tags: title, meta, OG, canonical via phaseOutput                            |
-| [cli-commands.md](cli-commands.md)                           | CLI commands: setup, validate, dev, agent-kit                                        |
-| `../references/<plugin>/`                                    | Plugin reference data                                                                |
+| File                                                         | Topic                                                                                               |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| [project-structure.md](project-structure.md)                 | Directory layout, configuration files                                                               |
+| [routing.md](routing.md)                                     | Directory-based routing, dynamic routes                                                             |
+| [configuration.md](configuration.md)                         | .jay file, plugin config, init.ts                                                                   |
+| [page-contracts.md](page-contracts.md)                       | Page-level contracts (page.jay-contract)                                                            |
+| [Contract Authoring Guide](../contracts/GUIDE.md)            | Writing contracts: syntax, page/component/linked contracts, examples                                |
+| [page-components.md](page-components.md)                     | page.ts: makeJayStackComponent for pages                                                            |
+| [query-param-pages.md](query-param-pages.md)                 | Page load performance for query-param pages: slow-phase default, carry-forward, scoped fast queries |
+| [design-system-guide.md](../designer/design-system-guide.md) | Shared components as design-system elements: ship a template, flatten, drift, `sync`                |
+| [component-structure.md](../plugin/component-structure.md)   | Builder API for shared/headless components: `.withProps()`, phases, render results                  |
+| [component-state.md](component-state.md)                     | createSignal, createMemo, createEffect, createDerivedArray                                          |
+| [component-refs.md](component-refs.md)                       | Refs, collection refs, element types                                                                |
+| [component-data.md](component-data.md)                       | Immutable data, JSON Patch, patching                                                                |
+| [render-results.md](render-results.md)                       | phaseOutput, RenderPipeline, errors, redirects                                                      |
+| [error-pages-guide.md](error-pages-guide.md)                 | Returning enriched errors (title/code/details) and which error page renders                         |
+| [seo-guide.md](seo-guide.md)                                 | SEO head tags: title, meta, OG, canonical via phaseOutput                                           |
+| [cli-commands.md](cli-commands.md)                           | CLI commands: setup, validate, dev, agent-kit                                                       |
+| `../references/<plugin>/`                                    | Plugin reference data                                                                               |

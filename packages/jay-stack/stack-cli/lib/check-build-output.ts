@@ -67,6 +67,77 @@ const UNRESOLVED_BINDING = /\{[A-Za-z_$][\w$]*(?:\.[\w$]+)*\}/;
 const TITLE_MAX = 60;
 const DESCRIPTION_MAX = 160;
 
+/** Soft budget for slow-phase `*.cache.json` (see agent-kit `query-param-pages.md`). */
+export const PAGE_CACHE_SOFT_BYTES = 300 * 1024;
+/** Hard limit aligned with common BaaS per-row snapshot caps (512 KiB). */
+export const PAGE_CACHE_HARD_BYTES = 512 * 1024;
+
+/** Every `*.cache.json` path declared on route instances in the manifest. */
+export function collectPageCachePaths(
+    manifest: RouteManifest,
+    backendDir: string,
+): Array<{ routePattern: string; cacheAbsPath: string }> {
+    const out: Array<{ routePattern: string; cacheAbsPath: string }> = [];
+    for (const route of manifest.routes) {
+        for (const instance of route.instances) {
+            if (!instance.cachePath) continue;
+            out.push({
+                routePattern: route.pattern,
+                cacheAbsPath: path.resolve(backendDir, instance.cachePath),
+            });
+        }
+    }
+    return out;
+}
+
+/** DL#211 Check 6 — per-instance `*.cache.json` byte size vs deploy carry budgets. */
+export async function checkPageCacheFileSizes(args: {
+    cacheAbsPath: string;
+    routePattern: string;
+}): Promise<BuildOutputFinding[]> {
+    const { cacheAbsPath, routePattern } = args;
+    const findings: BuildOutputFinding[] = [];
+    const rel = path.basename(path.dirname(cacheAbsPath)) + '/' + path.basename(cacheAbsPath);
+    let bytes: number;
+    try {
+        bytes = (await fsp.stat(cacheAbsPath)).size;
+    } catch (err: unknown) {
+        const detail = err instanceof Error ? err.message : String(err);
+        findings.push({
+            file: routePattern,
+            message: `${rel} is listed in the build manifest but could not be read (${detail}).`,
+            suggestion: 'Rebuild the project or fix the missing pre-rendered cache file.',
+            severity: 'error',
+            source: 'build-output',
+        });
+        return findings;
+    }
+
+    if (bytes >= PAGE_CACHE_HARD_BYTES) {
+        const hardKiB = PAGE_CACHE_HARD_BYTES / 1024;
+        findings.push({
+            file: routePattern,
+            message: `${rel} is ${bytes} bytes (≥ ${PAGE_CACHE_HARD_BYTES} bytes / ${hardKiB} KiB hard limit). Shrink slow-phase carry before deploy.`,
+            suggestion:
+                'Reduce slow-phase carryForward in this cache file before deploy (smaller payloads, defer non-first-paint data). See agent-kit developer/query-param-pages.md — cache size thresholds.',
+            severity: 'error',
+            source: 'build-output',
+        });
+    } else if (bytes >= PAGE_CACHE_SOFT_BYTES) {
+        const softKiB = PAGE_CACHE_SOFT_BYTES / 1024;
+        findings.push({
+            file: routePattern,
+            message: `${rel} is ${bytes} bytes (≥ ${PAGE_CACHE_SOFT_BYTES} bytes / ${softKiB} KiB soft budget). Consider deferring non-critical carry data.`,
+            suggestion:
+                'Review carryForward size: keep only what the default view needs for first paint; defer the rest (per-request fetch or post-hydration load). Oversize caches often need product decisions about what loads when — see agent-kit developer/query-param-pages.md.',
+            severity: 'warning',
+            source: 'build-output',
+        });
+    }
+
+    return findings;
+}
+
 /**
  * Reproduces `buildUrlFromManifest` from `production-server/builder/generate-sitemap.ts:55` (not exported).
  * Kept in lockstep: substitute `[[opt]]`, `[...all]`, `[p]` from params, collapse `//`, strip trailing slash.

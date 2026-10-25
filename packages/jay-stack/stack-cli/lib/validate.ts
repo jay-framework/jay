@@ -63,6 +63,8 @@ import {
     checkInstanceMeta,
     checkBuildJsonLd,
     checkInstanceJsonLd,
+    checkPageCacheFileSizes,
+    collectPageCachePaths,
     jsonLdBodyError,
     isBuildStale,
     newestSourceMtime,
@@ -2661,6 +2663,16 @@ async function runBuildOutputValidation(args: {
 
     // Check 4 — site-level + template JSON-LD baked into the manifest (DL#213).
     findings.push(...checkBuildJsonLd(loaded.manifest));
+
+    // Check 6 — per-instance *.cache.json size vs carry budgets (query-param-pages.md).
+    for (const entry of collectPageCachePaths(loaded.manifest, backendDir)) {
+        findings.push(
+            ...(await checkPageCacheFileSizes({
+                cacheAbsPath: entry.cacheAbsPath,
+                routePattern: entry.routePattern,
+            })),
+        );
+    }
 
     // Checks 2 + 3 + 5 — per concrete instance: rendered-content links + meta/SEO + component JSON-LD.
     for (const instance of oracle.instances) {

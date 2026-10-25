@@ -15,7 +15,15 @@ return phaseOutput(
 );
 ```
 
-CarryForward is available in the next phase via `props.carryForward` but is not part of the ViewState.
+CarryForward is passed to the next phase as a **positional argument**, not a field on `props`,
+and is not part of the ViewState. The fast render receives it as its **second parameter**
+(before services): `withFastRender(async (props, carryForward, ...services) => …)`. The
+interactive phase receives it as its **fourth** parameter, after `props`, `refs` and the fast
+ViewState signals.
+
+For query-param pages, use this to precompute the no-params default in the slow phase and
+forward it to the fast phase instead of querying on every request — see
+[query-param-pages.md](query-param-pages.md).
 
 ### Response Headers (fast phase only)
 
