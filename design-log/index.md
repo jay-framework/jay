@@ -110,7 +110,7 @@ Each entry's description leads with a **status tag**: **[Design]** (approved/in-
 | 82  | [automatic server-side action service injection](82%20-%20automatic%20server-side%20action%20service%20injection) | Auto-inject services when actions called from server code                  |
 | 129 | [streaming actions](129%20-%20streaming%20actions)                                                                | `makeJayStream` with `AsyncGenerator` handlers, SSE transport              |
 | 131 | [multipart file upload in actions](131%20-%20multipart%20file%20upload%20in%20actions)                            | `withFiles()` opt-in for binary uploads via FormData, `JayFile` temp paths |
-| 228 | [request context for server actions](228%20-%20request%20context%20for%20server%20actions.md)                      | **[Design]** — revising — request-scoped `getRequestContext()` (AsyncLocalStorage, stack-server-runtime) exposes server-trusted `{cookies, query, headers}` to action handlers; no signature change + per-request isolation hold **on Node**; the **edge/BaaS target is gated on a Phase 0 ALS spike** (no transparent no-ALS fallback — pivots if absent). Closes DL#63's deferred request-context |
+| 228 | [request context for server actions](228%20-%20request%20context%20for%20server%20actions.md)                      | **[Design]** — awaiting approval — request-scoped `getRequestContext()` (lazy/guarded AsyncLocalStorage, stack-server-runtime) exposes server-trusted `{cookies, query, headers}` to action handlers; no signature change + per-request isolation on Node; reading context disables shared caching (cross-user-leak guard); the **edge/BaaS target is gated on a Phase 0 ALS spike** (pivots if absent). Closes DL#63's deferred request-context |
 
 ---
 
