@@ -64,7 +64,6 @@ import {
     checkBuildJsonLd,
     checkInstanceJsonLd,
     checkPageCacheFileSizes,
-    collectPageCachePaths,
     jsonLdBodyError,
     isBuildStale,
     newestSourceMtime,
@@ -2665,11 +2664,12 @@ async function runBuildOutputValidation(args: {
     findings.push(...checkBuildJsonLd(loaded.manifest));
 
     // Check 6 — per-instance *.cache.json size vs carry budgets (query-param-pages.md).
-    for (const entry of collectPageCachePaths(loaded.manifest, backendDir)) {
+    // DL#227: instances live in the store, not the manifest; reuse the oracle's listInstances result.
+    for (const inst of oracle.instances) {
         findings.push(
             ...(await checkPageCacheFileSizes({
-                cacheAbsPath: entry.cacheAbsPath,
-                routePattern: entry.routePattern,
+                cacheAbsPath: inst.cacheAbsPath,
+                routePattern: inst.pattern,
             })),
         );
     }
