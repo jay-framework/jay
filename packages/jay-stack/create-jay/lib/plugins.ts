@@ -89,6 +89,14 @@ export const PLUGINS: PluginEntry[] = [
         isDep: true,
     },
     {
+        name: '@jay-framework/wix-forms',
+        label: 'Wix Forms',
+        description: 'Wix Forms: per-form headless contracts, validation, submissions',
+        group: 'Wix',
+        checked: false,
+        isDep: true,
+    },
+    {
         name: '@jay-framework/wix-deploy',
         label: 'Wix Deploy',
         description: 'Deployment to Wix infrastructure: CDN, hosting, domains',

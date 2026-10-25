@@ -8554,6 +8554,7 @@ __metadata:
     rimraf: "npm:^5.0.5"
     tsup: "npm:^8.0.1"
     typescript: "npm:^5.3.3"
+    vitest: "npm:^1.2.1"
   bin:
     create-jay: ./dist/index.js
   languageName: unknown
