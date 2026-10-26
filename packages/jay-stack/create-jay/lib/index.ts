@@ -4,6 +4,7 @@ import chalk from 'chalk';
 import { runPrompts, validateProjectName } from './prompts.js';
 import { scaffoldProject } from './scaffold.js';
 import { PLUGINS } from './plugins.js';
+import { selectPluginsByRequest } from './match-plugins.js';
 
 function detectPackageManager(): 'yarn' | 'npm' {
     const agent = process.env.npm_config_user_agent || '';
@@ -47,10 +48,23 @@ async function main(): Promise<void> {
             console.error(chalk.red(`  Error: ${nameError}`));
             process.exit(1);
         }
-        const requested = cliArgs.plugins ? cliArgs.plugins.split(',').map((s) => s.trim()) : [];
-        selectedPlugins = PLUGINS.filter(
-            (p) => requested.includes(p.name) || requested.includes(p.label.toLowerCase()),
-        );
+        const requested = cliArgs.plugins
+            ? cliArgs.plugins
+                  .split(',')
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+            : [];
+        const { selected, unknown } = selectPluginsByRequest(requested);
+        selectedPlugins = selected;
+
+        // Fail loudly on unknown plugin names instead of silently producing a project without them.
+        if (unknown.length > 0) {
+            console.error(chalk.red(`  Error: unknown plugin(s): ${unknown.join(', ')}`));
+            console.error(
+                chalk.dim(`  Available plugins: ${PLUGINS.map((p) => p.label).join(', ')}`),
+            );
+            process.exit(1);
+        }
     } else {
         const config = await runPrompts();
         name = config.name;
