@@ -16,6 +16,8 @@ export function selectPluginsByRequest(requested: string[]): PluginSelection {
     const selected = PLUGINS.filter((plugin) =>
         requested.some((token) => matchesRequest(plugin, token)),
     );
-    const unknown = requested.filter((token) => !PLUGINS.some((plugin) => matchesRequest(plugin, token)));
+    const unknown = requested.filter(
+        (token) => !PLUGINS.some((plugin) => matchesRequest(plugin, token)),
+    );
     return { selected, unknown };
 }
