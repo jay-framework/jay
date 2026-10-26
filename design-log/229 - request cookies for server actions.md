@@ -302,3 +302,55 @@ Cookie setting (red first):
 - **Dropping cookies on error** (+) Atomic outcomes. (−) Clearing a cookie on failure needs a success response.
 - **Origin fallback** (+) It protects browsers without `Sec-Fetch-Site`. (−) It can fail closed behind a Host-rewriting proxy (Q7).
 - **Scoping CSRF to `.withRequest()`** (+) Zero behavior change for existing actions. (−) Two security postures for actions, which the guide documents.
+
+## Implementation Results
+
+Implemented 2026-10-26, red-first. Every new test was run and seen failing for the intended reason before the code was written. Test #20 was first seen failing after `pipeFetchResponse` was exported unchanged: it received `set-cookie: "b=2; Path=/"` where both values were expected.
+
+### Tests
+
+New DL#229 tests: **41/41 passing**.
+
+| Package | File | New tests |
+| --- | --- | --- |
+| fullstack-component | `test/jay-action-builder.test.ts` | 5 (tests 1, 2, 3, 22, and direct-call setter discard) |
+| stack-server-runtime | `test/action-registry.test.ts` | 15 (tests 4-9, 16, 17, and the `needsSameOriginCheck` table) |
+| stack-server-runtime | `test/cookies.test.ts` (new) | 7 (tests 14, 15, and frozen cookies) |
+| production-server | `test/fetch-action-handler.test.ts` (new) | 7 (tests 10-13, 18, 19, 21) |
+| production-server | `test/main-server.test.ts` (new) | 1 (test 20, bug repro) |
+| dev-server | `test/action-router.test.ts` | 5 (mirrors 10, 11+21, 13, 18, and multipart skip) |
+| compiler-jay-stack | `test/transform-action-imports.test.ts` | 1 (deviation 1, bug repro) |
+
+Package totals: fullstack-component 63/63, stack-server-runtime 176/176, production-server 100/100, dev-server 761/761, compiler-jay-stack 71/71. Existing action tests pass unchanged, which is the opt-in proof.
+
+Across the repo, all `@jay-framework/*` and example packages: 4374 passed, 1 failed. The failure is pre-existing and unrelated (see `yarn confirm` below).
+
+### `yarn confirm`
+
+**Not green, because of breakage that predates this change and lies outside its files.**
+
+- `rebuild`: green.
+- `build:check-types`: fails in `stack-cli/lib/check-build-output.ts:82`. The code reads `route.instances`, but `RouteEntry` (`production-server/lib/types.ts:63`) has no `instances` field. The same area fails one stack-cli test (`check-build-output.test.ts`, the DL#211 tier-2 integration test).
+- `create-jay` has no `vitest` binary, so `yarn test` exits with 127.
+- This change touches none of these files. Every package it changes passes `tsc --noEmit` and its own tests.
+
+`grep` finds no `AsyncLocalStorage`, and no dependencies were added.
+
+### Deviations
+
+1. **The client build transform needed `withRequest`.** This was missing from the design. `compiler-jay-stack/lib/transform-action-imports.ts` walks builder chains against a fixed list of method names. A chain containing `.withRequest()` was not recognized as an action, so it was never replaced by an HTTP caller on the client. Fixed by adding `withRequest` to the list, with a red-first bug-repro test.
+2. **The direct-call warning uses `console.warn`, not `getLogger().warn`.** `fullstack-component` does not depend on `@jay-framework/logger`, and adding a dependency to the lowest-level package for a single warning was not worth it.
+3. **`serializeSetCookie(name, value, options, isSecureRequest)` takes 4 arguments.** It resolves the defaults itself, instead of taking pre-resolved options. This keeps one authoritative place for the defaults.
+4. **New stack-server-runtime exports beyond §3:**
+   - `isSecureRequest(protocol, forwardedProto)`, the Q11 rule shared by the entry points;
+   - `PER_USER_CACHE_CONTROL`;
+   - `crossOriginErrorResponse(actionName)`, with the message `Action '<name>' rejected a cross-origin request`;
+   - `createActionRequest`, `IncomingRequest`, `NO_INCOMING_REQUEST` and `CollectingActionRequest`, from `action-request.ts`.
+5. **The entry points read cookies only for `.withRequest()` actions.** Other actions get the registry default `{ cookies: {}, secure: false }`. Request handling for existing actions is therefore unchanged.
+6. **Exported handler-type helpers:** `ActionHandler<I, O, Services, WithRequest>` and `StreamActionHandler<…>` are the conditional types from §2. The builder's type flag is the 5th generic of `JayActionBuilder` and the 2nd of `JayStreamBuilder`, both defaulting to `false`.
+7. **The browser demo (Verification Criteria) was not recorded here.** HTTP-level behavior is covered by real-server tests in dev-server and by `Request`/`Response` tests in production-server.
+
+### jay-feedback
+
+- **Agent-kit:** added the section `.withRequest() — Reading the Caller's Cookies` to `stack-cli/agent-kit-template/plugin/actions-guide.md`, and a `.withRequest()` line to the Builder API block.
+- **Validation:** none. As designed, `withRequest` + `withCaching` throws when the action is defined.
