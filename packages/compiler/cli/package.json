@@ -27,7 +27,7 @@
     "chalk": "^4.1.2",
     "commander": "^14.0.0",
     "glob": "^10.4.5",
-    "rollup": "^4.9.5"
+    "rollup": "^4.22.4"
   },
   "devDependencies": {
     "@jay-framework/dev-environment": "workspace:^",
@@ -36,7 +36,7 @@
     "rimraf": "^5.0.5",
     "shelljs": "^0.8.5",
     "typescript": "^5.3.3",
-    "vite": "^5.0.11",
-    "vitest": "^1.2.1"
+    "vite": "^6.4.4",
+    "vitest": "^4.1.11"
   }
 }

@@ -6,46 +6,51 @@
         {
             "pattern": "/",
             "segments": [],
-            "serverModule": "home.server.js",
-            "instances": []
+            "serverModule": "home.server.js"
         },
         {
             "pattern": "/about",
-            "segments": [{ "type": "static", "value": "about" }],
-            "serverModule": "about.server.js",
-            "instances": []
+            "segments": [
+                {
+                    "type": "static",
+                    "value": "about"
+                }
+            ],
+            "serverModule": "about.server.js"
         },
         {
             "pattern": "/blog/[slug]",
             "segments": [
-                { "type": "static", "value": "blog" },
-                { "type": "param", "value": "slug" }
+                {
+                    "type": "static",
+                    "value": "blog"
+                },
+                {
+                    "type": "param",
+                    "value": "slug"
+                }
             ],
             "serverModule": "blog.server.js",
             "headMeta": {
-                "title": [{ "kind": "binding", "value": "post.title" }],
+                "title": [
+                    {
+                        "kind": "binding",
+                        "value": "post.title"
+                    }
+                ],
                 "meta": [
                     {
                         "name": "description",
-                        "content": [{ "kind": "static", "value": "A blog post" }]
+                        "content": [
+                            {
+                                "kind": "static",
+                                "value": "A blog post"
+                            }
+                        ]
                     }
                 ],
                 "links": []
-            },
-            "instances": [
-                {
-                    "params": { "slug": "hello" },
-                    "cachePath": "pre-rendered/blog-hello.cache.json",
-                    "serverElementPath": "",
-                    "clientBundlePath": ""
-                },
-                {
-                    "params": { "slug": "world" },
-                    "cachePath": "pre-rendered/blog-world.cache.json",
-                    "serverElementPath": "",
-                    "clientBundlePath": ""
-                }
-            ]
+            }
         }
     ],
     "actions": [],

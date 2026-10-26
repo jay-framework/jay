@@ -1,0 +1,23 @@
+<html>
+<head>
+    <script type="application/jay-headless"
+            plugin="test-form-fields"
+            contract="form-fields"
+            key="form"></script>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+</head>
+<body>
+<div>
+    <h1>{title}</h1>
+    <!-- Three non-repeated sibling sub-contracts, all bound on one page.    -->
+    <!-- Each leaf interactive tag is named `input`, so the compiler derives -->
+    <!-- the same const name (`refInput`) for all three refs (DL#226).       -->
+    <input ref="form.firstName.input" />
+    <input ref="form.email.input" />
+    <textarea ref="form.message.input"></textarea>
+</div>
+</body>
+</html>

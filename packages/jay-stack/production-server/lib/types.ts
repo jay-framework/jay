@@ -83,7 +83,8 @@ export interface RouteEntry {
     scripts?: JayHtmlScript[];
     /** True when page has static <meta name="robots" content="noindex"> */
     noIndex?: boolean;
-    instances: InstanceEntry[];
+    // No `instances` (Design Log #227): the manifest holds route structure only. Instances are
+    // resolved through the ArtifactStore (`getInstance` / `listInstances`).
     isPlugin?: boolean;
     pluginName?: string;
     /** Shared chunk package names this route's hydrate script imports (DL#177). */
@@ -92,6 +93,10 @@ export interface RouteEntry {
     devOnly?: boolean;
 }
 
+/**
+ * A resolved instance of a route (Design Log #227). Synthesized by the store from the route and
+ * the params — only `params` is per-instance information; the rest is route-level.
+ */
 export interface InstanceEntry {
     params: Record<string, string>;
     cachePath: string;
@@ -100,9 +105,24 @@ export interface InstanceEntry {
     clientCssPath?: string;
 }
 
+/** An instance as listed by `ArtifactStore.listInstances` (sitemap, llms.txt, …). */
+export interface InstanceRef {
+    params: Record<string, string>;
+    cachePath: string;
+}
+
 export interface CacheEntry {
     slowViewState: object;
     carryForward: object;
+    /** Epoch ms at which the slow data was rendered (Design Log #226). */
+    renderedAt?: number;
+    /** Freshness lifetime in seconds; undefined = never stale (#226). */
+    ttl?: number;
+    /** Absolute age in seconds up to which stale data is served immediately (#226). */
+    grace?: number;
+    /** Route pattern and params of the instance — makes the cache item its own index entry (#227). */
+    route?: string;
+    params?: Record<string, string>;
 }
 
 export interface ActionEntry {

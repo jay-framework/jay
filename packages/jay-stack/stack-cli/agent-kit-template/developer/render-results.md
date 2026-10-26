@@ -15,7 +15,15 @@ return phaseOutput(
 );
 ```
 
-CarryForward is available in the next phase via `props.carryForward` but is not part of the ViewState.
+CarryForward is passed to the next phase as a **positional argument**, not a field on `props`,
+and is not part of the ViewState. The fast render receives it as its **second parameter**
+(before services): `withFastRender(async (props, carryForward, ...services) => …)`. The
+interactive phase receives it as its **fourth** parameter, after `props`, `refs` and the fast
+ViewState signals.
+
+For query-param pages, use this to precompute the no-params default in the slow phase and
+forward it to the fast phase instead of querying on every request — see
+[query-param-pages.md](query-param-pages.md).
 
 ### Response Headers (fast phase only)
 
@@ -30,6 +38,25 @@ return phaseOutput(
 ```
 
 Use this when the page renders per-user data that must not be cached by CDN or browser. Can be combined with `headTags` in the same options object.
+
+### Freshness — `ttl` and `grace` (slow phase only)
+
+A slow render runs at build time, so its data ages. Return `ttl` (and optionally `grace`) — both in **seconds** — to tell the production server when the data goes stale:
+
+```typescript
+return phaseOutput(
+  { name: product.name, price: product.price },
+  { productId: product.id },
+  { ttl: 300, grace: 6 * 60 * 60 }, // fresh for 5 minutes, usable for 6 hours
+);
+```
+
+- **`ttl`** — the data is `fresh` for `ttl` seconds after it was rendered. After that it is `stale`: the server serves it immediately (`Cache-Control: no-store`) and re-runs the slow render in the background. No `ttl` → the data never goes stale (today's behavior). Minimum effective `ttl` is 10 seconds.
+- **`grace`** — absolute age after which the data is `expired`: the server waits (up to `JAY_STALE_WAIT_MS`, default 2000) for the refresh before answering. Default `max(12h, ttl)`.
+- Responses carry `jay-freshness: fresh | stale | expired, <age>ms`.
+- A page with several slow parts (page, keyed headless components, headless instances) gets the **minimum positive** `ttl` and the minimum positive `grace` across all of them; `0` / `null` are ignored.
+- With `RenderPipeline`, return `ttl` / `grace` from the `toPhaseOutput` callback next to `viewState` and `carryForward`.
+- Pick a `ttl` that matches how quickly the underlying data changes, not how fast you want pages to be: every `ttl` expiry costs one slow render per instance.
 
 ### Cookies (fast phase only)
 

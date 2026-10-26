@@ -1,6 +1,6 @@
 # DL#200 — Prefer design-system elements (validation + minimal guidance)
 
-Status: **DRAFT (for review)** — 2026-10-01
+Status: **[Implemented]** — 2026-10-01 (see Implementation Results)
 Related: #196 (validated inline composition — the flatten/drift/sync model), #198 (free refs), plugin
 `design-system-validator`.
 

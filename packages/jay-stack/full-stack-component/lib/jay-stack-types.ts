@@ -152,6 +152,19 @@ export interface PhaseOutput<ViewState extends object, CarryForward = {}> {
     headTags?: HeadTag[];
     /** HTTP response headers to set on the page response (Design Log #141). */
     responseHeaders?: Record<string, string>;
+    /**
+     * Slow phase only (Design Log #226): how long, in **seconds**, this slow data is considered
+     * fresh. After it, the production server serves the stored data and refreshes it in the
+     * background. `0` / `null` / `undefined` mean "no freshness opinion" (ignored). A page's
+     * effective `ttl` is the minimum positive `ttl` across all its slow components.
+     */
+    ttl?: number;
+    /**
+     * Slow phase only (Design Log #226): the **absolute age**, in **seconds** (≥ `ttl`), up to
+     * which stale data is served immediately while refreshing in the background. Beyond it the
+     * server waits (briefly) for the refresh. Defaults to `max(12h, ttl)`.
+     */
+    grace?: number;
 }
 
 /**

@@ -63,6 +63,14 @@ describe('contract definitions', () => {
             const folder = 'contracts/product-card';
             await testContractDefinitionFile(folder);
         });
+
+        // DL#226 — non-repeated sibling sub-contracts each exposing a leaf interactive tag of the
+        // same name (`input`). Keeps the contract .d.ts fixture (imported by the
+        // duplicate-ref-sibling-inputs generated-element fixtures) in sync with the compiler.
+        it('for sibling sub-contracts sharing a leaf interactive tag name (DL#226)', async () => {
+            const folder = 'contracts/form-fields-headless';
+            await testContractDefinitionFile(folder);
+        });
     });
 
     describe('generate jay-html definition linked to contract', () => {

@@ -1,13 +1,22 @@
-import { DevSlowlyChangingPhase, slowRenderInstances } from '@jay-framework/stack-server-runtime';
+import {
+    DevSlowlyChangingPhase,
+    slowRenderInstances,
+    mergeFreshness,
+    resolveFreshness,
+    type FreshnessInput,
+} from '@jay-framework/stack-server-runtime';
 import type { JayRollupConfig } from '@jay-framework/compiler-jay-stack';
 import type { JayRoute } from '@jay-framework/stack-route-scanner';
-import type { InstanceEntry } from '@jay-framework/production-server';
+import {
+    deriveCachePath,
+    serializeCacheEntry,
+    type InstanceEntry,
+} from '@jay-framework/production-server';
 import { loadProductionPageParts, buildPagePartsConfig } from './load-production-parts';
 import { buildUrl } from './param-routing';
 import { getLogger } from '@jay-framework/logger';
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import crypto from 'node:crypto';
 
 export interface ClientInitEntry {
     modulePath: string;
@@ -25,8 +34,6 @@ export interface InstanceBuildContext {
     tsConfigFilePath?: string;
     minify?: boolean;
     clientInits?: ClientInitEntry[];
-    /** When set, appended to instance ID hash to produce unique filenames per rebuild. */
-    rebuildSuffix?: string;
 }
 
 export type InstanceBuildResult =
@@ -38,22 +45,6 @@ export type InstanceBuildResult =
           contracts: string[];
       }
     | { status: 'skipped'; reason: string };
-
-function hashParams(params: Record<string, string>, suffix?: string): string {
-    const sorted = Object.keys(params)
-        .sort()
-        .reduce(
-            (acc, key) => {
-                acc[key] = params[key];
-                return acc;
-            },
-            {} as Record<string, string>,
-        );
-    const json = JSON.stringify(sorted);
-    if (json === '{}' && !suffix) return '';
-    const input = suffix ? json + ':' + suffix : json;
-    return '_' + crypto.createHash('md5').update(input).digest('hex').substring(0, 8);
-}
 
 export async function buildInstance(
     route: JayRoute,
@@ -67,8 +58,6 @@ export async function buildInstance(
 ): Promise<InstanceBuildResult> {
     const logger = getLogger();
     const routeDir = route.rawRoute.replace(/^\//, '') || 'index';
-    const paramHash = hashParams(params, ctx.rebuildSuffix);
-    const instanceId = `page${paramHash}`;
     const backendInstanceDir = path.join(ctx.backendDir, 'pre-rendered', routeDir);
     const frontendInstanceDir = path.join(ctx.frontendDir, 'pages', routeDir);
 
@@ -156,6 +145,7 @@ export async function buildInstance(
 
     const slowViewState = slowResult.rendered;
     const carryForward = slowResult.carryForward;
+    let instanceFreshness: FreshnessInput = {};
 
     // 2. Slow-render static headless instances (DL#144)
     // Static instances (outside forEach) are discovered from the original jay-html
@@ -164,7 +154,7 @@ export async function buildInstance(
         pageParts.discoveredInstances.length > 0 &&
         pageParts.headlessInstanceComponents.length > 0
     ) {
-        const slowResult = await slowRenderInstances(
+        const instanceSlowResult = await slowRenderInstances(
             pageParts.discoveredInstances,
             pageParts.headlessInstanceComponents,
             {
@@ -174,7 +164,8 @@ export async function buildInstance(
             },
         );
 
-        if (slowResult) {
+        if (instanceSlowResult) {
+            instanceFreshness = instanceSlowResult.freshness;
             const existingInstances = (carryForward as any).__instances || {
                 discovered: [],
                 carryForwards: {},
@@ -182,15 +173,15 @@ export async function buildInstance(
             (carryForward as any).__instances = {
                 discovered: [
                     ...existingInstances.discovered,
-                    ...slowResult.instancePhaseData.discovered,
+                    ...instanceSlowResult.instancePhaseData.discovered,
                 ],
                 carryForwards: {
                     ...existingInstances.carryForwards,
-                    ...slowResult.instancePhaseData.carryForwards,
+                    ...instanceSlowResult.instancePhaseData.carryForwards,
                 },
                 slowViewStates: {
                     ...(existingInstances.slowViewStates || {}),
-                    ...(slowResult.instancePhaseData as any).slowViewStates,
+                    ...(instanceSlowResult.instancePhaseData as any).slowViewStates,
                 },
             };
         }
@@ -206,16 +197,42 @@ export async function buildInstance(
         (carryForward as any).__instances = existingInstances;
     }
 
-    // Write cache metadata for the main server (backend)
-    const cachePath = path.join(backendInstanceDir, `${instanceId}.cache.json`);
+    // Write cache data for the main server (backend) at the deterministic path (DL#227). The file
+    // carries `route` + `params` (its own index entry) and `renderedAt` / `ttl` / `grace` (DL#226).
+    const freshness = resolveFreshness(
+        mergeFreshness([{ ttl: slowResult.ttl, grace: slowResult.grace }, instanceFreshness]),
+    );
+    // DL#227: an instance's identity is the params SERVE extracts from the URL — i.e. the route's
+    // dynamic `[segment]` params only. Inferred params (a static override of a dynamic route, e.g.
+    // `/products/ceramic-flower-vase` shadowing `/products/[slug]`) and inline headless props are
+    // render inputs, not key dimensions. Keying by the full `params` here wrote the cache under
+    // `page_<hash(slug)>.cache.json`, but the static route matches at serve with `{}` →
+    // `page.cache.json`, so `getInstance` missed it and render-on-miss served an instance-less page
+    // (no site-header / cart data). Key by the URL-visible params so build and serve agree.
+    const dynamicParamNames = new Set(
+        route.segments
+            .filter(
+                (s): s is Extract<JayRoute['segments'][number], { name: string }> =>
+                    typeof s !== 'string',
+            )
+            .map((s) => s.name),
+    );
+    const urlParams = Object.fromEntries(
+        Object.entries(params).filter(([k]) => dynamicParamNames.has(k)),
+    );
+    const cachePath = path.join(ctx.backendDir, deriveCachePath(route.rawRoute, urlParams));
     await fs.writeFile(
         cachePath,
-        JSON.stringify({
+        serializeCacheEntry({ pattern: route.rawRoute }, urlParams, {
             slowViewState,
             carryForward,
+            renderedAt: Date.now(),
+            ...(freshness.ttl !== undefined && { ttl: freshness.ttl }),
+            ...(freshness.grace !== undefined && { grace: freshness.grace }),
         }),
         'utf-8',
     );
+    const instanceId = path.basename(cachePath, '.cache.json');
 
     logger.info(`[Build] Instance data: ${routeDir}/${instanceId}`);
 
@@ -228,7 +245,7 @@ export async function buildInstance(
     // 4. Client bundle is compiled per-route (DL#144), skip per-instance
 
     const instanceEntry: InstanceEntry = {
-        params,
+        params: urlParams,
         cachePath: path.relative(ctx.backendDir, cachePath),
         serverElementPath: path.relative(ctx.backendDir, serverElementPath),
         clientBundlePath: routeClientBundlePath || '',

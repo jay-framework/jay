@@ -396,6 +396,10 @@ export class RenderPipeline<
             carryForward: TargetCF;
             headTags?: HeadTag[];
             responseHeaders?: Record<string, string>;
+            /** Slow phase only: freshness lifetime in seconds (Design Log #226). */
+            ttl?: number;
+            /** Slow phase only: absolute age in seconds up to which stale data is served immediately (#226). */
+            grace?: number;
         },
     ): Promise<RenderOutcome<TargetVS, TargetCF>> {
         // Resolve the value
@@ -448,8 +452,11 @@ export class RenderPipeline<
         }
 
         // Apply the final mapping
-        const { viewState, carryForward, headTags, responseHeaders } = fn(resolvedValue as T);
-        const options = headTags || responseHeaders ? { headTags, responseHeaders } : undefined;
+        const { viewState, carryForward, headTags, responseHeaders, ttl, grace } = fn(
+            resolvedValue as T,
+        );
+        const hasOptions = headTags || responseHeaders || ttl != null || grace != null;
+        const options = hasOptions ? { headTags, responseHeaders, ttl, grace } : undefined;
         return phaseOutput(viewState, carryForward, options);
     }
 

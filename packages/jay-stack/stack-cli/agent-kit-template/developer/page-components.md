@@ -59,8 +59,9 @@ export const page = makeJayStackComponent<ProductPageContract>()
       { productId: product.id },
     );
   })
-  .withFastRender(async (props, db) => {
-    const price = await db.getPrice(props.carryForward.productId);
+  // carryForward (the slow phase's output) is the 2nd positional arg — services follow it.
+  .withFastRender(async (props, carryForward, db) => {
+    const price = await db.getPrice(carryForward.productId);
     return phaseOutput({ price, inStock: price > 0 }, {});
   });
 ```
@@ -75,15 +76,17 @@ export const page = makeJayStackComponent<ProductPageContract>()
   .withSlowlyRender(async (props, db) => {
     // ... slow render
   })
-  .withFastRender(async (props, db) => {
-    // ... fast render
+  // With a slow phase, carryForward is the 2nd arg — the service (db) follows it.
+  .withFastRender(async (props, carryForward, db) => {
+    // ... fast render (use db for queries, carryForward for the slow phase's output)
   })
-  .withInteractive(function ProductPage(props, refs) {
+  // carryForward is the 4th positional arg: (props, refs, fastViewState, carryForward, ...contexts).
+  .withInteractive(function ProductPage(props, refs, fastViewState, carryForward) {
     const [quantity, setQuantity] = createSignal(1);
 
     refs.addToCart.onClick(async () => {
       await addToCartAction({
-        productId: props.carryForward.productId,
+        productId: carryForward.productId,
         quantity: quantity(),
       });
     });

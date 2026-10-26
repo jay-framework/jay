@@ -6,6 +6,7 @@ export type {
     RouteEntry,
     RouteSegment,
     InstanceEntry,
+    InstanceRef,
     ErrorPageEntry,
     CacheEntry,
     ActionEntry,
@@ -34,9 +35,30 @@ export {
     type RebuildResult,
 } from './invalidation/index';
 
-export type { ArtifactStore } from './serve/artifact-store';
-export { FilesystemArtifactStore } from './serve/artifact-store';
-export { matchRequest, type MatchResult } from './serve/route-matcher';
+export type { ArtifactStore, ListInstancesOptions } from './serve/artifact-store';
+export {
+    FilesystemArtifactStore,
+    CacheNotFoundError,
+    serializeCacheEntry,
+    parseCacheEntry,
+} from './serve/artifact-store';
+export { matchRoutes, type MatchResult, type RouteMatch } from './serve/route-matcher';
+export { resolveRequest, type ResolveResult } from './serve/resolve-request';
+export {
+    InstanceRenderer,
+    type InstanceRendererOptions,
+    type RefreshStart,
+    type MissOutcome,
+} from './serve/instance-renderer';
+export { SwrCache, DEFAULT_LIST_TTL_MS } from './serve/swr-cache';
+export {
+    canonicalParams,
+    instanceKey,
+    deriveCachePath,
+    routeInstanceDir,
+    synthesizeInstance,
+    toInstanceRef,
+} from './shared/instance-key';
 export { fetchPageRequest } from './serve/fetch-page-handler';
 export { renderErrorPage } from './serve/render-error-page';
 export {

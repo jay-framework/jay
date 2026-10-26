@@ -15,6 +15,7 @@ import {
     generateSiteJsonLd,
     generateLlmsTxt,
     generateRobotsTxtIfAbsent,
+    FilesystemArtifactStore,
 } from '@jay-framework/production-server';
 import { scanPluginRoutes } from './plugin-routes';
 import { compileRouteServerElement, compileRouteHydrateScript } from './server-element-compile';
@@ -617,7 +618,6 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
                     entry.routeClientBundlePath,
                 );
                 if (result.status === 'success') {
-                    entry.instances.push(result.instanceEntry);
                     if (result.contracts.length > 0 && !entry.contracts) {
                         entry.contracts = result.contracts;
                     }
@@ -679,6 +679,8 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
     };
 
     await writeRouteManifest(manifest, backendDir);
+    // Instances are listed through the store, like at serve time (Design Log #227).
+    const buildStore = new FilesystemArtifactStore(backendDir);
 
     // Copy public folder to frontend/
     const publicFolder = path.join(options.projectRoot, 'public');
@@ -693,7 +695,12 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
     // Generate sitemap.xml if baseUrl is configured
     if (options.siteBaseUrl) {
         const sitemapPath = path.join(frontendDir, 'sitemap.xml');
-        const urlCount = await generateSitemap(manifest, options.siteBaseUrl, sitemapPath);
+        const urlCount = await generateSitemap(
+            manifest,
+            buildStore,
+            options.siteBaseUrl,
+            sitemapPath,
+        );
         logger.important(`[Build] Sitemap generated: ${urlCount} URLs`);
     }
 
@@ -717,7 +724,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
             // absent — generate
         }
         if (!authored) {
-            const count = await generateLlmsTxt(manifest, siteConfig, backendDir, llmsPath);
+            const count = await generateLlmsTxt(manifest, buildStore, siteConfig, llmsPath);
             logger.important(`[Build] llms.txt generated: ${count} pages`);
         }
     }

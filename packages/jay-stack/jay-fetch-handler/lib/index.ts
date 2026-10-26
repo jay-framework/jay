@@ -2,7 +2,8 @@ import {
     type ArtifactStore,
     type PreImportedPlugin,
     FilesystemArtifactStore,
-    matchRequest,
+    InstanceRenderer,
+    resolveRequest,
     fetchPageRequest,
     fetchActionRequest,
     isActionRequest,
@@ -39,6 +40,8 @@ export function createJayFetchHandler(
     const { staticBaseUrl = '/', frontendDir } = options;
     const artifacts = options.artifactStore ?? new FilesystemArtifactStore(options.backendDir!);
     const backendDir = options.backendDir;
+    // Refresh + render-on-miss (DL#226/#227); inert when the store has no `writeCacheData`.
+    const renderer = new InstanceRenderer(artifacts);
     const logger = getLogger();
     let initialized = false;
 
@@ -80,13 +83,36 @@ export function createJayFetchHandler(
         }
 
         const manifest = await artifacts.readManifest();
-        const match = matchRequest(manifest, url.pathname);
+        const resolved = await resolveRequest(manifest, url.pathname, artifacts, renderer);
 
-        if (!match) {
+        if (resolved.kind === 'redirect') {
+            return new Response(null, {
+                status: resolved.status,
+                headers: { Location: resolved.location },
+            });
+        }
+        if (resolved.kind === 'unavailable') {
+            return new Response('Service Unavailable', {
+                status: 503,
+                headers: {
+                    'Retry-After': String(resolved.retryAfterSeconds),
+                    'Cache-Control': 'no-store',
+                },
+            });
+        }
+        if (resolved.kind === 'notFound') {
             return new Response('Not Found', { status: 404 });
         }
 
         const cookies = parseCookies(request.headers.get('cookie'));
-        return fetchPageRequest(match, manifest, url, artifacts, staticBaseUrl, cookies);
+        return fetchPageRequest(
+            resolved.match,
+            manifest,
+            url,
+            artifacts,
+            staticBaseUrl,
+            cookies,
+            renderer,
+        );
     };
 }

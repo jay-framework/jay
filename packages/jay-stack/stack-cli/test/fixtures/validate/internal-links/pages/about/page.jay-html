@@ -7,7 +7,9 @@ data:
 </head>
 <body>
     <h1>About</h1>
-    <a href="/about">self link</a>
+    <a href="/about">self link (warning)</a>
+    <a href="/about" jay-allow-self-link>intentional self link (suppressed)</a>
     <a href="/">home</a>
+    <h2 id="team">Team</h2>
 </body>
 </html>

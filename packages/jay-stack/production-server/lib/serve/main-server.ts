@@ -3,7 +3,8 @@ import { Readable } from 'node:stream';
 import path from 'node:path';
 import { getLogger } from '@jay-framework/logger';
 import { FilesystemArtifactStore } from './artifact-store';
-import { matchRequest } from './route-matcher';
+import { resolveRequest } from './resolve-request';
+import { InstanceRenderer } from './instance-renderer';
 import { fetchPageRequest } from './fetch-page-handler';
 import { renderErrorPage } from './render-error-page';
 import {
@@ -66,6 +67,7 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
     const backendDir = path.join(buildDir, 'backend');
     const frontendDir = path.join(buildDir, 'frontend');
     const artifacts = new FilesystemArtifactStore(backendDir);
+    const renderer = new InstanceRenderer(artifacts);
 
     const manifest = await artifacts.readManifest();
     logger.important(
@@ -123,9 +125,31 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
             }
 
             const currentManifest = await artifacts.readManifest();
-            const match = matchRequest(currentManifest, url.pathname);
+            const resolved = await resolveRequest(
+                currentManifest,
+                url.pathname,
+                artifacts,
+                renderer,
+            );
 
-            if (!match) {
+            if (resolved.kind === 'redirect') {
+                res.writeHead(resolved.status, { Location: resolved.location });
+                res.end();
+                return;
+            }
+
+            if (resolved.kind === 'unavailable') {
+                // DL#227 — unknown item could not be rendered now: retryable, never cached.
+                res.writeHead(503, {
+                    'Content-Type': 'text/plain; charset=utf-8',
+                    'Retry-After': String(resolved.retryAfterSeconds),
+                    'Cache-Control': 'no-store',
+                });
+                res.end('Service Unavailable');
+                return;
+            }
+
+            if (resolved.kind === 'notFound') {
                 // DL#218 — no route matched: render the 404 error page (plain-text fallback inside).
                 const response = await renderErrorPage(currentManifest, artifacts, staticBaseUrl, {
                     status: 404,
@@ -137,12 +161,13 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
 
             const cookies = parseCookies(req.headers.cookie);
             const response = await fetchPageRequest(
-                match,
+                resolved.match,
                 currentManifest,
                 url,
                 artifacts,
                 staticBaseUrl,
                 cookies,
+                renderer,
             );
             await pipeFetchResponse(response, res);
         } catch (err: any) {

@@ -12,9 +12,15 @@ data:
         <a href="/blog/first-post">Blog post (matches /blog/[slug] — deferred, ok)</a>
         <a href="https://example.com/external">External (skip)</a>
         <a href="mailto:hi@example.com">Email (skip)</a>
-        <a href="#section">In-page fragment (skip)</a>
+        <a href="#section">In-page fragment to an existing id (ok)</a>
+        <a href="#missing-anchor">In-page fragment, no such id (error)</a>
+        <a href="#top">Top (always ok)</a>
+        <a href="/about#team">Cross-page fragment to an existing id (ok)</a>
+        <a href="/about#ghost">Cross-page fragment, no such id (error)</a>
+        <a href="todo:/pricing">Pricing (todo — warning, not suppressible)</a>
         <a href="#">Placeholder (degenerate — error)</a>
         <a href="/does-not-exist">Missing static page (broken — error)</a>
     </nav>
+    <section id="section">In-page section target</section>
 </body>
 </html>

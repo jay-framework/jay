@@ -5,7 +5,6 @@ import { discoverWebhooks, type DiscoveredWebhook } from './webhook-discovery';
 import { initializeServices } from '../shared/init-services';
 import { rebuild, rebuildContract, type RebuildTarget } from '../invalidation';
 import type { InvalidateContract, WebhookEvent } from '@jay-framework/fullstack-component';
-import type { RouteManifest } from '../types';
 import fs from 'node:fs/promises';
 
 export interface RendererServerOptions {
@@ -139,16 +138,13 @@ export async function startRendererServer(options: RendererServerOptions): Promi
 
             // GET /_jay/status
             if (url.pathname === '/_jay/status' && req.method === 'GET') {
-                const manifest: RouteManifest = JSON.parse(
-                    await fs.readFile(path.join(buildDir, 'route-manifest.json'), 'utf-8'),
-                );
                 const metadata = JSON.parse(
                     await fs.readFile(path.join(buildDir, 'build-metadata.json'), 'utf-8'),
                 );
                 const status = {
                     version: options.version,
                     buildTimestamp: metadata.buildTimestamp,
-                    instanceCount: manifest.routes.reduce((n, r) => n + r.instances.length, 0),
+                    instanceCount: metadata.instanceCount,
                     uptime: Math.floor((Date.now() - startTime) / 1000),
                     webhooks: [...webhookMap.keys()],
                     lastWebhook,

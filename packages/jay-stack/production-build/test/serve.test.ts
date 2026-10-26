@@ -210,6 +210,41 @@ describe('dynamic param pages', () => {
     });
 });
 
+// DL#227 — a static page that shadows a dynamic route (`/items/special` next to `/items/[slug]`) and
+// carries an inline headless param gets inferred params at build; the build must key its cache by the
+// params SERVE extracts from the URL (`{}`), not the inferred `{slug}` — otherwise `getInstance` misses
+// the built cache, render-on-miss serves an instance-less page, and the page's shared headless
+// instances (site-header / cart-badge) hydrate with "no server data". This asserts the server-rendered
+// HTML carries those instances' view states.
+describe('static override of a dynamic route (DL#227 instance-key)', () => {
+    it('serves the override with its shared headless instance data embedded', async () => {
+        const res = await fetch('/items/special');
+        expect(res.status).toBe(200);
+        expect(res.body).toMatch(/Product special/);
+        // The site-header / cart-badge instance view states must be in the hydration payload.
+        expect(res.body).toMatch(/site-header:header/);
+        expect(res.body).toMatch(/Test Shop/);
+        expect(res.body).toMatch(/cart-badge/);
+    });
+});
+
+// DL#227 — the serve-side slow RE-render (stale-while-revalidate refresh and render-on-miss, both via
+// `renderInstance`) must render the page's headless instances just like the build did. That needs the
+// discovered instance placements, which are now persisted in page-parts.json and reloaded at serve
+// (previously the serve loader hardcoded `discoveredInstances: []`, so every re-render dropped
+// site-header / cart-badge and wrote an instance-less cache). `/shop/<unbuilt-slug>` renders via
+// render-on-miss (shop/[slug] renders any slug), exercising that path.
+describe('serve-side re-render keeps headless instances (DL#227 render-on-miss / refresh)', () => {
+    it('render-on-miss embeds the shared headless instance data', async () => {
+        const res = await fetch('/shop/not-prebuilt');
+        expect(res.status).toBe(200);
+        expect(res.body).toMatch(/Shop not-prebuilt/);
+        expect(res.body).toMatch(/site-header:header/);
+        expect(res.body).toMatch(/Test Shop/);
+        expect(res.body).toMatch(/cart-badge/);
+    });
+});
+
 describe('static assets', () => {
     it('serves shared chunks', async () => {
         const manifest = JSON.parse(
@@ -229,7 +264,7 @@ describe('static assets', () => {
             await fs.readFile(path.join(buildRoot, 'v1/backend/route-manifest.json'), 'utf-8'),
         );
         const index = routeManifest.routes.find((r: any) => r.pattern === '');
-        const res = await fetch(`/${index.instances[0].clientBundlePath}`);
+        const res = await fetch(`/${index.routeClientBundlePath}`);
         expect(res.status).toBe(200);
     });
 

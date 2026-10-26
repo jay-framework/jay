@@ -63,6 +63,7 @@ import {
     checkInstanceMeta,
     checkBuildJsonLd,
     checkInstanceJsonLd,
+    checkPageCacheFileSizes,
     jsonLdBodyError,
     isBuildStale,
     newestSourceMtime,
@@ -1114,12 +1115,12 @@ export function checkRegionCssScoping(jayHtml: JayHtmlSourceFile): RegionDriftFi
         }
         // DL#203 - fold the sorted `to (...)` boundary into the key: two blocks sharing a template and
         // body but with different donut boundaries stay separate, so they must not be flagged to coalesce.
-        const key = `${templates[0]} ${scopeBody(block)} ${[...to].sort().join(',')}`;
+        const key = `${templates[0]}\0${scopeBody(block)}\0${[...to].sort().join(',')}`;
         (groups.get(key) ?? groups.set(key, []).get(key)!).push(selectors.join(', '));
     }
     for (const [key, blockSelectors] of groups) {
         if (blockSelectors.length < 2) continue;
-        const template = key.split(' ')[0];
+        const template = key.split('\0')[0];
         warnings.push({
             message:
                 `${blockSelectors.length} @scope blocks (${blockSelectors.join(' ; ')}) share template ` +
@@ -2536,13 +2537,23 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
         projectRoot,
     });
     for (const finding of linkFindings) {
-        errors.push({
-            file: finding.file,
-            message: finding.message,
-            stage: 'generate',
-            source: 'internal-links',
-            suggestion: finding.suggestion,
-        });
+        // DL#210 v2 — route by severity: errors block the project; warnings (self-link, TODO) are advisory.
+        if (finding.severity === 'warning') {
+            warnings.push({
+                file: finding.file,
+                message: finding.message,
+                source: 'internal-links',
+                suggestion: finding.suggestion,
+            });
+        } else {
+            errors.push({
+                file: finding.file,
+                message: finding.message,
+                stage: 'generate',
+                source: 'internal-links',
+                suggestion: finding.suggestion,
+            });
+        }
     }
 
     // --- DL#211 — Tier 2: Build-Output Validation (opt-in: validate against an existing build) ---
@@ -2635,7 +2646,7 @@ async function runBuildOutputValidation(args: {
         });
     }
 
-    const oracle = buildBuildOracle(loaded.manifest, backendDir);
+    const oracle = await buildBuildOracle(loaded.manifest, backendDir);
     const findings: BuildOutputFinding[] = [];
 
     // Check 1′ — template links Check 1 deferred, resolved against the concrete URL set.
@@ -2651,6 +2662,17 @@ async function runBuildOutputValidation(args: {
 
     // Check 4 — site-level + template JSON-LD baked into the manifest (DL#213).
     findings.push(...checkBuildJsonLd(loaded.manifest));
+
+    // Check 6 — per-instance *.cache.json size vs carry budgets (query-param-pages.md).
+    // DL#227: instances live in the store, not the manifest; reuse the oracle's listInstances result.
+    for (const inst of oracle.instances) {
+        findings.push(
+            ...(await checkPageCacheFileSizes({
+                cacheAbsPath: inst.cacheAbsPath,
+                routePattern: inst.pattern,
+            })),
+        );
+    }
 
     // Checks 2 + 3 + 5 — per concrete instance: rendered-content links + meta/SEO + component JSON-LD.
     for (const instance of oracle.instances) {

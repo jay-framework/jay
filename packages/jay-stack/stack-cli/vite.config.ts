@@ -35,6 +35,7 @@ export default defineConfig({
                 '@jay-framework/compiler-analyze-exported-types',
                 '@jay-framework/compiler-jay-stack',
                 '@jay-framework/production-server',
+                '@jay-framework/production-build',
                 'express',
                 'get-port',
             ],

@@ -1,23 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { matchRequest } from '../lib/serve/route-matcher';
+import { matchRoutes } from '../lib/serve/route-matcher';
 import { buildImportMap } from '../lib/serve/import-map';
-import type { RouteEntry, RouteManifest, InstanceEntry, RouteSegment } from '../lib/types';
+import type { RouteEntry, RouteManifest, RouteSegment } from '../lib/types';
 
-function instance(params: Record<string, string>): InstanceEntry {
-    return {
-        params,
-        cachePath: `cache/${Object.values(params).join('-') || 'index'}.json`,
-        serverElementPath: 'server/element.js',
-        clientBundlePath: 'client/bundle.js',
-    };
-}
-
-function route(pattern: string, segments: RouteSegment[], instances: InstanceEntry[]): RouteEntry {
+function route(pattern: string, segments: RouteSegment[]): RouteEntry {
     return {
         pattern,
         segments,
         serverModule: 'route.js',
-        instances,
     };
 }
 
@@ -32,68 +22,68 @@ function manifest(routes: RouteEntry[]): RouteManifest {
     };
 }
 
-describe('matchRequest', () => {
+function matches(m: RouteManifest, pathname: string) {
+    return [...matchRoutes(m, pathname)].map(({ route, params }) => ({
+        pattern: route.pattern,
+        params,
+    }));
+}
+
+describe('matchRoutes', () => {
     it('matches a static route', () => {
-        const m = manifest([route('/about', [{ type: 'static', value: 'about' }], [instance({})])]);
-        const result = matchRequest(m, '/about');
-        expect(result?.params).toEqual({});
-        expect(result?.route.pattern).toEqual('/about');
+        const m = manifest([route('/about', [{ type: 'static', value: 'about' }])]);
+        expect(matches(m, '/about')).toEqual([{ pattern: '/about', params: {} }]);
     });
 
     it('matches the index route', () => {
-        const m = manifest([route('/', [], [instance({})])]);
-        const result = matchRequest(m, '/');
-        expect(result?.route.pattern).toEqual('/');
+        const m = manifest([route('/', [])]);
+        expect(matches(m, '/')).toEqual([{ pattern: '/', params: {} }]);
     });
 
-    it('matches a param route and selects the matching instance', () => {
+    it('extracts params of a param route (no instance lookup)', () => {
         const m = manifest([
-            route(
-                '/products/[slug]',
-                [
-                    { type: 'static', value: 'products' },
-                    { type: 'param', value: 'slug' },
-                ],
-                [instance({ slug: 'a' }), instance({ slug: 'b' })],
-            ),
+            route('/products/[slug]', [
+                { type: 'static', value: 'products' },
+                { type: 'param', value: 'slug' },
+            ]),
         ]);
-        const result = matchRequest(m, '/products/b');
-        expect(result?.params).toEqual({ slug: 'b' });
-        expect(result?.instance.params).toEqual({ slug: 'b' });
+        expect(matches(m, '/products/b')).toEqual([
+            { pattern: '/products/[slug]', params: { slug: 'b' } },
+        ]);
     });
 
     it('matches a catch-all segment', () => {
         const m = manifest([
-            route(
-                '/docs/[...path]',
-                [
-                    { type: 'static', value: 'docs' },
-                    { type: 'catchAll', value: 'path' },
-                ],
-                [instance({ path: 'a/b/c' })],
-            ),
+            route('/docs/[...path]', [
+                { type: 'static', value: 'docs' },
+                { type: 'catchAll', value: 'path' },
+            ]),
         ]);
-        const result = matchRequest(m, '/docs/a/b/c');
-        expect(result?.params).toEqual({ path: 'a/b/c' });
+        expect(matches(m, '/docs/a/b/c')).toEqual([
+            { pattern: '/docs/[...path]', params: { path: 'a/b/c' } },
+        ]);
     });
 
-    it('returns undefined for unmatched paths', () => {
-        const m = manifest([route('/about', [{ type: 'static', value: 'about' }], [instance({})])]);
-        expect(matchRequest(m, '/missing')).toBeUndefined();
+    it('yields nothing for unmatched paths', () => {
+        const m = manifest([route('/about', [{ type: 'static', value: 'about' }])]);
+        expect(matches(m, '/missing')).toEqual([]);
     });
 
-    it('returns undefined when no instance matches the params', () => {
+    it('yields every matching route in manifest order', () => {
         const m = manifest([
-            route(
-                '/products/[slug]',
-                [
-                    { type: 'static', value: 'products' },
-                    { type: 'param', value: 'slug' },
-                ],
-                [instance({ slug: 'a' })],
-            ),
+            route('/products/new', [
+                { type: 'static', value: 'products' },
+                { type: 'static', value: 'new' },
+            ]),
+            route('/products/[slug]', [
+                { type: 'static', value: 'products' },
+                { type: 'param', value: 'slug' },
+            ]),
         ]);
-        expect(matchRequest(m, '/products/z')).toBeUndefined();
+        expect(matches(m, '/products/new')).toEqual([
+            { pattern: '/products/new', params: {} },
+            { pattern: '/products/[slug]', params: { slug: 'new' } },
+        ]);
     });
 });
 
