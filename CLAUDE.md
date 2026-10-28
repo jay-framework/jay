@@ -194,7 +194,7 @@ The project follows a rigorous design log methodology for all significant featur
 2. **Before reading**: Check index.md first to find relevant design logs
 3. **After creating/updating**: Add new entries to appropriate category table
 4. **One line per entry, led by a status tag**: **[Design]** / **[Implemented]** / **[Rejected]** / **[Retrospective]** / **[Promoted]** / **[Superseded by #N]**. Keep descriptions to a single line — detail lives in the DL.
-5. **Cross-cutting logs** (spanning more than this repo — Wix services, AIditor, dev machines) live in the sibling repo `../jay-meta/design-log/`; this repo's `index.md` does not list them
+5. **Cross-cutting logs** (spanning more than this repo — Wix services, AIditor, dev machines) are kept in a separate internal repository; this repo's `index.md` does not list them.
 
 IMPORTANT - YOU ARE NOT ALLOWED TO USE toContain ON CODE FILES.
 
