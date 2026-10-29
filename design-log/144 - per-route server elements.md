@@ -467,3 +467,18 @@ vs.inStock ? adoptElement('S0/0/10/0', {}, [], refAddToCart()) : null;
 ```
 
 Since these appear inside children arrays, the parent's children array filters nulls. The ternary is sufficient because non-interactive conditions are static for the page lifetime — no create/destroy lifecycle needed.
+
+## Addendum (2026-10-29): dev-server analog of R7 bracket encoding
+
+**Context.** R7 (commit `1d17aa44`) fixed bracketed dynamic-route paths in **production** by URL-encoding `[`/`]` → `%5B`/`%5D` in the frontend asset paths written at build (CDNs/proxies reject bare brackets in URLs; backend keeps `[...]`). The **dev server** has the same class of bug once it is served behind a dev-machine hosting proxy: Vite emits asset URLs for a dynamic route with literal brackets (e.g. `…/pre-rendered/products/[slug]/page.css`, whether `/@fs/…` or root-relative), and the proxy returns an empty MIME type → the browser reports *"Refused to apply style … because its MIME type ('') is not a supported stylesheet MIME type"*.
+
+**Why the production approach does not port verbatim.** Two dev-only facts (both verified):
+
+- Vite 6.4.4 `decodeURI`s the incoming request URL, and serve-static/express `decodeURIComponent` theirs. So encoding the on-disk dir or the Vite module id to `%5B` (production's method) would make the decoded request (`[slug]`) no longer match — the file would 404.
+- The jay CSS loader resolves the file via the plugin's `meta.originId`, not via the id/URL (`rollup-plugin/.../load.ts` `loadCssFile`), so the URL and the on-disk file are decoupled.
+
+Therefore the dev fix encodes brackets **only in the emitted asset URL**, leaving the disk path and module id literal. It round-trips: browser sends `%5B` (proxy serves it with a real `text/css` MIME) → Vite/serve-static decode back to `[` → the literal module/file matches. Like production, it is **not** `/@fs/`-specific (there is no `@fs` in production) — it encodes brackets in the path of any `href`/`src` asset URL, only before the `?` so query strings are untouched. In practice only asset URLs carry brackets (resolved navigation hrefs do not), so real links are unaffected.
+
+**Implementation.** `encodeBracketsInAssetUrls(html)` in `packages/jay-stack/dev-server/lib/dev-server.ts`, applied to the output of every `vite.transformIndexHtml(...)` (client/element, SSR-hydrate, frozen-HMR paths). Unit test: `packages/jay-stack/dev-server/test/encode-brackets-in-fs-asset-urls.test.ts` (6 cases). SSR inlines CSS, so it is unaffected.
+
+**Known gap.** This post-processes HTML-level references (`<link>` / `<script>` / modulepreload). Bracketed URLs embedded **inside** Vite-served CSS (`url(...)`) or JS (`import` specifiers) are not rewritten; if a proxy also rejects those, extend with a Vite transform/`transformIndexHtml` hook that encodes emitted URLs at the source. Verify against the live dev-machine-hosting repro.

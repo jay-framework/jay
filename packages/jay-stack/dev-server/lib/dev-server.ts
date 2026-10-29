@@ -77,6 +77,36 @@ import { FreezeStore } from './freeze';
 import { DevServerService, DEV_SERVER_SERVICE } from './dev-server-service';
 import { registerService } from '@jay-framework/stack-server-runtime';
 
+/**
+ * Percent-encode `[`/`]` in the path of asset URLs (`href`/`src`) in served HTML.
+ *
+ * Dynamic routes produce asset paths with literal brackets (e.g.
+ * `.../pre-rendered/products/[slug]/page.css`), whether Vite serves them as
+ * `/@fs/…` or root-relative. Bare brackets in a URL are rejected by some
+ * dev-machine hosting proxies — the browser then sees an empty MIME type
+ * ("Refused to apply style … MIME type ('')"). This mirrors the production fix
+ * (DL#144/R7), which encodes brackets in *all* frontend asset paths; it is
+ * deliberately NOT `/@fs/`-specific (production has no `@fs`).
+ *
+ * Encoding only the emitted URL is sufficient and safe: the dev servers that
+ * handle these requests — Vite (`decodeURI`) and serve-static/express
+ * (`decodeURIComponent`) — decode `%5B` back to `[`, and CSS/module loading
+ * resolves via the plugin's `meta.originId` (not the id), so the encoded URL
+ * still maps to the literal on-disk file. Only the path (before `?`) is touched,
+ * so query strings (e.g. `?a[]=1`) are intact. In practice only asset URLs carry
+ * brackets — resolved navigation hrefs do not — so real links are unaffected.
+ * Exported so the dev-serving test guards the real behavior rather than a copy.
+ */
+export function encodeBracketsInAssetUrls(html: string): string {
+    return html.replace(/\b(href|src)="([^"]*)"/g, (whole, attr: string, value: string) => {
+        const q = value.indexOf('?');
+        const pathPart = q === -1 ? value : value.slice(0, q);
+        if (!pathPart.includes('[') && !pathPart.includes(']')) return whole;
+        const encodedPath = pathPart.replace(/\[/g, '%5B').replace(/\]/g, '%5D');
+        return `${attr}="${encodedPath}${q === -1 ? '' : value.slice(q)}"`;
+    });
+}
+
 /** Callback to register linked files for watching. Set by setupSlowRenderCacheInvalidation. */
 let _watchLinkedFiles: (files: string[], route?: JayRoute) => void = () => {};
 
@@ -1066,7 +1096,9 @@ async function handleClientOnlyRequest(
     }
 
     const viteStart = Date.now();
-    const compiledPageHtml = await vite.transformIndexHtml(url?.split('?')[0] || '/', pageHtml);
+    const compiledPageHtml = encodeBracketsInAssetUrls(
+        await vite.transformIndexHtml(url?.split('?')[0] || '/', pageHtml),
+    );
     timing?.recordViteClient(Date.now() - viteStart);
 
     res.status(200).set({ 'Content-Type': 'text/html' }).send(compiledPageHtml);
@@ -1182,7 +1214,9 @@ async function sendResponse(
     }
 
     const viteStart = Date.now();
-    const compiledPageHtml = await vite.transformIndexHtml(url?.split('?')[0] || '/', pageHtml);
+    const compiledPageHtml = encodeBracketsInAssetUrls(
+        await vite.transformIndexHtml(url?.split('?')[0] || '/', pageHtml),
+    );
     timing?.recordViteClient(Date.now() - viteStart);
 
     res.status(statusCode).set({ 'Content-Type': 'text/html' }).send(compiledPageHtml);
@@ -1257,7 +1291,9 @@ async function handleFrozenRequest(
         }
 
         if (injectDevHmr) {
-            const compiledHtml = await vite.transformIndexHtml(url?.split('?')[0] || '/', html);
+            const compiledHtml = encodeBracketsInAssetUrls(
+                await vite.transformIndexHtml(url?.split('?')[0] || '/', html),
+            );
             res.status(200).set(headers).send(compiledHtml);
         } else {
             res.status(200).set(headers).send(html);
