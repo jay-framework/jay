@@ -107,6 +107,48 @@ export function encodeBracketsInAssetUrls(html: string): string {
     });
 }
 
+/**
+ * Filesystem-safe name for the per-route debug artifact, derived from the route
+ * path only (DL#229). The query string is dropped — otherwise a long query
+ * (e.g. an ~800-char auth token passed by a hosting proxy) pushes the filename
+ * past `NAME_MAX` (255) and `fs.writeFile` throws `ENAMETOOLONG`. Also strips
+ * non-fs-safe characters and length-caps as defense-in-depth. Pure → unit-tested.
+ */
+export function debugPageName(url: string | undefined): string {
+    const routePath = (url || '/').split('?')[0];
+    if (routePath === '/' || routePath === '') return 'index';
+    return (
+        routePath
+            .replace(/^\//, '')
+            .replace(/\//g, '-')
+            .replace(/[^\w.-]/g, '_') // fs-safe (also turns [slug] → _slug_)
+            .slice(0, 200) || 'index' // guard a path that sanitizes to empty
+    );
+}
+
+/**
+ * Write the generated client HTML to `build/<...>/debug/client-entry/<route>.html`
+ * as a debugging aid (DL#229). Two properties matter:
+ *  - **Verbose-only** (DL#83): this is a write-only aid (nothing reads it), so it
+ *    runs only under `logLevel: 'verbose'` — no per-request disk I/O in normal dev.
+ *  - **Best-effort**: a debug side effect must never fail a page request, so every
+ *    error (ENAMETOOLONG, EACCES, ENOSPC, read-only buildFolder, …) is swallowed.
+ */
+async function writeDebugPage(
+    options: DevServerOptions,
+    url: string | undefined,
+    html: string,
+): Promise<void> {
+    if (options.logLevel !== 'verbose' || !options.buildFolder) return;
+    try {
+        const clientScriptDir = path.join(options.buildFolder, 'debug', 'client-entry');
+        await fs.mkdir(clientScriptDir, { recursive: true });
+        await fs.writeFile(path.join(clientScriptDir, `${debugPageName(url)}.html`), html, 'utf-8');
+    } catch (e) {
+        getLogger().info(`[dev] debug page write skipped: ${(e as Error).message}`);
+    }
+}
+
 /** Callback to register linked files for watching. Set by setupSlowRenderCacheInvalidation. */
 let _watchLinkedFiles: (files: string[], route?: JayRoute) => void = () => {};
 
@@ -1087,13 +1129,8 @@ async function handleClientOnlyRequest(
         },
     );
 
-    // Save generated page to build folder for debugging
-    if (options.buildFolder) {
-        const pageName = !url || url === '/' ? 'index' : url.replace(/^\//, '').replace(/\//g, '-');
-        const clientScriptDir = path.join(options.buildFolder, 'debug', 'client-entry');
-        await fs.mkdir(clientScriptDir, { recursive: true });
-        await fs.writeFile(path.join(clientScriptDir, `${pageName}.html`), pageHtml, 'utf-8');
-    }
+    // Save generated page to build/debug for debugging — verbose-only, best-effort (DL#229).
+    await writeDebugPage(options, url, pageHtml);
 
     const viteStart = Date.now();
     const compiledPageHtml = encodeBracketsInAssetUrls(
@@ -1197,13 +1234,8 @@ async function sendResponse(
         );
     }
 
-    // Save generated page to build folder for debugging
-    if (options.buildFolder) {
-        const pageName = !url || url === '/' ? 'index' : url.replace(/^\//, '').replace(/\//g, '-');
-        const clientScriptDir = path.join(options.buildFolder, 'debug', 'client-entry');
-        await fs.mkdir(clientScriptDir, { recursive: true });
-        await fs.writeFile(path.join(clientScriptDir, `${pageName}.html`), pageHtml, 'utf-8');
-    }
+    // Save generated page to build/debug for debugging — verbose-only, best-effort (DL#229).
+    await writeDebugPage(options, url, pageHtml);
 
     // Invalidate cached html-proxy modules so Vite re-extracts inline scripts.
     // Without this, Vite serves stale script content after SSR/client mode changes.
