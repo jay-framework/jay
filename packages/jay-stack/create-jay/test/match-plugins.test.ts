@@ -23,6 +23,16 @@ describe('selectPluginsByRequest', () => {
         expect(selectPluginsByRequest(['@jay-framework/wix-data']).unknown).toEqual([]);
     });
 
+    it('matches an unscoped package name', () => {
+        expect(selectedNames(['wix-forms'])).toEqual(['@jay-framework/wix-forms']);
+    });
+
+    it('selects a plugin once when requested under several aliases', () => {
+        expect(selectedNames(['Wix Forms', 'wix-forms', '@jay-framework/wix-forms'])).toEqual([
+            '@jay-framework/wix-forms',
+        ]);
+    });
+
     it('reports an unknown name and selects nothing', () => {
         const { selected, unknown } = selectPluginsByRequest(['Nope Plugin']);
         expect(selected).toEqual([]);

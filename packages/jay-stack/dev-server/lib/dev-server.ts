@@ -77,6 +77,78 @@ import { FreezeStore } from './freeze';
 import { DevServerService, DEV_SERVER_SERVICE } from './dev-server-service';
 import { registerService } from '@jay-framework/stack-server-runtime';
 
+/**
+ * Percent-encode `[`/`]` in the path of asset URLs (`href`/`src`) in served HTML.
+ *
+ * Dynamic routes produce asset paths with literal brackets (e.g.
+ * `.../pre-rendered/products/[slug]/page.css`), whether Vite serves them as
+ * `/@fs/…` or root-relative. Bare brackets in a URL are rejected by some
+ * dev-machine hosting proxies — the browser then sees an empty MIME type
+ * ("Refused to apply style … MIME type ('')"). This mirrors the production fix
+ * (DL#144/R7), which encodes brackets in *all* frontend asset paths; it is
+ * deliberately NOT `/@fs/`-specific (production has no `@fs`).
+ *
+ * Encoding only the emitted URL is sufficient and safe: the dev servers that
+ * handle these requests — Vite (`decodeURI`) and serve-static/express
+ * (`decodeURIComponent`) — decode `%5B` back to `[`, and CSS/module loading
+ * resolves via the plugin's `meta.originId` (not the id), so the encoded URL
+ * still maps to the literal on-disk file. Only the path (before `?`) is touched,
+ * so query strings (e.g. `?a[]=1`) are intact. In practice only asset URLs carry
+ * brackets — resolved navigation hrefs do not — so real links are unaffected.
+ * Exported so the dev-serving test guards the real behavior rather than a copy.
+ */
+export function encodeBracketsInAssetUrls(html: string): string {
+    return html.replace(/\b(href|src)="([^"]*)"/g, (whole, attr: string, value: string) => {
+        const q = value.indexOf('?');
+        const pathPart = q === -1 ? value : value.slice(0, q);
+        if (!pathPart.includes('[') && !pathPart.includes(']')) return whole;
+        const encodedPath = pathPart.replace(/\[/g, '%5B').replace(/\]/g, '%5D');
+        return `${attr}="${encodedPath}${q === -1 ? '' : value.slice(q)}"`;
+    });
+}
+
+/**
+ * Filesystem-safe name for the per-route debug artifact, derived from the route
+ * path only (DL#229). The query string is dropped — otherwise a long query
+ * (e.g. an ~800-char auth token passed by a hosting proxy) pushes the filename
+ * past `NAME_MAX` (255) and `fs.writeFile` throws `ENAMETOOLONG`. Also strips
+ * non-fs-safe characters and length-caps as defense-in-depth. Pure → unit-tested.
+ */
+export function debugPageName(url: string | undefined): string {
+    const routePath = (url || '/').split('?')[0];
+    if (routePath === '/' || routePath === '') return 'index';
+    return (
+        routePath
+            .replace(/^\//, '')
+            .replace(/\//g, '-')
+            .replace(/[^\w.-]/g, '_') // fs-safe (also turns [slug] → _slug_)
+            .slice(0, 200) || 'index' // guard a path that sanitizes to empty
+    );
+}
+
+/**
+ * Write the generated client HTML to `build/<...>/debug/client-entry/<route>.html`
+ * as a debugging aid (DL#229). Two properties matter:
+ *  - **Verbose-only** (DL#83): this is a write-only aid (nothing reads it), so it
+ *    runs only under `logLevel: 'verbose'` — no per-request disk I/O in normal dev.
+ *  - **Best-effort**: a debug side effect must never fail a page request, so every
+ *    error (ENAMETOOLONG, EACCES, ENOSPC, read-only buildFolder, …) is swallowed.
+ */
+async function writeDebugPage(
+    options: DevServerOptions,
+    url: string | undefined,
+    html: string,
+): Promise<void> {
+    if (options.logLevel !== 'verbose' || !options.buildFolder) return;
+    try {
+        const clientScriptDir = path.join(options.buildFolder, 'debug', 'client-entry');
+        await fs.mkdir(clientScriptDir, { recursive: true });
+        await fs.writeFile(path.join(clientScriptDir, `${debugPageName(url)}.html`), html, 'utf-8');
+    } catch (e) {
+        getLogger().info(`[dev] debug page write skipped: ${(e as Error).message}`);
+    }
+}
+
 /** Callback to register linked files for watching. Set by setupSlowRenderCacheInvalidation. */
 let _watchLinkedFiles: (files: string[], route?: JayRoute) => void = () => {};
 
@@ -1057,16 +1129,13 @@ async function handleClientOnlyRequest(
         },
     );
 
-    // Save generated page to build folder for debugging
-    if (options.buildFolder) {
-        const pageName = !url || url === '/' ? 'index' : url.replace(/^\//, '').replace(/\//g, '-');
-        const clientScriptDir = path.join(options.buildFolder, 'debug', 'client-entry');
-        await fs.mkdir(clientScriptDir, { recursive: true });
-        await fs.writeFile(path.join(clientScriptDir, `${pageName}.html`), pageHtml, 'utf-8');
-    }
+    // Save generated page to build/debug for debugging — verbose-only, best-effort (DL#229).
+    await writeDebugPage(options, url, pageHtml);
 
     const viteStart = Date.now();
-    const compiledPageHtml = await vite.transformIndexHtml(!!url ? url : '/', pageHtml);
+    const compiledPageHtml = encodeBracketsInAssetUrls(
+        await vite.transformIndexHtml(url?.split('?')[0] || '/', pageHtml),
+    );
     timing?.recordViteClient(Date.now() - viteStart);
 
     res.status(200).set({ 'Content-Type': 'text/html' }).send(compiledPageHtml);
@@ -1165,13 +1234,8 @@ async function sendResponse(
         );
     }
 
-    // Save generated page to build folder for debugging
-    if (options.buildFolder) {
-        const pageName = !url || url === '/' ? 'index' : url.replace(/^\//, '').replace(/\//g, '-');
-        const clientScriptDir = path.join(options.buildFolder, 'debug', 'client-entry');
-        await fs.mkdir(clientScriptDir, { recursive: true });
-        await fs.writeFile(path.join(clientScriptDir, `${pageName}.html`), pageHtml, 'utf-8');
-    }
+    // Save generated page to build/debug for debugging — verbose-only, best-effort (DL#229).
+    await writeDebugPage(options, url, pageHtml);
 
     // Invalidate cached html-proxy modules so Vite re-extracts inline scripts.
     // Without this, Vite serves stale script content after SSR/client mode changes.
@@ -1182,7 +1246,9 @@ async function sendResponse(
     }
 
     const viteStart = Date.now();
-    const compiledPageHtml = await vite.transformIndexHtml(!!url ? url : '/', pageHtml);
+    const compiledPageHtml = encodeBracketsInAssetUrls(
+        await vite.transformIndexHtml(url?.split('?')[0] || '/', pageHtml),
+    );
     timing?.recordViteClient(Date.now() - viteStart);
 
     res.status(statusCode).set({ 'Content-Type': 'text/html' }).send(compiledPageHtml);
@@ -1257,7 +1323,9 @@ async function handleFrozenRequest(
         }
 
         if (injectDevHmr) {
-            const compiledHtml = await vite.transformIndexHtml(url || '/', html);
+            const compiledHtml = encodeBracketsInAssetUrls(
+                await vite.transformIndexHtml(url?.split('?')[0] || '/', html),
+            );
             res.status(200).set(headers).send(compiledHtml);
         } else {
             res.status(200).set(headers).send(html);

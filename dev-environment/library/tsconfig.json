@@ -12,7 +12,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "types": ["vitest/globals"]
+    "types": ["vitest/globals", "node"]
   },
   "references": [
     { "path": "../../packages/runtime/serialization" },

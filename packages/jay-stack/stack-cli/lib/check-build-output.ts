@@ -72,24 +72,6 @@ export const PAGE_CACHE_SOFT_BYTES = 300 * 1024;
 /** Hard limit aligned with common BaaS per-row snapshot caps (512 KiB). */
 export const PAGE_CACHE_HARD_BYTES = 512 * 1024;
 
-/** Every `*.cache.json` path declared on route instances in the manifest. */
-export function collectPageCachePaths(
-    manifest: RouteManifest,
-    backendDir: string,
-): Array<{ routePattern: string; cacheAbsPath: string }> {
-    const out: Array<{ routePattern: string; cacheAbsPath: string }> = [];
-    for (const route of manifest.routes) {
-        for (const instance of route.instances) {
-            if (!instance.cachePath) continue;
-            out.push({
-                routePattern: route.pattern,
-                cacheAbsPath: path.resolve(backendDir, instance.cachePath),
-            });
-        }
-    }
-    return out;
-}
-
 /** DL#211 Check 6 — per-instance `*.cache.json` byte size vs deploy carry budgets. */
 export async function checkPageCacheFileSizes(args: {
     cacheAbsPath: string;

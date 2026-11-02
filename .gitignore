@@ -12,6 +12,7 @@ examples/**/lib/**/*.jay-html.ts
 .yarn/
 /.idea/prettier.xml
 /.idea/workspace.xml
+/.idea/vcs.xml
 
 4example
 

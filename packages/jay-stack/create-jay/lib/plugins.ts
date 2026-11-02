@@ -91,7 +91,7 @@ export const PLUGINS: PluginEntry[] = [
     {
         name: '@jay-framework/wix-forms',
         label: 'Wix Forms',
-        description: 'Wix Forms: per-form headless contracts, validation, submissions',
+        description: 'Forms: dynamic schemas from Wix, form rendering, validation, submissions',
         group: 'Wix',
         checked: false,
         isDep: true,
