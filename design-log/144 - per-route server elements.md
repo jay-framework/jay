@@ -470,7 +470,7 @@ Since these appear inside children arrays, the parent's children array filters n
 
 ## Addendum (2026-10-29): dev-server analog of R7 bracket encoding
 
-**Context.** R7 (commit `1d17aa44`) fixed bracketed dynamic-route paths in **production** by URL-encoding `[`/`]` → `%5B`/`%5D` in the frontend asset paths written at build (CDNs/proxies reject bare brackets in URLs; backend keeps `[...]`). The **dev server** has the same class of bug once it is served behind a dev-machine hosting proxy: Vite emits asset URLs for a dynamic route with literal brackets (e.g. `…/pre-rendered/products/[slug]/page.css`, whether `/@fs/…` or root-relative), and the proxy returns an empty MIME type → the browser reports *"Refused to apply style … because its MIME type ('') is not a supported stylesheet MIME type"*.
+**Context.** R7 (commit `1d17aa44`) fixed bracketed dynamic-route paths in **production** by URL-encoding `[`/`]` → `%5B`/`%5D` in the frontend asset paths written at build (CDNs/proxies reject bare brackets in URLs; backend keeps `[...]`). The **dev server** has the same class of bug once it is served behind a dev-machine hosting proxy: Vite emits asset URLs for a dynamic route with literal brackets (e.g. `…/pre-rendered/products/[slug]/page.css`, whether `/@fs/…` or root-relative), and the proxy returns an empty MIME type → the browser reports _"Refused to apply style … because its MIME type ('') is not a supported stylesheet MIME type"_.
 
 **Why the production approach does not port verbatim.** Two dev-only facts (both verified):
 
