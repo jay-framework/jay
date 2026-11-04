@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { ActionRegistry, type RegisteredAction } from '../lib/action-registry';
+import {
+    ActionRegistry,
+    isCrossOriginRequest,
+    needsSameOriginCheck,
+    type RegisteredAction,
+} from '../lib/action-registry';
 import { registerService, clearServiceRegistry } from '../lib/services';
 import {
     makeJayAction,
@@ -524,5 +529,204 @@ describe('Streaming Action Registry (DL#129)', () => {
 
         expect(chunks).toHaveLength(1);
         expect(chunks[0]).toBe('before');
+    });
+});
+
+// ============================================================================
+// Request cookies for server actions (DL#229)
+// ============================================================================
+
+describe('ActionRegistry withRequest (DL#229)', () => {
+    let registry: ActionRegistry;
+
+    beforeEach(() => {
+        registry = new ActionRegistry();
+        clearServiceRegistry();
+        registerService(CART_SERVICE, mockCartService);
+    });
+
+    function recordingAction(name: string) {
+        const calls: any[][] = [];
+        const action = makeJayAction(name)
+            .withServices(CART_SERVICE)
+            .withRequest()
+            .withHandler(async (input: { id: string }, request, cart) => {
+                calls.push([input, request.cookies, cart]);
+                return 'ok';
+            });
+        return { action, calls };
+    }
+
+    it('passes the incoming cookies as argument 2 for a needsRequest action', async () => {
+        const { action, calls } = recordingAction('dl229.read');
+        registry.register(action);
+
+        const result = await registry.execute(
+            'dl229.read',
+            { id: 'a' },
+            {
+                cookies: { s: '1' },
+                secure: false,
+            },
+        );
+
+        expect(result).toEqual({ success: true, data: 'ok' });
+        expect(calls).toEqual([[{ id: 'a' }, { s: '1' }, mockCartService]]);
+    });
+
+    it('does not pass cookies to an action without withRequest', async () => {
+        const calls: any[][] = [];
+        registry.register(
+            makeJayAction('dl229.plain')
+                .withServices(CART_SERVICE)
+                .withHandler(async (...args: [{ id: string }, CartService]) => {
+                    calls.push(args);
+                    return 'ok';
+                }),
+        );
+
+        await registry.execute('dl229.plain', { id: 'a' }, { cookies: { s: '1' }, secure: false });
+
+        expect(calls).toEqual([[{ id: 'a' }, mockCartService]]);
+    });
+
+    it('passes empty cookies when execute is called with two arguments', async () => {
+        const { action, calls } = recordingAction('dl229.empty');
+        registry.register(action);
+
+        await registry.execute('dl229.empty', { id: 'a' });
+
+        expect(calls).toEqual([[{ id: 'a' }, {}, mockCartService]]);
+    });
+
+    it('passes cookies to a streaming withRequest action, and empty cookies by default', async () => {
+        const seen: any[] = [];
+        registry.registerStream(
+            makeJayStream('dl229.stream')
+                .withServices(CART_SERVICE)
+                .withRequest()
+                .withHandler(async function* (input: {}, request, cart) {
+                    seen.push([request.cookies, cart]);
+                    yield 1;
+                }),
+        );
+
+        for await (const _ of registry.executeStream(
+            'dl229.stream',
+            {},
+            {
+                cookies: { s: '1' },
+                secure: false,
+            },
+        )) {
+        }
+        for await (const _ of registry.executeStream('dl229.stream', {})) {
+        }
+
+        expect(seen).toEqual([
+            [{ s: '1' }, mockCartService],
+            [{}, mockCartService],
+        ]);
+    });
+
+    it('returns private, no-store cache headers for needsRequest GET and POST', () => {
+        registry.register(
+            makeJayQuery('dl229.get')
+                .withRequest()
+                .withHandler(async (input: {}) => 1),
+        );
+        registry.register(
+            makeJayAction('dl229.post')
+                .withRequest()
+                .withHandler(async (input: {}) => 1),
+        );
+        registry.register(
+            makeJayQuery('dl229.cached')
+                .withCaching({ maxAge: 60 })
+                .withHandler(async (input: {}) => 1),
+        );
+
+        expect([
+            registry.getCacheHeaders('dl229.get'),
+            registry.getCacheHeaders('dl229.post'),
+            registry.getCacheHeaders('dl229.cached'),
+        ]).toEqual(['private, no-store', 'private, no-store', 'max-age=60']);
+    });
+
+    it('keeps one Set-Cookie per name, last write wins', async () => {
+        registry.register(
+            makeJayAction('dl229.set')
+                .withRequest()
+                .withHandler(async (input: {}, request) => {
+                    request.setCookie('a', '1');
+                    request.setCookie('b', '2');
+                    request.setCookie('a', '3');
+                    return 'ok';
+                }),
+        );
+
+        const result = await registry.execute('dl229.set', {}, { cookies: {}, secure: false });
+
+        expect(result).toEqual({
+            success: true,
+            data: 'ok',
+            setCookies: [
+                'a=3; Path=/; HttpOnly; SameSite=Lax',
+                'b=2; Path=/; HttpOnly; SameSite=Lax',
+            ],
+        });
+    });
+
+    it('drops cookies set before an ActionError', async () => {
+        registry.register(
+            makeJayAction('dl229.fail')
+                .withRequest()
+                .withHandler(async (input: {}, request) => {
+                    request.setCookie('sid', 'x');
+                    throw new ActionError('NOPE', 'failed');
+                }),
+        );
+
+        const result = await registry.execute('dl229.fail', {}, { cookies: {}, secure: true });
+
+        expect(result).toEqual({
+            success: false,
+            error: { code: 'NOPE', message: 'failed', isActionError: true },
+        });
+    });
+
+    it('requires the same-origin check only for non-GET withRequest actions', () => {
+        registry.register(
+            makeJayQuery('dl229.q')
+                .withRequest()
+                .withHandler(async (i: {}) => 1),
+        );
+        registry.register(
+            makeJayAction('dl229.a')
+                .withRequest()
+                .withHandler(async (i: {}) => 1),
+        );
+        registry.register(makeJayAction('dl229.p').withHandler(async (i: {}) => 1));
+
+        expect(
+            ['dl229.q', 'dl229.a', 'dl229.p'].map((name) =>
+                needsSameOriginCheck(registry.get(name)!),
+            ),
+        ).toEqual([false, true, false]);
+    });
+});
+
+describe('isCrossOriginRequest (DL#229)', () => {
+    const requestOrigin = 'https://site.example';
+    it.each([
+        ['cross-site', undefined, true],
+        ['same-site', undefined, true],
+        ['same-origin', undefined, false],
+        ['none', undefined, false],
+        [undefined, 'https://evil.example', true],
+        [undefined, 'https://site.example', false],
+        [undefined, undefined, false],
+    ])('Sec-Fetch-Site=%s Origin=%s -> %s', (secFetchSite, origin, expected) => {
+        expect(isCrossOriginRequest({ secFetchSite, origin, requestOrigin })).toEqual(expected);
     });
 });

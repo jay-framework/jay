@@ -6,7 +6,17 @@
  */
 
 import { Request, Response, RequestHandler } from 'express';
-import { ActionRegistry, actionRegistry } from '@jay-framework/stack-server-runtime';
+import {
+    ActionRegistry,
+    actionRegistry,
+    crossOriginErrorResponse,
+    isCrossOriginRequest,
+    isSecureRequest,
+    needsSameOriginCheck,
+    parseCookies,
+    type IncomingRequest,
+    type RegisteredActionEntry,
+} from '@jay-framework/stack-server-runtime';
 import type { HttpMethod, JayFile } from '@jay-framework/fullstack-component';
 import { getDevLogger } from '@jay-framework/logger';
 import Busboy from 'busboy';
@@ -100,6 +110,11 @@ export function createActionRouter(options?: ActionRouterOptions): RequestHandle
             return;
         }
 
+        if (isRejectedCrossOrigin(action, req)) {
+            res.status(403).json(crossOriginErrorResponse(actionName));
+            return;
+        }
+
         // Parse input based on method
         let input: unknown;
         try {
@@ -141,13 +156,19 @@ export function createActionRouter(options?: ActionRouterOptions): RequestHandle
             if (tempDir) cleanupTempDir(tempDir);
         };
 
+        const incoming = action.needsRequest ? readIncomingRequest(req) : undefined;
+        // withRequest actions are per-user: no response may be stored by any cache (DL#229)
+        if (action.needsRequest) {
+            res.set('Cache-Control', registry.getCacheHeaders(actionName)!);
+        }
+
         // Streaming action (DL#129): respond with NDJSON
         if (registry.isStreaming(actionName)) {
             res.setHeader('Content-Type', 'application/x-ndjson');
             res.setHeader('Transfer-Encoding', 'chunked');
 
             try {
-                const generator = registry.executeStream(actionName, input);
+                const generator = registry.executeStream(actionName, input, incoming);
                 for await (const chunk of generator) {
                     res.write(JSON.stringify({ chunk }) + '\n');
                 }
@@ -162,7 +183,7 @@ export function createActionRouter(options?: ActionRouterOptions): RequestHandle
         }
 
         // Execute the action
-        const result = await registry.execute(actionName, input);
+        const result = await registry.execute(actionName, input, incoming);
         cleanup();
 
         // Set cache headers for GET requests
@@ -175,6 +196,9 @@ export function createActionRouter(options?: ActionRouterOptions): RequestHandle
 
         // Return result
         if (result.success) {
+            for (const setCookie of result.setCookies ?? []) {
+                res.append('Set-Cookie', setCookie);
+            }
             res.status(200).json({
                 success: true,
                 data: result.data,
@@ -189,6 +213,27 @@ export function createActionRouter(options?: ActionRouterOptions): RequestHandle
         }
 
         timing?.end();
+    };
+}
+
+/**
+ * Whether a non-GET withRequest call came from another origin and must be rejected (DL#229).
+ */
+function isRejectedCrossOrigin(action: RegisteredActionEntry, req: Request): boolean {
+    return (
+        needsSameOriginCheck(action) &&
+        isCrossOriginRequest({
+            secFetchSite: req.headers['sec-fetch-site'] as string | undefined,
+            origin: req.headers.origin,
+            requestOrigin: `${req.protocol}://${req.headers.host}`,
+        })
+    );
+}
+
+function readIncomingRequest(req: Request): IncomingRequest {
+    return {
+        cookies: parseCookies(req.headers.cookie),
+        secure: isSecureRequest(req.protocol, req.headers['x-forwarded-proto'] as string),
     };
 }
 
@@ -380,6 +425,13 @@ export function actionBodyParser(options: ActionBodyParserOptions): RequestHandl
 
         // Skip body parsing for GET requests
         if (req.method === 'GET') {
+            next();
+            return;
+        }
+
+        // A cross-origin withRequest call is rejected by the router; read no body for it (DL#229)
+        const routedAction = registryToUse.get(req.path.slice(ACTION_ENDPOINT_BASE.length + 1));
+        if (routedAction && isRejectedCrossOrigin(routedAction, req)) {
             next();
             return;
         }

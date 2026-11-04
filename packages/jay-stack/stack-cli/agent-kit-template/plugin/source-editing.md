@@ -57,9 +57,17 @@ Action names are ordinary (nothing is reserved). Example mapping for a stores pl
 
 ## Discovery
 
-`plugin.yaml` is the source of truth: an agent that resolves a region to your contract reads `editingGuide`
-from the plugin's `plugin.yaml` and then reads the guide file. Keep the guide concise and imperative — it is
-read by an agent at edit time. (Surfacing `editingGuide` into `agent-kit/plugins-index.yaml` alongside the
+An agent that resolves a bound value to your contract (a region `name`, or a page-script headless `key` —
+see the designer **source-editing** guide) reads the contract's `.jay-contract` via `plugins-index.yaml`, then
+its `editingGuide`:
+
+- **Static contracts** — `editingGuide` / `readonly` in `plugin.yaml`.
+- **Dynamic (generated) contracts** — `plugin.yaml` can't name each one, so the generator writes top-level
+  `editingGuide: <project-root-relative path>` into each generated contract YAML, plus the record id the guide
+  needs (e.g. `recordSetId`). Ship the guide in the plugin and copy it to that path in your
+  `agentkit` handler (e.g. under `agent-kit/references/<plugin>/`).
+
+Keep the guide concise and imperative — it is read by an agent at edit time. (Surfacing `editingGuide` into `agent-kit/plugins-index.yaml` alongside the
 contract entry, so it's one hop from the index, is a planned enhancement.)
 
 ## Checklist

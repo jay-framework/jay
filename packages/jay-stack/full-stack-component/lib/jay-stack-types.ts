@@ -93,6 +93,36 @@ export interface RequestCookies {
     cookies: Record<string, string>;
 }
 
+/**
+ * Options for a response cookie set by an action handler (DL#229).
+ */
+export interface CookieOptions {
+    /** Default true */
+    httpOnly?: boolean;
+    /** Default: true when the request is https. Forced true by `sameSite: 'None'`. */
+    secure?: boolean;
+    /** Default 'Lax' */
+    sameSite?: 'Strict' | 'Lax' | 'None';
+    /** Default '/' */
+    path?: string;
+    /** Default: none (host-only cookie) */
+    domain?: string;
+    /** Lifetime in seconds */
+    maxAge?: number;
+    expires?: Date;
+}
+
+/** Read-only request data for stream handlers that opted in with .withRequest() (DL#229). */
+export type StreamActionRequest = Readonly<RequestCookies>;
+
+/** Request access for an action/query handler that opted in with .withRequest() (DL#229). */
+export interface ActionRequest extends StreamActionRequest {
+    /** Set a response cookie. Sent only when the handler succeeds. */
+    setCookie(name: string, value: string, options?: CookieOptions): void;
+    /** Emits the cookie with an empty value, Max-Age=0, and the same path/domain (they must match to clear). */
+    clearCookie(name: string, options?: Pick<CookieOptions, 'path' | 'domain'>): void;
+}
+
 export type UrlParams = Record<string, string>;
 
 // ============================================================================

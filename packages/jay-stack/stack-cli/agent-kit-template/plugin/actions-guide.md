@@ -49,6 +49,7 @@ makeJayAction('name')
   .withMethod('PUT') // Override HTTP method (default: POST for actions)
   .withCaching({ maxAge: 60 }) // Enable caching (queries only)
   .withFiles() // Accept file uploads (multipart/form-data)
+  .withRequest() // Receive the caller's cookies as argument 2 (see below)
   .withHandler(async (input, svc1, svc2) => {
     // Define handler
     return result;
@@ -132,6 +133,62 @@ refs.uploadBtn.onClick(async () => {
   const result = await uploadPhoto({ caption: 'My photo', photo: file });
 });
 ```
+
+## .withRequest() — Reading the Caller's Cookies
+
+Opt in with `.withRequest()` and the handler receives an `ActionRequest` as its **second** argument, before the services:
+
+```typescript
+import { makeJayAction, ActionError } from '@jay-framework/fullstack-component';
+
+export const updateAccount = makeJayAction('account.update')
+  .withServices(ACCOUNT_SERVICE)
+  .withRequest()
+  .withHandler(async (input: { name: string }, request, account) => {
+    const session = request.cookies.session; // server-trusted, includes HttpOnly cookies
+    if (!session) throw new ActionError('UNAUTHORIZED', 'Not signed in');
+    return account.update(session, input.name);
+  });
+```
+
+Without `.withRequest()`, the handler is `(input, ...services)` as before. The client call is always `action(input)`.
+
+Rules:
+
+- **Identity comes from `request.cookies`, never from `input`.** Input is client-controlled and spoofable.
+- **No `.withCaching()`.** A cookie-reading handler is per-user. Combining both throws when the action is defined. Every response of a `.withRequest()` action is sent with `Cache-Control: private, no-store`.
+- **A GET query (`makeJayQuery`) must not mutate.** Only non-GET actions are protected by the same-origin check.
+- **Non-GET calls must come from the same origin.** A cross-site browser request (by `Sec-Fetch-Site`, or `Origin` when that header is absent) is rejected with 403 `CROSS_ORIGIN_REQUEST` before the handler runs. Jay's client always calls same-origin. Requests with neither header (server-to-server, curl) are allowed.
+- **Direct server-side calls get no cookies.** Calling a `.withRequest()` action directly (from another handler, a render phase, or the CLI) passes `{ cookies: {} }`. To act for the same caller, put the logic in a shared function and pass `request` to it explicitly.
+
+### Setting cookies (login, refresh, logout)
+
+Page JS cannot write an HttpOnly credential, so credential cookies are set by an action:
+
+```typescript
+export const login = makeJayAction('account.login')
+  .withServices(AUTH_SERVICE)
+  .withRequest()
+  .withHandler(async (input: { email: string; password: string }, request, auth) => {
+    const token = await auth.signIn(input.email, input.password);
+    request.setCookie('session', token, { maxAge: 60 * 60 * 24 * 30 });
+    return { ok: true };
+  });
+
+export const logout = makeJayAction('account.logout')
+  .withRequest()
+  .withHandler(async (input: {}, request) => {
+    request.clearCookie('session'); // same path/domain as when it was set
+    return { ok: true };
+  });
+```
+
+- **Defaults:** `httpOnly: true`, `sameSite: 'Lax'`, `path: '/'`, and `secure` when the request is https (including `x-forwarded-proto: https`). Options: `httpOnly`, `secure`, `sameSite` (`'Strict' | 'Lax' | 'None'`; `'None'` forces `secure`), `path`, `domain`, `maxAge` (seconds), `expires`.
+- **Cookies are sent only on success.** If the handler throws (including `ActionError`), cookies it set are discarded. To clear a cookie on failure, return a success value that says so.
+- **`clearCookie` must use the same `path` and `domain`** the cookie was set with, or the browser keeps the original.
+- Setting the same name twice keeps the last write. Cookie names must be RFC 6265 tokens.
+- **Streams cannot set cookies.** `makeJayStream(...).withRequest()` gives a read-only `StreamActionRequest` (`request.cookies` only), because headers are sent before the generator runs.
+- **Direct calls cannot set cookies.** There is no HTTP response; the cookie is discarded with a warning.
 
 ## ActionError
 

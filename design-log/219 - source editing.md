@@ -481,3 +481,35 @@ The two verification bullets that had only been checked with throwaway scripts n
   `editingGuide` file warns. 4 tests pass.
 
 Both verified green in isolation; `node ... toContain` avoided per repo rule.
+
+### 2026-11-04 — Designer-role decision rule (B3 gap) + page-script bindings
+
+**Finding (live check in a downstream project).** Asked to rename a form label bound as
+`<label>{contact.firstName.label}<input …/></label>` on a page that imports the contract as a page-script
+headless (`<script type="application/jay-headless" … key="contact">`), an editing agent sometimes hard-coded
+the literal into jay-html. Cause, all in agent-kit:
+
+1. The decision rule (devops guide §4) classified content as bound only via `contentFromBinding` or a
+   `region`/`forEach` frame. Here neither holds — the `<label>` has its own `jay-dev-src` and a marked child,
+   and a page-script headless produces **no** region frame — so the rule said **static → edit the jay-html**.
+2. B3 planned the rule for the **designer + plugin** roles; it shipped in **devops + plugin** only. The
+   designer role (the one editing pages) had no source-editing guidance.
+3. Discovery named only `plugin.yaml` `editingGuide`; generated (dynamic) contracts can't be listed there and
+   carry `editingGuide` + their record id as top-level fields of the generated contract YAML.
+
+**Fix (agent-kit only — no inspector change; the inspector stays client-only per §2).**
+
+- New `agent-kit-template/designer/source-editing.md` — the single source of the decision rule: read `node.lines`
+  first; a `{…}` at the node is **bound** (never replace it with a literal); find the contract from the region
+  `name` **or** the binding's first segment → page-script `key`; read the `.jay-contract` via `plugins-index`
+  (dynamic contracts: `editingGuide` + record id on the contract); follow the guide; `readonly` → explain.
+- `designer/INSTRUCTIONS.md` — a top-level "Editing what the user points at" rule + reference-table row.
+- `devops/source-editing.md` §4 — now points to the designer guide (no duplicated rule).
+- `plugin/source-editing.md` Discovery — static (`plugin.yaml`) vs. dynamic (generated contract YAML) guides.
+
+**Verification.** Same scenario re-run 3× with the updated agent-kit: 3/3 agents read
+`designer/source-editing.md` (2/3) or went straight to the contract, resolved the page-script key → contract →
+`editingGuide`, followed it, and left the jay-html unchanged (before: 1 of 2 runs hard-coded the label).
+
+**Feedback loop.** Agent-kit guide: this entry. Validation: none — "an edit replaced a binding with a literal"
+is not visible at validate time (the result is valid jay-html), so the guide is the right layer.
