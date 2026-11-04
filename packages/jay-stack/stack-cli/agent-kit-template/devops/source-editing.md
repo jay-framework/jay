@@ -64,16 +64,9 @@ the element's own area ≥ 0.8), the **largest** is chosen; if none, it falls ba
 
 ## 4. Decide how to edit (the decision rule)
 
-- **Static content** (no `contentFromBinding`, not inside a region): the text/attribute is authored in the
-  jay-html — edit `file` at `node.lines`.
-- **Bound content** (`contentFromBinding`, or inside a `region`/`forEach` frame): the value comes from data,
-  not the markup. Read the binding at `node.lines` (e.g. `{post.content}`), then resolve its source:
-  - `stack` region frame → the `name` is the contract; map it via `agent-kit/plugins-index.yaml` to the
-    plugin's **editing guide** (see the plugin **source-editing** guide).
-  - `forEach` frame `itemId` identifies the record; route params (`route`/`routePattern`) identify the page
-    instance.
-  - Editing a bound value means editing its source (e.g. a markdown `.md` file, or a plugin's data via its
-    `devOnly` action), not the rendered markup.
+The agent reads `file` at `node.lines`, decides static vs. bound, and for bound content finds the contract and
+follows its `editingGuide` — see the designer **source-editing** guide (`designer/source-editing.md`), the
+single source of that rule.
 
 The inspector returns **locators, not resolved bindings** — it stays client-only, and the agent reads the
 jay-html + agent-kit to resolve. (The dev server does not resolve contracts; see DL#219 §2.)

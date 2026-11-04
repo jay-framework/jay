@@ -23,6 +23,13 @@ Your job is to create `.jay-html` pages that bind to the data and interactions d
 
 There is no standalone "interactive" phase. Any tag with `type: interactive` (refs/interactions) is automatically `fast+interactive`. Tags without an explicit phase are available in all phases.
 
+## Editing what the user points at
+
+When asked to change an element on an existing page, check the source first: if the value is a `{…}` binding,
+it is contract data — **never replace it with a literal**. Find the contract (region `name`, or the page
+`<script type="application/jay-headless" key="K">` matching the binding's first segment), read its
+`.jay-contract`, and follow its `editingGuide`. See [source-editing.md](source-editing.md).
+
 ## Workflow
 
 1. **Read this file** for overview and workflow
@@ -41,6 +48,7 @@ There is no standalone "interactive" phase. Any tag with `type: interactive` (re
 | ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | [project-structure.md](project-structure.md)               | Project layout, styling patterns (CSS themes, design tokens), configuration files                                                                              |
 | [jay-html-syntax.md](jay-html-syntax.md)                   | Jay-HTML overview: philosophy, component types, nesting rules, links to sub-files                                                                              |
+| [source-editing.md](source-editing.md)                     | Changing content the user points at: static vs. bound, contract → `editingGuide`, never hard-code a binding                                                    |
 | [jay-html-template-syntax.md](jay-html-template-syntax.md) | Template markup: data binding, conditions, expression limits (no `.length`), loops, refs                                                                       |
 | [jay-html-components.md](jay-html-components.md)           | Component imports: headless (key/instance), full-stack components, nesting, per-instance customization                                                         |
 | [design-system-guide.md](design-system-guide.md)           | Design-system elements — **create** (author template + contract, `jay-content` slots) and **use** (flatten with `template=`, drift, `override` facets, `sync`) |
