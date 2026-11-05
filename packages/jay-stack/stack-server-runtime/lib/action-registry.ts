@@ -14,6 +14,7 @@ import type {
     CacheOptions,
 } from '@jay-framework/fullstack-component';
 import { resolveServices } from './services';
+import { createActionRequest, NO_INCOMING_REQUEST, type IncomingRequest } from './action-request';
 import type { ActionMetadata } from './types';
 
 // ============================================================================
@@ -35,6 +36,8 @@ export interface RegisteredActionBase {
     metadata?: ActionMetadata;
     /** Whether this action accepts file uploads (DL#131) */
     acceptsFiles?: boolean;
+    /** Whether the handler receives the request as its second argument (DL#230) */
+    needsRequest?: boolean;
 }
 
 /**
@@ -68,7 +71,13 @@ export type RegisteredActionEntry = RegisteredAction | RegisteredStreamAction;
  * Result of executing an action.
  */
 export type ActionExecutionResult<T> =
-    { success: true; data: T } | { success: false; error: ActionErrorResponse };
+    | {
+          success: true;
+          data: T;
+          /** Serialized Set-Cookie values set by a withRequest handler (DL#230) */
+          setCookies?: string[];
+      }
+    | { success: false; error: ActionErrorResponse };
 
 /**
  * Error response structure for failed actions.
@@ -119,6 +128,7 @@ export class ActionRegistry {
             ...(action.acceptsFiles && {
                 acceptsFiles: true,
             }),
+            ...(action.needsRequest && { needsRequest: true }),
         };
 
         this.actions.set(action.actionName, entry);
@@ -196,9 +206,14 @@ export class ActionRegistry {
      *
      * @param actionName - The action to execute
      * @param input - The input data for the action
+     * @param incoming - Cookies and protocol of the HTTP request, for withRequest actions (DL#230)
      * @returns The action result or error
      */
-    async execute<T = any>(actionName: string, input: unknown): Promise<ActionExecutionResult<T>> {
+    async execute<T = any>(
+        actionName: string,
+        input: unknown,
+        incoming: IncomingRequest = NO_INCOMING_REQUEST,
+    ): Promise<ActionExecutionResult<T>> {
         const action = this.actions.get(actionName);
 
         if (!action) {
@@ -225,15 +240,14 @@ export class ActionRegistry {
         }
 
         try {
-            // Resolve services
-            const services = resolveServices(action.services);
-
-            // Execute handler
-            const result = await action.handler(input, ...services);
+            const request = createActionRequest(incoming);
+            const result = await invokeHandler(action as RegisteredAction, input, request);
+            const setCookies = request.collectSetCookies();
 
             return {
                 success: true,
                 data: result as T,
+                ...(setCookies.length > 0 && { setCookies }),
             };
         } catch (error: unknown) {
             // Check if it's an ActionError
@@ -273,6 +287,10 @@ export class ActionRegistry {
     getCacheHeaders(actionName: string): string | undefined {
         const action = this.actions.get(actionName);
 
+        if (action?.needsRequest) {
+            return PER_USER_CACHE_CONTROL;
+        }
+
         if (!action || action.method !== 'GET' || !action.cacheOptions) {
             return undefined;
         }
@@ -308,6 +326,7 @@ export class ActionRegistry {
             ...(action.acceptsFiles && {
                 acceptsFiles: true,
             }),
+            ...(action.needsRequest && { needsRequest: true }),
         };
         this.actions.set(action.actionName, entry);
     }
@@ -323,17 +342,82 @@ export class ActionRegistry {
     /**
      * Execute a streaming action, returning an async iterable of chunks.
      */
-    async *executeStream(actionName: string, input: unknown): AsyncGenerator<any> {
+    async *executeStream(
+        actionName: string,
+        input: unknown,
+        incoming: IncomingRequest = NO_INCOMING_REQUEST,
+    ): AsyncGenerator<any> {
         const action = this.actions.get(actionName);
         if (!action || !action.isStreaming) {
             throw new Error(`Streaming action '${actionName}' not found`);
         }
 
+        const request = Object.freeze({ cookies: Object.freeze({ ...incoming.cookies }) });
         const services = resolveServices(action.services);
-        for await (const chunk of action.handler(input, ...services)) {
+        const chunks = action.needsRequest
+            ? action.handler(input, request, ...services)
+            : action.handler(input, ...services);
+        for await (const chunk of chunks) {
             yield chunk;
         }
     }
+}
+
+/** Cache-Control for every response of a withRequest action: per-user, never stored (DL#230). */
+export const PER_USER_CACHE_CONTROL = 'private, no-store';
+
+function invokeHandler(action: RegisteredAction, input: unknown, request: unknown): Promise<any> {
+    const services = resolveServices(action.services);
+    return action.needsRequest
+        ? action.handler(input, request, ...services)
+        : action.handler(input, ...services);
+}
+
+/**
+ * Whether a dispatcher must reject cross-origin calls to this action before reading the body:
+ * non-GET actions that read cookies (DL#230 Q5).
+ */
+export function needsSameOriginCheck(action: RegisteredActionEntry): boolean {
+    return !!action.needsRequest && action.method !== 'GET';
+}
+
+export interface OriginHeaders {
+    /** The `Sec-Fetch-Site` request header */
+    secFetchSite?: string | null;
+    /** The `Origin` request header */
+    origin?: string | null;
+    /** The origin of the request URL, e.g. `https://site.example` */
+    requestOrigin: string;
+}
+
+/**
+ * Whether a browser request came from another origin (DL#230 Q5).
+ * Prefers `Sec-Fetch-Site`; falls back to comparing `Origin` with the request origin.
+ * A request with neither header (a non-browser client) is not cross-origin.
+ */
+export function isCrossOriginRequest({
+    secFetchSite,
+    origin,
+    requestOrigin,
+}: OriginHeaders): boolean {
+    if (secFetchSite) return secFetchSite !== 'same-origin' && secFetchSite !== 'none';
+    if (origin) return origin !== requestOrigin;
+    return false;
+}
+
+/** The 403 body for a rejected cross-origin call (DL#230). */
+export function crossOriginErrorResponse(actionName: string): {
+    success: false;
+    error: ActionErrorResponse;
+} {
+    return {
+        success: false,
+        error: {
+            code: 'CROSS_ORIGIN_REQUEST',
+            message: `Action '${actionName}' rejected a cross-origin request`,
+            isActionError: false,
+        },
+    };
 }
 
 // ============================================================================

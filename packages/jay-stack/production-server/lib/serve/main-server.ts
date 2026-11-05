@@ -39,11 +39,17 @@ function toFetchRequest(req: http.IncomingMessage): Request {
     return new Request(url, init);
 }
 
-async function pipeFetchResponse(response: Response, res: http.ServerResponse): Promise<void> {
-    const headers: Record<string, string> = {};
+export async function pipeFetchResponse(
+    response: Response,
+    res: http.ServerResponse,
+): Promise<void> {
+    const headers: Record<string, string | string[]> = {};
     response.headers.forEach((value, key) => {
-        headers[key] = value;
+        if (key !== 'set-cookie') headers[key] = value;
     });
+    // Headers.forEach joins repeated Set-Cookie values; each cookie needs its own header (DL#230)
+    const setCookies = response.headers.getSetCookie();
+    if (setCookies.length > 0) headers['set-cookie'] = setCookies;
     res.writeHead(response.status, headers);
 
     if (response.body) {

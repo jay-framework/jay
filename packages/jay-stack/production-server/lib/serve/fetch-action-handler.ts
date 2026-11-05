@@ -1,4 +1,13 @@
-import { ActionRegistry, actionRegistry } from '@jay-framework/stack-server-runtime';
+import {
+    ActionRegistry,
+    actionRegistry,
+    crossOriginErrorResponse,
+    isCrossOriginRequest,
+    isSecureRequest,
+    needsSameOriginCheck,
+    parseCookies,
+    type IncomingRequest,
+} from '@jay-framework/stack-server-runtime';
 import {
     isJayAction,
     isJayStreamAction,
@@ -54,6 +63,10 @@ export async function fetchActionRequest(
         });
     }
 
+    if (needsSameOriginCheck(action) && isCrossOrigin(request, url)) {
+        return jsonResponse(403, crossOriginErrorResponse(actionName));
+    }
+
     let input: unknown;
     try {
         if (requestMethod === 'GET') {
@@ -79,12 +92,17 @@ export async function fetchActionRequest(
         });
     }
 
+    const incoming = action.needsRequest ? readIncomingRequest(request, url) : undefined;
+    const perUserHeaders: Record<string, string> = action.needsRequest
+        ? { 'Cache-Control': registry.getCacheHeaders(actionName)! }
+        : {};
+
     if (registry.isStreaming(actionName)) {
         const encoder = new TextEncoder();
         const stream = new ReadableStream({
             async start(controller) {
                 try {
-                    const generator = registry.executeStream(actionName, input);
+                    const generator = registry.executeStream(actionName, input, incoming);
                     for await (const chunk of generator) {
                         controller.enqueue(encoder.encode(JSON.stringify({ chunk }) + '\n'));
                     }
@@ -98,36 +116,56 @@ export async function fetchActionRequest(
             },
         });
         return new Response(stream, {
-            headers: { 'Content-Type': 'application/x-ndjson' },
+            headers: { 'Content-Type': 'application/x-ndjson', ...perUserHeaders },
         });
     }
 
-    const result = await registry.execute(actionName, input);
+    const result = await registry.execute(actionName, input, incoming);
 
     if (result.success) {
-        const headers: Record<string, string> = {};
+        const headers = new Headers(perUserHeaders);
         if (requestMethod === 'GET') {
             const cacheHeaders = registry.getCacheHeaders(actionName);
             if (cacheHeaders) {
-                headers['Cache-Control'] = cacheHeaders;
+                headers.set('Cache-Control', cacheHeaders);
             }
+        }
+        for (const setCookie of result.setCookies ?? []) {
+            headers.append('Set-Cookie', setCookie);
         }
         return jsonResponse(200, { success: true, data: result.data }, headers);
     } else {
         const statusCode = getStatusCode(result.error.code, result.error.isActionError);
-        return jsonResponse(statusCode, { success: false, error: result.error });
+        return jsonResponse(
+            statusCode,
+            { success: false, error: result.error },
+            new Headers(perUserHeaders),
+        );
     }
+}
+
+function isCrossOrigin(request: Request, url: URL): boolean {
+    return isCrossOriginRequest({
+        secFetchSite: request.headers.get('sec-fetch-site'),
+        origin: request.headers.get('origin'),
+        requestOrigin: url.origin,
+    });
+}
+
+function readIncomingRequest(request: Request, url: URL): IncomingRequest {
+    return {
+        cookies: parseCookies(request.headers.get('cookie')),
+        secure: isSecureRequest(url.protocol, request.headers.get('x-forwarded-proto')),
+    };
 }
 
 function jsonResponse(
     status: number,
     body: object,
-    extraHeaders: Record<string, string> = {},
+    extraHeaders: Headers = new Headers(),
 ): Response {
-    return new Response(JSON.stringify(body), {
-        status,
-        headers: { 'Content-Type': 'application/json', ...extraHeaders },
-    });
+    extraHeaders.set('Content-Type', 'application/json');
+    return new Response(JSON.stringify(body), { status, headers: extraHeaders });
 }
 
 export async function registerActionsFromManifest(

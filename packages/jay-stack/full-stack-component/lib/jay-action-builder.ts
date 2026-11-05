@@ -1,4 +1,4 @@
-import { ServiceMarker, ServiceMarkers } from './jay-stack-types';
+import type { ActionRequest, ServiceMarkers, StreamActionRequest } from './jay-stack-types';
 
 // ============================================================================
 // Global Service Resolver
@@ -129,15 +129,36 @@ export interface JayActionDefinition<Input, Output, Services extends any[]> {
     /** Whether this action accepts file uploads (DL#131) */
     acceptsFiles?: boolean;
 
-    /** The handler function */
-    handler: (input: Input, ...services: Services) => Promise<Output>;
+    /** Whether the handler receives the request as its second argument (DL#230) */
+    needsRequest?: boolean;
+
+    /** The handler function. With `needsRequest`, it is called as (input, request, ...services). */
+    handler: (input: Input, ...args: any[]) => Promise<Output>;
 }
 
 // ============================================================================
 // Builder States
 // ============================================================================
 
-type ActionBuilderState = 'Initial' | 'Services' | 'Method' | 'Caching' | 'Done';
+/** The handler signature, with the request inserted at position 2 when opted in (DL#230). */
+export type ActionHandler<
+    I,
+    O,
+    Services extends any[],
+    WithRequest extends boolean,
+> = WithRequest extends true
+    ? (input: I, request: ActionRequest, ...services: Services) => Promise<O>
+    : (input: I, ...services: Services) => Promise<O>;
+
+/** The stream handler signature, with a read-only request at position 2 when opted in (DL#230). */
+export type StreamActionHandler<
+    I,
+    C,
+    Services extends any[],
+    WithRequest extends boolean,
+> = WithRequest extends true
+    ? (input: I, request: StreamActionRequest, ...services: Services) => AsyncIterable<C>
+    : (input: I, ...services: Services) => AsyncIterable<C>;
 
 // ============================================================================
 // Builder Interface
@@ -151,35 +172,47 @@ export interface JayActionBuilder<
     Input,
     Output,
     DefaultMethod extends HttpMethod,
+    WithRequest extends boolean = false,
 > {
     /**
      * Specify services to inject into the handler.
      */
     withServices<NewServices extends any[]>(
         ...services: ServiceMarkers<NewServices>
-    ): JayActionBuilder<NewServices, Input, Output, DefaultMethod>;
+    ): JayActionBuilder<NewServices, Input, Output, DefaultMethod, WithRequest>;
 
     /**
      * Override the HTTP method.
      */
-    withMethod<M extends HttpMethod>(method: M): JayActionBuilder<Services, Input, Output, M>;
+    withMethod<M extends HttpMethod>(
+        method: M,
+    ): JayActionBuilder<Services, Input, Output, M, WithRequest>;
 
     /**
      * Enable caching (typically for GET requests).
+     * Not allowed together with withRequest() (DL#230).
      */
-    withCaching(options?: CacheOptions): JayActionBuilder<Services, Input, Output, DefaultMethod>;
+    withCaching(
+        options?: CacheOptions,
+    ): JayActionBuilder<Services, Input, Output, DefaultMethod, WithRequest>;
 
     /**
      * Mark this action as accepting file uploads (DL#131).
      * The handler will receive JayFile objects for file fields.
      */
-    withFiles(): JayActionBuilder<Services, Input, Output, DefaultMethod>;
+    withFiles(): JayActionBuilder<Services, Input, Output, DefaultMethod, WithRequest>;
+
+    /**
+     * Receive the caller's cookies, and set response cookies, through an `ActionRequest`
+     * passed as the handler's second argument: `(input, request, ...services)` (DL#230).
+     */
+    withRequest(): JayActionBuilder<Services, Input, Output, DefaultMethod, true>;
 
     /**
      * Define the handler function. Input and output types are inferred from the handler signature.
      */
     withHandler<I, O>(
-        handler: (input: I, ...services: Services) => Promise<O>,
+        handler: ActionHandler<I, O, Services, WithRequest>,
     ): JayAction<I, O> & JayActionDefinition<I, O, Services>;
 }
 
@@ -195,6 +228,7 @@ class JayActionBuilderImpl<
     private _method: HttpMethod;
     private _cacheOptions?: CacheOptions;
     private _acceptsFiles = false;
+    private _needsRequest = false;
 
     constructor(
         private readonly _actionName: string,
@@ -227,38 +261,74 @@ class JayActionBuilderImpl<
         return this;
     }
 
+    withRequest(): JayActionBuilder<Services, unknown, unknown, DefaultMethod, true> {
+        this._needsRequest = true;
+        return this as unknown as JayActionBuilder<Services, unknown, unknown, DefaultMethod, true>;
+    }
+
     withHandler<I, O>(
-        handler: (input: I, ...services: Services) => Promise<O>,
+        handler: ActionHandler<I, O, Services, any>,
     ): JayAction<I, O> & JayActionDefinition<I, O, Services> {
         const actionName = this._actionName;
         const method = this._method;
         const cacheOptions = this._cacheOptions;
         const serviceMarkers = this._services;
+        const acceptsFiles = this._acceptsFiles;
+        const needsRequest = this._needsRequest;
+        if (needsRequest && cacheOptions) {
+            throw new Error(
+                `Action '${actionName}' uses .withRequest() and .withCaching(): a handler that reads cookies is per-user and must not be cached. Remove .withCaching().`,
+            );
+        }
+        const anyHandler = handler as (input: I, ...args: any[]) => Promise<O>;
 
         // Create the action object with callable function and metadata
         // On server: uses global resolver to inject services automatically
         // On client: build transform replaces this with HTTP call
-        const acceptsFiles = this._acceptsFiles;
-
         const action = Object.assign(
             (input: I): Promise<O> => {
-                const resolver = globalThis.__JAY_SERVICE_RESOLVER__;
-                const resolvedServices = resolver ? resolver(serviceMarkers as any[]) : [];
-                return handler(input, ...(resolvedServices as Services));
+                const services = resolveServicesForDirectCall(serviceMarkers);
+                return needsRequest
+                    ? anyHandler(input, createDetachedActionRequest(actionName), ...services)
+                    : anyHandler(input, ...services);
             },
             {
                 actionName,
                 method,
                 cacheOptions,
                 services: serviceMarkers,
-                handler,
+                handler: anyHandler,
                 _brand: 'JayAction' as const,
                 ...(acceptsFiles && { acceptsFiles: true }),
+                ...(needsRequest && { needsRequest: true }),
             },
         );
 
         return action as JayAction<I, O> & JayActionDefinition<I, O, Services>;
     }
+}
+
+function resolveServicesForDirectCall(serviceMarkers: ServiceMarkers<any[]>): any[] {
+    const resolver = globalThis.__JAY_SERVICE_RESOLVER__;
+    return resolver ? resolver(serviceMarkers as any[]) : [];
+}
+
+const EMPTY_COOKIES: Readonly<Record<string, string>> = Object.freeze({});
+
+/**
+ * The request a handler receives when called directly, outside an HTTP request (DL#230 Q4):
+ * no cookies, and cookie writes are dropped because there is no response to carry them.
+ */
+function createDetachedActionRequest(actionName: string): ActionRequest {
+    const warnDropped = (name: string) =>
+        console.warn(
+            `[Jay] Action '${actionName}' set cookie '${name}' outside an HTTP request; the cookie is discarded.`,
+        );
+    return Object.freeze({
+        cookies: EMPTY_COOKIES,
+        setCookie: (name: string) => warnDropped(name),
+        clearCookie: (name: string) => warnDropped(name),
+    });
 }
 
 // ============================================================================
@@ -366,30 +436,40 @@ export interface JayStreamActionDefinition<Input, Chunk, Services extends any[]>
     services: ServiceMarkers<Services>;
     /** Whether this action accepts file uploads (DL#131) */
     acceptsFiles?: boolean;
-    handler: (input: Input, ...services: Services) => AsyncIterable<Chunk>;
+    /** Whether the handler receives the read-only request as its second argument (DL#230) */
+    needsRequest?: boolean;
+    /** With `needsRequest`, it is called as (input, request, ...services). */
+    handler: (input: Input, ...args: any[]) => AsyncIterable<Chunk>;
 }
 
 /**
  * Builder interface for streaming actions.
  */
-export interface JayStreamBuilder<Services extends any[]> {
+export interface JayStreamBuilder<Services extends any[], WithRequest extends boolean = false> {
     withServices<NewServices extends any[]>(
         ...services: ServiceMarkers<NewServices>
-    ): JayStreamBuilder<NewServices>;
+    ): JayStreamBuilder<NewServices, WithRequest>;
 
     /**
      * Mark this streaming action as accepting file uploads (DL#131).
      */
-    withFiles(): JayStreamBuilder<Services>;
+    withFiles(): JayStreamBuilder<Services, WithRequest>;
+
+    /**
+     * Receive the caller's cookies (read-only) as the handler's second argument (DL#230).
+     * Streams cannot set cookies: headers are sent before the generator runs.
+     */
+    withRequest(): JayStreamBuilder<Services, true>;
 
     withHandler<I, C>(
-        handler: (input: I, ...services: Services) => AsyncIterable<C>,
+        handler: StreamActionHandler<I, C, Services, WithRequest>,
     ): JayStreamAction<I, C> & JayStreamActionDefinition<I, C, Services>;
 }
 
 class JayStreamBuilderImpl<Services extends any[]> implements JayStreamBuilder<Services> {
     private _services: ServiceMarkers<Services> = [] as unknown as ServiceMarkers<Services>;
     private _acceptsFiles = false;
+    private _needsRequest = false;
 
     constructor(private readonly _actionName: string) {}
 
@@ -405,27 +485,36 @@ class JayStreamBuilderImpl<Services extends any[]> implements JayStreamBuilder<S
         return this;
     }
 
+    withRequest(): JayStreamBuilder<Services, true> {
+        this._needsRequest = true;
+        return this as unknown as JayStreamBuilder<Services, true>;
+    }
+
     withHandler<I, C>(
-        handler: (input: I, ...services: Services) => AsyncIterable<C>,
+        handler: StreamActionHandler<I, C, Services, any>,
     ): JayStreamAction<I, C> & JayStreamActionDefinition<I, C, Services> {
         const actionName = this._actionName;
         const serviceMarkers = this._services;
         const acceptsFiles = this._acceptsFiles;
+        const needsRequest = this._needsRequest;
+        const anyHandler = handler as (input: I, ...args: any[]) => AsyncIterable<C>;
 
         const action = Object.assign(
             (input: I): AsyncIterable<C> => {
-                const resolver = globalThis.__JAY_SERVICE_RESOLVER__;
-                const resolvedServices = resolver ? resolver(serviceMarkers as any[]) : [];
-                return handler(input, ...(resolvedServices as Services));
+                const services = resolveServicesForDirectCall(serviceMarkers);
+                return needsRequest
+                    ? anyHandler(input, createDetachedActionRequest(actionName), ...services)
+                    : anyHandler(input, ...services);
             },
             {
                 actionName,
                 method: 'POST' as const,
                 isStreaming: true as const,
                 services: serviceMarkers,
-                handler,
+                handler: anyHandler,
                 _brand: 'JayStreamAction' as const,
                 ...(acceptsFiles && { acceptsFiles: true }),
+                ...(needsRequest && { needsRequest: true }),
             },
         );
 

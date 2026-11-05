@@ -703,3 +703,189 @@ describe('Action Router', () => {
         });
     });
 });
+
+// ============================================================================
+// Request cookies for server actions (DL#230)
+// ============================================================================
+
+describe('Action Router withRequest (DL#230)', () => {
+    let server: http.Server | undefined;
+    let buildFolder: string;
+
+    beforeEach(() => {
+        buildFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'jay-dl230-'));
+    });
+
+    afterEach(async () => {
+        if (server) await new Promise<void>((resolve) => server!.close(() => resolve()));
+        server = undefined;
+        fs.rmSync(buildFolder, { recursive: true, force: true });
+    });
+
+    function startServer(registry: ActionRegistry): Promise<string> {
+        const bodyParser = actionBodyParser({ buildFolder, registry });
+        const router = createActionRouter({ registry });
+        server = http.createServer((req, res) => {
+            const expressReq = req as any;
+            expressReq.path = req.url!;
+            expressReq.query = {};
+            expressReq.protocol = 'http';
+            const expressRes = res as any;
+            expressRes.status = (code: number) => {
+                res.statusCode = code;
+                return expressRes;
+            };
+            expressRes.json = (data: any) => {
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify(data));
+            };
+            expressRes.set = (key: string, value: string) => {
+                res.setHeader(key, value);
+                return expressRes;
+            };
+            expressRes.append = (key: string, value: string) => {
+                res.appendHeader(key, value);
+                return expressRes;
+            };
+            bodyParser(expressReq, expressRes, () => {
+                expressReq.path = expressReq.path.slice(ACTION_ENDPOINT_BASE.length);
+                router(expressReq, expressRes, () => {});
+            });
+        });
+        return new Promise((resolve) => {
+            server!.listen(0, () => {
+                const address = server!.address() as any;
+                resolve(`http://127.0.0.1:${address.port}${ACTION_ENDPOINT_BASE}`);
+            });
+        });
+    }
+
+    function registerCookieActions(registry: ActionRegistry) {
+        const calls: string[] = [];
+        registry.register(
+            makeJayAction('dl230.echo')
+                .withRequest()
+                .withHandler(async (input: {}, request) => {
+                    calls.push('echo');
+                    return request.cookies.s;
+                }),
+        );
+        registry.register(
+            makeJayAction('dl230.login')
+                .withRequest()
+                .withHandler(async (input: {}, request) => {
+                    calls.push('login');
+                    request.setCookie('sid', 'abc');
+                    request.setCookie('csrf', 'xyz', { httpOnly: false });
+                    return 'ok';
+                }),
+        );
+        registry.registerStream(
+            makeJayStream('dl230.stream')
+                .withRequest()
+                .withFiles()
+                .withHandler(async function* (input: {}, request) {
+                    calls.push('stream');
+                    yield request.cookies.s;
+                }),
+        );
+        return calls;
+    }
+
+    const crossSite = { 'sec-fetch-site': 'cross-site' };
+    const crossOriginBody = {
+        success: false,
+        error: {
+            code: 'CROSS_ORIGIN_REQUEST',
+            message: "Action 'dl230.login' rejected a cross-origin request",
+            isActionError: false,
+        },
+    };
+
+    it('passes request cookies and sends private, no-store', async () => {
+        const registry = new ActionRegistry();
+        registerCookieActions(registry);
+        const base = await startServer(registry);
+
+        const response = await fetch(`${base}/dl230.echo`, {
+            method: 'POST',
+            headers: { cookie: 's=abc' },
+            body: '{}',
+        });
+
+        expect(await response.json()).toEqual({ success: true, data: 'abc' });
+        expect(response.headers.get('cache-control')).toEqual('private, no-store');
+    });
+
+    it('rejects a cross-site POST with 403 and never runs the cookie-setting handler', async () => {
+        const registry = new ActionRegistry();
+        const calls = registerCookieActions(registry);
+        const base = await startServer(registry);
+
+        const response = await fetch(`${base}/dl230.login`, {
+            method: 'POST',
+            headers: crossSite,
+            body: '{}',
+        });
+
+        expect(response.status).toEqual(403);
+        expect(await response.json()).toEqual(crossOriginBody);
+        expect(response.headers.getSetCookie()).toEqual([]);
+        expect(calls).toEqual([]);
+    });
+
+    it('passes cookies to a streaming action and sends private, no-store', async () => {
+        const registry = new ActionRegistry();
+        registerCookieActions(registry);
+        const base = await startServer(registry);
+
+        const response = await fetch(`${base}/dl230.stream`, {
+            method: 'POST',
+            headers: { cookie: 's=abc' },
+            body: '{}',
+        });
+
+        expect(await response.text()).toEqual('{"chunk":"abc"}\n{"done":true}\n');
+        expect(response.headers.get('cache-control')).toEqual('private, no-store');
+    });
+
+    it('emits one Set-Cookie header per cookie', async () => {
+        const registry = new ActionRegistry();
+        registerCookieActions(registry);
+        const base = await startServer(registry);
+
+        const response = await fetch(`${base}/dl230.login`, { method: 'POST', body: '{}' });
+
+        expect(response.headers.getSetCookie()).toEqual([
+            'sid=abc; Path=/; HttpOnly; SameSite=Lax',
+            'csrf=xyz; Path=/; SameSite=Lax',
+        ]);
+        expect(response.headers.get('cache-control')).toEqual('private, no-store');
+    });
+
+    it('does not parse a cross-origin multipart body for a withRequest action', async () => {
+        const registry = new ActionRegistry();
+        const calls = registerCookieActions(registry);
+        const base = await startServer(registry);
+        const boundary = '----DL230Boundary';
+        const body =
+            `--${boundary}\r\n` +
+            `Content-Disposition: form-data; name="file"; filename="a.txt"\r\n` +
+            `Content-Type: text/plain\r\n\r\nhello\r\n` +
+            `--${boundary}--\r\n`;
+
+        const response = await fetch(`${base}/dl230.stream`, {
+            method: 'POST',
+            headers: {
+                ...crossSite,
+                'content-type': `multipart/form-data; boundary=${boundary}`,
+            },
+            body,
+        });
+
+        expect(response.status).toEqual(403);
+        expect((await response.json()).error.code).toEqual('CROSS_ORIGIN_REQUEST');
+        expect(fs.existsSync(path.join(buildFolder, '.tmp'))).toEqual(false);
+        expect(calls).toEqual([]);
+    });
+});
