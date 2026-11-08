@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { parsePolicy } from '../lib/policy/parse-policy.js';
 import { comparePolicy } from '../lib/compare/compare.js';
-import { readTree } from '../lib/fs/read-tree.js';
+import { treeFromDir } from '../lib/fs/read-tree.js';
 import { renderJson, renderMarkdown } from '../lib/report/render.js';
 import { CompareResult } from '../lib/compare/types.js';
 
@@ -19,8 +19,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const dir = path.join(here, 'fixtures', 'compare');
 const expectedDir = path.join(dir, 'expected');
 
-const baseline = readTree(path.join(dir, 'baseline'));
-const candidate = readTree(path.join(dir, 'candidate'));
+const baseline = treeFromDir(path.join(dir, 'baseline'));
+const candidate = treeFromDir(path.join(dir, 'candidate'));
 
 function loadPolicy(name: string) {
     const content = fs.readFileSync(path.join(dir, 'policies', `${name}.md`), 'utf-8');

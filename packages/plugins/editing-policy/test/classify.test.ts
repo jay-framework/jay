@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { classifyChanges } from '../lib/changes/classify.js';
-import { Tree } from '../lib/changes/types.js';
+import { Tree, treeFromMap } from '../lib/changes/types.js';
 
 function tree(entries: Record<string, string>): Tree {
-    return new Map(Object.entries(entries));
+    return treeFromMap(entries);
 }
 
 const PAGE = (body: string) => `<html><body>${body}</body></html>`;

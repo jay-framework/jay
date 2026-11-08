@@ -26,5 +26,28 @@ export interface Change {
     summary: string;
 }
 
-/** A project tree as a map of root-relative POSIX path → file contents. */
-export type Tree = Map<string, string>;
+/**
+ * A project tree: file paths are known up front, contents are read on demand and NOT retained — so a
+ * comparison never holds the whole project in memory, only the file(s) it is currently classifying.
+ */
+export interface Tree {
+    /** Root-relative POSIX paths of every file in the tree. */
+    paths(): string[];
+    has(path: string): boolean;
+    /** Read a file's contents on demand (uncached). Throws if the path is not in the tree. */
+    read(path: string): string;
+}
+
+/** A {@link Tree} backed by an in-memory map — for tests and programmatic callers. */
+export function treeFromMap(entries: Map<string, string> | Record<string, string>): Tree {
+    const map = entries instanceof Map ? entries : new Map(Object.entries(entries));
+    return {
+        paths: () => [...map.keys()],
+        has: (path) => map.has(path),
+        read: (path) => {
+            const content = map.get(path);
+            if (content === undefined) throw new Error(`no such file in tree: ${path}`);
+            return content;
+        },
+    };
+}

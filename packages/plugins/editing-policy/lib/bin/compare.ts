@@ -2,7 +2,7 @@
 import fs from 'fs';
 import path from 'path';
 import { parsePolicy, PolicyParseError } from '../policy/parse-policy.js';
-import { readTree } from '../fs/read-tree.js';
+import { treeFromDir } from '../fs/read-tree.js';
 import { comparePolicy, PolicyToolError } from '../compare/compare.js';
 import { EXIT_CODES, EXIT_TOOL_ERROR } from '../compare/types.js';
 import { renderJson, renderMarkdown } from '../report/render.js';
@@ -87,8 +87,8 @@ export async function runCompareCli(argv: string[], io: CliIo = defaultIo): Prom
         const policy = parsePolicy(policyContent);
 
         const result = comparePolicy({
-            baseline: readTree(args.baseline),
-            candidate: readTree(args.candidate),
+            baseline: treeFromDir(args.baseline),
+            candidate: treeFromDir(args.candidate),
             role: args.role,
             policy,
             policyContent,

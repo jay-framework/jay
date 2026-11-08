@@ -16,11 +16,12 @@ export { walkFiles, collectPolicyMarkers, policyMarkerNames } from './fs/scan-pr
 export { classifyChanges, classifyModifiedFile } from './changes/classify.js';
 export { classifyJayHtmlFile } from './changes/classify-jay-html.js';
 export type { Change, ChangeKind, Tree } from './changes/types.js';
+export { treeFromMap } from './changes/types.js';
 export { comparePolicy, PolicyToolError } from './compare/compare.js';
 export type { ComparePolicyInput } from './compare/compare.js';
 export { EXIT_CODES, EXIT_TOOL_ERROR } from './compare/types.js';
 export type { CompareResult, Disposition, Finding } from './compare/types.js';
 export { renderMarkdown, renderJson } from './report/render.js';
 export type { RenderMeta } from './report/render.js';
-export { readTree } from './fs/read-tree.js';
+export { treeFromDir } from './fs/read-tree.js';
 export { runCompareCli } from './bin/compare.js';

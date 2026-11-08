@@ -89,10 +89,11 @@ function classifyManifest(path: string, base: string, cand: string): Change[] {
     return changes;
 }
 
-function classifyAddedFile(path: string, _content: string): Change[] {
+function classifyAddedFile(path: string): Change[] {
     if (isAsset(path)) return [];
     // A new file/page/section is a `create` (DL#231 §6.1). Judging markup inside a new page by
-    // design/content (from-template) is resolved in the compare layer, not here.
+    // design/content (from-template) is resolved in the compare layer, not here. The content is not
+    // needed, so an added file is never read.
     return [{ kind: 'create', path, summary: `added ${path}` }];
 }
 
@@ -121,14 +122,26 @@ function detectRenames(
     const consumedAdded = new Set<string>();
     const consumedRemoved = new Set<string>();
 
+    // Added files are read at most once each (the churn set, not the whole tree) and dropped when
+    // this function returns.
+    const addedCache = new Map<string, string>();
+    const readAdded = (a: string): string => {
+        let v = addedCache.get(a);
+        if (v === undefined) {
+            v = candidate.read(a);
+            addedCache.set(a, v);
+        }
+        return v;
+    };
+
     for (const from of removed) {
-        const fromContent = baseline.get(from)!;
-        let to = added.find((a) => !consumedAdded.has(a) && candidate.get(a) === fromContent);
+        const fromContent = baseline.read(from);
+        let to = added.find((a) => !consumedAdded.has(a) && readAdded(a) === fromContent);
         if (!to) {
             let best: { a: string; score: number } | undefined;
             for (const a of added) {
                 if (consumedAdded.has(a) || ext(a) !== ext(from)) continue;
-                const score = lineSimilarity(fromContent, candidate.get(a)!);
+                const score = lineSimilarity(fromContent, readAdded(a));
                 if (score >= 0.6 && (!best || score > best.score)) best = { a, score };
             }
             to = best?.a;
@@ -142,8 +155,8 @@ function detectRenames(
                 fromPath: from,
                 summary: `renamed ${from} → ${to}`,
             });
-            const bc = baseline.get(from)!;
-            const cc = candidate.get(to)!;
+            const bc = fromContent;
+            const cc = readAdded(to);
             if (bc !== cc) renames.push(...classifyModifiedFile(to, bc, cc));
         }
     }
@@ -152,12 +165,9 @@ function detectRenames(
 
 /** Classify every change between two project trees (DL#231 §6.3 step 2). Pure. */
 export function classifyChanges(baseline: Tree, candidate: Tree): Change[] {
-    const baseSet = new Set(baseline.keys());
-    const candSet = new Set(candidate.keys());
-
-    let added = [...candidate.keys()].filter((p) => !baseSet.has(p)).sort();
-    let removed = [...baseline.keys()].filter((p) => !candSet.has(p)).sort();
-    const common = [...candidate.keys()].filter((p) => baseSet.has(p)).sort();
+    let added = candidate.paths().filter((p) => !baseline.has(p)).sort();
+    let removed = baseline.paths().filter((p) => !candidate.has(p)).sort();
+    const common = candidate.paths().filter((p) => baseline.has(p)).sort();
 
     const changes: Change[] = [];
 
@@ -171,12 +181,14 @@ export function classifyChanges(baseline: Tree, candidate: Tree): Change[] {
     added = added.filter((p) => !consumedAdded.has(p));
     removed = removed.filter((p) => !consumedRemoved.has(p));
 
+    // Each common file is read once per side, compared, classified, and dropped — peak memory is a
+    // single file pair, not the whole project.
     for (const p of common) {
-        const b = baseline.get(p)!;
-        const c = candidate.get(p)!;
+        const b = baseline.read(p);
+        const c = candidate.read(p);
         if (b !== c) changes.push(...classifyModifiedFile(p, b, c));
     }
-    for (const p of added) changes.push(...classifyAddedFile(p, candidate.get(p)!));
+    for (const p of added) changes.push(...classifyAddedFile(p));
     for (const p of removed) {
         if (isAsset(p)) continue;
         changes.push({ kind: 'delete', path: p, summary: `deleted ${p}` });

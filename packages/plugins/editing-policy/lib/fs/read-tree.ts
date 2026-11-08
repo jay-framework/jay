@@ -3,15 +3,19 @@ import path from 'path';
 import { walkFiles } from './scan-project.js';
 import { Tree } from '../changes/types.js';
 
-/** Read a project directory into a {@link Tree} (root-relative POSIX path → contents). */
-export function readTree(dir: string): Tree {
-    const tree: Tree = new Map();
-    for (const rel of walkFiles(dir)) {
-        try {
-            tree.set(rel, fs.readFileSync(path.join(dir, rel), 'utf-8'));
-        } catch {
-            // unreadable file (e.g. a socket) — skip
-        }
-    }
-    return tree;
+/**
+ * A {@link Tree} backed by a directory. File paths are listed up front (cheap); contents are read
+ * from disk on demand and not cached, so a comparison never holds the whole project in memory.
+ */
+export function treeFromDir(dir: string): Tree {
+    const files = walkFiles(dir);
+    const set = new Set(files);
+    return {
+        paths: () => files,
+        has: (rel) => set.has(rel),
+        read: (rel) => {
+            if (!set.has(rel)) throw new Error(`no such file in tree: ${rel}`);
+            return fs.readFileSync(path.join(dir, rel), 'utf-8');
+        },
+    };
 }
