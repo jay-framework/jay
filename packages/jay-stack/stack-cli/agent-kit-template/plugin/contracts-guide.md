@@ -122,6 +122,48 @@ For dynamic/materialized contracts linking to static contracts in a plugin packa
 
 `trackBy` must reference a `data` tag with `string` or `number` type within the same sub-contract.
 
+## Outcomes and User-Visible Text
+
+The page owns every word the visitor reads. A plugin reports **what happened**; the page decides **how it reads** (wording, language, layout). So any outcome a page may want to render differently — an error, a failure kind, a success, an empty or unavailable state — must be a **variant**, never only a string.
+
+- **One kind of outcome** → a `boolean` variant (`hasError`, `isSubmitted`).
+- **Several kinds** → an `enum` variant with one member per kind the page may word differently, plus a neutral member (`NONE`, `IDLE`) for "nothing to report".
+- **Text is optional default copy.** A `data` string next to the variant (`errorMessage`, `statusMessage`) is fine as an English default. Never make it the only signal: a page must not have to test for a non-empty string, or match its text, to know what happened.
+- **Keep codes stable and locale-neutral.** Name members by meaning (`NETWORK`, `PERMISSION`), not by message. **Appending** a member is safe; inserting, renaming, removing, or reordering one is a breaking change.
+
+```yaml
+# ✅ Outcome as variants; text is a default the page may ignore
+- {
+    tag: submitState,
+    type: variant,
+    dataType: 'enum (IDLE | SUBMITTING | SUCCEEDED | FAILED)',
+    phase: fast+interactive,
+  }
+- {
+    tag: submitFailure,
+    type: variant,
+    dataType: 'enum (NONE | VALIDATION | REJECTED | NETWORK)',
+    phase: fast+interactive,
+  }
+- {
+    tag: statusMessage,
+    type: data,
+    dataType: string,
+    phase: fast+interactive,
+    description: English default text,
+  }
+
+# ❌ Outcome only as text — the page can't localize or redesign it without parsing English
+- { tag: statusMessage, type: data, dataType: string, phase: fast+interactive }
+```
+
+```html
+<!-- The page writes its own copy, in its own language -->
+<p if="form.submitFailure === NETWORK">Problème de connexion, réessayez.</p>
+```
+
+Emit enum values from the enum the contract compiles to (or a mirror of it in the same order); the runtime value is the member's index. Document each member's meaning in the plugin's agent-kit.
+
 ## Async Data
 
 Wrap any tag in `Promise<T>` with `async: true`:

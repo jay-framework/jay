@@ -328,3 +328,17 @@ For repeated lists, add a **boolean variant** (e.g. `hasItems`, `hasCategories`)
 ```
 
 Alternatively, expose a **number** data tag (`itemCount`) and use numeric comparison: `if="itemCount===0"`. See [jay-html-template-syntax.md](jay-html-template-syntax.md#expression-limits-important) and [contracts/examples/category-list.md](https://github.com/jay-framework/jay/blob/main/packages/jay-stack/stack-cli/agent-kit-template/contracts/examples/category-list.md).
+
+### Plugin messages are defaults — write your own copy
+
+A plugin's `data` strings (`errorMessage`, `statusMessage`, …) are default text, usually English. When the project needs other wording or another language, branch on the plugin's **variants** (`hasError`, an outcome `enum`) and write the text in jay-html. Never detect an outcome by testing a message string, or by matching its text.
+
+```html
+<!-- ✅ The page owns the words -->
+<p if="form.submitFailure === NETWORK">Problème de connexion, réessayez.</p>
+
+<!-- ❌ On a localized page: shows the plugin's English text and uses it as the failure signal -->
+<p if="form.statusMessage">{form.statusMessage}</p>
+```
+
+If a plugin exposes an outcome only as a string, that is a gap in the plugin's contract: report it, don't work around it.
