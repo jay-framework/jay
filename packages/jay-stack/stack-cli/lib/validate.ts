@@ -14,8 +14,10 @@ import {
     type JayType,
     type JayHtmlValidationContext,
     type JayHtmlValidatorFn,
+    type ProjectValidationContext,
+    type ProjectValidatorFn,
 } from '@jay-framework/compiler-shared';
-import { scanPlugins } from '@jay-framework/stack-server-runtime';
+import { scanPlugins, type ScannedPlugin } from '@jay-framework/stack-server-runtime';
 import {
     hasTemplateForContractFile,
     listTemplatesForContractFile,
@@ -1745,6 +1747,57 @@ function resolveContractLinks(contract: Contract, contractPath: string | undefin
     return { ...contract, tags: resolveLinkedTags(contract.tags, contractDir) };
 }
 
+/**
+ * Load a plugin tools-capability handler (DL#179). Local plugins import the handler module by path
+ * and use its `validate`/default export; npm plugins import `<pkg>/tools` and read the named export.
+ * Shared by the per-file (DL#145) and project-level (DL#232) validator runners. Returns the handler
+ * fn, or `undefined` after pushing a `plugin`-stage load/shape error.
+ */
+async function loadPluginToolsHandler(
+    plugin: ScannedPlugin,
+    handlerRef: string,
+    capabilityLabel: string,
+    name: string,
+    source: string,
+    errors: ValidationError[],
+): Promise<((...args: any[]) => any) | undefined> {
+    try {
+        let handlerModule: any;
+        if (plugin.isLocal) {
+            const handlerPath = path.resolve(plugin.pluginPath, handlerRef);
+            handlerModule = await import(handlerPath);
+        } else {
+            // DL#179: tools handlers load only from the `./tools` entry, which may depend on the
+            // compiler. The serve entry (`.`) stays compiler-free.
+            handlerModule = await import(`${plugin.packageName}/tools`);
+        }
+
+        const fn = plugin.isLocal
+            ? (handlerModule.validate ?? handlerModule.default)
+            : handlerModule[handlerRef];
+
+        if (typeof fn !== 'function') {
+            const expected = plugin.isLocal ? 'validate' : handlerRef;
+            errors.push({
+                file: `plugin:${plugin.name}`,
+                message: `${capabilityLabel} "${name}" handler does not export a "${expected}" function`,
+                stage: 'plugin',
+                source,
+            });
+            return undefined;
+        }
+        return fn;
+    } catch (loadErr: any) {
+        errors.push({
+            file: `plugin:${plugin.name}`,
+            message: `Failed to load ${capabilityLabel.toLowerCase()} "${name}": ${loadErr.message}`,
+            stage: 'plugin',
+            source,
+        });
+        return undefined;
+    }
+}
+
 async function runPluginValidators(
     projectRoot: string,
     parsedFiles: Array<{ relativePath: string; parsed: JayHtmlSourceFile }>,
@@ -1759,43 +1812,16 @@ async function runPluginValidators(
 
         for (const validatorDef of plugin.manifest.validators) {
             const source = `${plugin.name}/${validatorDef.name}`;
-            let validatorFn: JayHtmlValidatorFn;
-            try {
-                let handlerModule: any;
-                if (plugin.isLocal) {
-                    const handlerPath = path.resolve(plugin.pluginPath, validatorDef.handler);
-                    handlerModule = await import(handlerPath);
-                } else {
-                    // DL#179: tools handlers (validators) load only from the `./tools` entry,
-                    // which may depend on the compiler. The serve entry (`.`) stays compiler-free.
-                    handlerModule = await import(`${plugin.packageName}/tools`);
-                }
-
-                validatorFn = plugin.isLocal
-                    ? (handlerModule.validate ?? handlerModule.default)
-                    : handlerModule[validatorDef.handler];
-
-                if (typeof validatorFn !== 'function') {
-                    errors.push({
-                        file: `plugin:${plugin.name}`,
-                        message: `Validator "${validatorDef.name}" handler does not export a "validate" function`,
-                        stage: 'plugin',
-                        source,
-                    });
-                    loadedValidators.push(source);
-                    continue;
-                }
-            } catch (loadErr: any) {
-                errors.push({
-                    file: `plugin:${plugin.name}`,
-                    message: `Failed to load validator "${validatorDef.name}": ${loadErr.message}`,
-                    stage: 'plugin',
-                    source,
-                });
-                loadedValidators.push(source);
-                continue;
-            }
+            const validatorFn = (await loadPluginToolsHandler(
+                plugin,
+                validatorDef.handler,
+                'Validator',
+                validatorDef.name,
+                source,
+                errors,
+            )) as JayHtmlValidatorFn | undefined;
             loadedValidators.push(source);
+            if (!validatorFn) continue;
 
             for (const { relativePath, parsed } of parsedFiles) {
                 const pageContractPath = parsed.contractRef
@@ -1886,6 +1912,71 @@ async function runPluginValidators(
                         source,
                     });
                 }
+            }
+        }
+    }
+
+    return loadedValidators;
+}
+
+/**
+ * Run plugin project-level validators (DL#232). Invoked once per project (not per jay-html file),
+ * so the context carries only `projectRoot` (decision C — a validator that needs `.jay` config loads
+ * it itself). Runs after the per-file pass and after the `--compile-only` early return, so it is
+ * skipped under compile-only. Returns the `plugin/name` sources that were loaded.
+ */
+async function runProjectValidators(
+    projectRoot: string,
+    errors: ValidationError[],
+    warnings: ValidationWarning[],
+): Promise<string[]> {
+    const scannedPlugins = await scanPlugins({ projectRoot, includeDevDeps: true });
+    const loadedValidators: string[] = [];
+
+    for (const [, plugin] of scannedPlugins) {
+        if (!plugin.manifest.projectValidators) continue;
+
+        for (const validatorDef of plugin.manifest.projectValidators) {
+            const source = `${plugin.name}/${validatorDef.name}`;
+            const validatorFn = (await loadPluginToolsHandler(
+                plugin,
+                validatorDef.handler,
+                'Project validator',
+                validatorDef.name,
+                source,
+                errors,
+            )) as ProjectValidatorFn | undefined;
+            loadedValidators.push(source);
+            if (!validatorFn) continue;
+
+            const ctx: ProjectValidationContext = { projectRoot };
+            try {
+                const findings = await validatorFn(ctx);
+                for (const finding of findings) {
+                    if (finding.severity === 'error') {
+                        errors.push({
+                            file: finding.file,
+                            message: finding.message,
+                            stage: 'plugin',
+                            source,
+                            suggestion: finding.suggestion,
+                        });
+                    } else {
+                        warnings.push({
+                            file: finding.file,
+                            message: finding.message,
+                            source,
+                            suggestion: finding.suggestion,
+                        });
+                    }
+                }
+            } catch (runErr: any) {
+                errors.push({
+                    file: '.jay',
+                    message: `Project validator "${source}" threw: ${runErr.message}`,
+                    stage: 'plugin',
+                    source,
+                });
             }
         }
     }
@@ -2573,6 +2664,9 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
     // --- Plugin validators (DL#145) ---
     const pluginValidators = await runPluginValidators(projectRoot, parsedFiles, errors, warnings);
 
+    // --- Project-level plugin validators (DL#232) ---
+    const projectValidators = await runProjectValidators(projectRoot, errors, warnings);
+
     return {
         valid: errors.length === 0,
         jayHtmlFilesScanned: jayHtmlFiles.length,
@@ -2580,7 +2674,7 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
         errors,
         warnings,
         coverage,
-        pluginValidators,
+        pluginValidators: [...pluginValidators, ...projectValidators],
         designSystemCoverage,
         designSystemReuse,
     };

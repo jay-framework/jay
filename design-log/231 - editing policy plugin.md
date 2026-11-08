@@ -1,11 +1,11 @@
 # Design Log #231 — Editing policy plugin (`@jay-framework/editing-policy`)
 
-Status: **[Design]**. Cross-cutting context (handover flow, publish job, roles from Wix collaborators) lives in the internal repository; this log covers only what belongs in the open-source framework.
+Status: **[Design]**. Cross-cutting context (handover flow, publish job, roles from Wix collaborators) lives in the internal repository; this log covers only what belongs in the open-source framework. **Dependencies verified against the codebase 2026-11-08 — see §12 for the ✅/⚠️ readiness table and exact anchors.**
 
 ## 1. Decisions for the Implementer (TL;DR)
 
 1. **New open-source plugin package** `packages/plugins/editing-policy` (`@jay-framework/editing-policy`). It owns the policy file format, the policy-file validation, and the baseline-vs-candidate comparison engine. Nothing in it is Wix-specific.
-2. **Policy-file validation is part of the regular `jay-stack validate`**, not a separate command. This needs a **project-level validator hook** next to the DL#145 per-file hook (a small framework extension, see §6.5). The **`compare` command** is a plugin CLI command (DL#142, `jay-stack run editing-policy/compare`), run through the existing `jay-stack` bin.
+2. **Policy-file validation is part of the regular `jay-stack validate`**, via the **`projectValidators` hook owned by DL#232** (not re-specified here; **DL#232 P0 is a prerequisite** — see §6.5). The **`compare` command ships as a standalone `bin`** that calls the library entry directly — *not* a `jay-stack run` plugin command: ✅ verified `run` boots a full Vite server + the jay-stack compiler + project/plugin service inits before the handler (so it cannot run install-free) and a command handler can only `exit 0/1` (it cannot emit the 0/10/11 dispositions). See §6.3 and §12.
 3. **The engine is pure: two directories + a role in, findings out.** It never runs git, never installs, never reads the network. **The CLI does no git operations either**: the caller (e.g. the publish job) checks out the baseline and candidate into two directories and passes them in.
 4. **The policy is read from the baseline**, never the candidate. A change to the policy file in the candidate is itself a classified change (`policy`), governed by the explicit `policy` rule (default: denied).
 5. **The role is an input** (`--role <name>`). Mapping a Wix collaborator to a role is the caller's job and stays out of this package.
@@ -36,12 +36,12 @@ Null hypothesis: could `validate` plus a git diff in a shell script do it? A dif
 ## 5. Questions and Answers
 
 - **Q1. Where does the code live?** A. Jay mono repo, `packages/plugins/editing-policy`. Open source because the policy format and change classification are framework concepts; enforcement strength comes from where it runs and which policy it reads, not from secrecy of the format.
-- **Q2. Plugin validator hook or CLI commands?** A. Split. Policy-file validation is a validation, so it goes through `validate` via a new project-level validator hook (DL#145 Q4 anticipated cross-file validators). `compare` is a CLI command (it takes two trees). It runs through the existing `jay-stack` bin; ⚠️ `run` initializes project services and a vite server first, to be checked on a sterile machine (fallback: call the library entry directly from a script).
+- **Q2. Plugin validator hook or CLI commands?** A. Split. Policy-file validation is a validation, so it goes through `validate` via the **`projectValidators` hook defined in DL#232** (✅ verified absent from code today; DL#232 owns it, #231 is its first consumer). `compare` takes two trees and ships as a **standalone `bin`**: ✅ verified `jay-stack run` boots a full Vite server + the jay-stack compiler + project/plugin service inits (SSR-loading `src/init.ts`) before the handler (`run-command.ts:109,116,141`) — it cannot run on a sterile machine — and a handler can only return `{success}` → `process.exit(0|1)` (`run-command.ts:143`), so the required 0/10/11 exit codes are impossible there. The bin calls the library entry (`comparePolicy`) directly. (This was the DL's "fallback"; it is now the primary and only path.)
 - **Q3. Should git be inside the engine?** A. No. Pure directories keep fixture-based tests, local use, and any CI possible. Checkout of the two trees is the caller's job (the publish job script), not the CLI's.
 - **Q4. Baseline/candidate naming.** A. `--baseline` / `--candidate` (directories). Alternatives considered: `base`/`head` (git-style, but "head" is ambiguous with HEAD), `before`/`after`. Rename if you prefer.
 - **Q5. Policy edits by contributors.** A. Always evaluated against the baseline policy, so a candidate cannot loosen its own rules. Changing the policy file or a `jay-policy` marker needs the explicit `policy` rule (default denied, §6.1), so granting it is a deliberate designer decision per role.
 - **Q7. Selector syntax and root.** A. Root is the project root; one selector kind (file-path glob, optional `#name` section). Routes are folders under `src/pages`, so no separate route syntax.
-- **Q10. Sync by clients.** A. Proposed: a change that makes a region equal to its current template is a `sync`, allowed for any role. Pending confirmation.
+- **Q10. Sync by clients.** A. **Confirmed:** a change that makes a region equal to its current template source is a `sync`, allowed for any role (a re-flatten adds no designer-unauthorised content).
 - **Q11. Template marker and closest-match search?** A. Dropped: the region's `template=` provenance is the explicit marker (DL#196); templates are components under `templates` globs.
 - **Q9. Policy marker.** A. `jay-policy="<name>"` on a plain element or a region tag (decided): not HTML `id` (unique per document, breaks under `forEach`), not the region tag name (several regions share it); the name belongs to the instance, so two `<jay:card>` regions can have different permissions.
 - **Q8. Negative rules?** A. No new syntax: a more specific selector with `<rule>: no`; unset rules are denied for non-admin roles.
@@ -106,9 +106,9 @@ roles:
 - `<p>` text changed to "Default body" = `content` if the template node is a `jay-content` slot; otherwise it is a structural/static-text drift = `design`.
 - `class="card-heading featured"` with `override="class"` = a `design` change (class facet differs from the template). `override=` makes the drift intentional for `validate`, not permitted by policy: `design: designSystemOnly` allows adding regions and design-system tokens, not editing classes of an existing element, so a client gets a `design` finding; a designer/developer role passes.
 
-**Edits inside the region** reuse the DL#196 differ unchanged: region body vs the template's current source (`checkRegionDrift`). Each differing facet becomes a change judged by the role: text/children under a `jay-content` slot (DL#202) = `content`; an `override`-marked or unmarked structural, attribute, or style facet = `design`/`css`. So a client may fill in content slots (`content: yes`), swap in design-system elements, and cannot restructure the region (`design: designSystemOnly`). Unmarked drift is still a `validate` warning (DL#196) and also counts as a change here; marking it `override` does not grant permission.
+**Edits inside the region** reuse the DL#196 facet differ: region body vs the template's current source. ✅ verified the reusable engine is `@jay-framework/compiler-inline-composition` — `diffBodies()`/`diffCss()` returning facet-granular `DiffEntry[]` (`facet`, `change`, `addedElementTags` for content-vs-structural), with `isContentSlot()`/`parseContent()` for `jay-content` slots (DL#202) — **not** `checkRegionDrift` (that is test-only/private in `stack-cli`, not exported). Each differing facet becomes a change judged by the role: text/children under a `jay-content` slot (DL#202) = `content`; an `override`-marked or unmarked structural, attribute, or style facet = `design`/`css`. So a client may fill in content slots (`content: yes`), swap in design-system elements, and cannot restructure the region (`design: designSystemOnly`). Unmarked drift is still a `validate` warning (DL#196) and also counts as a change here; marking it `override` does not grant permission.
 - **After the page exists** (in `main`), nothing special: later edits are diffs against `main`, judged by the selectors matching the page's path, and the region keeps being drift-checked against its template. Copy semantics, no link: a later template change reaches a page only through `sync`.
-- **`sync`.** A candidate change that makes a region **equal to its current template source** (a re-flatten) adds no designer-unauthorised content, so it is classified `sync`, not `design`, and is allowed for any role. ⚠️ open (Q10): confirm.
+- **`sync`.** A candidate change that makes a region **equal to its current template source** (a re-flatten) adds no designer-unauthorised content, so it is classified `sync`, not `design`, and is allowed for any role (Q10 confirmed).
 - **Policy names in instances:** `jay-policy` attributes inside a template body are copied into every instance verbatim, so a glob such as `src/pages/**/page.jay-html#hero` constrains that part on every page created from the template; the region tag's own `jay-policy` is set by whoever places the region (a designer, since adding it is a `policy` change). Selectors naming the template itself govern the template, not its instances.
 
 Without a matching `templates` glob, `from-template` can never be satisfied (the policy check errors if any role uses `create: from-template` or `overrideRoute: from-template` and `templates` is absent or matches no component).
@@ -134,7 +134,12 @@ The selector is `<file glob>#<name>`, e.g. `src/pages/page.jay-html#pricing-card
 - **Moving content between marked parts** is a removal from one and an insertion into the other; both are evaluated.
 - A `#name` selector on a file that is not `.jay-html` is an error; `validate` warns when a selector's `#name` is absent from the baseline file (for a glob: when **no** matched file has it).
 - **Inline rules were rejected:** the attribute carries only a name, never rules (`jay-policy="design:no"`), because rules must come from the baseline policy and per role, and the marker is editable page source.
-- **Compiler and parser hygiene:** `jay-policy` is read only by the policy engine. The compiler removes attributes from rendered HTML by an **opt-in list** (per maintainer; exact location to be found in `compiler-jay-html` during P0), so `jay-policy` **must be added there**. On a region tag, attributes are props, so the parser must also treat `jay-policy` as a bare directive, not a prop (as `override` and `jc` are, DL#196: add to the parser/validator skip list ⚠️ verify at `jay-html-parser.ts:878`). The designer agent guide must say to add `jay-policy` to every part a policy may need to control separately.
+- **Compiler and parser hygiene (✅ verified anchors).** `jay-policy` is read only by the policy engine. There is no single skip point — the earlier draft's `jay-html-parser.ts:878` reference is **stale** (that line is the headless-import loop; the prop-vs-directive decision lives in the compiler, not the parser). Three distinct spots must learn `jay-policy`:
+  1. Add `'jay-policy'` to the `DIRECTIVE_ATTRIBUTES` set (`compiler-jay-html/lib/jay-target/jay-html-compiler-shared.ts:120`) — strips it from element- and server-target rendered HTML, for both plain elements and region tags.
+  2. Add a `jay-policy` early-return in `renderChildCompProps` (`compiler-jay-html/lib/jay-target/jay-html-compiler.ts:433`) — otherwise it becomes a bogus component prop on a `<jay:X>` region tag (one add; this function also serves the hydrate + bridge targets).
+  3. Add `'jay-policy'` to `META_ATTRS` (`compiler-inline-composition/lib/override.ts:38`, beside `jc`/`override`/`page-scope`/`jay-content`) — so it rides through flatten/diff as meta and is never diffed as content. **This** is the mechanism DL#196 actually uses (not the parser).
+  4. **React target: out of scope.** It has a *separate* hardcoded skip list (`compiler-jay-html/lib/react-target/jay-html-compiler-react.ts:121`); we intentionally do **not** update it — `jay-policy` on React output is a non-goal.
+  ✅ verified there is no unknown-attribute/unknown-prop validation, so `jay-policy` is never rejected — the only risk is silent emission, which the adds above prevent. The designer agent guide must say to add `jay-policy` to every part a policy may need to control separately.
 
 **Rules** (what each governs is decided by **file type**, not by selector):
 
@@ -165,10 +170,12 @@ The policy file itself (`jay-policy.md`) and the `jay-policy` markers are govern
 
 A project-level validator (§6.5) runs when `jay-policy.md` exists in the project. Same `Finding`/`suggestion` output as other validators. Fails on: bad YAML or unknown `version`; unknown rule keys or values; unparsable selectors; **a rule used on a selector that cannot carry it** (`dependencies` on a selector that cannot match the root manifest, `#name` on a non-`.jay-html` file, `overrideRoute` on a selector outside the pages folder); duplicate or contradictory selectors in one role; roles with no `*` fallback (warning); selectors that match no route or section in the project (warning, tells the author which); markdown body missing (warning, agents get no guidelines); a non-`admin` role with `policy: yes` on `jay-policy.md` (warning: it can loosen the rules that govern later publishes; the change only takes effect once published from a role allowed to). Findings use the same `Finding` shape and `suggestion` field as DL#145.
 
-### 6.3 `compare`
+### 6.3 `compare` (standalone `bin`)
+
+Ships as a dedicated bin (declared in `package.json` `bin`) that calls the library entry (`comparePolicy`) directly — pure, no Vite, no install, no network — so it can map the disposition to exit codes (§1.6). See §6.5 / §12 for why this is not a `jay-stack run` command.
 
 ```
-jay-stack run editing-policy/compare
+editing-policy compare
    --baseline <dir>                                  # the project tree to compare against (e.g. main)
    --candidate <dir>                                 # the proposed project tree
    --role <name>  [--policy <file>]                  # role required unless the policy sets defaultRole; policy default: <baseline>/jay-policy.md
@@ -178,7 +185,7 @@ jay-stack run editing-policy/compare
 Pipeline, in order, cheapest first, no install:
 
 1. **Load** the policy from the baseline. Unknown role → tool error.
-2. **Classify changes** between the two trees into `Change[]`: `{kind: content | design | code | css | dependency | config | create | delete | rename | policy, path, route?, section?, summary}`. The file path (and, for `.jay-html`, the baseline section) selects the matching selectors; the file type decides the rule (`.jay-html` → content/design/css, `.ts/.js/.jay-contract` → code, `.css` → css, manifests → dependency, other → config). Content vs design is decided from jay-html text nodes vs attributes/styles/classes; renames are detected by file similarity (git-style) so a moved page is one `rename`, not delete+create; CSS via the DL#151 static analysis; dependencies from the manifest diff; contracts from `.jay-contract` diff.
+2. **Classify changes** between the two trees into `Change[]`: `{kind: content | design | code | css | dependency | config | create | delete | rename | policy, path, route?, section?, summary}`. The file path (and, for `.jay-html`, the baseline section) selects the matching selectors; the file type decides the rule (`.jay-html` → content/design/css, `.ts/.js/.jay-contract` → code, `.css` → css, manifests → dependency, other → config). Content vs design is decided from jay-html text nodes vs attributes/styles/classes; renames are detected by file similarity (git-style) so a moved page is one `rename`, not delete+create (⚠️ no tree-diff/rename utility exists in the repo today — this is net-new engine code); CSS token-vs-arbitrary classification via DL#151's `token-matcher` primitives (`matchColor`/`matchSpacing`/`parseDesignMd`; ⚠️ not currently exported from `design-system-validator/tools` — P1 adds the export or vendors the logic); dependencies from the manifest diff; contracts from `.jay-contract` diff.
 3. **Match** each change to the role's selectors and rules; a violation yields a `Finding` with the rule's `onViolation`.
 4. **Disposition**: strictest finding wins; no findings → `PUBLISH`.
 
@@ -220,18 +227,30 @@ interface CompareResult { disposition: Disposition; findings: Finding[]; changes
 
 ```
 packages/plugins/editing-policy/
-  plugin.yaml            # projectValidators: policy-file, commands: compare  (+ agent-kit guidelines entry)
-  lib/index.ts           # library entry: parsePolicy, checkPolicy, comparePolicy
+  plugin.yaml            # projectValidators: [{name: editing-policy, handler, description}]  (DL#232 hook)
+  package.json           # bin: { editing-policy }; exports "." (library) + "./tools" (handler); files: [dist, plugin.yaml, agent-kit]
+  vite.config.ts         # vite build --ssr, two-entry (index, tools); test.globals (mirror a11y-validator)
+  tsconfig.json          # extends @jay-framework/dev-environment/library-dom/tsconfig.json
+  lib/index.ts           # serve entry (DL#179) — empty (`export {}`) for a validator/engine-only plugin
+  lib/tools.ts           # toolchain entry: re-exports the policy-file validator handler
+  lib/api.ts             # library entry: parsePolicy, checkPolicy, comparePolicy
   lib/policy/            # schema, parser, selector matcher
-  lib/changes/           # tree differ and classifier
-  lib/validators/        # policy-file project validator
-  lib/commands/          # compare.jay-command
+  lib/changes/           # tree differ (net-new) + classifier (reuses compiler-inline-composition diffBodies/diffCss)
+  lib/validators/        # policy-file project validator (the projectValidators handler)
+  lib/bin/compare.ts     # standalone `compare` bin → comparePolicy, exit 0/10/11/1
+  agent-kit/<role>/*.md  # policy guidelines exposed to the authoring agent (directory-scan convention)
   test/fixtures/<case>/{baseline,candidate,policy.md,expected.json}
 ```
 
-### 6.5 Project-level validator hook (framework extension)
+### 6.5 Project-level validator hook — provided by DL#232 (prerequisite)
 
-`plugin.yaml` gains `projectValidators: [{name, handler, description}]`. A handler receives `{projectRoot, pluginConfig}` and returns findings, same result type as per-file validators; `jay-stack validate` runs them after the per-file pass. Needed only for validators whose input is not one jay-html file (this policy file, later: sitemap/robots, DL#175 does this ad hoc today ⚠️ not verified). Per the CLAUDE.md priority this is the framework feature of last resort: justified because the policy file must be validated by the regular API on every `validate` run and in the publish job.
+The `projectValidators` hook is **owned by DL#232**, not by this log (✅ verified absent from code today; #231 is DL#232's first consumer). This DL **consumes** it: the policy-file validator is a `projectValidators` entry in `editing-policy`'s `plugin.yaml`. **DL#232 P0 must land first.** Verified insertion points (DL#232's work, listed so the dependency is concrete):
+
+- Context + `Finding` types next to `JayHtmlValidatorFn` in `compiler-shared/lib/plugin-validators.ts` (the per-file `JayHtmlValidationFinding` already carries `severity`/`message`/`suggestion` — the project-level finding mirrors it).
+- Manifest schema check in `plugin-validator/lib/validate-plugin.ts:548` (mirror the `validators` block), plus the capability list (`:346`) and no-capability suggestion (`:376`).
+- A `runProjectValidators` pass beside `runPluginValidators` in `stack-cli/lib/validate.ts:1748`, invoked near `:2574` — after the `compileOnly` early-return at `:2344`, so it is automatically skipped under `--compile-only` (DL#232 Q5 / DL#232 crit. #4).
+
+Findings fold into `errors`/`warnings` tagged `source: plugin:editing-policy/<validator>`.
 
 ### 6.6 The role parameter
 
@@ -239,11 +258,12 @@ packages/plugins/editing-policy/
 
 ## 7. Implementation Plan
 
-1. **P0 — add `jay-policy` to the compiler's stripped-attribute list**, then policy schema + policy-file validator (with the project-level hook, §6.5) with fixtures (valid / each failure class). `toEqual` on parsed JSON findings.
-2. **P1 — change classifier** on fixture pairs (content edit, style edit, new page, dependency bump, contract change, policy edit).
-3. **P2 — `compare`**: selector matching, dispositions, exit codes, markdown report + `--json`.
-4. **P3 — agent-kit guidelines** from the policy body; authoring guide for designers.
-5. **P4 — add** `projectValidators` hook to plugin.yaml + `jay-stack validate` (§6.5), if not done in P0.
+0. **Prerequisite — DL#232 P0** (`projectValidators` hook): types in `compiler-shared`, schema in `validate-plugin`, `runProjectValidators` in `stack-cli`. Must land before the policy-file validator can register. Tracked in DL#232, not duplicated here.
+1. **P0 — compiler attribute hygiene + policy schema/validator.** Add `jay-policy` in the three verified spots (§6.1: `DIRECTIVE_ATTRIBUTES` `jay-html-compiler-shared.ts:120`, the `renderChildCompProps` skip `jay-html-compiler.ts:433`, `META_ATTRS` `override.ts:38`); then the policy schema (parser + selector matcher) and the policy-file validator registered as a `projectValidators` entry, with fixtures (valid / each failure class). `toEqual` on parsed JSON findings.
+2. **P1 — change classifier** on fixture pairs (content edit, style edit, new page, dependency bump, contract change, policy edit). Reuse `compiler-inline-composition` `diffBodies`/`diffCss`/`isContentSlot`; add the DL#151 `token-matcher` export to `design-system-validator/tools` (or vendor it); write the file-tree/rename detector (none exists today).
+3. **P2 — `compare` bin**: selector matching, dispositions, exit codes 0/10/11/1, markdown report + `--json`; pure library entry, no Vite/install. Live example on `examples/jay-stack/design-system-demo`.
+4. **P3 — agent-kit guidelines** from the policy body: drop a `.md` under `agent-kit/<role>/` (✅ directory-scan convention picked up by `jay-stack agent-kit`; no plugin.yaml key). Authoring guide for designers.
+5. **P4 — package wiring**: mirror the a11y/seo validator-plugin layout (`lib/index.ts` empty serve entry + `lib/tools.ts` toolchain entry, DL#179; `vite build --ssr` + `tsup` types; `files` includes `agent-kit`); `plugin.yaml` `projectValidators` entry; `yarn install` to register the workspace (root `workspaces` already globs `packages/plugins/*`).
 
 ## 8. Scope pre-mortem (not handled)
 
@@ -311,4 +331,24 @@ packages/plugins/editing-policy/test/fixtures/
 
 - Pure engine means the caller does install/validate and passes the result in: slightly more wiring, in exchange for running safely before untrusted scripts.
 - Public format becomes a public API: acceptable at this stage (no backward-compatibility obligation).
-- Plugin CLI commands reuse DL#142 but may carry heavyweight initialization (Q2); a standalone `bin` is the fallback.
+- A standalone `bin` (not a DL#142 plugin command) is the primary and only entry for `compare`: ✅ verified the plugin-command path carries heavyweight Vite/compiler/service initialization and cannot emit granular exit codes (§6.3, §12). Cost: `editing-policy` grows its own CLI surface instead of riding `jay-stack run`.
+
+## 12. Implementation Readiness (verified 2026-11-08)
+
+Every load-bearing dependency was traced to real code. Anchors are for the implementer; the four ⚠️ rows are the only net-new / cross-package work beyond this package.
+
+| Dependency | Status | Anchor / action |
+| --- | --- | --- |
+| Plugin package conventions (scope, two-entry DL#179, `vite build --ssr` + `tsup`, `files` incl. `agent-kit`) | ✅ | mirror `packages/plugins/a11y-validator` (package.json, vite.config.ts, tsconfig.json, lib/index.ts + lib/tools.ts) |
+| `validators`/`projectValidators` manifest shape, `Finding`+`suggestion` type | ✅ | `compiler-shared/lib/plugin-validators.ts` (`JayHtmlValidationFinding`); schema `validate-plugin.ts:548` |
+| `--compile-only` skips project validators | ✅ | `validate.ts:2344` early-return precedes the validator pass at `:2574` |
+| Attribute stripping / prop-vs-directive for `jay-policy` | ✅ | 3 spots: `jay-html-compiler-shared.ts:120`, `jay-html-compiler.ts:433`, `override.ts:38` (React target out of scope) |
+| Region facet differ + `jay-content` slots (DL#196/#202) | ✅ | `@jay-framework/compiler-inline-composition`: `diffBodies`/`diffCss`/`isContentSlot`/`parseContent` (not `checkRegionDrift`, which is private) |
+| `template=` / `as=` provenance (DL#196/#205) | ✅ | `JayHeadlessImports.template`/`contractName` (`jay-html-source-file.ts:25`, parser `:659`/`:803`) |
+| `agent-kit` guideline delivery | ✅ | directory-scan convention: `agent-kit/<role>/*.md` (`run-agent-kit.ts`); no plugin.yaml key |
+| `projectValidators` hook itself | ⚠️ | **does not exist** — owned by DL#232; **DL#232 P0 is a prerequisite** (§6.5) |
+| `compare` as `jay-stack run` command | ⚠️ | **unworkable** (heavy init; exit 0/1 only) → standalone `bin` instead (§6.3) |
+| DL#151 `token-matcher` reuse for CSS classification | ⚠️ | primitives exist but **not exported** from `design-system-validator/tools` — P1 adds the export or vendors them |
+| File-tree diff / rename detection | ⚠️ | **no utility exists** — net-new engine code (P1) |
+
+**Confirmed open decisions:** (1) `compare` ships as a standalone `bin`; (2) the `projectValidators` hook is DL#232's — #232 P0 lands first; (3) a re-flatten to current template is `sync`, allowed for every role (Q10).

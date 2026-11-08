@@ -216,6 +216,66 @@ describe('validatePlugin — tools entry (./tools) requirement', () => {
         expect(result.errors).toEqual([]);
     });
 
+    describe('projectValidators (DL#232)', () => {
+        it('errors when a projectValidators entry is missing "handler"', async () => {
+            const dir = createTempPlugin({
+                pluginYaml: `name: test-plugin\nprojectValidators:\n  - name: check\n`,
+                packageJson: {
+                    name: '@jay-framework/test-plugin',
+                    exports: { '.': './dist/index.js', './plugin.yaml': './plugin.yaml' },
+                },
+            });
+
+            const result = await validatePlugin({ pluginPath: dir });
+
+            const err = result.errors.find(
+                (e) => e.message === 'Project validator "check" is missing "handler" field',
+            );
+            expect(err).toBeDefined();
+            expect(err!.type).toBe('schema');
+        });
+
+        it('errors when projectValidators is not an array', async () => {
+            const dir = createTempPlugin({
+                pluginYaml: `name: test-plugin\nprojectValidators: nope\n`,
+                packageJson: {
+                    name: '@jay-framework/test-plugin',
+                    exports: { '.': './dist/index.js', './plugin.yaml': './plugin.yaml' },
+                },
+            });
+
+            const result = await validatePlugin({ pluginPath: dir });
+
+            const err = result.errors.find(
+                (e) => e.message === 'Field "projectValidators" must be an array',
+            );
+            expect(err).toBeDefined();
+            expect(err!.type).toBe('schema');
+        });
+
+        it('passes when a projectValidators handler is exported from ./tools', async () => {
+            const dir = createTempPluginWithSource({
+                pluginYaml: `name: test-plugin\nprojectValidators:\n  - name: check\n    handler: checkHandler\n`,
+                packageJson: {
+                    name: '@jay-framework/test-plugin',
+                    exports: {
+                        '.': './dist/index.js',
+                        './tools': './dist/tools.js',
+                        './plugin.yaml': './plugin.yaml',
+                    },
+                },
+                sourceFiles: {
+                    'dist/index.js': `export {};\n`,
+                    'dist/tools.js': `export { checkHandler } from './h.js';\n`,
+                },
+            });
+
+            const result = await validatePlugin({ pluginPath: dir });
+
+            expect(result.errors).toEqual([]);
+        });
+    });
+
     it('does not emit the legacy "no contracts" warning for a validator-only plugin', async () => {
         const dir = createTempPluginWithSource({
             pluginYaml: minimalPluginYaml,

@@ -123,6 +123,12 @@ export interface PluginManifest {
         handler: string;
         description?: string;
     }>;
+    /** Project-level validators provided by this plugin (DL#232): invoked once per project, not per file */
+    projectValidators?: Array<{
+        name: string;
+        handler: string;
+        description?: string;
+    }>;
     /** Export name (NPM) or relative path (local) to setup handler — `jay-stack setup` */
     setup?: string;
     /** Export name for agent-kit handler — `jay-stack agent-kit` (add-menu, references, skills) */

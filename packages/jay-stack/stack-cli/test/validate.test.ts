@@ -1202,6 +1202,75 @@ describe('headless instance props validation (DL#124 Phase 2)', () => {
             expect(result.errors).toHaveLength(0);
         });
     });
+
+    describe('project-level plugin validators (DL#232)', () => {
+        const projectFixtureDir = path.join(baseFixturesDir, 'project-validator');
+
+        it('surfaces project-validator findings as error and warning with source', async () => {
+            const result = await validateJayFiles({
+                path: projectFixtureDir,
+                projectRoot: projectFixtureDir,
+            });
+
+            const errors = result.errors.filter(
+                (e) => e.source === 'test-project-validator/check-project',
+            );
+            expect(errors).toEqual([
+                {
+                    file: 'jay-policy.md',
+                    message: 'Project-level error from fixture',
+                    stage: 'plugin',
+                    source: 'test-project-validator/check-project',
+                    suggestion: 'This is a fixture finding',
+                },
+            ]);
+
+            const warnings = result.warnings.filter(
+                (w) => w.source === 'test-project-validator/check-project',
+            );
+            expect(warnings).toEqual([
+                {
+                    file: '.jay',
+                    message: 'Project-level warning from fixture',
+                    source: 'test-project-validator/check-project',
+                    suggestion: undefined,
+                },
+            ]);
+
+            expect(result.pluginValidators).toContain('test-project-validator/check-project');
+        });
+
+        it('reports a load failure as a plugin-stage error', async () => {
+            const result = await validateJayFiles({
+                path: projectFixtureDir,
+                projectRoot: projectFixtureDir,
+            });
+
+            const loadErrors = result.errors.filter(
+                (e) => e.source === 'test-project-validator/broken',
+            );
+            expect(loadErrors).toHaveLength(1);
+            expect(loadErrors[0].stage).toBe('plugin');
+            expect(loadErrors[0].file).toBe('plugin:test-project-validator');
+            expect(loadErrors[0].message).toMatch(
+                /^Failed to load project validator "broken":/,
+            );
+        });
+
+        it('skips project validators under --compile-only', async () => {
+            const result = await validateJayFiles({
+                path: projectFixtureDir,
+                projectRoot: projectFixtureDir,
+                compileOnly: true,
+            });
+
+            const touched = [...result.errors, ...result.warnings].filter((f) =>
+                f.source?.startsWith('test-project-validator/'),
+            );
+            expect(touched).toEqual([]);
+            expect(result.pluginValidators).toEqual([]);
+        });
+    });
 });
 
 describe('prefer design-system elements (DL#200)', () => {

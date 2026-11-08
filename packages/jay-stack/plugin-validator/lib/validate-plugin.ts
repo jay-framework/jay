@@ -344,6 +344,7 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
         manifest.dynamic_contracts ||
         manifest.actions ||
         manifest.validators ||
+        manifest.projectValidators ||
         manifest.routes ||
         manifest.services ||
         manifest.contexts ||
@@ -373,7 +374,7 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
             result.warnings.push({
                 type: 'schema',
                 message:
-                    'Plugin declares no capabilities (contracts, dynamic_contracts, actions, validators, routes, services, contexts, init, setup, agentkit, commands)',
+                    'Plugin declares no capabilities (contracts, dynamic_contracts, actions, validators, projectValidators, routes, services, contexts, init, setup, agentkit, commands)',
                 location: 'plugin.yaml',
                 suggestion:
                     'Declare at least one capability. See agent-kit/plugin/plugin-structure.md',
@@ -585,6 +586,46 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
         }
     }
 
+    // Validate projectValidators (DL#232)
+    if (manifest.projectValidators) {
+        if (!Array.isArray(manifest.projectValidators)) {
+            result.errors.push({
+                type: 'schema',
+                message: 'Field "projectValidators" must be an array',
+                location: 'plugin.yaml',
+            });
+        } else {
+            manifest.projectValidators.forEach((validator, index) => {
+                if (!validator.name) {
+                    result.errors.push({
+                        type: 'schema',
+                        message: `Project validator at index ${index} is missing "name" field`,
+                        location: 'plugin.yaml',
+                    });
+                }
+                if (!validator.handler) {
+                    result.errors.push({
+                        type: 'schema',
+                        message: `Project validator "${validator.name || index}" is missing "handler" field`,
+                        location: 'plugin.yaml',
+                        suggestion: 'Specify the relative path to the project validator handler module',
+                    });
+                }
+                if (validator.handler) {
+                    // Project validators are a tools capability — handler lives in ./tools (DL#179).
+                    validateHandlerRef(
+                        validator.handler,
+                        `Project validator "${validator.name}" handler`,
+                        'plugin.yaml projectValidators',
+                        context,
+                        result,
+                        './tools',
+                    );
+                }
+            });
+        }
+    }
+
     // Validate setup and agent-kit handler exports
     if (manifest.setup) {
         if (typeof manifest.setup !== 'string') {
@@ -704,11 +745,17 @@ function hasComponentCapability(context: PluginContext): boolean {
 }
 
 /**
- * A plugin needs a `./tools` export iff it declares a tools capability: validators, commands,
- * agentkit, setup (DL#179) or any devOnly action (DL#180).
+ * A plugin needs a `./tools` export iff it declares a tools capability: validators, projectValidators,
+ * commands, agentkit, setup (DL#179) or any devOnly action (DL#180).
  */
 function needsToolsEntry(manifest: PluginManifest): boolean {
-    if (manifest.validators || manifest.commands || manifest.agentkit || manifest.setup) {
+    if (
+        manifest.validators ||
+        manifest.projectValidators ||
+        manifest.commands ||
+        manifest.agentkit ||
+        manifest.setup
+    ) {
         return true;
     }
     if (manifest.actions) {
