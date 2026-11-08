@@ -18,7 +18,7 @@ export default defineConfig({
         rollupOptions: {
             // Externalize the compiler so any leak into the serve entry (`.`) surfaces as a
             // literal import string in dist/index.js (DL#179 leak scan).
-            external: [/^@jay-framework\/compiler-/],
+            external: [/^@jay-framework\/compiler-/, 'yaml', 'fs', 'path'],
         },
     },
     test: {

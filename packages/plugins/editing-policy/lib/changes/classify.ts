@@ -165,9 +165,18 @@ function detectRenames(
 
 /** Classify every change between two project trees (DL#231 §6.3 step 2). Pure. */
 export function classifyChanges(baseline: Tree, candidate: Tree): Change[] {
-    let added = candidate.paths().filter((p) => !baseline.has(p)).sort();
-    let removed = baseline.paths().filter((p) => !candidate.has(p)).sort();
-    const common = candidate.paths().filter((p) => baseline.has(p)).sort();
+    let added = candidate
+        .paths()
+        .filter((p) => !baseline.has(p))
+        .sort();
+    let removed = baseline
+        .paths()
+        .filter((p) => !candidate.has(p))
+        .sort();
+    const common = candidate
+        .paths()
+        .filter((p) => baseline.has(p))
+        .sort();
 
     const changes: Change[] = [];
 

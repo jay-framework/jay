@@ -27,6 +27,9 @@
   "peerDependencies": {
     "@jay-framework/compiler-shared": "workspace:^"
   },
+  "dependencies": {
+    "yaml": "^2.3.4"
+  },
   "devDependencies": {
     "@jay-framework/compiler-shared": "workspace:^",
     "@jay-framework/dev-environment": "workspace:^",

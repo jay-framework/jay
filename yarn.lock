@@ -3264,6 +3264,8 @@ __metadata:
     yaml: "npm:^2.3.4"
   peerDependencies:
     "@jay-framework/compiler-shared": "workspace:^"
+  bin:
+    editing-policy: dist/compare.js
   languageName: unknown
   linkType: soft
 
@@ -3633,6 +3635,7 @@ __metadata:
     typescript: "npm:^5.3.3"
     vite: "npm:^6.4.4"
     vitest: "npm:^4.1.11"
+    yaml: "npm:^2.3.4"
   peerDependencies:
     "@jay-framework/compiler-shared": "workspace:^"
   languageName: unknown
@@ -14313,16 +14316,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"minimatch@npm:^9.0.0, minimatch@npm:^9.0.1, minimatch@npm:^9.0.4":
-  version: 9.0.9
-  resolution: "minimatch@npm:9.0.9"
-  dependencies:
-    brace-expansion: "npm:^2.0.2"
-  checksum: 10/b91fad937deaffb68a45a2cb731ff3cff1c3baf9b6469c879477ed16f15c8f4ce39d63a3f75c2455107c2fdff0f3ab597d97dc09e2e93b883aafcf926ef0c8f9
-  languageName: node
-  linkType: hard
-
-"minimatch@npm:^9.0.3":
+"minimatch@npm:^9.0.0, minimatch@npm:^9.0.1, minimatch@npm:^9.0.3, minimatch@npm:^9.0.4":
   version: 9.0.9
   resolution: "minimatch@npm:9.0.9"
   dependencies:

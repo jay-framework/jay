@@ -5,9 +5,7 @@
   "description": "Editing-policy plugin for Jay Framework (DL#231) — policy file format, policy-file validation, and baseline-vs-candidate change comparison",
   "license": "Apache-2.0",
   "main": "dist/index.js",
-  "bin": {
-    "editing-policy": "dist/compare.js"
-  },
+  "bin": "dist/compare.js",
   "files": [
     "dist",
     "plugin.yaml",

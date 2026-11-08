@@ -1,11 +1,11 @@
 {
-    "name": "compare-fixture-project",
-    "version": "1.0.0",
-    "private": true,
-    "dependencies": {
-        "left-pad": "1.3.1"
-    },
-    "scripts": {
-        "build": "jay-stack build"
-    }
+  "name": "compare-fixture-project",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "left-pad": "1.3.1"
+  },
+  "scripts": {
+    "build": "jay-stack build"
+  }
 }

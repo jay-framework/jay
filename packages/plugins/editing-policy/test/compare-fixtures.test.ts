@@ -71,8 +71,13 @@ describe('comparePolicy — on-disk fixture matrix (DL#231 §9.1)', () => {
         for (const role of ['developer', 'designer', 'client', 'admin']) {
             const { policy, content } = loadPolicy('main');
             expect(
-                comparePolicy({ baseline, candidate: baseline, role, policy, policyContent: content })
-                    .disposition,
+                comparePolicy({
+                    baseline,
+                    candidate: baseline,
+                    role,
+                    policy,
+                    policyContent: content,
+                }).disposition,
             ).toBe('PUBLISH');
         }
     });

@@ -71,7 +71,6 @@ import {
     newestSourceMtime,
     type BuildOutputFinding,
 } from './check-build-output';
-import { checkArdFiles } from './validate-ard';
 
 export interface ValidateOptions {
     path?: string;
@@ -2451,73 +2450,10 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
         };
     }
 
-    // --- Project-level validations (DL#175) ---
-    const robotsTxtPath = path.resolve(projectRoot, 'public/robots.txt');
-    if (!fs.existsSync(robotsTxtPath)) {
-        warnings.push({
-            file: 'public/robots.txt',
-            message:
-                "public/robots.txt not found — search engines may crawl pages you don't intend to expose.",
-            suggestion:
-                'Create public/robots.txt with: User-agent: *\nAllow: /\nSitemap: https://your-domain.com/sitemap.xml',
-        });
-    }
-
-    if (!config.site?.baseUrl) {
-        warnings.push({
-            file: '.jay',
-            message:
-                'site.baseUrl not configured — sitemap.xml will not be generated in production.',
-            suggestion: 'Add to .jay config:\n  site:\n    baseUrl: https://your-domain.com',
-        });
-    }
-
-    // DL#213 — site identity drives the auto-emitted Organization/WebSite JSON-LD.
-    if (!config.site?.name) {
-        warnings.push({
-            file: '.jay',
-            message:
-                'site.name not configured — Organization/WebSite JSON-LD and llms.txt will not be emitted, reducing how well search engines and agents understand the site.',
-            suggestion:
-                'Add to .jay config:\n  site:\n    name: Your Site Name\n    logo: /logo.png\n    description: What your site is about',
-        });
-    }
-
-    // DL#214 — agent-discovery: /.well-known/ard.json is author/agent responsibility. Warn on
-    // absence; validate the ARD v0.91 shape when present (handles the ai-catalog.json alias).
-    // A site with no agent resources to advertise suppresses the nudge via `.jay` `validations:
-    // allow-no-ard: true` — a project-level file governs a project-level concern (not a page's
-    // `application/jay-validations` script, which is for page/region-scoped rules).
-    const allowNoArd = config.validations?.['allow-no-ard'] === true;
-    const ardResult = await checkArdFiles(projectRoot);
-    if (ardResult.absent) {
-        if (!allowNoArd) {
-            warnings.push({
-                file: 'public/.well-known/ard.json',
-                message:
-                    'public/.well-known/ard.json not found — agents cannot discover this site’s resources/APIs via Agentic Resource Discovery.',
-                suggestion:
-                    'Author public/.well-known/ard.json (ARD v0.91), or suppress with `validations: { allow-no-ard: true }` in .jay if the site has no agent resources to advertise. See developer/seo-guide.md.',
-            });
-        }
-    } else {
-        for (const finding of ardResult.findings) {
-            if (finding.severity === 'error') {
-                errors.push({
-                    file: 'public/.well-known/ard.json',
-                    message: finding.message,
-                    stage: 'generate',
-                    suggestion: finding.suggestion,
-                });
-            } else {
-                warnings.push({
-                    file: 'public/.well-known/ard.json',
-                    message: finding.message,
-                    suggestion: finding.suggestion,
-                });
-            }
-        }
-    }
+    // --- Project-level validations ---
+    // robots.txt, site.baseUrl, site.name (DL#175/#213) and ARD (DL#214) moved to
+    // @jay-framework/seo-validator via the projectValidators hook (DL#232). Error pages (DL#218) and
+    // design-system (DL#200/#207) stay in core.
 
     // DL#218 — minimum error pages: a production site should ship at least a branded `404` and a
     // `5xx` page so authored errors render with the site's chrome instead of the plain-text fallback.

@@ -159,3 +159,14 @@ Deviations from design:
 
 - **`loadPluginToolsHandler` "not a function" message** now reports the _actual_ expected export (`validate` for local, the declared handler name for npm) instead of always `"validate"`. No test asserted the old string; the new one is more accurate.
 - **`settings` not yet plumbed** — the context type carries `settings?` but `runProjectValidators` passes only `{ projectRoot }`. No consumer needs settings yet (DL#231 doesn't); wire it when one does.
+
+## 13. Implementation Results — P1–P3 (SEO/ARD move)
+
+**Status: P1–P3 done; DL#232 complete.** The project-level SEO/discovery checks moved out of core into `@jay-framework/seo-validator` via the P0 hook.
+
+- **P1/P2 — move (seo-validator):** new `lib/validators/seo-project-validator.ts` (`validateProject`) does robots.txt presence, `site.baseUrl`, `site.name` (DL#175/#213) and ARD presence+shape (DL#214); `validate-ard.ts` moved from stack-cli into `seo-validator/lib/` verbatim. Decision C: the context is only `{ projectRoot }`, so seo-validator reads `.jay` itself via a small `lib/read-jay-config.ts` (`yaml` added as a dependency). `plugin.yaml` gains `projectValidators: [{ name: seo-site, handler: validateProject }]`; `tools.ts` re-exports it; build + `validate-plugin` pass.
+- **Core (`validate.ts`):** the DL#175/#213/#214 block and the `checkArdFiles` import are deleted; `validate-ard.ts` removed from stack-cli. Error pages (DL#218) and design-system (DL#200/#207) stay. Verification #7 holds — `validate.ts` no longer references robots.txt, site.baseUrl, site.name, or ARD (grep-clean).
+- **Tests moved:** `validate-ard.test.ts` → `seo-validator/test/` (unit, `validateArdDocument`); `validate-ard-suppression.test.ts` deleted and replaced by `seo-validator/test/seo-project-validator.test.ts` (robots/baseUrl/site.name all-missing → 4 warnings; fully-configured + `allow-no-ard` → silent; valid ard.json → no absence warning; malformed ard.json → error). seo-validator 66/66; stack-cli full suite 202/202; both type-check.
+- **P3 — docs/scaffold:** agent-kit `plugin/validation.md` gains a "Project-Level Validators (DL#232)" section (manifest field, `ProjectValidatorFn`/`ProjectValidationFinding`, runs-once/skipped-under-compile-only, seo-validator example). Index rows DL#175/#213/#214 annotated "(moved to seo-validator, DL#232)". `create-jay` already scaffolds `seo-validator` by default (confirmed with the user), so no scaffold change — new projects keep the SEO/ARD warnings; the accepted behavior change only affects projects that remove the plugin.
+
+**Deviation:** an ARD shape _error_ now surfaces with `stage: 'plugin'` and `source: seo-validator/seo-site` (was `stage: 'generate'` in core). Severity/message/suggestion unchanged (DL#232 verification #1).
