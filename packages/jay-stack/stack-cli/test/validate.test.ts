@@ -1252,9 +1252,7 @@ describe('headless instance props validation (DL#124 Phase 2)', () => {
             expect(loadErrors).toHaveLength(1);
             expect(loadErrors[0].stage).toBe('plugin');
             expect(loadErrors[0].file).toBe('plugin:test-project-validator');
-            expect(loadErrors[0].message).toMatch(
-                /^Failed to load project validator "broken":/,
-            );
+            expect(loadErrors[0].message).toMatch(/^Failed to load project validator "broken":/);
         });
 
         it('skips project validators under --compile-only', async () => {
@@ -1269,6 +1267,19 @@ describe('headless instance props validation (DL#124 Phase 2)', () => {
             );
             expect(touched).toEqual([]);
             expect(result.pluginValidators).toEqual([]);
+        });
+
+        it('discovers the editing-policy plugin and reports a policy finding (DL#231 e2e)', async () => {
+            const dir = path.join(baseFixturesDir, 'editing-policy-project');
+            const result = await validateJayFiles({ path: dir, projectRoot: dir });
+
+            const errors = result.errors.filter(
+                (e) => e.source === 'editing-policy/editing-policy',
+            );
+            expect(errors).toHaveLength(1);
+            expect(errors[0].message).toBe('Unsupported policy version 2 (expected 1)');
+            expect(errors[0].stage).toBe('plugin');
+            expect(result.pluginValidators).toContain('editing-policy/editing-policy');
         });
     });
 });

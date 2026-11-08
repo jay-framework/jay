@@ -1,0 +1,6 @@
+name: editing-policy
+
+projectValidators:
+  - name: editing-policy
+    handler: validate
+    description: Validates the project's jay-policy.md editing policy (DL#231)

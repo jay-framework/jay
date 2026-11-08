@@ -1,0 +1,81 @@
+{
+  "disposition": "REVIEW",
+  "findings": [
+    {
+      "id": "rule-0",
+      "source": "rule",
+      "severity": "review",
+      "ruleId": "config:no",
+      "selector": "**",
+      "path": "jay.config.yaml",
+      "message": "config change on jay.config.yaml is not allowed (rule config:no)",
+      "suggestion": "Revert the change, or request review from a role that allows \"config\"",
+      "role": "designer"
+    },
+    {
+      "id": "rule-1",
+      "source": "rule",
+      "severity": "review",
+      "ruleId": "dependencies:no",
+      "selector": "**",
+      "path": "package.json",
+      "message": "dependency change on package.json is not allowed (rule dependencies:no)",
+      "suggestion": "Revert the change, or request review from a role that allows \"dependency\"",
+      "role": "designer"
+    },
+    {
+      "id": "rule-2",
+      "source": "rule",
+      "severity": "review",
+      "ruleId": "code:no",
+      "selector": "**",
+      "path": "src/pages/products/page.ts",
+      "message": "code change on src/pages/products/page.ts is not allowed (rule code:no)",
+      "suggestion": "Revert the change, or request review from a role that allows \"code\"",
+      "role": "designer"
+    }
+  ],
+  "changes": [
+    {
+      "kind": "config",
+      "path": "jay.config.yaml",
+      "summary": "config changed in jay.config.yaml"
+    },
+    {
+      "kind": "dependency",
+      "path": "package.json",
+      "summary": "dependencies changed in package.json"
+    },
+    {
+      "kind": "content",
+      "path": "src/pages/legal/page.jay-html",
+      "summary": "content changed in src/pages/legal/page.jay-html"
+    },
+    {
+      "kind": "design",
+      "path": "src/pages/page.jay-html",
+      "section": "pricing-card",
+      "summary": "design changed in src/pages/page.jay-html#pricing-card"
+    },
+    {
+      "kind": "content",
+      "path": "src/pages/page.jay-html",
+      "summary": "content changed in src/pages/page.jay-html"
+    },
+    {
+      "kind": "code",
+      "path": "src/pages/products/page.ts",
+      "summary": "code changed in src/pages/products/page.ts"
+    },
+    {
+      "kind": "css",
+      "path": "src/styles/app.css",
+      "summary": "CSS changed in src/styles/app.css"
+    },
+    {
+      "kind": "create",
+      "path": "src/pages/offers/page.jay-html",
+      "summary": "added src/pages/offers/page.jay-html"
+    }
+  ]
+}

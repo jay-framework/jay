@@ -35,7 +35,8 @@ import { Facet } from './facet';
 export const CONTENT_MARKER = 'jay-content';
 
 /** Attributes that are jay meta, never diffed as content. */
-const META_ATTRS = new Set(['jc', 'override', 'page-scope', CONTENT_MARKER]);
+// DL#231 — `jay-policy` rides through flatten/diff as meta (like `jc`/`override`), never treated as content.
+const META_ATTRS = new Set(['jc', 'override', 'page-scope', CONTENT_MARKER, 'jay-policy']);
 
 export function isMetaAttr(name: string): boolean {
     return META_ATTRS.has(name.toLowerCase());

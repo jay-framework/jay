@@ -1,0 +1,17 @@
+<html>
+<body>
+    <h1>Welcome</h1>
+    <p>Our pricing is simple and fair.</p>
+    <jay:card jay-policy="pricing-card" heading="Starter">
+        <div class="card">
+            <h3 class="card-heading featured">Starter</h3>
+            <p class="card-body">Great for individuals.</p>
+        </div>
+    </jay:card>
+    <jay:card jay-policy="promo-card" heading="Sale">
+        <div class="card">
+            <h3 class="card-heading">Sale</h3>
+        </div>
+    </jay:card>
+</body>
+</html>

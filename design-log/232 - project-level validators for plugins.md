@@ -21,13 +21,13 @@ Plugins cannot validate anything that is not one jay-html file, so project-wide 
 
 ## 4. Prior Art / Adjacent Mechanisms
 
-| Mechanism | Solves | Constrains |
-| --- | --- | --- |
-| DL#145 `validators` | Per-file jay-html checks | One parsed file in; no project scope |
-| `runPluginValidators` (✅ `validate.ts:1748`) | Discovery via `scanPlugins`, handler loading (local path, or `<pkg>/tools` entry per DL#179), error reporting for load failures | Per-file loop; reusable for the loader part |
-| `.jay` config `validations:` (✅ `config.ts:40-50`) | Project-level suppressions (`allow-no-ard`, `allow-no-error-pages`) | Typed keys in core config; plugins would read, not own them |
-| `jay-stack validate-plugin` / `plugin-validator` | Validates `plugin.yaml` shape at plugin build time | Must learn the new manifest field |
-| Inline project-level block (DL#175) | Today's implementation of the checks we move | Core-only |
+| Mechanism                                           | Solves                                                                                                                          | Constrains                                                  |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| DL#145 `validators`                                 | Per-file jay-html checks                                                                                                        | One parsed file in; no project scope                        |
+| `runPluginValidators` (✅ `validate.ts:1748`)       | Discovery via `scanPlugins`, handler loading (local path, or `<pkg>/tools` entry per DL#179), error reporting for load failures | Per-file loop; reusable for the loader part                 |
+| `.jay` config `validations:` (✅ `config.ts:40-50`) | Project-level suppressions (`allow-no-ard`, `allow-no-error-pages`)                                                             | Typed keys in core config; plugins would read, not own them |
+| `jay-stack validate-plugin` / `plugin-validator`    | Validates `plugin.yaml` shape at plugin build time                                                                              | Must learn the new manifest field                           |
+| Inline project-level block (DL#175)                 | Today's implementation of the checks we move                                                                                    | Core-only                                                   |
 
 Null hypothesis: reuse the per-file hook with a fake file? No: it is invoked once per jay-html file with a parsed DOM, and a project with zero pages would never run it.
 
@@ -56,35 +56,37 @@ projectValidators:
 // @jay-framework/compiler-shared (next to JayHtmlValidatorFn — the home validator-only
 // plugins already import from; full-stack-component is for runtime builders, not validators)
 export interface ProjectValidationContext {
-    projectRoot: string;
-    settings?: unknown;         // the plugin's own settings, as for other plugin entry points
-    // NOTE (decision C, §12): no `config`. JayConfig lives in stack-cli (above compiler-shared),
-    // so it can't be referenced here. A validator that needs .jay config loads it via projectRoot.
+  projectRoot: string;
+  settings?: unknown; // the plugin's own settings, as for other plugin entry points
+  // NOTE (decision C, §12): no `config`. JayConfig lives in stack-cli (above compiler-shared),
+  // so it can't be referenced here. A validator that needs .jay config loads it via projectRoot.
 }
 export interface ProjectFinding {
-    severity: 'error' | 'warning';
-    file: string;               // project-relative, or `.jay`
-    message: string;
-    suggestion?: string;        // agent-actionable, as in DL#145
+  severity: 'error' | 'warning';
+  file: string; // project-relative, or `.jay`
+  message: string;
+  suggestion?: string; // agent-actionable, as in DL#145
 }
-export type ProjectValidatorFn = (ctx: ProjectValidationContext) => ProjectFinding[] | Promise<ProjectFinding[]>;
+export type ProjectValidatorFn = (
+  ctx: ProjectValidationContext,
+) => ProjectFinding[] | Promise<ProjectFinding[]>;
 ```
 
 Loading mirrors `runPluginValidators`: same `scanPlugins` pass, local plugins by relative path, npm plugins from `<pkg>/tools` (DL#179), load failures reported as `stage: 'plugin'` errors with `source: <plugin>/<name>`. Results fold into `errors`/`warnings` with `source: 'plugin:<name>/<validator>'` so they print grouped and are test-filterable. The validator names appear in `ValidationResult.pluginValidators`.
 
 ### 6.2 What moves, what stays
 
-| Check (today in `validate.ts`) | DL | Destination | Why |
-| --- | --- | --- | --- |
-| `public/robots.txt` missing | #175 | seo-validator `projectValidators` | SEO |
-| `site.baseUrl` missing (sitemap) | #175 | seo-validator | SEO |
-| `site.name` missing (Organization JSON-LD, llms.txt) | #213 | seo-validator | SEO / discovery |
-| ARD presence + shape, `allow-no-ard` (`validate-ard.ts`, 175 lines) | #214 | seo-validator (file moves) | discovery |
-| Branded 404/5xx error pages | #218 | **stays in core** | Framework routing feature (error pages resolved by status); not optional |
-| Broken internal links | #210 | **stays in core** | Needs the route scanner and parsed pages |
-| Build-output tier | #211 | **stays in core** | Needs build artifacts and the link oracle |
-| NO-DESIGN-SYSTEM, COMPONENT-NO-TEMPLATE, reuse summary | #200/#207 | **stays in core** | Depends on region/template-import counters computed in the per-file pass; revisit if the context later carries parsed files |
-| Editing policy file | #231 | editing-policy plugin | New |
+| Check (today in `validate.ts`)                                      | DL        | Destination                       | Why                                                                                                                         |
+| ------------------------------------------------------------------- | --------- | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `public/robots.txt` missing                                         | #175      | seo-validator `projectValidators` | SEO                                                                                                                         |
+| `site.baseUrl` missing (sitemap)                                    | #175      | seo-validator                     | SEO                                                                                                                         |
+| `site.name` missing (Organization JSON-LD, llms.txt)                | #213      | seo-validator                     | SEO / discovery                                                                                                             |
+| ARD presence + shape, `allow-no-ard` (`validate-ard.ts`, 175 lines) | #214      | seo-validator (file moves)        | discovery                                                                                                                   |
+| Branded 404/5xx error pages                                         | #218      | **stays in core**                 | Framework routing feature (error pages resolved by status); not optional                                                    |
+| Broken internal links                                               | #210      | **stays in core**                 | Needs the route scanner and parsed pages                                                                                    |
+| Build-output tier                                                   | #211      | **stays in core**                 | Needs build artifacts and the link oracle                                                                                   |
+| NO-DESIGN-SYSTEM, COMPONENT-NO-TEMPLATE, reuse summary              | #200/#207 | **stays in core**                 | Depends on region/template-import counters computed in the per-file pass; revisit if the context later carries parsed files |
+| Editing policy file                                                 | #231      | editing-policy plugin             | New                                                                                                                         |
 
 ### 6.3 Core after the change
 
@@ -124,18 +126,19 @@ Loading mirrors `runPluginValidators`: same `scanPlugins` pass, local plugins by
 
 Reviewed because DL#231 depends on this hook (DL#231 is the first consumer). P0 anchors traced to real code:
 
-| P0 item | Anchor | Status |
-| --- | --- | --- |
-| Types next to `JayHtmlValidatorFn` | `compiler-shared/lib/plugin-validators.ts:3-57` (`JayHtmlValidationFinding {severity,message,suggestion}` to mirror) | ✅ |
-| Correct home is compiler-shared | validator-only plugins (a11y, seo) depend on `compiler-shared` only and import `JayHtmlValidatorFn` from it; full-stack-component holds runtime builders, not validators | ✅ |
-| "Load handler" extraction | `validate.ts:1762-1798` is a self-contained try/catch (load local path or `<pkg>/tools`, DL#179); per-file loop `1800-1889` stays | ✅ |
-| `runProjectValidators` invocation | beside `runPluginValidators` at `validate.ts:2574` | ✅ |
-| `--compile-only` skip | `validate.ts:2344` returns *before* 2574 — automatic, no extra code | ✅ |
-| Schema check to mirror | `validate-plugin.ts:548-586` (validators block) | ✅ |
-| Capability list + no-capability suggestion | `validate-plugin.ts:342-354`, `:376` — add `manifest.projectValidators` to both | ✅ |
-| Manifest is `Record<string,any>` | `plugin-scanner.ts:14` — no manifest *type* change needed | ✅ |
+| P0 item                                    | Anchor                                                                                                                                                                   | Status |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------ |
+| Types next to `JayHtmlValidatorFn`         | `compiler-shared/lib/plugin-validators.ts:3-57` (`JayHtmlValidationFinding {severity,message,suggestion}` to mirror)                                                     | ✅     |
+| Correct home is compiler-shared            | validator-only plugins (a11y, seo) depend on `compiler-shared` only and import `JayHtmlValidatorFn` from it; full-stack-component holds runtime builders, not validators | ✅     |
+| "Load handler" extraction                  | `validate.ts:1762-1798` is a self-contained try/catch (load local path or `<pkg>/tools`, DL#179); per-file loop `1800-1889` stays                                        | ✅     |
+| `runProjectValidators` invocation          | beside `runPluginValidators` at `validate.ts:2574`                                                                                                                       | ✅     |
+| `--compile-only` skip                      | `validate.ts:2344` returns _before_ 2574 — automatic, no extra code                                                                                                      | ✅     |
+| Schema check to mirror                     | `validate-plugin.ts:548-586` (validators block)                                                                                                                          | ✅     |
+| Capability list + no-capability suggestion | `validate-plugin.ts:342-354`, `:376` — add `manifest.projectValidators` to both                                                                                          | ✅     |
+| Manifest is `Record<string,any>`           | `plugin-scanner.ts:14` — no manifest _type_ change needed                                                                                                                | ✅     |
 
 **Design corrections made from the review:**
+
 - **Context `config` dropped (decision C).** `JayConfig` is defined in `stack-cli/lib/config.ts:6` — above both `compiler-shared` and `full-stack-component` in the dep graph — so the context (which must live in compiler-shared so validator-only plugins can import it without taking a full-stack-component/stack-cli dep) cannot reference it. Context is `{ projectRoot, settings? }`; a validator needing `.jay` config loads it via `projectRoot`.
 - **Consequence for P1/P2 (SEO move):** the moved robots/baseUrl/site.name/ARD checks read config themselves via `projectRoot` (own `.jay` read), not from the context. Deferred to P1; not a P0 or DL#231 concern.
 
@@ -144,6 +147,7 @@ Reviewed because DL#231 depends on this hook (DL#231 is the first consumer). P0 
 **Status: P0 implemented and green.** The `projectValidators` hook exists end-to-end; P1–P4 (SEO-check move, scaffold, docs, editing-policy consumer) are not started.
 
 Files changed:
+
 - `compiler-shared/lib/plugin-validators.ts` — added `ProjectValidationContext { projectRoot; settings? }`, `ProjectValidationFinding { severity; file; message; suggestion? }`, `ProjectValidatorFn`. (`index.ts` already `export *`s the module.)
 - `compiler-shared/lib/plugin-resolution.ts` — added `projectValidators?: Array<{name;handler;description?}>` to `PluginManifest`.
 - `plugin-validator/lib/validate-plugin.ts` — `projectValidators` added to the capability list and no-capability suggestion; a schema block mirroring `validators` (array check, `name`/`handler` required, `validateHandlerRef(..., './tools')`); `needsToolsEntry` now treats it as a tools capability.
@@ -152,5 +156,6 @@ Files changed:
 Tests: `stack-cli/test/validate.test.ts` — new `project-level plugin validators (DL#232)` block (finding→error+warning with `source` via `toEqual`; load failure → `plugin`-stage error; skipped under `--compile-only`) with fixture `test/fixtures/validate/project-validator/`. `plugin-validator/test/validate-plugin.test.ts` — new `projectValidators` block (missing `handler`, non-array, valid-with-`./tools`). All green: stack-cli validate 95/95, plugin-validator 28/28, compiler-shared 130/130; all three type-check.
 
 Deviations from design:
-- **`loadPluginToolsHandler` "not a function" message** now reports the *actual* expected export (`validate` for local, the declared handler name for npm) instead of always `"validate"`. No test asserted the old string; the new one is more accurate.
+
+- **`loadPluginToolsHandler` "not a function" message** now reports the _actual_ expected export (`validate` for local, the declared handler name for npm) instead of always `"validate"`. No test asserted the old string; the new one is more accurate.
 - **`settings` not yet plumbed** — the context type carries `settings?` but `runProjectValidators` passes only `{ projectRoot }`. No consumer needs settings yet (DL#231 doesn't); wire it when one does.

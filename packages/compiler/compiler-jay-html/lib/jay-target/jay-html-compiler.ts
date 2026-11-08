@@ -435,7 +435,9 @@ export function renderChildCompProps(
             attrCanonical === 'foreach' ||
             attrCanonical === 'trackby' ||
             attrCanonical === 'jay-coordinate-base' ||
-            attrCanonical === 'jay-scope'
+            attrCanonical === 'jay-scope' ||
+            // DL#231 — editing-policy marker on a region tag is a bare directive, never a component prop.
+            attrCanonical === 'jay-policy'
         )
             return;
         if (attrCanonical === 'props') {

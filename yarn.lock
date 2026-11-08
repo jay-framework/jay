@@ -3245,6 +3245,28 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@jay-framework/editing-policy@workspace:packages/plugins/editing-policy":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/editing-policy@workspace:packages/plugins/editing-policy"
+  dependencies:
+    "@jay-framework/compiler-inline-composition": "workspace:^"
+    "@jay-framework/compiler-shared": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-stack-cli": "workspace:^"
+    "@types/node": "npm:^22.15.21"
+    minimatch: "npm:^9.0.3"
+    node-html-parser: "npm:^6.1.12"
+    rimraf: "npm:^5.0.5"
+    tsup: "npm:^8.0.1"
+    typescript: "npm:^5.3.3"
+    vite: "npm:^6.4.4"
+    vitest: "npm:^4.1.11"
+    yaml: "npm:^2.3.4"
+  peerDependencies:
+    "@jay-framework/compiler-shared": "workspace:^"
+  languageName: unknown
+  linkType: soft
+
 "@jay-framework/fullstack-component@workspace:^, @jay-framework/fullstack-component@workspace:packages/jay-stack/full-stack-component":
   version: 0.0.0-use.local
   resolution: "@jay-framework/fullstack-component@workspace:packages/jay-stack/full-stack-component"
@@ -14300,6 +14322,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"minimatch@npm:^9.0.3":
+  version: 9.0.9
+  resolution: "minimatch@npm:9.0.9"
+  dependencies:
+    brace-expansion: "npm:^2.0.2"
+  checksum: 10/b91fad937deaffb68a45a2cb731ff3cff1c3baf9b6469c879477ed16f15c8f4ce39d63a3f75c2455107c2fdff0f3ab597d97dc09e2e93b883aafcf926ef0c8f9
+  languageName: node
+  linkType: hard
+
 "minimist@npm:^1.2.0, minimist@npm:^1.2.6":
   version: 1.2.8
   resolution: "minimist@npm:1.2.8"
@@ -15010,17 +15041,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"p-retry@npm:^4.5.0":
-  version: 4.6.2
-  resolution: "p-retry@npm:4.6.2"
-  dependencies:
-    "@types/retry": "npm:0.12.0"
-    retry: "npm:^0.13.1"
-  checksum: 10/45c270bfddaffb4a895cea16cb760dcc72bdecb6cb45fef1971fa6ea2e91ddeafddefe01e444ac73e33b1b3d5d29fb0dd18a7effb294262437221ddc03ce0f2e
-  languageName: node
-  linkType: hard
-
-"p-retry@npm:^4.6.2":
+"p-retry@npm:^4.5.0, p-retry@npm:^4.6.2":
   version: 4.6.2
   resolution: "p-retry@npm:4.6.2"
   dependencies:

@@ -608,7 +608,8 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
                         type: 'schema',
                         message: `Project validator "${validator.name || index}" is missing "handler" field`,
                         location: 'plugin.yaml',
-                        suggestion: 'Specify the relative path to the project validator handler module',
+                        suggestion:
+                            'Specify the relative path to the project validator handler module',
                     });
                 }
                 if (validator.handler) {

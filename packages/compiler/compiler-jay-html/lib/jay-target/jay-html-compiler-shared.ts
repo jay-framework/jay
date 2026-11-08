@@ -131,6 +131,9 @@ const DIRECTIVE_ATTRIBUTES = new Set([
     // DL#202 — template-side content-slot marker. A pure build-time authoring directive read by the
     // drift/sync differ; it rides into the flattened page copy (verbatim flatten) but must never render.
     'jay-content',
+    // DL#231 — editing-policy marker (`jay-policy="<name>"`) on a plain element or region tag. Read only
+    // by the editing-policy engine; never a component prop or a rendered attribute.
+    'jay-policy',
     AsyncDirectiveTypes.loading.directive,
     AsyncDirectiveTypes.resolved.directive,
     AsyncDirectiveTypes.rejected.directive,
