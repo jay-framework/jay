@@ -1,0 +1,9 @@
+<html>
+<head>
+    <title>Project Validator Fixture</title>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+    <h1>{productName}</h1>
+</body>
+</html>

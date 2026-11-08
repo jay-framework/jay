@@ -1,0 +1,5 @@
+name: product-page
+tags:
+  - tag: productName
+    type: data
+    dataType: string
