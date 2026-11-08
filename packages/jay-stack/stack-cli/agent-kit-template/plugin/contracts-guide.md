@@ -129,7 +129,7 @@ The page owns every word the visitor reads. A plugin reports **what happened**; 
 - **One kind of outcome** → a `boolean` variant (`hasError`, `isSubmitted`).
 - **Several kinds** → an `enum` variant with one member per kind the page may word differently, plus a neutral member (`NONE`, `IDLE`) for "nothing to report".
 - **Text is optional default copy.** A `data` string next to the variant (`errorMessage`, `statusMessage`) is fine as an English default. Never make it the only signal: a page must not have to test for a non-empty string, or match its text, to know what happened.
-- **Keep codes stable and locale-neutral.** Name members by meaning (`NETWORK`, `PERMISSION`), not by message. Adding a member is safe; renaming or reordering one breaks pages that compare against it.
+- **Keep codes stable and locale-neutral.** Name members by meaning (`NETWORK`, `PERMISSION`), not by message. **Appending** a member is safe; inserting, renaming, removing, or reordering one is a breaking change.
 
 ```yaml
 # ✅ Outcome as variants; text is a default the page may ignore
