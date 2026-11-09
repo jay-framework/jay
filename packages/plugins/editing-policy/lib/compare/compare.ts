@@ -1,9 +1,12 @@
 import { createHash } from 'crypto';
-import { ADMIN_ROLE, PolicyFile } from '../policy/schema.js';
+import { findDesignMd } from '@jay-framework/design-system-validator/design-tokens';
+import { ADMIN_ROLE, DEFAULT_TEMPLATES_GLOB, PolicyFile } from '../policy/schema.js';
 import { classifyChanges } from '../changes/classify.js';
 import { Change, Tree } from '../changes/types.js';
 import { CompareResult, Disposition, Finding } from './types.js';
-import { compileRole, decide, Decision, resolveRule } from './resolve.js';
+import { CompiledRule, compileRole, decide, Decision, resolveRule } from './resolve.js';
+import { designDiff, findMarkedSubtree, parsePage, ParsedPage } from '../semantic/regions.js';
+import { verifyDesignSystemOnly, verifyFromTemplate, verifySync } from '../semantic/verify.js';
 
 export class PolicyToolError extends Error {}
 
@@ -17,6 +20,13 @@ export interface ComparePolicyInput {
     policyContent: string;
     /** Whether the caller ran `jay-stack validate` on the candidate (satisfies correctness.validate). */
     validated?: boolean;
+    /**
+     * On-disk roots of the two trees (DL#233). When present, the semantic verifiers (designSystemOnly
+     * / from-template / sync) run and may upgrade a conservative `review` to allowed. Absent (e.g.
+     * in-memory callers) → verifiers are skipped and the conservative DL#231 behavior stands.
+     */
+    baselineRoot?: string;
+    candidateRoot?: string;
 }
 
 function sha256(text: string): string {
@@ -71,11 +81,18 @@ function dispositionFrom(findings: Finding[], publishReview: boolean): Dispositi
     return 'PUBLISH';
 }
 
+interface RuleEntry {
+    finding: Finding;
+    change: Change;
+}
+
 /**
- * Compare a baseline and candidate tree under a role (DL#231 §6.3). Pure: no git, install, or network.
- * Throws {@link PolicyToolError} for an unknown role or when neither a role nor `defaultRole` is set.
+ * Compare a baseline and candidate tree under a role (DL#231 §6.3 + DL#233 semantic verification).
+ * Pure: no git, install, or network (the verifiers read jay-html/templates/DESIGN.md from the two
+ * directories). Throws {@link PolicyToolError} for an unknown role or when neither a role nor
+ * `defaultRole` is set.
  */
-export function comparePolicy(input: ComparePolicyInput): CompareResult {
+export async function comparePolicy(input: ComparePolicyInput): Promise<CompareResult> {
     const { baseline, candidate, policy, policyContent, validated } = input;
     const role = input.role ?? policy.defaultRole;
 
@@ -94,22 +111,37 @@ export function comparePolicy(input: ComparePolicyInput): CompareResult {
         throw new PolicyToolError(`Unknown role "${role}". Defined roles: ${defined}`);
     }
 
-    const findings: Finding[] = [];
+    const ruleEntries: RuleEntry[] = [];
     let publishReview = false;
     let id = 0;
+    let compiled: CompiledRule[] = [];
 
     if (!isAdmin) {
-        const compiled = compileRole(policy.roles[role]);
+        compiled = compileRole(policy.roles[role]);
         for (const change of changes) {
             const decision = decide(compiled, change);
             if (!decision.allowed) {
-                findings.push(makeFinding(id++, change, decision, role));
+                ruleEntries.push({ finding: makeFinding(id++, change, decision, role), change });
             } else if (resolveRule(compiled, change, 'publish').value === 'review') {
                 publishReview = true;
             }
         }
     }
 
+    // DL#233 — semantic upgrade pass: turn conservative review/no findings into allowed when provable.
+    const templatesGlobs =
+        policy.templates && policy.templates.length > 0
+            ? policy.templates
+            : [DEFAULT_TEMPLATES_GLOB];
+    const { survivors, upgradedPublishReview } = await applySemanticUpgrades(
+        ruleEntries,
+        input,
+        compiled,
+        templatesGlobs,
+    );
+    publishReview = publishReview || upgradedPublishReview;
+
+    const findings: Finding[] = survivors;
     if (policy.correctness?.validate && !validated) {
         findings.push({
             id: `validate-${id++}`,
@@ -132,4 +164,87 @@ export function comparePolicy(input: ComparePolicyInput): CompareResult {
     );
 
     return { disposition, findings, changes, policyHash };
+}
+
+/**
+ * DL#233: for each conservative rule finding, run the matching verifier (sync / designSystemOnly /
+ * from-template). A proven-safe change is dropped from the findings (allowed); its `publish` rule is
+ * then honored so an allowed-but-review-on-publish change still routes to REVIEW. Needs the on-disk
+ * roots — absent → nothing is upgraded (DL#231 conservative behavior stands).
+ */
+async function applySemanticUpgrades(
+    entries: RuleEntry[],
+    input: ComparePolicyInput,
+    compiled: CompiledRule[],
+    templatesGlobs: string[],
+): Promise<{ survivors: Finding[]; upgradedPublishReview: boolean }> {
+    const { baseline, candidate, baselineRoot, candidateRoot } = input;
+    if (!candidateRoot)
+        return { survivors: entries.map((e) => e.finding), upgradedPublishReview: false };
+
+    const pageCache = new Map<string, ParsedPage | null>();
+    const parseCached = async (
+        side: 'base' | 'cand',
+        root: string | undefined,
+        tree: Tree,
+        p: string,
+    ): Promise<ParsedPage | null> => {
+        if (!root) return null;
+        const key = `${side}:${p}`;
+        if (!pageCache.has(key)) {
+            let content: string | undefined;
+            try {
+                content = tree.read(p);
+            } catch {
+                content = undefined;
+            }
+            pageCache.set(key, content === undefined ? null : await parsePage(content, p, root));
+        }
+        return pageCache.get(key) ?? null;
+    };
+
+    const survivors: Finding[] = [];
+    let upgradedPublishReview = false;
+
+    for (const { finding: f, change } of entries) {
+        let upgraded = false;
+
+        if (f.path?.endsWith('.jay-html') || change.kind === 'create') {
+            // sync — a re-flatten of a marked region beats any design-rule finding (DL#231 Q10)
+            if (!upgraded && f.ruleId.startsWith('design:') && f.section) {
+                const cand = await parseCached('cand', candidateRoot, candidate, f.path!);
+                if (cand && (await verifySync(cand, f.section, candidateRoot))) upgraded = true;
+            }
+            // designSystemOnly — additive + token-only
+            if (!upgraded && f.ruleId.endsWith(':designSystemOnly')) {
+                const base = await parseCached('base', baselineRoot, baseline, f.path!);
+                const cand = await parseCached('cand', candidateRoot, candidate, f.path!);
+                if (base && cand) {
+                    const scopeBase = f.section
+                        ? (findMarkedSubtree(base.body, f.section) ?? base.body)
+                        : base.body;
+                    const scopeCand = f.section
+                        ? (findMarkedSubtree(cand.body, f.section) ?? cand.body)
+                        : cand.body;
+                    const tokens = findDesignMd(f.path!, candidateRoot)?.tokens;
+                    if (verifyDesignSystemOnly(designDiff(scopeBase, scopeCand), tokens) === 'pass')
+                        upgraded = true;
+                }
+            }
+            // create: from-template
+            if (!upgraded && f.ruleId.endsWith(':from-template')) {
+                const cand = await parseCached('cand', candidateRoot, candidate, f.path!);
+                if (cand && verifyFromTemplate(cand, templatesGlobs) === 'pass') upgraded = true;
+            }
+        }
+
+        if (upgraded) {
+            if (resolveRule(compiled, change, 'publish').value === 'review')
+                upgradedPublishReview = true;
+        } else {
+            survivors.push(f);
+        }
+    }
+
+    return { survivors, upgradedPublishReview };
 }

@@ -1,0 +1,64 @@
+{
+  "disposition": "REVIEW",
+  "findings": [
+    {
+      "id": "rule-1",
+      "source": "rule",
+      "severity": "review",
+      "ruleId": "design:designSystemOnly",
+      "selector": "**",
+      "path": "pages/home.jay-html",
+      "section": "ds-retheme",
+      "message": "design change on pages/home.jay-html#ds-retheme must use only design-system tokens and elements; this cannot be auto-verified",
+      "suggestion": "Use design-system tokens/elements only, or request review from the designer",
+      "role": "client"
+    },
+    {
+      "id": "rule-4",
+      "source": "rule",
+      "severity": "review",
+      "ruleId": "create:from-template",
+      "selector": "**",
+      "path": "pages/plain.jay-html",
+      "message": "new pages/plain.jay-html must be built from a template; this cannot be auto-verified",
+      "suggestion": "Build the page/section from a template region (template=), or request review",
+      "role": "client"
+    }
+  ],
+  "changes": [
+    {
+      "kind": "content",
+      "path": "pages/home.jay-html",
+      "section": "ds-add",
+      "summary": "content changed in pages/home.jay-html#ds-add"
+    },
+    {
+      "kind": "design",
+      "path": "pages/home.jay-html",
+      "section": "ds-add",
+      "summary": "design changed in pages/home.jay-html#ds-add"
+    },
+    {
+      "kind": "design",
+      "path": "pages/home.jay-html",
+      "section": "ds-retheme",
+      "summary": "design changed in pages/home.jay-html#ds-retheme"
+    },
+    {
+      "kind": "design",
+      "path": "pages/home.jay-html",
+      "section": "sync-card",
+      "summary": "design changed in pages/home.jay-html#sync-card"
+    },
+    {
+      "kind": "create",
+      "path": "pages/offers.jay-html",
+      "summary": "added pages/offers.jay-html"
+    },
+    {
+      "kind": "create",
+      "path": "pages/plain.jay-html",
+      "summary": "added pages/plain.jay-html"
+    }
+  ]
+}

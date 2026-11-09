@@ -10,10 +10,18 @@
     "plugin.yaml",
     "agent-kit"
   ],
+  "typesVersions": {
+    "*": {
+      "design-tokens": [
+        "dist/design-tokens.d.ts"
+      ]
+    }
+  },
   "exports": {
     ".": "./dist/index.js",
     "./client": "./dist/index.client.js",
     "./tools": "./dist/tools.js",
+    "./design-tokens": "./dist/design-tokens.js",
     "./plugin.yaml": "./plugin.yaml",
     "./dist/pages/settings/page.jay-html": "./dist/pages/settings/page.jay-html",
     "./font-fallback.jay-action": "./dist/actions/font-fallback.jay-action"
@@ -26,7 +34,7 @@
     "build:client": "vite build",
     "validate": "jay-stack-cli validate-plugin",
     "build:server": "vite build --ssr",
-    "build:types": "tsup lib/index.ts lib/index.client.ts lib/tools.ts --dts-only --format esm",
+    "build:types": "tsup lib/index.ts lib/index.client.ts lib/tools.ts lib/design-tokens.ts --dts-only --format esm",
     "build:check-types": "tsc",
     "clean": "rimraf dist",
     "confirm": "npm run clean && npm run build && npm run test",

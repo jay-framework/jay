@@ -3166,7 +3166,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@jay-framework/design-system-validator@workspace:packages/plugins/design-system-validator":
+"@jay-framework/design-system-validator@workspace:^, @jay-framework/design-system-validator@workspace:packages/plugins/design-system-validator":
   version: 0.0.0-use.local
   resolution: "@jay-framework/design-system-validator@workspace:packages/plugins/design-system-validator"
   dependencies:
@@ -3250,7 +3250,9 @@ __metadata:
   resolution: "@jay-framework/editing-policy@workspace:packages/plugins/editing-policy"
   dependencies:
     "@jay-framework/compiler-inline-composition": "workspace:^"
+    "@jay-framework/compiler-jay-html": "workspace:^"
     "@jay-framework/compiler-shared": "workspace:^"
+    "@jay-framework/design-system-validator": "workspace:^"
     "@jay-framework/dev-environment": "workspace:^"
     "@jay-framework/jay-stack-cli": "workspace:^"
     "@types/node": "npm:^22.15.21"

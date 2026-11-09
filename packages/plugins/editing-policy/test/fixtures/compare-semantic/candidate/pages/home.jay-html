@@ -1,0 +1,25 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+    <script type="application/jay-headless"
+            contract="../components/templates/card/card.jay-contract"
+            template="../components/templates/card/card.jay-html"></script>
+</head>
+<body>
+    <jay:card jay-policy="sync-card">
+        <div class="card">
+            <h3 class="card-heading">Card</h3>
+        </div>
+    </jay:card>
+    <div jay-policy="ds-add">
+        <p>Intro</p>
+        <span style="color: #6b7280">New</span>
+    </div>
+    <div jay-policy="ds-retheme">
+        <h3 class="card-heading featured">Keep</h3>
+    </div>
+</body>
+</html>

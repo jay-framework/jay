@@ -22,6 +22,8 @@ export default defineConfig(({ isSsrBuild }) => ({
                       // Tools entry (DL#179/#180): validators, agent-kit, devOnly settings
                       // actions + page. Compiler-allowed, toolchain/dev-only.
                       tools: resolve(__dirname, 'lib/tools.ts'),
+                      // Side-effect-free design-token primitives (DL#233), consumed by editing-policy.
+                      'design-tokens': resolve(__dirname, 'lib/design-tokens.ts'),
                   }
                 : { 'index.client': resolve(__dirname, 'lib/index.client.ts') },
             formats: ['es'],

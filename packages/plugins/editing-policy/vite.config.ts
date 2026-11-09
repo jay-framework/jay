@@ -24,6 +24,8 @@ export default defineConfig({
             // literal import string in dist/index.js (DL#179 leak scan).
             external: [
                 /^@jay-framework\/compiler-/,
+                '@jay-framework/design-system-validator',
+                /^@jay-framework\/design-system-validator\//,
                 'minimatch',
                 'node-html-parser',
                 'yaml',

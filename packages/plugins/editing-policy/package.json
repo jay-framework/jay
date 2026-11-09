@@ -32,6 +32,8 @@
   },
   "dependencies": {
     "@jay-framework/compiler-inline-composition": "workspace:^",
+    "@jay-framework/compiler-jay-html": "workspace:^",
+    "@jay-framework/design-system-validator": "workspace:^",
     "minimatch": "^9.0.3",
     "node-html-parser": "^6.1.12",
     "yaml": "^2.3.4"

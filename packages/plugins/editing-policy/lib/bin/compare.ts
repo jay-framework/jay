@@ -86,13 +86,15 @@ export async function runCompareCli(argv: string[], io: CliIo = defaultIo): Prom
         const policyContent = fs.readFileSync(policyPath, 'utf-8');
         const policy = parsePolicy(policyContent);
 
-        const result = comparePolicy({
+        const result = await comparePolicy({
             baseline: treeFromDir(args.baseline),
             candidate: treeFromDir(args.candidate),
             role: args.role,
             policy,
             policyContent,
             validated: args.validated,
+            baselineRoot: args.baseline,
+            candidateRoot: args.candidate,
         });
 
         io.stdout(
