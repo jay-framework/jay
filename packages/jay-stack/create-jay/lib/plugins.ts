@@ -41,6 +41,15 @@ export const PLUGINS: PluginEntry[] = [
         isDep: false,
     },
     {
+        name: '@jay-framework/editing-policy',
+        label: 'Editing policy',
+        description:
+            'Governance for handover: enforce who may change what via jay-policy.md (validate + compare gate)',
+        group: 'Jay Framework',
+        checked: false,
+        isDep: false,
+    },
+    {
         name: '@jay-framework/markdown',
         label: 'Markdown',
         description: 'Render markdown files as pages — documentation, blogs, changelogs',
