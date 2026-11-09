@@ -1,4 +1,4 @@
-import { minimatch } from 'minimatch';
+import { matchGlob } from '../glob.js';
 import type { ProjectValidationFinding } from '@jay-framework/compiler-shared';
 import {
     ADMIN_ROLE,
@@ -53,7 +53,7 @@ export function checkPolicy(
             ? policy.templates
             : [DEFAULT_TEMPLATES_GLOB];
     const templatesMatchSomething = ctx.projectFiles
-        ? templatesGlobs.some((g) => ctx.projectFiles!.some((f) => minimatch(f, g, { dot: true })))
+        ? templatesGlobs.some((g) => ctx.projectFiles!.some((f) => matchGlob(f, g)))
         : undefined;
 
     if (
@@ -129,7 +129,7 @@ export function checkPolicy(
 
                 if (
                     rule === 'dependencies' &&
-                    !minimatch('package.json', parsed.pathGlob, { dot: true })
+                    !matchGlob('package.json', parsed.pathGlob)
                 ) {
                     err(
                         `Rule "dependencies" on selector "${entry.selector}" cannot match the root manifest`,
@@ -150,7 +150,7 @@ export function checkPolicy(
                     value === 'yes' &&
                     roleName !== ADMIN_ROLE &&
                     parsed.pathGlob !== '**' &&
-                    minimatch(POLICY_FILE, parsed.pathGlob, { dot: true })
+                    matchGlob(POLICY_FILE, parsed.pathGlob)
                 ) {
                     warn(
                         `Role "${roleName}" grants policy:yes on ${POLICY_FILE}; it can loosen the rules that govern later publishes`,
@@ -162,7 +162,7 @@ export function checkPolicy(
             if (ctx.projectFiles) {
                 if (parsed.section === undefined) {
                     const matches = ctx.projectFiles.some((f) =>
-                        minimatch(f, parsed.pathGlob, { dot: true }),
+                        matchGlob(f, parsed.pathGlob),
                     );
                     if (!matches && parsed.pathGlob !== '**') {
                         warn(`Selector "${entry.selector}" matches no file in the project`);
@@ -173,7 +173,7 @@ export function checkPolicy(
                         const mp = m.slice(0, hashIdx);
                         const mn = m.slice(hashIdx + 1);
                         return (
-                            mn === parsed.section && minimatch(mp, parsed.pathGlob, { dot: true })
+                            mn === parsed.section && matchGlob(mp, parsed.pathGlob)
                         );
                     });
                     if (!anyMarker) {

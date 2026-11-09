@@ -1,4 +1,4 @@
-import { minimatch } from 'minimatch';
+import { matchGlob } from '../glob.js';
 
 // One selector kind (DL#231 §6.1): a glob over project-root-relative file paths, optionally
 // followed by `#<name>` to target a policy-marked section. Routes are folders under `src/pages`,
@@ -61,7 +61,7 @@ export interface ChangeTarget {
 
 /** Does a selector match a change? A path selector (no `#name`) also matches a sectioned change. */
 export function selectorMatches(selector: ParsedSelector, target: ChangeTarget): boolean {
-    if (!minimatch(target.path, selector.pathGlob, { dot: true })) return false;
+    if (!matchGlob(target.path, selector.pathGlob)) return false;
     if (selector.section === undefined) return true;
     return selector.section === target.section;
 }

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { minimatch } from 'minimatch';
+import { matchGlob } from '../glob.js';
 import { diffBodies, isRegionTag } from '@jay-framework/compiler-inline-composition';
 import {
     type DesignTokens,
@@ -61,7 +61,7 @@ export function verifyDesignSystemOnly(
  */
 export function verifyFromTemplate(page: ParsedPage, templatesGlobs: string[]): Verdict {
     const hasTemplateRegion = [...page.provenance.values()].some((tpl) =>
-        templatesGlobs.some((g) => minimatch(tpl, g, { dot: true })),
+        templatesGlobs.some((g) => matchGlob(tpl, g)),
     );
     return hasTemplateRegion ? 'pass' : 'fail';
 }
