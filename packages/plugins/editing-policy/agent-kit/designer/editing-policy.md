@@ -1,10 +1,13 @@
 # Editing policy — marking parts of a page
 
-How to give part of a page its own editing permissions, and where the project's rules live.
+How a designer/admin gives part of a page its own editing permissions (for setting up a policy). If
+instead you are **editing within** a policy and got a `compare` report to act on, see
+`handling-policy-feedback.md`.
 
 The project's editing rules live in `jay-policy.md` at the project root. **Read it first** — its markdown
 body is the authoritative guideline for what each role may change, and the rules in its frontmatter are
-what the validator and the `compare` check enforce. Never guess the policy; open the file.
+what the validator and the `compare` check enforce. Never guess the policy; open the file. (Authoring
+that file and running the enforcement gate are dev-ops concerns — see the dev-ops editing-policy guide.)
 
 ## Marking a part with `jay-policy`
 

@@ -48,6 +48,14 @@ export function renderMarkdown(result: CompareResult, meta: RenderMeta): string 
     }
     lines.push('');
 
+    // Point the reading agent at the guide for acting on this report (copied into a consumer project by
+    // `jay-stack agent-kit`).
+    lines.push('---');
+    lines.push(
+        'How to act on this report: see `agent-kit/designer/handling-policy-feedback.md`.',
+    );
+    lines.push('');
+
     return lines.join('\n');
 }
 
