@@ -43,8 +43,14 @@ function compareWith(policyName: string, role: string): Promise<CompareResult> {
 }
 
 function withoutHash(r: CompareResult) {
+    // Drop `policyHash` (reformat-sensitive) and `lines` (fixture-line-sensitive) so goldens stay
+    // robust; `lines` correctness is asserted in classify.test.ts and compare-semantic.test.ts.
+    const strip = <T extends { lines?: unknown }>(o: T) => {
+        const { lines, ...rest } = o;
+        return rest;
+    };
     const { policyHash, ...rest } = r;
-    return rest;
+    return { ...rest, findings: rest.findings.map(strip), changes: rest.changes.map(strip) };
 }
 
 const MATRIX: Array<{ policy: string; role: string }> = [

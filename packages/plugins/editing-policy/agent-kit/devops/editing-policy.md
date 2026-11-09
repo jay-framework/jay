@@ -20,8 +20,15 @@ roles:
   client:
     - selector: '**' # role baseline (needs a "**" fallback)
       rules:
-        { content: yes, design: designSystemOnly, create: from-template, code: no, css: no,
-          publish: review, onViolation: review }
+        {
+          content: yes,
+          design: designSystemOnly,
+          create: from-template,
+          code: no,
+          css: no,
+          publish: review,
+          onViolation: review,
+        }
     - selector: 'src/pages/legal/**' # a more specific selector wins per rule
       rules: { edit: no, onViolation: block }
     - selector: 'src/components/templates/**' # templates are the designer's — frozen for the client
@@ -42,20 +49,20 @@ governed too** (a component's `.jay-html`/`.ts`/`.css` is judged by the selector
 
 ## Rules (what each governs is decided by file type)
 
-| Rule | Values | Governs |
-| --- | --- | --- |
-| `content` | yes / no | Text in `.jay-html` |
-| `design` | yes / no / designSystemOnly | Layout, structure, classes, inline styles in `.jay-html`; `designSystemOnly` = add design-system tokens/elements, don't re-theme existing ones |
-| `css` | yes / no | `<style>` in `.jay-html` and external `.css` |
-| `code` | yes / no | `.ts`, `.js`, `.jay-contract` |
-| `dependencies` | yes / no | Dependency fields of `package.json` and lockfiles |
-| `config` | yes / no | Other non-source project files |
-| `create` / `delete` / `rename` | yes / no (`create` also `from-template`) | File/page/section lifecycle |
-| `overrideRoute` | any / from-template / no | Page folders overriding a plugin route |
-| `policy` | yes / no | `jay-policy` markers and the policy file (default **no**) |
-| `edit` | no | Freezes a selector entirely |
-| `publish` | direct / review | Publish directly or route to the admin |
-| `onViolation` | review / block | Disposition when a rule is violated |
+| Rule                           | Values                                   | Governs                                                                                                                                        |
+| ------------------------------ | ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `content`                      | yes / no                                 | Text in `.jay-html`                                                                                                                            |
+| `design`                       | yes / no / designSystemOnly              | Layout, structure, classes, inline styles in `.jay-html`; `designSystemOnly` = add design-system tokens/elements, don't re-theme existing ones |
+| `css`                          | yes / no                                 | `<style>` in `.jay-html` and external `.css`                                                                                                   |
+| `code`                         | yes / no                                 | `.ts`, `.js`, `.jay-contract`                                                                                                                  |
+| `dependencies`                 | yes / no                                 | Dependency fields of `package.json` and lockfiles                                                                                              |
+| `config`                       | yes / no                                 | Other non-source project files                                                                                                                 |
+| `create` / `delete` / `rename` | yes / no (`create` also `from-template`) | File/page/section lifecycle                                                                                                                    |
+| `overrideRoute`                | any / from-template / no                 | Page folders overriding a plugin route                                                                                                         |
+| `policy`                       | yes / no                                 | `jay-policy` markers and the policy file (default **no**)                                                                                      |
+| `edit`                         | no                                       | Freezes a selector entirely                                                                                                                    |
+| `publish`                      | direct / review                          | Publish directly or route to the admin                                                                                                         |
+| `onViolation`                  | review / block                           | Disposition when a rule is violated                                                                                                            |
 
 **Resolution:** per rule, the most specific matching selector decides (`#name` > more literal path
 segments > globs); equal specificity → the stricter value. A rule no matching selector sets is
@@ -88,12 +95,12 @@ editing-policy compare \
 
 Exit codes mirror the disposition — wire them into the job:
 
-| Exit | Disposition | Meaning |
-| --- | --- | --- |
-| `0` | PUBLISH | no findings — publish directly |
-| `10` | REVIEW | route to the admin (findings and/or `publish: review`) |
-| `11` | BLOCK | a `block` violation — do not publish |
-| `1` | — | tool error (unknown role, missing policy, bad args) |
+| Exit | Disposition | Meaning                                                |
+| ---- | ----------- | ------------------------------------------------------ |
+| `0`  | PUBLISH     | no findings — publish directly                         |
+| `10` | REVIEW      | route to the admin (findings and/or `publish: review`) |
+| `11` | BLOCK       | a `block` violation — do not publish                   |
+| `1`  | —           | tool error (unknown role, missing policy, bad args)    |
 
 The markdown report (disposition, findings with suggestions, change summary) is written for an agent:
 paste it back to the authoring agent as its fix task. Use `--json` (`{ disposition, findings, changes,

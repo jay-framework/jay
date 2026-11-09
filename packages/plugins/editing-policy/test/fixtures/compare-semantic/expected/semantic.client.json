@@ -9,8 +9,8 @@
       "selector": "**",
       "path": "pages/home.jay-html",
       "section": "ds-retheme",
-      "message": "design change on pages/home.jay-html#ds-retheme must use only design-system tokens and elements; this cannot be auto-verified",
-      "suggestion": "Use design-system tokens/elements only, or request review from the designer",
+      "message": "design change on pages/home.jay-html#ds-retheme is not design-system-only — it re-themes or restructures a pre-existing element, or uses a non-token value",
+      "suggestion": "Add design-system elements/tokens instead of editing existing elements, or request review from the designer",
       "role": "client"
     },
     {
@@ -20,8 +20,8 @@
       "ruleId": "create:from-template",
       "selector": "**",
       "path": "pages/plain.jay-html",
-      "message": "new pages/plain.jay-html must be built from a template; this cannot be auto-verified",
-      "suggestion": "Build the page/section from a template region (template=), or request review",
+      "message": "new pages/plain.jay-html is not built from a template",
+      "suggestion": "Build the page/section from a template region (import one with template= and flatten it via `jay-stack sync`), or request review",
       "role": "client"
     }
   ],

@@ -22,6 +22,8 @@ export interface Change {
     fromPath?: string;
     /** For a `.jay-html` change attributed to a policy-marked part, the innermost marker name. */
     section?: string;
+    /** 1-based [start, end] line range in the candidate file (set for section-scoped `.jay-html` changes). */
+    lines?: [number, number];
     /** Short human-readable description. */
     summary: string;
 }

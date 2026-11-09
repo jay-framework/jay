@@ -34,7 +34,9 @@ export function renderMarkdown(result: CompareResult, meta: RenderMeta): string 
     lines.push(`## Findings (${result.findings.length})`);
     for (const f of result.findings) {
         lines.push(`### ${SEV_WORD[f.severity]} — ${f.ruleId}`);
-        const ref = [`\`${loc(f)}\``, `role \`${f.role}\``];
+        const ref = [`\`${loc(f)}\``];
+        if (f.lines) ref.push(`lines ${f.lines[0]}–${f.lines[1]}`);
+        ref.push(`role \`${f.role}\``);
         if (f.selector) ref.push(`selector \`${f.selector}\``);
         lines.push(ref.join(' · '));
         lines.push(f.message);
@@ -44,16 +46,15 @@ export function renderMarkdown(result: CompareResult, meta: RenderMeta): string 
 
     lines.push(`## Changes (${result.changes.length})`);
     for (const c of result.changes) {
-        lines.push(`- ${c.kind}: \`${loc(c)}\` — ${c.summary}`);
+        const at = c.lines ? `\`${loc(c)}\` (lines ${c.lines[0]}–${c.lines[1]})` : `\`${loc(c)}\``;
+        lines.push(`- ${c.kind}: ${at} — ${c.summary}`);
     }
     lines.push('');
 
     // Point the reading agent at the guide for acting on this report (copied into a consumer project by
     // `jay-stack agent-kit`).
     lines.push('---');
-    lines.push(
-        'How to act on this report: see `agent-kit/designer/handling-policy-feedback.md`.',
-    );
+    lines.push('How to act on this report: see `agent-kit/designer/handling-policy-feedback.md`.');
     lines.push('');
 
     return lines.join('\n');

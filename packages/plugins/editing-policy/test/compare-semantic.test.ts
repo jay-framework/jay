@@ -34,8 +34,12 @@ function compareWith(policyName: string, role: string): Promise<CompareResult> {
 }
 
 function withoutHash(r: CompareResult) {
+    const strip = <T extends { lines?: unknown }>(o: T) => {
+        const { lines, ...rest } = o;
+        return rest;
+    };
     const { policyHash, ...rest } = r;
-    return rest;
+    return { ...rest, findings: rest.findings.map(strip), changes: rest.changes.map(strip) };
 }
 
 const GEN = process.env.GEN_GOLDENS === '1';
@@ -63,6 +67,12 @@ describe('comparePolicy — semantic verification (DL#233)', () => {
             'design:designSystemOnly@ds-retheme',
         ]);
         expect(result.disposition).toBe('REVIEW');
+
+        // The section finding pinpoints the marked part's line range in the candidate file.
+        const retheme = result.findings.find((f) => f.section === 'ds-retheme');
+        expect(retheme?.lines?.length).toBe(2);
+        expect(retheme!.lines![0]).toBeGreaterThan(1);
+        expect(retheme!.lines![1]).toBeGreaterThanOrEqual(retheme!.lines![0]);
     });
 
     it('semantic × admin: PUBLISH, no findings', async () => {

@@ -175,4 +175,8 @@ Tests: editing-policy **79/79**; build + `validate-plugin` pass (serve entry sta
 1. `./design-tokens` subpath instead of `./tools` (above) — cleaner, no behavior cost.
 2. **P4 `examples/jay-stack/design-system-demo` live overlay deferred** — `compare-semantic` is a realistic mini-project exercising the identical end-to-end path (compiler parse, real regions/`template=`, real `DESIGN.md`); the demo overlay would be a near-duplicate. Follow-up if a runnable demo is wanted.
 3. `designSystemOnly` v1: an added plain element carrying **class names** is `unknown`→review (class→token membership via `matchComponent` is a v2 refinement); added **inline-style token values** verify precisely today. `from-template` v1 passes on ≥1 template region without re-checking the non-region markup (Q7 v2). Both are upgrade-only-safe.
+
+**Follow-ups (post-review):**
+- **Report line ranges** (DL#231 §13): findings/changes on a `jay-policy`-marked part carry `lines:[start,end]` (node-html-parser `.range`), shown in the report; file-level changes have none.
+- **Verdict-accurate messages:** a surviving `designSystemOnly`/`from-template` finding is reworded by the upgrade pass to what the verifier actually found — `fail` → "is not design-system-only (re-themes/restructures an existing element or uses a non-token value)" / "is not built from a template"; `unknown` → "could not be confirmed …"; verification not run (no roots / unparsable page) → the conservative "cannot be auto-verified". (Needs the candidate page to parse — a page with no `<head>`/data script yields `unknown`.)
 ```

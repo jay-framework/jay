@@ -6,7 +6,12 @@ import { Change, Tree } from '../changes/types.js';
 import { CompareResult, Disposition, Finding } from './types.js';
 import { CompiledRule, compileRole, decide, Decision, resolveRule } from './resolve.js';
 import { designDiff, findMarkedSubtree, parsePage, ParsedPage } from '../semantic/regions.js';
-import { verifyDesignSystemOnly, verifyFromTemplate, verifySync } from '../semantic/verify.js';
+import {
+    verifyDesignSystemOnly,
+    verifyFromTemplate,
+    verifySync,
+    Verdict,
+} from '../semantic/verify.js';
 
 export class PolicyToolError extends Error {}
 
@@ -67,9 +72,51 @@ function makeFinding(id: number, change: Change, decision: Decision, role: strin
         selector: decision.selector,
         path: change.path,
         section: change.section,
+        lines: change.lines,
         message,
         suggestion,
         role,
+    };
+}
+
+/** Rewrite a surviving finding's message/suggestion to reflect what the verifier actually found. */
+function applyVerdictMessage(f: Finding, m: { message: string; suggestion: string }) {
+    f.message = m.message;
+    f.suggestion = m.suggestion;
+}
+
+function designSystemOnlyMessage(
+    loc: string,
+    verdict: Verdict,
+): { message: string; suggestion: string } {
+    if (verdict === 'fail') {
+        return {
+            message: `design change on ${loc} is not design-system-only — it re-themes or restructures a pre-existing element, or uses a non-token value`,
+            suggestion:
+                'Add design-system elements/tokens instead of editing existing elements, or request review from the designer',
+        };
+    }
+    return {
+        message: `design change on ${loc} could not be confirmed as design-system-only (no DESIGN.md, or it uses class names that can't be checked)`,
+        suggestion:
+            'Add a DESIGN.md with the design tokens and use token values, or request review from the designer',
+    };
+}
+
+function fromTemplateMessage(
+    path: string,
+    verdict: Verdict,
+): { message: string; suggestion: string } {
+    if (verdict === 'fail') {
+        return {
+            message: `new ${path} is not built from a template`,
+            suggestion:
+                'Build the page/section from a template region (import one with template= and flatten it via `jay-stack sync`), or request review',
+        };
+    }
+    return {
+        message: `new ${path} could not be confirmed as built from a template`,
+        suggestion: 'Ensure the new page flattens a template region (template=), or request review',
     };
 }
 
@@ -227,14 +274,22 @@ async function applySemanticUpgrades(
                         ? (findMarkedSubtree(cand.body, f.section) ?? cand.body)
                         : cand.body;
                     const tokens = findDesignMd(f.path!, candidateRoot)?.tokens;
-                    if (verifyDesignSystemOnly(designDiff(scopeBase, scopeCand), tokens) === 'pass')
-                        upgraded = true;
+                    const verdict = verifyDesignSystemOnly(
+                        designDiff(scopeBase, scopeCand),
+                        tokens,
+                    );
+                    if (verdict === 'pass') upgraded = true;
+                    else applyVerdictMessage(f, designSystemOnlyMessage(where(change), verdict));
                 }
             }
             // create: from-template
             if (!upgraded && f.ruleId.endsWith(':from-template')) {
                 const cand = await parseCached('cand', candidateRoot, candidate, f.path!);
-                if (cand && verifyFromTemplate(cand, templatesGlobs) === 'pass') upgraded = true;
+                if (cand) {
+                    const verdict = verifyFromTemplate(cand, templatesGlobs);
+                    if (verdict === 'pass') upgraded = true;
+                    else applyVerdictMessage(f, fromTemplateMessage(change.path, verdict));
+                }
             }
         }
 

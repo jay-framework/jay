@@ -199,6 +199,7 @@ describe('classifyChanges — per kind (DL#231 §6.3)', () => {
                 kind: 'policy',
                 path: 'src/pages/page.jay-html',
                 section: 'price-note',
+                lines: [1, 1],
                 summary: 'jay-policy="price-note" marker added in src/pages/page.jay-html',
             },
         ]);
@@ -216,6 +217,7 @@ describe('classifyChanges — per kind (DL#231 §6.3)', () => {
                 kind: 'content',
                 path: 'src/pages/page.jay-html',
                 section: 'card',
+                lines: [1, 1],
                 summary: 'content changed in src/pages/page.jay-html#card',
             },
         ]);

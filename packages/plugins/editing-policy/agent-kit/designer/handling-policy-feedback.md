@@ -7,11 +7,11 @@ is how to read it and fix what it flags so your change can publish.
 
 `# Policy comparison: PUBLISH | REVIEW | BLOCK`
 
-| Disposition | Meaning | What to do |
-| --- | --- | --- |
-| **PUBLISH** | nothing to fix | you're done |
-| **REVIEW** | allowed, but routes to a human admin (or has fixable findings) | fix any findings to reduce review scope; the rest is a human decision |
-| **BLOCK** | a hard violation | you must change the candidate — it will not publish as-is |
+| Disposition | Meaning                                                        | What to do                                                            |
+| ----------- | -------------------------------------------------------------- | --------------------------------------------------------------------- |
+| **PUBLISH** | nothing to fix                                                 | you're done                                                           |
+| **REVIEW**  | allowed, but routes to a human admin (or has fixable findings) | fix any findings to reduce review scope; the rest is a human decision |
+| **BLOCK**   | a hard violation                                               | you must change the candidate — it will not publish as-is             |
 
 ## Findings
 
@@ -19,12 +19,13 @@ Each finding is one violation:
 
 ```
 ### BLOCK — edit:no
-`src/pages/legal/page.jay-html` · role `client` · selector `src/pages/legal/**`
-content change on src/pages/legal/page.jay-html, but that part is frozen (edit: no)
+`src/pages/page.jay-html#promo` · lines 21–23 · role `client` · selector `src/pages/**`
+design change on src/pages/page.jay-html#promo, but that part is frozen (edit: no)
 Suggestion: Revert the change, or request an edit from a role that owns this part
 ```
 
 - The backtick path is **where** (`path` or `path#section`); `#section` is a `jay-policy="…"`-marked part.
+- `lines A–B` (when present) is the marked part's **line range in the candidate file** — go straight there. File-level changes (a whole new page, a `.ts`/`.css` edit) have no range.
 - `ruleId` is **why** (`edit:no`, `code:no`, `design:designSystemOnly`, `create:from-template`, …).
 - **Do what the `Suggestion:` line says.** It is written for you; the report can be fed back as your task.
 

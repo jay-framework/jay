@@ -1,4 +1,10 @@
 <html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+</head>
 <body>
     <h1>Plain</h1>
     <p>A hand-authored page with no template region.</p>

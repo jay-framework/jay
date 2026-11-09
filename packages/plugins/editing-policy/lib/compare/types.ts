@@ -10,6 +10,8 @@ export interface Finding {
     selector?: string;
     path?: string;
     section?: string;
+    /** 1-based [start, end] line range in the candidate file, when the change pinpoints a part. */
+    lines?: [number, number];
     message: string;
     suggestion?: string;
     role: string;

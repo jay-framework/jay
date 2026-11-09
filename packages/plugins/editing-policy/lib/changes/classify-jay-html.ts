@@ -81,18 +81,40 @@ function classifyBody(base: HTMLElement, cand: HTMLElement): JayHtmlKinds {
     };
 }
 
+/** 1-based [start, end] line range of a parsed element in its source, from node-html-parser `.range`. */
+function lineRange(content: string, el: HTMLElement): [number, number] | undefined {
+    const range = (el as unknown as { range?: [number, number] }).range;
+    if (!range) return undefined;
+    const lineAt = (off: number) => content.slice(0, off).split('\n').length;
+    return [lineAt(range[0]), lineAt(range[1])];
+}
+
 function emitKinds(
     changes: Change[],
     path: string,
     section: string | undefined,
     kinds: JayHtmlKinds,
+    lines?: [number, number],
 ) {
     const where = section ? `${path}#${section}` : path;
     if (kinds.content)
-        changes.push({ kind: 'content', path, section, summary: `content changed in ${where}` });
+        changes.push({
+            kind: 'content',
+            path,
+            section,
+            lines,
+            summary: `content changed in ${where}`,
+        });
     if (kinds.design)
-        changes.push({ kind: 'design', path, section, summary: `design changed in ${where}` });
-    if (kinds.css) changes.push({ kind: 'css', path, section, summary: `CSS changed in ${where}` });
+        changes.push({
+            kind: 'design',
+            path,
+            section,
+            lines,
+            summary: `design changed in ${where}`,
+        });
+    if (kinds.css)
+        changes.push({ kind: 'css', path, section, lines, summary: `CSS changed in ${where}` });
 }
 
 /**
@@ -136,6 +158,7 @@ export function classifyJayHtmlFile(
                 kind: 'policy',
                 path,
                 section: name,
+                lines: lineRange(candContent, candMarkers.get(name)!),
                 summary: `jay-policy="${name}" marker added in ${path}`,
             });
         }
@@ -144,11 +167,13 @@ export function classifyJayHtmlFile(
     // section-scoped content/design/css for markers present in both versions ("stable" markers)
     const stableNames = new Set([...names].filter((n) => baseMarkers.has(n) && candMarkers.has(n)));
     for (const name of [...stableNames].sort()) {
+        const candEl = candMarkers.get(name)!;
         emitKinds(
             changes,
             path,
             name,
-            classifyBody(baseMarkers.get(name)!, candMarkers.get(name)!),
+            classifyBody(baseMarkers.get(name)!, candEl),
+            lineRange(candContent, candEl),
         );
     }
 
