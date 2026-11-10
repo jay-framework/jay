@@ -48,6 +48,10 @@ export const TEST_IMPORT_RESOLVER: JayImportResolver = {
                 dir: 'form-fields-headless',
                 file: 'form-fields-headless',
             },
+            'test-boolean-choices:boolean-choices': {
+                dir: 'boolean-choices-headless',
+                file: 'boolean-choices-headless',
+            },
         };
 
         const key = `${pluginName}:${contractName}`;
@@ -213,6 +217,24 @@ export const TEST_IMPORT_RESOLVER: JayImportResolver = {
                         'contracts/form-fields-headless/form-fields-headless',
                     ),
                     componentName: 'formFields',
+                    isNpmPackage: false,
+                },
+                [],
+            );
+        }
+
+        if (pluginName === 'test-boolean-choices' && contractName === 'boolean-choices') {
+            return new WithValidations(
+                {
+                    contractPath: path.resolve(
+                        projectRoot,
+                        'contracts/boolean-choices-headless/boolean-choices-headless.jay-contract',
+                    ),
+                    componentPath: path.resolve(
+                        projectRoot,
+                        'contracts/boolean-choices-headless/boolean-choices-headless',
+                    ),
+                    componentName: 'booleanChoices',
                     isNpmPackage: false,
                 },
                 [],

@@ -76,7 +76,7 @@ async function main(): Promise<void> {
     console.log('');
     console.log(`Creating project in ${chalk.cyan(`./${name}`)}...`);
 
-    await scaffoldProject(projectDir, name, selectedPlugins);
+    await scaffoldProject(projectDir, name, selectedPlugins, pm);
     console.log(chalk.green('  ✓ Created project structure'));
 
     console.log(chalk.dim('  Installing dependencies...'));

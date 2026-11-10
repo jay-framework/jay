@@ -280,6 +280,23 @@ describe('generate jay-html element', () => {
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
+        /**
+         * Bug: boolean attributes bound to keyed headless (plugin) data rendered wrong.
+         * Found in: design-log/235 - boolean attributes and fresh-project validation.md
+         * Expected: `checked="ch.accepted"` / `checked="selected"` (documented condition syntax) and the
+         *   single-binding form `checked="{selected}"` compile to a boolean property (dp) on the client and
+         *   a present/absent attribute in SSR; `disabled="{ch.accepted}"` is the condition `ch.accepted`.
+         * Actual: `checked` was a template-style PROPERTY — the condition form was emitted as a literal
+         *   static attribute (always checked) and SSR wrote `checked="false"` (= checked) for the curly form;
+         *   `disabled="{…}"` was a client parse error while SSR accepted it.
+         */
+        it('renders boolean attributes bound to headless data inside and outside forEach (DL#235)', async () => {
+            const folder = 'contracts/boolean-attributes-headless';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
         it('for pre-rendered slow arrays with slowForEach', async () => {
             const folder = 'collections/slow-for-each';
             const elementFile = await readFileAndGenerateElementFile(folder);

@@ -332,6 +332,11 @@ booleanAttribute
   return cond.map(_ => `ba(${jayParams(cond)} => ${_})`).plusImport(ba)
 }
 
+booleanProperty
+  = cond:condition {
+  return cond.map(_ => `dp(${jayParams(cond)} => ${_})`).plusImport(dp)
+}
+
 dynamicAttribute
   = template:template {
   let [renderFragment, isDynamic] = template;

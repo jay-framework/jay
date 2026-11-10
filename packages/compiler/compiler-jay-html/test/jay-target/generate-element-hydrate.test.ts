@@ -200,6 +200,25 @@ describe('generate jay-html element hydrate', () => {
         });
 
         /**
+         * Bug: boolean attributes bound to keyed headless (plugin) data rendered wrong.
+         * Found in: design-log/235 - boolean attributes and fresh-project validation.md
+         * Expected: `checked="ch.accepted"` / `checked="selected"` (documented condition syntax) and the
+         *   single-binding form `checked="{selected}"` compile to a boolean property (dp) on the client and
+         *   a present/absent attribute in SSR; `disabled="{ch.accepted}"` is the condition `ch.accepted`.
+         * Actual: `checked` was a template-style PROPERTY — the condition form was emitted as a literal
+         *   static attribute (always checked) and SSR wrote `checked="false"` (= checked) for the curly form;
+         *   `disabled="{…}"` was a client parse error while SSR accepted it.
+         */
+        it('hydrates boolean attributes bound to headless data inside and outside forEach (DL#235)', async () => {
+            const folder = 'contracts/boolean-attributes-headless';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+
+        /**
          * DL#226: non-repeated sibling sub-contracts that each expose a leaf interactive tag with
          * the same name (`input`), all bound on one page, must each get a DISTINCT ref const
          * (`refInput` / `refInput2` / `refInput3`) rather than colliding on one `refInput` — which
