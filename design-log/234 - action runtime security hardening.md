@@ -380,3 +380,11 @@ All six phases implemented in plan order, each red-first (tests written with the
 ### Follow-up
 
 - Multipart / `withFiles` total-size limits (dev busboy + production parity) — own DL, per Resolved decision 3.
+
+### Code review (2026-11-10) — approved with suggestions
+
+- **Fixed:** the production handler's status mapping now matches the dev router: `getStatusCodeForError` (exported, renamed from `getStatusCode`) maps `PAYLOAD_TOO_LARGE → 413`. Red first: the new test got 500. production-server 121/121.
+- **Documented** in `agent-kit-template/plugin/actions-guide.md`: multipart (`.withFiles()`) bodies are not capped yet, so don't expose them to anonymous callers without your own limit; the same-origin check stops browsers driven by another site, not scripts (it is not authentication).
+- **Q (same-site, different-origin GET `.withRequest()` rejected — need an escape hatch?):** no current consumer calls a GET `.withRequest()` action cross-origin; jay's client always calls same-origin. Note that `// jay-action: allow-get-request` only suppresses the validation warning; it does not bypass the runtime 403. No runtime escape hatch until a consumer needs one.
+- **Q (multipart follow-up symmetric?):** the production handler has no multipart path today, so the follow-up design log should define the cap once for both: dev busboy limits now, and the same limit for production when it gains multipart.
+- **Branch:** the PR slice is the two commits on top of `origin/main` (`eb2922b3` design log, `8016bd35` implementation) plus this review fix; DL #231–#233 are already on `main`.

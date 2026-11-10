@@ -7,7 +7,7 @@ import {
     makeJayStream,
 } from '@jay-framework/fullstack-component';
 import { resetLogger, setLogger } from '@jay-framework/logger';
-import { fetchActionRequest } from '../lib/serve/fetch-action-handler';
+import { fetchActionRequest, getStatusCodeForError } from '../lib/serve/fetch-action-handler';
 
 const SITE = 'http://site.example';
 
@@ -521,5 +521,11 @@ describe('fetchActionRequest GET withRequest (DL#234)', () => {
         );
 
         expect(await response.json()).toEqual({ success: true, data: '%E0%A4%A' });
+    });
+});
+
+describe('getStatusCodeForError (DL#234 review: parity with the dev router)', () => {
+    it('should map PAYLOAD_TOO_LARGE to 413 like the dev router', () => {
+        expect(getStatusCodeForError('PAYLOAD_TOO_LARGE', false)).toEqual(413);
     });
 });

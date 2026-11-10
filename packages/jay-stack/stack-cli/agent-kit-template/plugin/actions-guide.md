@@ -61,6 +61,8 @@ makeJayAction('name')
 Actions can receive binary files (images, documents, etc.) via multipart/form-data.
 Add `.withFiles()` to the builder chain to enable file uploads.
 
+**No size limit yet.** The `actionBodyLimitBytes` cap (default 1 MiB) applies to JSON bodies only; multipart uploads are not capped. Do not expose a `.withFiles()` action to anonymous callers without your own limit (check file sizes in the handler, or cap request size at your edge).
+
 ```typescript
 import { makeJayAction, type JayFile } from '@jay-framework/fullstack-component';
 import fs from 'fs';
@@ -158,7 +160,7 @@ Rules:
 - **Identity comes from `request.cookies`, never from `input`.** Input is client-controlled and spoofable.
 - **No `.withCaching()`.** A cookie-reading handler is per-user. Combining both throws when the action is defined. Every response of a `.withRequest()` action is sent with `Cache-Control: private, no-store`.
 - **A GET query (`makeJayQuery`) that reads cookies must be read-only.** GETs are prefetched, retried and logged. Put state changes (including `setCookie`) in a `makeJayAction` (POST). `jay-stack validate` / `validate-plugin` warn `get-action-reads-cookies` on every GET chain with `.withRequest()`; after review, suppress with `// jay-action: allow-get-request` trailing the `makeJayQuery(` line or alone on the line directly above it.
-- **Every `.withRequest()` call must come from the same origin — GET included.** A cross-site browser request (by `Sec-Fetch-Site`, or `Origin` when that header is absent) is rejected with 403 `CROSS_ORIGIN_REQUEST` before the handler runs. Jay's client always calls same-origin. Requests with neither header (server-to-server, curl) are allowed.
+- **Every `.withRequest()` call must come from the same origin — GET included.** A cross-site browser request (by `Sec-Fetch-Site`, or `Origin` when that header is absent) is rejected with 403 `CROSS_ORIGIN_REQUEST` before the handler runs. Jay's client always calls same-origin. Requests with neither header (server-to-server, curl) are allowed. So the check stops browsers being driven by another site; it is not authentication — a script can call any action directly. Protect sensitive reads and writes with the caller's identity, not with the origin check.
 - **Direct server-side calls get no cookies.** Calling a `.withRequest()` action directly (from another handler, a render phase, or the CLI) passes `{ cookies: {} }`. To act for the same caller, put the logic in a shared function and pass `request` to it explicitly.
 
 ### Setting cookies (login, refresh, logout)

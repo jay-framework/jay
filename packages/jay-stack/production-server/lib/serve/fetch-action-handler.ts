@@ -157,7 +157,7 @@ export async function fetchActionRequest(
         }
         return jsonResponse(200, { success: true, data: result.data }, headers);
     } else {
-        const statusCode = getStatusCode(result.error.code, result.error.isActionError);
+        const statusCode = getStatusCodeForError(result.error.code, result.error.isActionError);
         return jsonResponse(
             statusCode,
             { success: false, error: redactInternalError(actionName, result.error, result.cause) },
@@ -320,7 +320,7 @@ export async function registerActionsFromModules(
     logger.info(`[Server] Registered ${count} actions from pre-imported modules`);
 }
 
-function getStatusCode(code: string, isActionError: boolean): number {
+export function getStatusCodeForError(code: string, isActionError: boolean): number {
     if (isActionError) return 422;
     switch (code) {
         case 'ACTION_NOT_FOUND':
@@ -332,6 +332,8 @@ function getStatusCode(code: string, isActionError: boolean): number {
             return 401;
         case 'FORBIDDEN':
             return 403;
+        case 'PAYLOAD_TOO_LARGE':
+            return 413;
         default:
             return 500;
     }
