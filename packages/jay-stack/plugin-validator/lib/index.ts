@@ -1,6 +1,10 @@
 export { validatePlugin } from './validate-plugin';
 export { checkComponentPropsAndParams } from './check-component-contract';
 export {
+    checkGetActionsReadingCookies,
+    type SourceWarning,
+} from './check-get-actions-reading-cookies';
+export {
     lintAddMenuCatalog,
     validateAddMenuCatalogFile,
     validateAddMenuItem,

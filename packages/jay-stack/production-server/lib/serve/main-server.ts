@@ -23,6 +23,8 @@ export interface MainServerOptions {
     publicBasePath?: string;
     serveStatic?: boolean;
     testMode?: boolean;
+    /** Cap on a JSON action request body in UTF-8 bytes (DL#234; default 1 MiB) */
+    actionBodyLimitBytes?: number;
 }
 
 function toFetchRequest(req: http.IncomingMessage): Request {
@@ -117,7 +119,9 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
 
             if (isActionRequest(url.pathname)) {
                 const fetchReq = toFetchRequest(req);
-                const response = await fetchActionRequest(fetchReq);
+                const response = await fetchActionRequest(fetchReq, undefined, {
+                    actionBodyLimitBytes: options.actionBodyLimitBytes,
+                });
                 await pipeFetchResponse(response, res);
                 return;
             }

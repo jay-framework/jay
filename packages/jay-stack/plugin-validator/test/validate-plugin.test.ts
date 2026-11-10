@@ -760,3 +760,34 @@ describe('validatePlugin — route jay-html compile', () => {
         expect(compileErr!.message).toMatch(/failed to compile/i);
     });
 });
+
+describe('validatePlugin — GET actions reading cookies (DL#234)', () => {
+    it('surfaces get-action-reads-cookies as a warning and stays valid', async () => {
+        const dir = createTempPluginWithSource({
+            pluginYaml: `name: test-plugin\nactions:\n  - cartQuery\n`,
+            packageJson: {
+                name: '@jay-framework/test-plugin',
+                exports: { '.': './dist/index.js', './plugin.yaml': './plugin.yaml' },
+            },
+            sourceFiles: {
+                'dist/index.js': `export const cartQuery = {};\n`,
+                'lib/actions/cart.ts': `export const cartQuery = makeJayQuery('cart.current').withRequest().withHandler(h);\n`,
+            },
+        });
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        expect(result.warnings.filter((w) => w.type === 'get-action-reads-cookies')).toEqual([
+            {
+                type: 'get-action-reads-cookies',
+                code: 'get-action-reads-cookies',
+                location: 'lib/actions/cart.ts:1',
+                message:
+                    "lib/actions/cart.ts:1 — GET action 'cart.current' reads cookies (.withRequest()). " +
+                    'It must not change state; use makeJayAction (POST) for writes. ' +
+                    'Cross-origin calls are rejected. Suppress with // jay-action: allow-get-request',
+            },
+        ]);
+        expect(result.valid).toEqual(true);
+    });
+});

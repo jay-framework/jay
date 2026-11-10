@@ -127,10 +127,7 @@ export function checkPolicy(
                     );
                 }
 
-                if (
-                    rule === 'dependencies' &&
-                    !matchGlob('package.json', parsed.pathGlob)
-                ) {
+                if (rule === 'dependencies' && !matchGlob('package.json', parsed.pathGlob)) {
                     err(
                         `Rule "dependencies" on selector "${entry.selector}" cannot match the root manifest`,
                         'Use a selector that matches package.json (e.g. "**" or "package.json")',
@@ -161,9 +158,7 @@ export function checkPolicy(
 
             if (ctx.projectFiles) {
                 if (parsed.section === undefined) {
-                    const matches = ctx.projectFiles.some((f) =>
-                        matchGlob(f, parsed.pathGlob),
-                    );
+                    const matches = ctx.projectFiles.some((f) => matchGlob(f, parsed.pathGlob));
                     if (!matches && parsed.pathGlob !== '**') {
                         warn(`Selector "${entry.selector}" matches no file in the project`);
                     }
@@ -172,9 +167,7 @@ export function checkPolicy(
                         const hashIdx = m.lastIndexOf('#');
                         const mp = m.slice(0, hashIdx);
                         const mn = m.slice(hashIdx + 1);
-                        return (
-                            mn === parsed.section && matchGlob(mp, parsed.pathGlob)
-                        );
+                        return mn === parsed.section && matchGlob(mp, parsed.pathGlob);
                     });
                     if (!anyMarker) {
                         warn(

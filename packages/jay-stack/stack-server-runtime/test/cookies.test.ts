@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { serializeSetCookie } from '../lib/cookies';
+import { parseCookies, serializeSetCookie } from '../lib/cookies';
 import { createActionRequest } from '../lib/action-request';
 
 describe('serializeSetCookie (DL#230)', () => {
@@ -60,5 +60,21 @@ describe('createActionRequest (DL#230)', () => {
         const request = createActionRequest({ cookies: { s: '1' }, secure: false });
         expect(Object.isFrozen(request.cookies)).toEqual(true);
         expect(request.cookies).toEqual({ s: '1' });
+    });
+});
+
+describe('parseCookies (DL#234)', () => {
+    /**
+     * Bug: a malformed percent-encoded cookie value throws URIError.
+     * Found in: design-log/234 - action runtime security hardening.md (Problem #3).
+     * Expected: the raw value is kept and other cookies still parse.
+     * Actual: parseCookies throws, failing every page and action for that browser.
+     */
+    it('should keep the raw value when a cookie is not valid percent-encoding', () => {
+        expect(parseCookies('a=%E0%A4%A; b=ok')).toEqual({ a: '%E0%A4%A', b: 'ok' });
+    });
+
+    it('should still decode valid percent-encoding', () => {
+        expect(parseCookies('a=x%20y')).toEqual({ a: 'x y' });
     });
 });

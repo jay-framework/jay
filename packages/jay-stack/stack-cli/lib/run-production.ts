@@ -6,6 +6,7 @@ import { setDevLogger, createDevLogger, getLogger, type LogLevel } from '@jay-fr
 import { surfaceValidationIssues } from './run-validate';
 import { generatePageDefinitionFiles } from './generate-page-definition-files';
 import { generateContractDefinitionFiles } from './generate-contract-definition-files';
+import { loadConfig, resolveActionBodyLimitBytes } from './config';
 
 export interface ProductionContext {
     resolvedPath: string;
@@ -164,6 +165,7 @@ export async function runServe(
             testMode: options.testMode,
             publicBasePath: options.staticBaseUrl,
             serveStatic: options.serveStatic,
+            actionBodyLimitBytes: resolveActionBodyLimitBytes(loadConfig(ctx.resolvedPath)),
         });
     }
 }

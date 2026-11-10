@@ -66,6 +66,7 @@ export {
     isActionRequest,
     registerActionsFromManifest,
     registerActionsFromModules,
+    type FetchActionOptions,
 } from './serve/fetch-action-handler';
 export { fetchStaticFile } from './serve/fetch-static-handler';
 export {

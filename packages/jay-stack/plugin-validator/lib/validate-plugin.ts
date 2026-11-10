@@ -13,6 +13,7 @@ import { checkComponentPropsAndParams } from './check-component-contract';
 import { validateAddMenuCatalog } from './validate-add-menu-catalog';
 import { validateAiditorSettings } from './validate-aiditor-settings';
 import { validateRouteJayHtmlTemplates } from './validate-route-jay-html-templates';
+import { checkGetActionsReadingCookies } from './check-get-actions-reading-cookies';
 
 /**
  * Validates a Jay Stack plugin package or local plugin directory.
@@ -473,6 +474,10 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
                 );
             }
         }
+    }
+
+    if (manifest.actions && manifest.actions.length > 0) {
+        checkPluginGetActionsReadingCookies(context, result);
     }
 
     // Validate init handler
@@ -1666,6 +1671,30 @@ async function validateDynamicContracts(
                     });
                 }
             }
+        }
+    }
+}
+
+/** Warns on GET action chains in the plugin's `lib/**\/*.ts` that call .withRequest() (DL#234). */
+function checkPluginGetActionsReadingCookies(
+    context: PluginContext,
+    result: ValidationResult,
+): void {
+    const libDir = path.join(context.pluginPath, 'lib');
+    if (!fs.existsSync(libDir)) return;
+    const sourceFiles = (fs.readdirSync(libDir, { recursive: true }) as string[])
+        .filter((file) => file.endsWith('.ts') && !file.endsWith('.d.ts'))
+        .sort();
+    for (const file of sourceFiles) {
+        const relativePath = path.posix.join('lib', file.split(path.sep).join('/'));
+        const source = fs.readFileSync(path.join(libDir, file), 'utf-8');
+        for (const warning of checkGetActionsReadingCookies(source, relativePath)) {
+            result.warnings.push({
+                type: warning.code,
+                code: warning.code,
+                location: `${warning.file}:${warning.line}`,
+                message: warning.message,
+            });
         }
     }
 }

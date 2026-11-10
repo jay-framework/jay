@@ -3,15 +3,25 @@ import type { CookieOptions } from '@jay-framework/fullstack-component';
 /**
  * Parse a Cookie header string into a key-value record.
  * Handles standard cookie format: "name1=value1; name2=value2".
+ * Never throws on a malformed value (DL#234).
  */
 export function parseCookies(cookieHeader: string | null | undefined): Record<string, string> {
     const cookies: Record<string, string> = {};
     if (!cookieHeader) return cookies;
     for (const pair of cookieHeader.split(';')) {
         const [name, ...rest] = pair.trim().split('=');
-        if (name) cookies[name] = decodeURIComponent(rest.join('='));
+        if (name) cookies[name] = decodeCookieValue(rest.join('='));
     }
     return cookies;
+}
+
+/** A value that is not valid percent-encoding is kept raw — what the browser sent (DL#234 Q7). */
+function decodeCookieValue(raw: string): string {
+    try {
+        return decodeURIComponent(raw);
+    } catch {
+        return raw;
+    }
 }
 
 /** RFC 6265 cookie-name token: visible ASCII except separators. */

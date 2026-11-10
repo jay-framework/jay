@@ -1479,3 +1479,36 @@ describe('prefer design-system elements (DL#200)', () => {
         });
     });
 });
+
+describe('action runtime hardening warnings (DL#234)', () => {
+    const fixtureDir = path.resolve('./test/fixtures/validate/get-action-reads-cookies');
+
+    it('warns on GET withRequest actions and an invalid action body limit, staying valid', async () => {
+        const result = await validateJayFiles({
+            path: path.join(fixtureDir, 'src/pages'),
+            projectRoot: fixtureDir,
+        });
+
+        const dl234Warnings = result.warnings.filter(
+            (w) =>
+                w.file.startsWith('src/actions') ||
+                w.message.startsWith('invalid-action-body-limit'),
+        );
+        expect(dl234Warnings).toEqual([
+            {
+                file: 'src/actions/cart.ts',
+                message:
+                    "src/actions/cart.ts:3 — GET action 'cart.current' reads cookies (.withRequest()). " +
+                    'It must not change state; use makeJayAction (POST) for writes. ' +
+                    'Cross-origin calls are rejected. Suppress with // jay-action: allow-get-request',
+            },
+            {
+                file: '.jay',
+                message:
+                    'invalid-action-body-limit: server.actionBodyLimitBytes must be a positive integer (got 0); ' +
+                    'the default of 1048576 bytes is used',
+            },
+        ]);
+        expect(result.valid).toEqual(true);
+    });
+});
