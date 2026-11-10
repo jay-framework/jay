@@ -15,6 +15,7 @@ import Node from 'node-html-parser/dist/nodes/node';
 import {
     parseClassExpression,
     parseServerCondition,
+    toBooleanCondition,
     parseServerTemplateExpression,
     UnsupportedServerParentBindingError,
     UNSUPPORTED_TARGET_PARENT_MESSAGE,
@@ -35,6 +36,7 @@ import { Indent } from './indent';
 import { assignCoordinates } from './assign-coordinates';
 import {
     BOOLEAN_ATTRIBUTE,
+    BOOLEAN_PROPERTY,
     COORD_ATTR,
     extractHeadlessCoordinate,
     filterContentNodes,
@@ -401,11 +403,11 @@ function renderServerAttributes(element: HTMLElement, context: ServerContext): R
 
         const attrValue = attributes[attrName];
 
-        if (propertyMapping[attrCanonical]?.type === BOOLEAN_ATTRIBUTE) {
+        if (isBooleanMapping(attrCanonical)) {
             if (attrValue === '') {
                 parts.push(w(indent, `' ${attrName}'`));
             } else {
-                const condExpr = parseServerCondition(attrValue, variables);
+                const condExpr = parseServerCondition(toBooleanCondition(attrValue), variables);
                 parts.push(
                     new RenderFragment(
                         `${indent.firstLine}if (${condExpr.rendered}) { w(' ${attrName}'); }`,
@@ -666,7 +668,7 @@ function renderServerAttributesAsString(
 
         const attrValue = attributes[attrName];
 
-        if (propertyMapping[attrCanonical]?.type === BOOLEAN_ATTRIBUTE) {
+        if (isBooleanMapping(attrCanonical)) {
             if (attrValue === '') {
                 parts.push(new RenderFragment(`' ${attrName}'`));
             }
@@ -1024,13 +1026,19 @@ function renderServerAsyncGroup(group: AsyncGroup, context: ServerContext): Rend
     return mergeServerFragments(parts);
 }
 
+/** DL#235 — boolean attributes and boolean properties (`checked`) both SSR as present/absent. */
+function isBooleanMapping(attrCanonical: string): boolean {
+    const type = propertyMapping[attrCanonical]?.type;
+    return type === BOOLEAN_ATTRIBUTE || type === BOOLEAN_PROPERTY;
+}
+
 export function hasDynamicAttributeBindings(element: HTMLElement, variables: Variables): boolean {
     const attributes = element.attributes;
     for (const attrName of Object.keys(attributes)) {
         const attrCanonical = attrName.toLowerCase();
         if (isDirectiveAttribute(attrCanonical)) continue;
         const attrValue = attributes[attrName];
-        if (propertyMapping[attrCanonical]?.type === BOOLEAN_ATTRIBUTE) {
+        if (isBooleanMapping(attrCanonical)) {
             if (attrValue !== '') return true; // Dynamic boolean is always dynamic
         } else if (propertyMapping[attrCanonical]?.type === PROPERTY) {
             const [, isDynamic] = parseServerTemplateExpression(attrValue, variables);

@@ -26,6 +26,7 @@ import {
     discoverPluginsWithSetup,
     executePluginSetup,
 } from '@jay-framework/stack-server-build';
+import { describeInitAfterSetupFailure } from './init-after-setup-message';
 import { loadConfig } from './config';
 import {
     createInteractivePrompt,
@@ -243,7 +244,7 @@ async function initPlugin(
     const initErrors = await executePluginServerInits(pluginInit, viteServer, false, true);
     if (initErrors.size > 0) {
         for (const [, err] of initErrors) {
-            logger.important(chalk.yellow(`   ⚠️  Init after setup: ${err.message}`));
+            logger.important(chalk.yellow(`   ⚠️  ${describeInitAfterSetupFailure(err)}`));
         }
     } else {
         logger.important(chalk.green(`   ✅ Services initialized`));

@@ -71,6 +71,13 @@ describe('contract definitions', () => {
             const folder = 'contracts/form-fields-headless';
             await testContractDefinitionFile(folder);
         });
+
+        // DL#235 — keyed headless contract with boolean data (top-level + repeated options), imported
+        // by the boolean-attributes-headless generated fixtures.
+        it('for headless contract with boolean data (DL#235)', async () => {
+            const folder = 'contracts/boolean-choices-headless';
+            await testContractDefinitionFile(folder);
+        });
     });
 
     describe('generate jay-html definition linked to contract', () => {

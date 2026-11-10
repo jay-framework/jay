@@ -1,0 +1,14 @@
+name: Test
+tags:
+  - tag: accepted
+    type: data
+    dataType: boolean
+    phase: slow
+  - tag: locked
+    type: data
+    dataType: boolean
+    phase: slow
+  - tag: busy
+    type: data
+    dataType: boolean
+    phase: fast

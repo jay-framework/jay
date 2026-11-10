@@ -36,6 +36,7 @@ import {
     parseAccessor,
     parseAttributeExpression,
     parseBooleanAttributeExpression,
+    parseBooleanPropertyExpression,
     parseClassExpression,
     parseComponentPropExpression,
     parseCondition,
@@ -80,6 +81,7 @@ import { tagToNamespace } from './tag-to-namespace';
 import {
     attributesRequiresQuotes,
     BOOLEAN_ATTRIBUTE,
+    BOOLEAN_PROPERTY,
     buildContractRefMap,
     expandContractType,
     filterContentNodes,
@@ -229,6 +231,14 @@ export function renderAttributes(
         } else if (propertyMapping[attrCanonical]?.type === PROPERTY) {
             let attributeExpression = parsePropertyExpression(attributes[attrName], variables);
             renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
+        } else if (propertyMapping[attrCanonical]?.type === BOOLEAN_PROPERTY) {
+            const attrValue = attributes[attrName];
+            if (attrValue === '') {
+                renderedAttributes.push(new RenderFragment(`${attrKey}: ''`, Imports.none()));
+            } else {
+                let attributeExpression = parseBooleanPropertyExpression(attrValue, variables);
+                renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
+            }
         } else if (propertyMapping[attrCanonical]?.type === BOOLEAN_ATTRIBUTE) {
             const attrValue = attributes[attrName];
             if (attrValue === '') {
@@ -287,6 +297,14 @@ export function renderDynamicAttributes(
             const attributeExpression = parsePropertyExpression(attributes[attrName], variables);
             if (attributeExpression.imports.has(Import.dynamicProperty)) {
                 renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
+            }
+        } else if (propertyMapping[attrCanonical]?.type === BOOLEAN_PROPERTY) {
+            const attrValue = attributes[attrName];
+            if (attrValue !== '') {
+                const attributeExpression = parseBooleanPropertyExpression(attrValue, variables);
+                if (attributeExpression.imports.has(Import.dynamicProperty)) {
+                    renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
+                }
             }
         } else if (propertyMapping[attrCanonical]?.type === BOOLEAN_ATTRIBUTE) {
             const attrValue = attributes[attrName];

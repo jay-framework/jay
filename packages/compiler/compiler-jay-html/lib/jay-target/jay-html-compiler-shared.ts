@@ -76,10 +76,16 @@ export function escapeForJsString(s: string): string {
 
 export const PROPERTY = 1;
 export const BOOLEAN_ATTRIBUTE = 3;
+/**
+ * DL#235 — a boolean DOM property: condition-style value (like BOOLEAN_ATTRIBUTE), applied as a
+ * property (dp) on the client because the attribute only sets the default, not the live state.
+ * SSR renders it as a present/absent attribute.
+ */
+export const BOOLEAN_PROPERTY = 4;
 export const propertyMapping: Record<string, { type: number }> = {
     // DOM properties (use template-style parsing with dp())
     value: { type: PROPERTY },
-    checked: { type: PROPERTY },
+    checked: { type: BOOLEAN_PROPERTY },
 
     // Boolean attributes (use condition-style parsing with ba())
     // The presence/absence of these attributes is controlled by a condition expression

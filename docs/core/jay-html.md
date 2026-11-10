@@ -765,13 +765,13 @@ Boolean HTML attributes like `disabled`, `hidden`, `required`, etc. use **condit
 
 Jay-HTML recognizes these HTML boolean attributes for condition-style parsing:
 
-| Category   | Attributes                                                                                  |
-| ---------- | ------------------------------------------------------------------------------------------- |
-| Form       | `disabled`, `readonly`, `required`, `autofocus`, `multiple`, `novalidate`, `formnovalidate` |
-| Selection  | `selected`                                                                                  |
-| Visibility | `hidden`, `open`, `inert`                                                                   |
-| Media      | `autoplay`, `controls`, `loop`, `muted`, `playsinline`                                      |
-| Other      | `reversed`, `ismap`, `defer`, `async`, `default`                                            |
+| Category   | Attributes                                                                                                        |
+| ---------- | ----------------------------------------------------------------------------------------------------------------- |
+| Form       | `checked` (property), `disabled`, `readonly`, `required`, `autofocus`, `multiple`, `novalidate`, `formnovalidate` |
+| Selection  | `selected`                                                                                                        |
+| Visibility | `hidden`, `open`, `inert`                                                                                         |
+| Media      | `autoplay`, `controls`, `loop`, `muted`, `playsinline`                                                            |
+| Other      | `reversed`, `ismap`, `defer`, `async`, `default`                                                                  |
 
 #### Condition Expressions
 
@@ -816,7 +816,9 @@ Boolean attributes support the full condition expression syntax:
 
 There's no need for `disabled="true"` or `disabled="false"` - use the bare attribute for always-present, or omit it entirely for never-present.
 
-**Note:** `checked` and `value` are **not** boolean attributes - they're DOM properties that use template-style syntax with curly braces: `checked="{isChecked}"`, `value="{inputValue}"`.
+A value that is exactly one binding is the same condition: `disabled="{isDisabled}"` ≡ `disabled="isDisabled"`. Text interpolation (`disabled="{a} {b}"`, or text plus a binding such as `checked="text {x}"`) is not a condition and is a compile error.
+
+**`checked`** takes the same condition syntax (`checked="isSelected"`, `checked="!isOff"`, `checked="{isSelected}"`). It is server-rendered as a present/absent attribute and applied as the `checked` DOM property on the client, so the live state follows the ViewState after the user clicks. `value` is a DOM property with template syntax: `value="{inputValue}"`.
 
 ### Class Binding
 

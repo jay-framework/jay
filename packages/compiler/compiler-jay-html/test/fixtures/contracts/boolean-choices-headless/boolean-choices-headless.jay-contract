@@ -1,0 +1,27 @@
+name: boolean-choices
+tags:
+  # A keyed headless plugin exposing boolean data: a top-level flag and a
+  # repeated list of options, each with a `selected` boolean (DL#235).
+  - tag: accepted
+    type: data
+    dataType: boolean
+    phase: fast+interactive
+
+  - tag: interests
+    type: sub-contract
+    phase: fast+interactive
+    tags:
+      - tag: options
+        type: sub-contract
+        repeated: true
+        trackBy: id
+        tags:
+          - tag: id
+            type: data
+            dataType: string
+          - tag: label
+            type: data
+            dataType: string
+          - tag: selected
+            type: data
+            dataType: boolean

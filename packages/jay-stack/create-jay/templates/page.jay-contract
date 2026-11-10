@@ -10,3 +10,8 @@ tags:
     type: data
     dataType: string
     phase: slow
+
+  - tag: openAiditor
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Opens /aiditor in a new browser tab (dev server only)
