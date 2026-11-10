@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import {
     ActionRegistry,
+    DEFAULT_ACTION_BODY_LIMIT_BYTES,
+    payloadTooLargeResponse,
     isCrossOriginRequest,
     needsSameOriginCheck,
     type RegisteredAction,
@@ -695,7 +697,7 @@ describe('ActionRegistry withRequest (DL#230)', () => {
         });
     });
 
-    it('requires the same-origin check only for non-GET withRequest actions', () => {
+    it('requires the same-origin check for every withRequest action, GET included (DL#234)', () => {
         registry.register(
             makeJayQuery('dl230.q')
                 .withRequest()
@@ -712,7 +714,7 @@ describe('ActionRegistry withRequest (DL#230)', () => {
             ['dl230.q', 'dl230.a', 'dl230.p'].map((name) =>
                 needsSameOriginCheck(registry.get(name)!),
             ),
-        ).toEqual([false, true, false]);
+        ).toEqual([true, true, false]);
     });
 });
 
@@ -728,5 +730,50 @@ describe('isCrossOriginRequest (DL#230)', () => {
         [undefined, undefined, false],
     ])('Sec-Fetch-Site=%s Origin=%s -> %s', (secFetchSite, origin, expected) => {
         expect(isCrossOriginRequest({ secFetchSite, origin, requestOrigin })).toEqual(expected);
+    });
+});
+
+describe('action runtime hardening (DL#234)', () => {
+    it('needsSameOriginCheck should be true for a GET withRequest action', () => {
+        const registry = new ActionRegistry();
+        registry.register(
+            makeJayQuery('dl234.q')
+                .withRequest()
+                .withHandler(async (i: {}) => 1),
+        );
+        expect(needsSameOriginCheck(registry.get('dl234.q')!)).toEqual(true);
+    });
+
+    it('should hand the original error to the dispatcher as cause on an internal error', async () => {
+        const registry = new ActionRegistry();
+        const thrown = new Error('secret');
+        registry.register(
+            makeJayAction('dl234.fail').withHandler(async () => {
+                throw thrown;
+            }),
+        );
+
+        const result = await registry.execute('dl234.fail', {});
+
+        expect(result).toEqual({
+            success: false,
+            error: { code: 'INTERNAL_ERROR', message: 'secret', isActionError: false },
+            cause: thrown,
+        });
+    });
+
+    it('should default the action body limit to 1 MiB', () => {
+        expect(DEFAULT_ACTION_BODY_LIMIT_BYTES).toEqual(1_048_576);
+    });
+
+    it('should describe the limit in the 413 body', () => {
+        expect(payloadTooLargeResponse(10)).toEqual({
+            success: false,
+            error: {
+                code: 'PAYLOAD_TOO_LARGE',
+                message: 'Action request body exceeds 10 bytes',
+                isActionError: false,
+            },
+        });
     });
 });

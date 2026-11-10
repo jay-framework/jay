@@ -1,7 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { loadConfig, updateConfig, getConfigWithDefaults, JayConfig } from '../lib/config';
+import os from 'os';
+import {
+    loadConfig,
+    updateConfig,
+    getConfigWithDefaults,
+    resolveActionBodyLimitBytes,
+    JayConfig,
+} from '../lib/config';
 
 describe('Config Loading', () => {
     const configPath = path.resolve('.jay');
@@ -87,5 +94,52 @@ describe('Config Loading', () => {
         expect(resolved.devServer.pagesBase).toEqual('./custom/pages');
         expect(resolved.devServer.publicFolder).toEqual('./public');
         expect(resolved.devServer.portRange).toEqual([3000, 3100]);
+    });
+});
+
+describe('resolveActionBodyLimitBytes (DL#234)', () => {
+    let projectRoot: string;
+
+    beforeEach(() => {
+        projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'jay-dl234-config-'));
+    });
+
+    afterEach(() => {
+        fs.rmSync(projectRoot, { recursive: true, force: true });
+    });
+
+    it('should default to 1 MiB', () => {
+        expect(resolveActionBodyLimitBytes({})).toEqual(1_048_576);
+    });
+
+    it('should read server.actionBodyLimitBytes from .jay', () => {
+        fs.writeFileSync(
+            path.join(projectRoot, '.jay'),
+            'server:\n  actionBodyLimitBytes: 2097152\n',
+        );
+
+        const config = loadConfig(projectRoot);
+
+        expect(config.server).toEqual({ actionBodyLimitBytes: 2097152 });
+        expect(resolveActionBodyLimitBytes(config)).toEqual(2097152);
+    });
+
+    it('should let a programmatic override win over .jay', () => {
+        const config: JayConfig = { server: { actionBodyLimitBytes: 2097152 } };
+        expect(resolveActionBodyLimitBytes(config, 5242880)).toEqual(5242880);
+    });
+
+    it.each([0, -5, 1.5, 'big' as unknown as number])(
+        'should fall back to the default for an invalid .jay value (%s)',
+        (value) => {
+            expect(
+                resolveActionBodyLimitBytes({ server: { actionBodyLimitBytes: value } }),
+            ).toEqual(1_048_576);
+        },
+    );
+
+    it('should ignore an invalid override', () => {
+        const config: JayConfig = { server: { actionBodyLimitBytes: 2097152 } };
+        expect(resolveActionBodyLimitBytes(config, 0)).toEqual(2097152);
     });
 });

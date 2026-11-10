@@ -44,4 +44,6 @@ export interface DevServerOptions {
      * they are only emitted for AIditor / source-editing sessions.
      */
     sourceEditing?: boolean;
+    /** Cap on a JSON action request body in UTF-8 bytes (DL#234; default 1 MiB) */
+    actionBodyLimitBytes?: number;
 }

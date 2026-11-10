@@ -1,6 +1,6 @@
 # 234 — Action runtime security hardening
 
-**Status:** Design
+**Status:** Implemented
 **Related:** DL#230 (request cookies for server actions, `.withRequest()`), DL#129 (streaming actions), DL#131 (file uploads), DL#134 (production build), DL#143 (fetch handler), DL#179 (validate-plugin)
 
 ## Decisions for the Implementer (TL;DR)
@@ -13,6 +13,7 @@
 4. **Body size cap** — default **1 MiB** (`1_048_576` bytes) for JSON action bodies, in both the production handler and the dev body parser. Over the cap → **413** `PAYLOAD_TOO_LARGE`. Checked from `Content-Length` first (no read), then enforced while streaming the body. Configured via (precedence, highest wins): optional programmatic `actionBodyLimitBytes` on `MainServerOptions`, `JayFetchHandlerOptions`, `DevServerOptions` / `ActionBodyParserOptions`; else `server.actionBodyLimitBytes` in the project **`.jay`** YAML (`stack-cli/lib/config.ts`, read by `jay-stack dev` and `jay-stack serve`); else the default constant. Multipart (`withFiles`) is out of scope (follow-up DL — see Resolved decisions).
 
 Non-obvious constraints:
+
 - The cross-origin and size checks run **before** the body is read (same rule as DL#230 Q5).
 - Per jay `CLAUDE.md` rule 4, no backward-compatibility shims. The new optional `options` parameter on `fetchActionRequest` is clean API, not a shim. Intentional behaviour changes:
   - Cross-site and same-site (different origin) browser GET callers of `.withRequest()` actions get **403** `CROSS_ORIGIN_REQUEST`.
@@ -54,22 +55,22 @@ flowchart TD
    - `production-server/lib/serve/main-server.ts:168` (every production page) → caught at `:179`, renders a 5xx page
    - `jay-fetch-handler/lib/index.ts:107` (every page in fetch runtimes) → unhandled rejection to the host runtime
    - `dev-server/lib/action-router.ts:235` and `dev-server/lib/dev-server.ts:595` (dev actions, dev pages)
-   One bad cookie makes every page on the site fail for that browser.
+     One bad cookie makes every page on the site fail for that browser.
 4. **No action body size cap.** Production reads `await request.text()` unbounded (`fetch-action-handler.ts:81`). Dev concatenates `req.on('data')` chunks unbounded (`action-router.ts:483-491`). An unauthenticated client can POST an arbitrarily large body to any registered action name and the server buffers it all before `JSON.parse`.
 
 ## Prior Art / Adjacent Mechanisms
 
-| Mechanism | Where | Reused for |
-|---|---|---|
-| `isCrossOriginRequest` (Sec-Fetch-Site, Origin fallback) | `action-registry.ts:389-399` | #1 runtime — unchanged, only the predicate widens |
-| `crossOriginErrorResponse` | `action-registry.ts:402-419` | #1 — same 403 body |
-| Dev rejects cross-origin before body parse | `action-router.ts:432-437` (`isRejectedCrossOrigin`, :222-231) | #1, #4 ordering |
-| `.withRequest()` + `.withCaching()` → build-time throw | `jay-action-builder.ts:277-281` | Considered for #1; rejected (Q1) |
-| Line-scan source warning with suppress comment | `stack-cli/lib/validate.ts:621-655` (`checkDirectDocumentAccess`, `// jay-dom: allow`) | #1 validation shape |
-| Plugin action export check (static, no import) | `plugin-validator/lib/validate-plugin.ts:449-476`, `:825` | #1 plugin side — static scan, so no import needed |
-| Project actions directory `src/actions` | `dev-server/lib/service-lifecycle.ts:152` | #1 project-side scan root |
-| Server logger `getLogger()` | `fetch-action-handler.ts:16`, `main-server.ts:179-181` | #2 server-side log |
-| Express `json()` default limit (100 kB), Node/undici have none | external | #4 default choice |
+| Mechanism                                                      | Where                                                                                  | Reused for                                        |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| `isCrossOriginRequest` (Sec-Fetch-Site, Origin fallback)       | `action-registry.ts:389-399`                                                           | #1 runtime — unchanged, only the predicate widens |
+| `crossOriginErrorResponse`                                     | `action-registry.ts:402-419`                                                           | #1 — same 403 body                                |
+| Dev rejects cross-origin before body parse                     | `action-router.ts:432-437` (`isRejectedCrossOrigin`, :222-231)                         | #1, #4 ordering                                   |
+| `.withRequest()` + `.withCaching()` → build-time throw         | `jay-action-builder.ts:277-281`                                                        | Considered for #1; rejected (Q1)                  |
+| Line-scan source warning with suppress comment                 | `stack-cli/lib/validate.ts:621-655` (`checkDirectDocumentAccess`, `// jay-dom: allow`) | #1 validation shape                               |
+| Plugin action export check (static, no import)                 | `plugin-validator/lib/validate-plugin.ts:449-476`, `:825`                              | #1 plugin side — static scan, so no import needed |
+| Project actions directory `src/actions`                        | `dev-server/lib/service-lifecycle.ts:152`                                              | #1 project-side scan root                         |
+| Server logger `getLogger()`                                    | `fetch-action-handler.ts:16`, `main-server.ts:179-181`                                 | #2 server-side log                                |
+| Express `json()` default limit (100 kB), Node/undici have none | external                                                                               | #4 default choice                                 |
 
 Null hypothesis per item: #1 — "document it in agent-kit" is too weak; the hole is runtime and the fix is one predicate. #2 — handlers could wrap everything in `ActionError`; they don't, and third-party SDK errors escape. #3/#4 — no existing primitive; these are plain bugs.
 
@@ -81,7 +82,7 @@ A. Yes. The validation only covers code `validate` sees; plugins installed from 
 **Q2. Then why keep the warning?**
 A. The runtime check blocks cross-site callers, but a GET handler that changes state is still wrong: GETs can be prefetched, retried and logged. The warning tells the author to make state-changing calls `makeJayAction` (POST) and to keep GET + cookies read-only. It is a warning, not an error, because read-only GET + cookies is fine.
 
-**Q3. Who is newly rejected by Q1?** A browser on a *same-site but different origin* (e.g. a sibling subdomain) calling a GET `withRequest` action — `Sec-Fetch-Site: same-site` is already rejected for non-GET (`action-registry.ts:394`). Non-browser clients (no `Sec-Fetch-Site`, no `Origin`) are unaffected (`:396`). GET navigations from old browsers send no `Origin`, so they pass — same residual as DL#230.
+**Q3. Who is newly rejected by Q1?** A browser on a _same-site but different origin_ (e.g. a sibling subdomain) calling a GET `withRequest` action — `Sec-Fetch-Site: same-site` is already rejected for non-GET (`action-registry.ts:394`). Non-browser clients (no `Sec-Fetch-Site`, no `Origin`) are unaffected (`:396`). GET navigations from old browsers send no `Origin`, so they pass — same residual as DL#230.
 
 **Q4. How is "production" detected for #2?**
 A. By dispatcher. `fetchActionRequest` is used only by `production-server/lib/serve/main-server.ts:118-120` and `jay-fetch-handler/lib/index.ts:76-77`; dev uses `createActionRouter`. No `NODE_ENV` read — it is unset in many fetch runtimes and would make behavior depend on deployment env. The registry keeps raw messages because `jay-stack action` (`stack-cli/lib/run-action.ts`) and dev need them.
@@ -105,7 +106,7 @@ A. By dispatcher. `fetchActionRequest` is used only by `production-server/lib/se
 ```ts
 /** Whether a dispatcher must reject cross-origin calls to this action before reading the body (DL#230, DL#234). */
 export function needsSameOriginCheck(action: RegisteredActionEntry): boolean {
-    return !!action.needsRequest;
+  return !!action.needsRequest;
 }
 ```
 
@@ -114,7 +115,12 @@ Both dispatchers already call it before input parsing (`fetch-action-handler.ts:
 **Validation** — new pure function in `plugin-validator` (exported so `stack-cli` reuses it):
 
 ```ts
-export interface SourceWarning { file: string; line: number; code: 'get-action-reads-cookies'; message: string }
+export interface SourceWarning {
+  file: string;
+  line: number;
+  code: 'get-action-reads-cookies';
+  message: string;
+}
 
 /** Finds GET action builder chains that call .withRequest() (DL#234). */
 export function checkGetActionsReadingCookies(source: string, file: string): SourceWarning[];
@@ -125,6 +131,7 @@ Algorithm: strip comments except the suppress marker; for each `makeJayQuery(` o
 Message: `` `<file>:<line> — GET action '<name>' reads cookies (.withRequest()). It must not change state; use makeJayAction (POST) for writes. Cross-origin calls are rejected. Suppress with // jay-action: allow-get-request` ``.
 
 Run sites:
+
 - `validate-plugin`: over the plugin's `lib/**/*.ts` when `manifest.actions` is non-empty (`validate-plugin.ts:450`) → `result.warnings`.
 - `jay-stack validate`: over `src/actions/**/*.ts` → `ValidationResult.warnings` (`validate.ts:151`).
 
@@ -145,7 +152,11 @@ Applied at `:138-141` before building the response. Logs `[Action] <name> failed
 
 ```ts
 function decodeCookieValue(raw: string): string {
-    try { return decodeURIComponent(raw); } catch { return raw; }
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
 }
 ```
 
@@ -156,15 +167,20 @@ Signature of `parseCookies` unchanged. All five callers benefit with no edits.
 ```ts
 // stack-server-runtime/lib/action-registry.ts (shared by both dispatchers)
 export const DEFAULT_ACTION_BODY_LIMIT_BYTES = 1_048_576;
-export function payloadTooLargeResponse(limitBytes: number): { success: false; error: ActionErrorResponse };
+export function payloadTooLargeResponse(limitBytes: number): {
+  success: false;
+  error: ActionErrorResponse;
+};
 // → { code: 'PAYLOAD_TOO_LARGE', message: `Action request body exceeds ${limitBytes} bytes`, isActionError: false }
 
 // production-server/lib/serve/fetch-action-handler.ts
-export interface FetchActionOptions { actionBodyLimitBytes?: number }
+export interface FetchActionOptions {
+  actionBodyLimitBytes?: number;
+}
 export async function fetchActionRequest(
-    request: Request,
-    registry?: ActionRegistry,
-    options?: FetchActionOptions,
+  request: Request,
+  registry?: ActionRegistry,
+  options?: FetchActionOptions,
 ): Promise<Response>;
 ```
 
@@ -185,10 +201,12 @@ export async function fetchActionRequest(
 Each phase: write the tests first, see them red, then implement.
 
 **Phase 1 — `parseCookies` (#3)** · `stack-server-runtime/test/cookies.test.ts`
+
 - `should keep the raw value when a cookie is not valid percent-encoding` — `parseCookies('a=%E0%A4%A; b=ok')` → `{ a: '%E0%A4%A', b: 'ok' }`.
 - `should not throw on a malformed cookie for a page request` — production page handler test with that header returns 200.
 
 **Phase 2 — body cap (#4)** · `production-server/test/fetch-action-handler.test.ts`, `dev-server/test/action-router.test.ts`
+
 - `should return 413 when Content-Length exceeds the limit` (body never read — assert handler not called).
 - `should return 413 when a chunked body exceeds the limit without Content-Length`.
 - `should accept a body exactly at the limit`.
@@ -200,6 +218,7 @@ Each phase: write the tests first, see them red, then implement.
 - Dev: the same Content-Length, chunked, exact-limit, multi-byte and configured-limit tests for `actionBodyParser`.
 
 **Phase 3 — error redaction (#2)** · `production-server/test/fetch-action-handler.test.ts`
+
 - `should return a generic message for a non-ActionError throw in production` → `{ code: 'INTERNAL_ERROR', message: 'Internal server error', isActionError: false }`, and logger received the original message.
 - `should return ActionError code and message unchanged`.
 - `should return a generic error frame for a streaming action throw`.
@@ -208,6 +227,7 @@ Each phase: write the tests first, see them red, then implement.
 - Dev router test: `should keep the original message in dev` (guards against over-applying).
 
 **Phase 4 — GET runtime check (#1)** · `stack-server-runtime/test/action-registry.test.ts`, both dispatcher tests
+
 - `needsSameOriginCheck should be true for a GET withRequest action`.
 - `should reject a GET withRequest action on a cross-site navigation` (`Sec-Fetch-Site: cross-site`, `Sec-Fetch-Mode: navigate`) → 403 `CROSS_ORIGIN_REQUEST`, handler not called.
 - `should allow a GET withRequest action from same-origin` and `from a client without Sec-Fetch-Site/Origin`.
@@ -215,6 +235,7 @@ Each phase: write the tests first, see them red, then implement.
 - Update on purpose: existing GET + `withRequest` tests that send a cross-origin header now expect 403.
 
 **Phase 5 — validation (#1)** · `plugin-validator/test/check-get-actions-reading-cookies.test.ts`, `stack-cli/test/validate.test.ts`
+
 - Warns for `makeJayQuery('x').withRequest().withHandler(...)` (single- and multi-line chains).
 - Warns for `makeJayAction('x').withMethod('GET').withRequest()`.
 - No warning for `makeJayAction('x').withRequest()` (POST), `makeJayQuery('x').withHandler()`, or `makeJayQuery('x').withMethod('POST').withRequest()`.
@@ -233,16 +254,22 @@ Gate: `yarn confirm`.
 // ✅ read-only GET with cookies — warns once; suppress after review
 // (suppress comment on the line directly above the builder call, or trailing on that line)
 // jay-action: allow-get-request
-export const currentCart = makeJayQuery('cart.current').withRequest()
-    .withHandler(async (_input, request) => loadCart(request.cookies.session));
+export const currentCart = makeJayQuery('cart.current')
+  .withRequest()
+  .withHandler(async (_input, request) => loadCart(request.cookies.session));
 
 // ✅ state change with cookies — POST, same-origin checked
-export const logout = makeJayAction('auth.logout').withRequest()
-    .withHandler(async (_input, request) => { request.clearCookie('session'); return {}; });
+export const logout = makeJayAction('auth.logout')
+  .withRequest()
+  .withHandler(async (_input, request) => {
+    request.clearCookie('session');
+    return {};
+  });
 
 // ❌ state change on GET — validation warning; cross-site navigation now gets 403
-export const subscribe = makeJayQuery('news.subscribe').withRequest()
-    .withHandler(async (input, request) => addSubscriber(request.cookies.session, input));
+export const subscribe = makeJayQuery('news.subscribe')
+  .withRequest()
+  .withHandler(async (input, request) => addSubscriber(request.cookies.session, input));
 
 // ✅ user-facing message survives in production
 throw new ActionError('OUT_OF_STOCK', 'This item is sold out');
@@ -253,7 +280,7 @@ throw new Error('This item is sold out');
 ```yaml
 # ✅ raising the cap for jay-stack dev / serve (no custom server code)
 server:
-  actionBodyLimitBytes: 5242880  # 5 MiB
+  actionBodyLimitBytes: 5242880 # 5 MiB
 ```
 
 ```ts
@@ -281,10 +308,10 @@ await startMainServer({ ...options, actionBodyLimitBytes: 5 * 1_048_576 });
 
 ## Scope pre-mortem
 
-- *"Fetch handler still crashes"* — covered: `parseCookies` fix is inside the shared function, not per caller.
-- *"Dev and production diverge again"* — cap constant and 413 body are shared from `stack-server-runtime`; tests exist for both dispatchers.
-- *"Redaction hides `ActionError` thrown from a nested library copy"* — detection stays the existing `name === 'ActionError'` duck check (`action-registry.ts:254-256`), unchanged.
-- *"`cause` leaks to the wire"* — test asserts the JSON response body has no `cause` key in both dispatchers.
+- _"Fetch handler still crashes"_ — covered: `parseCookies` fix is inside the shared function, not per caller.
+- _"Dev and production diverge again"_ — cap constant and 413 body are shared from `stack-server-runtime`; tests exist for both dispatchers.
+- _"Redaction hides `ActionError` thrown from a nested library copy"_ — detection stays the existing `name === 'ActionError'` duck check (`action-registry.ts:254-256`), unchanged.
+- _"`cause` leaks to the wire"_ — test asserts the JSON response body has no `cause` key in both dispatchers.
 - Out of scope: multipart limits, rate limiting, correlation ids, CORS headers.
 
 ## jay-feedback
@@ -302,3 +329,54 @@ await startMainServer({ ...options, actionBodyLimitBytes: 5 * 1_048_576 });
 ## Open Questions
 
 None — implementation may proceed on body-limit configuration per Resolved decisions above.
+
+## Implementation Results (2026-11-10)
+
+All six phases implemented in plan order, each red-first (tests written with the correct expectation, run red, then implemented).
+
+**Cross-reference:** #234 narrows DL#230's GET exemption (DL#230 Q5) to "GET without `withRequest`" — every `withRequest` action is now same-origin checked.
+
+### Red → green notes
+
+- Phase 1: `parseCookies('a=%E0%A4%A; b=ok')` threw `URIError` (red) → `decodeCookieValue` keeps the raw value.
+- Phase 2: production and dev cap tests failed (no cap, no option) → `readBodyWithinLimit` (production, `reader.cancel()` on overflow) and `parseJsonBody` (dev, `Buffer` byte counter). Config tests failed (`resolveActionBodyLimitBytes` missing) → added.
+- Phase 3: production returned the raw message and stream frame → `redactInternalError` / `streamErrorMessage`.
+- Phase 4: `needsSameOriginCheck` predicate test red → `return !!action.needsRequest`. The dispatcher GET tests went green as soon as the shared predicate changed (same build).
+- Phase 5: checker module missing (red) → `checkGetActionsReadingCookies`; `validate-plugin` and `jay-stack validate` run-site tests red → wired.
+
+### Review notes applied
+
+1. **Changed existing test:** the only existing test whose expectation changed is `stack-server-runtime/test/action-registry.test.ts:698` (`[false, true, false]` → `[true, true, false]`, renamed to "…for every withRequest action, GET included"). The TL;DR's list was wrong: no existing `fetch-action-handler.test.ts` / `action-router.test.ts` test sent a GET + `withRequest` cross-origin request, and no existing production test asserted a raw `INTERNAL_ERROR` message.
+2. **Dev 413 handling:** after a 413, the `data` handler stops accumulating, the `end` handler returns without parsing or calling `next()`, and the response is sent with `Connection: close` and the request is **destroyed** on `finish` (no `req.resume()` — the rest of the body is not read). Unit test `should not parse or call next after a 413, and should close the request` (mock request whose `resume()` throws).
+3. **`SourceWarning` mapping per run site:** `validate-plugin` → `{ type: 'get-action-reads-cookies', code, location: '<file>:<line>', message }`; `jay-stack validate` → `{ file, message }`.
+4. **GET detection in any quote style:** `/\.withMethod\s*\(\s*(['"`])GET\1/`; tests for single, double and backtick quotes.
+5. **`redactInternalError` logs the `cause` stack** when `cause` is an `Error` (`[Action] <name> failed: <message>\n<stack>`); same for stream throws.
+6. **No dispatcher serializes `cause`:** production builds the error body from `error` only; dev sends `result.error` only. Tests in both dispatchers assert the exact JSON body (keys `success`, `error`).
+7. **Dev status map:** `PAYLOAD_TOO_LARGE → 413` in `getStatusCodeForError` (now exported for the test).
+8. Cross-reference to DL#230 above (DL#230 not edited).
+
+### Deviations
+
+- **Phase 1 page-handler test:** no production page-handler harness takes a raw `Cookie` header cheaply (`main-server` page path needs a full build; `jay-fetch-handler` has no tests). The malformed-cookie case is covered by the shared `parseCookies` unit test plus action-dispatcher tests in production and dev (`should not throw on a malformed cookie`). All five callers use the same function.
+- **Phase 2 integration through `startDevServer` / `runServe`:** not added (would start Vite / a full production build). Covered instead by `resolveActionBodyLimitBytes` unit tests (default, from `.jay`, override wins, invalid values) plus dispatcher tests of the programmatic option; `startDevServer` and `runServe` each pass `resolveActionBodyLimitBytes(config)`.
+- `resolveActionBodyLimitBytes` also falls back on an invalid override (non-positive / non-integer), as specified; `isPositiveInteger` is exported from `config.ts` and reused by the validate warning.
+- `invalid-action-body-limit` message: `invalid-action-body-limit: server.actionBodyLimitBytes must be a positive integer (got <value>); the default of 1048576 bytes is used` (file `.jay`).
+- Dev JSON parser: `next()` now runs outside the `try`, so an exception downstream is no longer misreported as `INVALID_JSON`.
+- `mkDevServer`'s `defaults()` rebuilds the options object, so `actionBodyLimitBytes` had to be added there as well as to `DevServerOptions`.
+- Phase 6: `plugin/actions-guide.md` (GET + cookies read-only + suppress marker; same-origin for every `withRequest`; `ActionError` for user-facing text; body cap + `.jay`) and `devops/fetch-handler.md` (`actionBodyLimitBytes` option; `loadConfig` + `resolveActionBodyLimitBytes` bootstrap; production redaction).
+
+### Test results
+
+| Package              | Result  |
+| -------------------- | ------- |
+| stack-server-runtime | 182/182 |
+| production-server    | 120/120 |
+| dev-server           | 787/787 |
+| stack-cli            | 211/211 |
+| plugin-validator     | 76/76   |
+
+`yarn confirm` (rebuild, type check, all tests, format): green.
+
+### Follow-up
+
+- Multipart / `withFiles` total-size limits (dev busboy + production parity) — own DL, per Resolved decision 3.

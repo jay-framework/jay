@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createActionRouter, actionBodyParser, ACTION_ENDPOINT_BASE } from '../lib/action-router';
+import {
+    createActionRouter,
+    actionBodyParser,
+    getStatusCodeForError,
+    ACTION_ENDPOINT_BASE,
+    type ActionBodyParserOptions,
+} from '../lib/action-router';
+import { EventEmitter } from 'events';
 import {
     ActionRegistry,
     registerService,
@@ -708,6 +715,47 @@ describe('Action Router', () => {
 // Request cookies for server actions (DL#230)
 // ============================================================================
 
+/** A real http server running actionBodyParser + createActionRouter, as the dev server mounts them. */
+function startActionServer(
+    parserOptions: ActionBodyParserOptions,
+): Promise<{ server: http.Server; base: string }> {
+    const bodyParser = actionBodyParser(parserOptions);
+    const router = createActionRouter({ registry: parserOptions.registry });
+    const server = http.createServer((req, res) => {
+        const expressReq = req as any;
+        expressReq.path = req.url!;
+        expressReq.query = {};
+        expressReq.protocol = 'http';
+        const expressRes = res as any;
+        expressRes.status = (code: number) => {
+            res.statusCode = code;
+            return expressRes;
+        };
+        expressRes.json = (data: any) => {
+            res.setHeader('Content-Type', 'application/json');
+            res.end(JSON.stringify(data));
+        };
+        expressRes.set = (key: string, value: string) => {
+            res.setHeader(key, value);
+            return expressRes;
+        };
+        expressRes.append = (key: string, value: string) => {
+            res.appendHeader(key, value);
+            return expressRes;
+        };
+        bodyParser(expressReq, expressRes, () => {
+            expressReq.path = expressReq.path.slice(ACTION_ENDPOINT_BASE.length);
+            router(expressReq, expressRes, () => {});
+        });
+    });
+    return new Promise((resolve) => {
+        server.listen(0, () => {
+            const address = server.address() as any;
+            resolve({ server, base: `http://127.0.0.1:${address.port}${ACTION_ENDPOINT_BASE}` });
+        });
+    });
+}
+
 describe('Action Router withRequest (DL#230)', () => {
     let server: http.Server | undefined;
     let buildFolder: string;
@@ -722,42 +770,10 @@ describe('Action Router withRequest (DL#230)', () => {
         fs.rmSync(buildFolder, { recursive: true, force: true });
     });
 
-    function startServer(registry: ActionRegistry): Promise<string> {
-        const bodyParser = actionBodyParser({ buildFolder, registry });
-        const router = createActionRouter({ registry });
-        server = http.createServer((req, res) => {
-            const expressReq = req as any;
-            expressReq.path = req.url!;
-            expressReq.query = {};
-            expressReq.protocol = 'http';
-            const expressRes = res as any;
-            expressRes.status = (code: number) => {
-                res.statusCode = code;
-                return expressRes;
-            };
-            expressRes.json = (data: any) => {
-                res.setHeader('Content-Type', 'application/json');
-                res.end(JSON.stringify(data));
-            };
-            expressRes.set = (key: string, value: string) => {
-                res.setHeader(key, value);
-                return expressRes;
-            };
-            expressRes.append = (key: string, value: string) => {
-                res.appendHeader(key, value);
-                return expressRes;
-            };
-            bodyParser(expressReq, expressRes, () => {
-                expressReq.path = expressReq.path.slice(ACTION_ENDPOINT_BASE.length);
-                router(expressReq, expressRes, () => {});
-            });
-        });
-        return new Promise((resolve) => {
-            server!.listen(0, () => {
-                const address = server!.address() as any;
-                resolve(`http://127.0.0.1:${address.port}${ACTION_ENDPOINT_BASE}`);
-            });
-        });
+    async function startServer(registry: ActionRegistry): Promise<string> {
+        const started = await startActionServer({ buildFolder, registry });
+        server = started.server;
+        return started.base;
     }
 
     function registerCookieActions(registry: ActionRegistry) {
@@ -887,5 +903,309 @@ describe('Action Router withRequest (DL#230)', () => {
         expect((await response.json()).error.code).toEqual('CROSS_ORIGIN_REQUEST');
         expect(fs.existsSync(path.join(buildFolder, '.tmp'))).toEqual(false);
         expect(calls).toEqual([]);
+    });
+});
+
+/** A JSON body of exactly `byteLength` UTF-8 bytes, padded with `pad` (1 or 2 bytes per char). */
+function jsonBodyOfBytes(byteLength: number, pad = 'a'): string {
+    const envelopeBytes = '{"v":""}'.length;
+    const padBytes = Buffer.byteLength(pad);
+    const count = (byteLength - envelopeBytes) / padBytes;
+    if (!Number.isInteger(count))
+        throw new Error(`cannot pad to ${byteLength} bytes with '${pad}'`);
+    return JSON.stringify({ v: pad.repeat(count) });
+}
+
+/** A request body with no Content-Length — sent with Transfer-Encoding: chunked. */
+function chunkedBody(body: string): RequestInit {
+    const bytes = Buffer.from(body);
+    const chunkSize = Math.max(7, Math.ceil(bytes.length / 16));
+    const stream = new ReadableStream({
+        start(controller) {
+            for (let i = 0; i < bytes.length; i += chunkSize)
+                controller.enqueue(new Uint8Array(bytes.subarray(i, i + chunkSize)));
+            controller.close();
+        },
+    });
+    return { method: 'POST', body: stream, duplex: 'half' } as RequestInit;
+}
+
+describe('Action Router hardening (DL#234)', () => {
+    let server: http.Server | undefined;
+    let buildFolder: string;
+
+    beforeEach(() => {
+        buildFolder = fs.mkdtempSync(path.join(os.tmpdir(), 'jay-dl234-'));
+    });
+
+    afterEach(async () => {
+        if (server) await new Promise<void>((resolve) => server!.close(() => resolve()));
+        server = undefined;
+        fs.rmSync(buildFolder, { recursive: true, force: true });
+    });
+
+    async function start(registry: ActionRegistry, actionBodyLimitBytes?: number) {
+        const started = await startActionServer({ buildFolder, registry, actionBodyLimitBytes });
+        server = started.server;
+        return started.base;
+    }
+
+    function echoAction(registry: ActionRegistry) {
+        const calls: unknown[] = [];
+        registry.register(
+            makeJayAction('dl234.echo').withHandler(async (input: { v?: string }) => {
+                calls.push(input);
+                return input.v?.length ?? 0;
+            }),
+        );
+        return calls;
+    }
+
+    const tooLarge = (limitBytes: number) => ({
+        success: false,
+        error: {
+            code: 'PAYLOAD_TOO_LARGE',
+            message: `Action request body exceeds ${limitBytes} bytes`,
+            isActionError: false,
+        },
+    });
+
+    describe('body size cap', () => {
+        it('should return 413 when Content-Length exceeds the limit', async () => {
+            const registry = new ActionRegistry();
+            const calls = echoAction(registry);
+            const base = await start(registry, 32);
+
+            const response = await fetch(`${base}/dl234.echo`, {
+                method: 'POST',
+                body: jsonBodyOfBytes(40),
+            });
+
+            expect(response.status).toEqual(413);
+            expect(await response.json()).toEqual(tooLarge(32));
+            expect(calls).toEqual([]);
+        });
+
+        it('should return 413 when a chunked body exceeds the limit without Content-Length', async () => {
+            const registry = new ActionRegistry();
+            const calls = echoAction(registry);
+            const base = await start(registry, 32);
+
+            const response = await fetch(`${base}/dl234.echo`, chunkedBody(jsonBodyOfBytes(40)));
+
+            expect(response.status).toEqual(413);
+            expect(await response.json()).toEqual(tooLarge(32));
+            expect(calls).toEqual([]);
+        });
+
+        it('should accept a body exactly at the limit', async () => {
+            const registry = new ActionRegistry();
+            echoAction(registry);
+            const base = await start(registry, 32);
+
+            const response = await fetch(`${base}/dl234.echo`, chunkedBody(jsonBodyOfBytes(32)));
+
+            expect(await response.json()).toEqual({ success: true, data: 24 });
+        });
+
+        it('should accept a multi-byte body exactly at the limit in bytes and reject it one byte over', async () => {
+            const registry = new ActionRegistry();
+            echoAction(registry);
+            const base = await start(registry, 32);
+            const atLimit = jsonBodyOfBytes(32, 'é');
+            const overLimit = atLimit.replace('{"v"', '{"vv"');
+
+            const accepted = await fetch(`${base}/dl234.echo`, chunkedBody(atLimit));
+            const rejected = await fetch(`${base}/dl234.echo`, chunkedBody(overLimit));
+
+            expect(await accepted.json()).toEqual({ success: true, data: 12 });
+            expect(rejected.status).toEqual(413);
+        });
+
+        it('should enforce the 1 MiB default limit', async () => {
+            const registry = new ActionRegistry();
+            echoAction(registry);
+            const base = await start(registry);
+
+            const atDefault = await fetch(
+                `${base}/dl234.echo`,
+                chunkedBody(jsonBodyOfBytes(1_048_576)),
+            );
+            const overDefault = await fetch(
+                `${base}/dl234.echo`,
+                chunkedBody(jsonBodyOfBytes(1_048_578)),
+            );
+
+            expect(atDefault.status).toEqual(200);
+            expect(overDefault.status).toEqual(413);
+            expect(await overDefault.json()).toEqual(tooLarge(1_048_576));
+        });
+
+        it('should honour a configured actionBodyLimitBytes', async () => {
+            const registry = new ActionRegistry();
+            echoAction(registry);
+            const base = await start(registry, 5 * 1_048_576);
+
+            const response = await fetch(
+                `${base}/dl234.echo`,
+                chunkedBody(jsonBodyOfBytes(2 * 1_048_576)),
+            );
+
+            expect(response.status).toEqual(200);
+        });
+
+        it('should not parse or call next after a 413, and should close the request', () => {
+            const registry = new ActionRegistry();
+            echoAction(registry);
+            const parser = actionBodyParser({ buildFolder, registry, actionBodyLimitBytes: 8 });
+            const req: any = Object.assign(new EventEmitter(), {
+                method: 'POST',
+                path: `${ACTION_ENDPOINT_BASE}/dl234.echo`,
+                headers: {},
+                destroyed: false,
+                destroy() {
+                    this.destroyed = true;
+                },
+                resume() {
+                    throw new Error('must not drain the rest of an oversized body');
+                },
+            });
+            const sent: unknown[] = [];
+            const res: any = Object.assign(new EventEmitter(), {
+                statusCode: 200,
+                headers: {} as Record<string, string>,
+                status(code: number) {
+                    this.statusCode = code;
+                    return this;
+                },
+                set(key: string, value: string) {
+                    this.headers[key] = value;
+                    return this;
+                },
+                json(data: unknown) {
+                    sent.push(data);
+                    this.emit('finish');
+                    return this;
+                },
+            });
+            let nextCalls = 0;
+
+            parser(req, res, () => nextCalls++);
+            req.emit('data', Buffer.from('{"v":"aaaaa'));
+            req.emit('data', Buffer.from('aaaa"}'));
+            req.emit('end');
+
+            expect(res.statusCode).toEqual(413);
+            expect(sent).toEqual([tooLarge(8)]);
+            expect(nextCalls).toEqual(0);
+            expect(req.destroyed).toEqual(true);
+            expect(req.body).toBeUndefined();
+        });
+    });
+
+    describe('errors', () => {
+        it('should keep the original message in dev', async () => {
+            const registry = new ActionRegistry();
+            registry.register(
+                makeJayAction('dl234.fail').withHandler(async () => {
+                    throw new Error('secret https://internal.example/x');
+                }),
+            );
+            const base = await start(registry);
+
+            const response = await fetch(`${base}/dl234.fail`, { method: 'POST', body: '{}' });
+            const body = await response.json();
+
+            expect(response.status).toEqual(500);
+            expect(Object.keys(body)).toEqual(['success', 'error']);
+            expect(body).toEqual({
+                success: false,
+                error: {
+                    code: 'INTERNAL_ERROR',
+                    message: 'secret https://internal.example/x',
+                    isActionError: false,
+                },
+            });
+        });
+
+        it('should map PAYLOAD_TOO_LARGE to 413', () => {
+            expect(getStatusCodeForError('PAYLOAD_TOO_LARGE', false)).toEqual(413);
+        });
+    });
+
+    describe('GET withRequest', () => {
+        function cookieQuery(registry: ActionRegistry) {
+            const calls: string[] = [];
+            registry.register(
+                makeJayQuery('dl234.cart')
+                    .withRequest()
+                    .withHandler(async (input: {}, request) => {
+                        calls.push('cart');
+                        return request.cookies.s ?? null;
+                    }),
+            );
+            return calls;
+        }
+
+        it('should reject a GET withRequest action on a cross-site navigation', async () => {
+            const registry = new ActionRegistry();
+            const calls = cookieQuery(registry);
+            const base = await start(registry);
+
+            const response = await fetch(`${base}/dl234.cart`, {
+                headers: { 'sec-fetch-site': 'cross-site', 'sec-fetch-mode': 'navigate' },
+            });
+
+            expect(response.status).toEqual(403);
+            expect((await response.json()).error.code).toEqual('CROSS_ORIGIN_REQUEST');
+            expect(calls).toEqual([]);
+        });
+
+        it('should allow a GET withRequest action from same-origin', async () => {
+            const registry = new ActionRegistry();
+            cookieQuery(registry);
+            const base = await start(registry);
+
+            const response = await fetch(`${base}/dl234.cart`, {
+                headers: { 'sec-fetch-site': 'same-origin', cookie: 's=abc' },
+            });
+
+            expect(await response.json()).toEqual({ success: true, data: 'abc' });
+        });
+
+        it('should allow a GET withRequest action from a client without Sec-Fetch-Site/Origin', async () => {
+            const registry = new ActionRegistry();
+            cookieQuery(registry);
+            const base = await start(registry);
+
+            const response = await fetch(`${base}/dl234.cart`);
+
+            expect(response.status).toEqual(200);
+        });
+
+        it('should still allow a GET action without withRequest cross-origin', async () => {
+            const registry = new ActionRegistry();
+            registry.register(makeJayQuery('dl234.plain').withHandler(async (input: {}) => 'ok'));
+            const base = await start(registry);
+
+            const response = await fetch(`${base}/dl234.plain`, {
+                headers: { 'sec-fetch-site': 'cross-site' },
+            });
+
+            expect(response.status).toEqual(200);
+        });
+
+        /** Bug: a malformed Cookie header throws URIError (DL#234 Problem #3). */
+        it('should not throw on a malformed cookie', async () => {
+            const registry = new ActionRegistry();
+            cookieQuery(registry);
+            const base = await start(registry);
+
+            const response = await fetch(`${base}/dl234.cart`, {
+                headers: { cookie: 's=%E0%A4%A' },
+            });
+
+            expect(await response.json()).toEqual({ success: true, data: '%E0%A4%A' });
+        });
     });
 });

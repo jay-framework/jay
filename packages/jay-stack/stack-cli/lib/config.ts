@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import YAML from 'yaml';
 import { getLogger } from '@jay-framework/logger';
+import { DEFAULT_ACTION_BODY_LIMIT_BYTES } from '@jay-framework/stack-server-runtime';
 
 export interface JayConfig {
     devServer?: {
@@ -35,6 +36,11 @@ export interface JayConfig {
         description?: string;
         /** Social/profile URLs for the Organization `sameAs` (DL#213). */
         sameAs?: string[];
+    };
+    /** Runtime settings for both `jay-stack dev` and `jay-stack serve` (DL#234). */
+    server?: {
+        /** Cap on a JSON action request body in UTF-8 bytes (positive integer; default 1 MiB). */
+        actionBodyLimitBytes?: number;
     };
     /** Project-wide validation suppressions for project-level concerns (DL#214). */
     validations?: {
@@ -81,6 +87,7 @@ export function loadConfig(projectRoot?: string): JayConfig {
                 ...userConfig.devServer,
             },
             site: userConfig.site,
+            server: userConfig.server,
             validations: userConfig.validations,
         };
     } catch (error) {
@@ -107,6 +114,21 @@ export function getConfigWithDefaults(
         },
         site: config.site,
     };
+}
+
+/**
+ * The action body cap (DL#234): a positive-integer `override` wins, else `.jay`
+ * `server.actionBodyLimitBytes` when a positive integer, else the 1 MiB default.
+ */
+export function resolveActionBodyLimitBytes(config: JayConfig, override?: number): number {
+    if (isPositiveInteger(override)) return override;
+    const configured = config.server?.actionBodyLimitBytes;
+    if (isPositiveInteger(configured)) return configured;
+    return DEFAULT_ACTION_BODY_LIMIT_BYTES;
+}
+
+export function isPositiveInteger(value: unknown): value is number {
+    return typeof value === 'number' && Number.isInteger(value) && value > 0;
 }
 
 export function updateConfig(updates: Partial<JayConfig>): void {

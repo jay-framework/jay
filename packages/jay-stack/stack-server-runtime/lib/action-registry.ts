@@ -77,7 +77,12 @@ export type ActionExecutionResult<T> =
           /** Serialized Set-Cookie values set by a withRequest handler (DL#230) */
           setCookies?: string[];
       }
-    | { success: false; error: ActionErrorResponse };
+    | {
+          success: false;
+          error: ActionErrorResponse;
+          /** The original thrown value of an INTERNAL_ERROR, for server logs only — never serialize it (DL#234) */
+          cause?: unknown;
+      };
 
 /**
  * Error response structure for failed actions.
@@ -274,6 +279,7 @@ export class ActionRegistry {
                     message,
                     isActionError: false,
                 },
+                cause: error,
             };
         }
     }
@@ -375,10 +381,28 @@ function invokeHandler(action: RegisteredAction, input: unknown, request: unknow
 
 /**
  * Whether a dispatcher must reject cross-origin calls to this action before reading the body:
- * non-GET actions that read cookies (DL#230 Q5).
+ * every action that reads cookies, GET included (DL#230 Q5, DL#234).
  */
 export function needsSameOriginCheck(action: RegisteredActionEntry): boolean {
-    return !!action.needsRequest && action.method !== 'GET';
+    return !!action.needsRequest;
+}
+
+/** Default cap on a JSON action request body, in UTF-8 bytes (DL#234). */
+export const DEFAULT_ACTION_BODY_LIMIT_BYTES = 1_048_576;
+
+/** The 413 body for an action request body over the limit (DL#234). */
+export function payloadTooLargeResponse(limitBytes: number): {
+    success: false;
+    error: ActionErrorResponse;
+} {
+    return {
+        success: false,
+        error: {
+            code: 'PAYLOAD_TOO_LARGE',
+            message: `Action request body exceeds ${limitBytes} bytes`,
+            isActionError: false,
+        },
+    };
 }
 
 export interface OriginHeaders {

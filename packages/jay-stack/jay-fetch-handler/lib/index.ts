@@ -32,6 +32,13 @@ export interface JayFetchHandlerOptions {
     plugins?: PreImportedPlugin[];
     /** Pre-imported action modules — bypasses filesystem discovery (DL#143) */
     actionModules?: Array<{ module: Record<string, unknown>; name: string }>;
+
+    /**
+     * Cap on a JSON action request body in UTF-8 bytes (DL#234; default 1 MiB).
+     * Custom bootstraps can resolve it from the project `.jay` with `loadConfig` +
+     * `resolveActionBodyLimitBytes` from `@jay-framework/stack-cli`.
+     */
+    actionBodyLimitBytes?: number;
 }
 
 export function createJayFetchHandler(
@@ -74,7 +81,9 @@ export function createJayFetchHandler(
         const url = new URL(request.url);
 
         if (isActionRequest(url.pathname)) {
-            return fetchActionRequest(request);
+            return fetchActionRequest(request, undefined, {
+                actionBodyLimitBytes: options.actionBodyLimitBytes,
+            });
         }
 
         if (frontendDir) {

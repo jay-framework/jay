@@ -50,7 +50,9 @@ import {
 } from '@jay-framework/compiler-inline-composition';
 import { parse as parseHtml, HTMLElement, NodeType } from 'node-html-parser';
 import { scanRoutes } from '@jay-framework/stack-route-scanner';
-import { loadConfig, getConfigWithDefaults } from './config';
+import { loadConfig, getConfigWithDefaults, isPositiveInteger, type JayConfig } from './config';
+import { checkGetActionsReadingCookies } from '@jay-framework/plugin-validator';
+import { DEFAULT_ACTION_BODY_LIMIT_BYTES } from '@jay-framework/stack-server-runtime';
 import { buildMaterialiseOptions } from './materialise-context';
 import { extractScopeBlock, splitScopeBlocks } from './scope-css';
 import { buildRouteOracle, collectPublicAssets, checkInternalLinks } from './check-internal-links';
@@ -2431,6 +2433,11 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
         }
     }
 
+    if (!options.compileOnly) {
+        warnings.push(...(await checkProjectGetActionsReadingCookies(projectRoot)));
+        warnings.push(...checkActionBodyLimitConfig(config));
+    }
+
     if (options.compileOnly) {
         return {
             valid: errors.length === 0,
@@ -3009,4 +3016,38 @@ export function printJayValidationResult(result: ValidationResult, options: Vali
             ),
         );
     }
+}
+
+/** DL#234 — GET action chains under `src/actions` that call .withRequest(). */
+async function checkProjectGetActionsReadingCookies(
+    projectRoot: string,
+): Promise<ValidationWarning[]> {
+    const actionFiles = (await glob('src/actions/**/*.ts', { cwd: projectRoot }))
+        .filter((file) => !file.endsWith('.d.ts'))
+        .sort();
+    const warnings: ValidationWarning[] = [];
+    for (const file of actionFiles) {
+        const relativePath = file.split(path.sep).join('/');
+        const source = await fsp.readFile(path.join(projectRoot, file), 'utf-8');
+        for (const warning of checkGetActionsReadingCookies(source, relativePath)) {
+            warnings.push({ file: warning.file, message: warning.message });
+        }
+    }
+    return warnings;
+}
+
+/** DL#234 — `.jay` `server.actionBodyLimitBytes`, when present, must be a positive integer. */
+function checkActionBodyLimitConfig(config: JayConfig): ValidationWarning[] {
+    const server = config.server;
+    if (!server || !('actionBodyLimitBytes' in server)) return [];
+    const value = server.actionBodyLimitBytes;
+    if (isPositiveInteger(value)) return [];
+    return [
+        {
+            file: '.jay',
+            message:
+                `invalid-action-body-limit: server.actionBodyLimitBytes must be a positive integer (got ${JSON.stringify(value)}); ` +
+                `the default of ${DEFAULT_ACTION_BODY_LIMIT_BYTES} bytes is used`,
+        },
+    ];
 }

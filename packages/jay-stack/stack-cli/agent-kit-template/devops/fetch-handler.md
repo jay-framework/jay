@@ -33,19 +33,35 @@ interface JayFetchHandlerOptions {
   // Pre-imported modules — for bundled entry.mjs (DL#143)
   plugins?: PreImportedPlugin[];
   actionModules?: Array<{ module: Record<string, unknown>; name: string }>;
+
+  actionBodyLimitBytes?: number; // JSON action body cap in bytes (default 1 MiB) → 413 over it
 }
 ```
 
-| Option          | Required | Description                                                                                                                          |
-| --------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `backendDir`    | \*       | Path to the backend build directory. Creates a `FilesystemArtifactStore` internally                                                  |
-| `artifactStore` | \*       | Custom `ArtifactStore` implementation (e.g., cloud storage). Use instead of `backendDir`                                             |
-| `staticBaseUrl` | No       | URL prefix for import maps, CSS links, and client bundles. Set to your CDN URL for external hosting. Default: `/`                    |
-| `frontendDir`   | No       | When provided, the handler serves static files from this directory. Omit for CDN deployments where static files are hosted elsewhere |
-| `plugins`       | No       | Pre-imported plugin init modules. Bypasses filesystem discovery — use for bundled deployments                                        |
-| `actionModules` | No       | Pre-imported action modules. Bypasses filesystem discovery — use for bundled deployments                                             |
+| Option                 | Required | Description                                                                                                                          |
+| ---------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `backendDir`           | \*       | Path to the backend build directory. Creates a `FilesystemArtifactStore` internally                                                  |
+| `artifactStore`        | \*       | Custom `ArtifactStore` implementation (e.g., cloud storage). Use instead of `backendDir`                                             |
+| `staticBaseUrl`        | No       | URL prefix for import maps, CSS links, and client bundles. Set to your CDN URL for external hosting. Default: `/`                    |
+| `frontendDir`          | No       | When provided, the handler serves static files from this directory. Omit for CDN deployments where static files are hosted elsewhere |
+| `plugins`              | No       | Pre-imported plugin init modules. Bypasses filesystem discovery — use for bundled deployments                                        |
+| `actionModules`        | No       | Pre-imported action modules. Bypasses filesystem discovery — use for bundled deployments                                             |
+| `actionBodyLimitBytes` | No       | Cap on a JSON action request body in UTF-8 bytes. Default 1 MiB; over it → 413 `PAYLOAD_TOO_LARGE`                                   |
 
 \* One of `backendDir` or `artifactStore` is required.
+
+The handler does not read `.jay`. To honour the project's `server.actionBodyLimitBytes`, resolve it at bootstrap:
+
+```typescript
+import { loadConfig, resolveActionBodyLimitBytes } from '@jay-framework/stack-cli';
+
+const handler = createJayFetchHandler({
+  backendDir,
+  actionBodyLimitBytes: resolveActionBodyLimitBytes(loadConfig(projectRoot)),
+});
+```
+
+In production, non-`ActionError` failures return `'Internal server error'`; the original message and stack are logged via the server logger.
 
 ## Usage — Self-Hosted
 

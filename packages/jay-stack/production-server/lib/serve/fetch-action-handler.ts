@@ -2,10 +2,13 @@ import {
     ActionRegistry,
     actionRegistry,
     crossOriginErrorResponse,
+    DEFAULT_ACTION_BODY_LIMIT_BYTES,
+    payloadTooLargeResponse,
     isCrossOriginRequest,
     isSecureRequest,
     needsSameOriginCheck,
     parseCookies,
+    type ActionErrorResponse,
     type IncomingRequest,
 } from '@jay-framework/stack-server-runtime';
 import {
@@ -17,6 +20,14 @@ import { getLogger } from '@jay-framework/logger';
 
 const ACTION_PREFIX = '/_jay/actions/';
 
+/** Replaces INTERNAL_ERROR messages on the wire; the original is logged server-side (DL#234). */
+const GENERIC_INTERNAL_MESSAGE = 'Internal server error';
+
+export interface FetchActionOptions {
+    /** Cap on a JSON action request body in UTF-8 bytes (default: DEFAULT_ACTION_BODY_LIMIT_BYTES) */
+    actionBodyLimitBytes?: number;
+}
+
 export function isActionRequest(pathname: string): boolean {
     return pathname.startsWith(ACTION_PREFIX);
 }
@@ -24,7 +35,9 @@ export function isActionRequest(pathname: string): boolean {
 export async function fetchActionRequest(
     request: Request,
     registry: ActionRegistry = actionRegistry,
+    options: FetchActionOptions = {},
 ): Promise<Response> {
+    const limitBytes = options.actionBodyLimitBytes ?? DEFAULT_ACTION_BODY_LIMIT_BYTES;
     const url = new URL(request.url);
     const actionName = url.pathname.slice(ACTION_PREFIX.length);
 
@@ -67,6 +80,10 @@ export async function fetchActionRequest(
         return jsonResponse(403, crossOriginErrorResponse(actionName));
     }
 
+    if (requestMethod !== 'GET' && declaredLengthExceeds(request, limitBytes)) {
+        return jsonResponse(413, payloadTooLargeResponse(limitBytes));
+    }
+
     let input: unknown;
     try {
         if (requestMethod === 'GET') {
@@ -78,7 +95,10 @@ export async function fetchActionRequest(
                 delete (input as any)._input;
             }
         } else {
-            const text = await request.text();
+            const text = await readBodyWithinLimit(request, limitBytes);
+            if (text === BODY_TOO_LARGE) {
+                return jsonResponse(413, payloadTooLargeResponse(limitBytes));
+            }
             input = text ? JSON.parse(text) : {};
         }
     } catch {
@@ -109,7 +129,9 @@ export async function fetchActionRequest(
                     controller.enqueue(encoder.encode(JSON.stringify({ done: true }) + '\n'));
                 } catch (err: any) {
                     controller.enqueue(
-                        encoder.encode(JSON.stringify({ error: err.message }) + '\n'),
+                        encoder.encode(
+                            JSON.stringify({ error: streamErrorMessage(actionName, err) }) + '\n',
+                        ),
                     );
                 }
                 controller.close();
@@ -138,10 +160,75 @@ export async function fetchActionRequest(
         const statusCode = getStatusCode(result.error.code, result.error.isActionError);
         return jsonResponse(
             statusCode,
-            { success: false, error: result.error },
+            { success: false, error: redactInternalError(actionName, result.error, result.cause) },
             new Headers(perUserHeaders),
         );
     }
+}
+
+/** Whether a valid `Content-Length` already exceeds the limit; invalid values are left to the streaming counter. */
+function declaredLengthExceeds(request: Request, limitBytes: number): boolean {
+    const declared = request.headers.get('content-length');
+    if (declared === null || !/^\d+$/.test(declared.trim())) return false;
+    return Number(declared) > limitBytes;
+}
+
+const BODY_TOO_LARGE = Symbol('body too large');
+
+/** Reads the body as UTF-8, counting bytes; cancels the read as soon as the limit is crossed. */
+async function readBodyWithinLimit(
+    request: Request,
+    limitBytes: number,
+): Promise<string | typeof BODY_TOO_LARGE> {
+    if (request.body === null) return '';
+    const reader = request.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let receivedBytes = 0;
+    for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        receivedBytes += value.byteLength;
+        if (receivedBytes > limitBytes) {
+            await reader.cancel();
+            return BODY_TOO_LARGE;
+        }
+        chunks.push(value);
+    }
+    return decodeUtf8(chunks, receivedBytes);
+}
+
+function decodeUtf8(chunks: Uint8Array[], totalBytes: number): string {
+    const joined = new Uint8Array(totalBytes);
+    let offset = 0;
+    for (const chunk of chunks) {
+        joined.set(chunk, offset);
+        offset += chunk.byteLength;
+    }
+    return new TextDecoder().decode(joined);
+}
+
+/** Replaces an INTERNAL_ERROR message with a generic one and logs the original (DL#234). */
+function redactInternalError(
+    actionName: string,
+    error: ActionErrorResponse,
+    cause: unknown,
+): ActionErrorResponse {
+    if (error.isActionError || error.code !== 'INTERNAL_ERROR') return error;
+    logActionFailure(actionName, error.message, cause);
+    return { ...error, message: GENERIC_INTERNAL_MESSAGE };
+}
+
+/** A streaming ActionError keeps its message; any other throw is logged and redacted (DL#234). */
+function streamErrorMessage(actionName: string, err: unknown): string {
+    const error = err as { name?: string; message?: string } | undefined;
+    if (error?.name === 'ActionError') return String(error.message);
+    logActionFailure(actionName, error?.message ?? String(err), err);
+    return GENERIC_INTERNAL_MESSAGE;
+}
+
+function logActionFailure(actionName: string, message: string, cause: unknown): void {
+    const stack = cause instanceof Error && cause.stack ? `\n${cause.stack}` : '';
+    getLogger().error(`[Action] ${actionName} failed: ${message}${stack}`);
 }
 
 function isCrossOrigin(request: Request, url: URL): boolean {
