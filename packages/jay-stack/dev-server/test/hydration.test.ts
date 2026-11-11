@@ -1099,6 +1099,40 @@ describe('hydration', () => {
         });
     });
 
+    /**
+     * Bug: a page with its own page.jay-contract (and no page.ts) freezes the text and `if`
+     * bindings of a key-based headless component after interaction (DL#236).
+     * Expected: {headless.message}, if="headless.isActive" and aria-invalid all follow the
+     * headless component's interactive ViewState.
+     * Actual: aria-invalid updates, but the text and the conditional keep their SSR values.
+     */
+    const keyedHeadlessToggleChecks = {
+        hydrationChecks: async (page: Page) => {
+            expect(await page.textContent('#target .message')).toEqual('idle');
+            expect(await page.$('#target .active')).toBeNull();
+            expect(await page.getAttribute('#target .field', 'aria-invalid')).toEqual('false');
+        },
+        interactivityChecks: async (page: Page) => {
+            await page.click('#target button');
+            await page.waitForFunction(
+                () =>
+                    document.querySelector('#target .field')?.getAttribute('aria-invalid') ===
+                    'true',
+                { timeout: 2000 },
+            );
+            expect(await page.textContent('#target .message')).toEqual('active');
+            expect(await page.textContent('#target .active')).toEqual('on');
+        },
+    };
+
+    describe('6b. Key-based headless — page has its own contract and no page.ts (DL#236)', () => {
+        testFixture('6b-page-keyed-headless-with-page-contract', keyedHeadlessToggleChecks);
+    });
+
+    describe('6c. Key-based headless — page without a contract (DL#236 control)', () => {
+        testFixture('6c-page-keyed-headless-no-page-contract', keyedHeadlessToggleChecks);
+    });
+
     describe('7. Fast-only page with headless instance (no slow phase)', () => {
         // Page has withFastRender + withInteractive but NO withSlowlyRender.
         // Tests that the unified pipeline discovers and renders headless instances

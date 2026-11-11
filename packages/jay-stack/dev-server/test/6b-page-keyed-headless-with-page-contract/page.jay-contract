@@ -1,0 +1,10 @@
+name: page
+tags:
+  - tag: title
+    type: data
+    dataType: string
+    phase: slow
+
+  - tag: pageButton
+    type: interactive
+    elementType: HTMLButtonElement

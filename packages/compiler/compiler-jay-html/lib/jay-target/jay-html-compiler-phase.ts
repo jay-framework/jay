@@ -31,6 +31,30 @@ export function buildInteractivePaths(contract?: Contract): Set<string> {
 }
 
 /**
+ * Interactive root paths for a page: the page contract's paths plus the `key` of every keyed
+ * headless import that may change on the client (DL#236). Without the keys, a page contract with
+ * interactive tags makes the set non-empty and every `{key.x}` text / `if="key.x"` is wrongly
+ * skipped as non-interactive. An empty page set already means "treat all as interactive", so it is
+ * returned unchanged.
+ */
+export function buildPageInteractivePaths(
+    contract: Contract | undefined,
+    headlessImports: { key?: string; contract?: Contract }[],
+): Set<string> {
+    const paths = buildInteractivePaths(contract);
+    if (paths.size === 0) return paths;
+    for (const headless of headlessImports) {
+        if (headless.key && mayChangeOnClient(headless.contract)) paths.add(headless.key);
+    }
+    return paths;
+}
+
+/** An unresolved contract is treated as interactive — freezing live data is worse than adopting static data. */
+function mayChangeOnClient(contract: Contract | undefined): boolean {
+    return !contract || buildInteractivePaths(contract).size > 0;
+}
+
+/**
  * Check whether a text string contains any `{expr}` binding whose property path
  * is in the interactive set. When `interactivePaths` is empty every binding is
  * considered non-interactive (no contract → all bindings are from fast/slow only).

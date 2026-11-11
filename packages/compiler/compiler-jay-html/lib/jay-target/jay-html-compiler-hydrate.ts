@@ -64,6 +64,7 @@ import {
 } from './jay-html-compiler-shared';
 import {
     buildInteractivePaths,
+    buildPageInteractivePaths,
     conditionIsInteractive,
     simplifyConditionForHydrate,
     textHasInteractiveBindings,
@@ -1419,7 +1420,7 @@ export function renderHydrate(
         headlessInstanceDefs: [],
         headlessInstanceCounter: { count: 0 },
         insideFastForEach: false,
-        interactivePaths: buildInteractivePaths(contract),
+        interactivePaths: buildPageInteractivePaths(contract, headlessImports),
     };
 
     // Use ensureSingleChildElement to skip the <body> wrapper and get the
