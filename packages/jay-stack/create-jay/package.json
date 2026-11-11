@@ -1,6 +1,6 @@
 {
   "name": "create-jay",
-  "version": "0.26.2",
+  "version": "0.26.3",
   "type": "module",
   "description": "Create a new Jay Stack project",
   "license": "Apache-2.0",
