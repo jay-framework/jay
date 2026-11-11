@@ -1,0 +1,17 @@
+name: headless-component
+tags:
+  - tag: message
+    type: data
+    dataType: string
+    phase: fast+interactive
+  - tag: isActive
+    type: variant
+    dataType: boolean
+    phase: fast+interactive
+  - tag: invalid
+    type: data
+    dataType: boolean
+    phase: fast+interactive
+  - tag: toggle
+    type: interactive
+    elementType: HTMLButtonElement

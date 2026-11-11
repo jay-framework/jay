@@ -53,6 +53,7 @@ import {
 } from './jay-html-compiler-shared';
 import {
     buildInteractivePaths,
+    buildPageInteractivePaths,
     conditionIsInteractive,
     textHasInteractiveBindings,
 } from './jay-html-compiler-phase';
@@ -1130,7 +1131,10 @@ export function generateServerElementFile(
         headlessInstanceCounter: { count: 0 },
         varMappings: {},
         insideForEach: false,
-        interactivePaths: buildInteractivePaths(jayFile.contract),
+        interactivePaths: buildPageInteractivePaths(
+            jayFile.contract,
+            jayFile.headlessImports ?? [],
+        ),
         parentHasInteractiveChildren: false,
     };
 
