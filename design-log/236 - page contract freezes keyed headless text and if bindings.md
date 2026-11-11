@@ -140,6 +140,7 @@ hydration` failed — `expected 'idle' to deeply equal 'active'`, DOM showed
 - Green: `dev-server` `hydration.test.ts` 735/735; `compiler-jay-html` 764 passed / 4 skipped.
 
 ### Downstream verification (2026-11-11)
+
 A locally packed `compiler-jay-html` with this fix was installed into a downstream project that runs the published 0.26.1 packages, using a package-manager override. Two pages there import a keyed headless plugin form next to their own `page.jay-contract`, which has interactive tags. Both now update the plugin's text bindings and `if` conditionals live after hydration. One page had reproduced the bug before; the other is a fully declarative page (`page.ts` with refs, signals and context subscriptions inside `createEffect`). The earlier bisect note says a "slow-only" page contract also triggered the bug, but that contract had a `fast+interactive` tag. A truly slow-only page contract gives an empty page set, which already means "everything is interactive", so it never triggered the bug. That matches the unit test.
 
 Unit test added (`test/jay-target/jay-html-compiler-phase.test.ts`, 5 cases): an empty page set is returned unchanged, a keyless import is skipped, multiple keys are added, slow-only and fast-only headless contracts are not added, and an unloadable contract is added. Without the fix (the old `buildInteractivePaths(contract)`), the "multiple keys" and "unloadable contract" cases fail. compiler-jay-html: 769 passed / 4 skipped (28 files). dev-server hydration: 735/735.

@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/editing-policy",
-  "version": "0.26.1",
+  "version": "0.26.2",
   "type": "module",
   "description": "Editing-policy plugin for Jay Framework (DL#231) — policy file format, policy-file validation, and baseline-vs-candidate change comparison",
   "license": "Apache-2.0",
