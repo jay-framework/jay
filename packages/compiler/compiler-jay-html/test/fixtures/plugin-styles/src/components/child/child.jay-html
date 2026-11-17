@@ -1,0 +1,9 @@
+<html>
+<head>
+  <script type="application/jay-headless" plugin="brand-ds" contract="button"></script>
+  <script type="application/jay-data">
+data:
+  </script>
+</head>
+<body><div><jay:button label="Hi"></jay:button></div></body>
+</html>

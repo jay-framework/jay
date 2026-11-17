@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { resolvePluginComponent, resolvePluginManifest, findDynamicContract } from '../lib';
+import {
+    resolvePluginComponent,
+    resolvePluginManifest,
+    findDynamicContract,
+    resolvePluginStyles,
+} from '../lib';
 import type { PluginManifest } from '../lib';
 import path from 'path';
 import fs from 'fs';
@@ -637,5 +642,66 @@ describe('findDynamicContract', () => {
         };
         expect(findDynamicContract(single, 'cms/posts')?.prefix).toBe('cms');
         expect(findDynamicContract(single, 'cms')?.prefix).toBe('cms');
+    });
+});
+
+/**
+ * DL#238 — a plugin's page-wide `styles` (plugin.yaml) resolve to absolute paths, for local plugins
+ * (relative to the plugin folder) and NPM plugins (package export subpath).
+ */
+describe('resolvePluginStyles', () => {
+    let tempDir: string;
+
+    beforeAll(() => {
+        tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'jay-plugin-styles-'));
+        const localDir = path.join(tempDir, 'src', 'plugins', 'brand-ds');
+        fs.mkdirSync(localDir, { recursive: true });
+        fs.writeFileSync(
+            path.join(localDir, 'plugin.yaml'),
+            'name: brand-ds\nstyles: [theme.css, fonts/fonts.css]\ncontracts: []\n',
+        );
+        const plainDir = path.join(tempDir, 'src', 'plugins', 'plain');
+        fs.mkdirSync(plainDir, { recursive: true });
+        fs.writeFileSync(path.join(plainDir, 'plugin.yaml'), 'name: plain\ncontracts: []\n');
+
+        const npmDir = path.join(tempDir, 'node_modules', 'npm-ds');
+        fs.mkdirSync(path.join(npmDir, 'dist'), { recursive: true });
+        fs.writeFileSync(
+            path.join(npmDir, 'package.json'),
+            JSON.stringify({
+                name: 'npm-ds',
+                exports: { './plugin.yaml': './plugin.yaml', './theme.css': './dist/theme.css' },
+            }),
+        );
+        fs.writeFileSync(
+            path.join(npmDir, 'plugin.yaml'),
+            'name: npm-ds\nstyles: [theme.css]\ncontracts: []\n',
+        );
+        fs.writeFileSync(path.join(npmDir, 'dist', 'theme.css'), ':where(:root){--npm-ds-x: 1px}');
+    });
+
+    afterAll(() => {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+    });
+
+    it('resolves a local plugin styles list relative to the plugin folder', () => {
+        expect(resolvePluginStyles(tempDir, 'brand-ds')).toEqual([
+            path.join(tempDir, 'src', 'plugins', 'brand-ds', 'theme.css'),
+            path.join(tempDir, 'src', 'plugins', 'brand-ds', 'fonts', 'fonts.css'),
+        ]);
+    });
+
+    it('resolves an NPM plugin style through its package export subpath', () => {
+        expect(resolvePluginStyles(tempDir, 'npm-ds').map((p) => fs.realpathSync(p))).toEqual([
+            fs.realpathSync(path.join(tempDir, 'node_modules', 'npm-ds', 'dist', 'theme.css')),
+        ]);
+    });
+
+    it('returns an empty list for a plugin without styles', () => {
+        expect(resolvePluginStyles(tempDir, 'plain')).toEqual([]);
+    });
+
+    it('returns an empty list for an unknown plugin', () => {
+        expect(resolvePluginStyles(tempDir, 'no-such-plugin')).toEqual([]);
     });
 });

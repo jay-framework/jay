@@ -35,6 +35,12 @@ import {
 import { SourceFileFormat } from '@jay-framework/compiler-shared';
 import { JayImportLink, JayImportName } from '@jay-framework/compiler-shared';
 import { JayYamlStructure } from './jay-yaml-structure';
+import {
+    assemblePageCss,
+    collectUsedPluginNames,
+    loadPluginStyleParts,
+    resolveNestedCssImports,
+} from './page-css';
 import { Contract, ContractTag, RenderingPhase } from '../contract';
 import { ERROR_CONTRACT, ERROR_CONTRACT_MODULE, isBuiltInErrorContract } from '../contract';
 
@@ -712,6 +718,7 @@ async function parseHeadlessImports(
         // (kebab) contract name; for a local component `contract=` is a file path, so derive the tag
         // name from the loaded contract's name (DL#196).
         let contractTagName: string = contractAttr;
+        let pluginName: string | undefined;
 
         try {
             if (isBuiltInErrorContract(pluginAttr, contractAttr)) {
@@ -769,6 +776,7 @@ async function parseHeadlessImports(
                 contractFile = contractResult.val.contractPath;
                 contractMetadata = contractResult.val.metadata;
                 if (structural) name = pascalCase(loadedContract.name);
+                pluginName = pluginAttr;
             } else {
                 // DL#196 — local (plugin-less) component from the components folder. `contract=` is a
                 // file path; `src=` present ⇒ coded (resolve the single exported component); absent ⇒
@@ -914,6 +922,7 @@ async function parseHeadlessImports(
                     headlessProps,
                     ...(structural && { structural }),
                     ...(templateAttr && { template: templateAttr }),
+                    ...(pluginName && { pluginName }),
                     ...(suppressedValidations.length && { suppressedValidations }),
                 });
             });
@@ -1115,26 +1124,11 @@ function parseValidationOverrides(
 }
 
 interface ExtractCssResult {
-    css: string | undefined;
+    /** Page CSS parts (linked files, then `<head><style>`), unjoined so imports can be hoisted. */
+    cssParts: string[];
     linkedCssFiles: string[];
-}
-
-function resolveNestedCssImports(css: string, cssDir: string, visited?: Set<string>): string {
-    if (!css.includes('@import')) return css;
-    const seen = visited ?? new Set<string>();
-
-    return css.replace(/@import\s+(?:url\(\s*)?['"]([^'"]+)['"]\s*\)?;?/g, (match, importPath) => {
-        if (importPath.startsWith('http') || importPath.startsWith('//')) return match;
-        const resolved = path.resolve(cssDir, importPath);
-        if (seen.has(resolved)) return `/* circular import: ${importPath} */`;
-        seen.add(resolved);
-        try {
-            const imported = fsSync.readFileSync(resolved, 'utf-8');
-            return `/* @import ${importPath} */\n${resolveNestedCssImports(imported, path.dirname(resolved), seen)}`;
-        } catch {
-            return `/* @import not found: ${importPath} */`;
-        }
-    });
+    /** Hand-linked files skipped because a used plugin already ships them in `styles` (DL#238). */
+    duplicateLinks: string[];
 }
 
 async function extractCss(
@@ -1145,6 +1139,7 @@ async function extractCss(
     const cssParts: string[] = [];
     const validations: string[] = [];
     const linkedCssFiles: string[] = [];
+    const duplicateLinks: string[] = [];
 
     // Extract CSS from <link> tags with rel="stylesheet"
     const styleLinks = root.querySelectorAll('head link[rel="stylesheet"]');
@@ -1164,7 +1159,10 @@ async function extractCss(
                 const cssFilePath = path.resolve(filePath, href);
                 linkedCssFiles.push(cssFilePath);
 
-                if (skipPaths?.has(cssFilePath)) continue;
+                if (skipPaths?.has(cssFilePath)) {
+                    duplicateLinks.push(cssFilePath);
+                    continue;
+                }
 
                 try {
                     const cssContent = await fs.readFile(cssFilePath, 'utf-8');
@@ -1191,8 +1189,7 @@ async function extractCss(
         }
     }
 
-    const css = cssParts.length > 0 ? cssParts.join('\n\n') : undefined;
-    return new WithValidations({ css, linkedCssFiles }, validations);
+    return new WithValidations({ cssParts, linkedCssFiles, duplicateLinks }, validations);
 }
 
 /**
@@ -1385,7 +1382,12 @@ export async function parseJayFile(
         ]),
     ];
 
-    const cssResult = await extractCss(root, filePath);
+    const pluginStyleParts = loadPluginStyleParts(
+        projectRoot,
+        collectUsedPluginNames(allHeadlessImports),
+    );
+    const pluginStylePaths = pluginStyleParts.map((_) => _.path);
+    const cssResult = await extractCss(root, filePath, new Set(pluginStylePaths));
     // Exclude CSS links from head links if CSS extraction is enabled (we have a file path)
     const excludeCssLinks = !!filePath;
     const headLinks = parseHeadLinks(root, excludeCssLinks);
@@ -1398,11 +1400,14 @@ export async function parseJayFile(
 
     if (validations.length > 0) return new WithValidations(undefined, validations);
 
-    let css = cssResult.val?.css;
-    if (css) {
-        detectCssNameCollisions(css, validations);
-    }
-    const allLinkedCssFiles = cssResult.val?.linkedCssFiles || [];
+    const pageCssParts = cssResult.val?.cssParts ?? [];
+    // Collisions are checked on the page's own CSS: a theme-vs-page clash is a validate warning
+    // (DS-THEME-NAME-CLASH), never a compile failure (DL#238).
+    if (pageCssParts.length > 0) detectCssNameCollisions(pageCssParts.join('\n\n'), validations);
+    const css = assemblePageCss([...pluginStyleParts.map((_) => _.css), ...pageCssParts]);
+    const allLinkedCssFiles = [
+        ...new Set([...(cssResult.val?.linkedCssFiles ?? []), ...pluginStylePaths]),
+    ];
     const allLinkedComponentFiles: string[] = [];
 
     // Extract trackBy information from contracts for deep merge
