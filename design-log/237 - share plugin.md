@@ -487,3 +487,13 @@ Findings, not fixed: `PluginSummary.hasServerCode` is true for a plugin whose on
 - **Finding (not fixed, compiler):** `class="ds-button-{variant}"` parses as two classes (`ds-button-` + value), and contract prop `default` is parsed but never applied to a `<jay:x>` region without the attribute. Together they render a template-only Button unstyled on pages while the editor preview (which applies defaults and renders differently) looks right. Candidate: a validation for an interpolated class suffix, plus applying prop defaults.
 - `c97004fb` verified live (0.26.4 tarballs): a page importing `plugin="<ds>" contract="button"` renders 200 with no `index.js` import.
 - Tests: share 131/131; `yarn confirm` 4730 passed / 0 failed / 11 skipped.
+
+### Implementation Results — QA follow-up: grey design-system Button (2026-11-17)
+
+A shared Button showed purple in the editor's design-system card but browser-grey on the page. Two framework bugs:
+
+- **Class token split** (`cfb0fd8d`): `class="ds-button ds-button-{variant}"` rendered `ds-button- primary`. The class grammar's `_` between tokens matches zero whitespace, so `ds-button-` and `{variant}` became two classes. New `compoundClassExpression` rule in `expression-parser.pegjs`: adjacent literal/interpolation parts concatenate (`'ds-button-' + vs.variant`). Repro tests in `expression-compiler.unit.test.ts` (jay + react targets).
+- **Contract prop defaults not applied** (`36eec786`): DL#84 Q4 defines prop `default` and the agent-kit contract guides document it, yet no render path used it, so `<jay:button>` without `variant` rendered `ds-button-`. `normalizeAndResolveInstanceProps` (slow, fast and instance runners) now fills omitted props with their coerced contract default. Repro tests in `resolve-instance-props.test.ts`. Agent-kit `contracts/syntax.md` now states it.
+- **Renumbered** this log #221 → #237 (main brought a different #221).
+- Live: site-b home `<jay:button>` with no `variant` renders `ds-button ds-button-primary`, computed `background-color: rgb(124, 58, 237)`, the same as the editor's card.
+- `yarn confirm`: 4735 passed / 0 failed / 11 skipped.

@@ -574,7 +574,10 @@ describe('expression-compiler', () => {
         });
 
         it('should concatenate an interpolation suffix into the same class token', () => {
-            const actual = parseReactClassExpression('ds-button ds-button-{classProperty}', defaultVars);
+            const actual = parseReactClassExpression(
+                'ds-button ds-button-{classProperty}',
+                defaultVars,
+            );
             expect(actual.rendered).toEqual("{cx('ds-button', 'ds-button-' + vs.classProperty)}");
         });
 
