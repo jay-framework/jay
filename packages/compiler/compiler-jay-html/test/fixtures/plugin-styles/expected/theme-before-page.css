@@ -1,0 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora');
+@import url('https://fonts.googleapis.com/css2?family=Inter');
+@import url('https://fonts.googleapis.com/css2?family=Lora');
+
+/* Plugin CSS: brand-ds/theme.css */
+:where(:root) { --brand-ds-primary: #2563eb; }
+@keyframes brand-spin { to { transform: rotate(360deg); } }
+
+/* External CSS: page.css */
+.page { color: var(--brand-ds-primary); }
+
+.local { margin: 0; }

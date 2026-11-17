@@ -1,0 +1,5 @@
+name: tag
+tags:
+  - tag: label
+    type: data
+    dataType: string

@@ -52,6 +52,10 @@ export interface PluginManifest {
     /** When true, this plugin is loaded on every page regardless of usage in jay-html.
      *  Useful for global tools like WebMCP, analytics, or dev tools. */
     global?: boolean;
+    /** Page-wide stylesheets (DL#238): design tokens under `:where(:root)`, `@font-face`, font
+     *  `@import`. Local plugin: path relative to the plugin folder. NPM plugin: export subpath.
+     *  Inlined (once, before page CSS) into every page that imports a component of this plugin. */
+    styles?: string[];
     contracts?: Array<{
         name: string;
         contract: string; // For NPM: export subpath (e.g., "contract.jay-contract"). For local: relative path.
@@ -624,4 +628,60 @@ export function resolvePluginManifest(
             `Searched in src/plugins/${pluginName}/ and node_modules/${pluginName}/. ` +
             `Ensure the plugin is installed or exists in your project.`,
     ]);
+}
+
+/**
+ * Absolute paths of a plugin's page-wide `styles` (DL#238), local plugin first, then NPM.
+ * Returns the declared paths whether or not the files exist (callers skip missing ones);
+ * an unknown plugin or one without `styles` yields an empty list.
+ */
+export function resolvePluginStyles(projectRoot: string, pluginName: string): string[] {
+    const localPluginDir = path.join(projectRoot, LOCAL_PLUGIN_PATH, pluginName);
+    const localManifest = loadPluginManifest(localPluginDir);
+    if (localManifest) return pluginStylePaths(localPluginDir, localManifest);
+
+    const npmPluginDir = resolveNpmPluginDir(projectRoot, pluginName);
+    const npmManifest = npmPluginDir && loadPluginManifest(npmPluginDir);
+    if (!npmManifest) return [];
+    return pluginStylePaths(npmPluginDir, npmManifest, pluginName);
+}
+
+/**
+ * Absolute paths of the `styles` declared in an already-loaded manifest. For an NPM plugin
+ * (`packageName` given) each entry is resolved as a package export subpath, falling back to a
+ * path relative to the package folder.
+ */
+export function pluginStylePaths(
+    pluginDir: string,
+    manifest: PluginManifest,
+    packageName?: string,
+): string[] {
+    const styles = Array.isArray(manifest.styles) ? manifest.styles : [];
+    return styles
+        .filter((style): style is string => typeof style === 'string' && style.length > 0)
+        .map((style) =>
+            packageName
+                ? resolvePackageSubpath(pluginDir, packageName, style)
+                : path.resolve(pluginDir, style),
+        );
+}
+
+function resolveNpmPluginDir(projectRoot: string, pluginName: string): string | undefined {
+    try {
+        return path.dirname(
+            require.resolve(`${pluginName}/plugin.yaml`, { paths: [projectRoot || process.cwd()] }),
+        );
+    } catch {
+        return undefined;
+    }
+}
+
+function resolvePackageSubpath(pluginDir: string, packageName: string, subpath: string): string {
+    try {
+        return require.resolve(`${packageName}/${subpath.replace(/^\.\//, '')}`, {
+            paths: [pluginDir],
+        });
+    } catch {
+        return path.resolve(pluginDir, subpath);
+    }
 }

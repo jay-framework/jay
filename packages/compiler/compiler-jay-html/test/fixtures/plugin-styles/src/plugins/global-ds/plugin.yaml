@@ -1,0 +1,6 @@
+name: global-ds
+global: true
+styles: [global.css]
+contracts:
+  - name: badge
+    contract: badge.jay-contract
