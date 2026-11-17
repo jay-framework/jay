@@ -11,7 +11,7 @@ import {
     type ShareEntry,
     type ShareManifest,
 } from './manifest';
-import { requireGithubRepoUrl } from './repo-url';
+import { parseGithubRepoUrl, sameGithubRepo } from './repo-url';
 import { networkFailure } from './report';
 import { moveToBackup, newTmpCloneDir } from './scratch';
 import { checkSiteRepoAllowsSharing, ignoreSharedFolder } from './site-guards';
@@ -28,8 +28,9 @@ export interface LinkInput {
 
 /** `share/link` (DL#221 § Flows): clone a shared plugin branch into `src/plugins/<folder>` and pin it. */
 export async function link(ctx: ShareContext, input: LinkInput): Promise<ShareReport> {
-    const repo = requireGithubRepoUrl(input.repo);
-    const ref = input.ref || DEFAULT_REF;
+    const location = parseGithubRepoUrl(input.repo);
+    const repo = location.repo;
+    const ref = input.ref || location.ref || DEFAULT_REF;
     requireRepoNotInManifest(ctx.projectRoot, repo);
 
     const tmpDir = await cloneSingleBranch(ctx, repo, ref);
@@ -59,7 +60,7 @@ export async function link(ctx: ShareContext, input: LinkInput): Promise<ShareRe
 }
 
 function requireRepoNotInManifest(projectRoot: string, repo: string): void {
-    const existing = readManifest(projectRoot).plugins.find((e) => e.repo === repo);
+    const existing = readManifest(projectRoot).plugins.find((e) => sameGithubRepo(e.repo, repo));
     if (!existing) return;
     const missing = !fs.existsSync(pluginFolderPath(projectRoot, existing.folder));
     throw shareFailure(

@@ -53,10 +53,19 @@ const NEXT_STEPS: Partial<Record<ShareErrorCode, string>> = {
         'The branch is protected: push a branch with plain git inside the plugin folder and open a PR; after merge, sites run share/pull.',
 };
 
+const STALLED_NEXT_STEP =
+    'Use the SSH URL (git@github.com:<owner>/<name>.git) if your ssh key has access, or make sure ' +
+    'git can reach the HTTPS URL from a terminal without asking for credentials, then retry.';
+
 /** Turns a failed network git call into a ShareError with the classified code. */
 export function networkFailure(error: unknown, step: GitNetworkStep, context: string): ShareError {
     if (error instanceof ShareError) return error;
     const stderr = error instanceof GitCommandError ? error.stderr : String(error);
+    if (error instanceof GitCommandError && error.timedOut) {
+        return shareFailure('SHARE_NO_ACCESS', `${context}: ${stderr.trim()}`, {
+            nextStep: STALLED_NEXT_STEP,
+        });
+    }
     const code = classifyGitStderr(stderr, step);
     return shareFailure(code, `${context}: ${stderr.trim()}`, { nextStep: NEXT_STEPS[code] });
 }
