@@ -497,3 +497,9 @@ A shared Button showed purple in the editor's design-system card but browser-gre
 - **Renumbered** this log #221 → #237 (main brought a different #221).
 - Live: site-b home `<jay:button>` with no `variant` renders `ds-button ds-button-primary`, computed `background-color: rgb(124, 58, 237)`, the same as the editor's card.
 - `yarn confirm`: 4735 passed / 0 failed / 11 skipped.
+
+### Implementation Results — QA re-run from scratch (2026-11-17)
+
+- End-to-end share → import → edit → publish → update passed with fresh projects and a new branch. The HTTPS address-bar URL shared successfully, and a template-only import showed no "server code" note.
+- **Bug fixed** `f8feb7ca` (`stack-cli` `run-sync.ts`): `mergeScopeCss` wrote the merged CSS with `set_content(string)`, which re-parses it as HTML, so `syntax: '<angle>'` gained a stray `</angle>` and the page CSS stopped parsing. It now writes a `TextNode`. Repro test: `run-sync.test.ts` "should keep `<…>` text in the page <style> as raw CSS". stack-cli 214/214.
+- Follow-up candidate (validation first): a `SHARE-*` warning for `var(--token)` without a fallback in shared templates, because consumers that don't link the plugin's theme stylesheet render unstyled.
