@@ -213,6 +213,45 @@ describe('design-system-index (DL#204)', () => {
             });
         });
 
+        /**
+         * Bug: local plugin components were keyed by manifest.name, but `plugin="x"` resolves a
+         * local plugin by its folder under src/plugins (DL#221 — linked with `--as`).
+         * Expected: `plugin: ds2` for folder ds2 whose manifest.name is brand-ds.
+         * Actual (before fix): `plugin: brand-ds`, which does not resolve in a page.
+         */
+        it('keys a local plugin component by its folder, not its manifest name', () => {
+            write('src/plugins/ds2/card.jay-contract', contractFile('Card'));
+            const plugin = {
+                name: 'brand-ds',
+                pluginPath: path.join(root, 'src/plugins/ds2'),
+                packageName: path.join(root, 'src/plugins/ds2'),
+                isLocal: true,
+                manifest: {
+                    name: 'brand-ds',
+                    contracts: [{ name: 'card', contract: 'card.jay-contract' }],
+                },
+                dependencies: [],
+            } as ScannedPlugin;
+
+            const index = buildDesignSystemIndex({
+                projectRoot: root,
+                plugins: new Map([['ds2', plugin]]),
+                resolvePluginContractPath: (p, spec) => path.join(p.pluginPath, spec),
+            });
+
+            expect(index).toEqual({
+                components: [
+                    {
+                        name: 'card',
+                        contractPath: './src/plugins/ds2/card.jay-contract',
+                        source: 'plugin',
+                        plugin: 'ds2',
+                        templates: [],
+                    },
+                ],
+            });
+        });
+
         it('returns an empty catalog when there are no components', () => {
             const index = buildDesignSystemIndex({
                 projectRoot: root,
