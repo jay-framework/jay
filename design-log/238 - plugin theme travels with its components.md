@@ -192,3 +192,16 @@ New: compiler-jay-html `plugin-styles.test.ts` 9/9 (hand-written expected CSS fi
 ### Live check (P5, AIditor `examples/share-qa-a`, dev server)
 
 `styles: [theme.css]` added, tokens moved to `:where(:root)`, hand link removed, Button import switched to `plugin=`. `agent-kit` lists `styles: [src/plugins/share-qa-a-ds/theme.css]`. The page stylesheet starts with the plugin CSS (offset 3, page rules at 2471). Used Button: page `rgb(5, 150, 105)` = panel card `rgb(5, 150, 105)`. Unused Card (`rgb(255, 255, 255)` / `rgb(17, 24, 39)`), Badge (`rgb(254, 243, 199)` / `rgb(146, 64, 14)`) and the outline/secondary Button variants are themed from the plugin's `styles` in the panel. Not run: prod build, layout-override VC, dev watch on `theme.css`.
+
+### QA — theme travels between sites (2026-11-17)
+
+Driven through the AIditor UI in two dev projects (A owns the plugin, B imported it from the shared branch).
+
+- A: panel cards for the used Button and the unused Card, Badge, outline and secondary variants are all themed; page Button = card `rgb(5, 150, 105)`. Pass.
+- A: Publish changes → share commit + push → Published. Pass.
+- B: Check for updates → Update (dialog: "2 file(s) change", code files: `plugin.yaml`; `theme.css` counted as a non-code file) → Updated. Pass.
+- B: agent removed the hand-written theme link (import already used `plugin=`). Page Button `rgb(5, 150, 105)`; cards match A exactly (Card `rgb(255,255,255)`/`rgb(17,24,39)`, Badge `rgb(254,243,199)`/`rgb(146,64,14)`, secondary `rgb(224,231,255)`). Page CSS starts with the plugin CSS (offset 3, page rules at 2471). Pass.
+- B: a site `:root { --share-qa-a-ds-color-primary: #dc2626 }` override in the page style wins on the page and in the card (`rgb(220, 38, 38)`); A stays green. Pass.
+- Production build (`jay-stack build --no-minify`, site A copy without the starter's demo pages): built route CSS starts with `/* Plugin CSS: share-qa-a-ds/theme.css */`, page rules start at line 55, no link to the theme. Pass.
+
+No bugs found. Notes: `jay-stack build` stops on the starter's 13 existing demo-page validation errors (unrelated); a prettier-only reformat of B's plugin `theme.css` (from an earlier format run) blocked Update with "Publish your changes first" as designed — it was stashed in the plugin's git, not discarded.
