@@ -99,9 +99,17 @@ the same trust as a teammate's commit — but **mention the incoming code files 
 
 - Keep component CSS **inside the template `<style>`** — it travels with the region when the
   component is flattened into a page. A `<link rel="stylesheet">` inside a template does not travel.
-- Use **prefixed tokens with fallbacks**: `.ds-card { background: var(--brand-ds-surface, #fff); }`.
-  Never `:root { --surface: … }` in the shared plugin (does not travel, unprefixed).
-- Fonts: add the font `<link>` to the page `<head>` of each site that uses the component.
+- Put the **theme** (prefixed tokens, `@font-face`, font `@import url(https://…)`) in one plugin
+  stylesheet, e.g. `src/plugins/brand-ds/theme.css`, and declare it in `plugin.yaml`:
+  `styles: [theme.css]`. Jay adds it once, before the page CSS, to every page that imports a
+  component of the plugin, and the Design System panel previews load it too.
+- Declare tokens under **`:where(:root) { --brand-ds-surface: #fff; }`** (specificity 0) so a site
+  `:root` override always wins. Plain `:root` in a plugin stylesheet → `DS-THEME-ROOT-SPECIFICITY`.
+- **Do not hand-link** the plugin stylesheet in pages (`DS-THEME-HAND-LINKED`); importing a
+  component on the page is enough. A plugin used only inside a headfull child is not included yet —
+  import one of its components on the page (`DS-THEME-VIA-CHILD`).
+- Use **prefixed tokens**: `.ds-card { background: var(--brand-ds-surface, #fff); }`. A token with
+  no fallback must be defined in `styles` (`DS-TOKEN-NO-FALLBACK`).
 
 ## Customizing a shared design system
 
@@ -109,16 +117,16 @@ Pick the **highest layer that solves the job**; go lower only when necessary.
 
 | Layer | Name                                         | What changes                                                                                                                        | Upstream `share/pull`                                               |
 | ----- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| 1     | **Adjust brand (theme)**                     | The site or page sets `--<plugin>-*` custom properties; shared templates keep their fallbacks                                       | Updates shared components; the theme stays in the site              |
+| 1     | **Adjust brand (theme)**                     | The site or page sets `--<plugin>-*` custom properties on `:root`; they win over the plugin's `:where(:root)` defaults              | Updates shared components; the theme stays in the site              |
 | 2     | **Use another variant**                      | A second `.jay-html` per contract, imported on the page with `as=`                                                                  | New shared templates arrive on pull; pages keep their import choice |
 | 3     | **Custom look for this site (project skin)** | A project-owned template under `src/components/` or `src/plugins/<site>-ds/`, still using the shared contract / `.ts` when possible | Pull updates shared logic and contracts; re-check skins             |
 | 4     | **Detach**                                   | A full copy of the component in the site; references stop using `plugin="<shared>"` for it                                          | **No automatic sync** — an explicit opt-out                         |
 
-Theme override (layer 1) — the shared template keeps `var(--brand-ds-surface, #fff)`; the site
-overrides it, for the whole site or one page:
+Theme override (layer 1) — the plugin's `theme.css` defines `:where(:root) { --brand-ds-surface: #fff; }`;
+the site overrides it in its own CSS (page `<style>` or a site stylesheet), for the whole site or one page:
 
 ```css
-/* src/styles/theme.css */
+/* site CSS — never edit the shared plugin's theme.css for this */
 :root {
   --brand-ds-surface: #0f172a;
 }
