@@ -1,0 +1,4 @@
+name: sharePush
+description: Push local commits of a linked shared plugin (fast-forward only) and re-pin share.yaml. Returns a ShareReport (ok=false with a SHARE_* code on failure).
+inputSchema:
+  folder?: string

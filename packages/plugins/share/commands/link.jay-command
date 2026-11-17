@@ -1,0 +1,7 @@
+name: link
+description: Clone a shared plugin repo branch into src/plugins/<folder> and pin it in share.yaml
+inputSchema:
+  repo: string
+  ref?: string
+  as?: string
+  untrack?: boolean

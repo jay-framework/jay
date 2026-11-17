@@ -1,0 +1,5 @@
+name: brand-ds
+description: Shared brand design system (test fixture)
+contracts:
+  - name: card
+    contract: card.jay-contract

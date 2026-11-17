@@ -1,0 +1,3 @@
+name: setup-error
+setup: ./setup.ts
+agentkit: ./agent-kit.ts

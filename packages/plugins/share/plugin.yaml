@@ -1,0 +1,48 @@
+name: share
+description: Share Jay local plugins through a dedicated git repo (DL#221)
+
+agentkit: shareAgentKit
+
+commands:
+  - name: publish
+    command: commands/publish.jay-command
+  - name: link
+    command: commands/link.jay-command
+  - name: pull
+    command: commands/pull.jay-command
+  - name: push
+    command: commands/push.jay-command
+  - name: status
+    command: commands/status.jay-command
+  - name: restore
+    command: commands/restore.jay-command
+  - name: unlink
+    command: commands/unlink.jay-command
+
+actions:
+  - name: sharePublish
+    action: actions/publish.jay-action
+    devOnly: true
+  - name: shareLink
+    action: actions/link.jay-action
+    devOnly: true
+  - name: sharePull
+    action: actions/pull.jay-action
+    devOnly: true
+  - name: sharePush
+    action: actions/push.jay-action
+    devOnly: true
+  - name: shareStatus
+    action: actions/status.jay-action
+    devOnly: true
+  - name: shareRestore
+    action: actions/restore.jay-action
+    devOnly: true
+  - name: shareUnlink
+    action: actions/unlink.jay-action
+    devOnly: true
+
+validators:
+  - name: share
+    handler: validateShare
+    description: Warns when share.yaml, src/plugins folders, the managed .gitignore block or pinned commits disagree (warnings only)
