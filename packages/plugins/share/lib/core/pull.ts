@@ -18,7 +18,7 @@ interface PullResult {
 }
 
 /**
- * `share/pull` (DL#221 § Flows): `git merge --ff-only origin/<ref>`; jay never merges or rebases.
+ * `share/pull` (DL#237 § Flows): `git merge --ff-only origin/<ref>`; jay never merges or rebases.
  * `dryRun` fetches and lists `HEAD..origin/<ref>` without changing anything.
  */
 export async function pull(ctx: ShareContext, input: PullInput = {}): Promise<ShareReport> {

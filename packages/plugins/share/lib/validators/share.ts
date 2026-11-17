@@ -1,5 +1,5 @@
 /**
- * `share` plugin validator (DL#221 Phase 1a, DL#145 hook). The checks are project-level, but the
+ * `share` plugin validator (DL#237 Phase 1a, DL#145 hook). The checks are project-level, but the
  * only plugin→validate channel is the per-page hook, so — as in DL#216 — the scan runs once per
  * `projectRoot` and later pages return nothing. Zero-page projects get no findings (`share/status`
  * covers them).

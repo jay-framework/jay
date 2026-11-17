@@ -22,7 +22,7 @@ export interface SetupRun {
 
 /**
  * Runs a linked plugin's setup + agent-kit handlers after its files are in `src/plugins/<folder>`
- * (DL#221 § "Setup + agent-kit"). A seam so flow tests can spy on it.
+ * (DL#237 § "Setup + agent-kit"). A seam so flow tests can spy on it.
  */
 export interface PluginHandlers {
     runSetupAndAgentKit(projectRoot: string, folder: string): Promise<SetupRun>;

@@ -26,7 +26,7 @@ export interface LinkInput {
     untrack?: boolean;
 }
 
-/** `share/link` (DL#221 § Flows): clone a shared plugin branch into `src/plugins/<folder>` and pin it. */
+/** `share/link` (DL#237 § Flows): clone a shared plugin branch into `src/plugins/<folder>` and pin it. */
 export async function link(ctx: ShareContext, input: LinkInput): Promise<ShareReport> {
     const location = parseGithubRepoUrl(input.repo);
     const repo = location.repo;

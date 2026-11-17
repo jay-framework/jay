@@ -1,7 +1,7 @@
 import { GitCommandError } from './git-runner';
 import { ShareError, shareFailure, type ShareErrorCode, type ShareReport } from './types';
 
-/** Which network step failed — push stderr has extra meanings (DL#221 § "No prompts, ever"). */
+/** Which network step failed — push stderr has extra meanings (DL#237 § "No prompts, ever"). */
 export type GitNetworkStep = 'clone' | 'fetch' | 'ls-remote' | 'push' | 'publish-first-push';
 
 const NO_ACCESS_PATTERNS = [

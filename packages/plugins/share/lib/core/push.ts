@@ -18,7 +18,7 @@ interface PushResult {
 }
 
 /**
- * `share/push` (DL#221 § Flows): refuse dirty, fetch, require fast-forward, denylist the outgoing
+ * `share/push` (DL#237 § Flows): refuse dirty, fetch, require fast-forward, denylist the outgoing
  * paths, `git push origin <ref>` (never `--force`), then re-pin `commit`.
  */
 export async function push(ctx: ShareContext, input: PushInput = {}): Promise<ShareReport> {

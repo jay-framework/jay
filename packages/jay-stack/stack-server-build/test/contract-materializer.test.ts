@@ -29,7 +29,7 @@ describe('contract-materializer plugins-index keys', () => {
 
     /**
      * Bug: plugins-index.yaml keyed a local plugin by manifest.name, but `plugin="x"` resolves a
-     * local plugin by folder (DL#221 — linked with `--as`).
+     * local plugin by folder (DL#237 — linked with `--as`).
      * Expected: `name: ds2` for folder ds2 whose manifest.name is brand-ds.
      * Actual (before fix): `name: brand-ds`.
      */

@@ -3,7 +3,7 @@ import * as path from 'node:path';
 import { shareFailure } from './types';
 
 /**
- * Plugin-repo `.gitignore` written by publish (DL#221 § "Publish safety"): every hidden dot-file or
+ * Plugin-repo `.gitignore` written by publish (DL#237 § "Publish safety"): every hidden dot-file or
  * dot-folder is ignored except `.gitignore` itself, plus config and key material.
  */
 export const PLUGIN_GITIGNORE = [
@@ -64,7 +64,7 @@ export function isScriptFile(repoPath: string): boolean {
     return CODE_EXTENSIONS.test(repoPath) && !DECLARATION_EXTENSIONS.test(repoPath);
 }
 
-/** Code files (informational only, DL#221 § "Code files"). */
+/** Code files (informational only, DL#237 § "Code files"). */
 export function isCodeFile(repoPath: string): boolean {
     if (DECLARATION_EXTENSIONS.test(repoPath)) return false;
     return (

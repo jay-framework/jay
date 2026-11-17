@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { randomBytes } from 'node:crypto';
 
-/** `.jay-share/` is share's only scratch folder; nothing is ever deleted (DL#221 TL;DR #16). */
+/** `.jay-share/` is share's only scratch folder; nothing is ever deleted (DL#237 TL;DR #16). */
 export const SCRATCH_DIR = '.jay-share';
 
 export function newTmpCloneDir(projectRoot: string): string {

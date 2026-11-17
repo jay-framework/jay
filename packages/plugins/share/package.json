@@ -2,7 +2,7 @@
   "name": "@jay-framework/share",
   "version": "0.26.4",
   "type": "module",
-  "description": "Share Jay local plugins through a dedicated git repo — link, pull, push, publish, restore (DL#221)",
+  "description": "Share Jay local plugins through a dedicated git repo — link, pull, push, publish, restore (DL#237)",
   "license": "Apache-2.0",
   "main": "dist/index.js",
   "files": [

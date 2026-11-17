@@ -1,7 +1,7 @@
 import { execFile, execFileSync } from 'node:child_process';
 
 /**
- * The single seam through which share talks to git (DL#221 § "Git runner").
+ * The single seam through which share talks to git (DL#237 § "Git runner").
  * Plain `git` with the user's credentials; prompts are always disabled.
  */
 export interface GitRunner {
@@ -34,7 +34,7 @@ export interface GitRunnerOptions {
 
 /**
  * Prompts are disabled, but a credential helper (e.g. osxkeychain waiting for a Keychain dialog)
- * can still block forever; a share action must fail fast instead (DL#221 QA).
+ * can still block forever; a share action must fail fast instead (DL#237 QA).
  */
 export const GIT_TIMEOUT_MS = 60_000;
 

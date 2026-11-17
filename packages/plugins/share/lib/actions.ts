@@ -1,5 +1,5 @@
 /**
- * The 7 devOnly `share*` actions (DL#221 TL;DR #8) — the typed programmatic surface. Names are
+ * The 7 devOnly `share*` actions (DL#237 TL;DR #8) — the typed programmatic surface. Names are
  * prefixed because the action registry overwrites duplicates silently. The project root is
  * `process.cwd()`, which both hosts (CLI and dev server) set to the project folder.
  */

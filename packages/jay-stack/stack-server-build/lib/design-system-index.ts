@@ -173,7 +173,7 @@ export interface BuildDesignSystemIndexOptions {
  */
 /**
  * The key agents write in `plugin="x"`: a local plugin resolves by its folder under `src/plugins`
- * (the scanner map key), an NPM plugin by its package name (DL#221).
+ * (the scanner map key), an NPM plugin by its package name (DL#237).
  */
 export function pluginIndexKey(pluginKey: string, plugin: ScannedPlugin): string {
     return plugin.isLocal ? pluginKey : plugin.name;

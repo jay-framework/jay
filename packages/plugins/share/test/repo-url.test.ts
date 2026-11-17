@@ -49,7 +49,7 @@ describe('repo URL validation (DL221)', () => {
 
 /**
  * Bug: the Share / Import dialogs rejected or mis-handled GitHub URLs copied from the browser.
- * Found in: DL#221 / aiditor QA (2026-11-17) — product owner request.
+ * Found in: DL#237 / aiditor QA (2026-11-17) — product owner request.
  * Expected: browser URLs (trailing slash, `/tree/<branch>`), HTTPS clone URLs and SSH URLs all
  * normalize to a clean repo URL; `/tree/<branch>` also yields the branch.
  * Actual: a trailing slash or `/tree/<branch>` failed SHARE_INVALID_REPO.
@@ -97,7 +97,7 @@ describe('GitHub URL normalization (DL221 QA)', () => {
 
 /**
  * Bug: the same GitHub repo imported again through another URL form was not caught.
- * Found in: DL#221 QA follow-up (HTTPS / SSH / browser URL forms are all accepted now).
+ * Found in: DL#237 QA follow-up (HTTPS / SSH / browser URL forms are all accepted now).
  * Expected: link answers SHARE_ALREADY_IN_MANIFEST for any URL form of a linked repo.
  * Actual: the manifest check compared URL strings exactly.
  */

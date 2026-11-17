@@ -12,7 +12,7 @@ export type ShareCheckCode =
     | 'SHARE-COMMIT-MISMATCH'
     | 'SHARE-DIRTY';
 
-/** Every share finding is a warning: it never fails `jay-stack validate` (DL#221 Phase 1a). */
+/** Every share finding is a warning: it never fails `jay-stack validate` (DL#237 Phase 1a). */
 export interface ShareFinding {
     code: ShareCheckCode;
     severity: 'warning';

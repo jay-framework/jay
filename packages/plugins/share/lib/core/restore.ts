@@ -9,7 +9,7 @@ import { statusOf } from './status';
 import { shareFailure, type ShareReport } from './types';
 
 /**
- * `share/restore` (DL#221 § Flows): clone every entry missing on disk at its pinned commit, on
+ * `share/restore` (DL#237 § Flows): clone every entry missing on disk at its pinned commit, on
  * branch `<ref>` tracking `origin/<ref>` (not detached, so pull/push work). Never prompts.
  */
 export async function restore(ctx: ShareContext): Promise<ShareReport> {

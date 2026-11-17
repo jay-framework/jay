@@ -764,7 +764,7 @@ describe('validatePlugin — route jay-html compile', () => {
 /**
  * Bug: Share design system stops with "Contract "button" is missing "component" field" /
  * "Invalid component name: undefined" for a template-only design-system plugin.
- * Found in: QA of the share plugin (DL#221) — an agent-built `<site>-ds` plugin, same shape as
+ * Found in: QA of the share plugin (DL#237) — an agent-built `<site>-ds` plugin, same shape as
  * share's own brand-ds fixture (contract + .jay-html, no code).
  * Expected: a contract without `component` is a no-code (structural) component; no errors.
  * Actual: validate-plugin --local reports one schema error and one component error per contract.

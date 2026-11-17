@@ -215,7 +215,7 @@ describe('design-system-index (DL#204)', () => {
 
         /**
          * Bug: local plugin components were keyed by manifest.name, but `plugin="x"` resolves a
-         * local plugin by its folder under src/plugins (DL#221 — linked with `--as`).
+         * local plugin by its folder under src/plugins (DL#237 — linked with `--as`).
          * Expected: `plugin: ds2` for folder ds2 whose manifest.name is brand-ds.
          * Actual (before fix): `plugin: brand-ds`, which does not resolve in a page.
          */

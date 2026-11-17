@@ -1,5 +1,5 @@
 /**
- * Public result types of the share plugin (DL#221 § "Errors and reports — one type").
+ * Public result types of the share plugin (DL#237 § "Errors and reports — one type").
  * The 7 action names and these shapes are public API.
  */
 
@@ -43,7 +43,7 @@ export interface PluginSummary {
     routes: string[];
     /** Plugin routes hidden by project routes with the same path. */
     shadowedRoutes: string[];
-    /** Any `.ts/.tsx/.mts/.cts/.js/.jsx/.mjs/.cjs` file in the plugin (DL#221 Implementation Results). */
+    /** Any `.ts/.tsx/.mts/.cts/.js/.jsx/.mjs/.cjs` file in the plugin (DL#237 Implementation Results). */
     hasServerCode: boolean;
     setup: SetupOutcome;
     setupMessage?: string;

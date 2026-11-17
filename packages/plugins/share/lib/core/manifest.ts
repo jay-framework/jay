@@ -3,7 +3,7 @@ import * as path from 'node:path';
 import YAML from 'yaml';
 import { shareFailure } from './types';
 
-/** One `share.yaml` entry: `commit` is the lock, `ref` is what pull tracks (DL#221 TL;DR #4). */
+/** One `share.yaml` entry: `commit` is the lock, `ref` is what pull tracks (DL#237 TL;DR #4). */
 export interface ShareEntry {
     folder: string;
     repo: string;

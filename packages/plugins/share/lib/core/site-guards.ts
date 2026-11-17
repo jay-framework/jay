@@ -7,7 +7,7 @@ const relFolder = (folder: string) => `src/plugins/${folder}`;
 
 /**
  * Site-repo checks before a folder becomes shared: never a submodule, and already-tracked files
- * only with an explicit `untrack` (DL#221 Q12). Returns the tracked files to untrack later.
+ * only with an explicit `untrack` (DL#237 Q12). Returns the tracked files to untrack later.
  */
 export async function checkSiteRepoAllowsSharing(
     ctx: ShareContext,

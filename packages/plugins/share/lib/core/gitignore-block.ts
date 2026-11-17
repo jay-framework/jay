@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 /**
- * The managed block in the site `.gitignore` (DL#221 TL;DR #5): one line per shared folder plus
+ * The managed block in the site `.gitignore` (DL#237 TL;DR #5): one line per shared folder plus
  * the `.jay-share/` scratch folder. Lines outside the block are never touched.
  */
 export const BLOCK_START = '# >>> jay share';

@@ -1761,7 +1761,7 @@ describe('compiler', () => {
          * no module) imported the way `agent-kit`'s design-system.md shows —
          * `plugin="brand-ds" contract="card" template=...` — compiles to an import of the plugin's
          * `index.js`, so the dev server fails with "Failed to load url .../src/plugins/brand-ds/index.js".
-         * Found in: QA of the share plugin (DL#221) with an agent-built `<site>-ds` plugin.
+         * Found in: QA of the share plugin (DL#237) with an agent-built `<site>-ds` plugin.
          * Expected: a plugin contract with no component is a no-code structural passthrough region,
          * exactly like the plugin-less `contract="./card.jay-contract"` form (DL#196).
          * Actual: codeLink imports `../plugins/brand-ds/index.js` and the import is not structural.

@@ -1,5 +1,5 @@
 name: share
-description: Share Jay local plugins through a dedicated git repo (DL#221)
+description: Share Jay local plugins through a dedicated git repo (DL#237)
 
 agentkit: shareAgentKit
 

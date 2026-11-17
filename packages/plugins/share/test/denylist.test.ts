@@ -62,7 +62,7 @@ describe('denylist and code files (DL221)', () => {
 
 /**
  * Bug: the Import dialog said "This plugin contains server code" for a template-only design system.
- * Found in: DL#221 Implementation Results — QA end-to-end (generated `*.d.ts` files in the plugin).
+ * Found in: DL#237 Implementation Results — QA end-to-end (generated `*.d.ts` files in the plugin).
  * Expected: generated declaration files (`.d.ts`, `.d.mts`, `.d.cts`, `.jay-html.d.ts`) are neither
  * script files (`hasServerCode`) nor code files (`incoming.codeFiles`).
  * Actual: `.d.ts` matched the `.ts` extension, so `hasServerCode` was true.

@@ -1,4 +1,6 @@
-# 221 — Share plugin: share Jay resources through a dedicated git repo
+# 237 — Share plugin: share Jay resources through a dedicated git repo
+
+> History: renumbered from #221 on 2026-11-17 — merging `main` brought a different DL #221; references in this repo were updated.
 
 **Status:** [Implemented] — Phase 1 + Phase 1a implemented 2026-11-17 (see Implementation Results); Phase 2 and Phase 3 pending. Design approved by product owner 2026-11-17.
 
@@ -478,7 +480,7 @@ Findings, not fixed: `PluginSummary.hasServerCode` is true for a plugin whose on
 
 ## Implementation Results — merge main + QA follow-ups (2026-11-17)
 
-- **Merge:** `origin/main` merged into `share-plugin` (`fb0210da`); `@jay-framework/share` bumped 0.25.4 → 0.26.4 to match the other packages. Index conflict: main added a different DL #221 (per-route loadParams cache key); both rows kept, numbering collision left for the maintainers.
+- **Merge:** `origin/main` merged into `share-plugin` (`fb0210da`); `@jay-framework/share` bumped 0.25.4 → 0.26.4 to match the other packages. Index conflict: main added a different DL #237 (per-route loadParams cache key); both rows kept, numbering collision left for the maintainers.
 - `63f590f7` **Declaration files are not code.** `*.d.ts` / `*.d.mts` / `*.d.cts` (incl. `*.jay-html.d.ts`) no longer count for `hasServerCode` nor `incoming.codeFiles`. Deviation from the § "Code files" list: it now excludes generated declarations.
 - `24a9bf48` **Repo URL forms.** `parseGithubRepoUrl` accepts browser URLs (trailing slash, `/tree/<branch>` → ref when `--ref` is not given), HTTPS clone and SSH URLs. `link` treats any URL form of a linked repo as `SHARE_ALREADY_IN_MANIFEST` (owner/name, case-insensitive).
 - **HTTPS hang root cause:** git asks the `osxkeychain` credential helper (system gitconfig) after GitHub's 401; the helper blocks on a macOS Keychain dialog. `GIT_TERMINAL_PROMPT=0` / `GCM_INTERACTIVE=never` do not cover it, and killing git leaves the helper orphaned. Reproduced: `ls-remote` over HTTPS hung >100 s, SSH answered in 2 s. Fix: the git runner kills git and its helper tree after 60 s (`GIT_TIMEOUT_MS`); a stall is `SHARE_NO_ACCESS` whose next step suggests the SSH URL.

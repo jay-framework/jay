@@ -38,7 +38,7 @@ describe('git runner — no prompts (DL221)', () => {
 
 /**
  * Bug: Import from an HTTPS GitHub URL hung forever in QA.
- * Found in: DL#221 / aiditor QA (2026-11-17). Root cause: the osxkeychain credential helper waits
+ * Found in: DL#237 / aiditor QA (2026-11-17). Root cause: the osxkeychain credential helper waits
  * on a macOS Keychain dialog; GIT_TERMINAL_PROMPT / GCM_INTERACTIVE do not cover it.
  * Expected: a git call that stops responding fails fast with a clear error and leaves no
  * orphaned child process (the helper outlives a plain kill of git).

@@ -1,6 +1,6 @@
 /**
  * `jay-stack run share/<cmd>` — human text, exit 0 when the report is ok, 1 otherwise
- * (DL#221: actions are the typed surface; the CLI has no --json).
+ * (DL#237: actions are the typed surface; the CLI has no --json).
  */
 import {
     makeCliCommand,

@@ -25,7 +25,7 @@ export interface PublishInput {
 }
 
 /**
- * `share/publish` (DL#221 § Flows): push an existing local plugin, as its own history, to a new
+ * `share/publish` (DL#237 § Flows): push an existing local plugin, as its own history, to a new
  * branch of an existing GitHub repo. Never creates repos, never force-pushes. Resumable: a retry
  * after a successful push only writes the share.yaml entry + ignore block.
  */
