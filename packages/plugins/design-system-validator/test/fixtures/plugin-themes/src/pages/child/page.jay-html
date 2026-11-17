@@ -1,0 +1,6 @@
+<html>
+<head>
+  <script type="application/jay-headfull" src="../../components/card-holder/card-holder" names="CardHolder"></script>
+</head>
+<body><div>child</div></body>
+</html>

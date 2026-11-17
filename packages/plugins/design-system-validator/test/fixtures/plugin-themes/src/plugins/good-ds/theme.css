@@ -1,0 +1,8 @@
+:where(:root) {
+  --good-ds-primary: #2563eb;
+}
+@keyframes good-pulse {
+  to {
+    opacity: 0.5;
+  }
+}

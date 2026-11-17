@@ -1,0 +1,9 @@
+<html>
+<head>
+  <script type="application/jay-headless" plugin="good-ds" contract="button" key="btn"></script>
+  <style>
+    @keyframes good-pulse { to { opacity: 0; } }
+  </style>
+</head>
+<body><div>clash</div></body>
+</html>

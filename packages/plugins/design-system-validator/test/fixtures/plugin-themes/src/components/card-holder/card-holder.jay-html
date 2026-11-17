@@ -1,0 +1,6 @@
+<html>
+<head>
+  <script type="application/jay-headless" plugin="good-ds" contract="button" key="btn"></script>
+</head>
+<body><div>holder</div></body>
+</html>
