@@ -463,3 +463,14 @@ The plan has no explicit Phase 0; the probes were the load-bearing ✅/⚠️ cl
 - VC "linked plugin's components, actions and commands work in dev": covered by the index fix test and unit tests, not yet run against a live dev server.
 - Phase 2 and Phase 3 not started.
 - Agent feedback loop: the validation is the Phase 1a `SHARE-*` checks; the guides are `share-guide.md` plus the framework edits ("local plugin by default", four customization layers).
+
+## Implementation Results — QA end-to-end (2026-11-17)
+
+Driven through a consuming editor UI on three local projects against an existing GitHub test repo (SSH URL). link / publish / push / pull / status-fetch all worked once the fixes below were in. Branch `share-plugin`, not pushed.
+
+Fixes (each with a repro test first):
+1. `f4361fe6`: `status` / `unlink` `.jay-action` descriptions quoted (YAML parse warnings at dev startup). share 110/110.
+2. `c97004fb`: compiler-jay-html: a plugin contract with no `component` (template-only design-system plugin) is a structural passthrough. It had compiled to an import of the plugin's `index.js`, so the page failed to load with the import form that `agent-kit`'s design-system.md emits. 732/732. Not live-verified: this build can't run inside a project on the published 0.25.5 packages (missing export `injectDevMarkers`); needs a release.
+3. `dd4654c0`: plugin-validator: contracts without `component` are valid. Before this, `sharePublish` stopped every template-only plugin ("missing component"). 54/54. Verified live via a local tarball.
+
+Findings, not fixed: `PluginSummary.hasServerCode` is true for a plugin whose only `.ts` files are generated `.d.ts` files (link report says "contains server code"). `link` refuses a second branch of an already-linked repo (by design); callers get `SHARE_ALREADY_IN_MANIFEST`. Generated `*.d.ts` files are committed to the shared branch.
