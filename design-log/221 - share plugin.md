@@ -469,8 +469,19 @@ The plan has no explicit Phase 0; the probes were the load-bearing ✅/⚠️ cl
 Driven through a consuming editor UI on three local projects against an existing GitHub test repo (SSH URL). link / publish / push / pull / status-fetch all worked once the fixes below were in. Branch `share-plugin`, not pushed.
 
 Fixes (each with a repro test first):
+
 1. `f4361fe6`: `status` / `unlink` `.jay-action` descriptions quoted (YAML parse warnings at dev startup). share 110/110.
 2. `c97004fb`: compiler-jay-html: a plugin contract with no `component` (template-only design-system plugin) is a structural passthrough. It had compiled to an import of the plugin's `index.js`, so the page failed to load with the import form that `agent-kit`'s design-system.md emits. 732/732. Not live-verified: this build can't run inside a project on the published 0.25.5 packages (missing export `injectDevMarkers`); needs a release.
 3. `dd4654c0`: plugin-validator: contracts without `component` are valid. Before this, `sharePublish` stopped every template-only plugin ("missing component"). 54/54. Verified live via a local tarball.
 
 Findings, not fixed: `PluginSummary.hasServerCode` is true for a plugin whose only `.ts` files are generated `.d.ts` files (link report says "contains server code"). `link` refuses a second branch of an already-linked repo (by design); callers get `SHARE_ALREADY_IN_MANIFEST`. Generated `*.d.ts` files are committed to the shared branch.
+
+## Implementation Results — merge main + QA follow-ups (2026-11-17)
+
+- **Merge:** `origin/main` merged into `share-plugin` (`fb0210da`); `@jay-framework/share` bumped 0.25.4 → 0.26.4 to match the other packages. Index conflict: main added a different DL #221 (per-route loadParams cache key); both rows kept, numbering collision left for the maintainers.
+- `63f590f7` **Declaration files are not code.** `*.d.ts` / `*.d.mts` / `*.d.cts` (incl. `*.jay-html.d.ts`) no longer count for `hasServerCode` nor `incoming.codeFiles`. Deviation from the § "Code files" list: it now excludes generated declarations.
+- `24a9bf48` **Repo URL forms.** `parseGithubRepoUrl` accepts browser URLs (trailing slash, `/tree/<branch>` → ref when `--ref` is not given), HTTPS clone and SSH URLs. `link` treats any URL form of a linked repo as `SHARE_ALREADY_IN_MANIFEST` (owner/name, case-insensitive).
+- **HTTPS hang root cause:** git asks the `osxkeychain` credential helper (system gitconfig) after GitHub's 401; the helper blocks on a macOS Keychain dialog. `GIT_TERMINAL_PROMPT=0` / `GCM_INTERACTIVE=never` do not cover it, and killing git leaves the helper orphaned. Reproduced: `ls-remote` over HTTPS hung >100 s, SSH answered in 2 s. Fix: the git runner kills git and its helper tree after 60 s (`GIT_TIMEOUT_MS`); a stall is `SHARE_NO_ACCESS` whose next step suggests the SSH URL.
+- **Finding (not fixed, compiler):** `class="ds-button-{variant}"` parses as two classes (`ds-button-` + value), and contract prop `default` is parsed but never applied to a `<jay:x>` region without the attribute. Together they render a template-only Button unstyled on pages while the editor preview (which applies defaults and renders differently) looks right. Candidate: a validation for an interpolated class suffix, plus applying prop defaults.
+- `c97004fb` verified live (0.26.4 tarballs): a page importing `plugin="<ds>" contract="button"` renders 200 with no `index.js` import.
+- Tests: share 131/131; `yarn confirm` 4730 passed / 0 failed / 11 skipped.
