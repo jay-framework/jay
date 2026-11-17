@@ -1,5 +1,13 @@
 import type { RouteManifest, RouteEntry, InstanceEntry, RouteSegment } from '../types';
 
+/** A route whose segments match a request path (before the instance is resolved). */
+export interface RouteMatch {
+    route: RouteEntry;
+    params: Record<string, string>;
+    pathname: string;
+}
+
+/** A matched route with its resolved instance. */
 export interface MatchResult {
     route: RouteEntry;
     instance: InstanceEntry;
@@ -7,20 +15,20 @@ export interface MatchResult {
     pathname: string;
 }
 
-export function matchRequest(manifest: RouteManifest, pathname: string): MatchResult | undefined {
+/**
+ * Every route whose segments match `pathname`, in manifest (specificity) order, with the extracted
+ * params. The instance is resolved separately through the store (`getInstance`), so a route can
+ * match without an instance existing — that is the render-on-miss case (Design Log #227).
+ */
+export function* matchRoutes(manifest: RouteManifest, pathname: string): Generator<RouteMatch> {
     const urlSegments = pathname.split('/').filter((s) => s.length > 0);
 
     for (const route of manifest.routes) {
         const params = matchSegments(route.segments, urlSegments);
         if (params) {
-            const instance = findInstance(route, params);
-            if (instance) {
-                return { route, instance, params, pathname };
-            }
+            yield { route, params, pathname };
         }
     }
-
-    return undefined;
 }
 
 function matchSegments(
@@ -62,22 +70,4 @@ function matchSegments(
     if (urlIdx !== urlSegments.length) return undefined;
 
     return params;
-}
-
-function findInstance(
-    route: RouteEntry,
-    params: Record<string, string>,
-): InstanceEntry | undefined {
-    const paramNames = new Set(
-        route.segments.filter((s) => s.type !== 'static').map((s) => s.value),
-    );
-    return route.instances.find((instance) => {
-        for (const name of paramNames) {
-            const urlVal = params[name];
-            const instVal = instance.params[name];
-            if (urlVal === undefined && instVal === undefined) continue;
-            if (urlVal !== instVal) return false;
-        }
-        return true;
-    });
 }

@@ -8,6 +8,8 @@ import {
     ActionOutput,
     JayAction,
     JayActionDefinition,
+    type ActionRequest,
+    type StreamActionRequest,
 } from '../lib';
 import { createJayService } from '../lib';
 
@@ -272,5 +274,88 @@ describe('makeJayStream', () => {
 
         type Chunk = StreamChunk<typeof stream>;
         expectTypeOf<Chunk>().toEqualTypeOf<{ name: string; value: number }>();
+    });
+});
+
+// ============================================================================
+// Request cookies for server actions (DL#230)
+// ============================================================================
+
+describe('withRequest (DL#230)', () => {
+    function withResolver<T>(services: any[], run: () => Promise<T>): Promise<T> {
+        const previous = globalThis.__JAY_SERVICE_RESOLVER__;
+        globalThis.__JAY_SERVICE_RESOLVER__ = () => services;
+        return run().finally(() => {
+            globalThis.__JAY_SERVICE_RESOLVER__ = previous;
+        });
+    }
+
+    it('passes (input, { cookies: {} }, ...services) through the direct callable', async () => {
+        const cart = { name: 'cart' };
+        const calls: any[][] = [];
+        const action = makeJayAction('dl230.direct')
+            .withServices(CART_SERVICE)
+            .withRequest()
+            .withHandler(async (input: { id: string }, request, cartService) => {
+                calls.push([input, request.cookies, cartService]);
+                return 'ok';
+            });
+
+        const result = await withResolver([cart], () => action({ id: 'a' }));
+
+        expect(result).toEqual('ok');
+        expect(calls).toEqual([[{ id: 'a' }, {}, cart]]);
+        expect(action.needsRequest).toEqual(true);
+    });
+
+    it('throws in withHandler when withRequest is combined with withCaching', () => {
+        expect(() =>
+            makeJayQuery('dl230.cached')
+                .withRequest()
+                .withCaching({ maxAge: 10 })
+                .withHandler(async (input: {}) => 'x'),
+        ).toThrow(
+            "Action 'dl230.cached' uses .withRequest() and .withCaching(): a handler that reads cookies is per-user and must not be cached. Remove .withCaching().",
+        );
+    });
+
+    it('still invokes an action without withRequest as (input, ...services)', async () => {
+        const cart = { name: 'cart' };
+        const calls: any[][] = [];
+        const action = makeJayAction('dl230.plain')
+            .withServices(CART_SERVICE)
+            .withHandler(async (...args: [{ id: string }, CartService]) => {
+                calls.push(args);
+                return 'ok';
+            });
+
+        await withResolver([cart], () => action({ id: 'a' }));
+
+        expect(calls).toEqual([[{ id: 'a' }, cart]]);
+        expect(action.needsRequest).toEqual(undefined);
+    });
+
+    it('discards cookies set during a direct call', async () => {
+        const action = makeJayAction('dl230.directSet')
+            .withRequest()
+            .withHandler(async (input: {}, request) => {
+                request.setCookie('sid', 'x');
+                return 'ok';
+            });
+
+        expect(await withResolver([], () => action({}))).toEqual('ok');
+    });
+
+    it('gives stream handlers a read-only request', () => {
+        const stream = makeJayStream('dl230.stream')
+            .withRequest()
+            .withHandler(async function* (input: {}, request) {
+                expectTypeOf(request).toEqualTypeOf<StreamActionRequest>();
+                // @ts-expect-error stream handlers cannot set cookies (DL#230 Q10)
+                request.setCookie('a', 'b');
+                yield request.cookies;
+            });
+        expect(stream.needsRequest).toEqual(true);
+        expectTypeOf<ActionRequest['setCookie']>().toBeFunction();
     });
 });

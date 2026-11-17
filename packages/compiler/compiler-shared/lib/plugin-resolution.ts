@@ -61,6 +61,14 @@ export interface PluginManifest {
          *  Used by validators to suppress missing-title/description warnings.
          *  Values: "title", "meta:description", "meta:og:title", "link:canonical", etc. */
         headTags?: string[];
+        /** Source-editing story (DL#219): relative path to a markdown guide shipped by the plugin
+         *  that tells an agent how to edit this contract's bound data (e.g. which `devOnly` action to
+         *  call, or a URL to open). Mutually exclusive with `readonly`. `jay-stack validate` warns
+         *  when a contract declares neither. */
+        editingGuide?: string;
+        /** Source-editing story (DL#219): declare that this contract's data is not editable in place.
+         *  Mutually exclusive with `editingGuide`. */
+        readonly?: boolean;
     }>;
     dynamic_contracts?: DynamicContractConfig | DynamicContractConfig[];
     /** Named exports from plugin backend bundle that are JayAction instances.
@@ -111,6 +119,12 @@ export interface PluginManifest {
     }>;
     /** Jay-HTML validators provided by this plugin (DL#145) */
     validators?: Array<{
+        name: string;
+        handler: string;
+        description?: string;
+    }>;
+    /** Project-level validators provided by this plugin (DL#232): invoked once per project, not per file */
+    projectValidators?: Array<{
         name: string;
         handler: string;
         description?: string;

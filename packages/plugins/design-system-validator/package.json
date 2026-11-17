@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/design-system-validator",
-  "version": "0.25.4",
+  "version": "0.26.4",
   "type": "module",
   "description": "Design system validation plugin for Jay Framework — validates jay-html CSS against DESIGN.md tokens",
   "license": "Apache-2.0",
@@ -10,10 +10,18 @@
     "plugin.yaml",
     "agent-kit"
   ],
+  "typesVersions": {
+    "*": {
+      "design-tokens": [
+        "dist/design-tokens.d.ts"
+      ]
+    }
+  },
   "exports": {
     ".": "./dist/index.js",
     "./client": "./dist/index.client.js",
     "./tools": "./dist/tools.js",
+    "./design-tokens": "./dist/design-tokens.js",
     "./plugin.yaml": "./plugin.yaml",
     "./dist/pages/settings/page.jay-html": "./dist/pages/settings/page.jay-html",
     "./font-fallback.jay-action": "./dist/actions/font-fallback.jay-action"
@@ -26,7 +34,7 @@
     "build:client": "vite build",
     "validate": "jay-stack-cli validate-plugin",
     "build:server": "vite build --ssr",
-    "build:types": "tsup lib/index.ts lib/index.client.ts lib/tools.ts --dts-only --format esm",
+    "build:types": "tsup lib/index.ts lib/index.client.ts lib/tools.ts lib/design-tokens.ts --dts-only --format esm",
     "build:check-types": "tsc",
     "clean": "rimraf dist",
     "confirm": "npm run clean && npm run build && npm run test",
@@ -62,7 +70,7 @@
     "rimraf": "^5.0.5",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3",
-    "vite": "^5.0.11",
-    "vitest": "^1.2.1"
+    "vite": "^6.4.4",
+    "vitest": "^4.1.11"
   }
 }

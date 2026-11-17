@@ -33,21 +33,43 @@ describe('classifyHref', () => {
         expect(classifyHref('   ')).toEqual({ kind: 'degenerate' });
     });
 
-    it('skips fragments, bindings, and non-route schemes', () => {
-        expect(classifyHref('#section')).toEqual({ kind: 'skip' });
+    it('skips bindings and non-route schemes', () => {
         expect(classifyHref('/blog/{slug}')).toEqual({ kind: 'skip' });
         expect(classifyHref('mailto:x@y.com')).toEqual({ kind: 'skip' });
         expect(classifyHref('tel:+123')).toEqual({ kind: 'skip' });
         expect(classifyHref('javascript:void(0)')).toEqual({ kind: 'skip' });
     });
 
-    it('skips external and relative URLs, checks root-relative', () => {
+    it('classifies same-page fragments (DL#210 v2)', () => {
+        expect(classifyHref('#section')).toEqual({ kind: 'localFragment', fragment: 'section' });
+        expect(classifyHref('#top')).toEqual({ kind: 'localFragment', fragment: 'top' });
+    });
+
+    it('classifies todo: markers, capturing the note (DL#210 v2)', () => {
+        expect(classifyHref('todo:/pricing')).toEqual({ kind: 'todo', note: '/pricing' });
+        expect(classifyHref('todo: build the pricing page')).toEqual({
+            kind: 'todo',
+            note: 'build the pricing page',
+        });
+        expect(classifyHref('todo:')).toEqual({ kind: 'todo', note: '' });
+    });
+
+    it('skips external and relative URLs, checks root-relative (carrying the fragment)', () => {
         expect(classifyHref('https://other.com/x')).toEqual({ kind: 'skip' });
         expect(classifyHref('//cdn.com/x')).toEqual({ kind: 'skip' });
         expect(classifyHref('./relative')).toEqual({ kind: 'skip' });
         expect(classifyHref('../up')).toEqual({ kind: 'skip' });
         expect(classifyHref('/about')).toEqual({ kind: 'check', targetPath: '/about' });
-        expect(classifyHref('/about/?ref=1#top')).toEqual({ kind: 'check', targetPath: '/about' });
+        expect(classifyHref('/about/?ref=1#top')).toEqual({
+            kind: 'check',
+            targetPath: '/about',
+            fragment: 'top',
+        });
+        expect(classifyHref('/about#team')).toEqual({
+            kind: 'check',
+            targetPath: '/about',
+            fragment: 'team',
+        });
     });
 
     it('resolves same-origin absolute URLs against site.baseUrl', () => {
@@ -121,7 +143,7 @@ describe('checkInternalLinks', () => {
         ]);
     });
 
-    it('flags a link from a page to its own route', () => {
+    it('flags a self-link as a WARNING, suppressible per-anchor with jay-allow-self-link (DL#210 v2)', () => {
         const projectRoot = '/project';
         const selfUrlByPath = new Map([
             [path.resolve(projectRoot, 'pages/about/page.jay-html'), '/about'],
@@ -131,7 +153,13 @@ describe('checkInternalLinks', () => {
                 {
                     relativePath: 'pages/about/page.jay-html',
                     parsed: {
-                        body: parse(`<body><a href="/about">self</a><a href="/">home</a></body>`),
+                        body: parse(
+                            `<body>
+                                <a href="/about">self</a>
+                                <a href="/about" jay-allow-self-link>intentional self</a>
+                                <a href="/">home</a>
+                            </body>`,
+                        ),
                     },
                 },
             ],
@@ -139,12 +167,117 @@ describe('checkInternalLinks', () => {
             assetUrls,
             projectRoot,
         });
-        expect(findings.map((f) => f.message)).toEqual([
-            `Anchor <a href="/about"> points to the page's own route "/about" — a self-link goes nowhere.`,
+        expect(findings).toEqual([
+            {
+                file: 'pages/about/page.jay-html',
+                severity: 'warning',
+                message: `Anchor <a href="/about"> points to the page's own route "/about" — a self-link goes nowhere.`,
+                suggestion: `Remove the link, use an in-page "#" fragment, or add jay-allow-self-link to the anchor if intentional.`,
+            },
         ]);
     });
 
-    it('respects the per-page allow-broken-links suppression', () => {
+    it('flags a todo: link as a non-suppressible WARNING, echoing the note (DL#210 v2)', () => {
+        const findings = checkInternalLinks({
+            parsedFiles: [
+                page(
+                    `<a href="todo:/pricing">Pricing</a><a href="todo: write about page">About</a>`,
+                    {
+                        'jay-stack': { 'allow-broken-links': true }, // must NOT suppress todo links
+                    },
+                ),
+            ],
+            oracle,
+            assetUrls,
+        });
+        expect(findings.map((f) => ({ severity: f.severity, message: f.message }))).toEqual([
+            {
+                severity: 'warning',
+                message:
+                    'TODO link <a href="todo:/pricing"> — intended target "/pricing" is not wired up yet. This reminder cannot be suppressed — resolve it before release.',
+            },
+            {
+                severity: 'warning',
+                message:
+                    'TODO link <a href="todo: write about page"> — intended target "write about page" is not wired up yet. This reminder cannot be suppressed — resolve it before release.',
+            },
+        ]);
+    });
+
+    it('validates same-page #fragment anchors (DL#210 v2)', () => {
+        const projectRoot = '/project';
+        const selfUrlByPath = new Map([
+            [path.resolve(projectRoot, 'pages/about/page.jay-html'), '/about'],
+        ]);
+        const findings = checkInternalLinks({
+            parsedFiles: [
+                {
+                    relativePath: 'pages/about/page.jay-html',
+                    parsed: {
+                        body: parse(
+                            `<body>
+                                <a href="#team">Team</a>
+                                <a href="#missing">Missing</a>
+                                <a href="#top">Top</a>
+                                <h2 id="team">Team</h2>
+                            </body>`,
+                        ),
+                    },
+                },
+            ],
+            oracle: { ...oracle, selfUrlByPath },
+            assetUrls,
+            projectRoot,
+        });
+        expect(findings).toEqual([
+            {
+                file: 'pages/about/page.jay-html',
+                severity: 'error',
+                message: `Broken fragment link <a href="#missing"> — this page has no element with id "missing".`,
+                suggestion: `Add id="missing" to the target element, or fix the fragment.`,
+            },
+        ]);
+    });
+
+    it('validates cross-page /path#fragment anchors against the target page (DL#210 v2)', () => {
+        const projectRoot = '/project';
+        const selfUrlByPath = new Map([
+            [path.resolve(projectRoot, 'pages/page.jay-html'), '/'],
+            [path.resolve(projectRoot, 'pages/about/page.jay-html'), '/about'],
+        ]);
+        const findings = checkInternalLinks({
+            parsedFiles: [
+                {
+                    relativePath: 'pages/page.jay-html',
+                    parsed: {
+                        body: parse(
+                            `<body>
+                                <a href="/about#team">ok</a>
+                                <a href="/about#ghost">broken frag</a>
+                            </body>`,
+                        ),
+                    },
+                },
+                {
+                    relativePath: 'pages/about/page.jay-html',
+                    parsed: { body: parse(`<body><h2 id="team">Team</h2></body>`) },
+                },
+            ],
+            oracle: { ...oracle, selfUrlByPath },
+            assetUrls,
+            projectRoot,
+        });
+        expect(findings).toEqual([
+            {
+                file: 'pages/page.jay-html',
+                severity: 'error',
+                message: `Broken fragment link <a href="/about#ghost"> — page "/about" has no element with id "ghost".`,
+                suggestion: `Add id="ghost" to the target element on "/about", or fix the fragment.`,
+            },
+        ]);
+    });
+
+    it('respects the per-page allow-broken-links suppression (broken + degenerate only)', () => {
         const findings = checkInternalLinks({
             parsedFiles: [
                 page(`<a href="#">x</a><a href="/nope">y</a>`, {
@@ -159,23 +292,21 @@ describe('checkInternalLinks', () => {
 });
 
 describe('validateJayFiles — DL#210 integration', () => {
-    it('reports the degenerate and broken links as errors and marks the project invalid', async () => {
+    const byKey = (a: { file: string; message: string }, b: { file: string; message: string }) =>
+        (a.file + a.message).localeCompare(b.file + b.message);
+
+    it('routes broken/degenerate/fragment links to errors and self-link/todo to warnings (DL#210 v2)', async () => {
         const result = await validateJayFiles({
             path: path.join(fixture, 'pages'),
             projectRoot: fixture,
         });
 
-        const linkErrors = result.errors.filter((e) => e.source === 'internal-links');
-        expect(
-            linkErrors
-                .map((e) => ({ file: e.file, message: e.message }))
-                .sort((a, b) => (a.file + a.message).localeCompare(b.file + b.message)),
-        ).toEqual(
+        const linkErrors = result.errors
+            .filter((e) => e.source === 'internal-links')
+            .map((e) => ({ file: e.file, message: e.message }))
+            .sort(byKey);
+        expect(linkErrors).toEqual(
             [
-                {
-                    file: path.join('pages', 'about', 'page.jay-html'),
-                    message: `Anchor <a href="/about"> points to the page's own route "/about" — a self-link goes nowhere.`,
-                },
                 {
                     file: path.join('pages', 'page.jay-html'),
                     message:
@@ -186,8 +317,37 @@ describe('validateJayFiles — DL#210 integration', () => {
                     message:
                         'Broken internal link in anchor <a href="/does-not-exist"> — no page or public asset produces the URL "/does-not-exist".',
                 },
-            ].sort((a, b) => (a.file + a.message).localeCompare(b.file + b.message)),
+                {
+                    file: path.join('pages', 'page.jay-html'),
+                    message:
+                        'Broken fragment link <a href="#missing-anchor"> — this page has no element with id "missing-anchor".',
+                },
+                {
+                    file: path.join('pages', 'page.jay-html'),
+                    message:
+                        'Broken fragment link <a href="/about#ghost"> — page "/about" has no element with id "ghost".',
+                },
+            ].sort(byKey),
         );
+
+        const linkWarnings = result.warnings
+            .filter((w) => w.source === 'internal-links')
+            .map((w) => ({ file: w.file, message: w.message }))
+            .sort(byKey);
+        expect(linkWarnings).toEqual(
+            [
+                {
+                    file: path.join('pages', 'about', 'page.jay-html'),
+                    message: `Anchor <a href="/about"> points to the page's own route "/about" — a self-link goes nowhere.`,
+                },
+                {
+                    file: path.join('pages', 'page.jay-html'),
+                    message:
+                        'TODO link <a href="todo:/pricing"> — intended target "/pricing" is not wired up yet. This reminder cannot be suppressed — resolve it before release.',
+                },
+            ].sort(byKey),
+        );
+
         expect(result.valid).toBe(false);
     });
 });

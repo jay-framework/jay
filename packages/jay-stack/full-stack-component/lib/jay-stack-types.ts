@@ -93,6 +93,36 @@ export interface RequestCookies {
     cookies: Record<string, string>;
 }
 
+/**
+ * Options for a response cookie set by an action handler (DL#230).
+ */
+export interface CookieOptions {
+    /** Default true */
+    httpOnly?: boolean;
+    /** Default: true when the request is https. Forced true by `sameSite: 'None'`. */
+    secure?: boolean;
+    /** Default 'Lax' */
+    sameSite?: 'Strict' | 'Lax' | 'None';
+    /** Default '/' */
+    path?: string;
+    /** Default: none (host-only cookie) */
+    domain?: string;
+    /** Lifetime in seconds */
+    maxAge?: number;
+    expires?: Date;
+}
+
+/** Read-only request data for stream handlers that opted in with .withRequest() (DL#230). */
+export type StreamActionRequest = Readonly<RequestCookies>;
+
+/** Request access for an action/query handler that opted in with .withRequest() (DL#230). */
+export interface ActionRequest extends StreamActionRequest {
+    /** Set a response cookie. Sent only when the handler succeeds. */
+    setCookie(name: string, value: string, options?: CookieOptions): void;
+    /** Emits the cookie with an empty value, Max-Age=0, and the same path/domain (they must match to clear). */
+    clearCookie(name: string, options?: Pick<CookieOptions, 'path' | 'domain'>): void;
+}
+
 export type UrlParams = Record<string, string>;
 
 // ============================================================================
@@ -152,6 +182,19 @@ export interface PhaseOutput<ViewState extends object, CarryForward = {}> {
     headTags?: HeadTag[];
     /** HTTP response headers to set on the page response (Design Log #141). */
     responseHeaders?: Record<string, string>;
+    /**
+     * Slow phase only (Design Log #226): how long, in **seconds**, this slow data is considered
+     * fresh. After it, the production server serves the stored data and refreshes it in the
+     * background. `0` / `null` / `undefined` mean "no freshness opinion" (ignored). A page's
+     * effective `ttl` is the minimum positive `ttl` across all its slow components.
+     */
+    ttl?: number;
+    /**
+     * Slow phase only (Design Log #226): the **absolute age**, in **seconds** (≥ `ttl`), up to
+     * which stale data is served immediately while refreshing in the background. Beyond it the
+     * server waits (briefly) for the refresh. Defaults to `max(12h, ttl)`.
+     */
+    grace?: number;
 }
 
 /**

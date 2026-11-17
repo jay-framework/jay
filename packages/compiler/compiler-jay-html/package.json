@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/compiler-jay-html",
-  "version": "0.25.4",
+  "version": "0.26.4",
   "description": "",
   "license": "Apache-2.0",
   "main": "dist/index.js",
@@ -23,7 +23,7 @@
   "scripts": {
     "build": "npm run build:pegjs && npm run build:js && npm run build:types",
     "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch",
-    "build:pegjs": "pegjs --allowed-start-rules dynamicAttribute,booleanAttribute,dynamicText,dynamicProperty,conditionFunc,accessor,Identifier,classExpression,dynamicComponentProp,importNames,enum,is_enum,reactDynamicText,reactDynamicProperty,reactClassExpression,condition,styleDeclarations,slowCondition,template,templateParts  -o lib/expressions/expression-parser.cjs lib/expressions/expression-parser.pegjs",
+    "build:pegjs": "pegjs --allowed-start-rules dynamicAttribute,booleanAttribute,booleanProperty,dynamicText,dynamicProperty,conditionFunc,accessor,Identifier,classExpression,dynamicComponentProp,importNames,enum,is_enum,reactDynamicText,reactDynamicProperty,reactClassExpression,condition,styleDeclarations,slowCondition,template,templateParts  -o lib/expressions/expression-parser.cjs lib/expressions/expression-parser.pegjs",
     "build:js": "vite build",
     "build:types": "tsup lib/index.ts --dts-only --format cjs",
     "build:check-types": "tsc",
@@ -65,7 +65,7 @@
     "react-dom": "^18.2.0",
     "rimraf": "^5.0.5",
     "tsup": "^8.0.1",
-    "vite": "^5.0.11",
-    "vitest": "^1.2.1"
+    "vite": "^6.4.4",
+    "vitest": "^4.1.11"
   }
 }

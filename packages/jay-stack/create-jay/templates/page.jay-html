@@ -3,11 +3,13 @@
     <title>Welcome to {{name}}</title>
     <meta name="description" content="Your Jay Stack project is ready — edit pages with the AIditor, a coding agent, or by hand.">
     <script type="application/jay-data" contract="./page.jay-contract"></script>
+{{#uiKit}}
     <script
       type="application/jay-headless"
       plugin="@jay-framework/ui-kit"
       contract="letter-split"
     ></script>
+{{/uiKit}}
     <link rel="stylesheet" href="../styles/theme.css" />
     <style>
       /* ── Hero ── */
@@ -45,7 +47,22 @@
         font-size: 1.2rem;
         color: var(--color-text-muted);
         max-width: 520px;
-        margin-bottom: 2rem;
+        margin-bottom: 1.25rem;
+      }
+
+      .hero-aiditor {
+        font-size: 0.95rem;
+        color: var(--color-text-muted);
+        max-width: 520px;
+        margin-bottom: 1.25rem;
+        line-height: 1.5;
+      }
+
+      .hero-aiditor-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.75rem;
       }
 
       /* ── CTA button ── */
@@ -142,15 +159,26 @@
   <body>
     <main>
       <section class="hero">
+{{#uiKit}}
         <jay:letter-split text="{title}">
           <h1 class="hero-title" aria-label="Welcome to {{name}}">
             <span forEach="letters" trackBy="index" class="letter" aria-hidden="true" style="--i: {index}">{text}</span>
           </h1>
         </jay:letter-split>
+{{/uiKit}}
+{{^uiKit}}
+        <h1 class="hero-title">{title}</h1>
+{{/uiKit}}
 
         <p class="hero-subtitle">{description}</p>
 
-        <a class="cta-btn" href="/aiditor">Open the AIditor &#10132;</a>
+        <p class="hero-aiditor">
+          The AIditor is a dev-only visual editor served at <code>/aiditor</code> while the dev
+          server is running (it is not part of the production build).
+        </p>
+        <div class="hero-aiditor-actions">
+          <button type="button" ref="openAiditor" class="cta-btn">Open AIditor</button>
+        </div>
       </section>
 
       <section class="steps">
@@ -158,7 +186,10 @@
           <span class="step-number">1</span>
           <div class="step-body">
             <h2>Use the AIditor</h2>
-            <p>Open the visual editor at <a href="/aiditor">/aiditor</a> to design and tweak pages with AI assistance.</p>
+            <p>
+              With the dev server running, use <strong>Open AIditor</strong> above or visit
+              <code>/aiditor</code> in the browser to design and tweak pages with AI assistance.
+            </p>
           </div>
         </div>
 

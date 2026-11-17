@@ -250,6 +250,53 @@ describe('generate jay-html element', () => {
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
+        /**
+         * DL#226: non-repeated sibling sub-contracts that each expose a leaf interactive tag with
+         * the same name (`input`), all bound on one page, must each get a DISTINCT ref const
+         * (`refInput` / `refInput2` / `refInput3`) rather than colliding on one `refInput` — which
+         * previously produced `const [..., [refInput]] = ReferencesManager.for(...)` x3 and the
+         * esbuild error "The symbol \"refInput\" has already been declared", so the page never
+         * hydrated. Fixed by identifying refs by their full template path in
+         * RefNameGenerator.newConstantName.
+         * See design-log/226 - interactive ref const name collides across sibling sub-contracts.md
+         */
+        it('generates a unique ref const per non-repeated sibling sub-contract (DL#226)', async () => {
+            const folder = 'contracts/duplicate-ref-sibling-inputs';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
+        /**
+         * DL#226 companion (the reuse case): binding the SAME imported ref
+         * (`form.firstName.input`) on two elements in one scope is ONE ref, so it must yield
+         * exactly ONE const (`refInput`) reused by both usages — not two consts. Guards against the
+         * identity-based disambiguation over-firing and splitting a genuinely-shared ref.
+         */
+        it('reuses a single ref const when the same imported ref is bound twice (DL#226)', async () => {
+            const folder = 'contracts/reused-ref-same-import';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
+        /**
+         * Bug: boolean attributes bound to keyed headless (plugin) data rendered wrong.
+         * Found in: design-log/235 - boolean attributes and fresh-project validation.md
+         * Expected: `checked="ch.accepted"` / `checked="selected"` (documented condition syntax) and the
+         *   single-binding form `checked="{selected}"` compile to a boolean property (dp) on the client and
+         *   a present/absent attribute in SSR; `disabled="{ch.accepted}"` is the condition `ch.accepted`.
+         * Actual: `checked` was a template-style PROPERTY — the condition form was emitted as a literal
+         *   static attribute (always checked) and SSR wrote `checked="false"` (= checked) for the curly form;
+         *   `disabled="{…}"` was a client parse error while SSR accepted it.
+         */
+        it('renders boolean attributes bound to headless data inside and outside forEach (DL#235)', async () => {
+            const folder = 'contracts/boolean-attributes-headless';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
         it('for pre-rendered slow arrays with slowForEach', async () => {
             const folder = 'collections/slow-for-each';
             const elementFile = await readFileAndGenerateElementFile(folder);

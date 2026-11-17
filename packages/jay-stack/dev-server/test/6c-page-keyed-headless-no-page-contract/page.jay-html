@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Keyed Headless Without Page Contract</title>
+    <script type="application/jay-headless"
+            plugin="test-headless"
+            contract="headless"
+            key="headless"></script>
+    <script type="application/jay-data">
+data:
+    </script>
+</head>
+<body>
+    <div>
+        <p class="message">{headless.message}</p>
+        <span class="active" if="headless.isActive">on</span>
+        <input class="field" aria-invalid="{headless.invalid}" />
+        <button ref="headless.toggle">toggle</button>
+    </div>
+</body>
+</html>

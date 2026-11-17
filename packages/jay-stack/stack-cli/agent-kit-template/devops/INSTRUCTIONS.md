@@ -125,6 +125,16 @@ A cloud platform that boots the dev server but neither installs the CLI nor inje
 working site with a non-functional `/aiditor` — the single most common surprise. Install both, or
 document that visual editing is unavailable there.
 
+### Verbose diagnostics (`-v`)
+
+`jay-stack dev -v` (verbose) additionally **writes each rendered page's generated client HTML** to
+`<buildFolder>/debug/client-entry/<route>.html` (e.g. `build/dev/debug/client-entry/products-[slug].html`).
+This is a write-only debugging aid — inspect it when a page renders wrong, hydration mismatches, or a
+client bundle looks off; it mirrors exactly what the browser receives before Vite transforms it. It is
+**off by default** (no per-request disk writes in normal dev) and **best-effort** (a failed debug write
+never fails the page request). The filename is the route path only — the query string is dropped — so a
+proxy that carries a long auth token as a query param can't blow past the OS filename limit (DL#229).
+
 ### Health / shutdown (containers)
 
 Run with `--test-mode` to expose `GET /_jay/health` (readiness probe) and `POST /_jay/shutdown` (graceful
@@ -132,9 +142,10 @@ stop) — the sanctioned hooks for container healthchecks and lifecycle, instead
 
 ## Guides
 
-| File                                       | Topic                                                      |
-| ------------------------------------------ | ---------------------------------------------------------- |
-| [production-build.md](production-build.md) | Build pipeline, output structure, frontend/backend split   |
-| [serving-modes.md](serving-modes.md)       | Self-hosted, CDN, BaaS (fetch handler), CLI flags          |
-| [fetch-handler.md](fetch-handler.md)       | Fetch handler, ArtifactStore interface, BaaS custom stores |
-| [invalidation.md](invalidation.md)         | Rebuild, renderer server, cleanup                          |
+| File                                       | Topic                                                       |
+| ------------------------------------------ | ----------------------------------------------------------- |
+| [production-build.md](production-build.md) | Build pipeline, output structure, frontend/backend split    |
+| [serving-modes.md](serving-modes.md)       | Self-hosted, CDN, BaaS (fetch handler), CLI flags           |
+| [fetch-handler.md](fetch-handler.md)       | Fetch handler, ArtifactStore interface, BaaS custom stores  |
+| [invalidation.md](invalidation.md)         | Rebuild, renderer server, cleanup                           |
+| [source-editing.md](source-editing.md)     | Enable + use the source-editing inspector (AIditor, DL#219) |

@@ -23,6 +23,7 @@ import {
     parseComponentPropExpression,
     parseReactClassExpression,
     parseReactCondition,
+    toBooleanCondition,
     parseReactPropertyExpression,
     parseReactTextExpression,
     Variables,
@@ -83,6 +84,8 @@ function textEscape(s: string): string {
 // Boolean attributes use condition-style parsing
 // The presence/absence is controlled by a condition expression
 const booleanAttributes = new Set([
+    // DL#235 — `checked` takes condition syntax like the boolean attributes
+    'checked',
     'disabled',
     'selected',
     'readonly',
@@ -136,7 +139,10 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
                 renderedAttributes.push(new RenderFragment(`${reactAttributeName}`));
             } else {
                 // Use condition-style parsing for boolean attributes
-                let conditionExpression = parseReactCondition(attrValue, variables);
+                let conditionExpression = parseReactCondition(
+                    toBooleanCondition(attrValue),
+                    variables,
+                );
                 renderedAttributes.push(
                     conditionExpression.map((_) => `${reactAttributeName}={${_}}`),
                 );

@@ -22,6 +22,7 @@ export {
     dedupeByUrl,
     buildUrl,
     computeSpecificity,
+    loadParamsCacheKey,
 } from './builder/param-routing';
 export type { RouteInfo, ParamPart, MaterializedEntry } from './builder/param-routing';
 export { buildRouteEntry, discoverActions, writeRouteManifest } from './builder/route-manifest';

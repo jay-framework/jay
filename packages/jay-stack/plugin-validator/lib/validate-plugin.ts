@@ -13,6 +13,7 @@ import { checkComponentPropsAndParams } from './check-component-contract';
 import { validateAddMenuCatalog } from './validate-add-menu-catalog';
 import { validateAiditorSettings } from './validate-aiditor-settings';
 import { validateRouteJayHtmlTemplates } from './validate-route-jay-html-templates';
+import { checkGetActionsReadingCookies } from './check-get-actions-reading-cookies';
 
 /**
  * Validates a Jay Stack plugin package or local plugin directory.
@@ -337,6 +338,7 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
         manifest.dynamic_contracts ||
         manifest.actions ||
         manifest.validators ||
+        manifest.projectValidators ||
         manifest.routes ||
         manifest.services ||
         manifest.contexts ||
@@ -366,7 +368,7 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
             result.warnings.push({
                 type: 'schema',
                 message:
-                    'Plugin declares no capabilities (contracts, dynamic_contracts, actions, validators, routes, services, contexts, init, setup, agentkit, commands)',
+                    'Plugin declares no capabilities (contracts, dynamic_contracts, actions, validators, projectValidators, routes, services, contexts, init, setup, agentkit, commands)',
                 location: 'plugin.yaml',
                 suggestion:
                     'Declare at least one capability. See agent-kit/plugin/plugin-structure.md',
@@ -465,6 +467,10 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
                 );
             }
         }
+    }
+
+    if (manifest.actions && manifest.actions.length > 0) {
+        checkPluginGetActionsReadingCookies(context, result);
     }
 
     // Validate init handler
@@ -569,6 +575,47 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
                         validator.handler,
                         `Validator "${validator.name}" handler`,
                         'plugin.yaml validators',
+                        context,
+                        result,
+                        './tools',
+                    );
+                }
+            });
+        }
+    }
+
+    // Validate projectValidators (DL#232)
+    if (manifest.projectValidators) {
+        if (!Array.isArray(manifest.projectValidators)) {
+            result.errors.push({
+                type: 'schema',
+                message: 'Field "projectValidators" must be an array',
+                location: 'plugin.yaml',
+            });
+        } else {
+            manifest.projectValidators.forEach((validator, index) => {
+                if (!validator.name) {
+                    result.errors.push({
+                        type: 'schema',
+                        message: `Project validator at index ${index} is missing "name" field`,
+                        location: 'plugin.yaml',
+                    });
+                }
+                if (!validator.handler) {
+                    result.errors.push({
+                        type: 'schema',
+                        message: `Project validator "${validator.name || index}" is missing "handler" field`,
+                        location: 'plugin.yaml',
+                        suggestion:
+                            'Specify the relative path to the project validator handler module',
+                    });
+                }
+                if (validator.handler) {
+                    // Project validators are a tools capability — handler lives in ./tools (DL#179).
+                    validateHandlerRef(
+                        validator.handler,
+                        `Project validator "${validator.name}" handler`,
+                        'plugin.yaml projectValidators',
                         context,
                         result,
                         './tools',
@@ -697,11 +744,17 @@ function hasComponentCapability(context: PluginContext): boolean {
 }
 
 /**
- * A plugin needs a `./tools` export iff it declares a tools capability: validators, commands,
- * agentkit, setup (DL#179) or any devOnly action (DL#180).
+ * A plugin needs a `./tools` export iff it declares a tools capability: validators, projectValidators,
+ * commands, agentkit, setup (DL#179) or any devOnly action (DL#180).
  */
 function needsToolsEntry(manifest: PluginManifest): boolean {
-    if (manifest.validators || manifest.commands || manifest.agentkit || manifest.setup) {
+    if (
+        manifest.validators ||
+        manifest.projectValidators ||
+        manifest.commands ||
+        manifest.agentkit ||
+        manifest.setup
+    ) {
         return true;
     }
     if (manifest.actions) {
@@ -871,6 +924,30 @@ async function validateContract(
     result: ValidationResult,
 ): Promise<void> {
     result.contractsChecked = (result.contractsChecked || 0) + 1;
+
+    // DL#219 — source-editing coverage: a contract should declare how its bound data is edited, either an
+    // editing guide (markdown) or `readonly`. Prevention-first: warn (don't block) so an agent/AIditor
+    // knows whether/how to edit content bound to this contract.
+    const hasEditingGuide =
+        typeof contract.editingGuide === 'string' && contract.editingGuide.length > 0;
+    const isReadonly = contract.readonly === true;
+    if (!hasEditingGuide && !isReadonly) {
+        result.warnings.push({
+            type: 'source-editing-coverage',
+            message: `Contract "${contract.name}" declares no source-editing story. Add "editingGuide: <path.md>" (how to edit its bound data) or "readonly: true" (not editable in place).`,
+            location: `plugin.yaml contracts[${index}]`,
+            suggestion: 'See the plugin source-editing guide (DL#219).',
+        });
+    } else if (hasEditingGuide) {
+        const guideFullPath = path.resolve(context.pluginPath, contract.editingGuide);
+        if (!fs.existsSync(guideFullPath)) {
+            result.warnings.push({
+                type: 'source-editing-coverage',
+                message: `Contract "${contract.name}" editingGuide file not found: ${contract.editingGuide}`,
+                location: `plugin.yaml contracts[${index}]`,
+            });
+        }
+    }
 
     const contractPath = resolveContractFile(contract.contract, context);
 
@@ -1588,6 +1665,30 @@ async function validateDynamicContracts(
                     });
                 }
             }
+        }
+    }
+}
+
+/** Warns on GET action chains in the plugin's `lib/**\/*.ts` that call .withRequest() (DL#234). */
+function checkPluginGetActionsReadingCookies(
+    context: PluginContext,
+    result: ValidationResult,
+): void {
+    const libDir = path.join(context.pluginPath, 'lib');
+    if (!fs.existsSync(libDir)) return;
+    const sourceFiles = (fs.readdirSync(libDir, { recursive: true }) as string[])
+        .filter((file) => file.endsWith('.ts') && !file.endsWith('.d.ts'))
+        .sort();
+    for (const file of sourceFiles) {
+        const relativePath = path.posix.join('lib', file.split(path.sep).join('/'));
+        const source = fs.readFileSync(path.join(libDir, file), 'utf-8');
+        for (const warning of checkGetActionsReadingCookies(source, relativePath)) {
+            result.warnings.push({
+                type: warning.code,
+                code: warning.code,
+                location: `${warning.file}:${warning.line}`,
+                message: warning.message,
+            });
         }
     }
 }

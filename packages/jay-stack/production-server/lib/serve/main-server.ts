@@ -3,7 +3,8 @@ import { Readable } from 'node:stream';
 import path from 'node:path';
 import { getLogger } from '@jay-framework/logger';
 import { FilesystemArtifactStore } from './artifact-store';
-import { matchRequest } from './route-matcher';
+import { resolveRequest } from './resolve-request';
+import { InstanceRenderer } from './instance-renderer';
 import { fetchPageRequest } from './fetch-page-handler';
 import { renderErrorPage } from './render-error-page';
 import {
@@ -22,6 +23,8 @@ export interface MainServerOptions {
     publicBasePath?: string;
     serveStatic?: boolean;
     testMode?: boolean;
+    /** Cap on a JSON action request body in UTF-8 bytes (DL#234; default 1 MiB) */
+    actionBodyLimitBytes?: number;
 }
 
 function toFetchRequest(req: http.IncomingMessage): Request {
@@ -38,11 +41,17 @@ function toFetchRequest(req: http.IncomingMessage): Request {
     return new Request(url, init);
 }
 
-async function pipeFetchResponse(response: Response, res: http.ServerResponse): Promise<void> {
-    const headers: Record<string, string> = {};
+export async function pipeFetchResponse(
+    response: Response,
+    res: http.ServerResponse,
+): Promise<void> {
+    const headers: Record<string, string | string[]> = {};
     response.headers.forEach((value, key) => {
-        headers[key] = value;
+        if (key !== 'set-cookie') headers[key] = value;
     });
+    // Headers.forEach joins repeated Set-Cookie values; each cookie needs its own header (DL#230)
+    const setCookies = response.headers.getSetCookie();
+    if (setCookies.length > 0) headers['set-cookie'] = setCookies;
     res.writeHead(response.status, headers);
 
     if (response.body) {
@@ -66,6 +75,7 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
     const backendDir = path.join(buildDir, 'backend');
     const frontendDir = path.join(buildDir, 'frontend');
     const artifacts = new FilesystemArtifactStore(backendDir);
+    const renderer = new InstanceRenderer(artifacts);
 
     const manifest = await artifacts.readManifest();
     logger.important(
@@ -109,7 +119,9 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
 
             if (isActionRequest(url.pathname)) {
                 const fetchReq = toFetchRequest(req);
-                const response = await fetchActionRequest(fetchReq);
+                const response = await fetchActionRequest(fetchReq, undefined, {
+                    actionBodyLimitBytes: options.actionBodyLimitBytes,
+                });
                 await pipeFetchResponse(response, res);
                 return;
             }
@@ -123,9 +135,31 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
             }
 
             const currentManifest = await artifacts.readManifest();
-            const match = matchRequest(currentManifest, url.pathname);
+            const resolved = await resolveRequest(
+                currentManifest,
+                url.pathname,
+                artifacts,
+                renderer,
+            );
 
-            if (!match) {
+            if (resolved.kind === 'redirect') {
+                res.writeHead(resolved.status, { Location: resolved.location });
+                res.end();
+                return;
+            }
+
+            if (resolved.kind === 'unavailable') {
+                // DL#227 — unknown item could not be rendered now: retryable, never cached.
+                res.writeHead(503, {
+                    'Content-Type': 'text/plain; charset=utf-8',
+                    'Retry-After': String(resolved.retryAfterSeconds),
+                    'Cache-Control': 'no-store',
+                });
+                res.end('Service Unavailable');
+                return;
+            }
+
+            if (resolved.kind === 'notFound') {
                 // DL#218 — no route matched: render the 404 error page (plain-text fallback inside).
                 const response = await renderErrorPage(currentManifest, artifacts, staticBaseUrl, {
                     status: 404,
@@ -137,12 +171,13 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
 
             const cookies = parseCookies(req.headers.cookie);
             const response = await fetchPageRequest(
-                match,
+                resolved.match,
                 currentManifest,
                 url,
                 artifacts,
                 staticBaseUrl,
                 cookies,
+                renderer,
             );
             await pipeFetchResponse(response, res);
         } catch (err: any) {

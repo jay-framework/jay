@@ -1,0 +1,31 @@
+<html>
+<head>
+    <script type="application/jay-headless"
+            plugin="test-boolean-choices"
+            contract="boolean-choices"
+            key="ch"></script>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+</head>
+<body>
+<div>
+    <h1>{title}</h1>
+    <!-- DL#235: boolean attributes bound to keyed headless data, outside forEach -->
+    <input type="checkbox" checked="ch.accepted" />
+    <input type="checkbox" checked="{ch.accepted}" />
+    <button disabled="!ch.accepted">Send</button>
+    <button disabled="{ch.accepted}">Reset</button>
+    <!-- and inside forEach over a headless repeated sub-contract -->
+    <label forEach="ch.interests.options" trackBy="id">
+        <input type="checkbox" checked="selected" />
+        <input type="checkbox" checked="{selected}" />
+        <span>{label}</span>
+    </label>
+    <select multiple>
+        <option forEach="ch.interests.options" trackBy="id" value="{id}" selected="selected">{label}</option>
+    </select>
+</div>
+</body>
+</html>

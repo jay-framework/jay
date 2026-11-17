@@ -1,0 +1,8 @@
+<html>
+<body>
+    <div class="card">
+        <h3 class="card-heading" jay-content>Heading</h3>
+        <p class="card-body" jay-content>Body</p>
+    </div>
+</body>
+</html>

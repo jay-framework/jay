@@ -7,6 +7,7 @@ import {
 } from '@jay-framework/fullstack-component';
 import type { DevServerPagePart, HeadlessInstanceComponent } from './types';
 import { resolveServices } from './services';
+import { mergeFreshness, type FreshnessInput } from './freshness';
 import type { DiscoveredHeadlessInstance } from './types';
 import type { InstancePhaseData, InstanceSlowRenderResult } from './instance-slow-render';
 import {
@@ -38,6 +39,8 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
         let slowlyViewState = {};
         let carryForward = {};
         const slowHeadTagSources: HeadTag[][] = [];
+        // Freshness requested by each slow part (Design Log #226); merged into the result.
+        const freshnessInputs: FreshnessInput[] = [];
         for (const part of parts) {
             const { compDefinition, key, contractInfo } = part;
             if (compDefinition.slowlyRender) {
@@ -71,6 +74,10 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
                     if (slowlyRenderedPart.headTags) {
                         slowHeadTagSources.push(slowlyRenderedPart.headTags);
                     }
+                    freshnessInputs.push({
+                        ttl: slowlyRenderedPart.ttl,
+                        grace: slowlyRenderedPart.grace,
+                    });
                 } else return slowlyRenderedPart;
             }
         }
@@ -142,6 +149,7 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
                         if (slowResult.headTags) {
                             slowHeadTagSources.push(slowResult.headTags);
                         }
+                        freshnessInputs.push({ ttl: slowResult.ttl, grace: slowResult.grace });
                     }
                 }
             }
@@ -156,7 +164,10 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
             (carryForward as any).__slowHeadTags = slowHeadTagSources;
         }
 
-        return phaseOutput(slowlyViewState, carryForward);
+        // Raw merged freshness (min positive ttl / grace across all slow parts, #226). Defaults and
+        // the ttl floor are applied by `resolveFreshness` where the policy is stored with the
+        // instance, so this result can still be merged with other slow results.
+        return phaseOutput(slowlyViewState, carryForward, mergeFreshness(freshnessInputs));
     }
 }
 

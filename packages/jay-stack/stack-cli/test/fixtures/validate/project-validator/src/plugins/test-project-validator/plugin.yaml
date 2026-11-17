@@ -1,0 +1,8 @@
+name: test-project-validator
+projectValidators:
+  - name: check-project
+    handler: ./check-project.mjs
+    description: Emits one error and one warning at project scope (DL#232)
+  - name: broken
+    handler: ./does-not-exist.mjs
+    description: Handler path intentionally missing, to exercise load-failure reporting

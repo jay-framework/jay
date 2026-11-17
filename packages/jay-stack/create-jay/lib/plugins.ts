@@ -41,6 +41,15 @@ export const PLUGINS: PluginEntry[] = [
         isDep: false,
     },
     {
+        name: '@jay-framework/editing-policy',
+        label: 'Editing policy',
+        description:
+            'Governance for handover: enforce who may change what via jay-policy.md (validate + compare gate)',
+        group: 'Jay Framework',
+        checked: false,
+        isDep: false,
+    },
+    {
         name: '@jay-framework/markdown',
         label: 'Markdown',
         description: 'Render markdown files as pages — documentation, blogs, changelogs',
@@ -84,6 +93,14 @@ export const PLUGINS: PluginEntry[] = [
         name: '@jay-framework/wix-data',
         label: 'Wix Data',
         description: 'CMS collections: dynamic pages, content management',
+        group: 'Wix',
+        checked: false,
+        isDep: true,
+    },
+    {
+        name: '@jay-framework/wix-forms',
+        label: 'Wix Forms',
+        description: 'Forms: dynamic schemas from Wix, form rendering, validation, submissions',
         group: 'Wix',
         checked: false,
         isDep: true,

@@ -1,6 +1,7 @@
 import {
     makeJayStackComponent,
     phaseOutput,
+    notFound,
     type PageProps,
     type UrlParams,
 } from '@jay-framework/fullstack-component';
@@ -21,7 +22,9 @@ export const page = makeJayStackComponent()
     })
     .withSlowlyRender(async (props: PageProps & ItemParams) => {
         const item = items[props.slug];
-        if (!item) return phaseOutput({}, {});
+        // Unknown slug: signal a real 404 so render-on-miss (DL#227) returns 404 +
+        // negative-caches, rather than persisting an empty 200 page.
+        if (!item) return notFound();
         // props.url must carry the concrete route path at the slow phase (DL#163).
         const result = phaseOutput({ name: item.name, price: item.price, urlPath: props.url }, {});
         result.headTags = [

@@ -4,3 +4,8 @@ validators:
   - name: seo
     handler: validate
     description: Validates jay-html templates for SEO best practices
+
+projectValidators:
+  - name: seo-site
+    handler: validateProject
+    description: robots.txt, site.baseUrl, site.name, and ARD (/.well-known/ard.json) checks

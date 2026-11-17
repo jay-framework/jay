@@ -54,3 +54,30 @@ export interface JayHtmlValidationContext {
 export type JayHtmlValidatorFn = (
     context: JayHtmlValidationContext,
 ) => JayHtmlValidationFinding[] | Promise<JayHtmlValidationFinding[]>;
+
+/**
+ * Context for a project-level validator (DL#232). Unlike {@link JayHtmlValidationContext},
+ * it is invoked once per project, not once per jay-html file, so it carries no parsed DOM.
+ *
+ * Deliberately small (DL#232 decision C): `projectRoot` + the plugin's own `settings`. No parsed
+ * `.jay` config — `JayConfig` lives in stack-cli, above this package; a validator that needs config
+ * loads it via `projectRoot`. Widen only when a validator needs it.
+ */
+export interface ProjectValidationContext {
+    projectRoot: string;
+    /** The plugin's own settings, as for other plugin entry points. */
+    settings?: unknown;
+}
+
+export interface ProjectValidationFinding {
+    severity: 'error' | 'warning';
+    /** Project-relative path, or `.jay` for a config finding. */
+    file: string;
+    message: string;
+    /** Agent-actionable suggestion, as in DL#145. */
+    suggestion?: string;
+}
+
+export type ProjectValidatorFn = (
+    context: ProjectValidationContext,
+) => ProjectValidationFinding[] | Promise<ProjectValidationFinding[]>;

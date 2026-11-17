@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/ui-kit",
-  "version": "0.25.4",
+  "version": "0.26.4",
   "type": "module",
   "description": "Headless UI primitives: popover menu, scroll carousel, clipboard copy",
   "license": "Apache-2.0",
@@ -49,7 +49,7 @@
     "js-yaml": "^4.1.0",
     "rimraf": "^5.0.5",
     "typescript": "^5.3.3",
-    "vite": "^5.0.11",
-    "vitest": "^1.2.1"
+    "vite": "^6.4.4",
+    "vitest": "^4.1.11"
   }
 }

@@ -1,8 +1,14 @@
 import fs from 'node:fs/promises';
 import type { RouteManifest } from '../types';
+import type { ArtifactStore } from '../serve/artifact-store';
 
+/**
+ * Write `sitemap.xml` from the manifest routes × the store's instance listing (Design Log #227).
+ * The listing may be served from the store's TTL cache, so new items appear within the list TTL.
+ */
 export async function generateSitemap(
     manifest: RouteManifest,
+    store: Pick<ArtifactStore, 'listInstances'>,
     baseUrl: string,
     outputPath: string,
 ): Promise<number> {
@@ -17,7 +23,14 @@ export async function generateSitemap(
         if (route.devOnly) continue;
         if (route.noIndex) continue;
 
-        if (route.instances.length === 0) {
+        let count = 0;
+        for await (const instance of store.listInstances(route)) {
+            count++;
+            const urlPath = buildUrlFromManifest(route.pattern, instance.params);
+            urls.push(`${base}${urlPath}`);
+        }
+
+        if (count === 0) {
             // Static route with no instances — use the pattern directly
             // Only if it has no dynamic segments
             const hasDynamic = route.segments.some((s) => s.type !== 'static');
@@ -25,12 +38,6 @@ export async function generateSitemap(
                 const urlPath = route.pattern === '/' ? '/' : route.pattern;
                 urls.push(`${base}${urlPath}`);
             }
-            continue;
-        }
-
-        for (const instance of route.instances) {
-            const urlPath = buildUrlFromManifest(route.pattern, instance.params);
-            urls.push(`${base}${urlPath}`);
         }
     }
 

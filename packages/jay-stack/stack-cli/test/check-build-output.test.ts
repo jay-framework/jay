@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import path from 'path';
+import { mkdtemp, mkdir, writeFile, rm } from 'fs/promises';
+import { join } from 'path';
+import { tmpdir } from 'os';
 import { parse } from 'node-html-parser';
 import type { RouteManifest } from '@jay-framework/production-server';
 import type { JayHtmlHeadMeta } from '@jay-framework/stack-server-runtime';
@@ -15,8 +18,11 @@ import {
     checkInstanceMeta,
     checkBuildJsonLd,
     checkInstanceJsonLd,
+    checkPageCacheFileSizes,
     jsonLdBodyError,
     isBuildStale,
+    PAGE_CACHE_HARD_BYTES,
+    PAGE_CACHE_SOFT_BYTES,
 } from '../lib/check-build-output';
 
 // DL#211 — Tier 2 Build-Output Validation (`jay-stack validate --tier-2`). Tests assert on returned findings /
@@ -25,6 +31,13 @@ import {
 const fixture = path.resolve('./test/fixtures/validate/build-output');
 const backendV2 = path.join(fixture, 'build', 'v0.2.0', 'backend');
 const backendV1 = path.join(fixture, 'build', 'v0.1.0', 'backend');
+const helloCache = path.join(
+    backendV2,
+    'pre-rendered',
+    'blog',
+    '[slug]',
+    'page_7d3eb17e.cache.json',
+);
 
 describe('discoverBuildBackendDir', () => {
     it('picks the highest build version backend under the project', async () => {
@@ -60,24 +73,113 @@ describe('loadBuildManifest', () => {
 describe('buildBuildOracle', () => {
     it('collects concrete URLs and per-instance entries', async () => {
         const loaded = await loadBuildManifest(backendV2);
-        const oracle = buildBuildOracle(loaded!.manifest, backendV2);
+        const oracle = await buildBuildOracle(loaded!.manifest, backendV2);
 
         expect([...oracle.urls].sort()).toEqual(['/', '/about', '/blog/hello', '/blog/world']);
         expect(oracle.instances.map((i) => i.url).sort()).toEqual(['/blog/hello', '/blog/world']);
 
         const hello = oracle.instances.find((i) => i.url === '/blog/hello')!;
-        expect(hello.cacheAbsPath).toBe(
-            path.join(backendV2, 'pre-rendered', 'blog-hello.cache.json'),
-        );
+        expect(hello.cacheAbsPath).toBe(helloCache);
         expect(hello.headMeta?.title?.[0]).toEqual({ kind: 'binding', value: 'post.title' });
+    });
+});
+
+describe('checkPageCacheFileSizes', () => {
+    async function withCacheDir(
+        run: (paths: {
+            under: string;
+            atSoft: string;
+            atHard: string;
+            overHard: string;
+        }) => Promise<void>,
+    ) {
+        const dir = await mkdtemp(join(tmpdir(), 'jay-cache-'));
+        const routeDir = join(dir, 'pre-rendered', 'blog-hello');
+        const under = join(routeDir, 'page.cache.json');
+        const atSoft = join(routeDir, 'at-soft.cache.json');
+        const atHard = join(routeDir, 'at-hard.cache.json');
+        const overHard = join(routeDir, 'over-hard.cache.json');
+        try {
+            await mkdir(routeDir, { recursive: true });
+            await writeFile(under, 'x'.repeat(PAGE_CACHE_SOFT_BYTES - 1));
+            await writeFile(atSoft, 'x'.repeat(PAGE_CACHE_SOFT_BYTES));
+            await writeFile(atHard, 'x'.repeat(PAGE_CACHE_HARD_BYTES));
+            await writeFile(overHard, 'x'.repeat(PAGE_CACHE_HARD_BYTES + 1));
+            await run({ under, atSoft, atHard, overHard });
+        } finally {
+            await rm(dir, { recursive: true });
+        }
+    }
+
+    it('returns no findings under the soft limit', async () => {
+        await withCacheDir(async ({ under }) => {
+            expect(
+                await checkPageCacheFileSizes({ cacheAbsPath: under, routePattern: '/under' }),
+            ).toEqual([]);
+        });
+    });
+
+    it('warns at the soft limit and errors at the hard limit', async () => {
+        await withCacheDir(async ({ atSoft, atHard }) => {
+            expect(
+                await checkPageCacheFileSizes({ cacheAbsPath: atSoft, routePattern: '/soft' }),
+            ).toEqual([
+                {
+                    file: '/soft',
+                    message: expect.stringContaining('at-soft.cache.json'),
+                    suggestion: expect.stringContaining('query-param-pages.md'),
+                    severity: 'warning',
+                    source: 'build-output',
+                },
+            ]);
+            expect(
+                await checkPageCacheFileSizes({ cacheAbsPath: atHard, routePattern: '/hard' }),
+            ).toEqual([
+                {
+                    file: '/hard',
+                    message: expect.stringContaining(`${PAGE_CACHE_HARD_BYTES} bytes`),
+                    suggestion: expect.stringContaining('query-param-pages.md'),
+                    severity: 'error',
+                    source: 'build-output',
+                },
+            ]);
+        });
+    });
+
+    it('errors above the hard limit and when the cache file is missing', async () => {
+        await withCacheDir(async ({ overHard }) => {
+            expect(
+                await checkPageCacheFileSizes({ cacheAbsPath: overHard, routePattern: '/over' }),
+            ).toEqual([
+                {
+                    file: '/over',
+                    message: expect.stringContaining('over-hard.cache.json'),
+                    suggestion: expect.stringContaining('query-param-pages.md'),
+                    severity: 'error',
+                    source: 'build-output',
+                },
+            ]);
+        });
+        const missing = join(tmpdir(), `jay-cache-missing-${Date.now()}/nope/page.cache.json`);
+        const missingFindings = await checkPageCacheFileSizes({
+            cacheAbsPath: missing,
+            routePattern: '/missing',
+        });
+        expect(missingFindings).toEqual([
+            {
+                file: '/missing',
+                message: expect.stringContaining('page.cache.json'),
+                suggestion: expect.stringContaining('Rebuild'),
+                severity: 'error',
+                source: 'build-output',
+            },
+        ]);
     });
 });
 
 describe('loadSlowViewState', () => {
     it('reads slowViewState from a cache file', async () => {
-        const vs = await loadSlowViewState(
-            path.join(backendV2, 'pre-rendered', 'blog-hello.cache.json'),
-        );
+        const vs = await loadSlowViewState(helloCache);
         expect(vs).toEqual({
             post: { title: 'Hello World' },
             body: '<p>Links: <a href="/blog/world">next</a> and <a href="/blog/ghost">missing</a></p>',
@@ -298,7 +400,6 @@ describe('checkBuildJsonLd (DL#213)', () => {
                     pattern: '/p',
                     segments: [],
                     serverModule: 'm',
-                    instances: [],
                     scripts: routeScripts,
                 } as any,
             ],

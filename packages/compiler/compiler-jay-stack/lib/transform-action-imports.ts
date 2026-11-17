@@ -191,7 +191,9 @@ function extractActionFromExpression(
         // Check for other builder methods
         if (
             tsBridge.isPropertyAccessExpression(expr) &&
-            ['withServices', 'withCaching', 'withHandler', 'withTimeout'].includes(expr.name.text)
+            ['withServices', 'withCaching', 'withHandler', 'withTimeout', 'withRequest'].includes(
+                expr.name.text,
+            )
         ) {
             current = expr.expression;
             continue;

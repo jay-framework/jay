@@ -57,14 +57,46 @@ export function registerService<ServiceType>(
 export function getService<ServiceType>(marker: ServiceMarker<ServiceType>): ServiceType {
     const service = serviceRegistry.get(marker as symbol);
     if (service === undefined) {
-        const symbolKey = marker as symbol;
-        const serviceName = symbolKey.description || 'Unknown service';
-        throw new Error(
-            `Service '${serviceName}' not found. Did you register it in jay.init.ts?\n` +
-                `Make sure to call: registerService(${serviceName.toUpperCase()}_SERVICE, ...)`,
-        );
+        throw new ServiceNotRegisteredError((marker as symbol).description || 'Unknown service');
     }
     return service;
+}
+
+/**
+ * Thrown by `getService` for a marker nothing registered. Services come from plugin server inits and
+ * the project's jay.init.ts, so the common cause is a plugin whose init did not run because it is not
+ * configured yet (DL#235) — the message says so instead of implying a code bug.
+ */
+export class ServiceNotRegisteredError extends Error {
+    override readonly name = 'ServiceNotRegisteredError';
+
+    constructor(readonly serviceName: string) {
+        super(
+            `Service '${serviceName}' is not registered. Services are registered by a plugin's server ` +
+                `init or by the project's jay.init.ts — if '${serviceName}' comes from a plugin, that ` +
+                `plugin may not be configured yet (run \`jay-stack setup\`). To register it in ` +
+                `jay.init.ts: registerService(${markerConstName(serviceName)}, ...)`,
+        );
+    }
+}
+
+/** `jay:service:PaymentClient` → `PAYMENT_CLIENT_SERVICE`, the conventional marker constant name. */
+function markerConstName(serviceName: string): string {
+    const bareName = serviceName.replace(/^jay:service:/, '');
+    const snakeCase = bareName.replace(/([a-z0-9])([A-Z])/g, '$1_$2').replace(/\W+/g, '_');
+    return `${snakeCase.toUpperCase()}_SERVICE`;
+}
+
+/**
+ * Matches by name, not `instanceof`: Vite SSR may load a second copy of this module, so an error thrown
+ * inside a plugin init is not an instance of the caller's class.
+ */
+export function isServiceNotRegisteredError(error: unknown): error is ServiceNotRegisteredError {
+    return (
+        error instanceof Error &&
+        error.name === 'ServiceNotRegisteredError' &&
+        typeof (error as Partial<ServiceNotRegisteredError>).serviceName === 'string'
+    );
 }
 
 /**

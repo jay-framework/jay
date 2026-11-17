@@ -36,7 +36,9 @@ export function renderToStream(vs: AttributesViewState, ctx: ServerRenderContext
     w(' jay-coordinate="S0/0/3" />');
     w('<input');
     w(' type="checkbox"');
-    w(' checked="' + escapeAttr(String(vs.bool1)) + '"');
+    if (vs.bool1) {
+        w(' checked');
+    }
     w(' value="' + escapeAttr(String(vs.text2)) + '"');
     w(' jay-coordinate="S0/0/4" />');
     w('<label');

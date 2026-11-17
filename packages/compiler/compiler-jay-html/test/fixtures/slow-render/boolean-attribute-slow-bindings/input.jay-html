@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data" contract="./test.jay-contract"></script>
+</head>
+<body>
+    <input type="checkbox" checked="{accepted}" />
+    <input type="checkbox" checked="accepted" />
+    <input type="checkbox" checked="!accepted" />
+    <button disabled="{locked}">A</button>
+    <button disabled="locked || busy">B</button>
+    <button disabled="{busy}">C</button>
+</body>
+</html>

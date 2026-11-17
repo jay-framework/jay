@@ -87,7 +87,7 @@ export function redirect3xx(status: number, location: string, message?: string):
 export function phaseOutput<ViewState extends object, CarryForward = {}>(
     rendered: ViewState,
     carryForward: CarryForward,
-    options?: { headTags?: HeadTag[]; responseHeaders?: Record<string, string> },
+    options?: PhaseOutputOptions,
 ): PhaseOutput<ViewState, CarryForward> {
     return {
         kind: 'PhaseOutput',
@@ -95,7 +95,19 @@ export function phaseOutput<ViewState extends object, CarryForward = {}>(
         carryForward,
         ...(options?.headTags && { headTags: options.headTags }),
         ...(options?.responseHeaders && { responseHeaders: options.responseHeaders }),
+        ...(options?.ttl != null && { ttl: options.ttl }),
+        ...(options?.grace != null && { grace: options.grace }),
     };
+}
+
+/** Optional extras of a phase output (head tags, response headers, slow-phase freshness #226). */
+export interface PhaseOutputOptions {
+    headTags?: HeadTag[];
+    responseHeaders?: Record<string, string>;
+    /** Slow phase only: freshness lifetime in seconds (Design Log #226). */
+    ttl?: number | null;
+    /** Slow phase only: absolute age in seconds up to which stale data is served immediately (#226). */
+    grace?: number | null;
 }
 
 /**

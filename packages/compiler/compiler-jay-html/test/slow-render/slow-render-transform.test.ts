@@ -82,6 +82,18 @@ describe('Slow Render Transform', () => {
         it('should resolve empty string attribute values (not skip them as falsy)', async () => {
             await runSlowRenderTest('attribute-empty-string');
         });
+
+        /**
+         * Bug: a slow-phase binding on a boolean attribute was string-substituted.
+         * Found in: design-log/235 - boolean attributes and fresh-project validation.md
+         * Expected: a resolved slow condition makes the attribute present (true) or removes it (false);
+         *   condition syntax (`checked="accepted"`, `!accepted`, `locked || busy`) resolves too.
+         * Actual: `checked="{accepted}"` became `checked="false"` (= checked in HTML) and the condition
+         *   forms were left unresolved even though their data is gone after the slow phase.
+         */
+        it('should resolve slow bindings on boolean attributes to presence/absence (DL#235)', async () => {
+            await runSlowRenderTest('boolean-attribute-slow-bindings');
+        });
     });
 
     describe('Style Binding Resolution', () => {

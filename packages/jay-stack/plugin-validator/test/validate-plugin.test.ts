@@ -216,6 +216,66 @@ describe('validatePlugin — tools entry (./tools) requirement', () => {
         expect(result.errors).toEqual([]);
     });
 
+    describe('projectValidators (DL#232)', () => {
+        it('errors when a projectValidators entry is missing "handler"', async () => {
+            const dir = createTempPlugin({
+                pluginYaml: `name: test-plugin\nprojectValidators:\n  - name: check\n`,
+                packageJson: {
+                    name: '@jay-framework/test-plugin',
+                    exports: { '.': './dist/index.js', './plugin.yaml': './plugin.yaml' },
+                },
+            });
+
+            const result = await validatePlugin({ pluginPath: dir });
+
+            const err = result.errors.find(
+                (e) => e.message === 'Project validator "check" is missing "handler" field',
+            );
+            expect(err).toBeDefined();
+            expect(err!.type).toBe('schema');
+        });
+
+        it('errors when projectValidators is not an array', async () => {
+            const dir = createTempPlugin({
+                pluginYaml: `name: test-plugin\nprojectValidators: nope\n`,
+                packageJson: {
+                    name: '@jay-framework/test-plugin',
+                    exports: { '.': './dist/index.js', './plugin.yaml': './plugin.yaml' },
+                },
+            });
+
+            const result = await validatePlugin({ pluginPath: dir });
+
+            const err = result.errors.find(
+                (e) => e.message === 'Field "projectValidators" must be an array',
+            );
+            expect(err).toBeDefined();
+            expect(err!.type).toBe('schema');
+        });
+
+        it('passes when a projectValidators handler is exported from ./tools', async () => {
+            const dir = createTempPluginWithSource({
+                pluginYaml: `name: test-plugin\nprojectValidators:\n  - name: check\n    handler: checkHandler\n`,
+                packageJson: {
+                    name: '@jay-framework/test-plugin',
+                    exports: {
+                        '.': './dist/index.js',
+                        './tools': './dist/tools.js',
+                        './plugin.yaml': './plugin.yaml',
+                    },
+                },
+                sourceFiles: {
+                    'dist/index.js': `export {};\n`,
+                    'dist/tools.js': `export { checkHandler } from './h.js';\n`,
+                },
+            });
+
+            const result = await validatePlugin({ pluginPath: dir });
+
+            expect(result.errors).toEqual([]);
+        });
+    });
+
     it('does not emit the legacy "no contracts" warning for a validator-only plugin', async () => {
         const dir = createTempPluginWithSource({
             pluginYaml: minimalPluginYaml,
@@ -730,5 +790,36 @@ describe('validatePlugin — template-only design-system plugin', () => {
         const result = await validatePlugin({ pluginPath: dir });
 
         expect(result.errors).toEqual([]);
+    });
+});
+
+describe('validatePlugin — GET actions reading cookies (DL#234)', () => {
+    it('surfaces get-action-reads-cookies as a warning and stays valid', async () => {
+        const dir = createTempPluginWithSource({
+            pluginYaml: `name: test-plugin\nactions:\n  - cartQuery\n`,
+            packageJson: {
+                name: '@jay-framework/test-plugin',
+                exports: { '.': './dist/index.js', './plugin.yaml': './plugin.yaml' },
+            },
+            sourceFiles: {
+                'dist/index.js': `export const cartQuery = {};\n`,
+                'lib/actions/cart.ts': `export const cartQuery = makeJayQuery('cart.current').withRequest().withHandler(h);\n`,
+            },
+        });
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        expect(result.warnings.filter((w) => w.type === 'get-action-reads-cookies')).toEqual([
+            {
+                type: 'get-action-reads-cookies',
+                code: 'get-action-reads-cookies',
+                location: 'lib/actions/cart.ts:1',
+                message:
+                    "lib/actions/cart.ts:1 — GET action 'cart.current' reads cookies (.withRequest()). " +
+                    'It must not change state; use makeJayAction (POST) for writes. ' +
+                    'Cross-origin calls are rejected. Suppress with // jay-action: allow-get-request',
+            },
+        ]);
+        expect(result.valid).toEqual(true);
     });
 });

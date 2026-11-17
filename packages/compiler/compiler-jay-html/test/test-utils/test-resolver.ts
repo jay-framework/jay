@@ -3,6 +3,7 @@ import fs from 'fs';
 import { WithValidations } from '@jay-framework/compiler-shared';
 import {
     JAY_IMPORT_RESOLVER,
+    createJayImportResolver,
     JayImportResolver,
     PluginComponentResolution,
 } from '../../lib/jay-target/jay-import-resolver';
@@ -12,9 +13,13 @@ import { Contract } from '../../lib';
 /**
  * Test resolver that extends the default resolver with test plugin support.
  * This should ONLY be used in tests.
+ *
+ * DL#225: built over its own analysis context (`createJayImportResolver()`), not the module-global
+ * `JAY_IMPORT_RESOLVER`, so a test's type-analysis state (a persistent LanguageService) is isolated and
+ * doesn't leak across test files.
  */
 export const TEST_IMPORT_RESOLVER: JayImportResolver = {
-    ...JAY_IMPORT_RESOLVER,
+    ...createJayImportResolver(),
     loadPluginContract(
         pluginName: string,
         contractName: string,
@@ -38,6 +43,14 @@ export const TEST_IMPORT_RESOLVER: JayImportResolver = {
             'test-word-split:word-split': {
                 dir: 'page-with-headless-foreach-template',
                 file: 'word-split',
+            },
+            'test-form-fields:form-fields': {
+                dir: 'form-fields-headless',
+                file: 'form-fields-headless',
+            },
+            'test-boolean-choices:boolean-choices': {
+                dir: 'boolean-choices-headless',
+                file: 'boolean-choices-headless',
             },
         };
 
@@ -186,6 +199,42 @@ export const TEST_IMPORT_RESOLVER: JayImportResolver = {
                         'contracts/page-with-headless-foreach-template/word-split',
                     ),
                     componentName: 'wordSplit',
+                    isNpmPackage: false,
+                },
+                [],
+            );
+        }
+
+        if (pluginName === 'test-form-fields' && contractName === 'form-fields') {
+            return new WithValidations(
+                {
+                    contractPath: path.resolve(
+                        projectRoot,
+                        'contracts/form-fields-headless/form-fields-headless.jay-contract',
+                    ),
+                    componentPath: path.resolve(
+                        projectRoot,
+                        'contracts/form-fields-headless/form-fields-headless',
+                    ),
+                    componentName: 'formFields',
+                    isNpmPackage: false,
+                },
+                [],
+            );
+        }
+
+        if (pluginName === 'test-boolean-choices' && contractName === 'boolean-choices') {
+            return new WithValidations(
+                {
+                    contractPath: path.resolve(
+                        projectRoot,
+                        'contracts/boolean-choices-headless/boolean-choices-headless.jay-contract',
+                    ),
+                    componentPath: path.resolve(
+                        projectRoot,
+                        'contracts/boolean-choices-headless/boolean-choices-headless',
+                    ),
+                    componentName: 'booleanChoices',
                     isNpmPackage: false,
                 },
                 [],

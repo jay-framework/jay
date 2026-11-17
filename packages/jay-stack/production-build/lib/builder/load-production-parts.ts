@@ -151,6 +151,10 @@ export async function loadProductionPageParts(
                 : undefined;
             parts.push({
                 key: headlessImport.key,
+                // DL#221 post-merge fix: the component's module is its global identity — keys the
+                // build-time loadParams cache so two routes reusing the same ref `key` for different
+                // components don't collide (the ref `key` is page-local).
+                modulePath,
                 compDefinition: headlessCompDef,
                 clientImport: '',
                 clientPart: '',
@@ -268,6 +272,10 @@ export interface PagePartsConfig {
         propBindings: Record<string, string>;
         coordinateSuffix: string;
     }>;
+    // DL#227: static headless-instance placements (coordinates) discovered from the jay-html at build.
+    // Persisted so a serve-time slow RE-render (stale-while-revalidate refresh / render-on-miss) can
+    // render the same instances the build did — otherwise the re-render drops site-header/cart etc.
+    discoveredInstances?: DiscoveredHeadlessInstance[];
 }
 
 export function buildPagePartsConfig(
@@ -325,6 +333,7 @@ export function buildPagePartsConfig(
     return {
         parts,
         instanceComponents,
+        discoveredInstances: pageParts.discoveredInstances,
         forEachInstances: pageParts.forEachInstances.map((fi) => ({
             contractName: fi.contractName,
             forEachPath: fi.forEachPath,
@@ -394,7 +403,7 @@ export async function loadPagePartsFromConfig(
         parts,
         headlessContracts: [],
         headlessInstanceComponents,
-        discoveredInstances: [],
+        discoveredInstances: config.discoveredInstances ?? [],
         forEachInstances: config.forEachInstances as ForEachHeadlessInstance[],
         keyedPartModules: [],
         headlessModuleInfos: [],

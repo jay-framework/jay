@@ -1,0 +1,32 @@
+<html>
+<head>
+    <script type="application/jay-headless"
+            src="../../../components/product-info/index"
+            contract="../../../components/product-info/product-info.jay-contract"
+            key="productInfo">slug: special</script>
+    <script type="application/jay-headless"
+            src="../../../components/site-header/index"
+            contract="../../../components/site-header/site-header.jay-contract"></script>
+    <script type="application/jay-headless"
+            plugin="cart-badge"
+            contract="cart-badge"></script>
+    <script type="application/jay-data">
+data:
+    name: string
+    </script>
+</head>
+<body>
+    <div>
+        <jay:site-header logoUrl="/logo.png" ref="header">
+            <header>
+                <img src="{logoUrl}" />
+                <span>{headerTitle}</span>
+                <jay:cart-badge label="Cart">
+                    <span class="badge">{badgeLabel}: {count}</span>
+                </jay:cart-badge>
+            </header>
+        </jay:site-header>
+        <h1>{productInfo.title}</h1>
+    </div>
+</body>
+</html>

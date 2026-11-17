@@ -1,8 +1,9 @@
-import type { RouteManifest, RouteEntry, InstanceEntry, BuildMetadata } from '../types';
+import type { RouteManifest, RouteEntry } from '../types';
 import { rebuildInstance } from './rebuild-instance';
 import { generateSitemap } from '../builder/generate-sitemap';
 import { generateLlmsTxt } from '../builder/generate-llms-txt';
-import { matchRequest } from '../serve/route-matcher';
+import { matchRoutes } from '../serve/route-matcher';
+import { FilesystemArtifactStore } from '../serve/artifact-store';
 import { initializeServices } from '../shared/init-services';
 import { getLogger } from '@jay-framework/logger';
 import path from 'node:path';
@@ -69,28 +70,23 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
 
     await initializeServices(backendDir, options.projectRoot, 'Rebuild');
 
-    const rebuildSuffix = Date.now().toString(36);
+    const store = new FilesystemArtifactStore(backendDir);
 
     const result: RebuildResult = { affected: 0, rebuilt: 0, errors: [] };
-    const orphanedFiles: string[] = [];
 
     for (const route of affectedRoutes) {
-        const instancesToRebuild = targetParams
-            ? route.instances.filter((i) => paramsMatch(i.params, targetParams))
-            : [...route.instances];
-
-        if (instancesToRebuild.length === 0 && targetParams) {
-            instancesToRebuild.push({ params: targetParams } as any);
+        // Instances come from the store's index (Design Log #227), re-read from disk (`fresh`).
+        const known: Array<Record<string, string>> = [];
+        for await (const ref of store.listInstances(route, { fresh: true })) {
+            if (!targetParams || paramsMatch(ref.params, targetParams)) known.push(ref.params);
         }
+        const toRebuild = known.length === 0 && targetParams ? [targetParams] : known;
 
-        for (const instance of instancesToRebuild) {
+        for (const params of toRebuild) {
             result.affected++;
-            const params = instance.params;
-
-            const oldFiles = collectInstanceFiles(instance);
 
             try {
-                const buildResult = await rebuildInstance(route, params, backendDir, rebuildSuffix);
+                const buildResult = await rebuildInstance(route, params, store);
                 if (buildResult.status !== 'success') {
                     result.errors.push({
                         route: route.pattern,
@@ -98,14 +94,6 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
                         error: buildResult.reason || 'Unknown error',
                     });
                     continue;
-                }
-
-                const existingIdx = route.instances.findIndex((i) => paramsMatch(i.params, params));
-                if (existingIdx >= 0) {
-                    route.instances[existingIdx] = buildResult.instanceEntry!;
-                    orphanedFiles.push(...oldFiles);
-                } else {
-                    route.instances.push(buildResult.instanceEntry!);
                 }
 
                 result.rebuilt++;
@@ -121,41 +109,18 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
     }
 
     if (result.rebuilt > 0) {
-        const tempPath = manifestPath + '.tmp';
-        await fs.writeFile(tempPath, JSON.stringify(manifest, null, 2));
-        await fs.rename(tempPath, manifestPath);
-
-        // Update build-metadata.json — triggers main server manifest reload
-        const metadataPath = path.join(buildDir, 'backend', 'build-metadata.json');
-        try {
-            const metadata: BuildMetadata = JSON.parse(await fs.readFile(metadataPath, 'utf-8'));
-            metadata.buildTimestamp = new Date().toISOString();
-            metadata.instanceCount = manifest.routes.reduce((n, r) => n + r.instances.length, 0);
-            await fs.writeFile(metadataPath, JSON.stringify(metadata, null, 2));
-        } catch {
-            // No metadata file — write a new one
-            await fs.writeFile(
-                metadataPath,
-                JSON.stringify(
-                    {
-                        version: options.version,
-                        sourceHash: '',
-                        buildTimestamp: new Date().toISOString(),
-                        nodeVersion: process.version,
-                        instanceCount: manifest.routes.reduce((n, r) => n + r.instances.length, 0),
-                    } satisfies BuildMetadata,
-                    null,
-                    2,
-                ),
-            );
-        }
-
-        logger.important(`[Rebuild] Manifest and metadata updated`);
+        // The manifest holds routes only (Design Log #227): rebuilt instances are written in place
+        // at their derived path, so there is nothing to update except the generated site files.
 
         // Regenerate sitemap after successful rebuild
         if (options.siteBaseUrl) {
             const sitemapPath = path.join(frontendDir, 'sitemap.xml');
-            const urlCount = await generateSitemap(manifest, options.siteBaseUrl, sitemapPath);
+            const urlCount = await generateSitemap(
+                manifest,
+                store,
+                options.siteBaseUrl,
+                sitemapPath,
+            );
             logger.info(`[Rebuild] Sitemap regenerated: ${urlCount} URLs`);
         }
 
@@ -164,14 +129,8 @@ export async function rebuild(options: RebuildOptions): Promise<RebuildResult> {
         const site = options.site ?? (options.siteBaseUrl ? { baseUrl: options.siteBaseUrl } : {});
         if (site.name) {
             const llmsPath = path.join(frontendDir, 'llms.txt');
-            const count = await generateLlmsTxt(manifest, site, backendDir, llmsPath);
+            const count = await generateLlmsTxt(manifest, store, site, llmsPath);
             logger.info(`[Rebuild] llms.txt regenerated: ${count} pages`);
-        }
-
-        // Append orphaned files to cleanup manifest
-        if (orphanedFiles.length > 0) {
-            await appendCleanupManifest(buildDir, orphanedFiles);
-            logger.info(`[Rebuild] ${orphanedFiles.length} orphaned file(s) queued for cleanup`);
         }
     }
 
@@ -204,7 +163,7 @@ function resolveTarget(
             };
         }
         case 'url': {
-            const match = matchRequest(manifest, target.url);
+            const match = matchRoutes(manifest, target.url).next().value;
             if (!match) {
                 return { routes: [], label: `url "${target.url}"` };
             }
@@ -246,25 +205,6 @@ function paramsMatch(
     targetParams: Record<string, string>,
 ): boolean {
     return Object.entries(targetParams).every(([key, value]) => instanceParams[key] === value);
-}
-
-function collectInstanceFiles(instance: InstanceEntry): string[] {
-    if (!instance.cachePath) return [];
-    const files = [instance.cachePath, instance.serverElementPath, instance.clientBundlePath];
-    if (instance.clientCssPath) files.push(instance.clientCssPath);
-    return files.filter(Boolean);
-}
-
-async function appendCleanupManifest(buildDir: string, files: string[]): Promise<void> {
-    const cleanupPath = path.join(buildDir, 'cleanup-manifest.json');
-    let existing: string[] = [];
-    try {
-        existing = JSON.parse(await fs.readFile(cleanupPath, 'utf-8'));
-    } catch {
-        // No existing cleanup manifest
-    }
-    existing.push(...files);
-    await fs.writeFile(cleanupPath, JSON.stringify(existing, null, 2));
 }
 
 export async function cleanupOrphanedFiles(buildRoot: string, version: string): Promise<number> {

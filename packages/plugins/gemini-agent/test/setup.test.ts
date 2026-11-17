@@ -17,6 +17,10 @@ function makeCtx(overrides: Partial<PluginSetupContext> = {}): PluginSetupContex
 }
 
 describe('setupGeminiAgent', () => {
+    beforeEach(() => {
+        vi.resetAllMocks();
+    });
+
     afterEach(() => {
         vi.restoreAllMocks();
     });

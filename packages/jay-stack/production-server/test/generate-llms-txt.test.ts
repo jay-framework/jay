@@ -3,7 +3,8 @@ import { promises as fsp } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { generateLlmsTxt } from '../lib/builder/generate-llms-txt';
-import type { RouteManifest } from '../lib/types';
+import { FilesystemArtifactStore } from '../lib/serve/artifact-store';
+import type { RouteEntry, RouteManifest } from '../lib/types';
 
 // DL#214 — llms.txt generation from the build manifest + per-instance slow ViewState.
 
@@ -14,19 +15,36 @@ function bindingPart(value: string) {
     return { kind: 'binding' as const, value };
 }
 
+const blogRoute: RouteEntry = {
+    pattern: '/blog/[slug]',
+    segments: [
+        { type: 'static', value: 'blog' },
+        { type: 'param', value: 'slug' },
+    ],
+    serverModule: 'm',
+    headMeta: {
+        title: [bindingPart('post.title')],
+        meta: [{ name: 'description', content: [bindingPart('post.excerpt')] }],
+        links: [],
+    },
+};
+
 describe('generateLlmsTxt (DL#214)', () => {
     let dir: string;
+    let artifacts: FilesystemArtifactStore;
 
     beforeEach(async () => {
         dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'jay-llms-'));
-        await fsp.mkdir(path.join(dir, 'pre-rendered'), { recursive: true });
-        await fsp.writeFile(
-            path.join(dir, 'pre-rendered', 'blog-hello.cache.json'),
-            JSON.stringify({
+        const store = new FilesystemArtifactStore(dir);
+        await store.writeCacheData(
+            blogRoute,
+            { slug: 'hello' },
+            {
                 slowViewState: { post: { title: 'Hello World', excerpt: 'A first post' } },
                 carryForward: {},
-            }),
+            },
         );
+        artifacts = store;
     });
     afterEach(async () => {
         await fsp.rm(dir, { recursive: true, force: true });
@@ -48,42 +66,19 @@ describe('generateLlmsTxt (DL#214)', () => {
                     meta: [{ name: 'description', content: [staticPart('Welcome to Acme')] }],
                     links: [],
                 },
-                instances: [],
             },
-            {
-                pattern: '/blog/[slug]',
-                segments: [
-                    { type: 'static', value: 'blog' },
-                    { type: 'param', value: 'slug' },
-                ],
-                serverModule: 'm',
-                headMeta: {
-                    title: [bindingPart('post.title')],
-                    meta: [{ name: 'description', content: [bindingPart('post.excerpt')] }],
-                    links: [],
-                },
-                instances: [
-                    {
-                        params: { slug: 'hello' },
-                        cachePath: 'pre-rendered/blog-hello.cache.json',
-                        serverElementPath: 's',
-                        clientBundlePath: 'c',
-                    },
-                ],
-            },
+            blogRoute,
             {
                 pattern: '/admin',
                 segments: [{ type: 'static', value: 'admin' }],
                 serverModule: 'm',
                 devOnly: true,
-                instances: [],
             },
             {
                 pattern: '/secret',
                 segments: [{ type: 'static', value: 'secret' }],
                 serverModule: 'm',
                 noIndex: true,
-                instances: [],
             },
         ],
     } as RouteManifest;
@@ -92,8 +87,8 @@ describe('generateLlmsTxt (DL#214)', () => {
         const out = path.join(dir, 'llms.txt');
         const count = await generateLlmsTxt(
             manifest,
+            artifacts,
             { name: 'Acme', description: 'We build things', baseUrl: 'https://acme.com/' },
-            dir,
             out,
         );
         expect(count).toBe(2);
@@ -117,7 +112,12 @@ describe('generateLlmsTxt (DL#214)', () => {
 
     it('resolves bound titles against the instance slow ViewState', async () => {
         const out = path.join(dir, 'llms.txt');
-        await generateLlmsTxt(manifest, { name: 'Acme', baseUrl: 'https://acme.com' }, dir, out);
+        await generateLlmsTxt(
+            manifest,
+            artifacts,
+            { name: 'Acme', baseUrl: 'https://acme.com' },
+            out,
+        );
         const content = await fsp.readFile(out, 'utf8');
         expect(content.includes('[Hello World](https://acme.com/blog/hello)')).toBe(true);
         expect(content.includes('{post.title}')).toBe(false);

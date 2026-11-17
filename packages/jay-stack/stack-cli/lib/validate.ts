@@ -14,8 +14,10 @@ import {
     type JayType,
     type JayHtmlValidationContext,
     type JayHtmlValidatorFn,
+    type ProjectValidationContext,
+    type ProjectValidatorFn,
 } from '@jay-framework/compiler-shared';
-import { scanPlugins } from '@jay-framework/stack-server-runtime';
+import { scanPlugins, type ScannedPlugin } from '@jay-framework/stack-server-runtime';
 import {
     hasTemplateForContractFile,
     listTemplatesForContractFile,
@@ -48,7 +50,9 @@ import {
 } from '@jay-framework/compiler-inline-composition';
 import { parse as parseHtml, HTMLElement, NodeType } from 'node-html-parser';
 import { scanRoutes } from '@jay-framework/stack-route-scanner';
-import { loadConfig, getConfigWithDefaults } from './config';
+import { loadConfig, getConfigWithDefaults, isPositiveInteger, type JayConfig } from './config';
+import { checkGetActionsReadingCookies } from '@jay-framework/plugin-validator';
+import { DEFAULT_ACTION_BODY_LIMIT_BYTES } from '@jay-framework/stack-server-runtime';
 import { buildMaterialiseOptions } from './materialise-context';
 import { extractScopeBlock, splitScopeBlocks } from './scope-css';
 import { buildRouteOracle, collectPublicAssets, checkInternalLinks } from './check-internal-links';
@@ -63,12 +67,12 @@ import {
     checkInstanceMeta,
     checkBuildJsonLd,
     checkInstanceJsonLd,
+    checkPageCacheFileSizes,
     jsonLdBodyError,
     isBuildStale,
     newestSourceMtime,
     type BuildOutputFinding,
 } from './check-build-output';
-import { checkArdFiles } from './validate-ard';
 
 export interface ValidateOptions {
     path?: string;
@@ -1114,12 +1118,12 @@ export function checkRegionCssScoping(jayHtml: JayHtmlSourceFile): RegionDriftFi
         }
         // DL#203 - fold the sorted `to (...)` boundary into the key: two blocks sharing a template and
         // body but with different donut boundaries stay separate, so they must not be flagged to coalesce.
-        const key = `${templates[0]} ${scopeBody(block)} ${[...to].sort().join(',')}`;
+        const key = `${templates[0]}\0${scopeBody(block)}\0${[...to].sort().join(',')}`;
         (groups.get(key) ?? groups.set(key, []).get(key)!).push(selectors.join(', '));
     }
     for (const [key, blockSelectors] of groups) {
         if (blockSelectors.length < 2) continue;
-        const template = key.split(' ')[0];
+        const template = key.split('\0')[0];
         warnings.push({
             message:
                 `${blockSelectors.length} @scope blocks (${blockSelectors.join(' ; ')}) share template ` +
@@ -1744,6 +1748,57 @@ function resolveContractLinks(contract: Contract, contractPath: string | undefin
     return { ...contract, tags: resolveLinkedTags(contract.tags, contractDir) };
 }
 
+/**
+ * Load a plugin tools-capability handler (DL#179). Local plugins import the handler module by path
+ * and use its `validate`/default export; npm plugins import `<pkg>/tools` and read the named export.
+ * Shared by the per-file (DL#145) and project-level (DL#232) validator runners. Returns the handler
+ * fn, or `undefined` after pushing a `plugin`-stage load/shape error.
+ */
+async function loadPluginToolsHandler(
+    plugin: ScannedPlugin,
+    handlerRef: string,
+    capabilityLabel: string,
+    name: string,
+    source: string,
+    errors: ValidationError[],
+): Promise<((...args: any[]) => any) | undefined> {
+    try {
+        let handlerModule: any;
+        if (plugin.isLocal) {
+            const handlerPath = path.resolve(plugin.pluginPath, handlerRef);
+            handlerModule = await import(handlerPath);
+        } else {
+            // DL#179: tools handlers load only from the `./tools` entry, which may depend on the
+            // compiler. The serve entry (`.`) stays compiler-free.
+            handlerModule = await import(`${plugin.packageName}/tools`);
+        }
+
+        const fn = plugin.isLocal
+            ? (handlerModule.validate ?? handlerModule.default)
+            : handlerModule[handlerRef];
+
+        if (typeof fn !== 'function') {
+            const expected = plugin.isLocal ? 'validate' : handlerRef;
+            errors.push({
+                file: `plugin:${plugin.name}`,
+                message: `${capabilityLabel} "${name}" handler does not export a "${expected}" function`,
+                stage: 'plugin',
+                source,
+            });
+            return undefined;
+        }
+        return fn;
+    } catch (loadErr: any) {
+        errors.push({
+            file: `plugin:${plugin.name}`,
+            message: `Failed to load ${capabilityLabel.toLowerCase()} "${name}": ${loadErr.message}`,
+            stage: 'plugin',
+            source,
+        });
+        return undefined;
+    }
+}
+
 async function runPluginValidators(
     projectRoot: string,
     parsedFiles: Array<{ relativePath: string; parsed: JayHtmlSourceFile }>,
@@ -1758,43 +1813,16 @@ async function runPluginValidators(
 
         for (const validatorDef of plugin.manifest.validators) {
             const source = `${plugin.name}/${validatorDef.name}`;
-            let validatorFn: JayHtmlValidatorFn;
-            try {
-                let handlerModule: any;
-                if (plugin.isLocal) {
-                    const handlerPath = path.resolve(plugin.pluginPath, validatorDef.handler);
-                    handlerModule = await import(handlerPath);
-                } else {
-                    // DL#179: tools handlers (validators) load only from the `./tools` entry,
-                    // which may depend on the compiler. The serve entry (`.`) stays compiler-free.
-                    handlerModule = await import(`${plugin.packageName}/tools`);
-                }
-
-                validatorFn = plugin.isLocal
-                    ? (handlerModule.validate ?? handlerModule.default)
-                    : handlerModule[validatorDef.handler];
-
-                if (typeof validatorFn !== 'function') {
-                    errors.push({
-                        file: `plugin:${plugin.name}`,
-                        message: `Validator "${validatorDef.name}" handler does not export a "validate" function`,
-                        stage: 'plugin',
-                        source,
-                    });
-                    loadedValidators.push(source);
-                    continue;
-                }
-            } catch (loadErr: any) {
-                errors.push({
-                    file: `plugin:${plugin.name}`,
-                    message: `Failed to load validator "${validatorDef.name}": ${loadErr.message}`,
-                    stage: 'plugin',
-                    source,
-                });
-                loadedValidators.push(source);
-                continue;
-            }
+            const validatorFn = (await loadPluginToolsHandler(
+                plugin,
+                validatorDef.handler,
+                'Validator',
+                validatorDef.name,
+                source,
+                errors,
+            )) as JayHtmlValidatorFn | undefined;
             loadedValidators.push(source);
+            if (!validatorFn) continue;
 
             for (const { relativePath, parsed } of parsedFiles) {
                 const pageContractPath = parsed.contractRef
@@ -1885,6 +1913,71 @@ async function runPluginValidators(
                         source,
                     });
                 }
+            }
+        }
+    }
+
+    return loadedValidators;
+}
+
+/**
+ * Run plugin project-level validators (DL#232). Invoked once per project (not per jay-html file),
+ * so the context carries only `projectRoot` (decision C — a validator that needs `.jay` config loads
+ * it itself). Runs after the per-file pass and after the `--compile-only` early return, so it is
+ * skipped under compile-only. Returns the `plugin/name` sources that were loaded.
+ */
+async function runProjectValidators(
+    projectRoot: string,
+    errors: ValidationError[],
+    warnings: ValidationWarning[],
+): Promise<string[]> {
+    const scannedPlugins = await scanPlugins({ projectRoot, includeDevDeps: true });
+    const loadedValidators: string[] = [];
+
+    for (const [, plugin] of scannedPlugins) {
+        if (!plugin.manifest.projectValidators) continue;
+
+        for (const validatorDef of plugin.manifest.projectValidators) {
+            const source = `${plugin.name}/${validatorDef.name}`;
+            const validatorFn = (await loadPluginToolsHandler(
+                plugin,
+                validatorDef.handler,
+                'Project validator',
+                validatorDef.name,
+                source,
+                errors,
+            )) as ProjectValidatorFn | undefined;
+            loadedValidators.push(source);
+            if (!validatorFn) continue;
+
+            const ctx: ProjectValidationContext = { projectRoot };
+            try {
+                const findings = await validatorFn(ctx);
+                for (const finding of findings) {
+                    if (finding.severity === 'error') {
+                        errors.push({
+                            file: finding.file,
+                            message: finding.message,
+                            stage: 'plugin',
+                            source,
+                            suggestion: finding.suggestion,
+                        });
+                    } else {
+                        warnings.push({
+                            file: finding.file,
+                            message: finding.message,
+                            source,
+                            suggestion: finding.suggestion,
+                        });
+                    }
+                }
+            } catch (runErr: any) {
+                errors.push({
+                    file: '.jay',
+                    message: `Project validator "${source}" threw: ${runErr.message}`,
+                    stage: 'plugin',
+                    source,
+                });
             }
         }
     }
@@ -2340,6 +2433,11 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
         }
     }
 
+    if (!options.compileOnly) {
+        warnings.push(...(await checkProjectGetActionsReadingCookies(projectRoot)));
+        warnings.push(...checkActionBodyLimitConfig(config));
+    }
+
     if (options.compileOnly) {
         return {
             valid: errors.length === 0,
@@ -2359,73 +2457,10 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
         };
     }
 
-    // --- Project-level validations (DL#175) ---
-    const robotsTxtPath = path.resolve(projectRoot, 'public/robots.txt');
-    if (!fs.existsSync(robotsTxtPath)) {
-        warnings.push({
-            file: 'public/robots.txt',
-            message:
-                "public/robots.txt not found — search engines may crawl pages you don't intend to expose.",
-            suggestion:
-                'Create public/robots.txt with: User-agent: *\nAllow: /\nSitemap: https://your-domain.com/sitemap.xml',
-        });
-    }
-
-    if (!config.site?.baseUrl) {
-        warnings.push({
-            file: '.jay',
-            message:
-                'site.baseUrl not configured — sitemap.xml will not be generated in production.',
-            suggestion: 'Add to .jay config:\n  site:\n    baseUrl: https://your-domain.com',
-        });
-    }
-
-    // DL#213 — site identity drives the auto-emitted Organization/WebSite JSON-LD.
-    if (!config.site?.name) {
-        warnings.push({
-            file: '.jay',
-            message:
-                'site.name not configured — Organization/WebSite JSON-LD and llms.txt will not be emitted, reducing how well search engines and agents understand the site.',
-            suggestion:
-                'Add to .jay config:\n  site:\n    name: Your Site Name\n    logo: /logo.png\n    description: What your site is about',
-        });
-    }
-
-    // DL#214 — agent-discovery: /.well-known/ard.json is author/agent responsibility. Warn on
-    // absence; validate the ARD v0.91 shape when present (handles the ai-catalog.json alias).
-    // A site with no agent resources to advertise suppresses the nudge via `.jay` `validations:
-    // allow-no-ard: true` — a project-level file governs a project-level concern (not a page's
-    // `application/jay-validations` script, which is for page/region-scoped rules).
-    const allowNoArd = config.validations?.['allow-no-ard'] === true;
-    const ardResult = await checkArdFiles(projectRoot);
-    if (ardResult.absent) {
-        if (!allowNoArd) {
-            warnings.push({
-                file: 'public/.well-known/ard.json',
-                message:
-                    'public/.well-known/ard.json not found — agents cannot discover this site’s resources/APIs via Agentic Resource Discovery.',
-                suggestion:
-                    'Author public/.well-known/ard.json (ARD v0.91), or suppress with `validations: { allow-no-ard: true }` in .jay if the site has no agent resources to advertise. See developer/seo-guide.md.',
-            });
-        }
-    } else {
-        for (const finding of ardResult.findings) {
-            if (finding.severity === 'error') {
-                errors.push({
-                    file: 'public/.well-known/ard.json',
-                    message: finding.message,
-                    stage: 'generate',
-                    suggestion: finding.suggestion,
-                });
-            } else {
-                warnings.push({
-                    file: 'public/.well-known/ard.json',
-                    message: finding.message,
-                    suggestion: finding.suggestion,
-                });
-            }
-        }
-    }
+    // --- Project-level validations ---
+    // robots.txt, site.baseUrl, site.name (DL#175/#213) and ARD (DL#214) moved to
+    // @jay-framework/seo-validator via the projectValidators hook (DL#232). Error pages (DL#218) and
+    // design-system (DL#200/#207) stay in core.
 
     // DL#218 — minimum error pages: a production site should ship at least a branded `404` and a
     // `5xx` page so authored errors render with the site's chrome instead of the plain-text fallback.
@@ -2536,13 +2571,23 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
         projectRoot,
     });
     for (const finding of linkFindings) {
-        errors.push({
-            file: finding.file,
-            message: finding.message,
-            stage: 'generate',
-            source: 'internal-links',
-            suggestion: finding.suggestion,
-        });
+        // DL#210 v2 — route by severity: errors block the project; warnings (self-link, TODO) are advisory.
+        if (finding.severity === 'warning') {
+            warnings.push({
+                file: finding.file,
+                message: finding.message,
+                source: 'internal-links',
+                suggestion: finding.suggestion,
+            });
+        } else {
+            errors.push({
+                file: finding.file,
+                message: finding.message,
+                stage: 'generate',
+                source: 'internal-links',
+                suggestion: finding.suggestion,
+            });
+        }
     }
 
     // --- DL#211 — Tier 2: Build-Output Validation (opt-in: validate against an existing build) ---
@@ -2562,6 +2607,9 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
     // --- Plugin validators (DL#145) ---
     const pluginValidators = await runPluginValidators(projectRoot, parsedFiles, errors, warnings);
 
+    // --- Project-level plugin validators (DL#232) ---
+    const projectValidators = await runProjectValidators(projectRoot, errors, warnings);
+
     return {
         valid: errors.length === 0,
         jayHtmlFilesScanned: jayHtmlFiles.length,
@@ -2569,7 +2617,7 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
         errors,
         warnings,
         coverage,
-        pluginValidators,
+        pluginValidators: [...pluginValidators, ...projectValidators],
         designSystemCoverage,
         designSystemReuse,
     };
@@ -2635,7 +2683,7 @@ async function runBuildOutputValidation(args: {
         });
     }
 
-    const oracle = buildBuildOracle(loaded.manifest, backendDir);
+    const oracle = await buildBuildOracle(loaded.manifest, backendDir);
     const findings: BuildOutputFinding[] = [];
 
     // Check 1′ — template links Check 1 deferred, resolved against the concrete URL set.
@@ -2651,6 +2699,17 @@ async function runBuildOutputValidation(args: {
 
     // Check 4 — site-level + template JSON-LD baked into the manifest (DL#213).
     findings.push(...checkBuildJsonLd(loaded.manifest));
+
+    // Check 6 — per-instance *.cache.json size vs carry budgets (query-param-pages.md).
+    // DL#227: instances live in the store, not the manifest; reuse the oracle's listInstances result.
+    for (const inst of oracle.instances) {
+        findings.push(
+            ...(await checkPageCacheFileSizes({
+                cacheAbsPath: inst.cacheAbsPath,
+                routePattern: inst.pattern,
+            })),
+        );
+    }
 
     // Checks 2 + 3 + 5 — per concrete instance: rendered-content links + meta/SEO + component JSON-LD.
     for (const instance of oracle.instances) {
@@ -2957,4 +3016,38 @@ export function printJayValidationResult(result: ValidationResult, options: Vali
             ),
         );
     }
+}
+
+/** DL#234 — GET action chains under `src/actions` that call .withRequest(). */
+async function checkProjectGetActionsReadingCookies(
+    projectRoot: string,
+): Promise<ValidationWarning[]> {
+    const actionFiles = (await glob('src/actions/**/*.ts', { cwd: projectRoot }))
+        .filter((file) => !file.endsWith('.d.ts'))
+        .sort();
+    const warnings: ValidationWarning[] = [];
+    for (const file of actionFiles) {
+        const relativePath = file.split(path.sep).join('/');
+        const source = await fsp.readFile(path.join(projectRoot, file), 'utf-8');
+        for (const warning of checkGetActionsReadingCookies(source, relativePath)) {
+            warnings.push({ file: warning.file, message: warning.message });
+        }
+    }
+    return warnings;
+}
+
+/** DL#234 — `.jay` `server.actionBodyLimitBytes`, when present, must be a positive integer. */
+function checkActionBodyLimitConfig(config: JayConfig): ValidationWarning[] {
+    const server = config.server;
+    if (!server || !('actionBodyLimitBytes' in server)) return [];
+    const value = server.actionBodyLimitBytes;
+    if (isPositiveInteger(value)) return [];
+    return [
+        {
+            file: '.jay',
+            message:
+                `invalid-action-body-limit: server.actionBodyLimitBytes must be a positive integer (got ${JSON.stringify(value)}); ` +
+                `the default of ${DEFAULT_ACTION_BODY_LIMIT_BYTES} bytes is used`,
+        },
+    ];
 }

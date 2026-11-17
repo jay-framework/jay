@@ -55,8 +55,10 @@ import {
     HeadlessContractInfo,
     Contract,
     JAY_IMPORT_RESOLVER,
+    noteExportedTypesFileChanged,
     discoverHeadlessInstances,
     assignCoordinatesToJayHtml,
+    injectDevMarkers,
     type JayHtmlScript,
 } from '@jay-framework/compiler-jay-html';
 import {
@@ -74,6 +76,78 @@ import { getLogger, getDevLogger, type RequestTiming } from '@jay-framework/logg
 import { FreezeStore } from './freeze';
 import { DevServerService, DEV_SERVER_SERVICE } from './dev-server-service';
 import { registerService } from '@jay-framework/stack-server-runtime';
+
+/**
+ * Percent-encode `[`/`]` in the path of asset URLs (`href`/`src`) in served HTML.
+ *
+ * Dynamic routes produce asset paths with literal brackets (e.g.
+ * `.../pre-rendered/products/[slug]/page.css`), whether Vite serves them as
+ * `/@fs/…` or root-relative. Bare brackets in a URL are rejected by some
+ * dev-machine hosting proxies — the browser then sees an empty MIME type
+ * ("Refused to apply style … MIME type ('')"). This mirrors the production fix
+ * (DL#144/R7), which encodes brackets in *all* frontend asset paths; it is
+ * deliberately NOT `/@fs/`-specific (production has no `@fs`).
+ *
+ * Encoding only the emitted URL is sufficient and safe: the dev servers that
+ * handle these requests — Vite (`decodeURI`) and serve-static/express
+ * (`decodeURIComponent`) — decode `%5B` back to `[`, and CSS/module loading
+ * resolves via the plugin's `meta.originId` (not the id), so the encoded URL
+ * still maps to the literal on-disk file. Only the path (before `?`) is touched,
+ * so query strings (e.g. `?a[]=1`) are intact. In practice only asset URLs carry
+ * brackets — resolved navigation hrefs do not — so real links are unaffected.
+ * Exported so the dev-serving test guards the real behavior rather than a copy.
+ */
+export function encodeBracketsInAssetUrls(html: string): string {
+    return html.replace(/\b(href|src)="([^"]*)"/g, (whole, attr: string, value: string) => {
+        const q = value.indexOf('?');
+        const pathPart = q === -1 ? value : value.slice(0, q);
+        if (!pathPart.includes('[') && !pathPart.includes(']')) return whole;
+        const encodedPath = pathPart.replace(/\[/g, '%5B').replace(/\]/g, '%5D');
+        return `${attr}="${encodedPath}${q === -1 ? '' : value.slice(q)}"`;
+    });
+}
+
+/**
+ * Filesystem-safe name for the per-route debug artifact, derived from the route
+ * path only (DL#229). The query string is dropped — otherwise a long query
+ * (e.g. an ~800-char auth token passed by a hosting proxy) pushes the filename
+ * past `NAME_MAX` (255) and `fs.writeFile` throws `ENAMETOOLONG`. Also strips
+ * non-fs-safe characters and length-caps as defense-in-depth. Pure → unit-tested.
+ */
+export function debugPageName(url: string | undefined): string {
+    const routePath = (url || '/').split('?')[0];
+    if (routePath === '/' || routePath === '') return 'index';
+    return (
+        routePath
+            .replace(/^\//, '')
+            .replace(/\//g, '-')
+            .replace(/[^\w.-]/g, '_') // fs-safe (also turns [slug] → _slug_)
+            .slice(0, 200) || 'index' // guard a path that sanitizes to empty
+    );
+}
+
+/**
+ * Write the generated client HTML to `build/<...>/debug/client-entry/<route>.html`
+ * as a debugging aid (DL#229). Two properties matter:
+ *  - **Verbose-only** (DL#83): this is a write-only aid (nothing reads it), so it
+ *    runs only under `logLevel: 'verbose'` — no per-request disk I/O in normal dev.
+ *  - **Best-effort**: a debug side effect must never fail a page request, so every
+ *    error (ENAMETOOLONG, EACCES, ENOSPC, read-only buildFolder, …) is swallowed.
+ */
+async function writeDebugPage(
+    options: DevServerOptions,
+    url: string | undefined,
+    html: string,
+): Promise<void> {
+    if (options.logLevel !== 'verbose' || !options.buildFolder) return;
+    try {
+        const clientScriptDir = path.join(options.buildFolder, 'debug', 'client-entry');
+        await fs.mkdir(clientScriptDir, { recursive: true });
+        await fs.writeFile(path.join(clientScriptDir, `${debugPageName(url)}.html`), html, 'utf-8');
+    } catch (e) {
+        getLogger().info(`[dev] debug page write skipped: ${(e as Error).message}`);
+    }
+}
 
 /** Callback to register linked files for watching. Set by setupSlowRenderCacheInvalidation. */
 let _watchLinkedFiles: (files: string[], route?: JayRoute) => void = () => {};
@@ -292,6 +366,8 @@ function defaults(options: DevServerOptions): DevServerOptions {
         },
         httpServer: options.httpServer,
         allowedHosts: options.allowedHosts,
+        sourceEditing: options.sourceEditing,
+        actionBodyLimitBytes: options.actionBodyLimitBytes,
     };
 }
 
@@ -845,6 +921,7 @@ async function handlePreRenderRequest(
         partKeys,
         pageParams,
         pageProps,
+        options.sourceEditing,
     );
     timing?.recordSlowRender(Date.now() - slowStart);
 
@@ -1049,19 +1126,17 @@ async function handleClientOnlyRequest(
         {
             enableAutomation: !options.disableAutomation,
             routePattern: routeToExpressRoute(route),
+            sourceFile: path.relative(options.projectRootFolder!, route.jayHtmlPath),
         },
     );
 
-    // Save generated page to build folder for debugging
-    if (options.buildFolder) {
-        const pageName = !url || url === '/' ? 'index' : url.replace(/^\//, '').replace(/\//g, '-');
-        const clientScriptDir = path.join(options.buildFolder, 'debug', 'client-entry');
-        await fs.mkdir(clientScriptDir, { recursive: true });
-        await fs.writeFile(path.join(clientScriptDir, `${pageName}.html`), pageHtml, 'utf-8');
-    }
+    // Save generated page to build/debug for debugging — verbose-only, best-effort (DL#229).
+    await writeDebugPage(options, url, pageHtml);
 
     const viteStart = Date.now();
-    const compiledPageHtml = await vite.transformIndexHtml(!!url ? url : '/', pageHtml);
+    const compiledPageHtml = encodeBracketsInAssetUrls(
+        await vite.transformIndexHtml(url?.split('?')[0] || '/', pageHtml),
+    );
     timing?.recordViteClient(Date.now() - viteStart);
 
     res.status(200).set({ 'Content-Type': 'text/html' }).send(compiledPageHtml);
@@ -1098,10 +1173,19 @@ async function sendResponse(
 ): Promise<void> {
     let pageHtml: string;
 
+    // DL#219: project-relative path of the page's jay-html, so the inspector can report which file
+    // the matched `lines` live in (the agent edits this file).
+    const sourceFile = path.relative(options.projectRootFolder!, sourceJayHtmlPath);
+
     try {
         // SSR: compile from original jay-html with merged ViewState (DL#144)
         const jayHtmlDir = path.dirname(jayHtmlPath);
-        const jayHtmlContent = preLoadedContent ?? (await fs.readFile(jayHtmlPath, 'utf-8'));
+        const rawContent = preLoadedContent ?? (await fs.readFile(jayHtmlPath, 'utf-8'));
+        // DL#219: SSR compiles from the original source (not the pre-rendered file), so inject the
+        // source-editing markers here too. Both callers pass the original path and injectDevMarkers
+        // is deterministic + idempotent, so these lines match the hydrate side's markers (from the
+        // pre-rendered file, also injected from the same original) — no hydration mismatch.
+        const jayHtmlContent = options.sourceEditing ? injectDevMarkers(rawContent) : rawContent;
 
         pageHtml = await generateSSRPageHtml(
             vite,
@@ -1124,6 +1208,7 @@ async function sendResponse(
                 enableAutomation: !options.disableAutomation,
                 slowViewState,
                 routePattern,
+                sourceFile,
             },
             undefined,
             headTags,
@@ -1145,17 +1230,13 @@ async function sendResponse(
                 enableAutomation: !options.disableAutomation,
                 slowViewState,
                 routePattern,
+                sourceFile,
             },
         );
     }
 
-    // Save generated page to build folder for debugging
-    if (options.buildFolder) {
-        const pageName = !url || url === '/' ? 'index' : url.replace(/^\//, '').replace(/\//g, '-');
-        const clientScriptDir = path.join(options.buildFolder, 'debug', 'client-entry');
-        await fs.mkdir(clientScriptDir, { recursive: true });
-        await fs.writeFile(path.join(clientScriptDir, `${pageName}.html`), pageHtml, 'utf-8');
-    }
+    // Save generated page to build/debug for debugging — verbose-only, best-effort (DL#229).
+    await writeDebugPage(options, url, pageHtml);
 
     // Invalidate cached html-proxy modules so Vite re-extracts inline scripts.
     // Without this, Vite serves stale script content after SSR/client mode changes.
@@ -1166,7 +1247,9 @@ async function sendResponse(
     }
 
     const viteStart = Date.now();
-    const compiledPageHtml = await vite.transformIndexHtml(!!url ? url : '/', pageHtml);
+    const compiledPageHtml = encodeBracketsInAssetUrls(
+        await vite.transformIndexHtml(url?.split('?')[0] || '/', pageHtml),
+    );
     timing?.recordViteClient(Date.now() - viteStart);
 
     res.status(statusCode).set({ 'Content-Type': 'text/html' }).send(compiledPageHtml);
@@ -1241,7 +1324,9 @@ async function handleFrozenRequest(
         }
 
         if (injectDevHmr) {
-            const compiledHtml = await vite.transformIndexHtml(url || '/', html);
+            const compiledHtml = encodeBracketsInAssetUrls(
+                await vite.transformIndexHtml(url?.split('?')[0] || '/', html),
+            );
             res.status(200).set(headers).send(compiledHtml);
         } else {
             res.status(200).set(headers).send(html);
@@ -1286,8 +1371,15 @@ async function preRenderJayHtml(
     partKeys: string[] = [],
     pageParams: Record<string, string> = {},
     pageProps: PageProps = { language: 'en', url: '' },
+    sourceEditing: boolean = false,
 ): Promise<PreRenderResult | undefined> {
-    const jayHtmlWithTemplates = await fs.readFile(route.jayHtmlPath, 'utf-8');
+    // DL#219: inject dev-mode source-editing markers before slow-render, while line offsets
+    // still map to the author's on-disk file. All downstream dev targets (hydrate + SSR) read
+    // the resulting pre-rendered jay-html, so they inherit the markers. Gated behind the
+    // `sourceEditing` option (default off) because the markers change rendered output — they
+    // are only emitted for AIditor / source-editing sessions, not normal dev renders.
+    const rawJayHtml = await fs.readFile(route.jayHtmlPath, 'utf-8');
+    const jayHtmlWithTemplates = sourceEditing ? injectDevMarkers(rawJayHtml) : rawJayHtml;
     const sourceDir = path.dirname(route.jayHtmlPath);
 
     // slowRenderTransform still runs for the dev server's slow render cache.
@@ -1464,7 +1556,7 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     setupServiceHotReload(vite, lifecycleManager);
 
     // Set up action router for /_jay/actions/* endpoints
-    setupActionRouter(vite, buildFolder!);
+    setupActionRouter(vite, buildFolder!, options.actionBodyLimitBytes);
 
     // Scan routes, excluding any page files found inside the build folder.
     // This prevents pre-rendered cache files from being picked up as additional routes
@@ -1659,9 +1751,15 @@ function setupServiceHotReload(
  * Sets up the action router for handling /_jay/actions/* requests.
  * Actions are RPC-style endpoints that can be called from the client.
  */
-function setupActionRouter(vite: ViteDevServer, buildFolder: string): void {
-    // Add body parser middleware for action requests (DL#131: multipart support)
-    vite.middlewares.use(actionBodyParser({ buildFolder, registry: actionRegistry }));
+function setupActionRouter(
+    vite: ViteDevServer,
+    buildFolder: string,
+    actionBodyLimitBytes: number | undefined,
+): void {
+    // Add body parser middleware for action requests (DL#131: multipart support, DL#234: size cap)
+    vite.middlewares.use(
+        actionBodyParser({ buildFolder, registry: actionRegistry, actionBodyLimitBytes }),
+    );
 
     // Add action router
     vite.middlewares.use(ACTION_ENDPOINT_BASE, createActionRouter({ registry: actionRegistry }));
@@ -1788,6 +1886,17 @@ function setupSlowRenderCacheInvalidation(
     };
 
     vite.watcher.on('change', (changedPath) => {
+        // Perf (DL#224): a change to a .ts / .d.ts / .jay-contract can alter a component's analyzed
+        // exported types — directly, or transitively via an imported type. The analyzeExportedTypes
+        // cache keys on the analyzed file's own mtime, which catches a direct edit but not a transitive
+        // one (e.g. a regenerated contract .d.ts while the component .ts is untouched). Clear it here so
+        // the next request re-analyzes. (jay-html template edits don't change exported types.)
+        if (/\.(ts|tsx|jay-contract)$/.test(changedPath)) {
+            // Incremental (DL#225): bump just this file's version so the LanguageService re-reads it and
+            // re-checks dependents, keeping the rest of the program warm.
+            noteExportedTypesFileChanged(changedPath);
+        }
+
         // CSS or component files linked from jay-html.
         // CSS content is inlined in the SSR output; component jay-html templates
         // are injected into pages. Both require cache invalidation on change.

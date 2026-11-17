@@ -116,3 +116,28 @@ jay-stack serve --role renderer --port 4001
 ```
 
 The renderer server listens for data change webhooks and rebuilds affected page instances. The main server picks up the updated artifacts automatically (it re-reads the manifest when `build-metadata.json` changes).
+
+## Fresh Data and New Items
+
+The main server keeps slow-render data fresh and serves items that did not exist at build time. Each server instance does this independently against its own artifact store (a shared store, such as Wix's data collection, is refreshed once for everyone).
+
+**Stale-while-revalidate.** When slow render returns `ttl` / `grace` (seconds, see the developer `render-results.md` guide), the server classifies each instance as `fresh`, `stale` or `expired`:
+
+| State     | Served                                                                       | Headers                                                    |
+| --------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `fresh`   | Stored data; `max-age` / `s-maxage` clamped to the remaining TTL             | `jay-freshness: fresh, <age>ms`                            |
+| `stale`   | Stored data immediately, refresh runs in the background                      | `Cache-Control: no-store`, `jay-freshness: stale, <age>ms` |
+| `expired` | Waits up to `JAY_STALE_WAIT_MS` (2000) for the refresh, else the stored data | as `stale`, or `fresh` if the refresh finished             |
+
+Old data is never cached by CDNs (`no-store`) so a refresh becomes visible at once; validators (`ETag` gets `-<renderedAt>` appended, `Last-Modified`) are kept so crawlers and browsers can still revalidate cheaply.
+
+**Render on miss.** A URL that matches a route but has no instance (e.g. a product published after the build) is slow-rendered on the first request, stored, and served. If the slow render answers `notFound()` the request is a real 404 (remembered in memory for 10 minutes); if it cannot render right now the server answers `503` with `Retry-After: 2`.
+
+**Limits.** Concurrent requests for the same instance share one slow render. At most `JAY_SLOW_RENDER_CONCURRENCY` (default 5) slow renders run at once across refreshes and misses; there is no queue — a refresh that finds all slots busy serves the old data, a miss answers 503. A failed refresh backs off before retrying.
+
+| Variable                      | Default | Meaning                                                |
+| ----------------------------- | ------- | ------------------------------------------------------ |
+| `JAY_SLOW_RENDER_CONCURRENCY` | `5`     | Max concurrent slow renders (refresh + render-on-miss) |
+| `JAY_STALE_WAIT_MS`           | `2000`  | Max wait for the refresh of an `expired` instance      |
+| `JAY_MISS_TIMEOUT_MS`         | `8000`  | Max wait of a render-on-miss before 503                |
+| `JAY_FRESHNESS_HEADER`        | on      | Set to `off` to omit the `jay-freshness` header        |

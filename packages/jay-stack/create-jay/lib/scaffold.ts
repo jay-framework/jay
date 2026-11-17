@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
 import { CORE_DEPS, CORE_DEV_DEPS, type PluginEntry } from './plugins.js';
+import { renderAgentGuidance, renderHomePage, type PackageManager } from './render-templates.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -117,6 +118,7 @@ export async function scaffoldProject(
     projectDir: string,
     name: string,
     selectedPlugins: PluginEntry[],
+    packageManager: PackageManager,
 ): Promise<void> {
     fs.mkdirSync(projectDir, { recursive: true });
 
@@ -124,7 +126,7 @@ export async function scaffoldProject(
     writeFile(
         projectDir,
         'src/pages/page.jay-html',
-        readTemplate('page.jay-html').replace(/\{\{name\}\}/g, name),
+        renderHomePage(readTemplate('page.jay-html'), name, selectedPlugins),
     );
     writeFile(projectDir, 'src/pages/page.ts', readTemplate('page.ts'));
     writeFile(projectDir, 'src/pages/page.jay-contract', readTemplate('page.jay-contract'));
@@ -135,7 +137,7 @@ export async function scaffoldProject(
 
     // CLAUDE.md and agents.md are mirrors from one template so non-Claude agents (anything following
     // the agents.md convention) get identical guidance. Single source → no drift between the two.
-    const agentGuidance = readTemplate('CLAUDE.md');
+    const agentGuidance = renderAgentGuidance(readTemplate('CLAUDE.md'), packageManager);
     writeFile(projectDir, 'CLAUDE.md', agentGuidance);
     writeFile(projectDir, 'agents.md', agentGuidance);
 

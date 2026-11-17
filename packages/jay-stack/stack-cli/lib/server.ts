@@ -4,7 +4,7 @@ import { mkDevServer } from '@jay-framework/dev-server';
 import getPort from 'get-port';
 import path from 'path';
 import fs from 'fs';
-import { loadConfig, getConfigWithDefaults } from './config';
+import { loadConfig, getConfigWithDefaults, resolveActionBodyLimitBytes } from './config';
 import { generatePageDefinitionFiles } from './generate-page-definition-files';
 import { generateContractDefinitionFiles } from './generate-contract-definition-files';
 import { getLogger, type LogLevel } from '@jay-framework/logger';
@@ -62,6 +62,8 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
         logLevel: options.logLevel,
         httpServer,
         allowedHosts: resolvedConfig.devServer.allowedHosts,
+        sourceEditing: resolvedConfig.devServer.sourceEditing,
+        actionBodyLimitBytes: resolveActionBodyLimitBytes(config),
     });
 
     app.use(server);

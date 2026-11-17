@@ -6,7 +6,19 @@
  */
 
 import { Request, Response, RequestHandler } from 'express';
-import { ActionRegistry, actionRegistry } from '@jay-framework/stack-server-runtime';
+import {
+    ActionRegistry,
+    actionRegistry,
+    crossOriginErrorResponse,
+    DEFAULT_ACTION_BODY_LIMIT_BYTES,
+    payloadTooLargeResponse,
+    isCrossOriginRequest,
+    isSecureRequest,
+    needsSameOriginCheck,
+    parseCookies,
+    type IncomingRequest,
+    type RegisteredActionEntry,
+} from '@jay-framework/stack-server-runtime';
 import type { HttpMethod, JayFile } from '@jay-framework/fullstack-component';
 import { getDevLogger } from '@jay-framework/logger';
 import Busboy from 'busboy';
@@ -100,6 +112,11 @@ export function createActionRouter(options?: ActionRouterOptions): RequestHandle
             return;
         }
 
+        if (isRejectedCrossOrigin(action, req)) {
+            res.status(403).json(crossOriginErrorResponse(actionName));
+            return;
+        }
+
         // Parse input based on method
         let input: unknown;
         try {
@@ -141,13 +158,19 @@ export function createActionRouter(options?: ActionRouterOptions): RequestHandle
             if (tempDir) cleanupTempDir(tempDir);
         };
 
+        const incoming = action.needsRequest ? readIncomingRequest(req) : undefined;
+        // withRequest actions are per-user: no response may be stored by any cache (DL#230)
+        if (action.needsRequest) {
+            res.set('Cache-Control', registry.getCacheHeaders(actionName)!);
+        }
+
         // Streaming action (DL#129): respond with NDJSON
         if (registry.isStreaming(actionName)) {
             res.setHeader('Content-Type', 'application/x-ndjson');
             res.setHeader('Transfer-Encoding', 'chunked');
 
             try {
-                const generator = registry.executeStream(actionName, input);
+                const generator = registry.executeStream(actionName, input, incoming);
                 for await (const chunk of generator) {
                     res.write(JSON.stringify({ chunk }) + '\n');
                 }
@@ -162,7 +185,7 @@ export function createActionRouter(options?: ActionRouterOptions): RequestHandle
         }
 
         // Execute the action
-        const result = await registry.execute(actionName, input);
+        const result = await registry.execute(actionName, input, incoming);
         cleanup();
 
         // Set cache headers for GET requests
@@ -175,6 +198,9 @@ export function createActionRouter(options?: ActionRouterOptions): RequestHandle
 
         // Return result
         if (result.success) {
+            for (const setCookie of result.setCookies ?? []) {
+                res.append('Set-Cookie', setCookie);
+            }
             res.status(200).json({
                 success: true,
                 data: result.data,
@@ -193,9 +219,30 @@ export function createActionRouter(options?: ActionRouterOptions): RequestHandle
 }
 
 /**
+ * Whether a withRequest call came from another origin and must be rejected (DL#230, DL#234).
+ */
+function isRejectedCrossOrigin(action: RegisteredActionEntry, req: Request): boolean {
+    return (
+        needsSameOriginCheck(action) &&
+        isCrossOriginRequest({
+            secFetchSite: req.headers['sec-fetch-site'] as string | undefined,
+            origin: req.headers.origin,
+            requestOrigin: `${req.protocol}://${req.headers.host}`,
+        })
+    );
+}
+
+function readIncomingRequest(req: Request): IncomingRequest {
+    return {
+        cookies: parseCookies(req.headers.cookie),
+        secure: isSecureRequest(req.protocol, req.headers['x-forwarded-proto'] as string),
+    };
+}
+
+/**
  * Determines HTTP status code based on error type.
  */
-function getStatusCodeForError(code: string, isActionError: boolean): number {
+export function getStatusCodeForError(code: string, isActionError: boolean): number {
     // ActionErrors are business logic errors - use 422 (Unprocessable Entity)
     if (isActionError) {
         return 422;
@@ -212,6 +259,8 @@ function getStatusCodeForError(code: string, isActionError: boolean): number {
             return 401;
         case 'FORBIDDEN':
             return 403;
+        case 'PAYLOAD_TOO_LARGE':
+            return 413;
         case 'INTERNAL_ERROR':
         default:
             return 500;
@@ -226,6 +275,8 @@ export interface ActionBodyParserOptions {
     buildFolder: string;
     /** Action registry to check for acceptsFiles (default: global actionRegistry) */
     registry?: ActionRegistry;
+    /** Cap on a JSON action request body in UTF-8 bytes (DL#234; default 1 MiB) */
+    actionBodyLimitBytes?: number;
 }
 
 /**
@@ -370,6 +421,7 @@ function cleanupTempDir(dir: string): void {
 export function actionBodyParser(options: ActionBodyParserOptions): RequestHandler {
     const { buildFolder, registry: reg } = options;
     const registryToUse = reg ?? actionRegistry;
+    const limitBytes = options.actionBodyLimitBytes ?? DEFAULT_ACTION_BODY_LIMIT_BYTES;
 
     return (req: Request, res: Response, next) => {
         // Only parse for action routes
@@ -380,6 +432,13 @@ export function actionBodyParser(options: ActionBodyParserOptions): RequestHandl
 
         // Skip body parsing for GET requests
         if (req.method === 'GET') {
+            next();
+            return;
+        }
+
+        // A cross-origin withRequest call is rejected by the router; read no body for it (DL#230)
+        const routedAction = registryToUse.get(req.path.slice(ACTION_ENDPOINT_BASE.length + 1));
+        if (routedAction && isRejectedCrossOrigin(routedAction, req)) {
             next();
             return;
         }
@@ -428,27 +487,65 @@ export function actionBodyParser(options: ActionBodyParserOptions): RequestHandl
         }
 
         // Default: parse JSON body
-        let body = '';
-        req.setEncoding('utf8');
-
-        req.on('data', (chunk) => {
-            body += chunk;
-        });
-
-        req.on('end', () => {
-            try {
-                req.body = body ? JSON.parse(body) : {};
-                next();
-            } catch (e) {
-                res.status(400).json({
-                    success: false,
-                    error: {
-                        code: 'INVALID_JSON',
-                        message: 'Invalid JSON in request body',
-                        isActionError: false,
-                    },
-                });
-            }
-        });
+        parseJsonBody(req, res, next, limitBytes);
     };
+}
+
+/**
+ * Collects a JSON body, counting UTF-8 bytes (DL#234). Over the limit it responds 413 once,
+ * stops reading, and closes the request instead of draining the rest of the body.
+ */
+function parseJsonBody(req: Request, res: Response, next: () => void, limitBytes: number): void {
+    if (declaredLengthExceeds(req, limitBytes)) {
+        rejectTooLarge(req, res, limitBytes);
+        return;
+    }
+
+    const chunks: Buffer[] = [];
+    let receivedBytes = 0;
+    let rejected = false;
+
+    req.on('data', (chunk: Buffer) => {
+        if (rejected) return;
+        receivedBytes += chunk.length;
+        if (receivedBytes > limitBytes) {
+            rejected = true;
+            chunks.length = 0;
+            rejectTooLarge(req, res, limitBytes);
+            return;
+        }
+        chunks.push(chunk);
+    });
+
+    req.on('end', () => {
+        if (rejected) return;
+        const body = Buffer.concat(chunks).toString('utf8');
+        try {
+            req.body = body ? JSON.parse(body) : {};
+        } catch {
+            res.status(400).json({
+                success: false,
+                error: {
+                    code: 'INVALID_JSON',
+                    message: 'Invalid JSON in request body',
+                    isActionError: false,
+                },
+            });
+            return;
+        }
+        next();
+    });
+}
+
+/** Whether a valid `Content-Length` already exceeds the limit; invalid values are left to the byte counter. */
+function declaredLengthExceeds(req: Request, limitBytes: number): boolean {
+    const declared = req.headers['content-length'];
+    if (typeof declared !== 'string' || !/^\d+$/.test(declared.trim())) return false;
+    return Number(declared) > limitBytes;
+}
+
+function rejectTooLarge(req: Request, res: Response, limitBytes: number): void {
+    res.once('finish', () => req.destroy());
+    res.set('Connection', 'close');
+    res.status(413).json(payloadTooLargeResponse(limitBytes));
 }

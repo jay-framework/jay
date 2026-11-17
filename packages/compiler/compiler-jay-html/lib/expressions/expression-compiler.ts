@@ -245,8 +245,9 @@ export class Variables {
 function getExpressionHelp(startRule: string): string {
     switch (startRule) {
         case 'booleanAttribute':
+        case 'booleanProperty':
             return `
-  Boolean attributes use condition-style syntax (no curly braces).
+  Boolean attributes use condition-style syntax.
   Examples:
     ✓ disabled="isDisabled"
     ✓ disabled="!isValid"
@@ -256,7 +257,8 @@ function getExpressionHelp(startRule: string): string {
     ✓ disabled="a >= b.value"       (field-to-field comparison)
     ✓ disabled="isLoading || !isValid"
     ✓ disabled (bare attribute for always-present)
-    ✗ disabled="{isDisabled}" (no curly braces)`;
+    ✓ disabled="{isDisabled}"       (a single binding is the same condition)
+    ✗ disabled="{a} {b}"            (text interpolation is not a condition)`;
 
         case 'dynamicAttribute':
         case 'dynamicProperty':
@@ -379,6 +381,12 @@ function getFallbackForRule(
                 Imports.for(Import.booleanAttribute),
                 validations,
             );
+        case 'booleanProperty':
+            return new RenderFragment(
+                `dp(vs => false)`,
+                Imports.for(Import.dynamicProperty),
+                validations,
+            );
         case 'classExpression':
         case 'reactClassExpression':
             return new RenderFragment(`''`, Imports.none(), validations);
@@ -489,7 +497,27 @@ export function parseBooleanAttributeExpression(
     expression: string,
     vars: Variables,
 ): RenderFragment {
-    return doParse(expression, 'booleanAttribute', vars);
+    return doParse(toBooleanCondition(expression), 'booleanAttribute', vars);
+}
+
+/**
+ * DL#235 — a boolean DOM property (`checked`) takes the same condition syntax as a boolean attribute,
+ * but is applied as a property (`dp`) so the live state follows the ViewState after user interaction.
+ */
+export function parseBooleanPropertyExpression(
+    expression: string,
+    vars: Variables,
+): RenderFragment {
+    return doParse(toBooleanCondition(expression), 'booleanProperty', vars);
+}
+
+/**
+ * DL#235 — a boolean attribute value that is exactly one `{expr}` binding means the condition `expr`
+ * (`checked="{selected}"` ≡ `checked="selected"`). Any other value is already condition syntax.
+ */
+export function toBooleanCondition(attributeValue: string): string {
+    const singleBinding = attributeValue.trim().match(/^\{([^{}]*)\}$/);
+    return singleBinding ? singleBinding[1].trim() : attributeValue;
 }
 
 export function parseAttributeExpression(expression: string, vars: Variables): RenderFragment {

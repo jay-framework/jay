@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/dev-environment",
-  "version": "0.25.4",
+  "version": "0.26.4",
   "private": true,
   "files": [
     "*.ts",
@@ -16,6 +16,6 @@
   "devDependencies": {
     "@types/node": "^20.11.5",
     "typescript": "^5.3.3",
-    "vitest": "^1.2.1"
+    "vitest": "^4.1.11"
   }
 }

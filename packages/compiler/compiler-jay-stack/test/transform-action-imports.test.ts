@@ -219,6 +219,41 @@ describe('transform-action-imports', () => {
             });
         });
 
+        /**
+         * Bug: a builder chain containing .withRequest() (DL#230) is not recognized as an action.
+         * Found in: implementing design-log/230 - the chain walker only knows a fixed method list.
+         * Expected: the action is extracted, so the client build replaces it with an HTTP caller.
+         * Actual: extraction stops at .withRequest() and the action is missing.
+         */
+        it('should extract actions and streams that use withRequest', () => {
+            const source = `
+                import { makeJayAction, makeJayStream } from '@jay-framework/fullstack-component';
+
+                export const login = makeJayAction('account.login')
+                    .withServices(ACCOUNT_SERVICE)
+                    .withRequest()
+                    .withHandler(async (input, request, account) => ({ ok: true }));
+
+                export const feed = makeJayStream('account.feed')
+                    .withRequest()
+                    .withHandler(async function* (input, request) {
+                        yield 1;
+                    });
+            `;
+
+            const actions = extractActionsFromSource(source, 'test-request.ts');
+
+            expect(actions).toEqual([
+                { actionName: 'account.login', method: 'POST', exportName: 'login' },
+                {
+                    actionName: 'account.feed',
+                    method: 'POST',
+                    exportName: 'feed',
+                    isStreaming: true,
+                },
+            ]);
+        });
+
         it('should extract makeJayStream with withFiles flag', () => {
             const source = `
                 import { makeJayStream } from '@jay-framework/fullstack-component';

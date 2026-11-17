@@ -1,0 +1,64 @@
+{
+  "disposition": "REVIEW",
+  "findings": [
+    {
+      "id": "rule-1",
+      "source": "rule",
+      "severity": "review",
+      "ruleId": "design:designSystemOnly",
+      "selector": "**",
+      "path": "pages/home.jay-html",
+      "section": "ds-retheme",
+      "message": "design change on pages/home.jay-html#ds-retheme is not design-system-only — it re-themes or restructures a pre-existing element, or uses a non-token value",
+      "suggestion": "Add design-system elements/tokens instead of editing existing elements, or request review from the designer",
+      "role": "client"
+    },
+    {
+      "id": "rule-4",
+      "source": "rule",
+      "severity": "review",
+      "ruleId": "create:from-template",
+      "selector": "**",
+      "path": "pages/plain.jay-html",
+      "message": "new pages/plain.jay-html is not built from a template",
+      "suggestion": "Build the page/section from a template region (import one with template= and flatten it via `jay-stack sync`), or request review",
+      "role": "client"
+    }
+  ],
+  "changes": [
+    {
+      "kind": "content",
+      "path": "pages/home.jay-html",
+      "section": "ds-add",
+      "summary": "content changed in pages/home.jay-html#ds-add"
+    },
+    {
+      "kind": "design",
+      "path": "pages/home.jay-html",
+      "section": "ds-add",
+      "summary": "design changed in pages/home.jay-html#ds-add"
+    },
+    {
+      "kind": "design",
+      "path": "pages/home.jay-html",
+      "section": "ds-retheme",
+      "summary": "design changed in pages/home.jay-html#ds-retheme"
+    },
+    {
+      "kind": "design",
+      "path": "pages/home.jay-html",
+      "section": "sync-card",
+      "summary": "design changed in pages/home.jay-html#sync-card"
+    },
+    {
+      "kind": "create",
+      "path": "pages/offers.jay-html",
+      "summary": "added pages/offers.jay-html"
+    },
+    {
+      "kind": "create",
+      "path": "pages/plain.jay-html",
+      "summary": "added pages/plain.jay-html"
+    }
+  ]
+}

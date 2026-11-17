@@ -10,6 +10,13 @@ export type Coordinate = string[];
 export interface DevServerPagePart {
     compDefinition: AnyJayStackComponentDefinition;
     key?: string;
+    /**
+     * Module the keyed part's component is loaded from — its stable, global component identity
+     * (DL#221 post-merge fix). Used to key the build-time `loadParams` cache so two routes that reuse
+     * the same page-local ref `key` for different components don't collide. Absent for the page's own
+     * part (which is keyed per route instead).
+     */
+    modulePath?: string;
     clientImport: string;
     clientPart: string;
     contractInfo?: {

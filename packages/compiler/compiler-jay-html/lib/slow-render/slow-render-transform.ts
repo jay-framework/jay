@@ -10,7 +10,16 @@ import {
     getEffectivePhase,
 } from '../contract';
 import { isEnumType, WithValidations } from '@jay-framework/compiler-shared';
-import { parseConditionForSlowRender, SlowRenderContext } from '../expressions/expression-compiler';
+import {
+    parseConditionForSlowRender,
+    SlowRenderContext,
+    toBooleanCondition,
+} from '../expressions/expression-compiler';
+import {
+    BOOLEAN_ATTRIBUTE,
+    BOOLEAN_PROPERTY,
+    propertyMapping,
+} from '../jay-target/jay-html-compiler-shared';
 import { JayImportResolver } from '../jay-target/jay-import-resolver';
 import { Coordinate } from '@jay-framework/runtime';
 
@@ -329,6 +338,14 @@ function transformElement(
         )
         .map((attrName) => {
             const attrValue = element.getAttribute(attrName);
+            if (attrValue && isBooleanAttributeName(attrName)) {
+                resolveBooleanAttribute(element, attrName, attrValue, {
+                    slowData: contextData,
+                    phaseMap: phaseMap as Map<string, { phase: string; isArray?: boolean }>,
+                    contextPath,
+                });
+                return WithValidations.pure(null);
+            }
             if (attrValue && hasBindings(attrValue)) {
                 return resolveTextBindings(attrValue, contextData, phaseMap, contextPath).map(
                     (resolved) => {
@@ -348,6 +365,31 @@ function transformElement(
             children.forEach((child) => element.appendChild(child as any));
             return [element];
         });
+}
+
+function isBooleanAttributeName(attrName: string): boolean {
+    const type = propertyMapping[attrName.toLowerCase()]?.type;
+    return type === BOOLEAN_ATTRIBUTE || type === BOOLEAN_PROPERTY;
+}
+
+/**
+ * DL#235 — a boolean attribute holds a condition, not text: a fully slow condition becomes the bare
+ * attribute (true) or is removed (false); a mixed one keeps its simplified condition for the fast phase.
+ */
+function resolveBooleanAttribute(
+    element: HTMLElement,
+    attrName: string,
+    attrValue: string,
+    slowContext: SlowRenderContext,
+): void {
+    const condition = toBooleanCondition(attrValue);
+    const conditionResult = parseConditionForSlowRender(condition, slowContext);
+    if (conditionResult.type === 'resolved') {
+        if (conditionResult.value) element.setAttribute(attrName, '');
+        else element.removeAttribute(attrName);
+    } else if (conditionResult.simplifiedExpr && conditionResult.simplifiedExpr !== condition) {
+        element.setAttribute(attrName, conditionResult.simplifiedExpr);
+    }
 }
 
 /**
