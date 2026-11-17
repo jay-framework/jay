@@ -34,7 +34,9 @@ function installShare(sandbox: Sandbox): void {
     fs.symlinkSync(packageRoot, path.join(scoped, 'share'));
 }
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+    vi.restoreAllMocks();
+});
 
 describe('share actions (DL221)', () => {
     it('declares 7 devOnly actions whose names equal their tools export names', async () => {
