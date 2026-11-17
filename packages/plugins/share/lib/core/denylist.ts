@@ -56,14 +56,17 @@ export function writePluginGitignore(pluginDir: string): void {
 }
 
 const CODE_EXTENSIONS = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
+/** Generated type declarations (`*.d.ts`, `*.jay-html.d.ts`, ...) never run. */
+const DECLARATION_EXTENSIONS = /\.d\.(ts|mts|cts)$/;
 
 /** Script files that run on the server or in the build (`PluginSummary.hasServerCode`). */
 export function isScriptFile(repoPath: string): boolean {
-    return CODE_EXTENSIONS.test(repoPath);
+    return CODE_EXTENSIONS.test(repoPath) && !DECLARATION_EXTENSIONS.test(repoPath);
 }
 
 /** Code files (informational only, DL#221 § "Code files"). */
 export function isCodeFile(repoPath: string): boolean {
+    if (DECLARATION_EXTENSIONS.test(repoPath)) return false;
     return (
         isScriptFile(repoPath) || repoPath === 'plugin.yaml' || repoPath.startsWith('agent-kit/')
     );
