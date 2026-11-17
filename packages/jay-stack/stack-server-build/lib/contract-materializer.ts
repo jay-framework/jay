@@ -14,7 +14,11 @@ import type {
     DynamicContractGenerator,
     GeneratedContractYaml,
 } from '@jay-framework/fullstack-component';
-import { type DynamicContractConfig, normalizeActionEntry } from '@jay-framework/compiler-shared';
+import {
+    type DynamicContractConfig,
+    normalizeActionEntry,
+    pluginStylePaths,
+} from '@jay-framework/compiler-shared';
 import { createRequire } from 'module';
 import { type ScannedPlugin, scanPlugins } from '@jay-framework/stack-server-runtime';
 import type { ViteSSRLoader } from '@jay-framework/stack-server-runtime';
@@ -88,6 +92,9 @@ export interface PluginsIndexEntry {
     routes?: RouteIndexEntry[];
     /** CLI commands (DL#142) */
     commands?: CommandIndexEntry[];
+    /** Page-wide plugin stylesheets, project-relative (DL#238). Preview hosts link these before
+     *  the CSS of any component of this plugin. */
+    styles?: string[];
 }
 
 export interface PluginsIndex {
@@ -458,6 +465,7 @@ export async function materializeContracts(
                     };
                 });
             }
+            addPluginStyles(entry, plugin, projectRoot);
             pluginsIndexMap.set(indexKey, entry);
         }
 
@@ -635,6 +643,7 @@ export async function materializeContracts(
             ...(data.contexts?.length && { contexts: data.contexts }),
             ...(data.routes?.length && { routes: data.routes }),
             ...(data.commands?.length && { commands: data.commands }),
+            ...(data.styles && { styles: data.styles }),
         })),
     };
 
@@ -751,6 +760,7 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
                     };
                 });
             }
+            addPluginStyles(entry, plugin, projectRoot);
             pluginsMap.set(indexKey, entry);
         }
 
@@ -816,6 +826,20 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
             ...(data.contexts?.length && { contexts: data.contexts }),
             ...(data.routes?.length && { routes: data.routes }),
             ...(data.commands?.length && { commands: data.commands }),
+            ...(data.styles && { styles: data.styles }),
         })),
     };
+}
+
+function addPluginStyles(
+    entry: Omit<PluginsIndexEntry, 'name'>,
+    plugin: ScannedPlugin,
+    projectRoot: string,
+): void {
+    const styles = pluginStylePaths(
+        plugin.pluginPath,
+        plugin.manifest,
+        plugin.isLocal ? undefined : plugin.packageName,
+    ).map((stylePath) => path.relative(projectRoot, stylePath).replace(/\\/g, '/'));
+    if (styles.length > 0) entry.styles = styles;
 }
