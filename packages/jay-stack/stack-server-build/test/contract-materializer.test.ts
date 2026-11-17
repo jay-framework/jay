@@ -42,4 +42,23 @@ describe('contract-materializer plugins-index keys', () => {
         const index = await listContracts({ projectRoot: root });
         expect(index.plugins.map((p) => p.name)).toEqual(['ds2']);
     });
+
+    /** DL#238 — preview hosts read a plugin's page-wide stylesheets from plugins-index.yaml. */
+    it('lists a plugin styles as project-relative paths', async () => {
+        write(
+            'src/plugins/ds2/plugin.yaml',
+            'name: brand-ds\nstyles: [theme.css]\ncontracts:\n  - name: card\n    contract: card.jay-contract\n',
+        );
+        const result = await materializeContracts({ projectRoot: root });
+        const listed = await listContracts({ projectRoot: root });
+        expect(result.pluginsIndex.plugins.map((p) => p.styles)).toEqual([
+            ['src/plugins/ds2/theme.css'],
+        ]);
+        expect(listed.plugins.map((p) => p.styles)).toEqual([['src/plugins/ds2/theme.css']]);
+    });
+
+    it('omits styles for a plugin that declares none', async () => {
+        const result = await materializeContracts({ projectRoot: root });
+        expect(result.pluginsIndex.plugins.map((p) => p.styles)).toEqual([undefined]);
+    });
 });
