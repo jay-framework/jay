@@ -742,8 +742,13 @@ async function parseHeadlessImports(
                 const isNpmPackage = resolveResult.val.isNpmPackage;
                 const packageName = resolveResult.val.packageName;
 
-                // For NPM packages, use the package name; for local plugins, use relative path
-                if (isNpmPackage && packageName) {
+                // A plugin contract without `component:` ships only a contract + templates (e.g. a
+                // design-system plugin): a no-code structural passthrough, like the plugin-less form.
+                if (!name) {
+                    structural = true;
+                    module = '';
+                } else if (isNpmPackage && packageName) {
+                    // For NPM packages, use the package name; for local plugins, use relative path
                     module = packageName; // e.g. "example-jay-mood-tracker-plugin"
                 } else {
                     module = path.relative(filePath, absoluteComponentPath);
@@ -763,6 +768,7 @@ async function parseHeadlessImports(
                 loadedContract = contractResult.val.contract;
                 contractFile = contractResult.val.contractPath;
                 contractMetadata = contractResult.val.metadata;
+                if (structural) name = pascalCase(loadedContract.name);
             } else {
                 // DL#196 — local (plugin-less) component from the components folder. `contract=` is a
                 // file path; `src=` present ⇒ coded (resolve the single exported component); absent ⇒

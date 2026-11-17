@@ -1756,6 +1756,69 @@ describe('compiler', () => {
             expect((enumFromB!.type as JayEnumType).alias).toEqual('Status$1');
         });
 
+        /**
+         * Bug: a template-only design-system plugin (plugin.yaml `contracts:` without `component:`,
+         * no module) imported the way `agent-kit`'s design-system.md shows —
+         * `plugin="brand-ds" contract="card" template=...` — compiles to an import of the plugin's
+         * `index.js`, so the dev server fails with "Failed to load url .../src/plugins/brand-ds/index.js".
+         * Found in: QA of the share plugin (DL#221) with an agent-built `<site>-ds` plugin.
+         * Expected: a plugin contract with no component is a no-code structural passthrough region,
+         * exactly like the plugin-less `contract="./card.jay-contract"` form (DL#196).
+         * Actual: codeLink imports `../plugins/brand-ds/index.js` and the import is not structural.
+         */
+        it('should treat a plugin contract with no component as a structural passthrough import', async () => {
+            const cardContract: Contract = {
+                name: 'card',
+                tags: [{ tag: 'title', type: [ContractTagType.data], dataType: JayString }],
+            };
+            const resolver: JayImportResolver = {
+                ...defaultImportResolver,
+                resolvePluginComponent(pluginName: string, contractName: string) {
+                    return new WithValidations(
+                        {
+                            contractPath: '/site/src/plugins/brand-ds/card/card.jay-contract',
+                            componentPath: '/site/src/plugins/brand-ds/index.js',
+                            componentName: undefined as unknown as string,
+                            isNpmPackage: false,
+                        },
+                        [],
+                    );
+                },
+                loadPluginContract() {
+                    return new WithValidations(
+                        {
+                            contract: cardContract,
+                            contractPath: '/site/src/plugins/brand-ds/card/card.jay-contract',
+                        },
+                        [],
+                    );
+                },
+            };
+
+            const jayFile = await parseJayFile(
+                stripMargin(
+                    `<html>
+                    |   <head>
+                    |     <script type="application/jay-headless" plugin="brand-ds" contract="card" template="../plugins/brand-ds/card/card.jay-html"></script>
+                    |     <script type="application/jay-data">data:</script>
+                    |   </head>
+                    |   <body></body>
+                    | </html>`,
+                ),
+                'Page',
+                '/site/src/pages',
+                {},
+                resolver,
+                '/site',
+            );
+
+            expect(jayFile.validations).toEqual([]);
+            const cardImport = jayFile.val.headlessImports[0];
+            expect(cardImport.structural).toBe(true);
+            expect(cardImport.codeLink.module).toEqual('');
+            expect(cardImport.codeLink.names[0].name).toEqual('Card');
+        });
+
         it('should alias enums with same name even when values match across different contracts', async () => {
             // Even identical enums from different modules must be aliased —
             // same values in different order would produce different numeric indices
