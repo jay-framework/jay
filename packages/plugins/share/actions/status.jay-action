@@ -1,5 +1,5 @@
 name: shareStatus
-description: Report each shared plugin: present, dirty, ahead/behind, pin match (no network unless fetch). Returns a ShareReport (ok=false with a SHARE_* code on failure).
+description: "Report each shared plugin: present, dirty, ahead/behind, pin match (no network unless fetch). Returns a ShareReport (ok=false with a SHARE_* code on failure)."
 inputSchema:
   folder?: string
   fetch?: boolean
