@@ -150,6 +150,17 @@ Use media queries in the theme CSS or page-specific styles:
 }
 ```
 
+## Shareable Resources Live in a Local Plugin
+
+Build design-system resources (components, tokens) and actions that other sites may reuse **in a
+local plugin by default** — `src/plugins/<name>/` with its own `plugin.yaml` — not in
+`src/components/` or `src/actions/`. Keep component CSS inline in each template `<style>` with
+`var(--<plugin>-x, value)` tokens; sites override the look per site or page by setting those
+variables; use variants (`as=`) before forking templates. A local plugin can then be shared through
+a git repo with the `share` plugin (`share/publish`, `share/link`, `share/pull`, `share/push`) or
+packaged as NPM. Folders listed in `share.yaml` are separate git repos: commit inside the folder and
+run `share/push`; never add them to the site repo.
+
 ## Configuration Files
 
 ### config/ (Plugin Configuration)

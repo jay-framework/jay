@@ -24,7 +24,7 @@ import {
     type JayHtmlSourceFile,
 } from '@jay-framework/compiler-jay-html';
 import { materialise } from '@jay-framework/compiler-inline-composition';
-import { parse as parseHtml } from 'node-html-parser';
+import { parse as parseHtml, TextNode } from 'node-html-parser';
 import { buildMaterialiseOptions } from './materialise-context';
 import {
     splitScopeBlocks,
@@ -168,7 +168,8 @@ function mergeScopeCss(html: string, aggregatedCss: string): string {
 
     const newCss = [...kept, ...appended].filter(Boolean).join('\n\n');
     if (newCss === existingCss.trim()) return html; // nothing to change
-    if (styleEl) styleEl.set_content(newCss);
+    // A TextNode, not a string: `set_content(string)` re-parses CSS as HTML (`'<angle>'` → `<angle></angle>`).
+    if (styleEl) styleEl.set_content([new TextNode(newCss, styleEl)]);
     else head.insertAdjacentHTML('beforeend', `<style>${newCss}</style>`);
     return root.toString();
 }

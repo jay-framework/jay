@@ -14,13 +14,17 @@ import type {
     DynamicContractGenerator,
     GeneratedContractYaml,
 } from '@jay-framework/fullstack-component';
-import { type DynamicContractConfig, normalizeActionEntry } from '@jay-framework/compiler-shared';
+import {
+    type DynamicContractConfig,
+    normalizeActionEntry,
+    pluginStylePaths,
+} from '@jay-framework/compiler-shared';
 import { createRequire } from 'module';
 import { type ScannedPlugin, scanPlugins } from '@jay-framework/stack-server-runtime';
 import type { ViteSSRLoader } from '@jay-framework/stack-server-runtime';
 import { getLogger } from '@jay-framework/logger';
 import { loadActionMetadata, resolveActionMetadataPath } from './action-metadata';
-import { buildDesignSystemIndex, renderAddMenu } from './design-system-index';
+import { buildDesignSystemIndex, pluginIndexKey, renderAddMenu } from './design-system-index';
 
 const require = createRequire(import.meta.url);
 
@@ -88,6 +92,9 @@ export interface PluginsIndexEntry {
     routes?: RouteIndexEntry[];
     /** CLI commands (DL#142) */
     commands?: CommandIndexEntry[];
+    /** Page-wide plugin stylesheets, project-relative (DL#238). Preview hosts link these before
+     *  the CSS of any component of this plugin. */
+    styles?: string[];
 }
 
 export interface PluginsIndex {
@@ -393,10 +400,11 @@ export async function materializeContracts(
         }
 
         const { manifest } = plugin;
+        const indexKey = pluginIndexKey(pluginKey, plugin);
 
         // Ensure plugin entry exists in plugins index
         const pluginRelPath = path.relative(projectRoot, plugin.pluginPath);
-        if (!pluginsIndexMap.has(plugin.name)) {
+        if (!pluginsIndexMap.has(indexKey)) {
             const entry: Omit<PluginsIndexEntry, 'name'> = {
                 path: './' + pluginRelPath.replace(/\\/g, '/'),
                 contracts: [],
@@ -457,7 +465,8 @@ export async function materializeContracts(
                     };
                 });
             }
-            pluginsIndexMap.set(plugin.name, entry);
+            addPluginStyles(entry, plugin, projectRoot);
+            pluginsIndexMap.set(indexKey, entry);
         }
 
         // Add static contracts to index
@@ -485,7 +494,7 @@ export async function materializeContracts(
                     }
                 }
 
-                pluginsIndexMap.get(plugin.name)!.contracts.push({
+                pluginsIndexMap.get(indexKey)!.contracts.push({
                     name: contract.name,
                     ...(description && { description }),
                     type: 'static',
@@ -574,7 +583,7 @@ export async function materializeContracts(
                             path: './' + relativePath,
                             ...(generated.metadata && { metadata: generated.metadata }),
                         };
-                        pluginsIndexMap.get(plugin.name)!.contracts.push(contractEntry);
+                        pluginsIndexMap.get(indexKey)!.contracts.push(contractEntry);
                         dynamicCount++;
 
                         if (verbose) {
@@ -608,7 +617,7 @@ export async function materializeContracts(
                 if (!metadata) continue;
 
                 const actionRelPath = path.relative(projectRoot, metadataFilePath);
-                const pluginEntry = pluginsIndexMap.get(plugin.name)!;
+                const pluginEntry = pluginsIndexMap.get(indexKey)!;
                 if (!pluginEntry.actions) pluginEntry.actions = [];
                 pluginEntry.actions.push({
                     name: metadata.name,
@@ -634,6 +643,7 @@ export async function materializeContracts(
             ...(data.contexts?.length && { contexts: data.contexts }),
             ...(data.routes?.length && { routes: data.routes }),
             ...(data.commands?.length && { commands: data.commands }),
+            ...(data.styles && { styles: data.styles }),
         })),
     };
 
@@ -692,8 +702,9 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
         if (pluginFilter && plugin.name !== pluginFilter && pluginKey !== pluginFilter) continue;
 
         const { manifest } = plugin;
+        const indexKey = pluginIndexKey(pluginKey, plugin);
         const pluginRelPath = path.relative(projectRoot, plugin.pluginPath);
-        if (!pluginsMap.has(plugin.name)) {
+        if (!pluginsMap.has(indexKey)) {
             const entry: Omit<PluginsIndexEntry, 'name'> = {
                 path: './' + pluginRelPath.replace(/\\/g, '/'),
                 contracts: [],
@@ -749,7 +760,8 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
                     };
                 });
             }
-            pluginsMap.set(plugin.name, entry);
+            addPluginStyles(entry, plugin, projectRoot);
+            pluginsMap.set(indexKey, entry);
         }
 
         // Add static contracts
@@ -777,7 +789,7 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
                     }
                 }
 
-                pluginsMap.get(plugin.name)!.contracts.push({
+                pluginsMap.get(indexKey)!.contracts.push({
                     name: contract.name,
                     ...(listDescription && { description: listDescription }),
                     type: 'static',
@@ -796,7 +808,7 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
                 : [manifest.dynamic_contracts];
 
             for (const config of dynamicConfigs) {
-                pluginsMap.get(plugin.name)!.contracts.push({
+                pluginsMap.get(indexKey)!.contracts.push({
                     name: `${config.prefix}/*`,
                     type: 'dynamic',
                     path: '(run materialization to generate)',
@@ -814,6 +826,20 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
             ...(data.contexts?.length && { contexts: data.contexts }),
             ...(data.routes?.length && { routes: data.routes }),
             ...(data.commands?.length && { commands: data.commands }),
+            ...(data.styles && { styles: data.styles }),
         })),
     };
+}
+
+function addPluginStyles(
+    entry: Omit<PluginsIndexEntry, 'name'>,
+    plugin: ScannedPlugin,
+    projectRoot: string,
+): void {
+    const styles = pluginStylePaths(
+        plugin.pluginPath,
+        plugin.manifest,
+        plugin.isLocal ? undefined : plugin.packageName,
+    ).map((stylePath) => path.relative(projectRoot, stylePath).replace(/\\/g, '/'));
+    if (styles.length > 0) entry.styles = styles;
 }

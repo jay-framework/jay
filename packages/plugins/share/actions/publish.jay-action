@@ -1,0 +1,7 @@
+name: sharePublish
+description: Push an existing local plugin to a new branch of an existing GitHub repo and record it in share.yaml. Returns a ShareReport (ok=false with a SHARE_* code on failure).
+inputSchema:
+  plugin: string
+  repo: string
+  branch?: string
+  untrack?: boolean

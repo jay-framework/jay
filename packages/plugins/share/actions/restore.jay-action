@@ -1,0 +1,3 @@
+name: shareRestore
+description: Clone every share.yaml entry missing on disk at its pinned commit. Returns a ShareReport (ok=false with a SHARE_* code on failure).
+inputSchema: {}

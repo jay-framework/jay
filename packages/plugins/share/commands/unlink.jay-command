@@ -1,0 +1,4 @@
+name: unlink
+description: Stop sharing a folder: remove its share.yaml entry and ignore line, move it to .jay-share/backup
+inputSchema:
+  folder: string

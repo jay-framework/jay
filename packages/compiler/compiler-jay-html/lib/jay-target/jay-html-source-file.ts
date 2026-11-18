@@ -23,6 +23,7 @@ export interface JayHeadlessImports {
     headlessProps?: Record<string, string>; // Static props from YAML body in the script tag
     structural?: boolean; // True when no .ts code file exists — passthrough component (DL#162)
     template?: string; // DL#196: source-template provenance (the `template=` attribute) for validate/sync re-flatten
+    pluginName?: string; // DL#238: the `plugin=` this import resolved from — its `styles` join the page CSS
     suppressedValidations?: string[]; // DL#200: rule ids suppressed for this region via `jay-validations="..."` on the import
 }
 

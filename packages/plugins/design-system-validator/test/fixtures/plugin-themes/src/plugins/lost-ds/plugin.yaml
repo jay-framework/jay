@@ -1,0 +1,5 @@
+name: lost-ds
+styles: [nope.css]
+contracts:
+  - name: tag
+    contract: tag.jay-contract

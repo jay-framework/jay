@@ -55,3 +55,12 @@ validators:
   - name: design-viewport-height
     handler: validateViewportHeight
     description: Flags unbounded viewport-height units (vh/svh/lvh/dvh/vmax) on top-level containers that distort Googlebot's tall-viewport render (Search Console screenshots / mobile-usability)
+
+  - name: plugin-theme-usage
+    handler: validatePluginThemeUsage
+    description: 'DL#238: hand-linked plugin stylesheets, theme-vs-page @keyframes/@font-face clashes, plugin theme used only inside a headfull child (DS-THEME-HAND-LINKED / NAME-CLASH / VIA-CHILD)'
+
+projectValidators:
+  - name: plugin-themes
+    handler: validatePluginThemes
+    description: "DL#238: local plugins' styles — DS-THEME-MISSING, DS-THEME-FILE-MISSING, DS-THEME-ROOT-SPECIFICITY, DS-TOKEN-NO-FALLBACK"

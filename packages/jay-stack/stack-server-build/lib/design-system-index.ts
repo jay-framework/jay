@@ -171,6 +171,14 @@ export interface BuildDesignSystemIndexOptions {
  * DL#204 — build the catalog from the two discovery sources. Dynamic (generated) plugin contracts are
  * not included: they are materialized into agent-kit and have no co-located `.jay-html` to flatten.
  */
+/**
+ * The key agents write in `plugin="x"`: a local plugin resolves by its folder under `src/plugins`
+ * (the scanner map key), an NPM plugin by its package name (DL#237).
+ */
+export function pluginIndexKey(pluginKey: string, plugin: ScannedPlugin): string {
+    return plugin.isLocal ? pluginKey : plugin.name;
+}
+
 export function buildDesignSystemIndex(options: BuildDesignSystemIndexOptions): DesignSystemIndex {
     const { projectRoot, plugins, resolvePluginContractPath } = options;
     const componentsBase = options.componentsBase
@@ -212,14 +220,16 @@ export function buildDesignSystemIndex(options: BuildDesignSystemIndexOptions): 
     }
 
     // 2. Plugin components (static contracts).
-    for (const [, plugin] of plugins) {
+    for (const [pluginKey, plugin] of plugins) {
         const contracts = plugin.manifest.contracts;
         if (!Array.isArray(contracts)) continue;
         for (const contract of contracts) {
             const spec = contract.contract;
             if (!spec) continue;
             const contractFile = resolvePluginContractPath(plugin, spec);
-            components.push(makeEntry(contractFile, 'plugin', plugin.name, contract.name));
+            components.push(
+                makeEntry(contractFile, 'plugin', pluginIndexKey(pluginKey, plugin), contract.name),
+            );
         }
     }
 

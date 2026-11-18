@@ -1,0 +1,4 @@
+name: shareUnlink
+description: "Stop sharing a folder: remove its share.yaml entry and ignore line, move it to .jay-share/backup. Returns a ShareReport (ok=false with a SHARE_* code on failure)."
+inputSchema:
+  folder: string

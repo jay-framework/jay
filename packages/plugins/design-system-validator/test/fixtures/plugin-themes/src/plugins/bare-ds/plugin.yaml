@@ -1,0 +1,4 @@
+name: bare-ds
+contracts:
+  - name: card
+    contract: card.jay-contract

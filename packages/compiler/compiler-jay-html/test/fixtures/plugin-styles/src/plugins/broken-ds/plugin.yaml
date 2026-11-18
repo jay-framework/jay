@@ -1,0 +1,5 @@
+name: broken-ds
+styles: [missing.css]
+contracts:
+  - name: tag
+    contract: tag.jay-contract

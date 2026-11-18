@@ -263,15 +263,8 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
                         suggestion: 'Specify path to .jay-contract file',
                     });
                 }
-                if (!contract.component) {
-                    result.errors.push({
-                        type: 'schema',
-                        message: `Contract "${contract.name || index}" is missing "component" field`,
-                        location: 'plugin.yaml',
-                        suggestion:
-                            'Specify the exported member name from the module (e.g., "moodTracker")',
-                    });
-                } else {
+                // No `component`: a no-code contract + templates (structural passthrough).
+                if (contract.component) {
                     validateHandlerRef(
                         contract.component,
                         `Contract "${contract.name}" component`,
@@ -1030,6 +1023,7 @@ async function validateComponent(
     context: PluginContext,
     result: ValidationResult,
 ): Promise<void> {
+    if (contract.component === undefined) return;
     result.componentsChecked = (result.componentsChecked || 0) + 1;
 
     // For NPM packages, component is just the export name (e.g., "moodTracker")

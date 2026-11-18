@@ -66,6 +66,44 @@ conditional.
 - **Non-content (make a new variant):** changing `class` or inline/scoped CSS, or adding net-new layout DOM
   (`<div>`/`<section>` wrappers, custom components) — a different look or structure.
 
+## Shareable design systems: build them in a local plugin
+
+If the design system may be reused by another site, **build shareable design-system resources in a
+local plugin by default** (`src/plugins/<name>/`, contracts + templates under `components/`) rather
+than in `src/components/`. A local plugin can later be shared through its own git repo with the
+`share` plugin (`jay-stack run share/publish`, see `developer/share-guide.md` when installed) or
+packaged as NPM.
+
+- Keep component CSS **inline in the template `<style>`** with prefixed tokens:
+  `.ds-card { background: var(--<plugin>-surface, #fff); }`. A `<link rel="stylesheet">` inside a
+  template does not travel with the region.
+- Put the plugin's **theme** — tokens, `@font-face`, font `@import url(https://…)` — in one plugin
+  stylesheet (`src/plugins/<plugin>/theme.css`) and declare it in `plugin.yaml` as
+  `styles: [theme.css]`. Declare tokens under **`:where(:root) { … }`** (specificity 0). Jay inlines the
+  stylesheet once, before the page CSS, into every page that imports a component of the plugin, and
+  previews of any component of the plugin load it. **Never hand-link it in a page.** `jay-stack validate`
+  warns on `DS-THEME-MISSING`, `DS-THEME-FILE-MISSING`, `DS-THEME-ROOT-SPECIFICITY`,
+  `DS-TOKEN-NO-FALLBACK`, `DS-THEME-HAND-LINKED`, `DS-THEME-NAME-CLASH` and `DS-THEME-VIA-CHILD`
+  (a plugin used only inside a headfull child — import one of its components on the page).
+- **Override the look per site or page by setting those variables in site CSS** — e.g.
+  `:root { --brand-ds-surface: #0f172a; }` in a page `<style>` or site stylesheet (beats the plugin's
+  `:where(:root)` in any order), or `.page-pricing { --brand-ds-surface: #fef3c7; }` on a page wrapper.
+- **Use variants (`as=`) before forking templates.**
+
+### Customizing a shared design system
+
+Pick the highest layer that solves the job; go lower only when necessary.
+
+| Layer | Name                                         | What changes                                                                                                                  | Upstream `share/pull`                                                                                              |
+| ----- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| 1     | **Adjust brand (theme)**                     | The site or page sets `--<plugin>-*` custom properties on `:root`, over the plugin's `:where(:root)` theme                    | Updates shared components; the theme stays in the site                                                             |
+| 2     | **Use another variant**                      | A second `.jay-html` per contract, imported with `as=`                                                                        | New shared templates arrive on pull; pages keep their import choice                                                |
+| 3     | **Custom look for this site (project skin)** | A project-owned template under `src/components/` or `src/plugins/<site>-ds/`, using the shared contract / `.ts` when possible | Pull updates shared logic and contracts; re-check skins                                                            |
+| 4     | **Detach**                                   | A full copy in the site; references stop using `plugin="<shared>"` for it                                                     | No automatic sync — confirm first: "Updates from the shared design system will no longer apply to this component." |
+
+Do not use ad-hoc region CSS overrides on shared imports as the main customization path — prefer a
+variant or a project skin (see `REGION-OVERRIDE-NON-CONTENT`).
+
 ## Creating a design-system element
 
 Authoring a design-system element is just authoring a **component**: a `.jay-contract` (its data shape,

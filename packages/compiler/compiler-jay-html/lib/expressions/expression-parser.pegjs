@@ -289,8 +289,22 @@ classExpression
 
 singleClassExpression
   = ternaryClassExpression
-  / cssClassName
-  / singleClassPropertyAccessor
+  / compoundClassExpression
+
+// One whitespace-free class token, e.g. `btn-{variant}-lg`: adjacent literal text and
+// interpolations concatenate into a single class rather than splitting into several.
+compoundClassExpression
+  = head:(cssClassName / singleClassPropertyAccessor) tail:(classNameChunk / singleClassPropertyAccessor)* {
+    if (tail.length === 0)
+      return head;
+    const asFragment = part => part instanceof RenderFragment ? part : new RenderFragment(`'${part}'`);
+    return tail.reduce(
+      (result, part) => RenderFragment.merge(result, asFragment(part), ' + '),
+      asFragment(head));
+  }
+
+classNameChunk
+  = [_a-zA-Z0-9-]+ { return text() }
 
 singleClassPropertyAccessor
   =  '{' _ cls: propertyAccessor _ '}' {

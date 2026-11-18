@@ -1,0 +1,8 @@
+<html>
+<head>
+  <style>
+    .ds-button { color: var(--good-ds-primary); }
+  </style>
+</head>
+<body><button class="ds-button">Go</button></body>
+</html>

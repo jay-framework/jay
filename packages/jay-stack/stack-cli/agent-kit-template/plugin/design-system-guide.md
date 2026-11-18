@@ -19,6 +19,22 @@ A design-system element ships three things — the template is what makes it a d
 | `.ts`           | Optional  | Logic (`makeJayStackComponent`). Omit for a pure-markup element        |
 | `.jay-html`     | **Yes**   | The template the designer flattens — its `<body>` markup and `<style>` |
 
+Plugin-wide look — tokens, `@font-face`, font `@import` — goes in one stylesheet declared in
+`plugin.yaml` (DL#238); it travels with every component of the plugin, so pages never link it:
+
+```yaml
+name: brand-ds
+styles: [theme.css] # local: relative to the plugin folder; NPM: package export subpath
+```
+
+```css
+/* theme.css — :where(:root) has specificity 0, so a site :root override always wins */
+@import url('https://fonts.googleapis.com/css2?family=Sora');
+:where(:root) {
+  --brand-ds-primary: #2563eb;
+}
+```
+
 > **You ship a template, not a running UI.** The `.jay-html` is a _source to copy from_, not a live
 > component that renders itself at the usage site. The designer's flattened copy is what compiles and
 > renders. This is why upgrades flow through `sync` (below) rather than automatically — the project owns
