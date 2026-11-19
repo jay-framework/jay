@@ -1,6 +1,8 @@
 # 237 — Share plugin: share Jay resources through a dedicated git repo
 
-**Status:** [Design] — product owner 2026-11-16 (no trust gate, thin Phase 1; Q11 closed; four-layer customization model; five manifest/hygiene `SHARE-*` checks in Phase 1a, all warnings; flag-only untrack; `SHARE_BRANCH_PROTECTED`; no automatic fetch); product owner 2026-11-17 (publish to an existing repo + branch, never create repos); approved by product owner 2026-11-17; implementation starting. No implementation yet.
+> History: renumbered from #221 on 2026-11-17 — merging `main` brought a different DL #221; references in this repo were updated.
+
+**Status:** [Implemented] — Phase 1 + Phase 1a implemented 2026-11-17 (see Implementation Results); Phase 2 and Phase 3 pending. Design approved by product owner 2026-11-17.
 
 ## Decisions for the Implementer (TL;DR)
 
@@ -426,3 +428,78 @@ No false greens: every check and error code gets a failing fixture first.
 - **Product-owner requirement 2026-11-17 (existing repo + branch, never create repos) → revised.** `sharePublish.branch` (default `main`); `SHARE_BRANCH_NOT_EMPTY` replaces `SHARE_REPO_NOT_EMPTY`; plugin pushed as its own history to `refs/heads/<branch>`; `shareLink.ref` (branch) moved to Phase 1, tags and `pull --commit` stay Phase 2; VCs added.
 - **Round 14 (NEEDS-WORK, edge cases) → revised.** Publish push race → `SHARE_BRANCH_NOT_EMPTY`, `SHARE_BRANCH_PROTECTED` narrowed to `GH006`/`protected branch` (other `[remote rejected]` → `SHARE_NO_ACCESS`), resumable publish, link clones `main` single-branch with new `SHARE_NOT_A_PLUGIN`; VCs added.
 - **Round 15 (jay NEEDS-WORK: resume unreachable) → revised.** Resume check runs before the branch-exists check; `[remote rejected]` rule applies to every push; push steps reordered (protection read from push stderr); status line notes the 2026-11-17 decision.
+
+## Implementation Results (Phase 1 + 1a, 2026-11-17)
+
+Commits on `share-plugin`: index folder-key fix (`stack-server-build`), `@jay-framework/share` package (`packages/plugins/share/`), framework agent-kit guide edits, a test type fix.
+
+### Phase 0 — assumption probes
+
+The plan has no explicit Phase 0; the probes were the load-bearing ✅/⚠️ claims, checked against code and by tests:
+
+- ✅ devOnly actions load from `./tools` and register under their export name (`action-discovery.ts`), verified by a test that discovers all 7 `share*` actions through `discoverAllPluginActions` on a project that installs the built package; `.` exports nothing.
+- ✅ Local plugins are keyed by folder in the scanner while the indexes used `manifest.name`: reproduced red (3 failing tests), then fixed.
+- ✅ Command handlers are found by `commandName` in `./tools`; real `jay-stack run share/status` exits 0 and `share/pull --folder nope` exits 1.
+- ✅ Plugin warnings do not change the `jay-stack validate` exit code (`run-validate.ts` exits on `!valid` only); a real `jay-stack validate` with a `SHARE-DIRTY` warning exits 0.
+- ✅ (was ⚠️) Local setup end to end: a local `./setup.ts` and `./agent-kit.ts` run through the core's own `createViteForCli`, for `none`, `configured`, `needs-config`, `error` and `needs-answer` (with `setupQuestion`).
+
+### Deviations
+
+1. **`hasServerCode`** counts only script files (`.ts/.tsx/.mts/.cts/.js/.jsx/.mjs/.cjs`). The Design said "same set as `incoming.codeFiles`", but that set includes `plugin.yaml`, so every plugin would be `true`, which contradicts the Link report VC (`false` for a plugin with only `.jay-html`/`.css`/`.jay-contract`). The VC wins.
+2. **Extra no-access pattern:** `repository '<path>' does not exist` maps to `SHARE_NO_ACCESS`. git prints this for a missing clone source; it is needed for the VC "a rewritten URL to a missing bare repo → `SHARE_NO_ACCESS`".
+3. **Validator check scope:** `SHARE-FOLDER-NOT-IN-MANIFEST` flags only `src/plugins/*` folders that have their own `.git`, so ordinary local plugins are not flagged.
+4. **`share` agentkit handler** writes `agent-kit/references/share/shared-plugins.yaml` (the shared folders). The Design did not say what it outputs. `share-guide.md` ships in the plugin's `agent-kit/developer/`, which agent-kit merges automatically.
+5. **Bad folder name on link:** when the clone's `manifest.name` cannot be a folder name (e.g. scoped), link returns `SHARE_FOLDER_EXISTS` with next step `--as <folder>`. No new code was added for this.
+6. **Shadowed routes** compare static project page paths (`src/pages/<path>/page.jay-html`), not the full route scanner.
+7. **Process:** the index fix was test-first (red → green). For the share flows the code was written just before the tests. Each test asserts the DL's expected behavior, not captured output. Two real bugs showed up as red tests and were fixed: porcelain parsing lost the first character because stdout was trimmed, and `hasServerCode` (deviation 1).
+
+### Test results
+
+- `@jay-framework/share`: **103/103**. Unit tests: URL forms, stderr classifier, ssh BatchMode, denylist, ignore block. Flow tests against local bare repos: publish (empty repo, new branch on a non-empty repo, `SHARE_BRANCH_NOT_EMPTY`, push race, hook reject, resume, denylist, validate fail, untrack, no access), link, pull, push, status, restore, unlink. Also the validator incl. real `jay-stack validate`, actions/registry, CLI exit codes, setup via Vite, guides, and a never-create-repos/no-force grep.
+- `stack-server-build`: 62/62 (3 new index tests).
+- Full gate `yarn confirm`: **4341 passed, 0 failed, 11 skipped** (exit 0).
+
+### Pending
+
+- VC Phase 1 step 6 (demo: two example projects through a hand-created GitHub repo over https and ssh). This needs a user-created GitHub repo and network; share never creates one.
+- VC "linked plugin's components, actions and commands work in dev": covered by the index fix test and unit tests, not yet run against a live dev server.
+- Phase 2 and Phase 3 not started.
+- Agent feedback loop: the validation is the Phase 1a `SHARE-*` checks; the guides are `share-guide.md` plus the framework edits ("local plugin by default", four customization layers).
+
+## Implementation Results — QA end-to-end (2026-11-17)
+
+Driven through a consuming editor UI on three local projects against an existing GitHub test repo (SSH URL). link / publish / push / pull / status-fetch all worked once the fixes below were in. Branch `share-plugin`, not pushed.
+
+Fixes (each with a repro test first):
+
+1. `f4361fe6`: `status` / `unlink` `.jay-action` descriptions quoted (YAML parse warnings at dev startup). share 110/110.
+2. `c97004fb`: compiler-jay-html: a plugin contract with no `component` (template-only design-system plugin) is a structural passthrough. It had compiled to an import of the plugin's `index.js`, so the page failed to load with the import form that `agent-kit`'s design-system.md emits. 732/732. Not live-verified: this build can't run inside a project on the published 0.25.5 packages (missing export `injectDevMarkers`); needs a release.
+3. `dd4654c0`: plugin-validator: contracts without `component` are valid. Before this, `sharePublish` stopped every template-only plugin ("missing component"). 54/54. Verified live via a local tarball.
+
+Findings, not fixed: `PluginSummary.hasServerCode` is true for a plugin whose only `.ts` files are generated `.d.ts` files (link report says "contains server code"). `link` refuses a second branch of an already-linked repo (by design); callers get `SHARE_ALREADY_IN_MANIFEST`. Generated `*.d.ts` files are committed to the shared branch.
+
+## Implementation Results — merge main + QA follow-ups (2026-11-17)
+
+- **Merge:** `origin/main` merged into `share-plugin` (`fb0210da`); `@jay-framework/share` bumped 0.25.4 → 0.26.4 to match the other packages. Index conflict: main added a different DL #237 (per-route loadParams cache key); both rows kept, numbering collision left for the maintainers.
+- `63f590f7` **Declaration files are not code.** `*.d.ts` / `*.d.mts` / `*.d.cts` (incl. `*.jay-html.d.ts`) no longer count for `hasServerCode` nor `incoming.codeFiles`. Deviation from the § "Code files" list: it now excludes generated declarations.
+- `24a9bf48` **Repo URL forms.** `parseGithubRepoUrl` accepts browser URLs (trailing slash, `/tree/<branch>` → ref when `--ref` is not given), HTTPS clone and SSH URLs. `link` treats any URL form of a linked repo as `SHARE_ALREADY_IN_MANIFEST` (owner/name, case-insensitive).
+- **HTTPS hang root cause:** git asks the `osxkeychain` credential helper (system gitconfig) after GitHub's 401; the helper blocks on a macOS Keychain dialog. `GIT_TERMINAL_PROMPT=0` / `GCM_INTERACTIVE=never` do not cover it, and killing git leaves the helper orphaned. Reproduced: `ls-remote` over HTTPS hung >100 s, SSH answered in 2 s. Fix: the git runner kills git and its helper tree after 60 s (`GIT_TIMEOUT_MS`); a stall is `SHARE_NO_ACCESS` whose next step suggests the SSH URL.
+- **Finding (not fixed, compiler):** `class="ds-button-{variant}"` parses as two classes (`ds-button-` + value), and contract prop `default` is parsed but never applied to a `<jay:x>` region without the attribute. Together they render a template-only Button unstyled on pages while the editor preview (which applies defaults and renders differently) looks right. Candidate: a validation for an interpolated class suffix, plus applying prop defaults.
+- `c97004fb` verified live (0.26.4 tarballs): a page importing `plugin="<ds>" contract="button"` renders 200 with no `index.js` import.
+- Tests: share 131/131; `yarn confirm` 4730 passed / 0 failed / 11 skipped.
+
+### Implementation Results — QA follow-up: grey design-system Button (2026-11-17)
+
+A shared Button showed purple in the editor's design-system card but browser-grey on the page. Two framework bugs:
+
+- **Class token split** (`cfb0fd8d`): `class="ds-button ds-button-{variant}"` rendered `ds-button- primary`. The class grammar's `_` between tokens matches zero whitespace, so `ds-button-` and `{variant}` became two classes. New `compoundClassExpression` rule in `expression-parser.pegjs`: adjacent literal/interpolation parts concatenate (`'ds-button-' + vs.variant`). Repro tests in `expression-compiler.unit.test.ts` (jay + react targets).
+- **Contract prop defaults not applied** (`36eec786`): DL#84 Q4 defines prop `default` and the agent-kit contract guides document it, yet no render path used it, so `<jay:button>` without `variant` rendered `ds-button-`. `normalizeAndResolveInstanceProps` (slow, fast and instance runners) now fills omitted props with their coerced contract default. Repro tests in `resolve-instance-props.test.ts`. Agent-kit `contracts/syntax.md` now states it.
+- **Renumbered** this log #221 → #237 (main brought a different #221).
+- Live: site-b home `<jay:button>` with no `variant` renders `ds-button ds-button-primary`, computed `background-color: rgb(124, 58, 237)`, the same as the editor's card.
+- `yarn confirm`: 4735 passed / 0 failed / 11 skipped.
+
+### Implementation Results — QA re-run from scratch (2026-11-17)
+
+- End-to-end share → import → edit → publish → update passed with fresh projects and a new branch. The HTTPS address-bar URL shared successfully, and a template-only import showed no "server code" note.
+- **Bug fixed** `f8feb7ca` (`stack-cli` `run-sync.ts`): `mergeScopeCss` wrote the merged CSS with `set_content(string)`, which re-parses it as HTML, so `syntax: '<angle>'` gained a stray `</angle>` and the page CSS stopped parsing. It now writes a `TextNode`. Repro test: `run-sync.test.ts` "should keep `<…>` text in the page <style> as raw CSS". stack-cli 214/214.
+- Follow-up candidate (validation first): a `SHARE-*` warning for `var(--token)` without a fallback in shared templates, because consumers that don't link the plugin's theme stylesheet render unstyled.
