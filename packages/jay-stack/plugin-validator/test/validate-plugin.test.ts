@@ -761,6 +761,38 @@ describe('validatePlugin — route jay-html compile', () => {
     });
 });
 
+/**
+ * Bug: Share design system stops with "Contract "button" is missing "component" field" /
+ * "Invalid component name: undefined" for a template-only design-system plugin.
+ * Found in: QA of the share plugin (DL#237) — an agent-built `<site>-ds` plugin, same shape as
+ * share's own brand-ds fixture (contract + .jay-html, no code).
+ * Expected: a contract without `component` is a no-code (structural) component; no errors.
+ * Actual: validate-plugin --local reports one schema error and one component error per contract.
+ */
+describe('validatePlugin — template-only design-system plugin', () => {
+    it('should accept contracts without a component', async () => {
+        // A local plugin folder (src/plugins/brand-ds): plugin.yaml + contract + template, no package.json.
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'plugin-validator-test-'));
+        fs.mkdirSync(path.join(dir, 'card'));
+        fs.writeFileSync(
+            path.join(dir, 'plugin.yaml'),
+            `name: brand-ds\ncontracts:\n  - name: card\n    contract: ./card/card.jay-contract\n`,
+        );
+        fs.writeFileSync(
+            path.join(dir, 'card/card.jay-contract'),
+            `name: card\ntags:\n  - tag: title\n    type: data\n    dataType: string\n`,
+        );
+        fs.writeFileSync(
+            path.join(dir, 'card/card.jay-html'),
+            `<html><head><script type="application/jay-data" contract="./card.jay-contract"></script></head><body><div class="card">{title}</div></body></html>`,
+        );
+
+        const result = await validatePlugin({ pluginPath: dir });
+
+        expect(result.errors).toEqual([]);
+    });
+});
+
 describe('validatePlugin — GET actions reading cookies (DL#234)', () => {
     it('surfaces get-action-reads-cookies as a warning and stays valid', async () => {
         const dir = createTempPluginWithSource({
