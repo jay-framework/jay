@@ -1,0 +1,5 @@
+name: pull
+description: Fast-forward linked shared plugins to origin/<ref> (dryRun lists incoming files only)
+inputSchema:
+  folder?: string
+  dryRun?: boolean

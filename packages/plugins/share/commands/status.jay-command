@@ -1,0 +1,5 @@
+name: status
+description: Report each shared plugin: present, dirty, ahead/behind, pin match (no network unless fetch)
+inputSchema:
+  folder?: string
+  fetch?: boolean
