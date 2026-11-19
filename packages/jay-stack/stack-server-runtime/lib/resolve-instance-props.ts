@@ -147,7 +147,8 @@ export function normalizeInstancePropNames(
 
 /**
  * Normalize HTML attribute names to contract prop names, resolve `{binding}` values, and coerce
- * each resolved value to its declared prop `dataType` (DL#190).
+ * each resolved value to its declared prop `dataType` (DL#190). A prop the instance omits takes
+ * its contract `default` (DL#84 Q4), so a page renders what the contract promises.
  */
 export function normalizeAndResolveInstanceProps(
     instanceProps: Record<string, string>,
@@ -162,5 +163,16 @@ export function normalizeAndResolveInstanceProps(
         const resolved = resolvePropBinding(value, scope);
         normalized[propName] = coerceInstancePropValue(resolved, match?.dataType);
     }
-    return normalized;
+    return { ...contractPropDefaults(contractProps), ...normalized };
+}
+
+function contractPropDefaults(
+    contractProps: RuntimeContract['props'],
+): Record<string, string | number | boolean | object> {
+    const defaults: Record<string, string | number | boolean | object> = {};
+    for (const prop of contractProps ?? []) {
+        if (prop.default === undefined) continue;
+        defaults[prop.name] = coerceInstancePropValue(String(prop.default), prop.dataType);
+    }
+    return defaults;
 }
