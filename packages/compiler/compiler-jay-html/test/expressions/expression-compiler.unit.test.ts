@@ -498,6 +498,25 @@ describe('expression-compiler', () => {
             expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy();
         });
 
+        /**
+         * Bug: an interpolation adjacent to literal text inside one class token was split into
+         * two classes — `ds-button-{variant}` rendered `ds-button- primary`.
+         * Found in: QA of the design-system Button (grey on page, purple in the AIditor panel).
+         * Expected: the literal and the interpolation concatenate into one class token.
+         * Actual: `_` between class tokens matches zero whitespace, so they were joined with ' '.
+         */
+        it('should concatenate an interpolation suffix into the same class token', () => {
+            const actual = parseClassExpression('ds-button ds-button-{classProperty}', defaultVars);
+            expect(actual.rendered).toEqual(
+                "da(vs => cx('ds-button', 'ds-button-' + vs.classProperty))",
+            );
+        });
+
+        it('should concatenate literal text on both sides of an interpolation', () => {
+            const actual = parseClassExpression('pre-{classProperty}-post', defaultVars);
+            expect(actual.rendered).toEqual("da(vs => 'pre-' + vs.classProperty + '-post')");
+        });
+
         it('dynamic class declaration', () => {
             const actual = parseClassExpression(
                 '{isOne? class1} {isTwo? classTwo} three',
@@ -552,6 +571,14 @@ describe('expression-compiler', () => {
         it('class as value from view state', () => {
             const actual = parseReactClassExpression('{classProperty}', defaultVars);
             expect(actual.rendered).toEqual('{vs.classProperty}');
+        });
+
+        it('should concatenate an interpolation suffix into the same class token', () => {
+            const actual = parseReactClassExpression(
+                'ds-button ds-button-{classProperty}',
+                defaultVars,
+            );
+            expect(actual.rendered).toEqual("{cx('ds-button', 'ds-button-' + vs.classProperty)}");
         });
 
         it('dynamic class declaration', () => {
