@@ -1,0 +1,4 @@
+name: push
+description: Push local commits of a linked shared plugin (fast-forward only) and re-pin share.yaml
+inputSchema:
+  folder?: string

@@ -7,12 +7,29 @@
   "main": "dist/index.js",
   "files": [
     "dist",
-    "plugin.yaml"
+    "plugin.yaml",
+    "commands",
+    "actions",
+    "agent-kit"
   ],
   "exports": {
     ".": "./dist/index.js",
     "./tools": "./dist/tools.js",
-    "./plugin.yaml": "./plugin.yaml"
+    "./plugin.yaml": "./plugin.yaml",
+    "./commands/publish.jay-command": "./commands/publish.jay-command",
+    "./commands/link.jay-command": "./commands/link.jay-command",
+    "./commands/pull.jay-command": "./commands/pull.jay-command",
+    "./commands/push.jay-command": "./commands/push.jay-command",
+    "./commands/status.jay-command": "./commands/status.jay-command",
+    "./commands/restore.jay-command": "./commands/restore.jay-command",
+    "./commands/unlink.jay-command": "./commands/unlink.jay-command",
+    "./actions/publish.jay-action": "./actions/publish.jay-action",
+    "./actions/link.jay-action": "./actions/link.jay-action",
+    "./actions/pull.jay-action": "./actions/pull.jay-action",
+    "./actions/push.jay-action": "./actions/push.jay-action",
+    "./actions/status.jay-action": "./actions/status.jay-action",
+    "./actions/restore.jay-action": "./actions/restore.jay-action",
+    "./actions/unlink.jay-action": "./actions/unlink.jay-action"
   },
   "scripts": {
     "build": "npm run clean && npm run build:server && npm run build:types && npm run validate",

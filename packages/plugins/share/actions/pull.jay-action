@@ -1,0 +1,5 @@
+name: sharePull
+description: Fast-forward linked shared plugins to origin/<ref> (dryRun lists incoming files only). Returns a ShareReport (ok=false with a SHARE_* code on failure).
+inputSchema:
+  folder?: string
+  dryRun?: boolean

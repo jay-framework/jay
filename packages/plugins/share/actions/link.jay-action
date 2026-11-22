@@ -1,0 +1,7 @@
+name: shareLink
+description: Clone a shared plugin repo branch into src/plugins/<folder> and pin it in share.yaml. Returns a ShareReport (ok=false with a SHARE_* code on failure).
+inputSchema:
+  repo: string
+  ref?: string
+  as?: string
+  untrack?: boolean
