@@ -7,13 +7,13 @@
 **Phase 1 (MVP engine)**
 
 1. **New framework plugin `@jay-framework/share`** (plugin name `share`), an NPM plugin that ships `commands`, `actions`, an `agentkit` handler, and a **`share` plugin validator** (Phase 1a, before git flows), all from the `./tools` entry (DL #179). Every `actions:` entry is `devOnly: true`: NPM actions load from the main `.` entry unless `devOnly`, which loads `./tools` (✅ `stack-server-build/lib/action-discovery.ts:374-399`); the handler is `sourceModule[actionName]` (`:397-398`), so each `tools.ts` export name equals its action name. No runtime code; it never runs in the served site.
-2. **Unit of sharing = one jay local plugin = one git repo.** The repo root *is* a local plugin (`plugin.yaml` at the root). A linked clone lives in `src/plugins/<folder>/`; local-plugin discovery (✅ `stack-server-runtime/lib/plugin-scanner.ts:82-105`) picks it up.
+2. **Unit of sharing = one jay local plugin = one git repo.** The repo root _is_ a local plugin (`plugin.yaml` at the root). A linked clone lives in `src/plugins/<folder>/`; local-plugin discovery (✅ `stack-server-runtime/lib/plugin-scanner.ts:82-105`) picks it up.
 3. **One framework fix in Phase 1 (fixture first):** the design-system index and `plugins-index.yaml` write `manifest.name` as the plugin key (❌ `stack-server-build/lib/design-system-index.ts:215,222`, `contract-materializer.ts:387,399,628-629`), but `plugin="x"` resolves by folder; write the folder key for local plugins, so linked components resolve after `--as`. Everything else in Phase 1 is plugin code.
 4. **Manifest = `share.yaml` at project root** (committed to the site repo): per entry `folder`, `repo`, `ref` (branch, default `main`), `commit` (pinned SHA). `commit` is the lock; `ref` is what `pull` tracks. `link`, `pull`, `push` and `publish` write `commit`; `restore` checks it out.
 5. **Repo-inside-a-repo = `.gitignore` lines, not submodules.** A managed block (`# >>> jay share` … `# <<< jay share`) lists `/src/plugins/<folder>/` and `/.jay-share/`. Submodules are refused (`SHARE_SUBMODULE`).
 6. **No trust gate (product owner confirmed).** A shared plugin gets the same trust as a teammate's commit or an installed NPM plugin. `link` clones and moves straight into `src/plugins/<folder>/`; the review point is the site PR that moves `commit` in `share.yaml`. `pull` lists changed code files in `incoming.codeFiles` as information only. Stricter isolation = package as NPM (documented in `share-guide.md`).
 7. **GitHub only, plain `git` only.** Share never creates repos: the user gives an **existing** GitHub repo URL (`repo`, https or ssh) and optionally a `branch` (default `main`). Every operation is the `git` binary with the user's existing credentials, prompts disabled. No `gh`, no host API, no host interface; tests use a `GitRunner` seam with a local bare repo. Non-GitHub URL → `SHARE_INVALID_REPO`; publish to a branch that already has commits → `SHARE_BRANCH_NOT_EMPTY`.
-7a. **Never create a remote repository:** no GitHub API, no `gh`, no repo-creation call. Pushing a new branch to the user-given repo is the only remote write; never force-push, never delete or rewrite other branches.
+   7a. **Never create a remote repository:** no GitHub API, no `gh`, no repo-creation call. Pushing a new branch to the user-given repo is the only remote write; never force-push, never delete or rewrite other branches.
 8. **Seven actions, seven commands** (`jay-stack run share/<cmd>`): `sharePublish`, `shareLink`, `sharePull`, `sharePush`, `shareStatus`, `shareRestore`, `shareUnlink` (prefixed because the registry overwrites duplicates silently, ✅ `stack-server-runtime/lib/action-registry.ts:124`). Each has a `.jay-command` and a `.jay-action` with the same input schema; both call one core function that returns `ShareReport` or throws `ShareError`. Commands read `CONSOLE_CONTEXT.projectRoot` (`run-command.ts:123`); actions use `process.cwd()`, the project root in both hosts (✅ `stack-cli/lib/cli.ts:233`, `stack-cli/lib/server.ts:37-41,59`). Programmatic callers use the actions (typed `ShareReport`); the CLI prints human text and exits `0`/`1`. All flags are named (`run-command.ts:195-226` ignores positionals).
 9. **Phase 1 publish = an existing local plugin only:** `sharePublish { plugin, repo, branch?, untrack? }` (`branch` default `main`). The target branch must not exist on the remote (`git ls-remote <url> refs/heads/<branch>`); other branches and content in the repo are fine. The plugin is pushed as its own history (branch root = plugin folder); `share.yaml` records `ref: <branch>`. `shareLink { repo, ref?, as?, untrack? }` takes `ref` (branch) in Phase 1 so teammates can link that branch. No moving files out of the site, no reference rewriting (Phase 2).
 10. **Conflicts:** `pull` is `git merge --ff-only`; `push` fetches and requires fast-forward. Divergence → `SHARE_DIVERGED` report (both SHAs, next step "rebase inside `src/plugins/<f>`, then `share/push`"). jay never merges, rebases or force-pushes. `push` refuses a dirty tree (`SHARE_DIRTY`). `share.yaml` is never written on a failed step.
@@ -47,35 +47,35 @@ Jay projects are increasingly built by coding agents. Teams want to reuse a desi
 
 ## Prior Art / Adjacent Mechanisms
 
-| Mechanism | Where | Reuse |
-|---|---|---|
-| Local plugin discovery | ✅ `plugin-scanner.ts:82-105` (map key = folder, `name = manifest.name \|\| entry.name` at `:96-99`); `plugin-resolution.ts:232` resolves `plugin="x"` as `src/plugins/x` | Consumption side; basis of `--as`. |
-| Plugin CLI commands | ✅ DL #142; `stack-cli/lib/run-command.ts` | Command surface. |
-| Actions + `.jay-action` | DL #92/#95; `action-discovery.ts:198-210` | Agent surface. |
-| `./tools` entry | DL #179; ✅ `plugins/agent-skills/package.json:14-19` | git code never enters the serve bundle. |
-| Plugin validators | DL #145; ✅ `plugin-resolution.ts:112-117`; `plugin-validators.ts:25-56` | Phase 1a `SHARE-*` checks. |
-| Project-level check via per-page hook | DL #216; ✅ `agent-skills/lib/validator.ts:1-21` | Memoize-per-`projectRoot` pattern (Phase 1a). |
-| Region flattening carries template `<style>` | DL #196/#206; ✅ `materialise-context.ts:48-58`, `materialise.ts:172-203` | CSS/token transport. |
-| Setup / agent-kit handlers | DL #87, #157, #159; `stack-server-build/lib/plugin-setup.ts` | `link`, `pull`, `restore` run setup. |
-| Design-system index | DL #125, #204; `contract-materializer.ts:377-381,643-661` | Shared components show up for agents. |
-| Plugin validator `--local` | `plugin-validator/lib/validate-plugin.ts:134-151` | `publish` runs it before pushing. |
-| Plugin routes | DL #130; ✅ dev `dev-server.ts:112-150`; ❌ prod `packages/jay-stack/production-build/lib/builder/plugin-routes.ts:24` | Shared pages, Phase 3. |
-| NPM plugin packaging | ✅ `agent-kit-template/plugin/plugin-structure.md`; `docs/core/plugins.md` | The documented stricter path. |
+| Mechanism                                    | Where                                                                                                                                                                     | Reuse                                         |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
+| Local plugin discovery                       | ✅ `plugin-scanner.ts:82-105` (map key = folder, `name = manifest.name \|\| entry.name` at `:96-99`); `plugin-resolution.ts:232` resolves `plugin="x"` as `src/plugins/x` | Consumption side; basis of `--as`.            |
+| Plugin CLI commands                          | ✅ DL #142; `stack-cli/lib/run-command.ts`                                                                                                                                | Command surface.                              |
+| Actions + `.jay-action`                      | DL #92/#95; `action-discovery.ts:198-210`                                                                                                                                 | Agent surface.                                |
+| `./tools` entry                              | DL #179; ✅ `plugins/agent-skills/package.json:14-19`                                                                                                                     | git code never enters the serve bundle.       |
+| Plugin validators                            | DL #145; ✅ `plugin-resolution.ts:112-117`; `plugin-validators.ts:25-56`                                                                                                  | Phase 1a `SHARE-*` checks.                    |
+| Project-level check via per-page hook        | DL #216; ✅ `agent-skills/lib/validator.ts:1-21`                                                                                                                          | Memoize-per-`projectRoot` pattern (Phase 1a). |
+| Region flattening carries template `<style>` | DL #196/#206; ✅ `materialise-context.ts:48-58`, `materialise.ts:172-203`                                                                                                 | CSS/token transport.                          |
+| Setup / agent-kit handlers                   | DL #87, #157, #159; `stack-server-build/lib/plugin-setup.ts`                                                                                                              | `link`, `pull`, `restore` run setup.          |
+| Design-system index                          | DL #125, #204; `contract-materializer.ts:377-381,643-661`                                                                                                                 | Shared components show up for agents.         |
+| Plugin validator `--local`                   | `plugin-validator/lib/validate-plugin.ts:134-151`                                                                                                                         | `publish` runs it before pushing.             |
+| Plugin routes                                | DL #130; ✅ dev `dev-server.ts:112-150`; ❌ prod `packages/jay-stack/production-build/lib/builder/plugin-routes.ts:24`                                                    | Shared pages, Phase 3.                        |
+| NPM plugin packaging                         | ✅ `agent-kit-template/plugin/plugin-structure.md`; `docs/core/plugins.md`                                                                                                | The documented stricter path.                 |
 
 **Null hypothesis:** "just `git clone` + docs." Rejected: the pin, the ignore block, the denylist and (Phase 2) the move + rewrite are mechanical and error-prone for agents; commands and validations should own them.
 
 ### Verified capabilities of local plugins
 
-| Capability | Status |
-|---|---|
-| Contracts / headless components | ✅ `plugin-scanner.ts:82-105`, `plugin-resolution.ts:232` |
-| Actions | ✅ `action-discovery.ts:209-210`; `service-lifecycle.ts:163` |
-| Commands | ✅ `plugin-commands.ts:58` (includes local) |
-| Component CSS reaches the page | ✅ `materialise-context.ts:53-54`; `materialise.ts:172-203`. A `<link rel=stylesheet>` inside a template does **not** travel. |
-| Setup / init handlers | ✅ `plugin-init-discovery.ts:33,139`; `plugin-setup.ts:118` `discoverPluginsWithSetup`, `:210` `executePluginSetup`, `SetupNeedsAnswerError` (`:56`). ⚠️ local setup not traced end-to-end, covered by a VC |
-| Routes (dev) | ✅ `dev-server.ts:139-144` |
-| Routes (production build) | ❌ `plugin-routes.ts:24` skips local plugins, and `server-code-build.ts:8-9` never compiles their `page.ts`. Phase 3. |
-| Page-wide CSS (`:root`, `@font-face`) | ❌ no `PluginManifest` field (Q5). |
+| Capability                            | Status                                                                                                                                                                                                      |
+| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Contracts / headless components       | ✅ `plugin-scanner.ts:82-105`, `plugin-resolution.ts:232`                                                                                                                                                   |
+| Actions                               | ✅ `action-discovery.ts:209-210`; `service-lifecycle.ts:163`                                                                                                                                                |
+| Commands                              | ✅ `plugin-commands.ts:58` (includes local)                                                                                                                                                                 |
+| Component CSS reaches the page        | ✅ `materialise-context.ts:53-54`; `materialise.ts:172-203`. A `<link rel=stylesheet>` inside a template does **not** travel.                                                                               |
+| Setup / init handlers                 | ✅ `plugin-init-discovery.ts:33,139`; `plugin-setup.ts:118` `discoverPluginsWithSetup`, `:210` `executePluginSetup`, `SetupNeedsAnswerError` (`:56`). ⚠️ local setup not traced end-to-end, covered by a VC |
+| Routes (dev)                          | ✅ `dev-server.ts:139-144`                                                                                                                                                                                  |
+| Routes (production build)             | ❌ `plugin-routes.ts:24` skips local plugins, and `server-code-build.ts:8-9` never compiles their `page.ts`. Phase 3.                                                                                       |
+| Page-wide CSS (`:root`, `@font-face`) | ❌ no `PluginManifest` field (Q5).                                                                                                                                                                          |
 
 ## Q&A
 
@@ -83,14 +83,15 @@ Jay projects are increasingly built by coding agents. Teams want to reuse a desi
 - **Q2 Why `.gitignore` and not submodules?** Submodules pin in the parent index and every collaborator and CI must run `git submodule update`; agents routinely break them. `share.yaml` + `restore` gives the same pin in a readable form.
 - **Q3 (Phase 2) Which references does publish-from-site rewrite?** Parser-based, never regex; `--dry-run` lists every rewrite; any unsupported form stops publish before files move.
 
-  | # | Source form (page in the site) | Target form after the move |
-  |---|---|---|
-  | R1 | `<script type="application/jay-headless" contract="../components/card/card.jay-contract" src="../components/card/card.ts" template="../components/card/card.jay-html" key="card">` | `<script type="application/jay-headless" plugin="brand-ds" contract="card" template="../plugins/brand-ds/components/card/card.jay-html" key="card">` |
-  | R2 | `plugin="old" contract="card"` (re-homing) | `plugin="brand-ds" contract="card"`, `template=` re-pointed |
-  | R3 | `import { addToCart } from '../actions/cart.actions'` | `import { addToCart } from '../plugins/brand-ds/lib/actions/cart.actions'` |
-  | ✗ | Headfull `application/jay-headfull src=…` pointing at a moved file | **Unsupported** (`SHARE_UNSUPPORTED_REFERENCE`): headfull imports are file imports (✅ `jay-html-parser.ts:1310-1316`, DL #196). Convert to headless first. |
+  | #   | Source form (page in the site)                                                                                                                                                     | Target form after the move                                                                                                                                  |
+  | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | R1  | `<script type="application/jay-headless" contract="../components/card/card.jay-contract" src="../components/card/card.ts" template="../components/card/card.jay-html" key="card">` | `<script type="application/jay-headless" plugin="brand-ds" contract="card" template="../plugins/brand-ds/components/card/card.jay-html" key="card">`        |
+  | R2  | `plugin="old" contract="card"` (re-homing)                                                                                                                                         | `plugin="brand-ds" contract="card"`, `template=` re-pointed                                                                                                 |
+  | R3  | `import { addToCart } from '../actions/cart.actions'`                                                                                                                              | `import { addToCart } from '../plugins/brand-ds/lib/actions/cart.actions'`                                                                                  |
+  | ✗   | Headfull `application/jay-headfull src=…` pointing at a moved file                                                                                                                 | **Unsupported** (`SHARE_UNSUPPORTED_REFERENCE`): headfull imports are file imports (✅ `jay-html-parser.ts:1310-1316`, DL #196). Convert to headless first. |
 
   Components first (R1/R2); R3 actions follow in the same phase. A moved component's contract, `.ts` and template variants move side by side into `src/plugins/<n>/components/<c>/`, and `plugin.yaml` gains `contracts: [{ name, contract, component }]` (DL #204). A template that links an external stylesheet stops publish.
+
 - **Q4 Name clashes on link? What does `--as` do?** Local plugins resolve by **folder** (✅ `plugin-resolution.ts:232`, scanner key `plugin-scanner.ts:99`), so `--as alias` only sets the folder; the committed `plugin.yaml` is never edited. Commands are keyed by `manifest.name` (✅ `plugin-commands.ts:84`, `run-command.ts:67-71`) and actions by code-defined `actionName` with silent overwrite (✅ `action-registry.ts:112-125`), so two copies of one plugin cannot coexist: `link` refuses with `SHARE_NAME_CLASH` when a scanned plugin has the same `manifest.name`. `--as` is for a folder clash with a different plugin. The guide tells authors to prefix action names with the plugin name.
 - **Q5 CSS** — see TL;DR #13. Rationale: only verified existing transport, zero framework change, self-contained components; **per-project / per-page theming** overrides fallbacks via the same `--<plugin>-*` variables. Cost: repeated fallback values in shared templates; fonts manual until page links them.
 - **Q6 Versioning?** `commit` is always pinned; `ref` may be a tag. `pull` moves to `ref` HEAD. Phase 1: `link --ref <branch>` picks a branch (default `main`); Phase 2: tags as `ref` and `pull --commit <sha>` pins explicitly, and `<sha>` must be on `origin/<ref>` (else `SHARE_GIT_FAILED`, "commit <sha> is not on origin/<ref>"). No semver.
@@ -109,56 +110,90 @@ Jay projects are increasingly built by coding agents. Teams want to reuse a desi
 
 ```yaml
 plugins:
-  - folder: brand-ds          # src/plugins/<folder>; equals manifest.name unless linked --as
+  - folder: brand-ds # src/plugins/<folder>; equals manifest.name unless linked --as
     repo: https://github.com/acme/brand-ds.git
     ref: main
-    commit: 3f9c2a1…           # pinned; written by publish/link/pull/push
+    commit: 3f9c2a1… # pinned; written by publish/link/pull/push
 ```
 
 ### Errors and reports — one type
 
 ```ts
 type ShareErrorCode =
-  | 'SHARE_INVALID_REPO' | 'SHARE_BRANCH_NOT_EMPTY' | 'SHARE_NO_ACCESS' | 'SHARE_OFFLINE'
-  | 'SHARE_DIRTY' | 'SHARE_DIVERGED' | 'SHARE_BRANCH_PROTECTED'
-  | 'SHARE_SUBMODULE' | 'SHARE_TRACKED' | 'SHARE_NAME_CLASH' | 'SHARE_FOLDER_EXISTS'
-  | 'SHARE_SECRET_FOUND' | 'SHARE_VALIDATE_FAILED'
-  | 'SHARE_NOT_IN_MANIFEST' | 'SHARE_ALREADY_IN_MANIFEST' | 'SHARE_COMMIT_MISSING' | 'SHARE_GIT_FAILED'
+  | 'SHARE_INVALID_REPO'
+  | 'SHARE_BRANCH_NOT_EMPTY'
+  | 'SHARE_NO_ACCESS'
+  | 'SHARE_OFFLINE'
+  | 'SHARE_DIRTY'
+  | 'SHARE_DIVERGED'
+  | 'SHARE_BRANCH_PROTECTED'
+  | 'SHARE_SUBMODULE'
+  | 'SHARE_TRACKED'
+  | 'SHARE_NAME_CLASH'
+  | 'SHARE_FOLDER_EXISTS'
+  | 'SHARE_SECRET_FOUND'
+  | 'SHARE_VALIDATE_FAILED'
+  | 'SHARE_NOT_IN_MANIFEST'
+  | 'SHARE_ALREADY_IN_MANIFEST'
+  | 'SHARE_COMMIT_MISSING'
+  | 'SHARE_GIT_FAILED'
   | 'SHARE_NOT_A_PLUGIN'
   | 'SHARE_UNSUPPORTED_REFERENCE'; // Phase 2
 
 interface ShareReport {
   ok: boolean;
-  code?: ShareErrorCode;          // set when ok === false
+  code?: ShareErrorCode; // set when ok === false
   message: string;
-  files: string[];                // dirty / denylisted / failed-folder paths; [folder] for SHARE_ALREADY_IN_MANIFEST
-  localSha?: string;              // always set for SHARE_DIVERGED
-  remoteSha?: string;             // always set for SHARE_DIVERGED (fetched origin/<ref>)
-  nextStep?: string;              // exact command to run next (human-facing)
-  plugin?: PluginSummary;         // publish / link / pull
-  plugins?: PluginStatus[];       // status / restore
+  files: string[]; // dirty / denylisted / failed-folder paths; [folder] for SHARE_ALREADY_IN_MANIFEST
+  localSha?: string; // always set for SHARE_DIVERGED
+  remoteSha?: string; // always set for SHARE_DIVERGED (fetched origin/<ref>)
+  nextStep?: string; // exact command to run next (human-facing)
+  plugin?: PluginSummary; // publish / link / pull
+  plugins?: PluginStatus[]; // status / restore
   incoming?: { codeFiles: string[]; otherFiles: string[] }; // pull, pull dryRun; informational
-  plan?: PublishPlan;             // Phase 2: publish dryRun
+  plan?: PublishPlan; // Phase 2: publish dryRun
 }
 interface PluginSummary {
-  name: string; folder: string; repo: string;
-  sha: string; shortSha: string;
-  contracts: string[]; actions: string[]; routes: string[];
-  shadowedRoutes: string[];       // plugin routes hidden by project routes (dev-server.ts:121-127)
-  hasServerCode: boolean;         // any file in the plugin matches the code-files set (same set as incoming.codeFiles)
-  setup: SetupOutcome; setupMessage?: string;
-  setupQuestion?: { key: string; type: string; message: string; choices?: { value: string; name: string }[] };
+  name: string;
+  folder: string;
+  repo: string;
+  sha: string;
+  shortSha: string;
+  contracts: string[];
+  actions: string[];
+  routes: string[];
+  shadowedRoutes: string[]; // plugin routes hidden by project routes (dev-server.ts:121-127)
+  hasServerCode: boolean; // any file in the plugin matches the code-files set (same set as incoming.codeFiles)
+  setup: SetupOutcome;
+  setupMessage?: string;
+  setupQuestion?: {
+    key: string;
+    type: string;
+    message: string;
+    choices?: { value: string; name: string }[];
+  };
 }
 interface PluginStatus {
-  folder: string; name?: string; present: boolean; dirtyFiles: string[];
+  folder: string;
+  name?: string;
+  present: boolean;
+  dirtyFiles: string[];
   // ahead = commits in HEAD not in origin/<ref>; behind = the reverse; diverged = both > 0.
   // origin/<ref> is the last fetched remote-tracking ref (refreshed only with fetch: true).
-  ahead: number; behind: number; diverged: boolean;
-  headSha?: string; pinnedSha: string; headMatchesPin: boolean;
+  ahead: number;
+  behind: number;
+  diverged: boolean;
+  headSha?: string;
+  pinnedSha: string;
+  headMatchesPin: boolean;
   fetched: boolean;
 }
 type SetupOutcome = 'none' | 'configured' | 'needs-config' | 'needs-answer' | 'error';
-class ShareError extends Error { constructor(readonly report: ShareReport) { super(report.message); } }
+class ShareError extends Error {
+  constructor(readonly report: ShareReport) {
+    super(report.message);
+  }
+}
 ```
 
 **Programmatic surface = actions.** The 7 action names and input schemas are public API (renames are breaking). In-process callers use `actionRegistry.execute(name, input)` (✅ `action-registry.ts:201`), which returns `ActionExecutionResult<ShareReport>` (`:70-71`). A share failure is `success: true` with `data.ok === false`; `success: false` means the registry itself failed. The CLI prints human text and returns `{ success: report.ok }` → exit `0`/`1` (`run-command.ts:142-145`). **Rejected: `--json` + per-code exit codes**: the handler contract returns only `{ success }` (`plugin-commands.ts:185-193`), `process.exit` would skip Vite cleanup (`run-command.ts:152-155`), and plugin init logs share stdout (`:112`).
@@ -184,6 +219,7 @@ One `GitRunner` (`run(args, cwd) → {stdout}`) applies the no-prompt environmen
 **Code files (informational):** `*.ts`, `*.tsx`, `*.mts`, `*.cts`, `*.js`, `*.jsx`, `*.mjs`, `*.cjs`, `plugin.yaml`, `agent-kit/**`. Nothing is blocked on them.
 
 **Setup + agent-kit** (`lib/core/plugin-handlers.ts`), after the files are in `src/plugins/<folder>/`:
+
 - Discover: `discoverPluginsWithSetup({ projectRoot })` (✅ `plugin-setup.ts:118`) filtered by `pluginPath === path.resolve(projectRoot, 'src/plugins', folder)`; same with `discoverPluginsWithAgentKit` (`:163`). No match → `none`.
 - Execute: `executePluginSetup(plugin, { projectRoot, configDir, force: false, interactive: false, prompt, viteServer })` (✅ `:210-221`), `configDir` from `loadConfig().devServer?.configBase || './config'` (as `run-setup.ts:54-55`); then `executePluginAgentKit` (`:250-262`). `prompt` is the share plugin's own `createThrowingPrompt` (each method throws `SetupNeedsAnswerError`), since `stack-cli` is not a dependency.
 - Loader: a local handler is a relative `.ts`, loadable only via `viteServer.ssrLoadModule` (✅ `plugin-setup.ts:296-302`); handlers get no Vite server (`plugin-commands.ts:192`), so the core starts its own `createViteForCli({ projectRoot })` (✅ `dev-server/lib/vite-factory.ts:156`) for this step only and closes it in `finally`. **Cost: one Vite start (~1 s) per link / pull-that-moved-HEAD / restore.** `@jay-framework/dev-server` is a `./tools` dependency only.
@@ -206,13 +242,13 @@ One `GitRunner` (`run(args, cwd) → {stdout}`) applies the no-prompt environmen
 - **Product rule (2026-11-16):** every `SHARE-*` finding is **warning** severity. None of them may cause `jay-stack validate` to exit non-zero by themselves (local dev and AIditor follow-up must not be blocked). Teams may treat warnings as errors in CI later via a separate policy — out of scope for v1.
 - Ship in the share package with a minimal `share.yaml` reader so manifest/hygiene checks work even before link/publish actions land. Phase 1a has five checks, no suppression keys, no new config.
 
-  | Check (Phase 1a) | Severity |
-  |---|---|
-  | `SHARE-MANIFEST-MISSING-FOLDER` (run `share/restore`) | warning |
-  | `SHARE-FOLDER-NOT-IN-MANIFEST` | warning |
-  | `SHARE-NOT-IGNORED` (not ignored, or tracked by the site repo) | warning |
-  | `SHARE-COMMIT-MISMATCH` (HEAD ≠ `commit`) | warning |
-  | `SHARE-DIRTY` | warning |
+  | Check (Phase 1a)                                               | Severity |
+  | -------------------------------------------------------------- | -------- |
+  | `SHARE-MANIFEST-MISSING-FOLDER` (run `share/restore`)          | warning  |
+  | `SHARE-FOLDER-NOT-IN-MANIFEST`                                 | warning  |
+  | `SHARE-NOT-IGNORED` (not ignored, or tracked by the site repo) | warning  |
+  | `SHARE-COMMIT-MISMATCH` (HEAD ≠ `commit`)                      | warning  |
+  | `SHARE-DIRTY`                                                  | warning  |
 
   **Phase 2:** `SHARE-TOKEN-PREFIX` (custom properties in shared template CSS must start `--<folder>-` or `--<manifest.name>-`), `SHARE-FONT-MISSING` (needs a new `plugin.yaml` fonts field; unknown keys tolerated, `plugin-resolution.ts:174-186`), and `ctx.validationOverrides?.share` suppression keys (as `a11y-validator.ts:16`).
 
@@ -220,12 +256,12 @@ One `GitRunner` (`run(args, cwd) → {stdout}`) applies the no-prompt environmen
 
 Users and agents pick the **highest layer that solves the job** — only go lower when necessary.
 
-| Layer | User-facing name | What changes | Upstream `share/pull` |
-|---|---|---|---|
-| 1 | **Adjust brand (theme)** | Site/page sets `--<plugin>-*` custom properties; shared templates keep fallbacks | Updates shared components; theme stays in the site |
-| 2 | **Use another variant** | Second (or more) `.jay-html` per contract; page imports with `as=` (DL #205); contract variants for runtime modes | New shared templates arrive on pull; pages keep their import choice |
-| 3 | **Custom look for this site (project skin)** | Project-owned template (and minimal glue) under `src/components/` or `src/plugins/<site>-ds/`, still using shared contract/`.ts` when possible | Pull updates shared logic/contracts; re-check skins |
-| 4 | **Detach** | Full component tree copied to the site; references stop using `plugin="<shared>"` for that contract | **No automatic sync** — explicit opt-out; optional future "compare with upstream" (agent/UI), not silent merge |
+| Layer | User-facing name                             | What changes                                                                                                                                   | Upstream `share/pull`                                                                                          |
+| ----- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| 1     | **Adjust brand (theme)**                     | Site/page sets `--<plugin>-*` custom properties; shared templates keep fallbacks                                                               | Updates shared components; theme stays in the site                                                             |
+| 2     | **Use another variant**                      | Second (or more) `.jay-html` per contract; page imports with `as=` (DL #205); contract variants for runtime modes                              | New shared templates arrive on pull; pages keep their import choice                                            |
+| 3     | **Custom look for this site (project skin)** | Project-owned template (and minimal glue) under `src/components/` or `src/plugins/<site>-ds/`, still using shared contract/`.ts` when possible | Pull updates shared logic/contracts; re-check skins                                                            |
+| 4     | **Detach**                                   | Full component tree copied to the site; references stop using `plugin="<shared>"` for that contract                                            | **No automatic sync** — explicit opt-out; optional future "compare with upstream" (agent/UI), not silent merge |
 
 **Agent-kit (`share-guide.md` + framework `design-system-guide.md`):** one section **"Customizing a shared design system"** with this table, examples for theme + `as=` variant, project-skin layout, and detach confirmation copy ("Updates from the shared design system will no longer apply to this component."). Discourage ad-hoc region CSS on shared imports as the primary customization path — point to variant or project skin (aligns with REGION-OVERRIDE remedies, DL #200).
 
@@ -247,7 +283,7 @@ Users and agents pick the **highest layer that solves the job** — only go lowe
   1. **Simple (default):** one in-house team, everyone with git access pushes to `main` via `share/push`.
   2. **Team / agency:** GitHub permissions and branch protection on the plugin repo; changes go through branches + PRs. `share/push` to a protected `main` fails (`SHARE_BRANCH_PROTECTED`); the agent then pushes a branch with plain git and opens a PR, and sites `share/pull` after merge.
   3. **Advanced:** package as NPM (the section above) for outside authors, immutable releases or a private registry.
-  Also: updates are on demand (the user or the agent runs `share/pull`, or a teammate does it in a site branch/PR), never automatic. When publishing, ask the user for an existing GitHub repo URL and an optional branch (default `main`). Agents never create GitHub repositories; ask the user for an existing repo URL and optional branch. Agents may proactively offer to move existing site components into a local plugin when the user wants to share or reuse them.
+     Also: updates are on demand (the user or the agent runs `share/pull`, or a teammate does it in a site branch/PR), never automatic. When publishing, ask the user for an existing GitHub repo URL and an optional branch (default `main`). Agents never create GitHub repositories; ask the user for an existing repo URL and optional branch. Agents may proactively offer to move existing site components into a local plugin when the user wants to share or reuse them.
 - Framework guide edits (`agent-kit-template/designer/design-system-guide.md`, `developer/project-structure.md`): "build shareable design-system resources in a local plugin by default; keep component CSS inline in the template `<style>` with `var(--<plugin>-x, value)` tokens; override look per site/page by setting those variables; use variants (`as=`) before forking templates."
 - Section **"Customizing a shared design system"** (four layers table above).
 
@@ -295,26 +331,28 @@ jay-stack run share/push --folder brand-ds                              # diverg
 
 ## Trade-offs
 
-| Choice | Pro | Con |
-|---|---|---|
-| `.gitignore` + manifest vs submodule | Agent-friendly, validatable, no parent-index coupling | Needs `restore` in CI; HEAD vs pin can drift (`status`, Phase 1a `SHARE-COMMIT-MISMATCH`) |
-| git repo vs npm package | Edit in place from any site and push back; no registry | No semver or immutable versions; NPM stays the documented stricter path |
-| No trust gate (Q13) | Simple; same trust as teammates and NPM plugins; raw git works | Shared code runs on link/pull without a separate approval; review relies on the site PR |
-| `ff-only` vs auto-merge | Predictable; jay never authors merges | Divergence needs manual git |
-| Plain `git` vs `gh` / host API | No extra tool; user's credentials; one code path | jay never creates repos (user gives an existing repo + branch); GitHub only |
-| Thin Phase 1 (existing plugin publish only) | Ships the engine fast; no rewriter risk | Migrating site resources is manual until Phase 2 |
-| Denylist only in Phase 1 | Cheap, deterministic, no false positives | A secret inside an allowed file is not caught until the Later content scan |
-| Tokens as fallbacks vs page-wide CSS field | Zero framework change; sites override via same variable names | Repeated fallbacks; fonts manual |
-| All `SHARE-*` as warnings | Local dev and agents never hard-blocked; educate via validate output | Stricter CI policy deferred; teams must read warnings |
+| Choice                                      | Pro                                                                  | Con                                                                                       |
+| ------------------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `.gitignore` + manifest vs submodule        | Agent-friendly, validatable, no parent-index coupling                | Needs `restore` in CI; HEAD vs pin can drift (`status`, Phase 1a `SHARE-COMMIT-MISMATCH`) |
+| git repo vs npm package                     | Edit in place from any site and push back; no registry               | No semver or immutable versions; NPM stays the documented stricter path                   |
+| No trust gate (Q13)                         | Simple; same trust as teammates and NPM plugins; raw git works       | Shared code runs on link/pull without a separate approval; review relies on the site PR   |
+| `ff-only` vs auto-merge                     | Predictable; jay never authors merges                                | Divergence needs manual git                                                               |
+| Plain `git` vs `gh` / host API              | No extra tool; user's credentials; one code path                     | jay never creates repos (user gives an existing repo + branch); GitHub only               |
+| Thin Phase 1 (existing plugin publish only) | Ships the engine fast; no rewriter risk                              | Migrating site resources is manual until Phase 2                                          |
+| Denylist only in Phase 1                    | Cheap, deterministic, no false positives                             | A secret inside an allowed file is not caught until the Later content scan                |
+| Tokens as fallbacks vs page-wide CSS field  | Zero framework change; sites override via same variable names        | Repeated fallbacks; fonts manual                                                          |
+| All `SHARE-*` as warnings                   | Local dev and agents never hard-blocked; educate via validate output | Stricter CI policy deferred; teams must read warnings                                     |
 
 ## Verification Criteria
 
 **Phase 1a**
+
 - [P1a] Each of the five `SHARE-*` checks has a failing fixture first; every emitted finding has severity **warning**.
 - [P1a] Project with only share warnings: `jay-stack validate` exits `0`.
 - [P1a] Guides include four-layer customization + token override example.
 
 **Phase 1**
+
 - [P1] **Index after `--as`:** `link --as ds2` → `design-system-index.yaml` lists `plugin: ds2` (resolves in a page) and `plugins-index.yaml` lists `name: ds2` (fixture red first).
 - [P1] Linked plugin's components, actions and commands work in dev; components appear in `design-system-index.yaml`.
 - [P1] **Actions load:** all 7 `share*` actions register from `./tools` (`devOnly`); `.` exports none; an action called from the dev server resolves `projectRoot` to the project folder.
@@ -351,11 +389,13 @@ jay-stack run share/push --folder brand-ds                              # diverg
 - [P1] **Guides:** `share-guide.md` has "Choosing a sharing approach" (simple default, team branches + PRs, NPM) and the on-demand update rule; it has the NPM section with the `plugin=` update step and a link that resolves inside a generated project `agent-kit/`; framework guides state "shareable DS resources in a local plugin by default".
 
 **Phase 2**
+
 - [P2] Publish of components (+ an action) rewrites all R1/R3 references; `validate` clean; the site renders identically, including component CSS.
 - [P2] A headfull reference to a moved file stops publish with `SHARE_UNSUPPORTED_REFERENCE`, nothing moved.
 - [P2] `publish --dry-run` returns `plan`, changes no file, and makes no network git call; `--local-only` moves, rewrites, validates and makes no git repo, remote call or `share.yaml` change.
 
 **Phase 3**
+
 - [P3] `jay-stack build` of a project with a local plugin route (`component: ./pages/x/page.ts`) emits `server/plugins/<f>/pages/x/page.js`, renders server-side and hydrates on the client (fixture red first).
 - [P3] A page shared through a linked plugin serves in dev and prod.
 
