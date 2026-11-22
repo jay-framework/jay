@@ -1,35 +1,18 @@
 {
   "name": "@jay-framework/share",
-  "version": "0.26.4",
+  "version": "0.26.5",
   "type": "module",
   "description": "Share Jay local plugins through a dedicated git repo — link, pull, push, publish, restore (DL#237)",
   "license": "Apache-2.0",
   "main": "dist/index.js",
   "files": [
     "dist",
-    "plugin.yaml",
-    "commands",
-    "actions",
-    "agent-kit"
+    "plugin.yaml"
   ],
   "exports": {
     ".": "./dist/index.js",
     "./tools": "./dist/tools.js",
-    "./plugin.yaml": "./plugin.yaml",
-    "./commands/publish.jay-command": "./commands/publish.jay-command",
-    "./commands/link.jay-command": "./commands/link.jay-command",
-    "./commands/pull.jay-command": "./commands/pull.jay-command",
-    "./commands/push.jay-command": "./commands/push.jay-command",
-    "./commands/status.jay-command": "./commands/status.jay-command",
-    "./commands/restore.jay-command": "./commands/restore.jay-command",
-    "./commands/unlink.jay-command": "./commands/unlink.jay-command",
-    "./actions/publish.jay-action": "./actions/publish.jay-action",
-    "./actions/link.jay-action": "./actions/link.jay-action",
-    "./actions/pull.jay-action": "./actions/pull.jay-action",
-    "./actions/push.jay-action": "./actions/push.jay-action",
-    "./actions/status.jay-action": "./actions/status.jay-action",
-    "./actions/restore.jay-action": "./actions/restore.jay-action",
-    "./actions/unlink.jay-action": "./actions/unlink.jay-action"
+    "./plugin.yaml": "./plugin.yaml"
   },
   "scripts": {
     "build": "npm run clean && npm run build:server && npm run build:types && npm run validate",
