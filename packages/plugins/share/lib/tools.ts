@@ -20,5 +20,4 @@ export {
 } from './commands';
 export { validateShare } from './validators/share';
 export { shareAgentKit } from './agent-kit';
-export { runShareFlow, shareFlows } from './flows';
 export * from './core/types';
