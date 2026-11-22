@@ -139,5 +139,42 @@ describe('resolve-instance-props', () => {
 
             expect(props).toEqual({ categorySlug: 'bedroom' });
         });
+
+        /**
+         * Bug: contract prop `default`s were never applied at render.
+         * Found in: QA — `<jay:button>` without `variant` rendered class `ds-button-` (unstyled)
+         * while the editor preview filled the contract default and showed the styled button.
+         * Expected: an omitted prop takes its declared contract `default`, coerced to its dataType.
+         * Actual: the omitted prop was missing from the instance props.
+         */
+        it('should apply a contract default to a prop the instance omits', () => {
+            const props = normalizeAndResolveInstanceProps({ label: 'Book' }, [
+                { name: 'label', dataType: { kind: 'primitive', name: 'string' } },
+                {
+                    name: 'variant',
+                    default: 'primary',
+                    dataType: { kind: 'primitive', name: 'string' },
+                },
+                {
+                    name: 'showIcon',
+                    default: 'true',
+                    dataType: { kind: 'primitive', name: 'boolean' },
+                },
+            ] as unknown as ContractProp[]);
+
+            expect(props).toEqual({ label: 'Book', variant: 'primary', showIcon: true });
+        });
+
+        it('should keep an explicitly passed prop over its contract default', () => {
+            const props = normalizeAndResolveInstanceProps({ variant: 'ghost' }, [
+                {
+                    name: 'variant',
+                    default: 'primary',
+                    dataType: { kind: 'primitive', name: 'string' },
+                },
+            ] as unknown as ContractProp[]);
+
+            expect(props).toEqual({ variant: 'ghost' });
+        });
     });
 });

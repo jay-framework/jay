@@ -57,6 +57,38 @@ describe('syncPageContent (DL#196)', () => {
         expect(extractScopeBlock(style, '.promo')).not.toBeUndefined();
     });
 
+    /**
+     * Bug: sync corrupts a page `<style>` whose CSS contains `<…>` text, e.g. `syntax: '<angle>'`.
+     * Found in: share-ds QA re-run — after the agent placed a design-system Button and ran
+     * `jay-stack sync`, the starter home page gained a stray `</angle>` inside its `<style>`, so the
+     * page CSS no longer parsed (design-system card previews dropped the site CSS).
+     * Expected: the merged CSS is written back as raw text — `'<angle>'` kept, no `</angle>` added.
+     * Actual: `set_content(string)` re-parses the CSS as HTML and serializes `<angle>…</angle>`.
+     */
+    it('should keep `<…>` text in the page <style> as raw CSS when merging @scope CSS', async () => {
+        const { content, dirname } = await parseSyncPage('page.jay-html');
+        const propertyRule = "@property --border-angle { syntax: '<angle>'; inherits: false; }";
+        const withStyle = content.replace('</head>', `<style>${propertyRule}</style>\n</head>`);
+        const parsed = await parseJayFile(
+            withStyle,
+            'page',
+            dirname,
+            {},
+            JAY_IMPORT_RESOLVER,
+            syncDir,
+        );
+        const result = syncPageContent(withStyle, dirname, parsed.val!, readFileSyncSafe);
+
+        expect(result.content.includes('</angle>')).toBe(false);
+        const styles = parseHtml(result.content).querySelectorAll('style');
+        expect(styles).toHaveLength(1);
+        const collapse = (css: string) => css.replace(/\s+/g, ' ').trim();
+        const [handAuthored, ...regionBlocks] = styles[0].textContent.trim().split(/\n\s*\n/);
+        expect(collapse(handAuthored)).toEqual(collapse(propertyRule.replace(/([{;])\s*/g, '$1 ')));
+        expect(regionBlocks.length).toBeGreaterThan(0);
+        expect(extractScopeBlock(styles[0].textContent, '.promo')).not.toBeUndefined();
+    });
+
     it('coalesces same-template instances into one selector-list @scope block', async () => {
         const { content, jayHtml, dirname } = await parseSyncPage('two-cards.jay-html');
         const result = syncPageContent(content, dirname, jayHtml, readFileSyncSafe);

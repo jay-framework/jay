@@ -144,6 +144,9 @@ props:
     default: 'true'
 ```
 
+A usage that omits a prop renders with its `default` (coerced to the prop's type), so
+`<jay:button>` without `variant` gets the contract's default variant.
+
 ## Params — URL route segments
 
 Params come from dynamic route segments. Use for page-level routing.
