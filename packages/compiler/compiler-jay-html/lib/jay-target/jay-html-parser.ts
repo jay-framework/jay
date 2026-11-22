@@ -1127,8 +1127,6 @@ interface ExtractCssResult {
     /** Page CSS parts (linked files, then `<head><style>`), unjoined so imports can be hoisted. */
     cssParts: string[];
     linkedCssFiles: string[];
-    /** Hand-linked files skipped because a used plugin already ships them in `styles` (DL#238). */
-    duplicateLinks: string[];
 }
 
 async function extractCss(
@@ -1139,7 +1137,6 @@ async function extractCss(
     const cssParts: string[] = [];
     const validations: string[] = [];
     const linkedCssFiles: string[] = [];
-    const duplicateLinks: string[] = [];
 
     // Extract CSS from <link> tags with rel="stylesheet"
     const styleLinks = root.querySelectorAll('head link[rel="stylesheet"]');
@@ -1159,10 +1156,8 @@ async function extractCss(
                 const cssFilePath = path.resolve(filePath, href);
                 linkedCssFiles.push(cssFilePath);
 
-                if (skipPaths?.has(cssFilePath)) {
-                    duplicateLinks.push(cssFilePath);
-                    continue;
-                }
+                // A hand link to a stylesheet a used plugin already ships in `styles` (DL#238).
+                if (skipPaths?.has(cssFilePath)) continue;
 
                 try {
                     const cssContent = await fs.readFile(cssFilePath, 'utf-8');
@@ -1189,7 +1184,7 @@ async function extractCss(
         }
     }
 
-    return new WithValidations({ cssParts, linkedCssFiles, duplicateLinks }, validations);
+    return new WithValidations({ cssParts, linkedCssFiles }, validations);
 }
 
 /**

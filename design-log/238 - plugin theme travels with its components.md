@@ -179,6 +179,7 @@ Template `<style>` comes from the plugin's component `.jay-html` files. The chec
 
 - Plugin-level rules run as a **project validator** (DL#232), not per page: plugin templates under `src/plugins/` are not in the per-file pass, and per-page runs would repeat them.
 - The page validator reads the page source (links, `plugin=` imports, headfull `src=`) instead of extending `JayHtmlValidationContext`.
+- `ExtractCssResult.duplicateLinks` was dropped (review, 2026-11-22): `DS-THEME-HAND-LINKED` finds hand links from the page source, so the compiler only skips them through `skipPaths`.
 - Plugin CSS header uses the file basename (`/* Plugin CSS: brand-ds/theme.css */`).
 - Page CSS parts are now trimmed after import hoisting (small formatting change for all pages).
 - A page that imports a local plugin's contract **by file path** (`contract="../plugins/x/…jay-contract"`, no `plugin=`) does not trigger inclusion, as designed. The live site A used that form and had to switch to `plugin="x"`. Follow-up: a validation for path-imports into `src/plugins/`.
