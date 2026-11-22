@@ -170,6 +170,7 @@ function mergeScopeCss(html: string, aggregatedCss: string): string {
     if (newCss === existingCss.trim()) return html; // nothing to change
     // A TextNode, not a string: `set_content(string)` re-parses CSS as HTML (`'<angle>'` → `<angle></angle>`).
     if (styleEl) styleEl.set_content([new TextNode(newCss, styleEl)]);
+    // Safe as a string: the parser sees the whole `<style>` element and keeps its content as raw text.
     else head.insertAdjacentHTML('beforeend', `<style>${newCss}</style>`);
     return root.toString();
 }
