@@ -89,6 +89,25 @@ describe('syncPageContent (DL#196)', () => {
         expect(extractScopeBlock(styles[0].textContent, '.promo')).not.toBeUndefined();
     });
 
+    /**
+     * Guard for the create path of the `<angle>` fix above: when the page has no `<style>` yet, sync
+     * inserts a whole `<style>…</style>` element, whose content the parser keeps as raw text.
+     * Replacing that with `set_content(css)` would re-parse the CSS as HTML (`<angle></angle>`).
+     */
+    it('should keep `<…>` text as raw CSS when sync creates the page <style>', async () => {
+        const { content, jayHtml, dirname } = await parseSyncPage('page.jay-html');
+        const propertyRule = "@property --border-angle { syntax: '<angle>'; inherits: false; }";
+        const readTemplateWithAngle = (filePath: string) =>
+            readFileSyncSafe(filePath)?.replace('<style>', `<style>\n    ${propertyRule}`);
+        const result = syncPageContent(content, dirname, jayHtml, readTemplateWithAngle);
+
+        expect(result.content.includes('</angle>')).toBe(false);
+        const styles = parseHtml(result.content).querySelectorAll('style');
+        expect(styles).toHaveLength(1);
+        expect(styles[0].textContent.includes(`syntax: '<angle>'`)).toBe(true);
+        expect(extractScopeBlock(styles[0].textContent, '.promo')).not.toBeUndefined();
+    });
+
     it('coalesces same-template instances into one selector-list @scope block', async () => {
         const { content, jayHtml, dirname } = await parseSyncPage('two-cards.jay-html');
         const result = syncPageContent(content, dirname, jayHtml, readFileSyncSafe);

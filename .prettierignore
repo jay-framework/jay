@@ -7,3 +7,4 @@ build
 /packages/runtime/secure/test/**/*.html.ts
 .vscode
 .yarn
+/packages/compiler/compiler-jay-html/test/fixtures/plugin-styles/**/*.css

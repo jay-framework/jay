@@ -1,0 +1,5 @@
+name: brand-ds
+styles: [theme.css]
+contracts:
+  - name: button
+    contract: button.jay-contract

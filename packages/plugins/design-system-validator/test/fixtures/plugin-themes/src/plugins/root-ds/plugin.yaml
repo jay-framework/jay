@@ -1,0 +1,5 @@
+name: root-ds
+styles: [theme.css]
+contracts:
+  - name: chip
+    contract: chip.jay-contract

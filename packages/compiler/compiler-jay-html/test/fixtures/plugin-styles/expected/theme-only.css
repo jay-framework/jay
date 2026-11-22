@@ -1,0 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Sora');
+
+/* Plugin CSS: brand-ds/theme.css */
+:where(:root) { --brand-ds-primary: #2563eb; }
+@keyframes brand-spin { to { transform: rotate(360deg); } }

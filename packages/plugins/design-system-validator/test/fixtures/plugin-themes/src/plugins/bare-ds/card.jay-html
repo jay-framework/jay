@@ -1,0 +1,10 @@
+<html>
+<head>
+  <style>
+    .card { padding: 4px; }
+    .card-title { color: var(--bare-ds-ink); }
+    .card-body { color: var(--bare-ds-muted, #666); }
+  </style>
+</head>
+<body><div class="card"><h2 class="card-title">T</h2></div></body>
+</html>

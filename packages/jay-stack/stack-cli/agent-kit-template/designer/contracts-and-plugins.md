@@ -81,6 +81,10 @@ Key fields:
 - `contracts[].description` — what the component does (helps you decide which to use)
 - `actions[].name` — action name (use with `jay-stack action <plugin>/<action>`)
 - `actions[].action` — path to `.jay-action` file with full metadata (description, input/output schemas)
+- `styles` — page-wide plugin stylesheets (tokens under `:where(:root)`, `@font-face`, font `@import`).
+  Jay inlines them once, before the page CSS, into every page that imports a component of the
+  plugin; the plugins index lists them as `styles` (project-relative) for preview hosts. Do not
+  `<link>` them in pages yourself.
 
 ## Reading .jay-contract Files
 
