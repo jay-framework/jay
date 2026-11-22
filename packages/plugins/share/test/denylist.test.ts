@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { isCodeFile, isDeniedPath, isScriptFile, PLUGIN_GITIGNORE } from '../lib/core/denylist';
 
-describe('denylist and code files (DL221)', () => {
+describe('denylist and code files (DL#237)', () => {
     it('denies hidden dot paths, config/, key files and id_rsa*, but keeps the root .gitignore', () => {
         const paths = [
             '.gitignore',
@@ -67,7 +67,7 @@ describe('denylist and code files (DL221)', () => {
  * script files (`hasServerCode`) nor code files (`incoming.codeFiles`).
  * Actual: `.d.ts` matched the `.ts` extension, so `hasServerCode` was true.
  */
-describe('declaration files are not code (DL221 QA)', () => {
+describe('declaration files are not code (DL#237 QA)', () => {
     const declarations = [
         'index.d.ts',
         'components/button/button.jay-html.d.ts',

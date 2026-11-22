@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { classifyGitStderr } from '../lib/core/report';
 
-describe('git stderr classification (DL221)', () => {
+describe('git stderr classification (DL#237)', () => {
     it.each([
         ['git@github.com: Permission denied (publickey).', 'SHARE_NO_ACCESS'],
         ['fatal: unable to access: The requested URL returned error: 403', 'SHARE_NO_ACCESS'],

@@ -4,7 +4,7 @@ import { buildSshCommand, createGitRunner, GitCommandError } from '../lib/core/g
 import { networkFailure } from '../lib/core/report';
 import { createSandbox } from './harness';
 
-describe('git runner — no prompts (DL221)', () => {
+describe('git runner — no prompts (DL#237)', () => {
     it('appends BatchMode to ssh, the caller command, or core.sshCommand', () => {
         expect(buildSshCommand(undefined, undefined)).toEqual('ssh -o BatchMode=yes');
         expect(buildSshCommand('ssh -i k', undefined)).toEqual('ssh -i k -o BatchMode=yes');
@@ -44,7 +44,7 @@ describe('git runner — no prompts (DL221)', () => {
  * orphaned child process (the helper outlives a plain kill of git).
  * Actual: execFile had no timeout, so the share action never returned.
  */
-describe('git runner — stalled git (DL221 QA)', () => {
+describe('git runner — stalled git (DL#237 QA)', () => {
     it('fails with a timeout error and kills the whole process tree', async () => {
         const sandbox = createSandbox();
         const marker = `share-stall-${process.pid}-${Date.now()}`;
