@@ -20,7 +20,7 @@ import { type ScannedPlugin, scanPlugins } from '@jay-framework/stack-server-run
 import type { ViteSSRLoader } from '@jay-framework/stack-server-runtime';
 import { getLogger } from '@jay-framework/logger';
 import { loadActionMetadata, resolveActionMetadataPath } from './action-metadata';
-import { buildDesignSystemIndex, renderAddMenu } from './design-system-index';
+import { buildDesignSystemIndex, pluginIndexKey, renderAddMenu } from './design-system-index';
 
 const require = createRequire(import.meta.url);
 
@@ -393,10 +393,11 @@ export async function materializeContracts(
         }
 
         const { manifest } = plugin;
+        const indexKey = pluginIndexKey(pluginKey, plugin);
 
         // Ensure plugin entry exists in plugins index
         const pluginRelPath = path.relative(projectRoot, plugin.pluginPath);
-        if (!pluginsIndexMap.has(plugin.name)) {
+        if (!pluginsIndexMap.has(indexKey)) {
             const entry: Omit<PluginsIndexEntry, 'name'> = {
                 path: './' + pluginRelPath.replace(/\\/g, '/'),
                 contracts: [],
@@ -457,7 +458,7 @@ export async function materializeContracts(
                     };
                 });
             }
-            pluginsIndexMap.set(plugin.name, entry);
+            pluginsIndexMap.set(indexKey, entry);
         }
 
         // Add static contracts to index
@@ -485,7 +486,7 @@ export async function materializeContracts(
                     }
                 }
 
-                pluginsIndexMap.get(plugin.name)!.contracts.push({
+                pluginsIndexMap.get(indexKey)!.contracts.push({
                     name: contract.name,
                     ...(description && { description }),
                     type: 'static',
@@ -574,7 +575,7 @@ export async function materializeContracts(
                             path: './' + relativePath,
                             ...(generated.metadata && { metadata: generated.metadata }),
                         };
-                        pluginsIndexMap.get(plugin.name)!.contracts.push(contractEntry);
+                        pluginsIndexMap.get(indexKey)!.contracts.push(contractEntry);
                         dynamicCount++;
 
                         if (verbose) {
@@ -608,7 +609,7 @@ export async function materializeContracts(
                 if (!metadata) continue;
 
                 const actionRelPath = path.relative(projectRoot, metadataFilePath);
-                const pluginEntry = pluginsIndexMap.get(plugin.name)!;
+                const pluginEntry = pluginsIndexMap.get(indexKey)!;
                 if (!pluginEntry.actions) pluginEntry.actions = [];
                 pluginEntry.actions.push({
                     name: metadata.name,
@@ -692,8 +693,9 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
         if (pluginFilter && plugin.name !== pluginFilter && pluginKey !== pluginFilter) continue;
 
         const { manifest } = plugin;
+        const indexKey = pluginIndexKey(pluginKey, plugin);
         const pluginRelPath = path.relative(projectRoot, plugin.pluginPath);
-        if (!pluginsMap.has(plugin.name)) {
+        if (!pluginsMap.has(indexKey)) {
             const entry: Omit<PluginsIndexEntry, 'name'> = {
                 path: './' + pluginRelPath.replace(/\\/g, '/'),
                 contracts: [],
@@ -749,7 +751,7 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
                     };
                 });
             }
-            pluginsMap.set(plugin.name, entry);
+            pluginsMap.set(indexKey, entry);
         }
 
         // Add static contracts
@@ -777,7 +779,7 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
                     }
                 }
 
-                pluginsMap.get(plugin.name)!.contracts.push({
+                pluginsMap.get(indexKey)!.contracts.push({
                     name: contract.name,
                     ...(listDescription && { description: listDescription }),
                     type: 'static',
@@ -796,7 +798,7 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
                 : [manifest.dynamic_contracts];
 
             for (const config of dynamicConfigs) {
-                pluginsMap.get(plugin.name)!.contracts.push({
+                pluginsMap.get(indexKey)!.contracts.push({
                     name: `${config.prefix}/*`,
                     type: 'dynamic',
                     path: '(run materialization to generate)',

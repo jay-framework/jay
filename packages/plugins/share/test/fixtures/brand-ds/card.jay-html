@@ -1,0 +1,11 @@
+<html>
+  <head>
+    <script type="application/jay-data" contract="./card.jay-contract"></script>
+    <style>
+      .ds-card { background: var(--brand-ds-surface, #fff); }
+    </style>
+  </head>
+  <body>
+    <div class="ds-card">{title}</div>
+  </body>
+</html>

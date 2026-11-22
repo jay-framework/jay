@@ -1,0 +1,10 @@
+name: brand-ds
+actions:
+  - name: brandDsHello
+routes:
+  - path: /gallery
+    jayHtml: ./pages/gallery/page.jay-html
+    component: ./pages/gallery/page.ts
+  - path: /brand-ds/about
+    jayHtml: ./pages/about/page.jay-html
+    component: ./pages/about/page.ts
