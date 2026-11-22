@@ -189,13 +189,13 @@ Template `<style>` comes from the plugin's component `.jay-html` files. The chec
 
 New: compiler-jay-html `plugin-styles.test.ts` 9/9 (hand-written expected CSS fixtures, red first), compiler-shared `resolvePluginStyles` 4/4, stack-server-build index `styles` 2/2, design-system-validator `design-plugin-themes.test.ts` 5/5. `yarn confirm`: 4756 passed / 0 failed / 11 skipped.
 
-### Live check (P5, AIditor `examples/share-qa-a`, dev server)
+### Live check (P5, a QA site with a design-system plugin, dev server)
 
 `styles: [theme.css]` added, tokens moved to `:where(:root)`, hand link removed, Button import switched to `plugin=`. `agent-kit` lists `styles: [src/plugins/share-qa-a-ds/theme.css]`. The page stylesheet starts with the plugin CSS (offset 3, page rules at 2471). Used Button: page `rgb(5, 150, 105)` = panel card `rgb(5, 150, 105)`. Unused Card (`rgb(255, 255, 255)` / `rgb(17, 24, 39)`), Badge (`rgb(254, 243, 199)` / `rgb(146, 64, 14)`) and the outline/secondary Button variants are themed from the plugin's `styles` in the panel. Not run: prod build, layout-override VC, dev watch on `theme.css`.
 
 ### QA — theme travels between sites (2026-11-17)
 
-Driven through the AIditor UI in two dev projects (A owns the plugin, B imported it from the shared branch).
+Driven through a visual editor in two dev projects (A owns the plugin, B imported it from the shared branch).
 
 - A: panel cards for the used Button and the unused Card, Badge, outline and secondary variants are all themed; page Button = card `rgb(5, 150, 105)`. Pass.
 - A: Publish changes → share commit + push → Published. Pass.
