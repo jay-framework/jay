@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import { addIgnoredFolder, removeIgnoredFolder } from '../lib/core/gitignore-block';
 import { createSandbox } from './harness';
 
-describe('managed .gitignore block (DL221)', () => {
+describe('managed .gitignore block (DL#237)', () => {
     it('adds the block after existing lines and keeps them untouched', () => {
         const { site } = createSandbox();
         fs.writeFileSync(path.join(site, '.gitignore'), 'node_modules\nbuild\n');

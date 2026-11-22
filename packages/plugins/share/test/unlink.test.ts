@@ -6,7 +6,7 @@ import { link } from '../lib/core/link';
 import { readManifest } from '../lib/core/manifest';
 import { linkedSite, REPO_URL } from './harness';
 
-describe('share/unlink (DL221)', () => {
+describe('share/unlink (DL#237)', () => {
     it('removes the entry and ignore line and moves the folder to a distinct backup each time', async () => {
         const { sandbox, dir } = await linkedSite();
         const first = await unlink(sandbox.ctx(), { folder: 'brand-ds' });

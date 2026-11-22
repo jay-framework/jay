@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import { status } from '../lib/core/status';
 import { linkedSite, REPO_URL } from './harness';
 
-describe('share/status (DL221)', () => {
+describe('share/status (DL#237)', () => {
     it('reports offline by default and refreshes ahead/behind only with fetch', async () => {
         const { sandbox, dir, sha } = await linkedSite();
         const teammate = sandbox.teammateClone(REPO_URL);

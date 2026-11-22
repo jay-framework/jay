@@ -6,7 +6,7 @@ import { pull } from '../lib/core/pull';
 import { readManifest, writeManifest } from '../lib/core/manifest';
 import { linkedSite, REPO_URL, OTHER_REPO_URL } from './harness';
 
-describe('share/restore (DL221)', () => {
+describe('share/restore (DL#237)', () => {
     it('restores a missing folder at the pinned commit on branch <ref>, then pull works', async () => {
         const { sandbox, dir, sha } = await linkedSite();
         fs.renameSync(dir, path.join(sandbox.root, 'gone'));

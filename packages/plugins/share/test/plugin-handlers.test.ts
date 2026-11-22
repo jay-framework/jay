@@ -5,7 +5,7 @@ import { defaultPluginHandlers } from '../lib/core/plugin-handlers';
 import { createSandbox } from './harness';
 
 /** Real path: the core starts its own Vite server to load a local `./setup.ts`, then closes it. */
-describe('setup + agent-kit after link/pull/restore (DL221)', () => {
+describe('setup + agent-kit after link/pull/restore (DL#237)', () => {
     async function runFixture(kind: string) {
         const sandbox = createSandbox();
         fs.writeFileSync(

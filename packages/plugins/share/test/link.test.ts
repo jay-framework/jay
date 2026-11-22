@@ -9,7 +9,7 @@ const backups = (sandbox: Sandbox) =>
     fs.readdirSync(path.join(sandbox.site, '.jay-share', 'backup'));
 const pluginsDir = (sandbox: Sandbox) => fs.readdirSync(path.join(sandbox.site, 'src', 'plugins'));
 
-describe('share/link (DL221)', () => {
+describe('share/link (DL#237)', () => {
     it('clones main into src/plugins/<name>, pins it, ignores it and runs setup once', async () => {
         const sandbox = createSandbox();
         const sha = seedPluginRepo(sandbox, REPO_URL, 'main');

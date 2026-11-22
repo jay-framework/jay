@@ -3,7 +3,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { listFiles } from '../lib/core/plugin-summary';
 
-/** DL221 TL;DR #7a: no GitHub API, no `gh`, no repo creation, never a force push. */
+/** DL#237 TL;DR #7a: no GitHub API, no `gh`, no repo creation, never a force push. */
 describe('share never creates repos or force-pushes', () => {
     const libDir = path.resolve(__dirname, '../lib');
     const sources = listFiles(libDir).map((f) => ({

@@ -14,7 +14,7 @@ function codeOf(fn: () => unknown): string | undefined {
     }
 }
 
-describe('repo URL validation (DL221)', () => {
+describe('repo URL validation (DL#237)', () => {
     it.each([
         'https://github.com/acme/brand-ds',
         'https://github.com/acme/brand-ds.git',
@@ -54,7 +54,7 @@ describe('repo URL validation (DL221)', () => {
  * normalize to a clean repo URL; `/tree/<branch>` also yields the branch.
  * Actual: a trailing slash or `/tree/<branch>` failed SHARE_INVALID_REPO.
  */
-describe('GitHub URL normalization (DL221 QA)', () => {
+describe('GitHub URL normalization (DL#237 QA)', () => {
     it.each([
         ['https://github.com/acme/brand-ds', 'https://github.com/acme/brand-ds'],
         ['https://github.com/acme/brand-ds/', 'https://github.com/acme/brand-ds'],
@@ -101,7 +101,7 @@ describe('GitHub URL normalization (DL221 QA)', () => {
  * Expected: link answers SHARE_ALREADY_IN_MANIFEST for any URL form of a linked repo.
  * Actual: the manifest check compared URL strings exactly.
  */
-describe('same repo, other URL form (DL221 QA)', () => {
+describe('same repo, other URL form (DL#237 QA)', () => {
     it('refuses to link a repo that is already linked under another URL form', async () => {
         const sandbox = createSandbox();
         const https = 'https://github.com/acme/brand-ds.git';

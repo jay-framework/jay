@@ -22,7 +22,7 @@ function sharedSite(): Sandbox {
 const pushCalls = (sandbox: Sandbox) =>
     sandbox.gitSpy.mock.calls.filter(([args]) => args[0] === 'push');
 
-describe('share/publish (DL221)', () => {
+describe('share/publish (DL#237)', () => {
     it('publishes an existing local plugin to an empty repo on main', async () => {
         const sandbox = sharedSite();
         const report = await publish(sandbox.ctx(), { plugin: 'brand-ds', repo: REPO_URL });

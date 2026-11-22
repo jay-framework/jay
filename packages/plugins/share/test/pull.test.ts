@@ -5,7 +5,7 @@ import { pull } from '../lib/core/pull';
 import { readManifest } from '../lib/core/manifest';
 import { linkedSite, REPO_URL } from './harness';
 
-describe('share/pull (DL221)', () => {
+describe('share/pull (DL#237)', () => {
     it('fast-forwards, re-pins, splits incoming code and other files, runs setup once', async () => {
         const { sandbox, dir, sha } = await linkedSite();
         const teammate = sandbox.teammateClone(REPO_URL);

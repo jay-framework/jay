@@ -5,7 +5,7 @@ import { push } from '../lib/core/push';
 import { readManifest } from '../lib/core/manifest';
 import { linkedSite, remoteBranchSha, REPO_URL } from './harness';
 
-describe('share/push (DL221)', () => {
+describe('share/push (DL#237)', () => {
     it('pushes local commits fast-forward, re-pins, and lists outgoing files', async () => {
         const { sandbox, dir } = await linkedSite();
         const localSha = sandbox.commitFile(dir, 'card.css', '.c{}');
