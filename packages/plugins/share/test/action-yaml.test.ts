@@ -9,7 +9,7 @@ const actionFiles = fs.readdirSync(actionsDir).filter((file) => file.endsWith('.
 /**
  * Bug: the dev server logs "[ActionMetadata] Failed to parse status.jay-action / unlink.jay-action:
  * bad indentation of a mapping entry" on startup.
- * Found in: AIditor QA of the share plugin (DL #237 Implementation Results).
+ * Found in: QA of the share plugin from an editor that calls its actions (DL #237 Implementation Results).
  * Expected: every .jay-action parses with the framework's action parser (no validations).
  * Actual: descriptions containing an unquoted ": " are invalid YAML, so the metadata is dropped.
  */
