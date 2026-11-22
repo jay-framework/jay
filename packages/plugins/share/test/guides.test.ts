@@ -11,7 +11,7 @@ const headings = (file: string) =>
         .filter((l) => l.startsWith('#'))
         .map((l) => l.replace(/^#+\s*/, ''));
 
-describe('share agent-kit guides (DL221)', () => {
+describe('share agent-kit guides (DL#237)', () => {
     it('has the required sections', () => {
         const required = [
             'Choosing a sharing approach',

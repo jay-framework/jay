@@ -38,7 +38,7 @@ afterEach(() => {
     vi.restoreAllMocks();
 });
 
-describe('share actions (DL221)', () => {
+describe('share actions (DL#237)', () => {
     it('declares 7 devOnly actions whose names equal their tools export names', async () => {
         const manifest = YAML.parse(
             fs.readFileSync(path.join(packageRoot, 'plugin.yaml'), 'utf-8'),
@@ -86,7 +86,7 @@ describe('share actions (DL221)', () => {
     });
 });
 
-describe('share CLI commands (DL221)', () => {
+describe('share CLI commands (DL#237)', () => {
     function run(sandbox: Sandbox, args: string[]) {
         return spawnSync(process.execPath, [cli, 'run', ...args], {
             cwd: sandbox.site,

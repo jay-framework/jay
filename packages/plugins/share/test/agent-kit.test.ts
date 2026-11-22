@@ -5,7 +5,7 @@ import YAML from 'yaml';
 import { shareAgentKit } from '../lib/agent-kit';
 import { linkedSite, REPO_URL } from './harness';
 
-describe('share agent-kit handler (DL221)', () => {
+describe('share agent-kit handler (DL#237)', () => {
     it('lists the shared folders in agent-kit/references/share/shared-plugins.yaml', async () => {
         const { sandbox, sha } = await linkedSite();
         const referencesDir = path.join(sandbox.site, 'agent-kit/references/share');

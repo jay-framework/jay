@@ -9,7 +9,7 @@ import { linkedSite, createSandbox, type Sandbox } from './harness';
 const codes = (findings: ShareFinding[]) => findings.map((f) => f.code);
 const check = (sandbox: Sandbox) => checkShareHygiene(sandbox.site, sandbox.ctx().git);
 
-describe('share validator — Phase 1a hygiene checks (DL221)', () => {
+describe('share validator — Phase 1a hygiene checks (DL#237)', () => {
     it('reports nothing for a cleanly linked plugin', async () => {
         const { sandbox } = await linkedSite();
         expect(await check(sandbox)).toEqual([]);
