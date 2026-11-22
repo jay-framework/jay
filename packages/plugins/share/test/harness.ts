@@ -142,15 +142,3 @@ export function remoteBranchSha(sandbox: Sandbox, url: string, branch: string): 
 export function remoteRefs(sandbox: Sandbox, url: string): string {
     return sandbox.git(['ls-remote', sandbox.bare(url)], sandbox.root);
 }
-
-/** A site that has linked REPO_URL (`ref` branch) into src/plugins/brand-ds. */
-export async function linkedSite(
-    ref = 'main',
-): Promise<{ sandbox: Sandbox; dir: string; sha: string }> {
-    const { link } = await import('../lib/core/link');
-    const sandbox = createSandbox();
-    const sha = seedPluginRepo(sandbox, REPO_URL, ref);
-    await link(sandbox.ctx(), { repo: REPO_URL, ref });
-    sandbox.setupSpy.mockClear();
-    return { sandbox, dir: path.join(sandbox.site, 'src', 'plugins', 'brand-ds'), sha };
-}
