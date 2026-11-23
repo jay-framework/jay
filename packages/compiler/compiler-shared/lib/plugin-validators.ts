@@ -20,6 +20,8 @@ export interface JayHtmlHeadMeta {
         href: TemplatePart[];
         [key: string]: any;
     }>;
+    /** Non-empty head `<style>` texts, in order (they are also merged into the context's `css`). */
+    styles?: string[];
 }
 
 export interface JayHtmlValidationContext {

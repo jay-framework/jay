@@ -181,6 +181,8 @@ Use valid WAI-ARIA roles. Common roles: `button`, `link`, `navigation`, `search`
 <div role="search">...</div>
 ```
 
+For `role="dialog"` / `aria-modal`, use a real `<dialog>` instead — see `focus-and-dialogs.md`.
+
 Non-interactive elements with `tabindex="0"` must have a role:
 
 ```html
@@ -203,6 +205,8 @@ Avoid positive `tabindex` — it disrupts natural tab order. Use `tabindex="0"` 
 <button>First</button>
 <button>Second</button>
 ```
+
+Focus rings, roving tabindex, `autofocus`, dialogs and popovers: see `focus-and-dialogs.md`.
 
 ## Viewport Zoom
 

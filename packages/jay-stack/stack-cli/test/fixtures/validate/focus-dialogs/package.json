@@ -1,0 +1,8 @@
+{
+  "name": "focus-dialogs-fixture",
+  "private": true,
+  "type": "module",
+  "devDependencies": {
+    "@jay-framework/a11y-validator": "*"
+  }
+}

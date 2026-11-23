@@ -1,0 +1,21 @@
+<html>
+<head>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+  <script type="application/jay-validations">
+    jay-stack:
+      allow-no-design-system: true
+  </script>
+  <title>Bad modal</title>
+</head>
+<body>
+  <div class="app">
+    <h1>Shop</h1>
+    <button type="button" class="btn" ref="openCart">Open cart</button>
+    <div class="overlay" role="dialog" aria-modal="true"><h2>Cart</h2></div>
+    <dialog ref="help"><h2>Help</h2></dialog>
+    <div role="button" tabindex="0" autofocus>Menu</div>
+    <style>.btn:focus { outline: none }
+      a { outline: 0 }</style>
+  </div>
+</body>
+</html>
