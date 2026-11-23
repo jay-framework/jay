@@ -156,9 +156,9 @@ describe('CSS extraction', () => {
         expect(jayFile.val.css).toEqual(
             '/* External CSS: fixtures/css-test/with-import.css */\n' +
                 '/* jay:@import ./imported.css */\n' +
-                '.imported { color: blue; }\n' +
+                '.imported {\n  color: blue;\n}\n' +
                 '\n/* jay:end-@import ./imported.css */\n' +
-                '.after { color: red; }\n' +
+                '.after {\n  color: red;\n}\n' +
                 '\n\n' +
                 '/* jay:head-style */\n' +
                 '.custom { font-weight: bold; }',
