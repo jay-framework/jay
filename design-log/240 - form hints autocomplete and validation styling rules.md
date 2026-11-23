@@ -659,3 +659,5 @@ Videos at the workspace root. Chrome = installed Google Chrome 157 via Playwrigh
 ### Feedback-loop result
 
 Validation: R1–R11. Guide: `forms-and-autofill.md` (plugin) + framework pointer. Framework feature: none (the CSS source markers are a compiler comment change for locating findings).
+
+**Follow-up (found by the DL#243 `yarn confirm`):** the final `yarn format` of this log's confirm run reformatted the two new CSS fixtures (`test/fixtures/css-test/imported.css`, `with-import.css`) to multi-line CSS after the tests had run, so the exact marker test failed on the next run. The expected string now matches the formatted fixtures; the markers it pins are unchanged. compiler-jay-html `css-extraction.test.ts` 14/14 again.
