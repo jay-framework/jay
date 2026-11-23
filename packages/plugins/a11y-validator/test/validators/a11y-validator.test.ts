@@ -50,7 +50,7 @@ describe('a11y-validator', () => {
 
     describe('form label association', () => {
         it('flags input without label', async () => {
-            const ctx = makeContext('<input type="text" id="name" />');
+            const ctx = makeContext('<input type="text" id="field" />');
             const findings = await validate(ctx);
             expect(findings).toEqual([
                 expect.objectContaining({
@@ -63,7 +63,7 @@ describe('a11y-validator', () => {
 
         it('passes input with label[for]', async () => {
             const ctx = makeContext(
-                '<label for="name">Name</label><input type="text" id="name" />',
+                '<label for="field">Name</label><input type="text" id="field" />',
             );
             const findings = await validate(ctx);
             expect(findings).toEqual([]);
@@ -94,7 +94,7 @@ describe('a11y-validator', () => {
         });
 
         it('flags select without label', async () => {
-            const ctx = makeContext('<select id="country"><option>US</option></select>');
+            const ctx = makeContext('<select id="region"><option>US</option></select>');
             const findings = await validate(ctx);
             expect(findings).toEqual([
                 expect.objectContaining({
@@ -269,7 +269,7 @@ describe('a11y-validator', () => {
 
         it('passes label for with matching id', async () => {
             const ctx = makeContext(
-                '<label for="name">Name</label><input type="text" id="name" />',
+                '<label for="field">Name</label><input type="text" id="field" />',
             );
             const findings = await validate(ctx);
             expect(findings).toEqual([]);

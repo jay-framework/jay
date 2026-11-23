@@ -1,0 +1,4 @@
+@import './imported.css';
+.after {
+  color: red;
+}

@@ -89,6 +89,10 @@ Your page has no large images in the template. Small icons (under 200px) don't n
 
 Components are fragments — they don't need `<h1>`, `<main>`, `<title>`, or `<meta>`. These page-level rules are skipped for files in `src/components/`. If you still see them, check the file path.
 
+### Form findings (a11y)
+
+Form findings (`[a11y/…]`) → `agent-kit/designer/forms-and-autofill.md` (present when a11y-validator is installed).
+
 ### Focus and dialog warnings (a11y)
 
 When `@jay-framework/a11y-validator` is installed, these warnings point to `agent-kit/designer/focus-and-dialogs.md`. Suppress one per page with `a11y: { allow-<rule-id>: true }`:

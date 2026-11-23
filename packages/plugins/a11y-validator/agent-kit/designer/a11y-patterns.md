@@ -22,17 +22,19 @@ Every form control needs an accessible name. Three valid approaches:
 
 ```html
 <!-- 1. Wrapping label (simplest) -->
-<label>Email <input type="text" /></label>
+<label>Email <input type="email" autocomplete="email" /></label>
 
 <!-- 2. Explicit label with for/id -->
 <label for="email">Email</label>
-<input type="text" id="email" />
+<input type="email" id="email" autocomplete="email" />
 
 <!-- 3. aria-label (when no visible label) -->
 <input type="search" aria-label="Search products" />
 ```
 
 One label per control — don't nest multiple inputs in one `<label>`.
+
+A placeholder is not a label. Hints, error messages, `autocomplete` tokens, sign-in fields and `:user-invalid` styling: see `forms-and-autofill.md` (findings starting with `[a11y/…]`).
 
 ### Checkbox and Radio
 

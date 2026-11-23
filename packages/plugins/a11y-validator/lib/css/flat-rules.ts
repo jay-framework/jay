@@ -83,6 +83,10 @@ export function lastDeclaration(rule: FlatRule, properties: string[]): CssDeclar
 
 /** Parses a `style=""` value as a declaration list. Unparseable → empty. */
 export function parseInlineStyle(style: string): CssDeclaration[] {
-    const source: CssSource = { label: 'inline', css: `x{${style}}`, reportsLines: false };
+    const source: CssSource = {
+        origin: { kind: 'unmarked' },
+        css: `x{${style}}`,
+        reportsLines: false,
+    };
     return flattenRules(source)[0]?.declarations ?? [];
 }

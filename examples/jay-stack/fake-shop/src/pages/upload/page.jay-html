@@ -6,6 +6,7 @@
       .section h2 { margin-top: 0; }
       .form-row { margin: 10px 0; }
       .form-row label { display: block; font-weight: bold; margin-bottom: 4px; }
+      .form-row .hint { margin: 0 0 4px; color: #555; font-size: 0.9em; }
       .result { margin-top: 15px; padding: 10px; background: #f0f8ff; border-radius: 4px; white-space: pre-wrap; font-family: monospace; font-size: 13px; }
       button { padding: 8px 16px; cursor: pointer; }
     </style>
@@ -21,7 +22,8 @@
         <h2>Single File Upload</h2>
         <div class="form-row">
           <label for="productName">Product Name</label>
-          <input ref="productName" id="productName" type="text" placeholder="e.g. Ceramic Vase" />
+          <p id="productName-hint" class="hint">For example: Ceramic Vase</p>
+          <input ref="productName" id="productName" type="text" aria-describedby="productName-hint" />
         </div>
         <div class="form-row">
           <label for="fileInput">Product Image</label>
@@ -35,7 +37,8 @@
         <h2>Streaming Multi-File Upload</h2>
         <div class="form-row">
           <label for="streamLabel">Label</label>
-          <input ref="streamLabel" id="streamLabel" type="text" placeholder="e.g. Spring Collection" />
+          <p id="streamLabel-hint" class="hint">For example: Spring Collection</p>
+          <input ref="streamLabel" id="streamLabel" type="text" aria-describedby="streamLabel-hint" />
         </div>
         <div class="form-row">
           <label for="multiFileInput">Images</label>
