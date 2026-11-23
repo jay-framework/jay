@@ -1,6 +1,6 @@
 # 241 — Dark mode and theme-adaptive controls
 
-**Status:** [Design] — review rounds 1–3 resolved; awaiting next review round and product approval. No production code yet.
+**Status:** [Implemented] — see Implementation Results.
 
 ## Decisions for the Implementer (TL;DR)
 
@@ -502,3 +502,6 @@ Status after implementation: **[Implemented]**. Branch stacked on the reduced-mo
   | After        | `dark`, input background rgb(59, 59, 59)                    | `light`, white       |
 
   Videos at the workspace root: `06-dark-mode-baseline-20261123.webm` (red), `06-dark-mode-20261123.webm` (fixed).
+
+- `yarn format` reformatted the CSS fixtures (prettier turns `[data-theme="dark"]` into `[data-theme='dark']`). The finding names the selector as written, so test 7's expected `firstSelector` follows the formatted fixture (`[data-theme='dark']`); the token stays normalised (`[data-theme="dark"]`).
+- `yarn confirm`: rebuild and type check green; the test step stopped on `dev-server/test/hydration.test.ts` ("Hook timed out in 10000ms", heavy machine load; package not touched), which also skipped the format step and 11 packages. Re-run separately: dev-server 811/811 (8/8 files), stack-cli 213/213, a11y-validator 75/75, agent-skills 10/10, data-files 23/23, design-system-validator 237/237, editing-policy 79/79, markdown 35/35, seo-validator 66/66, design-system-demo 9/9, fake-shop 9/9, smoke-test 80/80. `yarn format` run separately.
