@@ -12,7 +12,7 @@ import path from 'path';
 import fs from 'fs';
 import type { HTMLElement } from 'node-html-parser';
 import type { Contract, ContractTag, JayHtmlSourceFile } from '@jay-framework/compiler-jay-html';
-import { isHtmlStringType } from '@jay-framework/compiler-shared';
+import { camelCase, isHtmlStringType } from '@jay-framework/compiler-shared';
 import { resolveContractLinks } from './validate';
 
 /** Runs all four rules for one jay-html file: warnings and errors by severity. */
@@ -29,14 +29,26 @@ export function checkHtmlSafety(
     };
 }
 
+/**
+ * Allow-list paths match in either spelling: the contract's (`rich-text`) or the binding's (`richText`).
+ * Each dotted segment is compared camelCased.
+ */
+function spellingKey(tagPath: string): string {
+    return tagPath.split('.').map(camelCase).join('.');
+}
+
 const GUIDE = 'See agent-kit/developer/html-safety.md.';
 const VALIDATIONS_SCRIPT = '<script type="application/jay-validations">';
 
 export function checkHtmlStringTrust(jayHtml: JayHtmlSourceFile, pageDir?: string): string[] {
-    const allowed = allowList(jayHtml, 'allow-html-string');
+    const allowed = new Set([...allowList(jayHtml, 'allow-html-string')].map(spellingKey));
     return findHtmlStringBindings(jayHtml, pageDir)
         .filter((binding) => !binding.suppressedOnImport)
-        .filter((binding) => !allowed.has(binding.qualifiedPath) && !allowed.has(binding.tagPath))
+        .filter(
+            (binding) =>
+                !allowed.has(spellingKey(binding.qualifiedPath)) &&
+                !allowed.has(spellingKey(binding.tagPath)),
+        )
         .map(
             ({ qualifiedPath, element }) =>
                 `HTML-STRING-TRUST: {${qualifiedPath}} on <${element}> is html-string and is rendered as raw HTML. ` +
@@ -260,12 +272,12 @@ function findHtmlStringBindings(jayHtml: JayHtmlSourceFile, pageDir?: string): H
             if (!SIMPLE_PATH.test(expression)) continue;
             const resolved = resolveScopedPath(expression, scopes);
             if (!resolved) continue;
-            const tag = findTag(resolved.source.tags, resolved.prefix);
-            if (!tag?.dataType || !isHtmlStringType(tag.dataType)) continue;
+            const found = findTag(resolved.source.tags, resolved.prefix);
+            if (!found?.tag.dataType || !isHtmlStringType(found.tag.dataType)) continue;
             const { key, suppressedOnImport } = resolved.source;
             bindings.push({
-                qualifiedPath: key ? `${key}.${resolved.prefix}` : resolved.prefix,
-                tagPath: resolved.prefix,
+                qualifiedPath: key ? `${key}.${found.contractPath}` : found.contractPath,
+                tagPath: found.contractPath,
                 element,
                 suppressedOnImport,
             });
@@ -283,13 +295,22 @@ function pageSource(contract: Contract, contractPath: string | undefined): Bindi
     };
 }
 
-function findTag(tags: ContractTag[], tagPath: string): ContractTag | undefined {
+/**
+ * Resolves a binding path (camelCase, as written in jay-html) to its contract tag. Returns the tag and its
+ * path in the contract's own spelling (e.g. `richText` → `rich-text`).
+ */
+function findTag(
+    tags: ContractTag[],
+    bindingPath: string,
+): { tag: ContractTag; contractPath: string } | undefined {
     let current: ContractTag | undefined;
     let level: ContractTag[] | undefined = tags;
-    for (const segment of tagPath.split('.')) {
-        current = level?.find((t) => t.tag === segment);
+    const contractSegments: string[] = [];
+    for (const segment of bindingPath.split('.')) {
+        current = level?.find((t) => t.tag === segment || camelCase(t.tag) === segment);
         if (!current) return undefined;
+        contractSegments.push(current.tag);
         level = current.tags;
     }
-    return current;
+    return current && { tag: current, contractPath: contractSegments.join('.') };
 }

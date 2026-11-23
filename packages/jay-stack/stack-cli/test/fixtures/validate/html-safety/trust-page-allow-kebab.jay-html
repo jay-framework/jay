@@ -1,0 +1,16 @@
+<html>
+<head>
+    <script type="application/jay-data" contract="./trust-page.jay-contract"></script>
+    <script type="application/jay-validations">
+jay-stack:
+  allow-html-string: ["rich-text"]
+    </script>
+</head>
+<body>
+<div>
+    <h1>{heading}</h1>
+    <div>{bio}</div>
+    <section>{richText}</section>
+</div>
+</body>
+</html>

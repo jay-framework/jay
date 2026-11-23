@@ -1,0 +1,13 @@
+<html>
+<head>
+    <script type="application/jay-data" contract="./trust-page.jay-contract"></script>
+
+</head>
+<body>
+<div>
+    <h1>{heading}</h1>
+    <div>{bio}</div>
+    <section>{richText}</section>
+</div>
+</body>
+</html>

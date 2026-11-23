@@ -1,0 +1,11 @@
+name: trust-page
+tags:
+  - tag: heading
+    type: data
+    dataType: string
+  - tag: bio
+    type: data
+    dataType: html-string
+  - tag: rich-text
+    type: data
+    dataType: html-string

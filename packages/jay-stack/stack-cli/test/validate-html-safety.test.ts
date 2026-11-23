@@ -109,6 +109,32 @@ describe('HTML-STRING-TRUST', () => {
     });
 });
 
+/**
+ * Round-6 review: the rule must cover the page's own contract tags (no key prefix), and kebab-case
+ * contract tags bound in camelCase (`rich-text` → `{richText}`).
+ * Expected: a warning per page-own html-string binding, reported in the contract's spelling; an allow-list
+ * entry matches in either spelling.
+ */
+describe('HTML-STRING-TRUST — page contract and tag spelling', () => {
+    it('warns for page-own contract html-string tags, including a kebab-case tag bound in camelCase', async () => {
+        const jayHtml = await parsePage('trust-page-contract.jay-html');
+        expect(checkHtmlStringTrust(jayHtml, fixturesDir)).toEqual([
+            trustWarning('bio', 'div'),
+            trustWarning('rich-text', 'section'),
+        ]);
+    });
+
+    it('suppresses a kebab-case tag listed in camelCase spelling ["richText"]', async () => {
+        const jayHtml = await parsePage('trust-page-allow-camel.jay-html');
+        expect(checkHtmlStringTrust(jayHtml, fixturesDir)).toEqual([trustWarning('bio', 'div')]);
+    });
+
+    it('suppresses a kebab-case tag listed in contract spelling ["rich-text"]', async () => {
+        const jayHtml = await parsePage('trust-page-allow-kebab.jay-html');
+        expect(checkHtmlStringTrust(jayHtml, fixturesDir)).toEqual([trustWarning('bio', 'div')]);
+    });
+});
+
 describe('RAW-HTML-SINK', () => {
     const sinkPage = (dir: string) => path.join(fixturesDir, dir, 'page.jay-html');
 
