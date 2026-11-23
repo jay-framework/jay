@@ -1,0 +1,529 @@
+# Design Log #240 — Form hints, autocomplete and validation-styling rules
+
+**Status:** [Design] — awaiting review and approval. No production code yet.
+**Owner package:** `@jay-framework/a11y-validator` (+ its plugin agent-kit guide).
+
+---
+
+## Decisions for the Implementer (TL;DR)
+
+1. **Validators first.** Add 11 rule ids, R1–R11, to `a11y-validator` (§Design 1). R1 upgrades the existing placeholder-only label finding; the rest are new. R1–R9 read the jay-html DOM, R10–R11 the page's local CSS (`ctx.css`).
+2. **Each message names its own location** (element or CSS selector + file), because `validate.ts` drops `element`/`attribute` (`stack-cli/lib/validate.ts:1891-1905`).
+3. **Each finding fires once per element per concern.** R1 replaces the generic no-label finding; R8 replaces R6 on the username field, structurally, whether or not R8 is suppressed (§Design 1).
+4. **One small core change:** `extractCss` writes `jay:`-prefixed source markers (head `<style>`, start and end of each inlined `@import`), so CSS findings name the right file (§Design 4). These comments **ship in the built and served CSS**, like the existing `External CSS` marker (§Design 4).
+5. **Bound attributes are skipped; suppression is the existing page-wide `a11y: { allow-<rule-id>: true }`.** Each key silences only its own rule. No new API, type or syntax.
+6. **Done = red-first tests + a demo of every rule in both real Chrome (saved profile) and real Safari** (§Verification matrix). **Proposed exception, needs approver acceptance (Q6):** R4's mobile-keyboard overlap needs iOS Simulator Safari; if that is unavailable, only that part is reported as not shown.
+7. **Scope boundary:** R5–R8 check only that `autocomplete` is **present and token-valid** on identity, contact, login and password fields; whether the value is right for the page's role (login vs sign-up, `username` vs `email`) is out of scope (§Design 6).
+8. **⚠️ Needs approver decision — Q1:** guide in the **plugin** agent-kit (proposed) or the **framework** agent-kit (what the brief said)?
+
+Implementation details (message prefix `[a11y/<rule-id>]`, guide link, `postcss`, test harness) are in §Design 4 and §Implementation Plan.
+
+---
+
+## Background
+
+The Chrome team's article "Top 10 things AI gets wrong in web dev" lists these mistakes under **#3 Forms**:
+- rebuilding `:user-invalid` with JS `blur` validation, which flags untouched required fields as soon as you tab past them
+- setting `aria-invalid` too early, or not keeping it in sync with `:user-invalid`
+- putting format hints (`MM/YY`) only in `placeholder`, where they should be a persistent hint linked with `aria-describedby`
+- putting hints and password rules **below** the input, where the mobile keyboard and autofill popovers cover them
+- signalling `:autofill` with border colour alone, when it should pair colour with a non-colour cue that doesn't shift layout (inset `box-shadow`)
+
+The brief also asks for `autocomplete` on identity/contact fields and on login fields (`username` / `current-password` / `new-password`).
+
+Jay already validates form **labels** (DL#166). Nothing checks hints, autocomplete or validation styling.
+
+## Problem
+
+AI-written jay-html forms often look fine but are hard to use:
+- a placeholder is the only label or hint
+- autocomplete is missing or misspelled, so autofill and password managers fail
+- CSS turns fields red before the user has typed
+- error text exists but screen readers never hear it
+
+Most of this is visible statically in jay-html + CSS. Agents fix things reliably only when `jay-stack validate` names the problem and the guide to read.
+
+## Coverage audit — verified against code (corrections)
+
+| Audit claim | Verdict | Correction |
+|---|---|---|
+| Context type at `plugin-validators.ts:25` | ✅ | — |
+| `checkDirectDocumentAccess` at `validate.ts:623` | ✅ | — |
+| Label rules at `a11y-validator.ts:425/486/497` | ✅ | (425 = no label, 486 = orphan `for`, 497 = multi-control label) |
+| "External CSS is only a placeholder" | ⚠️ Partly wrong | **Local** linked CSS is read and inlined (`jay-html-parser.ts:1157-1169`). Only `http(s)://` and `//` links are skipped (`:1149-1155`). The bare `/* External CSS: href */` placeholder appears only when there is no `filePath` (`:1174`). |
+| Body `<style>` is not included | ✅ | `jay-html-parser.ts:1179` (head `<style>` only) |
+| CSS source is traceable in `ctx.css` | ❌ | Head `<style>` text is appended after the linked parts with **no marker** (`jay-html-parser.ts:1180-1185`). Nested imports are inlined with a `/* @import <path> */` start marker and no end marker (`:1120-1129`), so rules after an import would be attributed to it. Hence the core change in §Design 4. |
+| Findings are "located" | ❌ | `element`/`attribute` are **dropped** at `validate.ts:1891-1905`. Output is file + message + suggestion, with no line numbers. Hence TL;DR #2. |
+| "Missing: placeholder as only hint" | ⚠️ Partly covered | An input with only a placeholder **already errors** as "no associated label" (`a11y-validator.ts:423-431`). The new rules add a placeholder-specific suggestion plus the separate *format-hint-in-placeholder* case. |
+| a11y-validator reads CSS | ❌ (not claimed, but relevant) | It never reads `ctx.css` and has no CSS parser dependency. The CSS rules need `postcss` added. |
+| Point 10 = login `autocomplete` | ⚠️ | The article's #10 is about the **passkey WebAuthn API** (`parseRequestOptionsFromJSON`, `signalUnknownCredential`, `getClientCapabilities`, AbortSignal, `uiMode`), all of which lives in TS. The login-autocomplete rule is still worth having: password managers and passkey conditional UI (`autocomplete="username webauthn"`) need it. It is our addition, not the article's wording. |
+| Guides at `stack-cli/agent-kit-template/<role>/` + plugin `agent-kit/<role>/` | ✅ | The a11y guide in use today is the **plugin** one, `a11y-validator/agent-kit/designer/a11y-patterns.md`. |
+| a11y-validator on by default | ✅ (added) | `create-jay/lib/plugins.ts:19-25` `checked: true`. `examples/jay-stack/fake-shop` uses it. |
+
+## Prior Art / Adjacent Mechanisms
+
+| What | Where | Reuse |
+|---|---|---|
+| Label rules (DL#166) | `a11y-validator.ts:354-432` `checkLabel`, `:475-511` | `hasAccessibleName` logic → shared helper `accessibleNameOf(el)` |
+| DOM index (ids, label-for) | `a11y-validator.ts:434-454` `collectDomIndex` | Reused for `aria-describedby` id resolution |
+| `aria-labelledby` missing-id check | `a11y-validator.ts:383-411` | Same shape for `aria-describedby` |
+| Per-page suppression | `isSuppressed` `a11y-validator.ts:15-17`; YAML parse `jay-html-parser.ts:1088-1108` | `allow-<rule-id>` |
+| Dynamic directives list | `a11y-validator.ts:576-583` (`if`, `forEach`, …) | "Conditional element" = error message candidate |
+| CSS cascade/selector parsing | `design-system-validator/lib/css-cascade.ts:1-3,72` (postcss, selector-parser) | Same libraries; we don't need the cascade, only rule + selector walks |
+| CSS rule with page opt-out | `design-viewport-height.ts:42-52` | Pattern for `if (!ctx.css) return []` + suppression |
+| Test harness | `a11y-validator.test.ts:14-22` | `makeContext(html, head?, css?)` |
+
+**Null hypothesis:** could existing rules plus a guide be enough? No. The label rule doesn't catch a labelled field whose format hint sits only in the placeholder. Nothing checks `autocomplete` or CSS pseudo-classes. And a guide alone is the weakest feedback channel: agents skip it unless a validator points at it. We need **no new API, type or syntax**. This change is new rules inside an existing plugin, an optional `css` in an existing test helper, and one new guide file.
+
+---
+
+## Design
+
+### 1. Rules
+
+Common skip conditions: `type=hidden|submit|button|reset|image`; the relevant attribute is bound (`{…}`); page-level suppression.
+
+**Precedence (one finding per element per concern):**
+- R1 replaces the generic no-label finding for that element.
+- R8 replaces R6 on the username field: if a field qualifies for both, only R8 is reported (R8 is the more specific fix: `username`). This precedence is **structural**, not suppression-dependent: with `allow-username-autocomplete` set, R8 is silenced and R6 does **not** come back on that field (the author opted out of the username advice; R6 would repeat it with another token).
+- R6 suggests one token: the **first** matching row of the §3 table wins (rows are ordered most-specific first).
+
+| # | Rule id | Severity | Detects | Suppression key |
+|---|---|---|---|---|
+| R1 | `placeholder-as-label` | error (replaces the generic no-label finding for that element) | control with `placeholder` and **no** label / `aria-label` / `aria-labelledby` | `allow-placeholder-as-label` (see note below) |
+| R2 | `placeholder-format-hint` | warning | labelled control, no `aria-describedby`, whose placeholder looks like a format/rule hint (patterns below) | `allow-placeholder-format-hint` |
+| R3 | `describedby-missing-id` | error | `aria-describedby` token not found as a **static** id in the file. Skipped when the `aria-describedby` is bound or the control is inside `forEach` (same as the existing labelledby check) | `allow-describedby-missing-id` |
+| R4 | `hint-below-field` | warning | a **hint-like** `aria-describedby` target that comes **after** a **text-entry** control in document order (details below) | `allow-hint-below-field` |
+| R5 | `autocomplete-invalid` | error | `autocomplete` value that is not a valid token list per the HTML autofill grammar (§2). Inspects `autocomplete` on `<input>`, `<select>`, `<textarea>` and `<form>` (on `<form>` only `on`/`off` are valid). On a typo-map hit (`phone`→`tel`, `zip`→`postal-code`, `firstname`→`given-name`, `nope`/`false`→`off`) the suggestion names that token; otherwise the suggestion is `Use a valid token from the HTML autofill list.` | `allow-autocomplete-invalid` |
+| R6 | `autocomplete-missing` | warning | identity/contact field without `autocomplete`. Scope: R4's text-entry `<input>` types **except `password`** (R7 owns it), plus `<select>` and `<textarea>` (address only, §3); checkbox/radio etc. never. Fires where the field is `type=email\|tel` **or** its `name`/`id` matches the heuristic table (§3) | `allow-autocomplete-missing` |
+| R7 | `password-autocomplete` | error | `type=password` without `current-password`, `new-password` or `one-time-code` in `autocomplete` (`off` also flagged: password managers ignore it and it blocks the user) | `allow-password-autocomplete` |
+| R8 | `username-autocomplete` | warning | the sign-in name field before the first password field has no `username` token (scope and candidate below) | `allow-username-autocomplete` |
+| R9 | `error-not-associated` | warning | a conditional, error-named element near exactly one control that is not linked to it (details below) | `allow-error-not-associated` |
+| R10 | `css-invalid-early` | warning | a CSS selector that styles `:invalid` without a "user has interacted" gate (details below) | `allow-css-invalid-early` |
+| R11 | `css-autofill-color-only` | warning | the merged declarations for an `:autofill` / `:-webkit-autofill` selector signal autofill with colour only (details below) | `allow-css-autofill-color-only` |
+
+**R1 note — why `allow-placeholder-as-label` exists.** It lets a page that deliberately keeps a placeholder-only field (e.g. a design-system search box labelled some other way the validator can't see) drop the placeholder-specific advice; it silences R1 only, and the generic no-label error still fires because the field is still unlabelled.
+
+**R2 patterns** (any match fires):
+- case-sensitive: `\bMM\b`, `\bDD\b`, `\bYY\b`, `\bYYYY\b` (so lowercase `mm` does not match)
+- case-insensitive: `\be\.g\.`, `\bformat\b`, `\bat least\b`, `\bmust\b`, `\bcharacters?\b`, `###`
+- digit-separator-digit `\d{2,}[-/]\d` — a format like `555-1234` or `12/34`, not a street number like `123 Main St`
+
+**R4 details.** Scope: text-entry controls only — `<textarea>` and `<input>` with no `type` or `type` = `text`, `email`, `tel`, `password`, `url`, `search`, `number`, `date`, `datetime-local`, `month`, `week`, `time`. Checkboxes, radios, selects etc. are skipped (a description after a checkbox is normal and no keyboard covers it). Hints belong above; **errors may be below**, so error-like targets are exempt. A target is exempt (not hint-like) if any of:
+- it, or any ancestor of it up to (not including) the **lowest common ancestor** with the control, has `if` / `when-*`;
+- it has a text binding `{…}`;
+- its `class` or `id` contains `error` or `invalid` (case-insensitive);
+- it has `role=alert` or `role=status`, or it has `aria-live`;
+- it is the target of any control's `aria-errormessage`.
+
+If the target is an ancestor of the control (contains it), R4 does not fire: position is undefined.
+
+**R8 details.**
+- With a `<form>` around the first `type=password`: the candidate is searched inside that form only.
+- Without a `<form>`: the candidate is the nearest preceding qualifying input in **document order** across the whole file; no further scope applies.
+- Candidate: the **nearest preceding text/email input before the first password field**, skipping any input whose `name`/`id` hits the §3 deny list (all entries, including `ipAddress`/`macAddress`). So a header search box before a password field with no `<form>` is never the candidate.
+- Fires when the candidate has no `username` token (`webauthn` allowed alongside).
+
+**R9 details.**
+- Trigger: a **conditional** element (`if=` / `when-*`) whose condition or text binding contains an identifier with case-insensitive substring `error` or `invalid` (e.g. `emailError`, `isInvalid`, `hasError`).
+- Excluded: counts/summaries ending in `Count` / `Summary` / `List` (e.g. `errorCount`).
+- Excluded: negated conditions (`if="!emailError"`). A negated branch shows content when there is **no** error, so it is not the error element.
+- **Form control** = text-entry inputs (R4 list), `<select>`, `<textarea>`, checkbox, radio. Not counted: `<button>` and `type=submit|reset|button|image|hidden` inputs.
+- Scope: exactly one form control in the element's parent; if the parent has none, its grandparent. Zero or two+ controls → no finding.
+- Reports which pieces are missing: (a) the error element has a static id listed in that control's `aria-describedby`; (b) the control has an `aria-invalid` attribute (static or bound).
+
+**Selector lists (R10 and R11).** A comma list is split into its individual selectors, each judged on its own. One finding per offending selector, naming that selector (not the whole list). So `input:invalid, input:user-invalid{…}` gives one R10 finding for `input:invalid`.
+
+**R10 details.** A selector is checked one compound at a time. The **subject compound** is the rightmost one (the element being styled).
+- **Gates** (on the same compound or an ancestor compound): a state class from the fixed list `submitted`, `touched`, `dirty`, `was-validated`, `user-interacted`; a state-like data attribute `[data-touched]`, `[data-submitted]`, `[data-dirty]`, `[data-state]` or any `[data-user-*]`; `[aria-invalid]`; `:not(:placeholder-shown)` (same compound only).
+- **`:not(:placeholder-shown)` caveat.** This gate only works if the field has a placeholder (an input without one is never `:placeholder-shown`, so the gate is always true and the field is red on load). CSS can't see the HTML, so R10 still accepts it as a gate; the guide warns that it needs a placeholder, e.g. `placeholder=" "`.
+- **`:has()` gate.** A gate on the compound that holds `:has()` (or on an ancestor of it) gates the `:invalid` inside: `.card.submitted:has(input:invalid)` → no finding; `.card:has(input:invalid)` → finding.
+- **Not gates:** plain layout classes (`.form-field input:invalid`); other `data-*` such as `[data-testid]`; `:focus` / `:focus-visible` / `:focus-within` — focus happens before typing, so `input:focus:invalid` turns a field red the moment it is tabbed into.
+- **Form-level allowance:** `:invalid` on a `form` or `fieldset` compound that is **not** the subject compound is allowed — it styles something else by form validity (e.g. dims the submit button). The same applies to `:has(:invalid)` on such a compound. So `form:invalid button` and `form:has(:invalid) button` are allowed; `form:invalid` alone (the form itself is the subject) and `.card:has(:invalid)` are not covered by this allowance. **Decision:** the allowance is for `form`/`fieldset` compounds only, even when the subject is a button — so `.card:has(:invalid) button` warns. Reason: a class like `.card` can't be known to wrap one form; keeping the list closed avoids guessing, and the author can rewrite to `form:has(:invalid) button` or suppress.
+- **Outer-compound gate:** a gate on a compound outside a `:is()`/`:where()` applies to every argument inside it (`.submitted :is(input:invalid)` → no finding).
+- **Pseudo-class arguments:** inside `:is()` / `:where()` each argument is checked as its own selector; `:invalid` inside `:not()` is ignored; `:invalid` inside `:has()` on a non-form/fieldset compound is checked as ungated.
+- `:user-invalid` anywhere, including inside `:is()`, is never flagged.
+- **Reset exemption:** a rule whose declarations are **all** resets (value `none`, `0`, `transparent`, `initial`, `unset`, `inherit` or `revert`) is exempt — it removes the browser's default invalid styling rather than adding early red. `input:invalid{box-shadow:none}` → no finding. A rule mixing a reset with any styling declaration (`input:invalid{box-shadow:none;border-color:red}`) still warns.
+
+**R11 details.**
+- **Merge first:** all declarations for the identical selector text across the page CSS (all sources in `ctx.css`) are merged before judging, so `input:autofill{border-color:blue}` plus a later `input:autofill{box-shadow:…}` is one clean rule. Different selectors are not merged.
+- **Colour-only declarations:** `border*-color`; `border` / `border-*` shorthand whose value is only a colour; `outline-color`; `outline` shorthand with only a colour; `color`; `background-color`; `-webkit-text-fill-color`.
+- **Non-colour cues** (any one clears the rule): `box-shadow` (and `-webkit-box-shadow`), `background-image`, `outline-style`, `outline-width`, `border*-width`, `border*-style`, an `outline` or `border` shorthand with a width or style component (e.g. `outline: 2px solid blue`), `text-decoration`, `font-weight`.
+- **Fires iff** the merged rule has **at least one** colour-only declaration **and zero** non-colour cues. A rule with no relevant declarations (e.g. only `transition`) → no finding.
+- **Location:** a merged rule names the file of its **first** occurrence.
+- **Known gap (guide only):** the common `box-shadow: 0 0 0 1000px white inset` hack that resets autofill background counts as a cue, though it hides autofill rather than signalling it. The guide says so.
+
+**R8 message decision.** R8 always suggests `autocomplete="username"` (plus `webauthn` if passkeys are used), never `email`, even when the field is `type=email` (Q4). Example: `<input type="email" name="email"> is the sign-in name for the password field but has no autocomplete="username"`.
+
+**R2 wording decision.** `e.g.` always fires, including `"e.g. Jane"`: an example in a placeholder disappears on typing just like a format hint, and the fix (move it to a linked hint, or drop it) is the same. Bare digits like `"123 Main St"` don't fire; only digit-separator-digit formats do.
+
+**How R9 sees bindings.** jay-html keeps bindings as raw attribute text in the parsed body: `if="emailError"`, `{emailError}` text nodes, `aria-invalid="{emailInvalid}"`. The validator reads `getAttribute('if')` and the text content of the element. This is exactly how `isDynamicSubtree` already reads directives (`a11y-validator.ts:591-596`). No contract lookup is needed. R9 is a name heuristic, so it stays a warning.
+
+### 2. Autocomplete grammar (R5)
+The value is `off` / `on`, **or** the following tokens in this order:
+1. optional `section-*`
+2. optional `shipping` or `billing`
+3. optional `home`, `work`, `mobile`, `fax` or `pager`, allowed only before a contact field
+4. exactly one field name
+5. optional `webauthn`
+
+Field names: `name honorific-prefix given-name additional-name family-name honorific-suffix nickname username new-password current-password one-time-code organization-title organization street-address address-line1 address-line2 address-line3 address-level4 address-level3 address-level2 address-level1 country country-name postal-code cc-name cc-given-name cc-additional-name cc-family-name cc-number cc-exp cc-exp-month cc-exp-year cc-csc cc-type transaction-currency transaction-amount language bday bday-day bday-month bday-year sex url photo`. Contact fields: `tel tel-country-code tel-national tel-area-code tel-local tel-extension email impp`. Matching is case-insensitive.
+
+### 3. Autocomplete heuristic table (R6)
+The `name`/`id` is normalised (lower-case, with `-`, `_` and camelCase split) and matched as a whole word. Rows are checked top to bottom and the **first match wins**, so the table is ordered most-specific first (`emailAddress` → `email`, `companyName` → `organization`, `lastName` → `family-name`):
+
+| name/id contains | suggested token |
+|---|---|
+| email, e-mail | `email` |
+| username, login | `username` |
+| company, organization | `organization` |
+| first name, fname, given | `given-name` |
+| last name, lname, surname, family | `family-name` |
+| phone, tel, mobile | `tel` |
+| zip, postal, postcode | `postal-code` |
+| city, town | `address-level2` |
+| country | `country-name` on inputs; `country` on `<select>` (the option values are codes) |
+| address, street | `street-address` |
+| full name / name (alone) | `name` |
+
+**Deny list:** `search`, `q`, `coupon`, `promo`, `message`, `ip address` (`ipAddress`) and `mac address` (`macAddress`) are never matched (also used by R8's candidate search). Skip `<textarea>` except for address. An explicit `autocomplete="off"` satisfies R6 (it was the author's choice), but **not** R7.
+
+### 4. Message format (exact)
+```
+[a11y/<rule-id>] <located element> <what is wrong> (<WCAG ref if any>)
+suggestion: <one concrete fix>. Suppress with a11y: { allow-<rule-id>: true } in <script type="application/jay-validations">.
+See: agent-kit/designer/forms-and-autofill.md
+```
+- **Located element** (first that applies; `type` is included whenever it exists):
+  1. has `name` → `<tag type="t" name="x">`
+  2. else has `id` → `<tag type="t" id="x">`
+  3. else has label text → `<input type="t"> labelled "L"`
+  4. else has placeholder → `<input type="t"> with placeholder "P"`
+  5. else ordinal → `<input type="t"> (3rd input in the file)`. The ordinal counts elements **of the same tag** in document order across the file (all `<input>`s for an input, whatever their type), e.g. `<textarea> (1st textarea in the file)`.
+
+  Label wins over placeholder. **R1 and R2** already quote the placeholder in their message, so they use the located element **without step 4** (falling back to the ordinal), e.g. `<input type="text"> (1st input in the file) with placeholder "Name" has no label …`.
+- **CSS findings:** `selector "input:invalid" in styles/form.css`. The file is the innermost open marker before the rule, read with a small stack. Markers carry a `jay:` prefix so an author comment can never be mistaken for one:
+
+| Marker in `ctx.css` | Stack action | File named in the message |
+|---|---|---|
+| `/* External CSS: <href> */` (existing, `jay-html-parser.ts:1169`, unchanged) | starts a top-level source | `<href>` |
+| `/* jay:head-style */` (**new**) | starts a top-level source | `<head> <style>` |
+| `/* jay:@import <path> */` (**new**, replaces today's `/* @import <path> */`, `:1127`) | push | `<path>` |
+| `/* jay:end-@import <path> */` (**new**) | pop | back to the enclosing source |
+| no marker before the rule (e.g. hand-built test CSS) | — | `page CSS` |
+
+The existing `External CSS` marker keeps its current text: it is already written by the parser and is unambiguous enough in practice (it carries the href). A bare `/* External CSS: href */` with no `filePath` (`:1174`) is still a top-level source with that href.
+
+**Core change (compiler-jay-html, `extractCss` / `resolveNestedCssImports`).** Push `/* jay:head-style */\n<css>` instead of the bare text (`:1182`); write `/* jay:@import <path> */` instead of `/* @import <path> */` (`:1127`) and append `\n/* jay:end-@import <path> */` after each inlined import. Comments only; no emitted-output change beyond comments.
+
+**The markers reach built and served CSS.** `ctx.css` is the same `css` string the compiler ships: the generated module imports `./<file>.css` (`jay-html-compiler.ts:1465-1470`, `generateCssImport`), and the rollup plugin serves that virtual CSS module as `jayHtml.css` verbatim (`rollup-plugin/lib/runtime/load.ts:98`). So, like today's `External CSS` and `@import` comments, the new `jay:` comments appear in dev-served CSS and in built CSS unless a later minifier strips comments. They are a few bytes per source and leak only relative file paths that the existing markers already expose.
+
+Own test in `jay-html-parser` tests: a page with a linked CSS that `@import`s a file, plus a head `<style>` → exact `css` string with the `External CSS`, `jay:@import`, `jay:end-@import` and `jay:head-style` markers (`toEqual`). Any existing parser test that asserts the old `/* @import … */` text is updated deliberately and noted in Implementation Results.
+
+**Exact text per rule.** Every message starts `[a11y/<rule-id>] `; every suggestion is exactly `"<fix>. Suppress with a11y: { allow-<rule-id>: true } in <script type=\"application/jay-validations\">.\nSee: agent-kit/designer/forms-and-autofill.md"` — the Suppress sentence follows the fix after one space, and `See:` starts a new line (`\n`), matching today's `pushFinding` join (`'\nSee: …'`). Below, `Suppress with … See: …` is shorthand for that exact tail, newline included. Placeholders: `<element>` = located element (above); `<selector>` = one selector from a split list; `<file>` = file from the marker table; `<placeholder>` = the placeholder text; `<id>` = the missing id token; `<token>` = the suggested autocomplete token; `<value>` = the authored `autocomplete` value; `<error-element>` = located error element; `<missing>` = the missing pieces, joined with ` and `, from `an id listed in its aria-describedby` and `an aria-invalid attribute`.
+
+| Rule | Message (after prefix) | Suggestion (before `…`) |
+|---|---|---|
+| R1 | `<element> with placeholder "<placeholder>" has no label — the placeholder disappears on typing and is not a reliable name (WCAG 1.3.1, 3.3.2)` | `Add a <label for> (or aria-label) and keep the placeholder only as an optional example.` |
+| R2 | `<element> puts a format or rule hint in its placeholder "<placeholder>" — it disappears on typing (WCAG 3.3.2)` | `Move the hint into an element above the field and link it with aria-describedby.` |
+| R3 | `<element> has aria-describedby "<id>" but no element with id "<id>" exists in this file (WCAG 1.3.1)` | `Add id="<id>" to the hint or error element, or remove the token.` |
+| R4 | `<element> has its hint "#<id>" below the field — the mobile keyboard and autofill popovers can cover it` | `Move the hint element above the field; error messages may stay below.` |
+| R5 (typo-map hit) | `<element> has invalid autocomplete "<value>" (WCAG 1.3.5)` | `Use autocomplete="<token>".` |
+| R5 (no hit) | `<element> has invalid autocomplete "<value>" (WCAG 1.3.5)` | `Use a valid token from the HTML autofill list.` |
+| R6 | `<element> looks like an identity or contact field but has no autocomplete (WCAG 1.3.5)` | `Add autocomplete="<token>" (or autocomplete="off" if autofill is unwanted).` |
+| R7 | `<element> has no autocomplete="current-password", "new-password" or "one-time-code" — password managers can't fill or save it (WCAG 1.3.5)` | `Add autocomplete="current-password" on sign-in or autocomplete="new-password" when choosing a password.` |
+| R8 | `<element> is the sign-in name for the password field but has no autocomplete="username" (WCAG 1.3.5)` | `Add autocomplete="username" (or "username webauthn" with passkeys).` |
+| R9 | `<error-element> looks like the error for <element> but is not linked: missing <missing> (WCAG 3.3.1, 4.1.2)` | `Give the error a static id, list it in the field's aria-describedby, and bind aria-invalid to the same state.` |
+| R10 | `selector "<selector>" in <file> styles fields as invalid before the user has typed` | `Use :user-invalid, or gate :invalid behind a state class such as .submitted.` |
+| R11 | `selector "<selector>" in <file> signals autofill with colour only (WCAG 1.4.1)` | `Add a non-colour cue that doesn't shift layout, e.g. box-shadow: inset 0 0 0 2px <colour>.` |
+
+Examples:
+```
+[a11y/password-autocomplete] <input type="password" name="pw"> has no autocomplete="current-password", "new-password" or "one-time-code" — password managers can't fill or save it (WCAG 1.3.5)
+suggestion: Add autocomplete="current-password" on sign-in or autocomplete="new-password" when choosing a password. Suppress with … See: agent-kit/designer/forms-and-autofill.md
+
+[a11y/css-invalid-early] selector "input:invalid" in styles/form.css styles fields as invalid before the user has typed
+suggestion: Use :user-invalid, or gate :invalid behind a state class such as .submitted. Suppress with … See: agent-kit/designer/forms-and-autofill.md
+```
+
+### 5. Before / after
+```html
+<!-- before: 4 findings: R1 ×2 (both inputs), R7, R8 (R8 replaces R6 on the email field) -->
+<form>
+  <input type="email" placeholder="Email" />
+  <input type="password" placeholder="Password" />
+</form>
+<!-- after: clean -->
+<form>
+  <label for="email">Email</label>
+  <input id="email" type="email" autocomplete="username" />
+  <label for="pw">Password</label>
+  <input id="pw" type="password" autocomplete="current-password" />
+</form>
+<!-- sign-up / new-password: password rules go ABOVE the field, linked -->
+<form>
+  <label for="new-pw">Choose a password</label>
+  <p id="new-pw-hint">At least 8 characters</p>
+  <input id="new-pw" type="password" autocomplete="new-password" aria-describedby="new-pw-hint" />
+</form>
+```
+```html
+<!-- before: R9 (no aria-describedby, no aria-invalid) -->
+<label for="zip">Postal code</label>
+<input id="zip" autocomplete="postal-code" value="{zip}" />
+<span if="zipError">{zipError}</span>
+<!-- after -->
+<input id="zip" autocomplete="postal-code" value="{zip}" aria-invalid="{zipInvalid}" aria-describedby="zip-err" />
+<span id="zip-err" if="zipError">{zipError}</span>
+```
+```css
+/* before: R10, R11 */  input:invalid { border-color: red }   input:autofill { border-color: blue }
+/* after */             input:user-invalid { border-color: red }
+                        input:autofill { border-color: blue; box-shadow: inset 0 0 0 2px blue }
+```
+
+### 6. Scope / non-goals
+
+**In scope (R5–R8):** the generic check that `autocomplete` is present and token-valid on identity, contact, login and password fields, judged from markup alone. R7 checks only that a password field carries `current-password`, `new-password` or `one-time-code`; it does not judge which one is right. R8 checks only that the sign-in name field before a password field has `username`.
+
+**Out of scope:** whether the value is role-correct for a flow (`current-password` vs `new-password` on a login vs sign-up page, `username` vs `email`), and whether a password field on an auth page sits in a `<form>` or has the right `type`. Plugins that know their page's role may add those checks.
+
+**What is NOT detectable (→ guide only):**
+- When errors appear (on blur or on submit), and JS blur validation that re-implements `:user-invalid`. This lives in component TS, which Jay doesn't analyse.
+- Whether `aria-invalid` is kept in sync with `:user-invalid` at runtime.
+- `novalidate` + custom errors flow, focus moved to the first error on submit, and live announcement.
+- Hints that are visually hidden or positioned by CSS (DOM order ≠ visual order). R4 uses DOM order only.
+- External (`https://`) CSS and body `<style>` (not in `ctx.css`).
+- Passkey WebAuthn API usage (article #10).
+- Inputs rendered by headless components whose markup isn't in this jay-html.
+
+### 7. Guide — `a11y-validator/agent-kit/designer/forms-and-autofill.md`
+Outline (one section per rule id, so the message → section mapping is obvious):
+1. Label every field. A placeholder is not a label (R1).
+2. Hints above, errors may be below. Hints and password rules go **above** the field, linked with `aria-describedby`; error messages may sit below it (R2, R4).
+3. Error messages: an element with an id, conditional, linked via `aria-describedby`, plus `aria-invalid` bound to the same state (R3, R9). Includes a jay-html snippet with `if=` and the bound `aria-invalid`.
+4. Use `:user-invalid`, not `:invalid`. If CSS styles `:user-invalid`, set `aria-invalid` from the same "user has interacted" moment. Don't rebuild it with blur JS (R10).
+5. `novalidate` + custom errors pattern: when it's OK, show all errors on submit, focus the first invalid field.
+6. Autocomplete token table, common typos, `section-`/`shipping`/`billing` (R5, R6).
+7. Login and sign-up: `username`, `current-password`, `new-password`, `one-time-code`, `username webauthn` for passkey conditional UI (R7, R8).
+8. `inputmode` / `type`: `type=email`/`tel`, `inputmode="numeric"` for codes and card numbers (not `type=number`).
+9. `:autofill` styling: colour plus a non-colour cue that doesn't shift layout (inset box-shadow) (R11). Notes the gap: the `box-shadow: 0 0 0 1000px white inset` reset hack passes R11 but hides autofill.
+10. R10 caveat: `:not(:placeholder-shown):invalid` works only if the field has a placeholder (use `placeholder=" "`); without one it is red on load (R10).
+11. Suppression: how and when.
+
+The framework `stack-cli/agent-kit-template/designer/validation-guide.md` gets one line: "Form findings (`[a11y/…]`) → `agent-kit/designer/forms-and-autofill.md`". `a11y-patterns.md` §Form Labels links to the new guide.
+
+---
+
+## Implementation Plan
+
+| Phase | Work |
+|---|---|
+| P0a | Core: `jay:` CSS source markers (`jay:head-style`, `jay:@import`, `jay:end-@import`) in `jay-html-parser.ts` + its own red-first test (§Design 4). `yarn confirm` in compiler-jay-html. |
+| P0 | Red tests for R1–R11 (§Tests). Extend `makeContext(html, head?, css?)`. |
+| P1 | DOM rules R1–R9: helpers `describeElement(el)`, `accessibleNameOf(el)`, `isBound(value)`, `parseAutocomplete(value)`. Put form rules in a new module `lib/validators/form-rules.ts` called from `validate`, so the 661-line file stays readable. `pushFinding(findings, f, guide?)`. |
+| P2 | CSS rules R10–R11 in `lib/validators/form-css-rules.ts` (postcss). Add `postcss` and `postcss-selector-parser` to `dependencies`. |
+| P3 | Guide + pointer lines; update `a11y-patterns.md` cross-link. |
+| P4 | `yarn confirm` in a11y-validator. `jay-stack validate` on fake-shop must stay clean or get its real issues fixed. No version bumps; CHANGELOG under `## Unreleased`. |
+| P5 | Demo videos (§Verification). Append Implementation Results; index → `[Implemented]`. |
+
+Message/guide plumbing: every message starts with `[a11y/<rule-id>]`; every suggestion ends with `See: agent-kit/designer/forms-and-autofill.md` instead of the generic `a11y-patterns.md` that `pushFinding` appends (`a11y-validator.ts:8,23-25`) — `pushFinding` gets an optional `guide` argument. CSS uses `postcss` + `postcss-selector-parser`, the same versions as `design-system-validator` (`package.json:53-54`); no regex on CSS.
+
+Install the new dependencies with `yarn install`. That needs the registry network prerequisite; on a network error, stop and ask.
+
+## Tests (red first, CORRECT expected output)
+
+The rows below are the cases. This repo's CLAUDE.md prefers fixtures in files, but the a11y-validator suite is inline-HTML today (`a11y-validator.test.ts:14-22`), so we stay consistent with it. Multi-element forms (R8, R9, the login/address pages) get `test/fixtures/forms/<case>.jay-html` files that the demo pages reuse. No `toContain`. Each case is `makeContext(html, undefined, css?)` → findings **filtered by the row's rule id** (message prefix `[a11y/<id>]`), then `toEqual` on that filtered array; so other rules firing on the same fixture (e.g. a missing label) don't break the row. "`[]`" means no finding of that row's rule. **Exception:** precedence rows — T1 and T4 (R1 vs generic label), T25, T26 and T102 (R8 vs R6), T42 (§5 login "before") — assert the **whole unfiltered** array.
+
+**At least one exact test per rule.** For each of R1–R11, at least one row asserts the whole finding with `toEqual` — severity, full `message` and full `suggestion` text from the §Design 4 exact-text table — so message wording is pinned, not just the id prefix.
+
+| # | Fixture (inline) | Expected |
+|---|---|---|
+| T1 | `<input type="text" placeholder="Name">` | 1 × error `placeholder-as-label`, **no** generic no-label finding; message reads `<input type="text"> (1st input in the file) with placeholder "Name" has no label …` (no placeholder clause in the located element) |
+| T2 | `<input type="text" id="n" placeholder="Name">` | R1 message starts `<input type="text" id="n"> with placeholder "Name"` |
+| T3 | `<label>City <input type="text" placeholder="e.g. Paris"></label>` | R2 message starts `<input type="text"> labelled "City"` (label wins over placeholder) |
+| T4 | `<input type="text" placeholder="Name">` + `allow-placeholder-as-label` | whole array: exactly 1 × generic no-label error (no R1) |
+| T5 | `<label for="c">Card</label><input id="c" placeholder="MM/YY">` | warning `placeholder-format-hint` |
+| T6 | same + `aria-describedby="h"` + `<p id="h">MM/YY</p>` **before** input | `[]` |
+| T7 | hint `<p id="h">` **after** input | warning `hint-below-field` |
+| T8 | `<input id="pw" type="password" autocomplete="new-password" aria-describedby="pw-rules">` then static `<p id="pw-rules">At least 8 characters, one number</p>` after it (labelled) | warning `hint-below-field` |
+| T9 | labelled input with `aria-describedby="e-err"`, then static `<span id="e-err" class="field-error">Enter a valid email</span>` after it | `[]` (error-like target, exempt from R4) |
+| T10 | same, target `<span id="e-msg" role="alert">`, `aria-live="polite"`, `{emailError}` text, or the `aria-errormessage` target (each its own case) | `[]` |
+| T11 | `aria-describedby="nope"` with no such id | error `describedby-missing-id` |
+| T12 | `aria-describedby="{x}"` | `[]` (bound, skipped) |
+| T13 | `<input aria-describedby="h">` inside a `forEach` with no `id="h"` | `[]` (R3 checks static ids only) |
+| T14 | `<input aria-describedby="h">` with a bound `id="{hintId}"` elsewhere | error `describedby-missing-id` for `h` (bound ids are not counted as present) |
+| T15 | `autocomplete="phone"` | error `autocomplete-invalid`, suggestion names `tel` (`Use autocomplete="tel".`) |
+| T16 | `autocomplete="shipping street-address"`, `"section-a billing postal-code"`, `"work email"`, `"username webauthn"` | `[]` |
+| T17 | `autocomplete="work postal-code"` | error `autocomplete-invalid` (modifier only before contact fields) |
+| T18 | labelled `<input type="email">` without autocomplete | warning `autocomplete-missing`, suggests `email` |
+| T19 | labelled `<input name="zipCode">` | warning `autocomplete-missing`, suggests `postal-code` |
+| T20 | labelled `<input name="search">`, `name="coupon"` | `[]` |
+| T21 | labelled `<input type="email" autocomplete="off">` | `[]` |
+| T22 | `<input type="password">` (labelled) | error `password-autocomplete` |
+| T23 | `type=password autocomplete="off"` | error `password-autocomplete` |
+| T24 | `type=password autocomplete="one-time-code"` (labelled) | `[]` |
+| T25 | login form, both fields labelled: email input (no autocomplete) + password `current-password` | warning `username-autocomplete` only (no R6 on that element) |
+| T26 | sign-up form, all three fields labelled: `name="name"`, `type=email`, password `new-password`, none with autocomplete on the first two | R6 on name (suggests `name`), R8 on email (nearest preceding), no R6 on email |
+| T27 | password and email not in a `<form>`, sibling `<div>`s | R8 on the email input (no `<form>`: nearest preceding qualifying input in document order) |
+| T28 | R9 bad fixture from §5 | warning `error-not-associated` naming both missing pieces |
+| T29 | R9 good fixture from §5 | `[]` |
+| T30 | `<span if="loading">` next to an input | `[]` (no error/invalid name) |
+| T31 | `<p if="errorCount">` summary near several controls | `[]` |
+| T32 | placeholder `"Leave a comment"`, `"Summer"`, `"Your address"`, `"123 Main St"` (labelled) | `[]` (no R2) |
+| T33 | placeholder `"YYYY-MM-DD"`, `"e.g. 555-1234"`, `"e.g. Jane"`, `"At least 8 characters"` (labelled) | warning `placeholder-format-hint` |
+| T34 | hint element contains the control | `[]` (no R4) |
+| T35 | `<input type="checkbox" id="t" aria-describedby="t-d"><label for="t">Terms</label><p id="t-d">You can unsubscribe any time</p>` | `[]` (R4 only checks text-entry controls) |
+| T36 | static `<textarea aria-describedby="h">` then `<p id="h">Max 200 words</p>` (labelled) | warning `hint-below-field` |
+| T37 | `autocomplete="qwerty"` | error `autocomplete-invalid`, suggestion `Use a valid token from the HTML autofill list.` |
+| T38 | CSS `form:invalid button{opacity:.5}`, `input:not(:placeholder-shown):invalid{…}`, `:is(input:user-invalid, .x){…}` | `[]` |
+| T39 | CSS `:is(input:invalid, .x){…}` | warning `css-invalid-early` |
+| T40 | CSS `input:autofill{border:2px solid blue}` | `[]` (shorthand has width/style, so not colour-only) |
+| T41 | CSS `input:autofill{border:blue}` | warning `css-autofill-color-only` |
+| T42 | §5 login "before" | exactly R1 ×2, R7, R8 (no R6) |
+| T43 | CSS `/* jay:head-style */\ninput:invalid{border-color:red}` | warning `css-invalid-early`, message names `<head> <style>` |
+| T44 | CSS `input:invalid{border-color:red}` (no marker) | warning `css-invalid-early`, message names `page CSS` |
+| T45 | CSS `input:invalid, input:user-invalid, select:invalid{…}` | 2 warnings, naming `input:invalid` and `select:invalid` (list split) |
+| T46 | CSS `.card.submitted:has(input:invalid){…}` | `[]` (gate on the `:has()` compound) |
+| T47 | CSS `input:autofill{transition:all 1s}` | `[]` (no relevant declarations) |
+| T48 | CSS `input:autofill{border-color:blue;border-width:2px}` | `[]` (width is a cue) |
+| T49 | CSS `input:autofill, input:-webkit-autofill{border-color:blue}` | 2 warnings, one per selector |
+| T50 | CSS `/* External CSS: a.css */\ninput:autofill{border-color:blue}\n/* jay:head-style */\ninput:autofill{color:blue}` | 1 warning, names `a.css` (first occurrence) |
+| T51 | labelled `<input name="emailAddress">`, `name="companyName"`, `name="lastName"` | warning `autocomplete-missing` suggesting `email`, `organization`, `family-name` (first row wins; each its own case) |
+| T52 | CSS `/* External CSS: styles/form.css */\n.submitted input:invalid{…}` | `[]` |
+| T53 | CSS `input.touched:invalid`, `[data-state] input:invalid`, `[aria-invalid] :invalid` | `[]` (each its own case) |
+| T54 | CSS `.form-field input:invalid{…}` | warning `css-invalid-early` (layout class is no gate) |
+| T55 | CSS `[data-testid] input:invalid{…}` | warning `css-invalid-early` (non-state data attribute is no gate) |
+| T56 | CSS `[data-user-touched] input:invalid`, `[data-submitted] :invalid` | `[]` (each its own case) |
+| T57 | link + head style: `/* External CSS: a.css */\n.x{}\n\n/* jay:head-style */\ninput:invalid{…}` | warning names `<head> <style>`, not `a.css` |
+| T58 | nested @import: `/* External CSS: a.css */\n/* jay:@import b.css */\ninput:invalid{}\n/* jay:end-@import b.css */\nselect:invalid{}` | 2 warnings: first names `b.css`, second `a.css` |
+| T59 | author comment `/* @import fake.css */` before `input:invalid{}` under `/* jay:head-style */` | warning names `<head> <style>` (non-`jay:` comment is not a marker) |
+| T60 | CSS `input:user-invalid{…}` | `[]` |
+| T61 | CSS `input:-webkit-autofill{border-color:blue;box-shadow:inset 0 0 0 2px blue}` | `[]` |
+| T62 | each rule + `a11y: { allow-<id>: true }` in overrides | `[]` for that rule (for R1, the generic no-label error remains — see T4) |
+| T63 | every new finding's suggestion | ends with `forms-and-autofill.md`, not `a11y-patterns.md` |
+| | **R10 form-level and pseudo-class rows** | |
+| T64 | CSS `form:has(:invalid) button{opacity:.5}`, `fieldset:invalid legend{…}` | `[]` (form-level allowance) |
+| T65 | CSS `form:invalid button{opacity:.5}` | `[]` |
+| T66 | CSS `form:invalid{outline:1px solid red}` (form is the subject) | warning `css-invalid-early` |
+| T67 | CSS `input:focus:invalid{…}`, `input:focus-visible:invalid{…}` | warning `css-invalid-early` (focus is not a gate) |
+| T68 | CSS `input:not(:invalid){…}` | `[]` (`:not()` ignored) |
+| T69 | CSS `:where(input:invalid){…}` | warning `css-invalid-early` |
+| T70 | CSS `:where(.submitted input:invalid){…}` | `[]` |
+| T71 | CSS `.card:has(input:invalid){…}` | warning `css-invalid-early` |
+| | **R11 merge rows** | |
+| T72 | CSS `input:autofill{border-color:blue}` then, in another source, `input:autofill{box-shadow:inset 0 0 0 2px blue}` | `[]` (merged by identical selector) |
+| T73 | CSS `input:autofill{border-color:blue}` + `input:-webkit-autofill{box-shadow:…}` | warning for `input:autofill` only (different selectors not merged) |
+| T74 | CSS `input:autofill{outline:2px solid blue}` | `[]` (outline with width+style is a non-colour cue) |
+| T75 | CSS `input:autofill{outline:blue}` | warning `css-autofill-color-only` |
+| T76 | CSS `input:-webkit-autofill{-webkit-box-shadow:inset 0 0 0 2px blue}` | `[]` (`-webkit-box-shadow` is a cue) |
+| T77 | CSS `input:-webkit-autofill{-webkit-text-fill-color:blue}` | warning `css-autofill-color-only` (text-fill colour is colour-only) |
+| | **R10 reset exemption** | |
+| T78 | CSS `input:invalid{box-shadow:none}`, `:invalid{outline:none}` | `[]` (all declarations are resets; each its own case) |
+| T79 | CSS `input:invalid{box-shadow:none;border-color:red}` | warning `css-invalid-early` (mixed reset + styling) |
+| | **R4 exemption scope** | |
+| T80 | `<div><input aria-describedby="h"><div if="showHint"><p id="h">Use MM/YY</p></div></div>` (conditional ancestor below the LCA) | `[]` |
+| T81 | `<div if="showForm"><input aria-describedby="h"><p id="h">Use MM/YY</p></div>` (conditional is the LCA itself, applies to both) | warning `hint-below-field` |
+| T82 | `<div id="h"><label for="c">Card</label><input id="c" aria-describedby="h"></div>` (target is the control's ancestor) | `[]` |
+| | **R9 scope** | |
+| T83 | `<span if="formError">` with two inputs in the same parent | `[]` |
+| T84 | `<div><div><input id="e"></div><span if="emailError">{emailError}</span></div>` — control in a sibling wrapper, found via grandparent | warning `error-not-associated` |
+| T85 | `<span if="hasError">` next to one unlinked input | warning `error-not-associated` |
+| T86 | `<span if="!emailError">Looks good</span>` next to one unlinked input | `[]` (negated condition excluded) |
+| | **R6 heuristic** | |
+| T87 | labelled `<input name="firstName">` | warning `autocomplete-missing`, suggests `given-name` |
+| T88 | labelled `<textarea name="message">`, `<textarea name="notes">` | `[]` (textarea skipped) |
+| T89 | labelled `<textarea name="address">` | warning `autocomplete-missing`, suggests `street-address` |
+| T90 | labelled `<select name="country">` | warning `autocomplete-missing`, suggests `country` |
+| T91 | labelled `<input name="country">` | warning `autocomplete-missing`, suggests `country-name` |
+| T92 | labelled `<input name="ipAddress">`, `name="macAddress"` | `[]` (deny list; each its own case) |
+| | **R5 grammar edges** | |
+| T93 | `autocomplete="Email"`, `"Shipping Postal-Code"` | `[]` (case-insensitive) |
+| T94 | `autocomplete="webauthn username"` | error `autocomplete-invalid` (webauthn must be last) |
+| | **R2 / R3 / R8 edges** | |
+| T95 | labelled placeholder `"mm/yy"` | `[]` from the `MM`/`YY` patterns (case-sensitive); the digit pattern does not match either |
+| T96 | `aria-describedby="h1 missing"` with only `<p id="h1">` | one error `describedby-missing-id` naming `missing` only |
+| T97 | no `<form>`: header `<input type="search" name="q">`, then a `<div>` with `<input type="email" name="email">` and a password `current-password` | one warning `username-autocomplete` on the email input, none on the search box |
+| T98 | no `<form>`: header `<input type="text" name="search">` then only a password field | `[]` from R8 (deny-listed candidate skipped, none left) |
+
+| | **Added scope rows** | |
+| T99 | labelled `<input type="checkbox" name="emailOptIn">` | `[]` (R6: checkbox out of scope) |
+| T100 | labelled `<input type="radio" name="phone">` | `[]` (R6: radio out of scope) |
+| T101 | labelled `<input type="password" name="loginPassword" autocomplete="current-password">` | `[]` from R6 (password excluded) |
+| T102 | login form, both fields labelled (email, no autocomplete + password `current-password`) + `allow-username-autocomplete` | whole array: `[]` (R8 silenced, R6 does not return) |
+| T103 | `<div><input id="e" aria-describedby="x"><button type="submit">Go</button><span if="emailError">{emailError}</span></div>` + `<p id="x">` | warning `error-not-associated` (button not counted; one control) |
+| T104 | `<textarea placeholder="Notes"></textarea>` (no label, no name/id) | R1 message starts `<textarea> (1st textarea in the file) with placeholder "Notes"` |
+| T105 | CSS `.card:has(:invalid) button{opacity:.5}` | warning `css-invalid-early` (allowance is form/fieldset only) |
+| T106 | CSS `.submitted :is(input:invalid){…}` | `[]` (outer-compound gate) |
+| T107 | `<form autocomplete="off">` | `[]` (R5: `off` valid on form) |
+| T108 | `<form autocomplete="email">` | error `autocomplete-invalid` (form allows `on`/`off` only) |
+Existing DL#166 tests must keep passing, except that a placeholder-only input now reports R1 instead of the generic label error. Update those tests deliberately and record the change in Implementation Results.
+
+## Verification — demo videos (required for "done")
+
+**Setup.** Make a non-committed demo copy of `examples/jay-stack/fake-shop` outside the repo. Give it pages `/forms/bad-*` and `/forms/good-*`, one pair per scenario. Videos are saved outside the repo as `forms-<scenario>-<chrome|safari>-<date>.mp4` (screen recordings are converted to `.mp4` so every video has one extension).
+
+Each video has 3 parts: (1) a terminal frame with `jay-stack validate` showing the bad page's `[a11y/…]` finding; (2) the bad page driven as a user would; (3) the good page, same steps, showing the difference.
+
+**Browsers.** Chrome = **real Chrome** with a saved QA profile (`--channel chrome`, persistent context). Safari = **real Safari via macOS screen recording** for every scenario; Playwright WebKit may be added as an extra, never as a substitute. **VoiceOver runs always use real Safari via a VoiceOver capture tool, never Playwright WebKit.**
+
+| Scenario | Rules | Chrome | Safari | User actions | Visible/audible difference |
+|---|---|---|---|---|---|
+| Placeholder label/hint | R1, R2, R4 | real Chrome + mobile viewport (R4: hint below, covered by the autofill popover) | real Safari + VoiceOver; **iOS Simulator Safari required** for R4 keyboard overlap | focus card expiry, start typing | bad: hint vanishes / covered by keyboard (Simulator) or autofill popover; good: hint stays above; VO reads label + hint on focus, before the field |
+| Error announced | R3, R9 | real Chrome | real Safari + VoiceOver | type invalid zip, Tab away, Shift-Tab back | bad (R9): error not linked (VO: label only); bad (R3): `aria-describedby` points at a missing id — the error is visible on screen but VO reads only the label, nothing for the description; good (two variants): conditional `if=` error, and a static `role="status"`/`aria-live` error span below the field whose text is bound — both read as label + "invalid" + error text |
+| Address autofill | R5, R6 | real Chrome, saved QA address | real Safari (screen rec), Safari AutoFill QA contact | focus name, open autofill, pick the address | bad page names its expected failure in advance: R6 = the postal-code field `<input name="zipCode">` with no `autocomplete`, expected to be left empty; R5 = the city field with `autocomplete="town"` (invalid token), expected to be left empty or skipped by the autofill dropdown. If a browser still fills them by its own heuristics, record "no visible difference"; good: every field filled correctly |
+| Login save/fill | R7, R8 | real Chrome, password manager | real Safari (screen rec), Keychain | sign in with QA credential → save prompt; reload → fill. Sign-up page: focus the new-password field | bad: wrong field saved as the username, or no save/fill offer; good: email saved as username and filled. R7 good: Chrome suggests a strong password on `new-password` |
+| Early red | R10 | real Chrome | real Safari (screen rec); Playwright WebKit optional extra | load, Tab past untouched fields; type bad email, blur | bad: red on load/Tab; good: red only after typing + blur |
+| Autofill cue | R11 | real Chrome | real Safari (screen rec) | autofill a field | bad: border colour only; good: inset ring visible |
+
+If a browser shows no difference between bad and good for a rule, the video and Implementation Results record **"no visible difference"** honestly; it is not staged. Every rule R1–R11 appears in both columns. Proposed exception (Q6): R4's **keyboard overlap** is shown only in iOS Simulator Safari. If the Simulator is unavailable, the R4 part of both videos shows only "hint vanishes / is covered by the autofill popover" plus the VoiceOver reading order, and Implementation Results states that keyboard overlap was not demonstrated. **12 videos**, assuming the recorder gaps below are fixed first (6 scenarios × 2 browsers), named as in Setup.
+
+**Tool gaps to resolve first (reported, not hidden):**
+- The Playwright demo recorder (outside this repo) launches bundled Chromium only. It needs a `--browser chromium|webkit` flag and a `--channel chrome --profile <dir>` option. That is a tooling change, not a jay one.
+- Autofill dropdowns, save-password bubbles and Keychain prompts are browser UI, outside the page video. Record the screen with macOS `screencapture -v` while the browser is driven (headed Playwright for Chrome; manual or osascript for Safari). If a step can't be done, say so in Implementation Results instead of faking it.
+- The Chrome profile and Safari AutoFill/Keychain hold **only** QA data (`QA Tester`, `qa+forms@example.com`).
+- **Steps that need explicit user permission before they run** (they change the user's own macOS data):
+  1. Creating or setting the Safari AutoFill "My Card" contact in Contacts (QA data only).
+  2. Saving the QA credential to Keychain during the login demo.
+  3. Removing that Keychain entry (and the QA "My Card", if created) afterwards.
+  If permission is not given, the affected Safari parts are reported as not shown.
+
+**Verification criteria (all required):**
+- `yarn confirm` green in a11y-validator, with every §Tests row passing.
+- Each bad page prints exactly its expected `[a11y/…]` ids, and each good page prints none.
+- 12 videos (matrix above) exist (saved outside the repo).
+- The VoiceOver capture logs (real Safari) for "Placeholder label/hint" and "Error announced" show the hint/error text spoken on the good page only.
+- fake-shop `validate` has no new false positives (any it does produce are listed and judged).
+
+## Scope pre-mortem — "this failed because…"
+
+| Risk | Mitigation |
+|---|---|
+| R6/R9 name heuristics are noisy, and teams suppress the whole rule | Warnings, whole-word match, deny list, ship with fake-shop measured; tune before release |
+| R1 changes an existing finding and breaks consumers' snapshot tests | Same severity, documented in CHANGELOG `## Unreleased` |
+| R4 flags hints that CSS moves visually | Warning + guide explains; page suppression |
+| R4 flags error messages placed below the field | Error-like targets exempt (class/id, role, `aria-live`, `aria-errormessage`, binding, conditional); red tests for both sides |
+| CSS location wrong (head style unmarked, imports have no end) | Core marker change (§Design 4) with its own parser test; validator tests for link + head style and nested @import; no marker → "page CSS" |
+| Autofill demo impossible to automate | Screen-recording fallback; honest note |
+| Scope creep into runtime validation helpers | Out of scope; guide only |
+
+## Q&A / open questions
+
+1. **Guide in the plugin agent-kit vs the framework agent-kit?** Proposed: the plugin (`a11y-validator/agent-kit/designer/`), because the guide only matters where the validator runs, and that's where the current a11y guide already lives. The framework agent-kit gets a pointer. **Open — needs approver decision** (flagged in TL;DR #8); the brief said "framework agent-kit".
+2. **Should `validate.ts` print `element`/`attribute`?** That would help every plugin, but it's a core output change and out of scope here. Embedding the location in the message works today. Possible follow-up.
+3. **R7 as error?** Proposed yes. There is no legitimate password field without one of the two tokens, and the rule is suppressible.
+4. **R8 accepts `email` instead of `username`?** Proposed no. Password managers key on `username`, even when the field is `type=email`.
+5. **Per-element suppression?** Not now. It would be a new mechanism; page-level is the existing one.
+6. **Accept the R4 keyboard-overlap gap?** Proposed: if iOS Simulator Safari is unavailable, R4's keyboard overlap is reported as not shown (autofill-popover overlap and VoiceOver order are still shown). **Open — needs approver acceptance** (TL;DR #6).
+
+## Trade-offs
+
+- **Heuristics vs silence:** R2, R6 and R9 will miss some cases and wrongly flag others. They stay warnings, and every message says how to suppress.
+- **DOM order for R4** is a proxy for visual order. It's cheap and right in most AI-generated forms.
+- **A new dependency (postcss)** in a11y-validator costs some package size. In return we avoid regex CSS parsing, which is fragile, and reuse a library already in the monorepo.
+
+## Agent feedback loop (jay-feedback decision)
+
+- **Validation:** yes, R1–R11 (deterministic or near-deterministic, in jay-html + local CSS).
+- **Agent-kit guide:** yes, `forms-and-autofill.md` (plugin, designer role) for the runtime parts that can't be validated, plus a framework pointer.
+- **Framework feature:** none.
