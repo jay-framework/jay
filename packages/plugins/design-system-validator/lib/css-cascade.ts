@@ -35,7 +35,7 @@ function computeSpecificity(selector: string): [number, number, number] {
     return result;
 }
 
-function hasAllowComment(decl: Declaration): boolean {
+export function hasAllowComment(decl: Declaration): boolean {
     const next = decl.next();
     if (next?.type === 'comment' && (next as Comment).text.trim() === ALLOW_COMMENT) {
         return true;

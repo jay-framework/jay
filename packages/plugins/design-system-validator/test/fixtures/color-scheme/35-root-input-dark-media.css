@@ -1,0 +1,8 @@
+input {
+  background: #fff;
+}
+@media (prefers-color-scheme: dark) {
+  :root input {
+    background: #222;
+  }
+}

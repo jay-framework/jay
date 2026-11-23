@@ -47,8 +47,14 @@ Slides snap to the left edge. Adjust `flex` to control how many slides are visib
   display: flex;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
   gap: 16px;
+}
+/* Smooth scroll only for users who did not ask for reduced motion. The prev/next buttons
+   already use behavior 'instant' under reduce. */
+@media (prefers-reduced-motion: no-preference) {
+  .carousel-track {
+    scroll-behavior: smooth;
+  }
 }
 .slide {
   scroll-snap-align: start;

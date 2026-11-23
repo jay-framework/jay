@@ -1,0 +1,18 @@
+/* Adapted from ui-kit sticky-header-scroll.md (not its exact CSS). */
+.bar {
+  animation: grow linear;
+  animation-timeline: scroll();
+}
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    animation: none;
+  }
+}

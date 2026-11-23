@@ -205,12 +205,15 @@ These are the errors the validator produces. Use them to align your CSS with the
   Suggestion: Use an animation preset easing: fade-in (cubic-bezier(0, 0, 0.2, 1)), micro (ease-in-out)
 ```
 
-**Missing reduced-motion media query:**
+**Reduced motion** (validator `design-reduced-motion`, no `DESIGN.md` needed):
 
 ```
-⚠ Page uses transitions/animations but has no @media (prefers-reduced-motion) override
-  Suggestion: Add @media (prefers-reduced-motion: reduce) { * { transition-duration: 0s !important; animation-duration: 0s !important; } }
+⚠ [reduced-motion/missing] Page moves elements (transform/animation) but has no @media (prefers-reduced-motion) rules
+  Suggestion: Put movement inside @media (prefers-reduced-motion: no-preference) { ... }, or override each moving selector inside @media (prefers-reduced-motion: reduce). Keep opacity/color fades. Do not use a "*" reset.
 ```
+
+Do **not** add a blanket `*` reset that zeroes every transition: it also removes fades that show
+state changes. All reduced-motion rules and fixes are in [reduced-motion.md](reduced-motion.md).
 
 **Non-standard breakpoint:**
 

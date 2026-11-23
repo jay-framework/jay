@@ -1,0 +1,8 @@
+.lift {
+  transition: transform 200ms;
+}
+@media (prefers-reduced-motion) {
+  .lift {
+    transition: none;
+  }
+}

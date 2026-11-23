@@ -251,23 +251,13 @@ describe('design-tokens validator', () => {
         expect(findings).toEqual([]);
     });
 
-    it('warns when animations exist but no prefers-reduced-motion', async () => {
+    // DL#238: the reduced-motion check moved to design-reduced-motion, and a fade is not movement.
+    it('does not report reduced motion for a fade (moved to design-reduced-motion)', async () => {
         const ctx = makeContext(`<html><body>
             <style>.fade { transition: opacity 300ms; }</style>
             <div class="fade">Text</div>
         </body></html>`);
-        const findings = withoutGuide(await validateTokens(ctx));
-        expect(findings).toEqual([
-            {
-                severity: 'warning',
-                message:
-                    'Page uses transitions/animations but has no @media (prefers-reduced-motion) override',
-                suggestion:
-                    'Add @media (prefers-reduced-motion: reduce) { * { transition-duration: 0s !important; animation-duration: 0s !important; } }. ' +
-                    'If intentional, suppress with design-system: { allow-no-reduced-motion: true } in <script type="application/jay-validations">. ' +
-                    'See agent-kit/designer/validation-guide.md',
-            },
-        ]);
+        expect(await validateTokens(ctx)).toEqual([]);
     });
 
     it('passes when prefers-reduced-motion is present', async () => {

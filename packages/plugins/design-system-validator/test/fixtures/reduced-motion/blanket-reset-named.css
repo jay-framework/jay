@@ -1,0 +1,9 @@
+.card {
+  transition: opacity 200ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .menu {
+    transition: none;
+  }
+}

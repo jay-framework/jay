@@ -51,7 +51,8 @@
     "@jay-framework/stack-server-runtime": "workspace:^",
     "js-yaml": "^4.1.0",
     "postcss": "^8.5.6",
-    "postcss-selector-parser": "^7.1.0"
+    "postcss-selector-parser": "^7.1.0",
+    "postcss-value-parser": "^4.2.0"
   },
   "peerDependencies": {
     "@jay-framework/compiler-jay-html": "workspace:^",

@@ -72,4 +72,4 @@ The linked contract must have a tag matching the `trackBy` field.
 
 ## See Also
 
-- [composing-contracts example](examples/composing-contracts.md) — Real-world composition hierarchy from wix-stores
+- [composing-contracts example](https://github.com/jay-framework/jay/blob/main/packages/jay-stack/stack-cli/agent-kit-template/contracts/examples/composing-contracts.md) — Real-world composition hierarchy from wix-stores

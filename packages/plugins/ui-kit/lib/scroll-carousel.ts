@@ -16,15 +16,11 @@ export const scrollCarousel = makeJayStackComponent<ScrollCarouselContract>()
         const [atEnd, setAtEnd] = createSignal(false);
 
         refs.prev.onclick(() => {
-            refs.container.exec$((el) => {
-                el.scrollBy({ left: -el.clientWidth, behavior: 'smooth' });
-            });
+            refs.container.exec$((el) => scrollCarouselBy(el, -1));
         });
 
         refs.next.onclick(() => {
-            refs.container.exec$((el) => {
-                el.scrollBy({ left: el.clientWidth, behavior: 'smooth' });
-            });
+            refs.container.exec$((el) => scrollCarouselBy(el, 1));
         });
 
         const updateScrollState = () => {
@@ -43,3 +39,12 @@ export const scrollCarousel = makeJayStackComponent<ScrollCarouselContract>()
             }),
         };
     });
+
+/**
+ * Scrolls one page of the carousel. Under prefers-reduced-motion it jumps (`'instant'`, not `'auto'`:
+ * `'auto'` defers to CSS `scroll-behavior`, which may still be `smooth`). DL#238.
+ */
+export function scrollCarouselBy(el: HTMLElement, direction: 1 | -1): void {
+    const reduce = globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollBy({ left: direction * el.clientWidth, behavior: reduce ? 'instant' : 'smooth' });
+}

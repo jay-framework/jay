@@ -1,0 +1,6 @@
+:root {
+  --bg: light-dark(#fff, #111);
+}
+:root {
+  color-scheme: light dark;
+}

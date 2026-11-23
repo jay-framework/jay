@@ -6,9 +6,9 @@ A page component (`page.ts`) uses `makeJayStackComponent` to provide page-level 
 
 ```typescript
 import { makeJayStackComponent, phaseOutput } from '@jay-framework/fullstack-component';
-import type { HomePageContract } from './page.jay-contract.generated';
+import type { PageContract } from './page.jay-contract';
 
-export const page = makeJayStackComponent<HomePageContract>()
+export const page = makeJayStackComponent<PageContract>()
   .withSlowlyRender(async () => {
     return phaseOutput({ heroTitle: 'Welcome', heroSubtitle: 'Build something great' }, {});
   })
@@ -18,6 +18,27 @@ export const page = makeJayStackComponent<HomePageContract>()
 ```
 
 The export name must be `page` for page-level components.
+
+## Where to import page types from
+
+Both `page.jay-contract.d.ts` and `page.jay-html.d.ts` are generated next to your page (on `dev`/`build`).
+They cover **different surfaces** — import from the right one:
+
+- **Data types and runtime enum/variant _values_** (`PageContract`, `PageViewState`, `PageSlowViewState`,
+  `PageFastViewState`, `PageRefs`, and any `enum` your contract declares) → import from **`./page.jay-contract`**.
+  This mirrors how a component's `.ts` imports from its own `./X.jay-contract`. A runtime enum value
+  (e.g. `Status.warning`) **must** come from here — importing it from `./page.jay-html` pulls the browser element
+  module into server-side SSR and fails.
+- **Composed refs that come from the template** — child-component refs, and DL#198 free refs like
+  `refs.card.dismiss` — live only in `page.jay-html.d.ts`. Import them **type-only** from **`./page.jay-html`**
+  (type-only so nothing is loaded at runtime):
+
+  ```typescript
+  import type { PageElementRefs } from './page.jay-html';
+  ```
+
+Rule of thumb: **data → `./page.jay-contract`; template/composed refs → `./page.jay-html` (type-only)**.
+Do not import runtime values from `./page.jay-html`, and there is no `.generated` suffix.
 
 ## Page Component with Params
 
@@ -38,8 +59,9 @@ export const page = makeJayStackComponent<ProductPageContract>()
       { productId: product.id },
     );
   })
-  .withFastRender(async (props, db) => {
-    const price = await db.getPrice(props.carryForward.productId);
+  // carryForward (the slow phase's output) is the 2nd positional arg — services follow it.
+  .withFastRender(async (props, carryForward, db) => {
+    const price = await db.getPrice(carryForward.productId);
     return phaseOutput({ price, inStock: price > 0 }, {});
   });
 ```
@@ -54,15 +76,17 @@ export const page = makeJayStackComponent<ProductPageContract>()
   .withSlowlyRender(async (props, db) => {
     // ... slow render
   })
-  .withFastRender(async (props, db) => {
-    // ... fast render
+  // With a slow phase, carryForward is the 2nd arg — the service (db) follows it.
+  .withFastRender(async (props, carryForward, db) => {
+    // ... fast render (use db for queries, carryForward for the slow phase's output)
   })
-  .withInteractive(function ProductPage(props, refs) {
+  // carryForward is the 4th positional arg: (props, refs, fastViewState, carryForward, ...contexts).
+  .withInteractive(function ProductPage(props, refs, fastViewState, carryForward) {
     const [quantity, setQuantity] = createSignal(1);
 
     refs.addToCart.onClick(async () => {
       await addToCartAction({
-        productId: props.carryForward.productId,
+        productId: carryForward.productId,
         quantity: quantity(),
       });
     });
@@ -80,6 +104,12 @@ export const page = makeJayStackComponent<ProductPageContract>()
     };
   });
 ```
+
+## DOM access in interactive phase
+
+Reach rendered elements through **refs** only. Put overlays, panels, and lists in **jay-html**; drive them with ViewState from `.withInteractive`. Do not use `document.querySelector`, imperative `createElement` UI, or document-level drag listeners.
+
+See [component-refs.md](component-refs.md#dom-access-rules-jay-stack-pages).
 
 ## Calling File Upload Actions
 

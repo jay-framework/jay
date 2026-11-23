@@ -1,0 +1,14 @@
+@media (prefers-reduced-motion: reduce) {
+  .slide {
+    transition: none;
+  }
+  .slide:hover {
+    transform: none;
+  }
+}
+.slide {
+  transition: transform 300ms;
+}
+.slide:hover {
+  transform: scale(1.1);
+}

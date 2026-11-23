@@ -51,23 +51,22 @@ src/pages/products/
 
 The static `ceramic-flower-vase/` route takes priority over `[slug]/` for that URL, but all other product URLs still use the dynamic route.
 
-### Static Override Params (`jay-params`)
+### Static Override Params and Headless Component Props
 
-Static override routes often use the same contract as the dynamic route they override. Since the static route has no dynamic directory segment, the params must be declared explicitly using `<script type="application/jay-params">`:
+Static override routes use the same headless component as the dynamic route they override. Since the static route has no dynamic directory segment, the params must be declared in the headless component's YAML body:
 
 ```html
 <!-- src/pages/products/ceramic-flower-vase/page.jay-html -->
 <html>
   <head>
-    <script type="application/jay-params">
-      slug: ceramic-flower-vase
-    </script>
     <script
       type="application/jay-headless"
       plugin="wix-stores"
       contract="product-page"
       key="product"
-    ></script>
+    >
+      slug: ceramic-flower-vase
+    </script>
   </head>
   <body>
     <h1>{product.productName}</h1>
@@ -75,7 +74,20 @@ Static override routes often use the same contract as the dynamic route they ove
 </html>
 ```
 
-The script body is YAML. The declared params are passed to the component as if extracted from a dynamic URL segment. Without this, the component would receive no param values.
+The script body is YAML. Values are passed to the component as props alongside route params. This same mechanism is used for any per-component configuration:
+
+```html
+<script
+  type="application/jay-headless"
+  plugin="@jay-framework/markdown"
+  contract="markdown-pages"
+  key="post"
+>
+  contentDir: ./content
+</script>
+```
+
+> **Note:** `<script type="application/jay-params">` is no longer supported — it is silently ignored by the route scanner and reported as an error by `jay-stack validate`. Move param values into the headless component's script tag body.
 
 ## Page Files
 
@@ -112,7 +124,7 @@ tags:
 
 ## Dynamic Routes and Contract Params
 
-When a component on the page — whether the page contract, a headless component, or a headfull full-stack component — declares `params`, the page should be placed in a dynamic route directory that provides those params.
+When a component on the page — whether the page contract, a plugin headless component, or a shared full-stack component — declares `params`, the page should be placed in a dynamic route directory that provides those params.
 
 For example, if a headless component's contract declares:
 
@@ -141,7 +153,18 @@ jay-stack params wix-stores/product-page
 # Output: [{"slug": "blue-shirt"}, {"slug": "red-hat"}, ...]
 ```
 
-Params are always strings (URL params).
+Params are always strings (URL params). Routes are **case-sensitive** — use lowercase for all param values and filenames that become URL segments.
+
+### When page.ts is not needed for params
+
+The designer can bind route params directly to nested component props using `jay.params` in the template — no `page.ts` or page contract needed:
+
+```html
+<jay:DocsSidebar activeRole="{jay.params.role}" activePage="{jay.params.slug}" />
+<jay:Sidebar currentPath="{jay.url.path}" />
+```
+
+Only create a `page.ts` for params when you need to **transform** them (fetch data, compute derived values, combine with service calls). If the page just passes params through to components, `jay.params` is sufficient.
 
 ## Query Parameters
 

@@ -1,0 +1,9 @@
+input {
+  background: #fff;
+}
+html.dark input {
+  background: #222;
+}
+html.dark {
+  color-scheme: dark;
+}
