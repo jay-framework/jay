@@ -577,42 +577,42 @@ Implemented on branch `ai-web-mistakes/03-form-validation`, stacked on `ai-web-m
 
 ### Final rule ids (message prefix `[a11y/<id>]`, suppression `a11y: { allow-<id>: true }`)
 
-| # | Rule id | Severity |
-|---|---|---|
-| R1 | `placeholder-as-label` | error (replaces the generic no-label error for that element) |
-| R2 | `placeholder-format-hint` | warning |
-| R3 | `describedby-missing-id` | error |
-| R4 | `hint-below-field` | warning |
-| R5 | `autocomplete-invalid` | error |
-| R6 | `autocomplete-missing` | warning |
-| R7 | `password-autocomplete` | error |
-| R8 | `username-autocomplete` | warning |
-| R9 | `error-not-associated` | warning |
-| R10 | `css-invalid-early` | warning |
-| R11 | `css-autofill-color-only` | warning |
+| #   | Rule id                   | Severity                                                     |
+| --- | ------------------------- | ------------------------------------------------------------ |
+| R1  | `placeholder-as-label`    | error (replaces the generic no-label error for that element) |
+| R2  | `placeholder-format-hint` | warning                                                      |
+| R3  | `describedby-missing-id`  | error                                                        |
+| R4  | `hint-below-field`        | warning                                                      |
+| R5  | `autocomplete-invalid`    | error                                                        |
+| R6  | `autocomplete-missing`    | warning                                                      |
+| R7  | `password-autocomplete`   | error                                                        |
+| R8  | `username-autocomplete`   | warning                                                      |
+| R9  | `error-not-associated`    | warning                                                      |
+| R10 | `css-invalid-early`       | warning                                                      |
+| R11 | `css-autofill-color-only` | warning                                                      |
 
 **Boundary (unchanged, restated for downstream plugins):** R5–R8 check only that `autocomplete` is present and token-valid on identity, contact, login and password fields. Role-correctness (`current-password` vs `new-password` on a login vs sign-up page, `username` vs `email`), `<form>` placement and password `type` are left to plugins that know the page's role.
 
 ### Code
 
-| Piece | Where |
-|---|---|
-| R1–R9 (DOM) | `packages/plugins/a11y-validator/lib/validators/form-rules.ts`; located-element + label helpers `form-index.ts`; autofill grammar `autocomplete.ts` |
-| R10–R11 (CSS) | `lib/validators/form-css-rules.ts` (postcss + postcss-selector-parser, no regex on CSS) |
-| R1 replacing the generic label error | `a11y-validator.ts` `checkLabel` takes an `unlabelledFinding` callback; with `allow-placeholder-as-label` the generic error comes back (T4) |
-| CSS source markers (core, P0a) | `compiler-jay-html/lib/jay-target/jay-html-parser.ts`: `/* jay:head-style */` before each head `<style>`, `/* jay:@import <path> */` … `/* jay:end-@import <path> */` around each inlined import (replaces `/* @import <path> */`) |
+| Piece                                  | Where                                                                                                                                                                                                                                                                                       |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1–R9 (DOM)                            | `packages/plugins/a11y-validator/lib/validators/form-rules.ts`; located-element + label helpers `form-index.ts`; autofill grammar `autocomplete.ts`                                                                                                                                         |
+| R10–R11 (CSS)                          | `lib/validators/form-css-rules.ts` (postcss + postcss-selector-parser, no regex on CSS)                                                                                                                                                                                                     |
+| R1 replacing the generic label error   | `a11y-validator.ts` `checkLabel` takes an `unlabelledFinding` callback; with `allow-placeholder-as-label` the generic error comes back (T4)                                                                                                                                                 |
+| CSS source markers (core, P0a)         | `compiler-jay-html/lib/jay-target/jay-html-parser.ts`: `/* jay:head-style */` before each head `<style>`, `/* jay:@import <path> */` … `/* jay:end-@import <path> */` around each inlined import (replaces `/* @import <path> */`)                                                          |
 | Marker-aware source splitting (shared) | `lib/css/css-sources.ts` now walks `External CSS` / `jay:head-style` / `jay:@import` / `jay:end-@import` with a stack; DL#239 labels (`style#1`, `./a.css`, `head style`, `css`) and DL#240 names (`styles/form.css`, `<head> <style>`, `page CSS`) are two formatters over one `CssOrigin` |
-| Guide | `a11y-validator/agent-kit/designer/forms-and-autofill.md` (plugin agent-kit, per approval); one-line pointer in framework `validation-guide.md`; `a11y-patterns.md` §Form Labels links it (and its own examples now carry `autocomplete="email"`) |
+| Guide                                  | `a11y-validator/agent-kit/designer/forms-and-autofill.md` (plugin agent-kit, per approval); one-line pointer in framework `validation-guide.md`; `a11y-patterns.md` §Form Labels links it (and its own examples now carry `autocomplete="email"`)                                           |
 
 ### Reviewer notes folded in
 
-| Note | Result |
-|---|---|
-| Say whether R9 counts children or descendants | **Descendants.** The scope (parent, else grandparent) counts every form control *inside* it, at any depth. Test "counts descendants, not only children" (control inside `<label><span>`) |
-| Does a typeless input count as a text field for R8? | **Yes.** No `type` = `text` (HTML default), for R4, R6 and R8. Test "a typeless input counts as a text field for the candidate" |
-| Pin the R9 message text in T28 | T28 asserts the whole finding with `toEqual`, including the `missing … and …` text |
-| Remove the stray blank line splitting the test table | Removed (formatting only; no row changed) |
-| Boundary R5–R8 = presence + valid tokens only | Restated above; the guide (§7) says the same |
+| Note                                                 | Result                                                                                                                                                                                   |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Say whether R9 counts children or descendants        | **Descendants.** The scope (parent, else grandparent) counts every form control _inside_ it, at any depth. Test "counts descendants, not only children" (control inside `<label><span>`) |
+| Does a typeless input count as a text field for R8?  | **Yes.** No `type` = `text` (HTML default), for R4, R6 and R8. Test "a typeless input counts as a text field for the candidate"                                                          |
+| Pin the R9 message text in T28                       | T28 asserts the whole finding with `toEqual`, including the `missing … and …` text                                                                                                       |
+| Remove the stray blank line splitting the test table | Removed (formatting only; no row changed)                                                                                                                                                |
+| Boundary R5–R8 = presence + valid tokens only        | Restated above; the guide (§7) says the same                                                                                                                                             |
 
 ### Deviations
 
@@ -631,28 +631,28 @@ Implemented on branch `ai-web-mistakes/03-form-validation`, stacked on `ai-web-m
 
 ### Demo pages (`jay-stack validate`, one page per run, outside the repo)
 
-| Page | `[a11y/…]` ids printed |
-|---|---|
-| bad-hints | `placeholder-as-label`, `placeholder-format-hint`, `hint-below-field` |
-| bad-errors | `describedby-missing-id`, `error-not-associated` |
-| bad-address | `autocomplete-invalid`, `autocomplete-missing` |
-| bad-login | `password-autocomplete`, `username-autocomplete` |
-| bad-early-red | `css-invalid-early` |
-| bad-autofill-cue | `css-autofill-color-only` |
-| every good-* page | none |
+| Page              | `[a11y/…]` ids printed                                                |
+| ----------------- | --------------------------------------------------------------------- |
+| bad-hints         | `placeholder-as-label`, `placeholder-format-hint`, `hint-below-field` |
+| bad-errors        | `describedby-missing-id`, `error-not-associated`                      |
+| bad-address       | `autocomplete-invalid`, `autocomplete-missing`                        |
+| bad-login         | `password-autocomplete`, `username-autocomplete`                      |
+| bad-early-red     | `css-invalid-early`                                                   |
+| bad-autofill-cue  | `css-autofill-color-only`                                             |
+| every good-* page | none                                                                  |
 
 ### Verification matrix — recorded honestly
 
 Videos at the workspace root. Chrome = installed Google Chrome 157 via Playwright `channel: 'chrome'` with a persistent QA profile (bundled Chromium is 151), headless. Every video starts with the real `validate` output of its bad page.
 
-| Scenario | Rules | Chrome | Safari |
-|---|---|---|---|
-| Placeholder label/hint | R1, R2, R4 | **PASSED** — `03-form-validation-hints-chrome-20261123.webm`: bad: after typing `1226` no `MM/YY` text remains and Chrome's a11y tree gives the field no description; the phone hint is below its field. Good: description is `MM/YY`, hint above the field. Mobile keyboard overlap: **not shown** (no iOS Simulator on this machine, Q6) | **FAILED** — not driven |
-| Error announced | R3, R9 | **PASSED** — `03-form-validation-errors-chrome-20261123.webm`: Chrome a11y tree (CDP), bad: zip back-focused after the visible error → description `""`, invalid `false`; phone (`aria-describedby` → missing id) → description `""`. Good: zip → description `Enter a 5-digit postal code`, invalid `true`; phone → its hint text. (A11y-tree evidence, not VoiceOver speech) | **FAILED** — not driven; VoiceOver not run |
-| Address autofill | R5, R6 | **FAILED** — the autofill dropdown is browser UI that Playwright cannot open or record, and screen recording is not permitted on this machine | **FAILED** |
-| Login save/fill | R7, R8 | **FAILED** — save-password bubble / fill is browser UI; same reason | **FAILED** |
-| Early red | R10 | **PASSED** — `03-form-validation-early-red-chrome-20261123.webm`: bad: `#nl-email` background red on load; good: neutral on load and after tabbing past, red only after typing `not-an-email` and leaving | **FAILED** |
-| Autofill cue | R11 | **FAILED** — `:autofill` only matches after a real browser autofill, which cannot be triggered from the page | **FAILED** |
+| Scenario               | Rules      | Chrome                                                                                                                                                                                                                                                                                                                                                                         | Safari                                     |
+| ---------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------ |
+| Placeholder label/hint | R1, R2, R4 | **PASSED** — `03-form-validation-hints-chrome-20261123.webm`: bad: after typing `1226` no `MM/YY` text remains and Chrome's a11y tree gives the field no description; the phone hint is below its field. Good: description is `MM/YY`, hint above the field. Mobile keyboard overlap: **not shown** (no iOS Simulator on this machine, Q6)                                     | **FAILED** — not driven                    |
+| Error announced        | R3, R9     | **PASSED** — `03-form-validation-errors-chrome-20261123.webm`: Chrome a11y tree (CDP), bad: zip back-focused after the visible error → description `""`, invalid `false`; phone (`aria-describedby` → missing id) → description `""`. Good: zip → description `Enter a 5-digit postal code`, invalid `true`; phone → its hint text. (A11y-tree evidence, not VoiceOver speech) | **FAILED** — not driven; VoiceOver not run |
+| Address autofill       | R5, R6     | **FAILED** — the autofill dropdown is browser UI that Playwright cannot open or record, and screen recording is not permitted on this machine                                                                                                                                                                                                                                  | **FAILED**                                 |
+| Login save/fill        | R7, R8     | **FAILED** — save-password bubble / fill is browser UI; same reason                                                                                                                                                                                                                                                                                                            | **FAILED**                                 |
+| Early red              | R10        | **PASSED** — `03-form-validation-early-red-chrome-20261123.webm`: bad: `#nl-email` background red on load; good: neutral on load and after tabbing past, red only after typing `not-an-email` and leaving                                                                                                                                                                      | **FAILED**                                 |
+| Autofill cue           | R11        | **FAILED** — `:autofill` only matches after a real browser autofill, which cannot be triggered from the page                                                                                                                                                                                                                                                                   | **FAILED**                                 |
 
 **Why Safari is FAILED:** from this environment (and through iTerm) `screencapture` returns "could not create image from display" (no Screen Recording permission) and every AppleScript to Safari times out (`AppleEvent timed out (-1712)`, no Automation access); `safaridriver` is not enabled. Real Safari could therefore be neither driven nor recorded. VoiceOver runs need the user's go-ahead because they take over the Mac, and they were not run. **The Safari "My Card" contact and Keychain entries were not created** (nothing could use them), so there is nothing to delete. Playwright WebKit was not used as a substitute. Result: 3 of 12 planned videos, all Chrome; 9 cells FAILED.
 

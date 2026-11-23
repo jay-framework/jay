@@ -89,6 +89,16 @@ Your page has no large images in the template. Small icons (under 200px) don't n
 
 Components are fragments — they don't need `<h1>`, `<main>`, `<title>`, or `<meta>`. These page-level rules are skipped for files in `src/components/`. If you still see them, check the file path.
 
+### Swipe and gesture warnings
+
+When `@jay-framework/a11y-validator` is installed, these CSS/markup warnings point to `agent-kit/designer/swipe-gestures.md`; suppress one per page with the key shown:
+
+- `SWIPE-SNAP-OVERSCROLL` — horizontal scroll-snap rule without `overscroll-behavior-x` (`a11y: { allow-snap-overscroll: true }`).
+- `SWIPE-SNAP-BLOCKED` — snap rule with `touch-action: none`/`pan-y`, or overflow `visible`/`clip` on both axes (`allow-snap-blocked`).
+- `SWIPE-CAROUSEL-KEYBOARD` — swipe region with no keyboard path, carousel with no name, or `aria-roledescription` without a role (`allow-carousel-keyboard`).
+
+`SWIPE-TOUCH-LISTENER` is reported by the core `.ts` scan (always on): touch listeners or `ontouch*` handlers in `page.ts` / component files → `agent-kit/developer/component-refs.md#gestures`; suppress with `// jay-gesture: allow` on the same line.
+
 ### Form findings (a11y)
 
 Form findings (`[a11y/…]`) → `agent-kit/designer/forms-and-autofill.md` (present when a11y-validator is installed).

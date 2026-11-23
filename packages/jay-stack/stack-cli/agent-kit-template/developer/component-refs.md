@@ -140,6 +140,12 @@ Refs are the **only supported path** from TypeScript to elements Jay renders. Di
 - `document.createElement` + `appendChild` for UI that belongs in jay-html — use `forEach` with ViewState
 - `document.addEventListener` for global events — use the root ref pattern (below)
 
+## Gestures
+
+- **Swipes** (tabs, carousels, galleries, swipe-to-dismiss): build them with CSS scroll snap in jay-html (`scroll-snap-type: x mandatory; overscroll-behavior-x: contain`), not touch listeners. React to the outcome with `scrollend` on the track ref. See `agent-kit/designer/swipe-gestures.md` (shipped by `@jay-framework/a11y-validator`).
+- **Real drags** (slider thumbs, resizers, drag-and-drop): pointer events on the ref — `onpointerdown` → `setPointerCapture` → `onpointermove` / `onpointerup` on the same ref — with `touch-action: none` on **that** element only, so the page still scrolls elsewhere.
+- **No touch listeners.** `jay-stack validate` warns (`SWIPE-TOUCH-LISTENER`) on `addEventListener('touchstart' | 'touchmove' | 'touchend' | 'touchcancel', …)` and on `ontouch*` ref handlers in page and component `.ts` files. For a genuine multi-touch need (pinch), suppress with `// jay-gesture: allow` on the same line. It is a separate token from `// jay-dom: allow`.
+
 ## Root ref pattern — replacing `document.addEventListener`
 
 Wrap the page content in a shell element with a ref. Use capture-phase listeners on the shell to intercept events before they reach children — functionally equivalent to `document.addEventListener`.

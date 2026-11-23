@@ -7,6 +7,7 @@ import { walkElements } from '@jay-framework/compiler-shared';
 import { checkFocusAndDialogs } from './focus-rules.js';
 import { checkFormRules, placeholderAsLabelFinding } from './form-rules.js';
 import { checkFormCssRules } from './form-css-rules.js';
+import { checkSwipeGestures } from './swipe-rules.js';
 
 const A11Y_GUIDE = '\nSee: agent-kit/designer/a11y-patterns.md';
 
@@ -358,6 +359,7 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
     findings.push(...checkFocusAndDialogs(ctx));
     findings.push(...checkFormRules(ctx));
     findings.push(...checkFormCssRules(ctx));
+    findings.push(...checkSwipeGestures(ctx));
 
     return findings;
 };

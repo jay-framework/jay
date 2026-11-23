@@ -642,27 +642,35 @@ export interface DirectDocumentAccessOptions {
     hasA11yValidator: boolean;
 }
 
-export function checkDirectDocumentAccess(
+/** The component file next to a jay-html (`<basename>.ts`, else `page.ts`), split into lines. */
+function readComponentSource(
     jayHtmlPath: string,
-    { hasA11yValidator }: DirectDocumentAccessOptions,
-): string[] {
+): { compName: string; lines: string[] } | undefined {
     const dirname = path.dirname(jayHtmlPath);
     const basename = path.basename(jayHtmlPath, JAY_EXTENSION);
     const candidates = [path.join(dirname, `${basename}.ts`), path.join(dirname, 'page.ts')];
     const compPath = candidates.find((p) => fs.existsSync(p));
-    if (!compPath) return [];
-    const compName = path.basename(compPath);
-
-    let content: string;
+    if (!compPath) return undefined;
     try {
-        content = fs.readFileSync(compPath, 'utf-8');
+        return {
+            compName: path.basename(compPath),
+            lines: fs.readFileSync(compPath, 'utf-8').split('\n'),
+        };
     } catch {
-        return [];
+        return undefined;
     }
+}
+
+export function checkDirectDocumentAccess(
+    jayHtmlPath: string,
+    { hasA11yValidator }: DirectDocumentAccessOptions,
+): string[] {
+    const source = readComponentSource(jayHtmlPath);
+    if (!source) return [];
+    const { compName, lines } = source;
 
     const guideSuffix = hasA11yValidator ? FOCUS_GUIDE_SUFFIX : '';
     const warnings: string[] = [];
-    const lines = content.split('\n');
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         if (line.includes(DOM_SUPPRESS_COMMENT)) continue;
@@ -685,6 +693,34 @@ export function checkDirectDocumentAccess(
             }
         }
     }
+    return warnings;
+}
+
+// --- Touch gesture listener check (DL#243) ---
+
+const TOUCH_LISTENER_PATTERNS = [
+    /addEventListener\(\s*['"`]touch(start|move|end|cancel)['"`]/,
+    /\.ontouch(start|move|end|cancel)\$?\(/,
+];
+
+/** Separate from `jay-dom: allow`, so one comment never silences both a DOM and a gesture warning. */
+const GESTURE_SUPPRESS_COMMENT = 'jay-gesture: allow';
+
+export function checkTouchListeners(jayHtmlPath: string): string[] {
+    const source = readComponentSource(jayHtmlPath);
+    if (!source) return [];
+    const warnings: string[] = [];
+    source.lines.forEach((line, index) => {
+        if (line.includes(GESTURE_SUPPRESS_COMMENT)) return;
+        const match = TOUCH_LISTENER_PATTERNS.map((pattern) => pattern.exec(line)).find(Boolean);
+        if (!match) return;
+        warnings.push(
+            `[SWIPE-TOUCH-LISTENER] ${source.compName}:${index + 1} — Touch listener "${match[0]}" — ` +
+                'build swipes with CSS scroll-snap, or pointer events for drag. ' +
+                `Suppress with // ${GESTURE_SUPPRESS_COMMENT} on the same line. ` +
+                'See agent-kit/developer/component-refs.md#gestures',
+        );
+    });
     return warnings;
 }
 
@@ -2206,6 +2242,9 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
             // Check page.ts for direct document access
             const domWarnings = checkDirectDocumentAccess(jayFile, { hasA11yValidator });
             for (const msg of domWarnings) {
+                warnings.push({ file: relativePath, message: msg });
+            }
+            for (const msg of checkTouchListeners(jayFile)) {
                 warnings.push({ file: relativePath, message: msg });
             }
 
