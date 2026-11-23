@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import path from 'path';
+import os from 'os';
 import {
     validateJayFiles,
     extractRouteParams,
@@ -17,6 +18,7 @@ import {
     checkComponentNoTemplate,
     checkNoDesignSystem,
     checkJsonLdScripts,
+    checkDirectDocumentAccess,
 } from '../lib/validate';
 import { parseJayFile, JAY_IMPORT_RESOLVER } from '@jay-framework/compiler-jay-html';
 import { JayEnumType, JayAtomicType } from '@jay-framework/compiler-shared';
@@ -1510,5 +1512,94 @@ describe('action runtime hardening warnings (DL#234)', () => {
             },
         ]);
         expect(result.valid).toEqual(true);
+    });
+});
+
+describe('scroll-lock TS scan (DL#239)', () => {
+    const FOCUS_GUIDE = 'agent-kit/designer/focus-and-dialogs.md';
+
+    async function writeComponent(line: string): Promise<string> {
+        const dir = await fsp.mkdtemp(path.join(os.tmpdir(), 'dl239-'));
+        await fsp.writeFile(
+            path.join(dir, 'page.jay-html'),
+            '<html><body><div></div></body></html>',
+        );
+        await fsp.writeFile(path.join(dir, 'page.ts'), line + '\n');
+        return path.join(dir, 'page.jay-html');
+    }
+
+    it('27: warns on document.body.style.overflow and points to the guide when a11y-validator is installed', async () => {
+        const jayHtml = await writeComponent("document.body.style.overflow = 'hidden';");
+        const warnings = checkDirectDocumentAccess(jayHtml, { hasA11yValidator: true });
+        expect(warnings).toHaveLength(1);
+        expect(warnings[0]).toMatch(
+            /^page\.ts:1 — Scroll lock via document\.body\.style\.overflow\./,
+        );
+        expect(warnings[0].endsWith(FOCUS_GUIDE)).toBe(true);
+        expect(warnings[0]).not.toMatch(/use Jay refs/);
+    });
+
+    it('28: warns without a guide pointer when a11y-validator is not installed', async () => {
+        const jayHtml = await writeComponent("document.documentElement.style.overflow = 'hidden';");
+        const warnings = checkDirectDocumentAccess(jayHtml, { hasA11yValidator: false });
+        expect(warnings).toHaveLength(1);
+        expect(warnings[0]).toMatch(
+            /^page\.ts:1 — Scroll lock via document\.documentElement\.style\.overflow\./,
+        );
+        expect(warnings[0]).not.toMatch(/focus-and-dialogs/);
+    });
+
+    it('29: is suppressed by // jay-dom: allow', async () => {
+        const jayHtml = await writeComponent(
+            "document.body.style.overflow = 'hidden'; // jay-dom: allow",
+        );
+        expect(checkDirectDocumentAccess(jayHtml, { hasA11yValidator: true })).toEqual([]);
+    });
+
+    it('30: does not warn on popstate listeners (rejected rule; documentation-only guard)', async () => {
+        const jayHtml = await writeComponent("window.addEventListener('popstate', close);");
+        expect(checkDirectDocumentAccess(jayHtml, { hasA11yValidator: true })).toEqual([]);
+    });
+
+    /**
+     * Fixture project: test/fixtures/validate/focus-dialogs (DL#239 Appendix A). Its package.json lists
+     * @jay-framework/a11y-validator as a devDependency; scanPlugins resolves `<name>/plugin.yaml` with
+     * require.resolve from the fixture dir, which walks up to the monorepo root node_modules, where the
+     * workspace package is symlinked. The plugin runs from its built dist, so build a11y-validator first.
+     */
+    it('31: a real validate run detects a11y-validator by package name and gives the exact Appendix A warnings', async () => {
+        const fixtureDir = path.resolve('./test/fixtures/validate/focus-dialogs');
+        const result = await validateJayFiles({
+            path: path.join(fixtureDir, 'src/pages'),
+            projectRoot: fixtureDir,
+        });
+        expect(result.errors).toEqual([]);
+        expect(result.warnings.map((w) => [w.file, w.message])).toEqual([
+            [
+                'src/pages/bad-modal/page.jay-html',
+                'page.ts:7 — Scroll lock via document.body.style.overflow. Use <dialog>.showModal() with CSS html:has(dialog:modal) { overflow: hidden }. Suppress with // jay-dom: allow on the same line. See agent-kit/designer/focus-and-dialogs.md',
+            ],
+            [
+                'src/pages/bad-modal/page.jay-html',
+                '<div aria-modal="true"> is a hand-rolled modal. Use <dialog> + showModal() for focus containment, Escape and an inert background.',
+            ],
+            [
+                'src/pages/bad-modal/page.jay-html',
+                '<dialog> has no accessible name. Add aria-labelledby pointing at its heading.',
+            ],
+            [
+                'src/pages/bad-modal/page.jay-html',
+                'autofocus outside a dialog moves focus on page load and skips content for screen-reader users.',
+            ],
+            [
+                'src/pages/bad-modal/page.jay-html',
+                '[style#1 line 1] .btn:focus removes the focus outline with no :focus-visible replacement. Keyboard users lose track of focus.',
+            ],
+            [
+                'src/pages/bad-modal/page.jay-html',
+                '[style#1 line 2] a { outline: 0 } removes focus outlines everywhere.',
+            ],
+        ]);
+        expect(result.warnings[0].message.endsWith(FOCUS_GUIDE)).toBe(true);
     });
 });

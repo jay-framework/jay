@@ -28,6 +28,10 @@
   "peerDependencies": {
     "@jay-framework/compiler-shared": "workspace:^"
   },
+  "dependencies": {
+    "postcss": "^8.5.6",
+    "postcss-selector-parser": "^7.1.0"
+  },
   "devDependencies": {
     "@jay-framework/compiler-shared": "workspace:^",
     "@jay-framework/dev-environment": "workspace:^",

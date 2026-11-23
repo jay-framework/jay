@@ -1083,7 +1083,12 @@ function parseHeadMeta(root: HTMLElement): JayHtmlHeadMeta | undefined {
         links.push({ rel, href: toParts(hrefRaw), ...extraAttrs });
     }
 
-    return { title, meta, links };
+    const styles = head
+        .querySelectorAll('style')
+        .map((el) => el.text.trim())
+        .filter((text) => text !== '');
+
+    return { title, meta, links, styles };
 }
 
 function parseValidationOverrides(

@@ -1,0 +1,11 @@
+name: Page
+tags:
+  - tag: openCart
+    type: interactive
+    elementType: HTMLButtonElement
+  - tag: closeCart
+    type: interactive
+    elementType: HTMLButtonElement
+  - tag: cart
+    type: interactive
+    elementType: HTMLDialogElement

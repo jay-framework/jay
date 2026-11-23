@@ -4,6 +4,7 @@ import type {
     JayHtmlValidationContext,
 } from '@jay-framework/compiler-shared';
 import { walkElements } from '@jay-framework/compiler-shared';
+import { checkFocusAndDialogs } from './focus-rules.js';
 
 const A11Y_GUIDE = '\nSee: agent-kit/designer/a11y-patterns.md';
 
@@ -347,6 +348,8 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
             }
         }
     }
+
+    findings.push(...checkFocusAndDialogs(ctx));
 
     return findings;
 };
