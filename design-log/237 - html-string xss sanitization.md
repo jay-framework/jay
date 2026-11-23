@@ -206,7 +206,15 @@ Example page with a contract `bio: html-string` and `title: string`, both given 
 
 ### Reviewer notes (round 6)
 
-The round-6 review notes were not available to the implementation session (no review report in the workspace or the branch). The points the design-log text already carried were implemented as written; any notes beyond those still need to be checked against this section.
+The notes reached the implementation after the first pass; each was checked and closed in follow-up commits.
+
+1. **`collectUsedTags` records no locations and skips the page's own tags.** Confirmed. `HTML-STRING-TRUST` does not reuse it: `validate-html-safety.ts` has its own walker with the same scoping (keyed paths, `forEach`, `<jay:x>`, `with-data`). It reports the binding element and also resolves the page's own contract (`jayHtml.contract`, with linked sub-contracts resolved from `contractRef`). New tests cover page-own tags. _Deviation from §1:_ this is a sibling walker, not a reuse of `collectUsedTags`. Changing `collectUsedTags` would have touched coverage behaviour that other streams depend on.
+2. **Kebab-case vs camelCase suppression paths.** This was a real gap: a kebab-case tag (`rich-text`) bound as `{richText}` was not resolved, so it never warned. Fixed. **Rule:** a binding segment matches a contract tag by exact name or by its camelCase. The warning prints the contract spelling (`rich-text`, consistent with `allow-unused-tags`). An `allow-html-string` entry matches in either spelling, because both sides are camelCased per segment before comparing. Tests cover both spellings, and html-safety.md documents the rule.
+3. **Exact escape sets.** Text mode escapes `&`→`&amp;`, `<`→`&lt;`, `>`→`&gt;`, and leaves `"`, `'` and `\` as-is. Attribute mode escapes `&`→`&amp;` and `"`→`&quot;`, and leaves `<`, `>`, `'` and `\` as-is. There is one `it.each` test per character per mode, and html-safety.md documents both sets.
+4. **Backslashes in slow attributes.** This was in scope, and is a real bug that goes further than the note said. node-html-parser `setAttribute`/`removeAttribute` re-serialize **every** attribute of the element through `quoteAttribute`, which strips all `\`. So a slow binding (or a slow boolean attribute) also corrupted literal siblings: `pattern="\d+"` became `d+`. A red test came first (fixture `slow-attribute-backslash`). The fix is `serializeRawAttributes()`, which rebuilds `rawAttrs` from the stored raw values after each mutation. CHANGELOG entry added.
+5. **Demo route.** Handled by the sandboxed-frame demo; see Deviation 5.
+
+Follow-up tests: validate 18/18 (+3), slow render +13 (6 text, 6 attribute, 1 backslash); compiler-jay-html 787/787, stack-cli 231/231.
 
 ### Agent feedback loop (jay-feedback)
 

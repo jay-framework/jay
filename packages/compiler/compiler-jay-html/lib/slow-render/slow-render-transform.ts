@@ -393,6 +393,7 @@ function transformElement(
                     contextPath,
                 ).map((resolved) => {
                     element.setAttribute(attrName, escapeAttributeValue(resolved));
+                    serializeRawAttributes(element);
                     return null; // Side effect only
                 });
             }
@@ -407,6 +408,19 @@ function transformElement(
             children.forEach((child) => element.appendChild(child as any));
             return [element];
         });
+}
+
+/**
+ * node-html-parser's `setAttribute` / `removeAttribute` re-serialize **every** attribute of the element through
+ * `quoteAttribute`, which drops all backslashes (`JSON.stringify` then `replace(/\\/g, '')`). Rebuild the raw
+ * attribute string from the stored raw values instead; they are already escaped (`&` and `"`) or as authored.
+ */
+function serializeRawAttributes(element: HTMLElement): void {
+    element.rawAttrs = Object.entries(element.rawAttributes)
+        .map(([name, value]) =>
+            value === '' ? name : `${name}="${value.replace(/"/g, '&quot;')}"`,
+        )
+        .join(' ');
 }
 
 function isBooleanAttributeName(attrName: string): boolean {
@@ -432,6 +446,7 @@ function resolveBooleanAttribute(
     } else if (conditionResult.simplifiedExpr && conditionResult.simplifiedExpr !== condition) {
         element.setAttribute(attrName, conditionResult.simplifiedExpr);
     }
+    serializeRawAttributes(element);
 }
 
 /**

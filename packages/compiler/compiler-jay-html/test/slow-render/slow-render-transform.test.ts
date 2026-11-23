@@ -55,6 +55,30 @@ async function runSlowRenderTest(folder: string) {
     );
 }
 
+function renderSlow(body: string, value: string): string {
+    const contract = checkValidationErrors(
+        parseContract(
+            'name: Test\ntags:\n  - tag: value\n    type: data\n    dataType: string\n    phase: slow\n',
+            'contract.yaml',
+        ),
+    );
+    const result = slowRenderTransform({
+        jayHtmlContent: `<html><head><script type="application/jay-data" contract="./t.jay-contract"></script></head><body>${body}</body></html>`,
+        slowViewState: { value },
+        contract,
+    });
+    expect(result.validations).toEqual([]);
+    return result.val!.preRenderedJayHtml;
+}
+
+function renderSlowText(value: string): string {
+    return renderSlow('<p>{value}</p>', value).match(/<p>(.*)<\/p>/s)![1];
+}
+
+function renderSlowAttribute(value: string): string {
+    return renderSlow('<p title="{value}">x</p>', value).match(/<p title="(.*)">/s)![1];
+}
+
 /** Compile a pre-rendered page (contract reference replaced by an empty inline data script). */
 async function compileBothTargets(preRenderedJayHtml: string) {
     const standalone = preRenderedJayHtml.replace(
@@ -193,6 +217,45 @@ describe('Slow Render Transform', () => {
             });
             expect(result.validations).toEqual([]);
             expect(result.val!.preRenderedJayHtml).toMatch(/<span title="A &amp; x<y">/);
+        });
+
+        /**
+         * Round-6 review: which characters each mode escapes, one test per character.
+         * Text mode escapes `&`, `<`, `>` only; attribute mode escapes `&` and `"` only.
+         */
+        const textCases: Array<[string, string]> = [
+            ['&', '&amp;'],
+            ['<', '&lt;'],
+            ['>', '&gt;'],
+            ['"', '"'],
+            ["'", "'"],
+            ['\\', '\\'],
+        ];
+        it.each(textCases)('text mode writes %j as %j', (character, expected) => {
+            expect(renderSlowText(`a${character}b`)).toEqual(`a${expected}b`);
+        });
+
+        const attributeCases: Array<[string, string]> = [
+            ['&', '&amp;'],
+            ['"', '&quot;'],
+            ['<', '<'],
+            ['>', '>'],
+            ["'", "'"],
+            ['\\', '\\'],
+        ];
+        it.each(attributeCases)('attribute mode writes %j as %j', (character, expected) => {
+            expect(renderSlowAttribute(`a${character}b`)).toEqual(`a${expected}b`);
+        });
+
+        /**
+         * Bug: node-html-parser `setAttribute` re-serializes every attribute of the element through
+         * `quoteAttribute`, which drops all backslashes.
+         * Found in: design-log/237 - html-string xss sanitization.md (Problem row 6b, round-6 review)
+         * Expected: backslashes in the slow value and in the element's literal attributes are kept.
+         * Actual: `title="C:\docs\a.txt"` became `C:docsa.txt` and `pattern="\d+"` became `d+`.
+         */
+        it('keeps backslashes in slow attribute values and in sibling literal attributes', async () => {
+            await runSlowRenderTest('slow-attribute-backslash');
         });
 
         it('keeps html-string slow value raw', async () => {

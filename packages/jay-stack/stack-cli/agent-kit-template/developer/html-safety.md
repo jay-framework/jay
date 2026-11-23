@@ -39,11 +39,18 @@ you have checked the source is trusted or sanitized, acknowledge it in the page:
 
 Entries are dotted contract tag paths: `<key>.<tag path>` (e.g. `article.sections.body`, one entry covers
 every repeated item; linked sub-contracts go through the linking tag, e.g. `article.author.bio`), or the bare
-tag path without the key (`body`). Page-own contract tags have no key. To acknowledge every tag of one
+tag path without the key (`body`). Write each segment in the contract's spelling (`rich-text`) or the binding's camelCase (`richText`); both match, and the warning prints the contract spelling. Page-own contract tags have no key. To acknowledge every tag of one
 headless import, add `jay-validations="HTML-STRING-TRUST"` on its `application/jay-headless` script.
 
 `jay-stack run data-files/generate-schema` infers `html-string` for any value starting with `<` and prints a
 warning naming the field. Change it to `string` if it is text.
+
+### What Jay escapes
+
+Plain (non-html-string) values are escaped in every phase. In the slow phase, a text value has `&`, `<` and
+`>` escaped (quotes and backslashes are left as-is); an attribute value has `&` and `"` escaped (`<`, `>`, `'`
+and backslashes are left as-is, which is safe inside a double-quoted attribute). html-string text is never
+escaped.
 
 ## No raw HTML sinks in component code
 
