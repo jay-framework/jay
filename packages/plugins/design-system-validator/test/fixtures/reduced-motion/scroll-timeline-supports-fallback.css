@@ -1,9 +1,21 @@
 @supports not (animation-timeline: scroll()) {
-  .bar { opacity: 1; }
+  .bar {
+    opacity: 1;
+  }
 }
 @media (prefers-reduced-motion: no-preference) {
   @supports (animation-timeline: scroll()) {
-    .bar { animation: grow linear; animation-timeline: scroll(); }
+    .bar {
+      animation: grow linear;
+      animation-timeline: scroll();
+    }
   }
 }
-@keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}

@@ -14,19 +14,19 @@ Status: **[Implemented]**. Builds on DL#145 (plugin validators), DL#151 (design-
 8. **JS rule** scans `src/**/*.{ts,tsx,js,jsx,mjs}` for `behavior: 'smooth'` / `.animate(`; a file that mentions `prefers-reduced-motion` passes.
 9. **Fix framework-shipped wrong patterns**: `component-refs.md:192,258` and `ui-kit/lib/scroll-carousel.ts:20,26`.
 10. **No runtime helper.** `matchMedia('(prefers-reduced-motion: reduce)')` is one line. Reduced motion maps to `behavior: 'instant'`, never `'auto'` (`'auto'` defers to CSS `scroll-behavior`, which may still be `smooth`).
-11. **Demo project = fake-shop**, which gains `@jay-framework/design-system-validator` as a devDependency. Exact before/after warnings are listed in *Verification*.
+11. **Demo project = fake-shop**, which gains `@jay-framework/design-system-validator` as a devDependency. Exact before/after warnings are listed in _Verification_.
 
 ## Background
 
 Source: Chrome DevRel, "Top 10 things AI gets wrong in web dev", point 2. Motion can cause dizziness or nausea for people with vestibular disorders. Models usually remember `prefers-reduced-motion` for plain transitions, but get it wrong for:
 
-| # | Article mistake |
-|---|---|
-| A | `scroll-behavior: smooth` set globally and unconditionally on the root |
-| B | Scroll-driven animations (`animation-timeline: scroll()/view()`) with no reduced-motion check |
-| C | Carousel: transition removed under `reduce`, but `transform` kept → items jump in size |
-| D | Blanket `0.01ms`/`0s` reset on `*, *::before, *::after` → also kills useful fades (opacity, colour) and can break JS waiting on `transitionend` |
-| E | `@view-transition { navigation: auto }` enabled unconditionally |
+| #   | Article mistake                                                                                                                                 |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| A   | `scroll-behavior: smooth` set globally and unconditionally on the root                                                                          |
+| B   | Scroll-driven animations (`animation-timeline: scroll()/view()`) with no reduced-motion check                                                   |
+| C   | Carousel: transition removed under `reduce`, but `transform` kept → items jump in size                                                          |
+| D   | Blanket `0.01ms`/`0s` reset on `*, *::before, *::after` → also kills useful fades (opacity, colour) and can break JS waiting on `transitionend` |
+| E   | `@view-transition { navigation: auto }` enabled unconditionally                                                                                 |
 
 Also in scope: JS motion — `scrollIntoView/scrollTo/scrollBy({ behavior: 'smooth' })` and `element.animate()`.
 
@@ -38,7 +38,7 @@ Also in scope: JS motion — `scrollIntoView/scrollTo/scrollBy({ behavior: 'smoo
    - `packages/plugins/design-system-validator/test/validators/design-tokens.test.ts:254-270` — test locks the wrong text in.
 2. **The check is narrow and too eager.** ✅ verified:
    - Runs only with a `DESIGN.md` that has animation tokens (`design-tokens.ts:150`, `:198`).
-   - Passes if *any* `@media` mentions `prefers-reduced-motion` (`:232`).
+   - Passes if _any_ `@media` mentions `prefers-reduced-motion` (`:232`).
    - Fires on a pure fade: the test at `design-tokens.test.ts:254` expects a warning for `.fade { transition: opacity 300ms }` — the opposite of the guide's "keep fades".
    - Ignores A, B, C, E.
 3. **Jay ships mistake A in JS/CSS.** ✅ verified:
@@ -48,15 +48,15 @@ Also in scope: JS motion — `scrollIntoView/scrollTo/scrollBy({ behavior: 'smoo
 
 ## Prior Art / Adjacent Mechanisms
 
-| Mechanism | Where | Use |
-|---|---|---|
-| `checkReducedMotion` | `design-tokens.ts:218-248` | **Moved and replaced.** |
-| `design-viewport-height` | `design-viewport-height.ts:41-48` (DL#188) | Template: pages-only gate (`/pages/` path check), `design-system` override key, guide-named message. |
-| `ctx.css` | `compiler-jay-html/lib/jay-target/jay-html-parser.ts:1134-1189` | ✅ Merges linked CSS (with `@import`) and `<style>` blocks. One parse covers the page. |
-| `ctx.validationOverrides['design-system']` | `packages/compiler/compiler-shared/lib/plugin-validators.ts:32`; keys in `validation-guide.md:134-136` | Suppression to reuse. |
-| `projectValidators` hook | DL#232; runner `stack-cli/lib/validate.ts:1929-1975` | ✅ Loads the handler from the plugin's **tools** entry via `loadPluginToolsHandler`; context is only `{ projectRoot }` (`:1953`), so the validator globs files itself (as `seo-project-validator.ts:12` reads its own files). Finding has `file`, no line → line goes in the message. |
-| `scanPlugins({ includeDevDeps: true })` | `validate.ts:1808,1934` | ✅ A devDependency is enough to load the plugin in the demo project. |
-| Good examples in ui-kit | `spring-button-hover.md:52-60`, `sticky-header-scroll.md:102-108` | Linked from the new guide. |
+| Mechanism                                  | Where                                                                                                  | Use                                                                                                                                                                                                                                                                                   |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `checkReducedMotion`                       | `design-tokens.ts:218-248`                                                                             | **Moved and replaced.**                                                                                                                                                                                                                                                               |
+| `design-viewport-height`                   | `design-viewport-height.ts:41-48` (DL#188)                                                             | Template: pages-only gate (`/pages/` path check), `design-system` override key, guide-named message.                                                                                                                                                                                  |
+| `ctx.css`                                  | `compiler-jay-html/lib/jay-target/jay-html-parser.ts:1134-1189`                                        | ✅ Merges linked CSS (with `@import`) and `<style>` blocks. One parse covers the page.                                                                                                                                                                                                |
+| `ctx.validationOverrides['design-system']` | `packages/compiler/compiler-shared/lib/plugin-validators.ts:32`; keys in `validation-guide.md:134-136` | Suppression to reuse.                                                                                                                                                                                                                                                                 |
+| `projectValidators` hook                   | DL#232; runner `stack-cli/lib/validate.ts:1929-1975`                                                   | ✅ Loads the handler from the plugin's **tools** entry via `loadPluginToolsHandler`; context is only `{ projectRoot }` (`:1953`), so the validator globs files itself (as `seo-project-validator.ts:12` reads its own files). Finding has `file`, no line → line goes in the message. |
+| `scanPlugins({ includeDevDeps: true })`    | `validate.ts:1808,1934`                                                                                | ✅ A devDependency is enough to load the plugin in the demo project.                                                                                                                                                                                                                  |
+| Good examples in ui-kit                    | `spring-button-hover.md:52-60`, `sticky-header-scroll.md:102-108`                                      | Linked from the new guide.                                                                                                                                                                                                                                                            |
 
 ## Questions and Answers
 
@@ -87,10 +87,10 @@ A (decided): **design-system-validator.** It already owns the check, the `allow-
 
 A declaration is **movement** when:
 
-| Property | Movement if |
-|---|---|
-| `transition`, `transition-property` | lists `transform`, `translate`, `scale`, `rotate`, `all`, or names no property (shorthand default = `all`) |
-| `transition-duration` alone | value is not all-zero (`0s`/`0ms`), and the rule has no `transition-property` limiting it to non-movement |
+| Property                                                                               | Movement if                                                                                                                                                                                                                                                                                                                                                             |
+| -------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `transition`, `transition-property`                                                    | lists `transform`, `translate`, `scale`, `rotate`, `all`, or names no property (shorthand default = `all`)                                                                                                                                                                                                                                                              |
+| `transition-duration` alone                                                            | value is not all-zero (`0s`/`0ms`), and the rule has no `transition-property` limiting it to non-movement                                                                                                                                                                                                                                                               |
 | `animation`, `animation-name` (not `none`), in a rule **without** `animation-timeline` | keyframes name = `animation-name`, or for the shorthand the first token that is not a time, easing (`ease*`, `linear`, `step*`, `cubic-bezier(`), number/`infinite`, direction, fill-mode, play-state or `none`; the referenced `@keyframes` in `ctx.css` sets `transform`/`translate`/`scale`/`rotate`, **or** the keyframes are not found (unknown → assume movement) |
 
 | `scroll-behavior: smooth` | **not** movement for `missing` — owned by `smooth-scroll` |
@@ -107,14 +107,14 @@ Never movement: opacity/colour/background/box-shadow transitions; `transition: n
 
 Validator `design-system-validator/design-reduced-motion`, severity **warning**, **pages only**. One finding per (rule, selector), deduped like `flaggedBreakpoints` in `design-tokens.ts:163`.
 
-| Rule id | Catches | Pass when | Suppress key |
-|---|---|---|---|
-| `reduced-motion/missing` | Page has a movement declaration and **no** `prefers-reduced-motion` media block at all | any such block exists (Q9) | `allow-no-reduced-motion` (existing) |
-| `reduced-motion/blanket-reset` | Inside `reduce`, a rule whose selector list contains `*` (alone or `*::before`/`*::after`, even mixed with named selectors) setting `transition*`/`animation*` | reset targets named selectors only | `allow-blanket-motion-reset` |
-| `reduced-motion/smooth-scroll` | `scroll-behavior: smooth` not gated | inside `no-preference`, or same selector has `scroll-behavior: auto` in `reduce` | `allow-smooth-scroll` |
-| `reduced-motion/scroll-timeline` | `animation-timeline` = `scroll(`/`view(`/named timeline, not gated | inside `no-preference`, or same selector sets `animation: none`/`animation-name: none` in `reduce` | `allow-scroll-animation` |
-| `reduced-motion/view-transition` | `@view-transition { navigation: auto }` not inside `no-preference` | wrapped in `no-preference` | `allow-view-transition` |
-| `reduced-motion/transform-kept` (Phase 3) | Inside `reduce`, selector S sets transition `none`/`0s`, and an ungated rule T outside `reduce` sets `transform` where T = S after stripping trailing `:hover`/`:focus`/`:focus-visible`/`:active` (Q3 normalisation). One finding per T. | `reduce` has a rule with **exactly T** (e.g. `.slide:hover`, not `.slide`) setting `transform: none`, or T's `transform` is inside `no-preference`. Reason: `.slide:hover` is more specific than `.slide`, so `reduce { .slide { transform: none } }` loses and the item still jumps. | `allow-transform-under-reduce` |
+| Rule id                                   | Catches                                                                                                                                                                                                                                   | Pass when                                                                                                                                                                                                                                                                             | Suppress key                         |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `reduced-motion/missing`                  | Page has a movement declaration and **no** `prefers-reduced-motion` media block at all                                                                                                                                                    | any such block exists (Q9)                                                                                                                                                                                                                                                            | `allow-no-reduced-motion` (existing) |
+| `reduced-motion/blanket-reset`            | Inside `reduce`, a rule whose selector list contains `*` (alone or `*::before`/`*::after`, even mixed with named selectors) setting `transition*`/`animation*`                                                                            | reset targets named selectors only                                                                                                                                                                                                                                                    | `allow-blanket-motion-reset`         |
+| `reduced-motion/smooth-scroll`            | `scroll-behavior: smooth` not gated                                                                                                                                                                                                       | inside `no-preference`, or same selector has `scroll-behavior: auto` in `reduce`                                                                                                                                                                                                      | `allow-smooth-scroll`                |
+| `reduced-motion/scroll-timeline`          | `animation-timeline` = `scroll(`/`view(`/named timeline, not gated                                                                                                                                                                        | inside `no-preference`, or same selector sets `animation: none`/`animation-name: none` in `reduce`                                                                                                                                                                                    | `allow-scroll-animation`             |
+| `reduced-motion/view-transition`          | `@view-transition { navigation: auto }` not inside `no-preference`                                                                                                                                                                        | wrapped in `no-preference`                                                                                                                                                                                                                                                            | `allow-view-transition`              |
+| `reduced-motion/transform-kept` (Phase 3) | Inside `reduce`, selector S sets transition `none`/`0s`, and an ungated rule T outside `reduce` sets `transform` where T = S after stripping trailing `:hover`/`:focus`/`:focus-visible`/`:active` (Q3 normalisation). One finding per T. | `reduce` has a rule with **exactly T** (e.g. `.slide:hover`, not `.slide`) setting `transform: none`, or T's `transform` is inside `no-preference`. Reason: `.slide:hover` is more specific than `.slide`, so `reduce { .slide { transform: none } }` loses and the item still jumps. | `allow-transform-under-reduce`       |
 
 `@supports` wrappers are transparent: a declaration inside `@supports (...)` or `@supports not (...)` is judged by its `@media` ancestors only. A rule inside `@supports not (animation-timeline: scroll())` is a fallback for browsers without scroll timelines, so `scroll-timeline` never fires there (it has no `animation-timeline` declaration anyway).
 
@@ -122,14 +122,14 @@ Validator `design-system-validator/design-reduced-motion`, severity **warning**,
 
 ### JS rule (project validator)
 
-| | |
-|---|---|
-| Id | `reduced-motion/js-motion`, validator `design-system-validator/reduced-motion-js` |
-| Files | `src/**/*.{ts,tsx,js,jsx,mjs}` under `projectRoot`, walked with `fs.readdirSync(dir, { recursive: true })` (Node ≥20, no new dep) |
-| Excluded | `**/*.d.ts`, `**/*.test.*`, `**/*.spec.*`, `**/test/**`, `**/__tests__/**`, `**/node_modules/**`, `**/dist/**` |
-| Triggers | `/behavior:\s*['"]smooth['"]/` or `/\.animate\(/` |
-| Pass | file text contains `prefers-reduced-motion` |
-| Finding | one per file, first matching line in the message |
+|          |                                                                                                                                   |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Id       | `reduced-motion/js-motion`, validator `design-system-validator/reduced-motion-js`                                                 |
+| Files    | `src/**/*.{ts,tsx,js,jsx,mjs}` under `projectRoot`, walked with `fs.readdirSync(dir, { recursive: true })` (Node ≥20, no new dep) |
+| Excluded | `**/*.d.ts`, `**/*.test.*`, `**/*.spec.*`, `**/test/**`, `**/__tests__/**`, `**/node_modules/**`, `**/dist/**`                    |
+| Triggers | `/behavior:\s*['"]smooth['"]/` or `/\.animate\(/`                                                                                 |
+| Pass     | file text contains `prefers-reduced-motion`                                                                                       |
+| Finding  | one per file, first matching line in the message                                                                                  |
 
 Only project `src/` is scanned — ui-kit's own `lib/` is covered by its unit test (Phase 1).
 
@@ -178,13 +178,13 @@ isGated(declaration, offValue):
 
 ### Registration
 
-| File | Change |
-|---|---|
-| `lib/validators/design-reduced-motion.ts` (new) | `export const validateReducedMotion: JayHtmlValidatorFn` |
-| `lib/validators/reduced-motion-js.ts` (new) | `export const validateReducedMotionJs: ProjectValidatorFn` |
-| `lib/tools.ts` | export both (project handlers are loaded from the tools entry by `loadPluginToolsHandler`) |
-| `plugin.yaml` | `validators:` → `design-reduced-motion` / `validateReducedMotion`; new `projectValidators:` → `reduced-motion-js` / `validateReducedMotionJs` |
-| `lib/validators/design-tokens.ts` | delete `checkReducedMotion` + `ANIMATION_PROPERTIES` and the call at `:198-200`. Side effect: `validateTokens` appends its `GUIDE_SUGGESTION` finding (`:202-204`) only when it has findings, so a page whose only issue was missing reduced-motion no longer gets the `design-system.md` guide line. Intended — the new messages name `reduced-motion.md` themselves. |
+| File                                            | Change                                                                                                                                                                                                                                                                                                                                                                 |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lib/validators/design-reduced-motion.ts` (new) | `export const validateReducedMotion: JayHtmlValidatorFn`                                                                                                                                                                                                                                                                                                               |
+| `lib/validators/reduced-motion-js.ts` (new)     | `export const validateReducedMotionJs: ProjectValidatorFn`                                                                                                                                                                                                                                                                                                             |
+| `lib/tools.ts`                                  | export both (project handlers are loaded from the tools entry by `loadPluginToolsHandler`)                                                                                                                                                                                                                                                                             |
+| `plugin.yaml`                                   | `validators:` → `design-reduced-motion` / `validateReducedMotion`; new `projectValidators:` → `reduced-motion-js` / `validateReducedMotionJs`                                                                                                                                                                                                                          |
+| `lib/validators/design-tokens.ts`               | delete `checkReducedMotion` + `ANIMATION_PROPERTIES` and the call at `:198-200`. Side effect: `validateTokens` appends its `GUIDE_SUGGESTION` finding (`:202-204`) only when it has findings, so a page whose only issue was missing reduced-motion no longer gets the `design-system.md` guide line. Intended — the new messages name `reduced-motion.md` themselves. |
 
 ### Flow
 
@@ -208,31 +208,31 @@ flowchart LR
 
 ### Other file changes
 
-| File | Change |
-|---|---|
-| `design-system-validator/agent-kit/designer/design-system.md:208-212` | replace the blanket suggestion; point to `reduced-motion.md` |
-| `stack-cli/agent-kit-template/designer/validation-guide.md:134-136` | add the five new keys |
-| `stack-cli/agent-kit-template/developer/component-refs.md:192,258` | gate `behavior` with `matchMedia` (`'instant'` under reduce) |
-| `ui-kit/agent-kit/designer/scroll-carousel.md:50` | wrap `scroll-behavior: smooth` in `no-preference` |
-| `ui-kit/lib/scroll-carousel.ts:20,26` | extract `scrollCarouselBy(el, direction)` (exported for the test; reads `matchMedia` and scrolls); `behavior: reduce ? 'instant' : 'smooth'`; reads `globalThis.matchMedia` (works in the browser and in the node test) |
-| `examples/jay-stack/fake-shop/package.json` | add devDependency `"@jay-framework/design-system-validator": "workspace:^"` |
-| `examples/jay-stack/fake-shop/src/pages/ui-demo/page.jay-html` | move `scroll-behavior: smooth` (`:45`) and the transform transitions (`:84`, `:95-96`) into `no-preference`, keep the colour/background fades |
-| `examples/jay-stack/*/agent-kit/**` | regenerate with `yarn agent-kit` (Q10), no hand edits |
+| File                                                                  | Change                                                                                                                                                                                                                  |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `design-system-validator/agent-kit/designer/design-system.md:208-212` | replace the blanket suggestion; point to `reduced-motion.md`                                                                                                                                                            |
+| `stack-cli/agent-kit-template/designer/validation-guide.md:134-136`   | add the five new keys                                                                                                                                                                                                   |
+| `stack-cli/agent-kit-template/developer/component-refs.md:192,258`    | gate `behavior` with `matchMedia` (`'instant'` under reduce)                                                                                                                                                            |
+| `ui-kit/agent-kit/designer/scroll-carousel.md:50`                     | wrap `scroll-behavior: smooth` in `no-preference`                                                                                                                                                                       |
+| `ui-kit/lib/scroll-carousel.ts:20,26`                                 | extract `scrollCarouselBy(el, direction)` (exported for the test; reads `matchMedia` and scrolls); `behavior: reduce ? 'instant' : 'smooth'`; reads `globalThis.matchMedia` (works in the browser and in the node test) |
+| `examples/jay-stack/fake-shop/package.json`                           | add devDependency `"@jay-framework/design-system-validator": "workspace:^"`                                                                                                                                             |
+| `examples/jay-stack/fake-shop/src/pages/ui-demo/page.jay-html`        | move `scroll-behavior: smooth` (`:45`) and the transform transitions (`:84`, `:95-96`) into `no-preference`, keep the colour/background fades                                                                           |
+| `examples/jay-stack/*/agent-kit/**`                                   | regenerate with `yarn agent-kit` (Q10), no hand edits                                                                                                                                                                   |
 
 ## Scope pre-mortem — what this will not handle
 
-| Gap | Decision |
-|---|---|
-| Third-party CSS from `node_modules` | Out — `ctx.css` only has project CSS. |
-| Inline `style="..."` | Defer — cannot be gated inline; guide says don't. |
-| Component files checked on their own | Out — pages only (Q8). |
-| Non-scroll `@keyframes` animations (spin, pulse, parallax via transform) | Covered **only** by `missing` (coarse). A page with an unrelated reduced-motion block and an ungated spinner passes. Accepted; the guide shows the gate. |
-| A gated and an ungated JS call in one file | Passes (file-level rule). |
-| `transitionend` listeners | Guide only. |
-| JS animation libraries (GSAP etc.) | Defer. |
-| `/\.animate\(/` also matches jQuery `.animate(` and other libraries' methods | Accepted false positive; mentioning `prefers-reduced-motion` in the file (the fix) silences it. |
-| Equivalent but different selectors | False positive; suppress. |
-| Auto-fix | No. |
+| Gap                                                                          | Decision                                                                                                                                                 |
+| ---------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Third-party CSS from `node_modules`                                          | Out — `ctx.css` only has project CSS.                                                                                                                    |
+| Inline `style="..."`                                                         | Defer — cannot be gated inline; guide says don't.                                                                                                        |
+| Component files checked on their own                                         | Out — pages only (Q8).                                                                                                                                   |
+| Non-scroll `@keyframes` animations (spin, pulse, parallax via transform)     | Covered **only** by `missing` (coarse). A page with an unrelated reduced-motion block and an ungated spinner passes. Accepted; the guide shows the gate. |
+| A gated and an ungated JS call in one file                                   | Passes (file-level rule).                                                                                                                                |
+| `transitionend` listeners                                                    | Guide only.                                                                                                                                              |
+| JS animation libraries (GSAP etc.)                                           | Defer.                                                                                                                                                   |
+| `/\.animate\(/` also matches jQuery `.animate(` and other libraries' methods | Accepted false positive; mentioning `prefers-reduced-motion` in the file (the fix) silences it.                                                          |
+| Equivalent but different selectors                                           | False positive; suppress.                                                                                                                                |
+| Auto-fix                                                                     | No.                                                                                                                                                      |
 
 ## Implementation Plan
 
@@ -240,30 +240,32 @@ flowchart LR
 
 `packages/plugins/design-system-validator/test/validators/design-reduced-motion.test.ts` — each "should warn" expects exactly the message above; each "should not warn" expects `[]`. Contexts use a `src/pages/x/page.jay-html` path. Fixture CSS lives in `test/fixtures/reduced-motion/<rule>-<case>.css` (repo rule: fixtures as files); assertions use `toEqual` on the full findings array, never `toContain`.
 
-Expected arrays below list findings in order, by rule id and selector; each entry is the exact message/suggestion from *Exact messages* with that selector. "Should not warn" = `[]`.
+Expected arrays below list findings in order, by rule id and selector; each entry is the exact message/suggestion from _Exact messages_ with that selector. "Should not warn" = `[]`.
 
-| Rule | Should warn → expected findings | Should not warn |
-|---|---|---|
-| missing | `.lift { transition: transform 200ms }`, no `DESIGN.md` (bug repro: today `[]`, `design-tokens.ts:150`) → `[missing]`; `.spin { animation: 2s linear infinite spin }` + `@keyframes spin` rotating (name not first token) → `[missing]` | `.fade { transition: opacity 300ms }` (bug repro: today warns, `design-tokens.test.ts:254`); `.x { transition-duration: 0s }`; same `.lift` in `src/components/x.jay-html` |
-| blanket-reset | `.card { transition: opacity 200ms }` + `reduce { *, *::before, *::after { transition-duration: 0.01ms !important } }` → `[blanket-reset]` (reduce exists → no `missing`; reset is not movement) | `.card, .menu { transition: none }` in `reduce` |
-| blanket-reset (mixed list) | `reduce { .card, * { animation: none } }` → `[blanket-reset]` | — |
-| smooth-scroll | `html { scroll-behavior: smooth }` → `[smooth-scroll "html"]` (no `missing`: smooth scroll is not `missing` movement) | inside `no-preference`; or `html { scroll-behavior: auto }` in `reduce` |
-| smooth-scroll + missing | `html { scroll-behavior: smooth } .lift { transition: transform 200ms }` → `[missing, smooth-scroll "html"]` (in that order) | — |
-| scroll-timeline | `.bar { animation: grow linear; animation-timeline: scroll() }` → `[scroll-timeline ".bar" (scroll())]` (no `missing`) | `.bar { animation: none }` in `reduce` (CSS from `sticky-header-scroll.md`); fallback inside `@supports not (animation-timeline: scroll())`; ungated rule inside `@media not (prefers-reduced-motion: reduce)` |
-| view-transition | `@view-transition { navigation: auto }` → `[view-transition]` | wrapped in `no-preference` |
-| bare media query | — | `.lift { transition: transform 200ms }` + `@media (prefers-reduced-motion) { .lift { transition: none } }` → `[]` (bare query treated as `reduce`: block exists, its declarations are not movement); and `html { scroll-behavior: smooth }` + `@media (prefers-reduced-motion) { html { scroll-behavior: auto } }` → `[]` |
-| transform-kept (Phase 3) | base `.slide { transition: transform 300ms } .slide:hover { transform: scale(1.1) }` plus: (a) `reduce { .slide { transition: none } }` → `[transform-kept T=".slide:hover" S=".slide"]`; (b) `reduce { .slide { transition: none; transform: none } }` → same single finding (`.slide` loses to `.slide:hover`) | base + `reduce { .slide { transition: none } .slide:hover { transform: none } }`; `.slide:hover { transform }` inside `no-preference` + `reduce { .slide { transition: none } }`; `.slide { transition: none }` under reduce with no transform anywhere |
-| suppression | table-driven: each key silences its rule | — |
+| Rule                       | Should warn → expected findings                                                                                                                                                                                                                                                                                  | Should not warn                                                                                                                                                                                                                                                                                                           |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| missing                    | `.lift { transition: transform 200ms }`, no `DESIGN.md` (bug repro: today `[]`, `design-tokens.ts:150`) → `[missing]`; `.spin { animation: 2s linear infinite spin }` + `@keyframes spin` rotating (name not first token) → `[missing]`                                                                          | `.fade { transition: opacity 300ms }` (bug repro: today warns, `design-tokens.test.ts:254`); `.x { transition-duration: 0s }`; same `.lift` in `src/components/x.jay-html`                                                                                                                                                |
+| blanket-reset              | `.card { transition: opacity 200ms }` + `reduce { *, *::before, *::after { transition-duration: 0.01ms !important } }` → `[blanket-reset]` (reduce exists → no `missing`; reset is not movement)                                                                                                                 | `.card, .menu { transition: none }` in `reduce`                                                                                                                                                                                                                                                                           |
+| blanket-reset (mixed list) | `reduce { .card, * { animation: none } }` → `[blanket-reset]`                                                                                                                                                                                                                                                    | —                                                                                                                                                                                                                                                                                                                         |
+| smooth-scroll              | `html { scroll-behavior: smooth }` → `[smooth-scroll "html"]` (no `missing`: smooth scroll is not `missing` movement)                                                                                                                                                                                            | inside `no-preference`; or `html { scroll-behavior: auto }` in `reduce`                                                                                                                                                                                                                                                   |
+| smooth-scroll + missing    | `html { scroll-behavior: smooth } .lift { transition: transform 200ms }` → `[missing, smooth-scroll "html"]` (in that order)                                                                                                                                                                                     | —                                                                                                                                                                                                                                                                                                                         |
+| scroll-timeline            | `.bar { animation: grow linear; animation-timeline: scroll() }` → `[scroll-timeline ".bar" (scroll())]` (no `missing`)                                                                                                                                                                                           | `.bar { animation: none }` in `reduce` (CSS from `sticky-header-scroll.md`); fallback inside `@supports not (animation-timeline: scroll())`; ungated rule inside `@media not (prefers-reduced-motion: reduce)`                                                                                                            |
+| view-transition            | `@view-transition { navigation: auto }` → `[view-transition]`                                                                                                                                                                                                                                                    | wrapped in `no-preference`                                                                                                                                                                                                                                                                                                |
+| bare media query           | —                                                                                                                                                                                                                                                                                                                | `.lift { transition: transform 200ms }` + `@media (prefers-reduced-motion) { .lift { transition: none } }` → `[]` (bare query treated as `reduce`: block exists, its declarations are not movement); and `html { scroll-behavior: smooth }` + `@media (prefers-reduced-motion) { html { scroll-behavior: auto } }` → `[]` |
+| transform-kept (Phase 3)   | base `.slide { transition: transform 300ms } .slide:hover { transform: scale(1.1) }` plus: (a) `reduce { .slide { transition: none } }` → `[transform-kept T=".slide:hover" S=".slide"]`; (b) `reduce { .slide { transition: none; transform: none } }` → same single finding (`.slide` loses to `.slide:hover`) | base + `reduce { .slide { transition: none } .slide:hover { transform: none } }`; `.slide:hover { transform }` inside `no-preference` + `reduce { .slide { transition: none } }`; `.slide { transition: none }` under reduce with no transform anywhere                                                                   |
+| suppression                | table-driven: each key silences its rule                                                                                                                                                                                                                                                                         | —                                                                                                                                                                                                                                                                                                                         |
 
 `test/validators/design-tokens.test.ts:254-270` — **change** to expect `validateTokens` returns `[]` for that fixture (the check moved, and a fade is not movement).
 
 `test/validators/reduced-motion-js.test.ts` (temp dir as `projectRoot`):
+
 - `should warn with line number on behavior: 'smooth' without matchMedia` (`.ts`)
 - `should warn on element.animate( in a .tsx file`
 - `should not warn when the file mentions prefers-reduced-motion`
 - `should skip .d.ts, *.test.ts and test/ files`
 
 `packages/plugins/ui-kit/test/scroll-carousel.test.ts` (node env: `ui-kit/vite.config.ts` sets no test environment, so there is no `window`):
+
 - The helper reads `globalThis.matchMedia` (decided; no `window` stub). Test: `vi.stubGlobal('matchMedia', vi.fn((query) => ({ matches: true, media: query })))`; fake `el = { clientWidth: 300, scrollBy: vi.fn() }`.
 - `should scroll with behavior 'instant' when reduced motion is preferred` → `scrollCarouselBy(el, 1)` calls `el.scrollBy({ left: 300, behavior: 'instant' })`; `-1` → `{ left: -300, behavior: 'instant' }`; matchMedia called with `'(prefers-reduced-motion: reduce)'`.
 - `should scroll smoothly when no reduced-motion preference` → `matches: false` → `{ left: 300, behavior: 'smooth' }`.
@@ -279,33 +281,60 @@ Run `yarn confirm` at the end. Never bump versions; CHANGELOG entries under `## 
 ## Examples
 
 ❌ Blanket reset (`blanket-reset`)
+
 ```css
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
 ```
 
 ✅ Opt-in movement, keep the fade
+
 ```css
-.card { transition: opacity 200ms ease; }
+.card {
+  transition: opacity 200ms ease;
+}
 @media (prefers-reduced-motion: no-preference) {
-  .card { transition: opacity 200ms ease, transform 300ms ease; }
-  .card:hover { transform: translateY(-4px); }
+  .card {
+    transition:
+      opacity 200ms ease,
+      transform 300ms ease;
+  }
+  .card:hover {
+    transform: translateY(-4px);
+  }
 }
 ```
 
 ✅ Fade alone — no warning, no gate needed
+
 ```css
-.dropdown { opacity: 0; transition: opacity 0.15s; }
+.dropdown {
+  opacity: 0;
+  transition: opacity 0.15s;
+}
 ```
 
 ❌ / ✅ Smooth scroll
+
 ```css
-html { scroll-behavior: smooth; }                                                    /* ❌ */
-@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } } /* ✅ */
+html {
+  scroll-behavior: smooth;
+} /* ❌ */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+} /* ✅ */
 ```
 
 ✅ JS
+
 ```ts
 export function scrollCarouselBy(el: HTMLElement, direction: 1 | -1) {
   const reduce = globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -315,15 +344,15 @@ export function scrollCarouselBy(el: HTMLElement, direction: 1 | -1) {
 
 ## Trade-offs
 
-| Choice | Benefit | Cost |
-|---|---|---|
-| Warnings, not errors | No broken builds | Can be ignored |
-| Movement only | No noise on fades; matches the guide | Must parse transition lists and keyframes |
-| Pages only | No false positives from split CSS | Unlinked component CSS unchecked |
-| Exact selector match | Simple, predictable | False positives on equivalent selectors |
-| File-level JS pass | No new suppression syntax | Mixed files pass |
-| Separate validator | Runs without `DESIGN.md` | One existing test rewritten |
-| No runtime helper | No new API | Agents write one `matchMedia` line |
+| Choice               | Benefit                              | Cost                                      |
+| -------------------- | ------------------------------------ | ----------------------------------------- |
+| Warnings, not errors | No broken builds                     | Can be ignored                            |
+| Movement only        | No noise on fades; matches the guide | Must parse transition lists and keyframes |
+| Pages only           | No false positives from split CSS    | Unlinked component CSS unchecked          |
+| Exact selector match | Simple, predictable                  | False positives on equivalent selectors   |
+| File-level JS pass   | No new suppression syntax            | Mixed files pass                          |
+| Separate validator   | Runs without `DESIGN.md`             | One existing test rewritten               |
+| No runtime helper    | No new API                           | Agents write one `matchMedia` line        |
 
 ## Verification Criteria
 
@@ -334,15 +363,42 @@ export function scrollCarouselBy(el: HTMLElement, direction: 1 | -1) {
    - Order: `missing`, then `smooth-scroll`. Not movement: `.carousel-btn` / `.has-tooltip::after` static `transform` (no transform transition).
    - No warning for `.dropdown { transition: opacity 0.15s }` (`:38`) or `.slider { transition: background 0.2s }` (`:83`).
    - No `js-motion` warning (fake-shop `src/` has no `behavior: 'smooth'` / `.animate(`).
-   After the fix (lines `:45`, `:84`, `:95` become as below; everything else unchanged) → zero `reduced-motion/*` warnings:
+     After the fix (lines `:45`, `:84`, `:95` become as below; everything else unchanged) → zero `reduced-motion/*` warnings:
    ```css
-   .carousel-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; padding: 8px 0; scrollbar-width: none; }
-   .slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; }
-   .letter-demo .letter { display: inline-block; transition: color 0.2s; }
+   .carousel-track {
+     display: flex;
+     overflow-x: auto;
+     scroll-snap-type: x mandatory;
+     gap: 12px;
+     padding: 8px 0;
+     scrollbar-width: none;
+   }
+   .slider::before {
+     content: '';
+     position: absolute;
+     width: 18px;
+     height: 18px;
+     left: 3px;
+     bottom: 3px;
+     background: white;
+     border-radius: 50%;
+   }
+   .letter-demo .letter {
+     display: inline-block;
+     transition: color 0.2s;
+   }
    @media (prefers-reduced-motion: no-preference) {
-     .carousel-track { scroll-behavior: smooth; }
-     .slider::before { transition: transform 0.2s; }
-     .letter-demo .letter { transition: transform 0.2s, color 0.2s; }
+     .carousel-track {
+       scroll-behavior: smooth;
+     }
+     .slider::before {
+       transition: transform 0.2s;
+     }
+     .letter-demo .letter {
+       transition:
+         transform 0.2s,
+         color 0.2s;
+     }
    }
    ```
    Colour/opacity fades (`.dropdown`, `.slider` background, `.has-tooltip::after`, `.letter` colour) stay ungated. Under reduce the hover transforms still apply instantly (no transition) — no `transform-kept`, since no `reduce` block turns a transition off. Adding the plugin also brings its devOnly `/design-system/settings` route and its `agentkit` generator (`plugin.yaml:3,24`), so the regenerated fake-shop agent-kit gains design-system files — expected, not drift. Other new design-system warnings that adding the plugin may surface (contrast, font fallbacks, undefined vars) are out of scope; list them in Implementation Results, do not fix here.
@@ -350,15 +406,16 @@ export function scrollCarouselBy(el: HTMLElement, direction: 1 | -1) {
 3. A page with no `DESIGN.md` and `.lift { transition: transform 200ms }` gets `reduced-motion/missing`; `.fade { transition: opacity 300ms }` gets nothing.
 4. **Browser demo** (Playwright, fake-shop `/ui-demo`). The track snaps (`scroll-snap-type: x mandatory`, slides `calc(33.33% - 8px)` + `gap: 12px`, `page.jay-html:45,47`), so the resting `scrollLeft` is a snap point, not `clientWidth`. Measure: click "next", read `scrollLeft` right after the click (`first`), then after ~800 ms (`final`).
 
-   | Run | Expected |
-   |---|---|
+   | Run                                                | Expected                                                   |
+   | -------------------------------------------------- | ---------------------------------------------------------- |
    | Pre-fix baseline, `reduce` (record as the red run) | `first < final` — JS smooth scroll animates despite reduce |
-   | Post-fix, `reduce` | `first === final` (> 0) |
-   | Post-fix, `no-preference` | `first < final`; reaches `final` within ~500 ms |
+   | Post-fix, `reduce`                                 | `first === final` (> 0)                                    |
+   | Post-fix, `no-preference`                          | `first < final`; reaches `final` within ~500 ms            |
 
    This proves the **JS** fix (`scrollBy({ behavior })` overrides CSS `scroll-behavior`, so the CSS move alone cannot change it); the CSS move into `no-preference` is checked by the validator (Verification 2). The ~500 ms bound is informational, not pass/fail.
 
    Video saved at the workspace root.
+
 5. Feedback loop (jay-feedback): validation = the rules above; guide = `reduced-motion.md`; framework feature = none (Q6).
 
 ## Open questions
@@ -371,16 +428,16 @@ Status after implementation: **[Implemented]**.
 
 ### What landed
 
-| Area | Files |
-|---|---|
-| Page validator `design-reduced-motion` (6 rules incl. Phase 3 `transform-kept`, kept per Q7) | `design-system-validator/lib/validators/design-reduced-motion.ts` |
-| Project validator `reduced-motion-js` | `design-system-validator/lib/validators/reduced-motion-js.ts` |
-| Registration | `lib/tools.ts`, `plugin.yaml` (`validators:` + new `projectValidators:`) |
-| Old check removed | `checkReducedMotion` + `ANIMATION_PROPERTIES` (and the now-unused `postcss` import) deleted from `design-tokens.ts` |
-| Guides | new `agent-kit/designer/reduced-motion.md`; `design-system.md` (blanket reset removed); `validation-guide.md` (five new keys); `component-refs.md` (both snippets gated, `'instant'`); ui-kit `scroll-carousel.md` |
-| ui-kit | `scrollCarouselBy(el, direction)` exported from `lib/scroll-carousel.ts`, reads `globalThis.matchMedia` |
-| fake-shop | devDependency `@jay-framework/design-system-validator`; `ui-demo/page.jay-html` movement moved into `no-preference` |
-| Example agent-kits | regenerated with `yarn agent-kit` in fake-shop and design-system-demo (no hand edits) |
+| Area                                                                                         | Files                                                                                                                                                                                                              |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Page validator `design-reduced-motion` (6 rules incl. Phase 3 `transform-kept`, kept per Q7) | `design-system-validator/lib/validators/design-reduced-motion.ts`                                                                                                                                                  |
+| Project validator `reduced-motion-js`                                                        | `design-system-validator/lib/validators/reduced-motion-js.ts`                                                                                                                                                      |
+| Registration                                                                                 | `lib/tools.ts`, `plugin.yaml` (`validators:` + new `projectValidators:`)                                                                                                                                           |
+| Old check removed                                                                            | `checkReducedMotion` + `ANIMATION_PROPERTIES` (and the now-unused `postcss` import) deleted from `design-tokens.ts`                                                                                                |
+| Guides                                                                                       | new `agent-kit/designer/reduced-motion.md`; `design-system.md` (blanket reset removed); `validation-guide.md` (five new keys); `component-refs.md` (both snippets gated, `'instant'`); ui-kit `scroll-carousel.md` |
+| ui-kit                                                                                       | `scrollCarouselBy(el, direction)` exported from `lib/scroll-carousel.ts`, reads `globalThis.matchMedia`                                                                                                            |
+| fake-shop                                                                                    | devDependency `@jay-framework/design-system-validator`; `ui-demo/page.jay-html` movement moved into `no-preference`                                                                                                |
+| Example agent-kits                                                                           | regenerated with `yarn agent-kit` in fake-shop and design-system-demo (no hand edits)                                                                                                                              |
 
 ### Reviewer notes folded in (final review round)
 
@@ -409,13 +466,14 @@ Status after implementation: **[Implemented]**.
 3. Covered by the `missing` tests (no `DESIGN.md`: `.lift` warns, `.fade` does not).
 4. Browser demo (Playwright, fake-shop `/ui-demo`, `emulateMedia({ reducedMotion })`):
 
-   | Run | first | final | Result |
-   |---|---|---|---|
-   | Pre-fix, `reduce` (red) | 2 | 527 | animated — bug reproduced |
-   | Post-fix, `reduce` | 527 | 527 | jumped, no movement ✅ |
-   | Post-fix, `no-preference` | 2 | 527 | animated ✅ |
+   | Run                       | first | final | Result                    |
+   | ------------------------- | ----- | ----- | ------------------------- |
+   | Pre-fix, `reduce` (red)   | 2     | 527   | animated — bug reproduced |
+   | Post-fix, `reduce`        | 527   | 527   | jumped, no movement ✅    |
+   | Post-fix, `no-preference` | 2     | 527   | animated ✅               |
 
    Videos at the workspace root: `02-reduced-motion-baseline-20261123.webm` (red), `02-reduced-motion-20261123.webm` (fixed).
+
 5. Feedback loop: validation = the seven rules; guide = `reduced-motion.md`; framework feature = none.
 
 ### Tests
@@ -423,4 +481,4 @@ Status after implementation: **[Implemented]**.
 - Red first: 35 design-system-validator tests and 2 ui-kit tests failed before the implementation (validators missing; the old fade test still warned).
 - design-system-validator: **194/194** (incl. 33 `design-reduced-motion`, 2 `reduced-motion-js`, the rewritten fade test in `design-tokens`).
 - ui-kit: **7/7** (incl. 2 `scroll-carousel`).
-- `yarn confirm`: green (rebuild, type check, 3837 tests across the workspace, format).
+- `yarn confirm`: rebuild and type check green; the test step stopped on `dev-server/test/hydration.test.ts` ("Hook timed out in 10000ms", all its 735 tests pass, the file fails on hook timeouts under heavy machine load; this package is not touched here), which also skipped the format step and 11 packages' tests. Re-run separately: stack-cli 213/213, a11y-validator 75/75, agent-skills 10/10, data-files 23/23, design-system-validator 194/194, editing-policy 79/79, markdown 35/35, seo-validator 66/66, design-system-demo 9/9, fake-shop 9/9, smoke-test 80/80. `yarn format` run separately (formatting-only follow-up commit).

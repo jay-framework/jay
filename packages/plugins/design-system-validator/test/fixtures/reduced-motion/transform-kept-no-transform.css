@@ -1,4 +1,8 @@
-.slide { transition: opacity 300ms; }
+.slide {
+  transition: opacity 300ms;
+}
 @media (prefers-reduced-motion: reduce) {
-  .slide { transition: none; }
+  .slide {
+    transition: none;
+  }
 }

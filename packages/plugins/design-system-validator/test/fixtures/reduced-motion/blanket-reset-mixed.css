@@ -1,3 +1,6 @@
 @media (prefers-reduced-motion: reduce) {
-  .card, * { animation: none; }
+  .card,
+  * {
+    animation: none;
+  }
 }
