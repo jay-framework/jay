@@ -148,6 +148,9 @@ The core `jay-stack validate` emits four warnings that nudge you to reuse UI thr
 | `NO-DESIGN-SYSTEM`                                 | `jay-stack: allow-no-design-system: true`                                                                                                 |
 | Broken / degenerate internal link (DL#210)         | `jay-stack: allow-broken-links: true` (per-page — suppresses broken + `#`/empty link errors; does **not** affect TODO or fragment checks) |
 | Self-link warning (DL#210 v2)                      | `jay-allow-self-link` attribute on the specific `<a>` (per-anchor, not per-page)                                                          |
+| `HTML-STRING-TRUST` (warning)                      | `jay-stack: allow-html-string: ["<key>.<tag path>"]`, or `jay-validations="HTML-STRING-TRUST"` on the import — see `developer/html-safety.md` |
+| `INLINE-EVENT-HANDLER` (error)                     | `jay-stack: allow-inline-handler: ["<element>@<attr>"]` — see `developer/html-safety.md`                                            |
+| `JAVASCRIPT-URL` (error)                           | `jay-stack: allow-javascript-url: ["<exact value>"]` — see `developer/html-safety.md`                                                 |
 | Missing `#fragment` anchor / TODO link (DL#210 v2) | Not suppressible — fix the anchor id, or replace the `todo:` href                                                                         |
 
 ```html

@@ -43,6 +43,8 @@ tags:
   description: Display name
 ```
 
+> `html-string` is rendered as raw HTML and Jay never sanitizes it. A plugin exposing CMS or user markup as `html-string` must sanitize it in its render function — see [html-safety.md](../developer/html-safety.md).
+
 ### `variant` — Enum/boolean for conditionals
 
 ```yaml

@@ -34,6 +34,8 @@ tags:
 
 Data types: `string` (default), `html-string`, `number`, `boolean`, `date`.
 
+> `html-string` is rendered as raw HTML and Jay never sanitizes it. Use it only for trusted markup or markup sanitized at the source on the server — see [html-safety.md](../developer/html-safety.md).
+
 ### `variant` — Conditionals (enum or boolean)
 
 ```yaml
