@@ -3190,6 +3190,7 @@ __metadata:
     node-html-parser: "npm:^6.1.0"
     postcss: "npm:^8.5.6"
     postcss-selector-parser: "npm:^7.1.0"
+    postcss-value-parser: "npm:^4.2.0"
     rimraf: "npm:^5.0.5"
     tsup: "npm:^8.0.1"
     typescript: "npm:^5.3.3"

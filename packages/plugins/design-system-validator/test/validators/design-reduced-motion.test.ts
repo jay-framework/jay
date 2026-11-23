@@ -157,15 +157,16 @@ describe('validateReducedMotion (DL#238)', () => {
         });
 
         it('should report missing before smooth-scroll', async () => {
-            expect(await validateReducedMotion(makeContext('smooth-scroll-and-missing'))).toEqual(
-                [missing, smoothScroll('html')],
-            );
+            expect(await validateReducedMotion(makeContext('smooth-scroll-and-missing'))).toEqual([
+                missing,
+                smoothScroll('html'),
+            ]);
         });
 
         it('should not warn inside no-preference', async () => {
-            expect(
-                await validateReducedMotion(makeContext('smooth-scroll-no-preference')),
-            ).toEqual([]);
+            expect(await validateReducedMotion(makeContext('smooth-scroll-no-preference'))).toEqual(
+                [],
+            );
         });
 
         it('should not warn when reduce sets scroll-behavior: auto on the same selector', async () => {
@@ -257,9 +258,9 @@ describe('validateReducedMotion (DL#238)', () => {
         });
 
         it('should not warn when there is no transform anywhere', async () => {
-            expect(
-                await validateReducedMotion(makeContext('transform-kept-no-transform')),
-            ).toEqual([]);
+            expect(await validateReducedMotion(makeContext('transform-kept-no-transform'))).toEqual(
+                [],
+            );
         });
     });
 

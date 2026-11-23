@@ -19,6 +19,7 @@ export { validateFontFallbacks } from './validators/design-font-fallbacks.js';
 export { validateUndefinedVars } from './validators/design-undefined-vars.js';
 export { validateViewportHeight } from './validators/design-viewport-height.js';
 export { validateReducedMotion } from './validators/design-reduced-motion.js';
+export { validateColorScheme } from './validators/design-color-scheme.js';
 
 // Project validators (DL#232)
 export { validateReducedMotionJs } from './validators/reduced-motion-js.js';

@@ -1,0 +1,6 @@
+html.dark {
+  color-scheme: dark;
+}
+.dark .x {
+  color: #eee;
+}

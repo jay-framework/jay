@@ -1,0 +1,9 @@
+input {
+  background: #fff;
+}
+:root[data-theme='dark'] input {
+  background: #222;
+}
+[data-theme='dark'] {
+  color-scheme: dark;
+}

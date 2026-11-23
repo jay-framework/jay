@@ -1,2 +1,12 @@
-.bar { animation: grow linear; animation-timeline: scroll(); }
-@keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.bar {
+  animation: grow linear;
+  animation-timeline: scroll();
+}
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}

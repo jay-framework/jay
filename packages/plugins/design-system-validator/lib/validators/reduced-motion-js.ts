@@ -9,8 +9,7 @@ import type { ProjectValidatorFn, ProjectValidationFinding } from '@jay-framewor
  */
 
 const SOURCE_FILE = /\.(ts|tsx|js|jsx|mjs)$/;
-const EXCLUDED =
-    /(\.d\.ts$|\.test\.|\.spec\.|(^|\/)(test|__tests__|node_modules|dist)\/)/;
+const EXCLUDED = /(\.d\.ts$|\.test\.|\.spec\.|(^|\/)(test|__tests__|node_modules|dist)\/)/;
 
 const TRIGGERS: Array<{ pattern: RegExp; label: string }> = [
     { pattern: /behavior:\s*['"]smooth['"]/, label: "behavior: 'smooth'" },
@@ -24,7 +23,9 @@ export const validateReducedMotionJs: ProjectValidatorFn = ({ projectRoot }) => 
     const srcDir = join(projectRoot, 'src');
     if (!existsSync(srcDir)) return [];
     return listSourceFiles(srcDir)
-        .map((relative) => checkFile(`src/${relative}`, readFileSync(join(srcDir, relative), 'utf-8')))
+        .map((relative) =>
+            checkFile(`src/${relative}`, readFileSync(join(srcDir, relative), 'utf-8')),
+        )
         .filter((finding): finding is ProjectValidationFinding => finding != null);
 };
 

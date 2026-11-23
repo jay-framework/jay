@@ -60,6 +60,10 @@ validators:
     handler: validateReducedMotion
     description: Flags page motion that ignores prefers-reduced-motion (ungated transforms, smooth scroll, scroll-driven animations, view transitions) and the blanket "*" reset (DL#238)
 
+  - name: color-scheme
+    handler: validateColorScheme
+    description: Dark-theme pages must declare color-scheme (meta + property) so native controls follow the theme (DL#241)
+
 projectValidators:
   - name: reduced-motion-js
     handler: validateReducedMotionJs

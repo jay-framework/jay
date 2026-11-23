@@ -1,1 +1,3 @@
-.fade { transition: opacity 300ms; }
+.fade {
+  transition: opacity 300ms;
+}

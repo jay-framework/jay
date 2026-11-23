@@ -1,0 +1,17 @@
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111;
+  }
+}
+:root {
+  --bg: #fff;
+}
+input {
+  background: var(--bg);
+}
+textarea {
+  color: Field;
+}
+select {
+  background: transparent;
+}

@@ -1,0 +1,11 @@
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111;
+  }
+}
+button {
+  color: #000;
+}
+input[type='submit'] {
+  background: #fff;
+}

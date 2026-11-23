@@ -1,2 +1,6 @@
-html { scroll-behavior: smooth; }
-.lift { transition: transform 200ms; }
+html {
+  scroll-behavior: smooth;
+}
+.lift {
+  transition: transform 200ms;
+}

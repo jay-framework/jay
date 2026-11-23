@@ -1,0 +1,12 @@
+.btn.dark {
+  background: #000;
+}
+.card.dark {
+  color: #fff;
+}
+.navbar .dark {
+  color: #fff;
+}
+.btn:is(.dark) {
+  color: #fff;
+}

@@ -1,4 +1,10 @@
-import postcss, { type AtRule, type Container, type Declaration, type Node, type Rule } from 'postcss';
+import postcss, {
+    type AtRule,
+    type Container,
+    type Declaration,
+    type Node,
+    type Rule,
+} from 'postcss';
 import type { JayHtmlValidatorFn, JayHtmlValidationFinding } from '@jay-framework/compiler-shared';
 
 /**
@@ -177,7 +183,10 @@ function transitionedProperties(value: string): string[] {
 
 function animationNames(decl: Declaration): string[] {
     if (decl.prop.toLowerCase() === 'animation-name') {
-        return decl.value.split(',').map((name) => name.trim()).filter((n) => n !== 'none');
+        return decl.value
+            .split(',')
+            .map((name) => name.trim())
+            .filter((n) => n !== 'none');
     }
     return listItems(decl.value)
         .map((tokens) =>
@@ -296,8 +305,7 @@ function checkSmoothScroll(sheet: Stylesheet): JayHtmlValidationFinding[] {
 
 function checkScrollTimeline(sheet: Stylesheet): JayHtmlValidationFinding[] {
     const isScrollTimeline = (d: Declaration) =>
-        d.prop.toLowerCase() === 'animation-timeline' &&
-        !/^(auto|none)$/i.test(d.value.trim());
+        d.prop.toLowerCase() === 'animation-timeline' && !/^(auto|none)$/i.test(d.value.trim());
     const isNone = (value: string) => value.trim().toLowerCase() === 'none';
     return ungatedRules(sheet, isScrollTimeline, ['animation', 'animation-name'], isNone).map(
         ({ selector, decl }) =>
@@ -352,9 +360,7 @@ function sourceIndex(sheet: Stylesheet, rule: Rule): number {
 }
 
 function checkTransformKept(sheet: Stylesheet): JayHtmlValidationFinding[] {
-    const resetSelectors = sheet.reduceRules
-        .filter(turnsTransitionOff)
-        .flatMap(selectorsOf);
+    const resetSelectors = sheet.reduceRules.filter(turnsTransitionOff).flatMap(selectorsOf);
     const findings = new Map<string, JayHtmlValidationFinding>();
 
     for (const rule of sheet.rules) {
@@ -364,7 +370,8 @@ function checkTransformKept(sheet: Stylesheet): JayHtmlValidationFinding[] {
         for (const transformSelector of selectorsOf(rule)) {
             if (!STATE_PSEUDO_SUFFIX.test(transformSelector)) continue;
             const resetSelector = transformSelector.replace(STATE_PSEUDO_SUFFIX, '');
-            if (!resetSelectors.includes(resetSelector) || findings.has(transformSelector)) continue;
+            if (!resetSelectors.includes(resetSelector) || findings.has(transformSelector))
+                continue;
             const fixedLater = sheet.reduceRules.some(
                 (reduceRule) =>
                     selectorsOf(reduceRule).includes(transformSelector) &&

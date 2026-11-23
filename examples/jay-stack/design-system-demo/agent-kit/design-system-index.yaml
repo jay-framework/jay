@@ -8,13 +8,13 @@ components:
     source: local
     templates:
       - path: ./src/components/button/button.jay-html
-        variant: ""
+        variant: ''
   - name: Card
     contractPath: ./src/components/card/card.jay-contract
     source: local
     templates:
       - path: ./src/components/card/card.jay-html
-        variant: ""
+        variant: ''
       - path: ./src/components/card/card.feature.jay-html
         variant: card.feature
         title: Feature card
@@ -23,10 +23,10 @@ components:
     source: local
     templates:
       - path: ./src/components/gallery/gallery.jay-html
-        variant: ""
+        variant: ''
   - name: Section
     contractPath: ./src/components/section/section.jay-contract
     source: local
     templates:
       - path: ./src/components/section/section.jay-html
-        variant: ""
+        variant: ''

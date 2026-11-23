@@ -106,6 +106,11 @@ Mix static, dynamic, and conditional classes:
 - `{!condition ? class}` uses negation
 - Multiple bindings can be combined in one `class` attribute
 
+## Dark Mode
+
+A page with a dark theme needs `<meta name="color-scheme" content="light dark">` in `<head>` and `color-scheme` on `:root` and on each toggle selector (`[data-theme="dark"] { color-scheme: dark; }`), or native inputs and scrollbars stay light.
+With `@jay-framework/design-system-validator` installed, the `color-scheme` validator checks this; see that plugin's `dark-mode-patterns.md`.
+
 ## Viewport Height & Google Search Console
 
 Googlebot's Web Rendering Service does **not** render at a normal phone height. To capture lazy-loaded and
