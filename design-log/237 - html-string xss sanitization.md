@@ -216,6 +216,16 @@ The notes reached the implementation after the first pass; each was checked and 
 
 Follow-up tests: validate 18/18 (+3), slow render +13 (6 text, 6 attribute, 1 backslash); compiler-jay-html 787/787, stack-cli 231/231.
 
+### dev-server 14a timeouts reported after the review commits
+
+One `yarn confirm` run on the branch tip (`ca5e2f01`) failed 10/811 dev-server tests: all of `hydration.test.ts` "14a. Instance with nested slow+fast sub-contract" in all three modes (15 s timeouts), plus `dev-server.test.ts` "simple-page hydration" with `ENOTEMPTY: rmdir …/dev-server/node_modules/.vite/deps`. Investigated on the same tip with a quiet machine (load average 5–15):
+
+- 14a alone: passes. `hydration.test.ts` alone: 735/735. dev-server package: 811/811, with a warm, a cold, and the stale Vite cache restored (it held a leftover `deps_temp_*` directory).
+- Full `yarn confirm`: **exit 0**, 72/72 packages (dev-server 811/811, compiler-jay-html 787/787, stack-cli 231/231).
+- 14a passes through the changed code (slow `src`/`alt` attributes on an `<img>` inside a headless instance). In the passing runs the DOM checks pass, so `serializeRawAttributes` emits the expected attributes.
+
+**Conclusion:** not reproducible, so there was nothing to bisect and no code change was made. The failing run's `ENOTEMPTY` on `.vite/deps` points to the Vite dependency optimizer racing between the two dev-server test files, which share `node_modules/.vite`. In that state page loads hang, and the hang shows up as timeouts with correct DOM. This needs a separate test-infrastructure fix (for example a per-file Vite `cacheDir`) if it recurs.
+
 ### Agent feedback loop (jay-feedback)
 
 - **Validation:** four core rules + the generate-schema warning, as designed.
