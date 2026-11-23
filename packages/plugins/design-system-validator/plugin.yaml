@@ -64,6 +64,18 @@ validators:
     handler: validateColorScheme
     description: Dark-theme pages must declare color-scheme (meta + property) so native controls follow the theme (DL#241)
 
+  - name: design-media-dimensions
+    handler: validateMediaDimensions
+    description: Flags <video>/<iframe> without width/height or aspect-ratio on the element (layout shift, DL#242)
+
+  - name: design-hidden-root
+    handler: validateHiddenRoot
+    description: Flags anti-flicker opacity 0 / visibility hidden on html, body or a direct child of body (DL#242)
+
+  - name: design-view-transition-expect
+    handler: validateViewTransitionExpect
+    description: Flags cross-document view transitions without <link rel="expect" blocking="render"> (DL#242)
+
 projectValidators:
   - name: reduced-motion-js
     handler: validateReducedMotionJs

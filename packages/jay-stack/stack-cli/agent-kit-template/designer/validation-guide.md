@@ -141,6 +141,9 @@ installed, the reduced-motion rules add `allow-blanket-motion-reset`, `allow-smo
 The dark-mode rules (`color-scheme` validator, see `dark-mode-patterns.md`) add `allow-no-color-scheme-meta`,
 `allow-color-scheme-meta-light-only`, `allow-dark-toggle-without-color-scheme`,
 `allow-light-dark-without-color-scheme` and `allow-fixed-control-colors`.
+The layout-stability rules (see `layout-stability.md`) add `allow-media-no-dimensions` (unsized
+`<video>`/`<iframe>`; also valid in a component's own `<head>`), `allow-hidden-root` (anti-flicker
+`opacity: 0` / `visibility: hidden` on the page root) and `allow-view-transition-no-expect`.
 
 ### Prefer-design-system-elements warnings (jay-stack namespace)
 

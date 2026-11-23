@@ -20,6 +20,9 @@ export { validateUndefinedVars } from './validators/design-undefined-vars.js';
 export { validateViewportHeight } from './validators/design-viewport-height.js';
 export { validateReducedMotion } from './validators/design-reduced-motion.js';
 export { validateColorScheme } from './validators/design-color-scheme.js';
+export { validateMediaDimensions } from './validators/design-media-dimensions.js';
+export { validateHiddenRoot } from './validators/design-hidden-root.js';
+export { validateViewTransitionExpect } from './validators/design-view-transition-expect.js';
 
 // Project validators (DL#232)
 export { validateReducedMotionJs } from './validators/reduced-motion-js.js';

@@ -1,6 +1,6 @@
 # DL#242 — Layout shift (CLS) and flicker validations
 
-Status: **[Design]**
+Status: **[Implemented]** — see Implementation Results.
 
 ## Decisions for the Implementer (TL;DR)
 
@@ -17,28 +17,28 @@ Status: **[Design]**
 
 The article "Top 10 things AI gets wrong in web dev" (developer.chrome.com), point #8, says models set `width`/`height` on `<img>` but miss other causes of CLS:
 
-| Article cause | Article fix |
-| --- | --- |
-| `<video>` without dimensions defaults to 300x150, then jumps when metadata loads | `aspect-ratio` + `object-fit` **on the media element**, not on a wrapper |
-| Web font swap reflows text | `font-size-adjust` / metric-matched fallback |
-| Static `vh` heroes jump when mobile toolbars show/hide | `dvh` / `svh` |
-| A/B "anti-flicker" snippets: `opacity:0` / `visibility:hidden` with long timeouts. They delay LCP and leave invisible content clickable | `<script blocking="render">` |
-| Cross-document view transitions start before above-the-fold markup is parsed | `<link rel="expect" href="#id" blocking="render">` |
+| Article cause                                                                                                                           | Article fix                                                              |
+| --------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| `<video>` without dimensions defaults to 300x150, then jumps when metadata loads                                                        | `aspect-ratio` + `object-fit` **on the media element**, not on a wrapper |
+| Web font swap reflows text                                                                                                              | `font-size-adjust` / metric-matched fallback                             |
+| Static `vh` heroes jump when mobile toolbars show/hide                                                                                  | `dvh` / `svh`                                                            |
+| A/B "anti-flicker" snippets: `opacity:0` / `visibility:hidden` with long timeouts. They delay LCP and leave invisible content clickable | `<script blocking="render">`                                             |
+| Cross-document view transitions start before above-the-fold markup is parsed                                                            | `<link rel="expect" href="#id" blocking="render">`                       |
 
 ## Prior Art / Adjacent Mechanisms (verified against code)
 
-| Mechanism | Where | What it covers |
-| --- | --- | --- |
-| img dimensions rule | `packages/plugins/seo-validator/lib/validators/seo-validator.ts:59-81` | warns when `<img>` has no `width`+`height` attributes and no inline `width:`+`height:`. **Skipped when `srcset` is present** (`:63-67`) |
-| img `loading` rule | same file `:83-95` | missing `loading`. Not a CLS rule (LCP / bytes) |
-| `display=swap` on font links | same file `:359-372` | only `fonts.googleapis.com` and `use.typekit.net` (`:330`) |
+| Mechanism                      | Where                                                                                      | What it covers                                                                                                                                                                   |
+| ------------------------------ | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| img dimensions rule            | `packages/plugins/seo-validator/lib/validators/seo-validator.ts:59-81`                     | warns when `<img>` has no `width`+`height` attributes and no inline `width:`+`height:`. **Skipped when `srcset` is present** (`:63-67`)                                          |
+| img `loading` rule             | same file `:83-95`                                                                         | missing `loading`. Not a CLS rule (LCP / bytes)                                                                                                                                  |
+| `display=swap` on font links   | same file `:359-372`                                                                       | only `fonts.googleapis.com` and `use.typekit.net` (`:330`)                                                                                                                       |
 | font fallback metrics (DL#168) | `packages/plugins/design-system-validator/lib/validators/design-font-fallbacks.ts:143-239` | web font with no `local()` `@font-face` using `size-adjust`/`ascent-override`/`descent-override`/`line-gap-override` (`:12-17`). Suppressed by `allow-font-no-fallback` (`:209`) |
-| viewport height (DL#188) | `.../validators/design-viewport-height.ts:41-98` | `vh`/`svh`/`lvh`/`dvh`/`vmax` on top-level containers, for the Googlebot tall render. Suppressed by `allow-viewport-height` (`:50`) |
-| CSS→element cascade | `.../design-system-validator/lib/css-cascade.ts:144-151` | `html`, `:root` and `body` rules resolve onto the root container. This lets a rule see `body { opacity: 0 }` |
-| validator registry | `packages/plugins/design-system-validator/plugin.yaml:30-58` | one entry per sub-validator |
-| finding shape | `packages/compiler/compiler-shared/lib/plugin-validators.ts:3-9` | `severity`, `message`, `suggestion`, `element`, `attribute`. **No rule id and no line number** |
-| what `ctx.css` contains | `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-parser.ts:1170-1188` | linked local CSS plus `<head><style>`. External CSS is only a comment. Body inline `style=""` is not included and must be read from the element |
-| suppression docs | `packages/jay-stack/stack-cli/agent-kit-template/designer/validation-guide.md:107-136` | `jay-validations` YAML and the list of design-system keys |
+| viewport height (DL#188)       | `.../validators/design-viewport-height.ts:41-98`                                           | `vh`/`svh`/`lvh`/`dvh`/`vmax` on top-level containers, for the Googlebot tall render. Suppressed by `allow-viewport-height` (`:50`)                                              |
+| CSS→element cascade            | `.../design-system-validator/lib/css-cascade.ts:144-151`                                   | `html`, `:root` and `body` rules resolve onto the root container. This lets a rule see `body { opacity: 0 }`                                                                     |
+| validator registry             | `packages/plugins/design-system-validator/plugin.yaml:30-58`                               | one entry per sub-validator                                                                                                                                                      |
+| finding shape                  | `packages/compiler/compiler-shared/lib/plugin-validators.ts:3-9`                           | `severity`, `message`, `suggestion`, `element`, `attribute`. **No rule id and no line number**                                                                                   |
+| what `ctx.css` contains        | `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-parser.ts:1170-1188`          | linked local CSS plus `<head><style>`. External CSS is only a comment. Body inline `style=""` is not included and must be read from the element                                  |
+| suppression docs               | `packages/jay-stack/stack-cli/agent-kit-template/designer/validation-guide.md:107-136`     | `jay-validations` YAML and the list of design-system keys                                                                                                                        |
 
 ### Audit notes
 
@@ -51,10 +51,22 @@ The article "Top 10 things AI gets wrong in web dev" (developer.chrome.com), poi
 An agent can ship a page that passes `jay-stack validate` and still shifts or flickers:
 
 ```html
-<video src="/hero.mp4" autoplay muted></video>          <!-- 300x150, then jump -->
-<iframe src="https://maps.example/embed"></iframe>       <!-- jump -->
-<style>body { opacity: 0 }</style>                       <!-- anti-flicker -->
-<style>@view-transition { navigation: auto; }</style>    <!-- pops in -->
+<video src="/hero.mp4" autoplay muted></video>
+<!-- 300x150, then jump -->
+<iframe src="https://maps.example/embed"></iframe>
+<!-- jump -->
+<style>
+  body {
+    opacity: 0;
+  }
+</style>
+<!-- anti-flicker -->
+<style>
+  @view-transition {
+    navigation: auto;
+  }
+</style>
+<!-- pops in -->
 ```
 
 None of these is flagged today.
@@ -88,14 +100,14 @@ All three rules are new sub-validators in `packages/plugins/design-system-valida
 
 ### Rule 1 — `design-media-dimensions` (handler `validateMediaDimensions`)
 
-| | |
-| --- | --- |
-| Elements | `<video>`, `<iframe>`, in page and component files |
-| Passes if any | (a) both `width` and `height` attributes are non-empty (a binding such as `width="{w}"` counts; `width=""` does not); (b) the base cascade or inline `style` gives the element `aspect-ratio`; (c) the base cascade or inline `style` gives both `width` and `height`, neither `auto`. So `width:100%; height:auto` still warns (the guide says to add `aspect-ratio`). A **mix** (`width` attribute + CSS `height`) warns: each condition is a self-contained pair, the mix is rare, and the suggestion's fix is one line; suppression covers a deliberate mix |
-| Not satisfied by | `aspect-ratio` on a **wrapper**. The article says the ratio belongs on the media element |
-| Lenient on at-rules | Rule 1 reads the cascade, whose `getMediaQuery` (`css-cascade.ts:53-62`) knows only `@media`. So `aspect-ratio` inside `@supports`/`@container` lands in the base map and **passes**. Accepted: a false pass is cheaper than a false warning here. Rule 2 differs on purpose (it walks at-rules itself and excludes these) |
-| Suppress | `design-system: { allow-media-no-dimensions: true }` in the page's or the component's own `<head>` |
-| `element` / `attribute` | `` `<${tag}>` `` (`<video>` or `<iframe>`) / `width` |
+|                         |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Elements                | `<video>`, `<iframe>`, in page and component files                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Passes if any           | (a) both `width` and `height` attributes are non-empty (a binding such as `width="{w}"` counts; `width=""` does not); (b) the base cascade or inline `style` gives the element `aspect-ratio`; (c) the base cascade or inline `style` gives both `width` and `height`, neither `auto`. So `width:100%; height:auto` still warns (the guide says to add `aspect-ratio`). A **mix** (`width` attribute + CSS `height`) warns: each condition is a self-contained pair, the mix is rare, and the suggestion's fix is one line; suppression covers a deliberate mix |
+| Not satisfied by        | `aspect-ratio` on a **wrapper**. The article says the ratio belongs on the media element                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Lenient on at-rules     | Rule 1 reads the cascade, whose `getMediaQuery` (`css-cascade.ts:53-62`) knows only `@media`. So `aspect-ratio` inside `@supports`/`@container` lands in the base map and **passes**. Accepted: a false pass is cheaper than a false warning here. Rule 2 differs on purpose (it walks at-rules itself and excludes these)                                                                                                                                                                                                                                      |
+| Suppress                | `design-system: { allow-media-no-dimensions: true }` in the page's or the component's own `<head>`                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `element` / `attribute` | `` `<${tag}>` `` (`<video>` or `<iframe>`) / `width`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 
 Why components too: a page's context does not contain its components' templates, so a pages-only rule would miss every video inside a component. Each file is checked once, against its own body and CSS, so nothing is reported twice. Known gap: a component whose sizing comes from the page's CSS warns in the component; suppress it there.
 
@@ -109,13 +121,13 @@ False positives: (1) `position: absolute; inset: 0` inside a sized box. This tak
 
 ### Rule 2 — `design-hidden-root` (handler `validateHiddenRoot`)
 
-| | |
-| --- | --- |
-| Targets | `html`, `:root`, `body`, and direct element children of `<body>` (exact matching below); pages only |
-| Flags | base-level `opacity: 0` (also `0.0`, `0%`) or `visibility: hidden`, from CSS or inline `style`. A `transition` beside it does not change this: a script fade-in is the anti-flicker pattern |
-| Not flagged | rules inside `@media`, `@keyframes`, `@starting-style`, `@supports`, `@container`. Rules inside `@layer` count as base |
-| Suppress | `design-system: { allow-hidden-root: true }` |
-| `element` | the selector as written (`body`, `:root`, `body.dark`), or `` `<${tag}>` `` for an inline `style` |
+|             |                                                                                                                                                                                             |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Targets     | `html`, `:root`, `body`, and direct element children of `<body>` (exact matching below); pages only                                                                                         |
+| Flags       | base-level `opacity: 0` (also `0.0`, `0%`) or `visibility: hidden`, from CSS or inline `style`. A `transition` beside it does not change this: a script fade-in is the anti-flicker pattern |
+| Not flagged | rules inside `@media`, `@keyframes`, `@starting-style`, `@supports`, `@container`. Rules inside `@layer` count as base                                                                      |
+| Suppress    | `design-system: { allow-hidden-root: true }`                                                                                                                                                |
+| `element`   | the selector as written (`body`, `:root`, `body.dark`), or `` `<${tag}>` `` for an inline `style`                                                                                           |
 
 **Why not the cascade.** `getMediaQuery` (`css-cascade.ts:53-62`) knows only `@media`, so `@starting-style`/`@supports`/`@container` rules would land in the base map. And `selectorTargetsRoot` (`css-cascade.ts:148`, private) tests `body.dark` with `root.closest(...)`, so it needs the class present statically. Rule 2 therefore does not use or export it. It adds its own helper in the rule file:
 
@@ -136,14 +148,14 @@ False positives: a splash or loader the author reveals deliberately. Suppress it
 
 ### Rule 3 — `design-view-transition-expect` (handler `validateViewTransitionExpect`)
 
-| | |
-| --- | --- |
-| Trigger | page file whose `ctx.css` has `@view-transition` with `navigation: auto` (postcss `walkAtRules('view-transition')`) |
-| Passes if | `ctx.head?.links` has `rel="expect"` with a `blocking` value that includes `render` |
-| Suppress | `design-system: { allow-view-transition-no-expect: true }` |
-| Message | `Cross-document view transition is enabled without <link rel="expect" blocking="render">. The transition can start before above-the-fold content is parsed, so it pops in.` |
+|            |                                                                                                                                                                                                                                                                                                         |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Trigger    | page file whose `ctx.css` has `@view-transition` with `navigation: auto` (postcss `walkAtRules('view-transition')`)                                                                                                                                                                                     |
+| Passes if  | `ctx.head?.links` has `rel="expect"` with a `blocking` value that includes `render`                                                                                                                                                                                                                     |
+| Suppress   | `design-system: { allow-view-transition-no-expect: true }`                                                                                                                                                                                                                                              |
+| Message    | `Cross-document view transition is enabled without <link rel="expect" blocking="render">. The transition can start before above-the-fold content is parsed, so it pops in.`                                                                                                                             |
 | Suggestion | `Add <link rel="expect" href="#main-content" blocking="render"> in <head>, pointing at an above-the-fold element id. If intentional, suppress with design-system: { allow-view-transition-no-expect: true } in <script type="application/jay-validations">. See agent-kit/designer/layout-stability.md` |
-| `element` | `@view-transition` |
+| `element`  | `@view-transition`                                                                                                                                                                                                                                                                                      |
 
 The parser keeps every link attribute except `rel`/`href` (`jay-html-parser.ts:1078-1083`), so `blocking` reaches `head.links`. No parser change. If `ctx.head` is undefined, treat it as no links (the rule fires when `@view-transition` is present).
 
@@ -162,14 +174,14 @@ Also add the three new keys to the suppression list in `stack-cli/agent-kit-temp
 
 ### Null hypothesis
 
-| Candidate | Existing rule that covers it? | Decision |
-| --- | --- | --- |
-| video/iframe dimensions | img rule is `<img>`-only (`seo-validator.ts:32`) | new rule |
-| hidden root | none (`grep opacity` in validators: none) | new rule |
-| view transition `expect` | none | new rule |
-| font metric overrides | DL#168 `font-fallbacks` | no rule |
-| `font-size-adjust` | partly covered by DL#168 | guide only |
-| mobile `vh` jump | DL#188 rule fires on top-level `vh` | guide only |
+| Candidate                | Existing rule that covers it?                    | Decision   |
+| ------------------------ | ------------------------------------------------ | ---------- |
+| video/iframe dimensions  | img rule is `<img>`-only (`seo-validator.ts:32`) | new rule   |
+| hidden root              | none (`grep opacity` in validators: none)        | new rule   |
+| view transition `expect` | none                                             | new rule   |
+| font metric overrides    | DL#168 `font-fallbacks`                          | no rule    |
+| `font-size-adjust`       | partly covered by DL#168                         | guide only |
+| mobile `vh` jump         | DL#188 rule fires on top-level `vh`              | guide only |
 
 ## Implementation Plan
 
@@ -178,6 +190,7 @@ Also add the three new keys to the suppression list in `stack-cli/agent-kit-temp
 Every "1" case below with no other note asserts the **full finding object** with `toEqual` (the repo forbids `toContain`). Pages use path `src/pages/x/page.jay-html`; components `src/components/c/c.jay-html`.
 
 `design-media-dimensions.test.ts`
+
 - page `<video src="/v.mp4"></video>` → 1, video message, `element:'<video>'`
 - page `<iframe src="/e"></iframe>` → 1, iframe message, `element:'<iframe>'`
 - component file `<video src="/v.mp4"></video>` → 1 (components are checked)
@@ -198,6 +211,7 @@ Every "1" case below with no other note asserts the **full finding object** with
 - `<video class="v">` + `@media (min-width:600px){.v{aspect-ratio:16/9}}` → 1 (base only)
 
 `design-hidden-root.test.ts` (page `<body><main id="app"><div class="modal"></div></main></body>` unless noted)
+
 - `body{opacity:0}` → 1, `element:'body'`
 - `html{visibility:hidden}` → 1, `element:'html'`
 - `:root{opacity:0%}` → 1, `element:':root'`
@@ -223,6 +237,7 @@ Every "1" case below with no other note asserts the **full finding object** with
 - override `allow-hidden-root` → 0
 
 `design-view-transition-expect.test.ts`
+
 - `@view-transition{navigation:auto}`, no link → 1, `element:'@view-transition'`
 - same with `ctx.head` undefined → 1
 - `<link rel="expect" href="#m" blocking="render">` → 0
@@ -260,16 +275,16 @@ No example app loads `design-system-validator` (plugins come from `src/plugins/`
 
 ## Scope pre-mortem
 
-| Risk | Mitigation |
-| --- | --- |
-| Noise on existing projects: every embed iframe warns | Single page-level key. The suggestion gives the exact one-line fix |
-| Cascade misses external or CDN CSS → false positives | Documented in the guide. Suppression |
-| Component media sized by page CSS warns in the component | Known gap, in the guide. Suppress in the component's `<head>` |
-| A shared linked CSS file with `@view-transition` makes **every** page warn | Expected: `rel="expect"` is per document, so each page needs its own link. The guide says so; per-page suppression |
-| Runtime `html`/`body` class toggles and nested CSS escape Rule 2 | Known gap, in the guide (Q6) |
-| Inline `style` on `<html>`, and `<style>` inside `<body>`, escape Rule 2: `ctx.body` starts at `<body>`, and `ctx.css` holds only `head style` and linked sheets (`jay-html-parser.ts:1179-1180`) | Known gap, in the guide |
-| Scope creep into the img/srcset fix or font-host unification | Explicitly deferred (Q7) |
-| Double warnings with DL#168/#188 | No font rule and no vh rule (null-hypothesis table) |
+| Risk                                                                                                                                                                                              | Mitigation                                                                                                         |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Noise on existing projects: every embed iframe warns                                                                                                                                              | Single page-level key. The suggestion gives the exact one-line fix                                                 |
+| Cascade misses external or CDN CSS → false positives                                                                                                                                              | Documented in the guide. Suppression                                                                               |
+| Component media sized by page CSS warns in the component                                                                                                                                          | Known gap, in the guide. Suppress in the component's `<head>`                                                      |
+| A shared linked CSS file with `@view-transition` makes **every** page warn                                                                                                                        | Expected: `rel="expect"` is per document, so each page needs its own link. The guide says so; per-page suppression |
+| Runtime `html`/`body` class toggles and nested CSS escape Rule 2                                                                                                                                  | Known gap, in the guide (Q6)                                                                                       |
+| Inline `style` on `<html>`, and `<style>` inside `<body>`, escape Rule 2: `ctx.body` starts at `<body>`, and `ctx.css` holds only `head style` and linked sheets (`jay-html-parser.ts:1179-1180`) | Known gap, in the guide                                                                                            |
+| Scope creep into the img/srcset fix or font-host unification                                                                                                                                      | Explicitly deferred (Q7)                                                                                           |
+| Double warnings with DL#168/#188                                                                                                                                                                  | No font rule and no vh rule (null-hypothesis table)                                                                |
 
 ## Trade-offs
 
@@ -282,3 +297,57 @@ No example app loads `design-system-validator` (plugins come from `src/plugins/`
 
 - **Validations:** `design-media-dimensions`, `design-hidden-root`, `design-view-transition-expect`.
 - **Guide:** `layout-stability.md` plus the key list in `validation-guide.md`.
+
+## Implementation Results
+
+Status after implementation: **[Implemented]**. Branch stacked on the dark-mode branch (DL#241, which includes DL#238), merged in first.
+
+### What landed
+
+| Area                                   | Files                                                                                                                                                                       |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rule 1 `design-media-dimensions`       | `design-system-validator/lib/validators/design-media-dimensions.ts`                                                                                                         |
+| Rule 2 `design-hidden-root`            | `lib/validators/design-hidden-root.ts` (own postcss walk + selector parser, no cascade)                                                                                     |
+| Rule 3 `design-view-transition-expect` | `lib/validators/design-view-transition-expect.ts`                                                                                                                           |
+| Registration                           | `plugin.yaml` (three entries), `lib/tools.ts` (not `lib/index.ts`)                                                                                                          |
+| Shared                                 | `isPageFile` from `lib/validators/page-file.ts` (added by DL#241)                                                                                                           |
+| Guides                                 | new `agent-kit/designer/layout-stability.md`; three keys in `validation-guide.md`                                                                                           |
+| Tests                                  | `design-media-dimensions.test.ts` (19), `design-hidden-root.test.ts` (27), `design-view-transition-expect.test.ts` (8), shared helper `test/validators/cls-test-context.ts` |
+
+### Reviewer notes folded in (final review round)
+
+1. Single-colon `:before`/`:after` (and `:first-line`/`:first-letter`) are pseudo-elements; test "pseudo-elements are skipped (double and single colon)".
+2. `body > *` gives exactly **one** finding (per selector, not per matched child); pinned by a test.
+3. `!important` is stripped before the value check; `body { opacity: 0 !important }` warns with value `0`.
+4. `attribute` field: Rule 1 → `width`; Rule 2 CSS finding → none, Rule 2 inline-style finding → `style`; Rule 3 → none.
+5. New tests: a CSS-only `width` + `height` pass, and an inline `style` on `<body>`.
+6. The demo's MDN `flower.mp4` link was checked: HTTP 200.
+
+### Deviations
+
+- **Demo on fake-shop, not design-system-demo.** After DL#238 fake-shop loads `design-system-validator`, so no `package.json` change was needed. A transient `src/pages/cls-demo/page.jay-html` was used and removed after recording (not committed).
+- **Slow video instead of CDP throttling.** CDP throttling (400 ms / 400 kbit/s) made the unbundled dev-server modules time out. The demo holds only the `.mp4` request instead (`page.route`, 9 s), so the text paints first and the metadata arrives late, which reproduces the same jump.
+- **Demo video sized by `max-width: 100%`, not a fixed width.** With `width: 480px` the 300x150 → 16:9 change was too small to measure (CLS 0.014); the article's case is an unsized video, so the bad page has no width.
+- **Finding: the anti-flicker snippet hides the shift from the CLS metric.** With `body { opacity: 0 }` lifted at 2 s, Chrome reported **no** `layout-shift` entries, although the text under the video moved 329 px. The same page without the snippet reports CLS **0.135**. So the baseline shows the move in px and the reported CLS side by side. This supports Rule 2: the snippet also hides a real problem from field metrics.
+- The inline lift script is written without braces (`setTimeout(() => document.body.style.opacity = '1', 2000)`), because `{…}` in a jay-html script is parsed as an interpolation.
+- Example agent-kits are not regenerated (the DL does not ask for it).
+- No CHANGELOG entry: the plugin has no CHANGELOG file.
+
+### Verification
+
+- Red first: 53/53 new tests failed before registration; design-system-validator now **290/290**. Existing design-system-validator tests unchanged and green; seo-validator untouched.
+- `jay-stack validate` on fake-shop: the three new rules report no issues on the existing pages.
+- Demo page before the fix: `design-media-dimensions` (video, iframe), `design-hidden-root` (`body`), `design-view-transition-expect`, plus DL#238's `reduced-motion/view-transition`. After the guide's fixes (`width`/`height` attributes with `height: auto`, no opacity snippet, `<link rel="expect" href="#main-content" blocking="render">`, view transition inside `no-preference`): none of these warnings.
+- Browser (Playwright):
+
+  | Run          | body opacity at +500 ms | Text moved when metadata arrived | Reported CLS                                |
+  | ------------ | ----------------------- | -------------------------------- | ------------------------------------------- |
+  | Before (red) | 0 (blank page)          | 329 px                           | 0 (masked by the snippet; 0.135 without it) |
+  | After        | 1                       | 0 px                             | 0                                           |
+
+  Videos at the workspace root: `08-cls-layout-shift-baseline-20261123.webm` (red), `08-cls-layout-shift-20261123.webm` (fixed).
+
+### Tests
+
+- design-system-validator **290/290** (53 new).
+- `yarn confirm`: rebuild and type check green; the test step stopped on `dev-server/test/hydration.test.ts` (one timeout in "4a. Phase-aware forEach", heavy machine load; package not touched), which also skipped 11 packages. Re-run separately: dev-server 811/811 (8/8 files), stack-cli 213/213, a11y-validator 75/75, agent-skills 10/10, data-files 23/23, design-system-validator 290/290, editing-policy 79/79, markdown 35/35, seo-validator 66/66, design-system-demo 9/9, fake-shop 9/9, smoke-test 80/80. `yarn format` run separately before confirm.
