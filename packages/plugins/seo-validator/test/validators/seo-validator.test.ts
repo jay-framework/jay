@@ -732,3 +732,72 @@ describe('seo-validator', () => {
         });
     });
 });
+
+/** Design Log #244 — content-visibility: auto needs contain-intrinsic-size. */
+describe('content-visibility-without-intrinsic-size', () => {
+    function cssFindings(css: string, suppressed = false) {
+        const ctx: JayHtmlValidationContext = {
+            ...makeContext('<h1>Title</h1>'),
+            css,
+            validationOverrides: suppressed
+                ? { seo: { 'allow-content-visibility-without-size': true } }
+                : undefined,
+        };
+        const findings = validate(ctx) as Awaited<ReturnType<typeof validate>>;
+        return findings.filter((f) => f.message.includes('content-visibility'));
+    }
+
+    function expected(selector: string) {
+        return {
+            severity: 'warning',
+            message: `${selector} uses content-visibility: auto without contain-intrinsic-size — scrollbar jumps and layout shift`,
+            suggestion:
+                'Add contain-intrinsic-size: auto <px>. ' +
+                'Suppress with seo: { allow-content-visibility-without-size: true } in <script type="application/jay-validations">. ' +
+                'See agent-kit/designer/jay-html-styling.md',
+        };
+    }
+
+    it('flags content-visibility: auto with no intrinsic size', () => {
+        expect(cssFindings('.a{content-visibility:auto}')).toEqual([expected('.a')]);
+    });
+
+    it.each([
+        '.a{content-visibility:auto;contain-intrinsic-size:auto 300px}',
+        '.a{content-visibility:auto;contain-intrinsic-block-size:300px}',
+        '.a{content-visibility:var(--cv)}',
+        ':root{--cv: auto}',
+        '.a{content-visibility:visible}',
+    ])('does not flag %s', (css) => {
+        expect(cssFindings(css)).toEqual([]);
+    });
+
+    it('flags rules nested in @media', () => {
+        expect(
+            cssFindings('@media (min-width:600px){ .list > li { content-visibility: auto; } }'),
+        ).toEqual([expected('.list > li')]);
+    });
+
+    it('is not unbalanced by braces in CSS strings or comments', () => {
+        expect(cssFindings('.a{content:"}"} /* } */ .b{content-visibility:auto}')).toEqual([
+            expected('.b'),
+        ]);
+    });
+
+    it('can be suppressed', () => {
+        expect(cssFindings('.a{content-visibility:auto}', true)).toEqual([]);
+    });
+
+    it('points to an existing guide', () => {
+        const guide = /See agent-kit\/(\S+)$/.exec(expected('.a').suggestion)![1];
+        expect(
+            fs.existsSync(
+                path.resolve(
+                    __dirname,
+                    '../../../../jay-stack/stack-cli/agent-kit-template',
+                    guide,
+                ),
+            ),
+        ).toBe(true);
+    });
+});

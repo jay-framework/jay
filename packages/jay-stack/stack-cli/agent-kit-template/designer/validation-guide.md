@@ -159,6 +159,16 @@ The core `jay-stack validate` emits four warnings that nudge you to reuse UI thr
 </script>
 ```
 
+### Responsiveness (INP) warnings
+
+See `../developer/responsiveness-guide.md` for the fixes.
+
+| Rule                                                                                     | Where                    | How to suppress                                        |
+| ---------------------------------------------------------------------------------------- | ------------------------ | ------------------------------------------------------ |
+| `inp/blocking-dialog` (`alert(` / `confirm(` / `prompt(` in the interactive constructor) | page `.ts`               | `// jay-inp: allow` on the same line                   |
+| `inp/settimeout-zero-yield` (`setTimeout(fn, 0)` in the interactive constructor)         | page `.ts`               | `// jay-inp: allow` on the same line                   |
+| `content-visibility-without-intrinsic-size`                                              | page CSS (seo-validator) | `seo: { allow-content-visibility-without-size: true }` |
+
 ### When you can't suppress
 
 If a warning comes from dynamic content (`{post.content}`) or a generated file, you can't suppress it in the template. This is a validator limitation — the warning is a false positive. Don't loop trying to fix it.

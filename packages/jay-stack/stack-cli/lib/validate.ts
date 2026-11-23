@@ -54,6 +54,7 @@ import { loadConfig, getConfigWithDefaults, isPositiveInteger, type JayConfig } 
 import { checkGetActionsReadingCookies } from '@jay-framework/plugin-validator';
 import { DEFAULT_ACTION_BODY_LIMIT_BYTES } from '@jay-framework/stack-server-runtime';
 import { buildMaterialiseOptions } from './materialise-context';
+import { checkInpResponsiveness } from './inp-responsiveness';
 import { extractScopeBlock, splitScopeBlocks } from './scope-css';
 import { buildRouteOracle, collectPublicAssets, checkInternalLinks } from './check-internal-links';
 import {
@@ -2168,6 +2169,9 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
             // Check page.ts for direct document access
             const domWarnings = checkDirectDocumentAccess(jayFile);
             for (const msg of domWarnings) {
+                warnings.push({ file: relativePath, message: msg });
+            }
+            for (const msg of checkInpResponsiveness(jayFile)) {
                 warnings.push({ file: relativePath, message: msg });
             }
 

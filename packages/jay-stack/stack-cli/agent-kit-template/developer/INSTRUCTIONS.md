@@ -37,6 +37,7 @@ The developer sets up the project, configures plugins, creates page-level compon
 | [component-data.md](component-data.md)                       | Immutable data, JSON Patch, patching                                                                |
 | [render-results.md](render-results.md)                       | phaseOutput, RenderPipeline, errors, redirects                                                      |
 | [error-pages-guide.md](error-pages-guide.md)                 | Returning enriched errors (title/code/details) and which error page renders                         |
+| [responsiveness-guide.md](responsiveness-guide.md)           | INP: keep handlers light, yield with `scheduler.yield()`, no `confirm()`, refs not `on*=`           |
 | [seo-guide.md](seo-guide.md)                                 | SEO head tags: title, meta, OG, canonical via phaseOutput                                           |
 | [cli-commands.md](cli-commands.md)                           | CLI commands: setup, validate, dev, agent-kit                                                       |
 | `../references/<plugin>/`                                    | Plugin reference data                                                                               |

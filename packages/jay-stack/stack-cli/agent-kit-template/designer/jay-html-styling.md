@@ -165,3 +165,26 @@ Choose the fix by what the container holds:
       allow-viewport-height: true
   </script>
   ```
+
+## content-visibility
+
+`content-visibility: auto` lets the browser skip rendering off-screen sections, which keeps long pages
+responsive. A skipped section has **no size** unless you give it one, so the scrollbar jumps and the
+layout shifts as sections render. Always pair it with `contain-intrinsic-size` in the same rule:
+
+```css
+/* warns */
+.card {
+  content-visibility: auto;
+}
+/* ok — `auto` remembers the real size once rendered; 320px is the first guess */
+.card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 320px;
+}
+```
+
+`jay-stack validate` (seo-validator) warns on `content-visibility: auto` without any
+`contain-intrinsic-*` property in the same rule. If the size is set in another rule for the same
+element, suppress with `seo: { allow-content-visibility-without-size: true }`. See also
+`../developer/responsiveness-guide.md`.

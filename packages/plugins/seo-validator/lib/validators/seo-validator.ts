@@ -2,6 +2,10 @@ import type { JayHtmlValidatorFn, JayHtmlValidationFinding } from '@jay-framewor
 import { walkElements } from '@jay-framework/compiler-shared';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import {
+    CONTENT_VISIBILITY_SUPPRESS_KEY,
+    findContentVisibilityWithoutSize,
+} from './content-visibility';
 
 function isComponent(filePath: string): boolean {
     const normalized = filePath.replace(/\\/g, '/');
@@ -371,6 +375,10 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
                 }
             }
         }
+    }
+
+    if (ctx.css && !isSuppressed(ctx, CONTENT_VISIBILITY_SUPPRESS_KEY)) {
+        findings.push(...findContentVisibilityWithoutSize(ctx.css));
     }
 
     return findings;
