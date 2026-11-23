@@ -1,6 +1,15 @@
-# Contract Authoring Guide
+# Plugin Contract Guide
 
-Contracts (`.jay-contract` files) are the source of truth for a component's data shape. Define the contract before implementing the component.
+For the full contract syntax, decision tree, and examples, see the shared [Contract Authoring Guide](../contracts/GUIDE.md).
+
+This file covers plugin-specific contract concerns. Contracts (`.jay-contract` files) are the source of truth for a component's data shape. Define the contract before implementing the component.
+
+> **Interactive components need a `./client` export.** If a component built from this contract declares
+> an interactive phase (`.withInteractive(...)`) — or the plugin declares `contexts` — the package
+> must expose a `./client` export (`./dist/index.client.js`) for browser hydration. `validate-plugin`
+> detects interactivity by scanning the built server bundle and errors if `./client` is missing.
+> Server-only (slow/fast) component plugins need no `./client`. See
+> [plugin-structure.md](plugin-structure.md).
 
 ## Basic Structure
 
@@ -113,6 +122,48 @@ For dynamic/materialized contracts linking to static contracts in a plugin packa
 
 `trackBy` must reference a `data` tag with `string` or `number` type within the same sub-contract.
 
+## Outcomes and User-Visible Text
+
+The page owns every word the visitor reads. A plugin reports **what happened**; the page decides **how it reads** (wording, language, layout). So any outcome a page may want to render differently — an error, a failure kind, a success, an empty or unavailable state — must be a **variant**, never only a string.
+
+- **One kind of outcome** → a `boolean` variant (`hasError`, `isSubmitted`).
+- **Several kinds** → an `enum` variant with one member per kind the page may word differently, plus a neutral member (`NONE`, `IDLE`) for "nothing to report".
+- **Text is optional default copy.** A `data` string next to the variant (`errorMessage`, `statusMessage`) is fine as an English default. Never make it the only signal: a page must not have to test for a non-empty string, or match its text, to know what happened.
+- **Keep codes stable and locale-neutral.** Name members by meaning (`NETWORK`, `PERMISSION`), not by message. **Appending** a member is safe; inserting, renaming, removing, or reordering one is a breaking change.
+
+```yaml
+# ✅ Outcome as variants; text is a default the page may ignore
+- {
+    tag: submitState,
+    type: variant,
+    dataType: 'enum (IDLE | SUBMITTING | SUCCEEDED | FAILED)',
+    phase: fast+interactive,
+  }
+- {
+    tag: submitFailure,
+    type: variant,
+    dataType: 'enum (NONE | VALIDATION | REJECTED | NETWORK)',
+    phase: fast+interactive,
+  }
+- {
+    tag: statusMessage,
+    type: data,
+    dataType: string,
+    phase: fast+interactive,
+    description: English default text,
+  }
+
+# ❌ Outcome only as text — the page can't localize or redesign it without parsing English
+- { tag: statusMessage, type: data, dataType: string, phase: fast+interactive }
+```
+
+```html
+<!-- The page writes its own copy, in its own language -->
+<p if="form.submitFailure === NETWORK">Problème de connexion, réessayez.</p>
+```
+
+Emit enum values from the enum the contract compiles to (or a mirror of it in the same order); the runtime value is the member's index. Document each member's meaning in the plugin's agent-kit.
+
 ## Async Data
 
 Wrap any tag in `Promise<T>` with `async: true`:
@@ -164,11 +215,29 @@ props:
   - name: productId
     type: string
     required: true
+    phase: fast # slow (default), fast, or fast+interactive
     description: The product to display
   - name: showPricing
     type: boolean
     default: 'true'
 ```
+
+#### Prop phases — declare the phase you consume the prop
+
+A prop has a `phase` just like a tag, and it declares **when your component reads that prop**. The binding at the usage site must have a source phase ≤ the prop's phase (validated at build; see [validation.md](validation.md)).
+
+| Prop phase         | Resolved at       | At `slow` it is…   | Read it in                                      | At interactive it is…              |
+| ------------------ | ----------------- | ------------------ | ----------------------------------------------- | ---------------------------------- |
+| `slow` (default)   | build             | present            | `slowlyRender`, `fastRender`, `withInteractive` | a signal `() => T`, constant value |
+| `fast`             | request           | `undefined` / `''` | `fastRender`, `withInteractive`                 | a signal `() => T`, constant value |
+| `fast+interactive` | request (initial) | `undefined` / `''` | `fastRender`, `withInteractive`                 | a **reactive** signal `() => T`    |
+
+Two rules to internalize:
+
+- **A `fast` / `fast+interactive` prop is `undefined` (or `''` for a string binding) during `slow`.** Never read such a prop in `slowlyRender` — declare the prop at the phase where you actually consume it (the same phase your render function runs at). `markdown-content` reads `props.markdown` at slow → `slow`; `markdown-live` reads it at fast and as a signal at interactive → `fast+interactive`.
+- **At the interactive phase every prop arrives as a signal (`() => T`)** — the same shape for all phases, reactive only for `fast+interactive`. Type interactive props as `() => T` in the `.ts` (matching client-only Jay), regardless of phase.
+
+The prop type stays a single in-code declaration (`.withProps<T>()`) — the framework does not generate per-phase prop types. It is the author's job (backed by validation) not to read a `fast` prop at slow.
 
 ### Params — URL route segments
 
@@ -189,6 +258,21 @@ Always include a `description` at the contract level explaining when to use this
 name: product-search
 description: Product listing with filters, sorting, and pagination. Use for search results and category pages.
 ```
+
+## Tag Metadata
+
+Tags can carry a `meta` field — a free-form key-value map for plugin validators. The framework ignores `meta`; only validators read it.
+
+```yaml
+- tag: heroImage
+  type: data
+  dataType: string
+  meta:
+    vendor: wix-image
+    defaultTransform: w_800,h_400,q_80
+```
+
+Use `meta` to attach semantic meaning that goes beyond the data type — e.g., marking a `string` tag as a URL that requires specific formatting. See [validation.md](validation.md) for writing validators that consume `meta`.
 
 ## Validation Rules
 

@@ -12,6 +12,8 @@ devServer:
   pagesBase: ./src/pages
   componentsBase: ./src/components
   publicFolder: ./public
+  # allowedHosts: ['.example.dev']   # extra hosts the dev server's host-check accepts (DL#220)
+  # sourceEditing: true              # inject source-editing markers for the inspector (DL#219) — dev only
 editorServer:
   portRange:
     - 3101
@@ -24,6 +26,8 @@ editorServer:
 - `devServer.componentsBase` — Root directory for components
 - `devServer.publicFolder` — Static assets directory
 - `devServer.portRange` — Port range for the dev server
+- `devServer.allowedHosts` — Hosts the dev server's host-check accepts beyond localhost — a list in Vite host-suffix syntax (e.g. `['.example.dev']`) or `true` to disable the check (cloud preview only). Absent = localhost-only (DL#220)
+- `devServer.sourceEditing` — When `true`, inject source-editing markers (`jay-dev-*`) so the AIditor source-editing inspector can map a rendered pixel back to its jay-html source. **Off by default; dev-only** — the markers change rendered output, so enable only for AIditor / source-editing sessions, never in production. See the devops **source-editing** guide (DL#219)
 
 ## Plugin Configuration (config/)
 

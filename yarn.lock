@@ -10165,6 +10165,7 @@ __metadata:
   resolution: "example-jay-fake-shop@workspace:examples/jay-stack/fake-shop"
   dependencies:
     "@jay-framework/a11y-validator": "workspace:^"
+    "@jay-framework/design-system-validator": "workspace:^"
     "@jay-framework/dev-environment": "workspace:^"
     "@jay-framework/fullstack-component": "workspace:^"
     "@jay-framework/jay-cli": "workspace:^"

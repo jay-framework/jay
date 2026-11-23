@@ -88,6 +88,10 @@ HTML boolean attributes (`disabled`, `checked`, `hidden`, `readonly`) can be bou
 - Set the attribute value to a **boolean tag name** — the attribute is present when true, absent when false
 - Use `!` prefix to negate: `disabled="!enabled"` means disabled when enabled is false
 - Without a value (`disabled` alone), the attribute is always present (standard HTML behavior)
+- A single binding is the same condition: `checked="{isSelected}"` ≡ `checked="isSelected"` — never write a literal `checked="false"` (any present boolean attribute counts as true in HTML)
+- Works the same for headless/plugin data and inside `forEach` (`checked="selected"` on an option item, `checked="form.accepted"` for a keyed headless)
+- `checked` is applied as the DOM property on the client, so it follows the ViewState after the user toggles it
+- Mixing text and a binding (`checked="text {x}"`, `disabled="{a} {b}"`) is a compile error — a boolean attribute takes one condition
 
 ## Conditional Rendering
 
@@ -240,7 +244,7 @@ Jay-html expressions resolve **contract or page tag names only**. They are **not
 | Empty list hint | `hasItems: boolean` variant  | `if="!hasItems"`     |
 | Count-based UI  | `itemCount: number` data tag | `if="itemCount===0"` |
 
-See [contracts/examples/category-list.md](../contracts/examples/category-list.md) (`hasCategories`).
+See [contracts/examples/category-list.md](https://github.com/jay-framework/jay/blob/main/packages/jay-stack/stack-cli/agent-kit-template/contracts/examples/category-list.md) (`hasCategories`).
 
 ### Common Errors
 

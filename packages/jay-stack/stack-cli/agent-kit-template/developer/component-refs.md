@@ -189,7 +189,9 @@ refs.shell.onfocusin(({ event }) => {
   if (!keyboardNav) return;
   const el = event.target as HTMLElement;
   refs.shell.exec$(() => {
-    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    // 'instant', not 'auto': 'auto' defers to CSS scroll-behavior, which may still be smooth.
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollIntoView({ behavior: reduce ? 'instant' : 'smooth', block: 'nearest' });
   });
 });
 ```
@@ -255,7 +257,8 @@ refs.myInput.onclick(() => {
 });
 
 refs.scrollContainer.exec$((el) => {
-  el.scrollTo({ top: 0, behavior: 'smooth' });
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  el.scrollTo({ top: 0, behavior: reduce ? 'instant' : 'smooth' });
 });
 ```
 

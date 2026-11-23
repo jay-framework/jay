@@ -18,6 +18,10 @@ export { validateContrast } from './validators/design-contrast.js';
 export { validateFontFallbacks } from './validators/design-font-fallbacks.js';
 export { validateUndefinedVars } from './validators/design-undefined-vars.js';
 export { validateViewportHeight } from './validators/design-viewport-height.js';
+export { validateReducedMotion } from './validators/design-reduced-motion.js';
+
+// Project validators (DL#232)
+export { validateReducedMotionJs } from './validators/reduced-motion-js.js';
 
 // Agent-kit generator
 export { generateDesignSystemAgentKit, ADD_MENU_GENERATED_REL } from './generate-add-menu.js';

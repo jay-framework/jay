@@ -39,6 +39,13 @@ Static routes match before dynamic routes (most specific first):
 3. **`[[param]]`** — optional param
 4. **`[...param]`** — catch-all — lowest priority
 
+## Reserved Status Folders (Error Pages)
+
+Top-level folders named for an HTTP **status token** — `404`, `5xx`, `502`, `4xx`, … — are reserved
+for **error pages**, not navigable routes. They are selected by response status (not URL), never
+appear in the sitemap, and visiting `/404` directly returns a normal 404. See
+[error-pages-guide.md](error-pages-guide.md).
+
 ## Static Route Overrides
 
 A static route can override a dynamic route for a specific URL — giving one particular page a custom layout while the dynamic route handles everything else:

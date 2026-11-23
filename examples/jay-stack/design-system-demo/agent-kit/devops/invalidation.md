@@ -29,7 +29,7 @@ jay-stack rebuild --route /products/[slug] --params '{"slug":"blue-widget"}'
 
 ### How it works
 
-1. Reads the route manifest to find affected routes/instances
+1. Reads the route manifest to find affected routes, and the artifact store's instance listing for their instances
 2. Re-runs slow render with fresh data
 3. Re-compiles server element and client bundle
 4. Updates the instance entry in the manifest
@@ -69,9 +69,4 @@ The manifest tracks which contracts each route uses. When a webhook says "produc
 
 ## Build Output After Rebuild
 
-Rebuilt instances write new files to both `frontend/` and `backend/`:
-
-- `backend/pre-rendered/` — updated jay-html, cache, server element
-- `frontend/pages/` — updated client bundle, CSS
-
-Old files are not deleted immediately — they're tracked in `cleanup-manifest.json`. This avoids breaking in-flight requests that still reference old bundles.
+A rebuilt instance overwrites its `backend/pre-rendered/{route}/page[_hash].cache.json` in place (atomically, at the same derived path), so no manifest update and no orphaned files are involved. Route-level bundles in `frontend/` are not rebuilt by an instance rebuild.

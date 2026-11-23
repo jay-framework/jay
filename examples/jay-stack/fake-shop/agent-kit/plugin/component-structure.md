@@ -6,7 +6,7 @@ Full-stack components use `makeJayStackComponent` with a fluent builder API and 
 
 ```typescript
 import { makeJayStackComponent, phaseOutput } from '@jay-framework/fullstack-component';
-import type { MyContract } from './my-contract.generated';
+import type { MyContract } from './my-contract.jay-contract';
 
 export const myComponent = makeJayStackComponent<MyContract>()
   .withSlowlyRender(async (props) => {
