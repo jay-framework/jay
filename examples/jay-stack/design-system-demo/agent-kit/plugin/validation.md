@@ -42,6 +42,15 @@ jay-stack validate-plugin -v
 - Contract files referenced in `plugin.yaml` exist
 - Component export names are valid strings (not file paths)
 - Action metadata files (`.jay-action`) exist
+- Each `routes[].jayHtml` file **parses and compiles** (same generate stage as `jay-stack validate` — catches invalid template expressions before the dev server)
+
+During plugin development, also compile-check **source** templates (paths under `lib/`, not only `dist/`):
+
+```bash
+jay-stack validate -p lib/pages/my-route --compile-only
+```
+
+`--compile-only` skips project rules (broken links, DOM lint, design system) so it is safe inside a plugin package `validate` script alongside `validate-plugin`.
 
 ### Capability-aware structure
 
@@ -242,3 +251,39 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
   return findings;
 };
 ```
+
+## Project-Level Validators (DL#232)
+
+A per-file validator sees one jay-html file at a time. A **project-level validator** runs **once per
+project** — for concerns that are not a single file: a config file, a `.well-known` file, a policy
+file, cross-file consistency. Declare them under `projectValidators` (same `./tools` handler rules as
+`validators`):
+
+```yaml
+projectValidators:
+  - name: seo-site
+    handler: validateProject # export name from the ./tools entry
+    description: robots.txt, site identity, and ARD checks
+```
+
+The handler receives only `{ projectRoot }` (and the plugin's own `settings`) — **not** parsed config
+or parsed jay-html. A validator that needs `.jay` config reads it itself via `projectRoot`:
+
+```typescript
+import type { ProjectValidatorFn, ProjectValidationFinding } from '@jay-framework/compiler-shared';
+
+export const validateProject: ProjectValidatorFn = async (ctx) => {
+  const findings: ProjectValidationFinding[] = [];
+  // ctx.projectRoot — absolute project root path
+  // ctx.settings    — the plugin's own settings (optional)
+  return findings;
+};
+```
+
+Each `ProjectValidationFinding` has `severity` (`'error'` | `'warning'`), `file` (project-relative,
+or `.jay`), `message`, and optional `suggestion`. Project validators run **after** the per-file pass
+and are **skipped under `--compile-only`**. Findings surface with `source: plugin:<plugin>/<name>`.
+
+Built-in example: `@jay-framework/seo-validator` ships a `seo-site` project validator (robots.txt,
+`site.baseUrl`, `site.name`, and ARD `/.well-known/ard.json`) — these moved out of core `validate`
+into the plugin via this hook (DL#232), so a project only gets them when it installs seo-validator.

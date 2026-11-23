@@ -51,5 +51,7 @@ export default defineConfig(({ isSsrBuild }) => ({
     },
     test: {
         globals: true,
+        // Fixture projects contain files named like tests (DL#238 reduced-motion-js skips them).
+        exclude: ['**/node_modules/**', 'test/fixtures/**'],
     },
 }));

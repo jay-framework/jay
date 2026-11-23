@@ -1,5 +1,4 @@
 import type { JayHtmlValidatorFn, JayHtmlValidationFinding } from '@jay-framework/compiler-shared';
-import postcss from 'postcss';
 import { findDesignMd } from '../parse-design-md.js';
 import { resolveCascadeByBreakpoint, type ResolvedStyle } from '../css-cascade.js';
 import {
@@ -195,55 +194,9 @@ export const validateTokens: JayHtmlValidatorFn = (ctx) => {
         }
     }
 
-    if (Object.keys(tokens.animations).length > 0 && !dsOverrides?.['allow-no-reduced-motion']) {
-        checkReducedMotion(cssSources, findings);
-    }
-
     if (findings.length > 0) {
         findings.push({ severity: 'warning', message: '', suggestion: GUIDE_SUGGESTION });
     }
 
     return findings;
 };
-
-const ANIMATION_PROPERTIES = new Set([
-    'transition',
-    'transition-duration',
-    'transition-property',
-    'animation',
-    'animation-duration',
-    'animation-name',
-]);
-
-function checkReducedMotion(cssSources: string[], findings: JayHtmlValidationFinding[]): void {
-    let hasAnimations = false;
-    let hasReducedMotion = false;
-
-    for (const css of cssSources) {
-        const root = postcss.parse(css);
-
-        root.walkDecls((decl) => {
-            if (ANIMATION_PROPERTIES.has(decl.prop) && decl.value !== 'none') {
-                hasAnimations = true;
-            }
-        });
-
-        root.walkAtRules('media', (atRule) => {
-            if (atRule.params.includes('prefers-reduced-motion')) {
-                hasReducedMotion = true;
-            }
-        });
-    }
-
-    if (hasAnimations && !hasReducedMotion) {
-        findings.push({
-            severity: 'warning',
-            message:
-                'Page uses transitions/animations but has no @media (prefers-reduced-motion) override',
-            suggestion:
-                'Add @media (prefers-reduced-motion: reduce) { * { transition-duration: 0s !important; animation-duration: 0s !important; } }. ' +
-                'If intentional, suppress with design-system: { allow-no-reduced-motion: true } in <script type="application/jay-validations">. ' +
-                'See agent-kit/designer/validation-guide.md',
-        });
-    }
-}

@@ -42,7 +42,7 @@
 
     /* Carousel styles */
     .carousel { position: relative; }
-    .carousel-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth; gap: 12px; padding: 8px 0; scrollbar-width: none; }
+    .carousel-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; padding: 8px 0; scrollbar-width: none; }
     .carousel-track::-webkit-scrollbar { display: none; }
     .slide { scroll-snap-align: start; flex: 0 0 calc(33.33% - 8px); background: #f5f5f5; border-radius: 8px; padding: 40px 20px; text-align: center; font-size: 18px; }
     .carousel-btn { position: absolute; top: 50%; transform: translateY(-50%); background: white; border: 1px solid #ccc; border-radius: 50%; width: 36px; height: 36px; font-size: 20px; cursor: pointer; z-index: 1; }
@@ -81,7 +81,7 @@
     .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
     .switch input { opacity: 0; width: 0; height: 0; }
     .slider { position: absolute; inset: 0; background: #ccc; border-radius: 24px; cursor: pointer; transition: background 0.2s; }
-    .slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: transform 0.2s; }
+    .slider::before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; bottom: 3px; background: white; border-radius: 50%; }
     input:checked + .slider { background: #4caf50; }
     input:checked + .slider::before { transform: translateX(20px); }
     .switch-row { display: flex; align-items: center; gap: 12px; cursor: pointer; margin: 8px 0; }
@@ -92,8 +92,16 @@
     .word-demo .word:nth-child(even) { color: #2196f3; }
 
     /* Letter Split */
-    .letter-demo .letter { display: inline-block; transition: transform 0.2s, color 0.2s; }
-    .letter-demo .letter:hover { transform: translateY(-4px) scale(1.3); color: #e91e63; }
+    .letter-demo .letter { display: inline-block; transition: color 0.2s; }
+    .letter-demo .letter:hover { color: #e91e63; }
+
+    /* Movement only for users who did not ask for reduced motion (DL#238). Fades stay above. */
+    @media (prefers-reduced-motion: no-preference) {
+      .carousel-track { scroll-behavior: smooth; }
+      .slider::before { transition: transform 0.2s; }
+      .letter-demo .letter { transition: transform 0.2s, color 0.2s; }
+      .letter-demo .letter:hover { transform: translateY(-4px) scale(1.3); }
+    }
   </style>
   <script type="application/jay-data" contract="./page.jay-contract"></script>
   <title>UI Kit Demo — Fake Shop</title>

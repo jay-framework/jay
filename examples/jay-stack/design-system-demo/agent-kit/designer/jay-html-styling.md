@@ -19,12 +19,13 @@ Add `<style>` blocks in `<head>`:
 </head>
 ```
 
-## Styling a design-system region (`@scope` + `:scope`)
+## Styling a design-system region (`@scope`)
 
 CSS for a `<jay:X>` **design-system element** (a region with `template=` provenance) is not written as plain
-page rules — it lives in an `@scope (.<ref>)` block, and the component's own root rule must target `:scope`,
-not its block class (inside `@scope`, a class selector matches descendants of the scope root only). This has
-its own rules and is covered in full in
+page rules — it lives in an `@scope (.<ref>)` block keyed by the region's `ref`. Inside that block you write
+the component's **plain class rules** exactly as authored in the template (`.ds-card { … }`); the compiler
+synthesizes a `display:contents` scope-anchor so `.<ref>` has something to match — you never write it or use
+`:scope`. This has its own rules and is covered in full in
 [design-system-guide.md → The shape of a region's CSS](design-system-guide.md#the-shape-of-a-regions-css).
 The plain-`<style>` patterns on this page apply to ordinary page markup.
 

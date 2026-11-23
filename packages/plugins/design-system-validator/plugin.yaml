@@ -55,3 +55,12 @@ validators:
   - name: design-viewport-height
     handler: validateViewportHeight
     description: Flags unbounded viewport-height units (vh/svh/lvh/dvh/vmax) on top-level containers that distort Googlebot's tall-viewport render (Search Console screenshots / mobile-usability)
+
+  - name: design-reduced-motion
+    handler: validateReducedMotion
+    description: Flags page motion that ignores prefers-reduced-motion (ungated transforms, smooth scroll, scroll-driven animations, view transitions) and the blanket "*" reset (DL#238)
+
+projectValidators:
+  - name: reduced-motion-js
+    handler: validateReducedMotionJs
+    description: Flags src files that call scroll*({ behavior 'smooth' }) or element.animate() without checking prefers-reduced-motion (DL#238)

@@ -33,19 +33,35 @@ interface JayFetchHandlerOptions {
   // Pre-imported modules — for bundled entry.mjs (DL#143)
   plugins?: PreImportedPlugin[];
   actionModules?: Array<{ module: Record<string, unknown>; name: string }>;
+
+  actionBodyLimitBytes?: number; // JSON action body cap in bytes (default 1 MiB) → 413 over it
 }
 ```
 
-| Option          | Required | Description                                                                                                                          |
-| --------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `backendDir`    | \*       | Path to the backend build directory. Creates a `FilesystemArtifactStore` internally                                                  |
-| `artifactStore` | \*       | Custom `ArtifactStore` implementation (e.g., cloud storage). Use instead of `backendDir`                                             |
-| `staticBaseUrl` | No       | URL prefix for import maps, CSS links, and client bundles. Set to your CDN URL for external hosting. Default: `/`                    |
-| `frontendDir`   | No       | When provided, the handler serves static files from this directory. Omit for CDN deployments where static files are hosted elsewhere |
-| `plugins`       | No       | Pre-imported plugin init modules. Bypasses filesystem discovery — use for bundled deployments                                        |
-| `actionModules` | No       | Pre-imported action modules. Bypasses filesystem discovery — use for bundled deployments                                             |
+| Option                 | Required | Description                                                                                                                          |
+| ---------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `backendDir`           | \*       | Path to the backend build directory. Creates a `FilesystemArtifactStore` internally                                                  |
+| `artifactStore`        | \*       | Custom `ArtifactStore` implementation (e.g., cloud storage). Use instead of `backendDir`                                             |
+| `staticBaseUrl`        | No       | URL prefix for import maps, CSS links, and client bundles. Set to your CDN URL for external hosting. Default: `/`                    |
+| `frontendDir`          | No       | When provided, the handler serves static files from this directory. Omit for CDN deployments where static files are hosted elsewhere |
+| `plugins`              | No       | Pre-imported plugin init modules. Bypasses filesystem discovery — use for bundled deployments                                        |
+| `actionModules`        | No       | Pre-imported action modules. Bypasses filesystem discovery — use for bundled deployments                                             |
+| `actionBodyLimitBytes` | No       | Cap on a JSON action request body in UTF-8 bytes. Default 1 MiB; over it → 413 `PAYLOAD_TOO_LARGE`                                   |
 
 \* One of `backendDir` or `artifactStore` is required.
+
+The handler does not read `.jay`. To honour the project's `server.actionBodyLimitBytes`, resolve it at bootstrap:
+
+```typescript
+import { loadConfig, resolveActionBodyLimitBytes } from '@jay-framework/stack-cli';
+
+const handler = createJayFetchHandler({
+  backendDir,
+  actionBodyLimitBytes: resolveActionBodyLimitBytes(loadConfig(projectRoot)),
+});
+```
+
+In production, non-`ActionError` failures return `'Internal server error'`; the original message and stack are logged via the server logger.
 
 ## Usage — Self-Hosted
 
@@ -106,8 +122,29 @@ interface ArtifactStore {
   loadModule(modulePath: string, local?: boolean): Promise<any>;
   getAssetPath(relativePath: string): string;
   getBuildDir(): string;
+
+  // Instances — the manifest holds routes only; the store owns the instance index
+  getInstance(
+    route: RouteEntry,
+    params: Record<string, string>,
+  ): Promise<InstanceEntry | undefined>;
+  listInstances(route: RouteEntry, options?: { fresh?: boolean }): AsyncIterable<InstanceRef>;
+
+  // Optional — implement to enable stale refresh and render-on-miss (omit for a read-only store)
+  writeCacheData?(
+    route: RouteEntry,
+    params: Record<string, string>,
+    entry: CacheEntry,
+  ): Promise<void>;
+  removeInstance?(route: RouteEntry, params: Record<string, string>): Promise<void>;
+  readCacheDataFresh?(relativePath: string): Promise<CacheEntry>;
 }
 ```
+
+- `readCacheData` must throw `CacheNotFoundError` (exported from `/serve`) when the instance has no data.
+- `getInstance` returns `undefined` only for a real "does not exist" — other errors must throw (they are not a 404).
+- `writeCacheData` upserts the data at the path derived by `deriveCachePath(route.pattern, params)` and keeps the index consistent (the item itself is the index entry). Race handling should be idempotent (adopt a concurrent winner), not a lock.
+- `listInstances` may serve a TTL-cached listing (`SwrCache`, default 10 minutes); `fresh: true` re-reads. Page through the backend's own page-size limit.
 
 `loadModule` handles all module loading — server elements, page components, headless components. The `local` flag indicates whether the path is relative to the build directory (`true`) or an npm package (`false`). For filesystem deployments, local modules resolve from `basePath` and npm modules use bare `import()`. BaaS implementations resolve all modules from their pre-bundled registry, ignoring the `local` flag.
 

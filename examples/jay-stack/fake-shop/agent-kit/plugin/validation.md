@@ -1,5 +1,12 @@
 # Plugin Validation
 
+Two separate validation commands:
+
+- **`jay-stack validate-plugin`** — validates your plugin's own structure (run during plugin development)
+- **`jay-stack validate`** — validates a project's jay-html files, including running your plugin's custom validators (run from a project that uses your plugin)
+
+## validate-plugin
+
 Run `jay-stack validate-plugin` to check your plugin for errors.
 
 ## Usage
@@ -35,6 +42,33 @@ jay-stack validate-plugin -v
 - Contract files referenced in `plugin.yaml` exist
 - Component export names are valid strings (not file paths)
 - Action metadata files (`.jay-action`) exist
+- Each `routes[].jayHtml` file **parses and compiles** (same generate stage as `jay-stack validate` — catches invalid template expressions before the dev server)
+
+During plugin development, also compile-check **source** templates (paths under `lib/`, not only `dist/`):
+
+```bash
+jay-stack validate -p lib/pages/my-route --compile-only
+```
+
+`--compile-only` skips project rules (broken links, DOM lint, design system) so it is safe inside a plugin package `validate` script alongside `validate-plugin`.
+
+### Capability-aware structure
+
+`validate-plugin` derives required exports from the capabilities the plugin declares (see the
+capability matrix in [plugin-structure.md](plugin-structure.md)):
+
+- **≥1 capability** — a plugin declaring none is warned (a `global: true` plugin counts iff it exports
+  a resolvable `init`/`setup` handler).
+- **`./tools` required** iff any tools capability (`validators`, `commands`, `agentkit`, `setup`) or a
+  `devOnly` action is declared — those handlers load only from `./tools`. Validator/setup/agentkit
+  handler names are checked against the **`./tools`** entry, not `.`.
+- **`./client` required** iff a component has an interactive phase (detected by scanning the built
+  server `.` bundle for the interactive mark) or `contexts` is declared. Server-only and tools-only
+  plugins need no `./client`.
+- **Leak scan** — the serve entry `dist/index.js` must contain no `@jay-framework/compiler-` import.
+  A compiler-using handler re-exported from `index.ts` fails this check; move it to `lib/tools.ts`.
+- **`devOnly`** — `actions[].devOnly` / `routes[].devOnly` must be booleans; a `devOnly` action
+  requires the `./tools` export.
 
 ### Type Generation
 
@@ -99,3 +133,157 @@ component: ./lib/components/product-page.ts
 # Right
 component: productPage
 ```
+
+## Head Tags Declaration
+
+If your component provides head tags dynamically (via `phaseOutput({ headTags })`), declare them in `plugin.yaml` so validators don't warn about missing tags on pages using your component:
+
+```yaml
+contracts:
+  - name: product-page
+    contract: product-page.jay-contract
+    component: productPage
+    headTags:
+      - title
+      - meta:description
+      - link:canonical
+```
+
+Values: `title`, `meta:<name>` (e.g., `meta:description`), `link:<rel>` (e.g., `link:canonical`).
+
+Validators access this via `ctx.headlessImports[].providedHeadTags`.
+
+## Plugin Validators (jay-stack validate)
+
+Plugins can provide custom jay-html validation rules that run during `jay-stack validate` in projects that use your plugin. Declare validators in `plugin.yaml`:
+
+```yaml
+validators:
+  - name: media-optimization
+    handler: validateMediaOptimization # export name from the ./tools entry
+    description: Ensures media URLs use resize parameters
+```
+
+**Handler format:**
+
+- **NPM plugins** — `handler` is an export name from the **`./tools`** entry (e.g., `validateMediaOptimization`). The function must be exported from `lib/tools.ts`. **Never re-export a validator from `lib/index.ts`** — validators use compiler APIs (`walkElements`, `parseTemplateParts`, …), and re-exporting from the serve entry pulls the compiler into the production bundle (caught by the leak scan).
+- **Local plugins** (`src/plugins/`) — `handler` is a relative path to the module (e.g., `./validators/media-validator`). The module must export a `validate` function.
+
+`jay-stack validate-plugin` checks that the handler exists and is correctly exported from `./tools`.
+
+### Writing a Validator
+
+Export the validator function from the **`./tools`** entry (`lib/tools.ts`, for NPM) or from the handler module (for local):
+
+```typescript
+import type { JayHtmlValidatorFn, JayHtmlValidationFinding } from '@jay-framework/compiler-shared';
+
+export const validate: JayHtmlValidatorFn = (ctx) => {
+  const findings: JayHtmlValidationFinding[] = [];
+
+  // ctx.body — parsed DOM tree (HTMLElement from node-html-parser)
+  // ctx.head — parsed <head> metadata (title, meta tags, link tags)
+  // ctx.filePath — relative path to the jay-html file
+  // ctx.contract — page contract (if any), with tags including meta
+  // ctx.headlessImports — headless components used in this file
+  //   .providedHeadTags — head tags the component declares in plugin.yaml
+  // ctx.projectRoot — absolute project root path
+
+  return findings;
+};
+```
+
+Each finding has:
+
+- `severity` — `'error'` (fails validation) or `'warning'`
+- `message` — what's wrong
+- `suggestion` — how to fix it (shown to agents and developers)
+- `element` — (optional) which element
+- `attribute` — (optional) which attribute
+
+### Validator Utilities
+
+- **`parseTemplateParts(value)`** — split `"{url}/v1/fit/w_300/file.jpg"` into binding and static parts (import from `@jay-framework/compiler-jay-html`)
+- **`walkElements(root, ctx, visitor)`** — depth-first traversal tracking data scope through `forEach` and `<jay:component>` boundaries (import from `@jay-framework/compiler-shared`)
+- **`resolveBinding(path, scope)`** — resolve a binding path to its contract tag (including `meta`) (import from `@jay-framework/compiler-shared`)
+
+### Contract Tag `meta`
+
+Contract tags can carry a `meta` field — arbitrary key-value metadata that validators read:
+
+```yaml
+tags:
+  - tag: imageUrl
+    type: data
+    dataType: string
+    meta:
+      vendor: wix-image
+      defaultTransform: w_300,h_200,q_80
+```
+
+Validators use `resolveBinding` to find the tag and inspect `meta`:
+
+```typescript
+import { walkElements, resolveBinding } from '@jay-framework/compiler-shared';
+import { parseTemplateParts } from '@jay-framework/compiler-jay-html';
+
+export const validate: JayHtmlValidatorFn = (ctx) => {
+  const findings: JayHtmlValidationFinding[] = [];
+
+  walkElements(ctx.body, ctx, (el, scope) => {
+    if (el.rawTagName !== 'img') return;
+    const src = el.getAttribute('src');
+    if (!src) return;
+
+    for (const part of parseTemplateParts(src)) {
+      if (part.kind !== 'binding') continue;
+      const resolved = resolveBinding(part.value, scope);
+      if (resolved.tag?.meta?.vendor !== 'wix-image') continue;
+
+      findings.push({
+        severity: 'warning',
+        message: `Image binding {${part.value}} may need resize parameters`,
+        suggestion: 'Add /v1/fit/w_{WIDTH},h_{HEIGHT},q_80/file.jpg after the binding',
+      });
+    }
+  });
+
+  return findings;
+};
+```
+
+## Project-Level Validators (DL#232)
+
+A per-file validator sees one jay-html file at a time. A **project-level validator** runs **once per
+project** — for concerns that are not a single file: a config file, a `.well-known` file, a policy
+file, cross-file consistency. Declare them under `projectValidators` (same `./tools` handler rules as
+`validators`):
+
+```yaml
+projectValidators:
+  - name: seo-site
+    handler: validateProject # export name from the ./tools entry
+    description: robots.txt, site identity, and ARD checks
+```
+
+The handler receives only `{ projectRoot }` (and the plugin's own `settings`) — **not** parsed config
+or parsed jay-html. A validator that needs `.jay` config reads it itself via `projectRoot`:
+
+```typescript
+import type { ProjectValidatorFn, ProjectValidationFinding } from '@jay-framework/compiler-shared';
+
+export const validateProject: ProjectValidatorFn = async (ctx) => {
+  const findings: ProjectValidationFinding[] = [];
+  // ctx.projectRoot — absolute project root path
+  // ctx.settings    — the plugin's own settings (optional)
+  return findings;
+};
+```
+
+Each `ProjectValidationFinding` has `severity` (`'error'` | `'warning'`), `file` (project-relative,
+or `.jay`), `message`, and optional `suggestion`. Project validators run **after** the per-file pass
+and are **skipped under `--compile-only`**. Findings surface with `source: plugin:<plugin>/<name>`.
+
+Built-in example: `@jay-framework/seo-validator` ships a `seo-site` project validator (robots.txt,
+`site.baseUrl`, `site.name`, and ARD `/.well-known/ard.json`) — these moved out of core `validate`
+into the plugin via this hook (DL#232), so a project only gets them when it installs seo-validator.

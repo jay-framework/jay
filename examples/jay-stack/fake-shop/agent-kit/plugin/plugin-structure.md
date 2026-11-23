@@ -2,6 +2,53 @@
 
 A plugin provides headless components, contracts, and actions. It can be a standalone npm package or inline within a project.
 
+## Capabilities & the runtime/tools split
+
+A plugin package runs code in two very different phases, and they must **not** share one module graph:
+
+- **Serve-time (runtime)** — headless components, production routes, **server actions**, the client
+  bundle, global `init`. Loaded on the production request path. **Must stay compiler-free** — the
+  serve bundle ships to production.
+- **Tools-time** — validators, **CLI commands**, agent-kit generators, `setup` handlers, and
+  `devOnly` route components/actions. Run only under the Jay toolchain (`jay-stack
+validate`/`agent-kit`/`setup`/`run`, dev server). These **may** use the compiler.
+
+**Actions vs commands** — the load-bearing distinction:
+
+- **Actions** are the _serving_ primitive: request-time handlers that run in production. They live on
+  the `.` entry and **must be compiler-free**.
+- **CLI commands** are the _tools_ primitive: invoked under the toolchain. They live on `./tools` and
+  **may use the compiler**.
+
+Rule of thumb: **if a handler needs the compiler, it is a command (or a `devOnly` action), not a
+regular action.**
+
+### Capability → required export
+
+Derive a plugin's required `package.json` exports from the capabilities it declares:
+
+| Capability (plugin.yaml)    | Needs `./client`?          | Handler/export loaded from      |
+| --------------------------- | -------------------------- | ------------------------------- |
+| `contracts`                 | only if interactive phase  | `.` (+ `./<contract>` per item) |
+| `dynamic_contracts`         | only if interactive phase  | `.`                             |
+| `routes`                    | only if interactive phase  | `.` (or `./tools` if `devOnly`) |
+| `contexts`                  | ✅ always (client by def.) | `.`, `./client`                 |
+| `actions`                   | ❌                         | `.` (or `./tools` if `devOnly`) |
+| `services`, `init` / global | ❌                         | `.`                             |
+| `validators`                | ❌                         | **`./tools`**                   |
+| `commands`                  | ❌                         | **`./tools`**                   |
+| `agentkit` / `setup`        | ❌                         | **`./tools`**                   |
+
+Rules `jay-stack validate-plugin` enforces:
+
+- **≥1 capability.** A plugin declaring none is flagged (a `global: true` plugin counts iff it exports
+  a resolvable `init`/`setup` handler).
+- **`./tools` required** iff any tools capability (`validators`, `commands`, `agentkit`, `setup`) or a
+  `devOnly` action is declared.
+- **`./client` required** iff a provided component has an interactive phase, or `contexts` is declared.
+  Server-only and tools-only plugins need no `./client`.
+- **Leak scan:** `dist/index.js` (the `.` entry) must contain no `@jay-framework/compiler-` import.
+
 ## plugin.yaml
 
 The plugin manifest declares all contracts, actions, services, contexts, and configuration:
@@ -55,12 +102,20 @@ routes:
     component: ./pages/admin/page.ts
     description: Admin dashboard with product stats
 
-setup:
-  handler: setup-handler
-  references: references-handler
-  configTemplate:
-    - source: templates/config.yaml
-      target: my-plugin.yaml
+commands:
+  - name: upload-public
+    command: commands/upload-public.jay-command
+  - name: sync-catalog
+    command: commands/sync-catalog.jay-command
+
+validators:
+  - name: media-optimization
+    handler: validateMediaOptimization
+    description: Ensures media URLs use resize parameters
+
+setup: setup-handler
+agentkit: agentkit-handler
+description: Configure My Plugin
 ```
 
 ### Contract Entry Fields
@@ -117,6 +172,10 @@ tags:
 
 - `name` — Action name (used with `jay-stack action <plugin>/<action>`)
 - `action` — Path to `.jay-action` metadata file
+- `devOnly` — (optional, boolean) When `true`, the action's handler lives in `./tools` (compiler
+  allowed), is served by the dev server, and is **excluded from production builds**. Use for
+  settings-page / admin handlers. A non-`devOnly` action's handler must be compiler-free on `.`. See
+  [plugin-routes.md](plugin-routes.md) for the settings-page pattern.
 
 ### Webhook Entry Fields
 
@@ -169,14 +228,42 @@ services:
 - `css` — (optional) Path to the page's CSS file
 - `component` — Path to the page component (relative to plugin root, or exported member name for NPM)
 - `description` — What this page does
+- `devOnly` — (optional, boolean) When `true`, the route is dev-server tooling (e.g. a settings UI):
+  served by the dev server, **excluded from production builds**. A `devOnly` route whose page
+  component uses the compiler resolves its component from `./tools`.
 
 Plugin routes are served by the dev server alongside project routes. If a project defines the same route path, the project's page takes precedence.
 
-### Setup Fields
+### Command Entry Fields
 
-- `handler` — Setup handler for `jay-stack setup` (handles config, credentials)
-- `references` — Reference generator for `jay-stack agent-kit` (generates discovery data)
-- `configTemplate` — Config file templates to copy during setup
+- `name` — Command name (used with `jay-stack run <plugin>/<command>`)
+- `command` — (optional) Path to `.jay-command` metadata file (declares description and input schema)
+
+Commands are CLI operations run via `jay-stack run`. Use `makeCliCommand()` to create handlers with service injection. See [commands-guide.md](commands-guide.md).
+
+### Validator Entry Fields
+
+- `name` — Validator name (shown in validation output as `plugin-name/validator-name`)
+- `handler` — Export name (NPM plugins) or relative path (local plugins) to the validator function
+- `description` — (optional) What this validator checks
+
+**NPM plugins:** `handler` is the export name from the **`./tools`** entry (e.g., `validateMediaOptimization`). The function must be exported from `lib/tools.ts` — **never re-export a validator (or any compiler-using handler) from `lib/index.ts`**, or the compiler leaks into the serve bundle.  
+**Local plugins:** `handler` is a relative path to the module (e.g., `./validators/media-validator`). The module must export a `validate` function.
+
+Validators run during `jay-stack validate` against every parsed jay-html file in the project. See [validation.md](validation.md) for implementation details.
+
+### Setup and agent-kit fields
+
+- `setup` — Export name (NPM) or relative path (local) for `jay-stack setup <plugin>`. Creates config files, validates credentials and services.
+- `agentkit` — Export name (NPM) or relative path (local) for `jay-stack agent-kit`. Generates discovery data: add-menu catalogs, reference files, skills, thumbnails.
+- `description` — (optional, top-level) Human-readable description of what setup validates
+
+**NPM plugins:** `setup` and `agentkit` are export names from the **`./tools`** entry (`lib/tools.ts`) — they are tools-time handlers and may use the compiler.  
+**Local plugins:** relative paths to the handler modules.
+
+`jay-stack validate-plugin` checks that declared handlers exist and are correctly exported.
+
+See [setup-guide.md](setup-guide.md) for implementation details.
 
 ## Package Layout
 
@@ -193,8 +280,12 @@ my-plugin/
 │   ├── actions/
 │   │   ├── search-products.jay-action
 │   │   └── add-to-cart.jay-action
+│   ├── commands/
+│   │   └── upload-public.jay-command
 │   ├── webhooks/
 │   │   └── on-product-change.ts
+│   ├── validators/
+│   │   └── media-validator.ts
 │   ├── components/
 │   │   ├── product-page.ts
 │   │   └── product-search.ts
@@ -226,21 +317,29 @@ my-project/
 
 See `examples/jay-stack/fake-shop` for a working example.
 
-## Dual Entry Points
+## Entry Points
 
-Jay plugins are fullstack — they run on both server and client. The build produces two bundles:
+Jay plugins run in three contexts. The build produces up to three bundles:
 
-- **Server** (`dist/index.js`) — actions, services, SSR rendering, `init()`. Built with `vite build --ssr`.
-- **Client** (`dist/index.client.js`) — components for hydration, context tokens, `init()`. Built with `vite build`.
+- **Server / serve** (`dist/index.js`, `.`) — actions, services, SSR rendering, `init()`. Loaded on
+  the production request path. **Compiler-free.** Built with `vite build --ssr`.
+- **Client** (`dist/index.client.js`, `./client`) — components for hydration, context tokens,
+  `init()`. Built with `vite build`.
+- **Tools** (`dist/tools.js`, `./tools`) — validators, commands, agent-kit/setup handlers, and any
+  `devOnly` route component/action. **Compiler-allowed** (toolchain-only, never in a serve bundle).
+  Built alongside the server bundle (`vite build --ssr`).
 
-Create two entry files:
+Create the entry files:
 
-| File                  | Exports                                                    |
-| --------------------- | ---------------------------------------------------------- |
-| `lib/index.ts`        | Actions, services, components (SSR), init, service markers |
-| `lib/index.client.ts` | Components (hydration), context markers, init              |
+| File                  | Exports                                                                                                |
+| --------------------- | ------------------------------------------------------------------------------------------------------ |
+| `lib/index.ts`        | Actions, services, components (SSR), init, service markers — **compiler-free**                         |
+| `lib/index.client.ts` | Components (hydration), context markers, init                                                          |
+| `lib/tools.ts`        | Validators, commands, agent-kit/setup handlers, `devOnly` route components + actions — **compiler OK** |
 
-Actions and service providers are server-only. Components appear in **both** entries.
+Actions and service providers are server-only. Components appear in **both** `index.ts` and
+`index.client.ts`. **`index.ts` must never import `tools.ts`** — that is what keeps the compiler out of
+the serve bundle. A validator-only or tools-only plugin may have a near-empty `index.ts`.
 
 ## Build Scripts
 
@@ -252,7 +351,7 @@ Actions and service providers are server-only. Components appear in **both** ent
     "build:client": "vite build",
     "build:server": "vite build --ssr",
     "build:copy-assets": "cp lib/*.jay-contract* dist/",
-    "build:types": "tsup lib/index.ts lib/index.client.ts --dts-only --format esm",
+    "build:types": "tsup lib/index.ts lib/index.client.ts lib/tools.ts --dts-only --format esm",
     "validate": "jay-stack-cli validate-plugin",
     "clean": "rimraf dist"
   }
@@ -276,7 +375,12 @@ export default defineConfig(({ isSsrBuild }) => ({
     emptyOutDir: false,
     lib: {
       entry: isSsrBuild
-        ? { index: resolve(__dirname, 'lib/index.ts') }
+        ? {
+            index: resolve(__dirname, 'lib/index.ts'),
+            // Tools entry (compiler-allowed, toolchain-only). Omit if the plugin has no
+            // validators/commands/agentkit/setup/devOnly surfaces.
+            tools: resolve(__dirname, 'lib/tools.ts'),
+          }
         : { 'index.client': resolve(__dirname, 'lib/index.client.ts') },
       formats: ['es'],
     },
@@ -288,6 +392,9 @@ export default defineConfig(({ isSsrBuild }) => ({
         '@jay-framework/stack-server-runtime',
         '@jay-framework/reactive',
         '@jay-framework/runtime',
+        // Externalize the compiler namespace: any leak into `.` then shows up as a literal
+        // import string in dist/index.js, which validate-plugin's leak scan catches.
+        /^@jay-framework\/compiler-/,
       ],
     },
   },
@@ -312,6 +419,10 @@ For NPM packages, declare exports for both server and client entry points:
       "types": "./dist/index.client.d.ts",
       "default": "./dist/index.client.js"
     },
+    "./tools": {
+      "types": "./dist/tools.d.ts",
+      "default": "./dist/tools.js"
+    },
     "./plugin.yaml": "./plugin.yaml",
     "./my-contract.jay-contract": "./dist/my-contract.jay-contract"
   },
@@ -319,7 +430,19 @@ For NPM packages, declare exports for both server and client entry points:
 }
 ```
 
-The `./client` export is required — the framework uses it for browser-side hydration code. The `.` export handles server-side rendering and action execution.
+- The `.` export handles server-side rendering and action execution — it must be **compiler-free**.
+- The `./client` export is required **only** when a component has an interactive phase or the plugin
+  declares `contexts` (browser-side hydration / client contexts).
+- The `./tools` export is required **only** when the plugin declares a tools capability (`validators`,
+  `commands`, `agentkit`, `setup`) or a `devOnly` action — those handlers load exclusively from
+  `./tools`.
+
+### compiler-\* dependencies
+
+If `./tools` uses the compiler (`@jay-framework/compiler-jay-html`, `compiler-shared`), declare those
+packages as **`peerDependencies`** (provided by the toolchain at tools time) plus **`devDependencies`**
+(so the plugin's own build/test resolve them). Never put them in `dependencies` — that would pull the
+compiler into runtime installs.
 
 ## Plugin-Contributed Agent-Kit Guides
 

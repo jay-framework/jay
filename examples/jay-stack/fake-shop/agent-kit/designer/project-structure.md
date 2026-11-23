@@ -14,7 +14,7 @@ my-project/
 │   ├── project.conf.yaml       # Project metadata (name, etc.)
 │   └── <plugin-name>.yaml      # Plugin-specific config files
 ├── src/
-│   ├── components/              # Headfull full-stack components (shared across pages)
+│   ├── components/              # Shared full-stack components, headless (shared across pages)
 │   │   └── site-header/
 │   │       ├── site-header.ts
 │   │       ├── site-header.jay-html

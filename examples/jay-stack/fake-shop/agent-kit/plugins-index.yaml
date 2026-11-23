@@ -68,6 +68,20 @@ plugins:
   - name: a11y-validator
     path: ./../../../packages/plugins/a11y-validator
     contracts: []
+  - name: design-system-validator
+    path: ./../../../packages/plugins/design-system-validator
+    contracts: []
+    actions:
+      - name: fontFallback
+        description: >
+          Generate a metric-matched fallback @font-face for a web font to
+          prevent layout shift (CLS). Uses pre-computed metrics from
+          @capsizecss/metrics for known Google and system fonts.
+        path: ./../../../packages/plugins/design-system-validator/dist/actions/font-fallback.jay-action
+    routes:
+      - path: /design-system/settings
+        description: Design system project settings — token overview, analysis report,
+          add-menu regeneration
   - name: seo-validator
     path: ./../../../packages/plugins/seo-validator
     contracts: []

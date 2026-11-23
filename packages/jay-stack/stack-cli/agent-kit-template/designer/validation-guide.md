@@ -133,7 +133,11 @@ Multiple plugins can be configured in one tag:
 
 Design-system suppression keys include `allow-undefined-vars`, `allow-viewport-height` (top-level
 viewport-height containers — see `jay-html-styling.md`), `allow-custom-breakpoints`,
-`allow-no-reduced-motion`, and `allow-font-no-fallback`.
+`allow-no-reduced-motion`, and `allow-font-no-fallback`. With `@jay-framework/design-system-validator`
+installed, the reduced-motion rules add `allow-blanket-motion-reset`, `allow-smooth-scroll`,
+`allow-scroll-animation`, `allow-view-transition` and `allow-transform-under-reduce`
+(see that plugin's `reduced-motion.md`). `allow-no-reduced-motion` now silences only
+`reduced-motion/missing`: a page that moves elements and has no `prefers-reduced-motion` block at all.
 
 ### Prefer-design-system-elements warnings (jay-stack namespace)
 
