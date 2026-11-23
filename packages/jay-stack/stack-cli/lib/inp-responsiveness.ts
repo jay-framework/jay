@@ -43,10 +43,12 @@ export function checkInpResponsiveness(jayHtmlPath: string): string[] {
 /** INP warnings for a component source; only the `.withInteractive(...)` constructor is scanned. */
 export function findInpWarnings(source: string, componentFileName: string): string[] {
     const masked = maskSource(source);
-    const span = findInteractiveSpan(masked);
-    if (!span) return [];
     const rawLines = source.split('\n');
-    return [...findBlockingDialogs(masked, span), ...findZeroTimeouts(masked, span)]
+    const findings = findInteractiveSpans(masked).flatMap((span) => [
+        ...findBlockingDialogs(masked, span),
+        ...findZeroTimeouts(masked, span),
+    ]);
+    return uniqueByIndex(findings)
         .sort((a, b) => a.index - b.index)
         .map((finding) => ({ ...finding, line: lineNumberAt(masked, finding.index) }))
         .filter((finding) => !rawLines[finding.line - 1].includes(INP_SUPPRESS_COMMENT))
@@ -94,6 +96,11 @@ function findZeroTimeouts(masked: string, span: Span): Finding[] {
         }));
 }
 
+function uniqueByIndex(findings: Finding[]): Finding[] {
+    const seen = new Set<number>();
+    return findings.filter((f) => !seen.has(f.index) && seen.add(f.index));
+}
+
 function matchesInSpan(masked: string, span: Span, pattern: RegExp): RegExpExecArray[] {
     const text = masked.slice(0, span.end);
     const matches: RegExpExecArray[] = [];
@@ -106,32 +113,101 @@ function matchesInSpan(masked: string, span: Span, pattern: RegExp): RegExpExecA
 
 // --- Interactive constructor resolution ---
 
-const WITH_INTERACTIVE = /\.withInteractive\s*\(/;
+const WITH_INTERACTIVE = /\.withInteractive\s*\(/g;
 const IDENTIFIER_ONLY = /^\s*([A-Za-z_$][\w$]*)\s*$/;
 
-/** The source span of the constructor passed to `.withInteractive(...)`, if it can be resolved. */
-export function findInteractiveSpan(masked: string): Span | undefined {
-    const call = WITH_INTERACTIVE.exec(masked);
-    if (!call) return undefined;
-    const openParen = call.index + call[0].length - 1;
-    const closeParen = findClosingBracket(masked, openParen);
-    const argument = masked.slice(openParen + 1, closeParen);
-    const name = IDENTIFIER_ONLY.exec(argument)?.[1];
-    if (!name) return { start: openParen + 1, end: closeParen };
-    return findNamedFunctionSpan(masked, name);
+/**
+ * The source spans of the constructors passed to every `.withInteractive(...)` call.
+ * An inline argument is its own span; a bare name is resolved to a function or const in the file.
+ * Unresolvable arguments are skipped.
+ */
+export function findInteractiveSpans(masked: string): Span[] {
+    const spans: Span[] = [];
+    for (const call of masked.matchAll(WITH_INTERACTIVE)) {
+        const openParen = call.index! + call[0].length - 1;
+        const closeParen = findClosingBracket(masked, openParen);
+        const name = IDENTIFIER_ONLY.exec(masked.slice(openParen + 1, closeParen))?.[1];
+        const span = name
+            ? findNamedFunctionSpan(masked, name)
+            : { start: openParen + 1, end: closeParen };
+        if (span) spans.push(span);
+    }
+    return spans;
 }
 
 function findNamedFunctionSpan(masked: string, name: string): Span | undefined {
-    const declaration = new RegExp(
-        `(?:export\\s+)?(?:async\\s+)?function\\s+${name}\\s*[<(]` +
-            `|(?:export\\s+)?(?:const|let|var)\\s+${name}\\s*(?::[^=]+)?=`,
-    ).exec(masked);
-    if (!declaration) return undefined;
-    const paramsOpen = masked.indexOf('(', declaration.index + declaration[0].length - 1);
+    const declaration = new RegExp(`(?:async\\s+)?function\\s+${name}\\s*[<(]`).exec(masked);
+    if (declaration) {
+        const body = findFunctionBody(masked, declaration.index + declaration[0].length - 1);
+        return body && { start: declaration.index, end: body.end };
+    }
+    const variable = new RegExp(`\\b(?:const|let|var)\\s+${name}\\b`).exec(masked);
+    if (!variable) return undefined;
+    const valueStart = findInitializerStart(masked, variable.index + variable[0].length);
+    if (valueStart === undefined) return undefined;
+    const body = findFunctionValueBody(masked, valueStart);
+    return body && { start: variable.index, end: body.end };
+}
+
+/** Index just after the `=` that starts a declaration's value, skipping a type annotation. */
+function findInitializerStart(masked: string, from: number): number | undefined {
+    let depth = 0;
+    for (let i = from; i < masked.length; i++) {
+        const char = masked[i];
+        if ('([{<'.includes(char)) depth++;
+        else if (')]}'.includes(char) || (char === '>' && masked[i - 1] !== '=')) depth--;
+        else if (char === ';') return undefined;
+        else if (char === '=' && depth === 0 && masked[i + 1] !== '>' && masked[i + 1] !== '=')
+            return i + 1;
+    }
+    return undefined;
+}
+
+/** Body of `function (...) {...}` or an arrow, starting at a declaration's value. */
+function findFunctionValueBody(masked: string, valueStart: number): Span | undefined {
+    const value = /^\s*(?:async\s+)?/.exec(masked.slice(valueStart))!;
+    const start = valueStart + value[0].length;
+    if (masked.startsWith('function', start)) return findFunctionBody(masked, start);
+    return findArrowBody(masked, start);
+}
+
+/** From a point before the parameter list: the `{...}` body after the parameters. */
+function findFunctionBody(masked: string, from: number): Span | undefined {
+    const paramsOpen = masked.indexOf('(', from);
     if (paramsOpen < 0) return undefined;
     const bodyOpen = masked.indexOf('{', findClosingBracket(masked, paramsOpen));
     if (bodyOpen < 0) return undefined;
-    return { start: declaration.index, end: findClosingBracket(masked, bodyOpen) };
+    return { start: bodyOpen, end: findClosingBracket(masked, bodyOpen) };
+}
+
+const ARROW_PARAMS = /^(?:\([^]*?\)|[A-Za-z_$][\w$]*)/;
+
+/**
+ * An arrow's body: a `{...}` block, or an expression that ends at the first `;` or line break
+ * outside brackets (or the end of the file).
+ */
+function findArrowBody(masked: string, start: number): Span | undefined {
+    if (!ARROW_PARAMS.test(masked.slice(start))) return undefined;
+    const paramsEnd = masked[start] === '(' ? findClosingBracket(masked, start) + 1 : start;
+    const arrow = masked.indexOf('=>', paramsEnd);
+    if (arrow < 0) return undefined;
+    const bodyStart = arrow + 2 + /^\s*/.exec(masked.slice(arrow + 2))![0].length;
+    if (masked[bodyStart] === '{')
+        return { start: bodyStart, end: findClosingBracket(masked, bodyStart) };
+    return { start: bodyStart, end: findExpressionEnd(masked, bodyStart) };
+}
+
+function findExpressionEnd(masked: string, start: number): number {
+    let depth = 0;
+    for (let i = start; i < masked.length; i++) {
+        const char = masked[i];
+        if ('([{'.includes(char)) depth++;
+        else if (')]}'.includes(char)) {
+            if (depth === 0) return i;
+            depth--;
+        } else if (depth === 0 && (char === ';' || char === '\n')) return i;
+    }
+    return masked.length;
 }
 
 // --- Bracket helpers ---
@@ -176,6 +252,24 @@ function lineNumberAt(text: string, index: number): number {
 /** Chars after which a `/` starts a regex literal rather than a division. */
 const REGEX_PRECEDERS = new Set([...'(,=:[!&|?{};+-*%<>~^']);
 
+/** Keywords after which a `/` starts a regex literal (`return /re/`). */
+const KEYWORDS_BEFORE_EXPRESSION = new Set([
+    'return',
+    'typeof',
+    'instanceof',
+    'in',
+    'of',
+    'new',
+    'delete',
+    'void',
+    'throw',
+    'case',
+    'do',
+    'else',
+    'yield',
+    'await',
+]);
+
 /**
  * Blanks comment, string, template-text and regex-body characters with spaces.
  * Delimiters, template `${...}` code and newlines are kept, so offsets and line numbers match.
@@ -210,8 +304,7 @@ class SourceMasker {
         if (char === '/' && next === '/') return this.blankUntil('\n');
         if (char === '/' && next === '*') return this.blankBlockComment();
         if (char === '"' || char === "'") return this.blankQuoted(char);
-        if (char === '/' && (this.lastCodeChar === '' || REGEX_PRECEDERS.has(this.lastCodeChar)))
-            return this.blankRegex();
+        if (char === '/' && this.slashStartsRegex()) return this.blankRegex();
         if (char === '`') {
             this.inTemplateText = true;
         } else if (char === '{' && this.templateBraceDepths.length) {
@@ -225,6 +318,13 @@ class SourceMasker {
         }
         if (!/\s/.test(char)) this.lastCodeChar = char;
         this.i++;
+    }
+
+    private slashStartsRegex(): boolean {
+        if (this.lastCodeChar === '' || REGEX_PRECEDERS.has(this.lastCodeChar)) return true;
+        const before = this.source.slice(Math.max(0, this.i - 12), this.i);
+        const word = /([A-Za-z_$][\w$]*)\s*$/.exec(before)?.[1];
+        return word !== undefined && KEYWORDS_BEFORE_EXPRESSION.has(word);
     }
 
     private stepTemplateText(): void {

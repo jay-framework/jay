@@ -784,6 +784,23 @@ describe('content-visibility-without-intrinsic-size', () => {
         ]);
     });
 
+    it('matches property names and values case-insensitively', () => {
+        expect(cssFindings('.A{CONTENT-VISIBILITY:AUTO}')).toEqual([expected('.A')]);
+        expect(cssFindings('.a{Content-Visibility:Auto;Contain-Intrinsic-Size:auto 10px}')).toEqual(
+            [],
+        );
+    });
+
+    /** Bug: `auto !important` was not recognised as `auto`, so the rule stayed silent. */
+    it('treats !important values like plain values', () => {
+        expect(cssFindings('.a{content-visibility:auto !important}')).toEqual([expected('.a')]);
+        expect(
+            cssFindings(
+                '.a{content-visibility:auto!important;contain-intrinsic-size:10px !important}',
+            ),
+        ).toEqual([]);
+    });
+
     it('can be suppressed', () => {
         expect(cssFindings('.a{content-visibility:auto}', true)).toEqual([]);
     });

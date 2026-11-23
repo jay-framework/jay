@@ -336,3 +336,19 @@ A temporary fake-shop page (`confirm()`, `setTimeout(…, 0)`, bare `content-vis
 ### Feedback-loop answer
 
 Validation: 3 rules (the fourth is covered by `INLINE-EVENT-HANDLER`). Guide: yes, as listed. Framework feature: none.
+
+### Round-3 review follow-ups
+
+Applied after the first implementation commit; behaviour changes went red first.
+
+| #   | Note                                              | Result                                                                                                                                                                                                                                                               |
+| --- | ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `return /'/` read as a string start               | Bug fixed: a `/` after `return`, `typeof`, `in`, `of`, `new`, `delete`, `void`, `throw`, `case`, `do`, `else`, `yield`, `await`, `instanceof` starts a regex. Reproduction test red → green                                                                          |
+| 2   | `const P: (p) => R = ...` resolved the wrong span | Bug fixed: the initializer `=` is found with a bracket-aware scan that skips the type annotation (ignores the `=` of `=>`). Red → green                                                                                                                              |
+| 3   | End of an expression-bodied arrow                 | Defined: a `{...}` body ends at its matching `}`; an expression body ends at the first `;` or line break outside brackets, or end of file. Two tests (code after it not scanned; multi-line call scanned). Red → green                                               |
+| 4   | Several `.withInteractive(` calls                 | Defined: every call's constructor is scanned; a finding inside overlapping spans is reported once. Red → green                                                                                                                                                       |
+| 5   | CSS case and `!important`                         | Property names and values compare case-insensitively (already true, now tested). `auto !important` now counts as `auto`, and `!important` on `contain-intrinsic-*` still counts as a size. `!important` was a bug: red → green                                       |
+| 6   | "headless inline templates"                       | Only in the dropped `inp/inline-event-handler` Design row, so it is moot. What is actually scanned: the page `.ts` (`<name>.ts` or `page.ts`), only the argument span of each `.withInteractive(...)`; jay-html is not scanned by these rules. The guide states this |
+| 7   | Line numbers after masking                        | Test: multi-line block comment and multi-line template before `confirm(` → reported at the right line (passes; the masker keeps newlines)                                                                                                                            |
+
+Tests after the follow-ups: stack-cli new file 35/35; seo-validator 78/78.

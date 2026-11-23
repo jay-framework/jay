@@ -34,7 +34,11 @@ function declaresAutoWithoutSize(declarations: string): boolean {
         .filter((parts) => parts.length >= 2)
         .map(([name, ...value]) => ({
             name: name.trim().toLowerCase(),
-            value: value.join(':').trim().toLowerCase(),
+            value: value
+                .join(':')
+                .replace(/\s*!important\s*$/i, '')
+                .trim()
+                .toLowerCase(),
         }));
     const hasAuto = properties.some((p) => p.name === 'content-visibility' && p.value === 'auto');
     return hasAuto && !properties.some((p) => INTRINSIC_SIZE_PROPERTY.test(p.name));

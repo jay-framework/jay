@@ -236,3 +236,70 @@ describe('guide pointers', () => {
         }
     });
 });
+
+/** Round-3 review follow-ups (Design Log #244, Implementation Results). */
+describe('round-3 review follow-ups', () => {
+    /**
+     * Bug: `return /'/` was read as division, so `'` opened a string and hid the rest of the line.
+     * Expected: the regex is masked and the confirm( after it is reported.
+     */
+    it('reads a regex after the return keyword as a regex, not a string', () => {
+        const body = ["const isQuote = (s) => { return /'/.test(s) && confirm('x'); };"];
+        expect(findInpWarnings(namedPage(body), 'page.ts')).toEqual([dialogWarning(3, 'confirm')]);
+    });
+
+    /**
+     * Bug: a function-typed const annotation `(p) => R` was cut at the `=` of its `=>`,
+     * so the body was looked up inside the type.
+     */
+    it('resolves a const whose type annotation is a function type', () => {
+        const src = [
+            'const Page: (p: P, r: R) => { render: () => {} } = function (props, refs) {',
+            "    refs.a.onclick(() => confirm('x'));",
+            '    return { render: () => ({}) };',
+            '};',
+            'export const page = makeJayStackComponent().withInteractive(Page);',
+        ].join('\n');
+        expect(findInpWarnings(src, 'page.ts')).toEqual([dialogWarning(2, 'confirm')]);
+    });
+
+    describe('expression-bodied arrow constructor ends at the end of its expression', () => {
+        it('does not scan the code after the expression', () => {
+            const src = [
+                'const Page = (props, refs) => wire(refs);',
+                "function other() { confirm('x'); }",
+                'export const page = makeJayStackComponent().withInteractive(Page);',
+            ].join('\n');
+            expect(findInpWarnings(src, 'page.ts')).toEqual([]);
+        });
+
+        it('scans the whole expression, across lines', () => {
+            const src = [
+                'const Page = (props, refs) =>',
+                "    wire(refs, () => confirm('x'));",
+                "function other() { alert('y'); }",
+                'export const page = makeJayStackComponent().withInteractive(Page);',
+            ].join('\n');
+            expect(findInpWarnings(src, 'page.ts')).toEqual([dialogWarning(2, 'confirm')]);
+        });
+    });
+
+    it('scans the constructor of every .withInteractive( call in the file', () => {
+        const src = [
+            "function A(props, refs) { confirm('a'); }",
+            'function B(props, refs) { setTimeout(r, 0); }',
+            "function C(props, refs) { alert('not interactive'); }",
+            'export const a = makeJayStackComponent().withInteractive(A);',
+            'export const b = makeJayStackComponent().withInteractive(B);',
+        ].join('\n');
+        expect(findInpWarnings(src, 'page.ts')).toEqual([
+            dialogWarning(1, 'confirm'),
+            timeoutWarning(2),
+        ]);
+    });
+
+    it('keeps line numbers right after multi-line comments and templates', () => {
+        const body = ['/* one', '   two */', 'const t = `a', 'b ${x} c', 'd`;', "confirm('x');"];
+        expect(findInpWarnings(namedPage(body), 'page.ts')).toEqual([dialogWarning(8, 'confirm')]);
+    });
+});

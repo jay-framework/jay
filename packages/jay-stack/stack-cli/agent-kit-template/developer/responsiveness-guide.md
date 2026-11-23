@@ -92,6 +92,9 @@ attributes as **INLINE-EVENT-HANDLER**.
 | `content-visibility-without-intrinsic-size` | `content-visibility: auto` without `contain-intrinsic-*` in the same rule | `seo: { allow-content-visibility-without-size: true }` |
 | `INLINE-EVENT-HANDLER`                      | `on*=` attributes in jay-html                                             | see the validation guide                               |
 
-Only the page's interactive constructor is scanned — the function passed to `.withInteractive(...)`,
-inline or by name in the same file. Helpers outside it, constructors imported from another file and
-headless plugin components are **not** scanned. A clean validate does not prove a fast page.
+What is scanned: the page's `.ts` file (`<name>.ts` next to the jay-html, or `page.ts`), and in it
+only the function passed to each `.withInteractive(...)` call — an inline function, or a name
+resolved to a `function` or `const`/`let`/`var` in the same file. An expression-bodied arrow
+(`const Page = (p, refs) => wire(refs)`) ends at the first `;` or line break outside brackets. jay-html
+templates, helpers outside the constructor, constructors imported from another file and headless
+plugin components are **not** scanned. A clean validate does not prove a fast page.
