@@ -620,7 +620,32 @@ const DOCUMENT_ACCESS_PATTERNS = [
 
 const DOM_SUPPRESS_COMMENT = 'jay-dom: allow';
 
-function checkDirectDocumentAccess(jayHtmlPath: string): string[] {
+const A11Y_VALIDATOR_PACKAGE = '@jay-framework/a11y-validator';
+const FOCUS_GUIDE_SUFFIX = ' See agent-kit/designer/focus-and-dialogs.md';
+
+/** DL#239 — TS patterns with their own message; the guide pointer is added only when a11y-validator ships it. */
+const SCROLL_LOCK_PATTERNS: Array<{
+    pattern: RegExp;
+    message: (match: string, guideSuffix: string) => string;
+}> = [
+    {
+        // body-style-overflow
+        pattern: /document\.(body|documentElement)\.style\.overflow\b/,
+        message: (match, guideSuffix) =>
+            `Scroll lock via ${match}. Use <dialog>.showModal() with CSS html:has(dialog:modal) { overflow: hidden }. ` +
+            `Suppress with // ${DOM_SUPPRESS_COMMENT} on the same line.${guideSuffix}`,
+    },
+];
+
+export interface DirectDocumentAccessOptions {
+    /** Whether `@jay-framework/a11y-validator` is installed (its focus guide is then in the agent-kit). */
+    hasA11yValidator: boolean;
+}
+
+export function checkDirectDocumentAccess(
+    jayHtmlPath: string,
+    { hasA11yValidator }: DirectDocumentAccessOptions,
+): string[] {
     const dirname = path.dirname(jayHtmlPath);
     const basename = path.basename(jayHtmlPath, JAY_EXTENSION);
     const candidates = [path.join(dirname, `${basename}.ts`), path.join(dirname, 'page.ts')];
@@ -635,6 +660,7 @@ function checkDirectDocumentAccess(jayHtmlPath: string): string[] {
         return [];
     }
 
+    const guideSuffix = hasA11yValidator ? FOCUS_GUIDE_SUFFIX : '';
     const warnings: string[] = [];
     const lines = content.split('\n');
     for (let i = 0; i < lines.length; i++) {
@@ -648,6 +674,13 @@ function checkDirectDocumentAccess(jayHtmlPath: string): string[] {
                         `Suppress with // ${DOM_SUPPRESS_COMMENT} on the same line. ` +
                         `See agent-kit/developer/component-refs.md`,
                 );
+                break;
+            }
+        }
+        for (const { pattern, message } of SCROLL_LOCK_PATTERNS) {
+            const match = pattern.exec(line);
+            if (match) {
+                warnings.push(`${compName}:${i + 1} — ${message(match[0], guideSuffix)}`);
                 break;
             }
         }
@@ -1804,8 +1837,8 @@ async function runPluginValidators(
     parsedFiles: Array<{ relativePath: string; parsed: JayHtmlSourceFile }>,
     errors: ValidationError[],
     warnings: ValidationWarning[],
+    scannedPlugins: Map<string, ScannedPlugin>,
 ): Promise<string[]> {
-    const scannedPlugins = await scanPlugins({ projectRoot, includeDevDeps: true });
     const loadedValidators: string[] = [];
 
     for (const [, plugin] of scannedPlugins) {
@@ -1930,8 +1963,8 @@ async function runProjectValidators(
     projectRoot: string,
     errors: ValidationError[],
     warnings: ValidationWarning[],
+    scannedPlugins: Map<string, ScannedPlugin>,
 ): Promise<string[]> {
-    const scannedPlugins = await scanPlugins({ projectRoot, includeDevDeps: true });
     const loadedValidators: string[] = [];
 
     for (const [, plugin] of scannedPlugins) {
@@ -1987,6 +2020,11 @@ async function runProjectValidators(
 
 export async function validateJayFiles(options: ValidateOptions = {}): Promise<ValidationResult> {
     const projectRoot = options.projectRoot ?? process.cwd();
+    // One plugin scan per run, shared by the TS scan and both plugin passes (DL#239).
+    const scannedPlugins = await scanPlugins({ projectRoot, includeDevDeps: true });
+    const hasA11yValidator = [...scannedPlugins.values()].some(
+        (p) => p.packageName === A11Y_VALIDATOR_PACKAGE,
+    );
     const config = loadConfig(projectRoot);
     const resolvedConfig = getConfigWithDefaults(config);
 
@@ -2166,7 +2204,7 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
             }
 
             // Check page.ts for direct document access
-            const domWarnings = checkDirectDocumentAccess(jayFile);
+            const domWarnings = checkDirectDocumentAccess(jayFile, { hasA11yValidator });
             for (const msg of domWarnings) {
                 warnings.push({ file: relativePath, message: msg });
             }
@@ -2605,10 +2643,21 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
     }
 
     // --- Plugin validators (DL#145) ---
-    const pluginValidators = await runPluginValidators(projectRoot, parsedFiles, errors, warnings);
+    const pluginValidators = await runPluginValidators(
+        projectRoot,
+        parsedFiles,
+        errors,
+        warnings,
+        scannedPlugins,
+    );
 
     // --- Project-level plugin validators (DL#232) ---
-    const projectValidators = await runProjectValidators(projectRoot, errors, warnings);
+    const projectValidators = await runProjectValidators(
+        projectRoot,
+        errors,
+        warnings,
+        scannedPlugins,
+    );
 
     return {
         valid: errors.length === 0,

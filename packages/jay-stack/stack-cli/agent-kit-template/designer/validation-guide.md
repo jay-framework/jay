@@ -19,6 +19,7 @@ The validator processes each `.jay-html` file with:
 - **Headless component tags** — `<jay:product-widget>` inline templates are visible
 - **Linked CSS files** — `<link rel="stylesheet" href="...">` referenced from `<head>` are read and validated (e.g., for CSS `@import` of external URLs)
 - **Inline `<style>` blocks** — CSS in `<head>` is parsed for rule violations
+- **Body `<style>` blocks** — the a11y focus rules also read `<style>` elements inside `<body>` (their findings start with `[style#N line L]`)
 
 So a warning about an `<img>` might come from a full-stack component's template, not your page template. A CSS warning might come from a linked stylesheet.
 
@@ -87,6 +88,21 @@ Your page has no large images in the template. Small icons (under 200px) don't n
 ### Warnings on component files
 
 Components are fragments — they don't need `<h1>`, `<main>`, `<title>`, or `<meta>`. These page-level rules are skipped for files in `src/components/`. If you still see them, check the file path.
+
+### Form findings (a11y)
+
+Form findings (`[a11y/…]`) → `agent-kit/designer/forms-and-autofill.md` (present when a11y-validator is installed).
+
+### Focus and dialog warnings (a11y)
+
+When `@jay-framework/a11y-validator` is installed, these warnings point to `agent-kit/designer/focus-and-dialogs.md`. Suppress one per page with `a11y: { allow-<rule-id>: true }`:
+
+- `custom-modal` — `aria-modal` / `role="dialog"` on a non-`<dialog>`; use `<dialog>` + `showModal()`.
+- `dialog-name` — `<dialog>` without `aria-labelledby` / `aria-label`.
+- `outline-without-focus-visible` — a `:focus` rule hides the outline with no `:focus-visible` replacement.
+- `outline-none-unconditional` — `outline: none` on focusable elements with no `:focus` scoping (CSS or inline `style`).
+- `autofocus-outside-dialog` — page-load `autofocus` outside a `<dialog>` / `[popover]`.
+- `body-style-overflow` — `document.body.style.overflow` in `page.ts`; lock scroll with `html:has(dialog:modal) { overflow: hidden }`. Suppress with `// jay-dom: allow`. This core warning names `focus-and-dialogs.md` only when a11y-validator is installed (the guide ships with it); otherwise it has no guide pointer.
 
 ## Suppressing Warnings
 

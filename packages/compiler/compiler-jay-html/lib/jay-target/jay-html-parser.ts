@@ -1083,7 +1083,12 @@ function parseHeadMeta(root: HTMLElement): JayHtmlHeadMeta | undefined {
         links.push({ rel, href: toParts(hrefRaw), ...extraAttrs });
     }
 
-    return { title, meta, links };
+    const styles = head
+        .querySelectorAll('style')
+        .map((el) => el.text.trim())
+        .filter((text) => text !== '');
+
+    return { title, meta, links, styles };
 }
 
 function parseValidationOverrides(
@@ -1124,7 +1129,9 @@ function resolveNestedCssImports(css: string, cssDir: string, visited?: Set<stri
         seen.add(resolved);
         try {
             const imported = fsSync.readFileSync(resolved, 'utf-8');
-            return `/* @import ${importPath} */\n${resolveNestedCssImports(imported, path.dirname(resolved), seen)}`;
+            // DL#240: start and end markers, so validators can name the file each rule came from.
+            const inlined = resolveNestedCssImports(imported, path.dirname(resolved), seen);
+            return `/* jay:@import ${importPath} */\n${inlined}\n/* jay:end-@import ${importPath} */`;
         } catch {
             return `/* @import not found: ${importPath} */`;
         }
@@ -1181,7 +1188,7 @@ async function extractCss(
     for (const style of styleTags) {
         const cssContent = style.text.trim();
         if (cssContent) {
-            cssParts.push(cssContent);
+            cssParts.push(`/* jay:head-style */\n${cssContent}`);
         }
     }
 

@@ -1,0 +1,33 @@
+<html>
+<head>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+  <script type="application/jay-validations">
+    jay-stack:
+      allow-no-design-system: true
+  </script>
+  <title>Good modal</title>
+</head>
+<body>
+  <div class="app">
+    <h1>Shop</h1>
+    <button type="button" class="btn" ref="openCart">Open cart</button>
+    <dialog ref="cart" aria-labelledby="cart-title">
+      <h2 id="cart-title">Cart</h2>
+      <button type="button" class="btn" ref="closeCart">Close</button>
+    </dialog>
+    <style>
+      .app { background: #ffffff; color: #111111; min-height: 200vh }
+      .btn:focus-visible { outline: 2px solid #1a56db; outline-offset: 2px }
+      html:has(dialog:modal) { overflow: hidden }
+      dialog { transition: opacity .2s, display .2s allow-discrete, overlay .2s allow-discrete; opacity: 0 }
+      dialog[open] { opacity: 1 }
+      dialog::backdrop { transition: background-color .2s, display .2s allow-discrete, overlay .2s allow-discrete; background-color: transparent }
+      dialog[open]::backdrop { background-color: rgb(0 0 0 / .4) }
+      @starting-style {
+        dialog[open] { opacity: 0 }
+        dialog[open]::backdrop { background-color: transparent }
+      }
+    </style>
+  </div>
+</body>
+</html>

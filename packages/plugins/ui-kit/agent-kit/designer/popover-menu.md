@@ -19,7 +19,7 @@ Dropdown menu that opens on hover and closes when the mouse leaves. Headless com
 ```html
 <jay:popover-menu>
   <div class="nav-item">
-    <a ref="trigger" class="nav-link">Products &#x25BE;</a>
+    <button type="button" ref="trigger" class="nav-link">Products &#x25BE;</button>
     <div popover ref="popover" class="dropdown-menu">
       <a href="/products/shoes">Shoes</a>
       <a href="/products/bags">Bags</a>
@@ -83,20 +83,26 @@ Position the popover below the trigger using CSS Anchor Positioning. The compone
 
 ## Accessibility
 
-Add `aria-haspopup` and `aria-expanded` on the trigger. The Popover API handles focus trapping and Escape-to-close natively:
+This component is **hover-driven**: it opens on `mouseenter` and closes on `mouseleave`. It is **not keyboard-operable**, and a popover is non-modal, so it does **not** trap focus. Be honest about that in your markup:
+
+- Make the trigger a real `<button type="button">` so it is focusable and announced as a control. Do **not** also wire it to the popover as a click toggle: a click would then close the menu hover just opened.
+- Do **not** hard-code `aria-expanded` — a static value is wrong half of the time.
+- Use plain links inside the popover. Do not add `role="menu"` / `role="menuitem"`: those roles promise arrow-key navigation this component does not ship.
+- Keep every destination reachable without hover (for example, the trigger's section page also links to them).
 
 ```html
-<a ref="trigger" class="nav-link" aria-haspopup="true" aria-expanded="false">Products &#x25BE;</a>
+<jay:popover-menu>
+  <div class="nav-item">
+    <button type="button" ref="trigger" class="nav-link">Products &#x25BE;</button>
+    <div popover ref="popover" class="dropdown-menu">
+      <a href="/products/shoes">Shoes</a>
+      <a href="/products/bags">Bags</a>
+    </div>
+  </div>
+</jay:popover-menu>
 ```
 
-Note: this component opens on hover only. Keyboard users can activate the popover via `popovertarget` (add it alongside the ref for click/keyboard access):
-
-```html
-<a ref="trigger" class="nav-link" popovertarget="products-menu">Products &#x25BE;</a>
-<div popover ref="popover" id="products-menu" class="dropdown-menu" role="menu">
-  <a href="/products/shoes" role="menuitem">Shoes</a>
-</div>
-```
+**Need keyboard access?** Use a click popover instead (see `click-popover.md`): its trigger button is keyboard-operable (Enter/Space), and the browser exposes its expanded state for you. Focus and dialog rules: `focus-and-dialogs.md` (shipped by `@jay-framework/a11y-validator`).
 
 ## Active State
 
@@ -112,7 +118,9 @@ Inside the menu, use `===` for exact page match or `^=` for section match:
 ```html
 <jay:popover-menu>
   <div class="nav-item">
-    <a ref="trigger" class="nav-link {currentPath ^= '/products' ? active}">Products &#x25BE;</a>
+    <button type="button" ref="trigger" class="nav-link {currentPath ^= '/products' ? active}">
+      Products &#x25BE;
+    </button>
     <div popover ref="popover" class="dropdown-menu">
       <a href="/products/shoes" class="{currentPath === '/products/shoes' ? active}">Shoes</a>
       <a href="/products/bags" class="{currentPath === '/products/bags' ? active}">Bags</a>

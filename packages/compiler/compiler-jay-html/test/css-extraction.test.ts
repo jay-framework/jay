@@ -131,6 +131,40 @@ describe('CSS extraction', () => {
         expect(jayFile.val.css).toMatch(/--font-body:\s*'Inter'/);
     });
 
+    /**
+     * DL#240 §4: every CSS source is marked so validators can name the file a rule came from:
+     * head <style> gets `jay:head-style`, an inlined @import gets `jay:@import` / `jay:end-@import`.
+     */
+    it('should mark head styles and the start and end of inlined imports (DL#240)', async () => {
+        const jayFile = await parseJayFile(
+            jayFileWith(
+                TEST_YAML,
+                TEST_BODY,
+                `<link rel="stylesheet" href="fixtures/css-test/with-import.css">
+                  |<style>
+                  |   .custom { font-weight: bold; }
+                  | </style>`,
+            ),
+            'CssSourceMarkersTest',
+            './test',
+            {},
+            JAY_IMPORT_RESOLVER,
+            '',
+        );
+
+        expect(jayFile.validations).toEqual([]);
+        expect(jayFile.val.css).toEqual(
+            '/* External CSS: fixtures/css-test/with-import.css */\n' +
+                '/* jay:@import ./imported.css */\n' +
+                '.imported { color: blue; }\n' +
+                '\n/* jay:end-@import ./imported.css */\n' +
+                '.after { color: red; }\n' +
+                '\n\n' +
+                '/* jay:head-style */\n' +
+                '.custom { font-weight: bold; }',
+        );
+    });
+
     it('should return undefined when no CSS is present', async () => {
         const jayFile = await parseJayFile(
             jayFileWith(TEST_YAML, TEST_BODY),

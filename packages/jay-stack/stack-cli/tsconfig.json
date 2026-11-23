@@ -6,5 +6,6 @@
       "@jay-framework/list-compare": ["../list-compare/lib"],
       "@jay-framework/reactive": ["../reactive/lib"]
     }
-  }
+  },
+  "exclude": ["node_modules", "dist", "test/fixtures/**/src/pages/**"]
 }

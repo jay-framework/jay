@@ -4,6 +4,9 @@ import type {
     JayHtmlValidationContext,
 } from '@jay-framework/compiler-shared';
 import { walkElements } from '@jay-framework/compiler-shared';
+import { checkFocusAndDialogs } from './focus-rules.js';
+import { checkFormRules, placeholderAsLabelFinding } from './form-rules.js';
+import { checkFormCssRules } from './form-css-rules.js';
 
 const A11Y_GUIDE = '\nSee: agent-kit/designer/a11y-patterns.md';
 
@@ -165,6 +168,10 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
     const idCounts = new Map<string, number>();
 
     collectDomIndex(ctx.body, labelForIds, allIds, idCounts);
+    const unlabelledFinding = (el: any) =>
+        isSuppressed(ctx, 'allow-placeholder-as-label')
+            ? undefined
+            : placeholderAsLabelFinding(el, ctx.body);
 
     for (const [id, count] of idCounts) {
         if (count > 1) {
@@ -207,10 +214,10 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
                 return;
             }
             if (!LABELABLE_INPUTS.has(type)) return;
-            checkLabel(el, tag, findings, labelForIds, allIds);
+            checkLabel(el, tag, findings, labelForIds, allIds, unlabelledFinding);
         }
         if (tag === 'select' || tag === 'textarea') {
-            checkLabel(el, tag, findings, labelForIds, allIds);
+            checkLabel(el, tag, findings, labelForIds, allIds, unlabelledFinding);
         }
 
         // --- Rule: button must have accessible name ---
@@ -348,6 +355,10 @@ export const validate: JayHtmlValidatorFn = (ctx) => {
         }
     }
 
+    findings.push(...checkFocusAndDialogs(ctx));
+    findings.push(...checkFormRules(ctx));
+    findings.push(...checkFormCssRules(ctx));
+
     return findings;
 };
 
@@ -357,6 +368,7 @@ function checkLabel(
     findings: JayHtmlValidationFinding[],
     labelForIds: Set<string>,
     allIds: Set<string>,
+    unlabelledFinding: (el: any) => JayHtmlValidationFinding | undefined,
 ): void {
     const id = el.getAttribute?.('id');
     const ariaLabel = el.getAttribute?.('aria-label');
@@ -418,6 +430,13 @@ function checkLabel(
     while (parent) {
         if (parent.rawTagName?.toLowerCase() === 'label') return;
         parent = parent.parentNode;
+    }
+
+    // DL#240 R1: a placeholder-only field gets the placeholder-specific finding instead.
+    const replacement = unlabelledFinding(el);
+    if (replacement) {
+        findings.push(replacement);
+        return;
     }
 
     pushFinding(findings, {

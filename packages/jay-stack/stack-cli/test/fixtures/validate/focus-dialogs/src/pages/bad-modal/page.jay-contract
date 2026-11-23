@@ -1,0 +1,8 @@
+name: Page
+tags:
+  - tag: openCart
+    type: interactive
+    elementType: HTMLButtonElement
+  - tag: help
+    type: interactive
+    elementType: HTMLDialogElement
