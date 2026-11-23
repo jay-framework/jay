@@ -84,12 +84,12 @@ const safeUrl = (url: string) => (/^(https?:|mailto:|\/|#)/i.test(url.trim()) ? 
 
 ## Suppression keys
 
-| Rule                   | Severity | Suppress                                                                        |
-| ---------------------- | -------- | ------------------------------------------------------------------------------- |
-| `HTML-STRING-TRUST`    | warning  | `jay-stack: allow-html-string: [path]`, or `jay-validations` on the import       |
-| `RAW-HTML-SINK`        | warning  | `// jay-validations: RAW-HTML-SINK <reason>` (same or preceding line)           |
-| `INLINE-EVENT-HANDLER` | error    | `jay-stack: allow-inline-handler: ["<element>@<attr>"]`                         |
-| `JAVASCRIPT-URL`       | error    | `jay-stack: allow-javascript-url: ["<exact value>"]`                            |
+| Rule                   | Severity | Suppress                                                                   |
+| ---------------------- | -------- | -------------------------------------------------------------------------- |
+| `HTML-STRING-TRUST`    | warning  | `jay-stack: allow-html-string: [path]`, or `jay-validations` on the import |
+| `RAW-HTML-SINK`        | warning  | `// jay-validations: RAW-HTML-SINK <reason>` (same or preceding line)      |
+| `INLINE-EVENT-HANDLER` | error    | `jay-stack: allow-inline-handler: ["<element>@<attr>"]`                    |
+| `JAVASCRIPT-URL`       | error    | `jay-stack: allow-javascript-url: ["<exact value>"]`                       |
 
 The page-script keys follow the `jay-stack: { allow-… }` naming used by the other core suppressions (see
 `designer/validation-guide.md`). Multi-line YAML in the `application/jay-validations` script, including `#`

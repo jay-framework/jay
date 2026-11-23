@@ -181,7 +181,9 @@ describe('generateSchema html-string inference warning', () => {
         `Declare it string if it is text. See agent-kit/developer/html-safety.md.`;
 
     it('generate-schema warns with file and field when it infers html-string', async () => {
-        const { warnings } = await generateSchemaWithWarnings(path.join(fixturesDir, 'html-inferred'));
+        const { warnings } = await generateSchemaWithWarnings(
+            path.join(fixturesDir, 'html-inferred'),
+        );
         expect(warnings).toEqual([inferredWarning('body'), inferredWarning('author.bio')]);
     });
 

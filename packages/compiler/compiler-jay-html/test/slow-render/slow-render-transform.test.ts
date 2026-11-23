@@ -55,7 +55,6 @@ async function runSlowRenderTest(folder: string) {
     );
 }
 
-
 /** Compile a pre-rendered page (contract reference replaced by an empty inline data script). */
 async function compileBothTargets(preRenderedJayHtml: string) {
     const standalone = preRenderedJayHtml.replace(

@@ -1743,7 +1743,10 @@ function resolveLinkedTags(tags: ContractTag[], contractDir: string): ContractTa
     });
 }
 
-export function resolveContractLinks(contract: Contract, contractPath: string | undefined): Contract {
+export function resolveContractLinks(
+    contract: Contract,
+    contractPath: string | undefined,
+): Contract {
     if (!contractPath) return contract;
     const contractDir = path.dirname(contractPath);
     return { ...contract, tags: resolveLinkedTags(contract.tags, contractDir) };
@@ -2174,7 +2177,8 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
 
             // DL#237 — html-safety rules
             const htmlSafety = checkHtmlSafety(parsedFile.val!, jayFile);
-            for (const msg of htmlSafety.warnings) warnings.push({ file: relativePath, message: msg });
+            for (const msg of htmlSafety.warnings)
+                warnings.push({ file: relativePath, message: msg });
             for (const msg of htmlSafety.errors) {
                 errors.push({ file: relativePath, message: msg, stage: 'generate' });
             }

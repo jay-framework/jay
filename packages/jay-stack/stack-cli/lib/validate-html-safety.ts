@@ -219,8 +219,7 @@ function findHtmlStringBindings(jayHtml: JayHtmlSourceFile, pageDir?: string): H
     ): BindingScope | undefined {
         const [first, ...rest] = expression.split('.');
         const keyedSource = keyed.get(first);
-        if (keyedSource && rest.length > 0)
-            return { source: keyedSource, prefix: rest.join('.') };
+        if (keyedSource && rest.length > 0) return { source: keyedSource, prefix: rest.join('.') };
         const scope = scopes[scopes.length - 1];
         if (!scope) return undefined;
         return {

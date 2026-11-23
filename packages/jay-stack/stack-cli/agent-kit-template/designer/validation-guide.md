@@ -140,18 +140,18 @@ viewport-height containers — see `jay-html-styling.md`), `allow-custom-breakpo
 The core `jay-stack validate` emits four warnings that nudge you to reuse UI through design-system elements
 (see `design-system-guide.md`). Suppress the legitimate case:
 
-| Rule                                               | How to suppress                                                                                                                           |
-| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `REGION-NOT-LINKED`                                | `jay-validations="REGION-NOT-LINKED"` on the `application/jay-headless` import, or `jay-stack: allow-inline-region: [Contract]`           |
-| `REGION-OVERRIDE-NON-CONTENT`                      | `jay-validations="REGION-OVERRIDE-NON-CONTENT"` on the import                                                                             |
-| `COMPONENT-NO-TEMPLATE`                            | `jay-stack: allow-no-template: [Contract]`                                                                                                |
-| `NO-DESIGN-SYSTEM`                                 | `jay-stack: allow-no-design-system: true`                                                                                                 |
-| Broken / degenerate internal link (DL#210)         | `jay-stack: allow-broken-links: true` (per-page — suppresses broken + `#`/empty link errors; does **not** affect TODO or fragment checks) |
-| Self-link warning (DL#210 v2)                      | `jay-allow-self-link` attribute on the specific `<a>` (per-anchor, not per-page)                                                          |
+| Rule                                               | How to suppress                                                                                                                               |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `REGION-NOT-LINKED`                                | `jay-validations="REGION-NOT-LINKED"` on the `application/jay-headless` import, or `jay-stack: allow-inline-region: [Contract]`               |
+| `REGION-OVERRIDE-NON-CONTENT`                      | `jay-validations="REGION-OVERRIDE-NON-CONTENT"` on the import                                                                                 |
+| `COMPONENT-NO-TEMPLATE`                            | `jay-stack: allow-no-template: [Contract]`                                                                                                    |
+| `NO-DESIGN-SYSTEM`                                 | `jay-stack: allow-no-design-system: true`                                                                                                     |
+| Broken / degenerate internal link (DL#210)         | `jay-stack: allow-broken-links: true` (per-page — suppresses broken + `#`/empty link errors; does **not** affect TODO or fragment checks)     |
+| Self-link warning (DL#210 v2)                      | `jay-allow-self-link` attribute on the specific `<a>` (per-anchor, not per-page)                                                              |
 | `HTML-STRING-TRUST` (warning)                      | `jay-stack: allow-html-string: ["<key>.<tag path>"]`, or `jay-validations="HTML-STRING-TRUST"` on the import — see `developer/html-safety.md` |
-| `INLINE-EVENT-HANDLER` (error)                     | `jay-stack: allow-inline-handler: ["<element>@<attr>"]` — see `developer/html-safety.md`                                            |
-| `JAVASCRIPT-URL` (error)                           | `jay-stack: allow-javascript-url: ["<exact value>"]` — see `developer/html-safety.md`                                                 |
-| Missing `#fragment` anchor / TODO link (DL#210 v2) | Not suppressible — fix the anchor id, or replace the `todo:` href                                                                         |
+| `INLINE-EVENT-HANDLER` (error)                     | `jay-stack: allow-inline-handler: ["<element>@<attr>"]` — see `developer/html-safety.md`                                                      |
+| `JAVASCRIPT-URL` (error)                           | `jay-stack: allow-javascript-url: ["<exact value>"]` — see `developer/html-safety.md`                                                         |
+| Missing `#fragment` anchor / TODO link (DL#210 v2) | Not suppressible — fix the anchor id, or replace the `todo:` href                                                                             |
 
 ```html
 <script type="application/jay-validations">
