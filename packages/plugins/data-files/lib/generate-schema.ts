@@ -92,7 +92,17 @@ function tagToYaml(tag: InferredTag, indent: number): string {
     return lines.join('\n');
 }
 
+export interface GeneratedSchema {
+    yaml: string;
+    /** DL#237 — one warning per field inferred as html-string (raw HTML). */
+    warnings: string[];
+}
+
 export async function generateSchema(contentDir: string): Promise<string> {
+    return (await generateSchemaWithWarnings(contentDir)).yaml;
+}
+
+export async function generateSchemaWithWarnings(contentDir: string): Promise<GeneratedSchema> {
     const files = await fs.readdir(contentDir);
     const dataFile = files.find(
         (f) =>
@@ -129,7 +139,20 @@ export async function generateSchema(contentDir: string): Promise<string> {
         ...tags.map((t) => tagToYaml(t, 1)),
     ];
 
-    return lines.join('\n') + '\n';
+    const warnings = inferredHtmlStringPaths(tags).map(
+        (field) =>
+            `${dataFile}: field ${field} was inferred as html-string (raw HTML) because its value starts with <. ` +
+            `Declare it string if it is text. See agent-kit/developer/html-safety.md.`,
+    );
+    return { yaml: lines.join('\n') + '\n', warnings };
+}
+
+function inferredHtmlStringPaths(tags: InferredTag[], prefix = ''): string[] {
+    return tags.flatMap((tag) => {
+        const tagPath = prefix ? `${prefix}.${tag.tag}` : tag.tag;
+        if (tag.dataType === 'html-string') return [tagPath];
+        return tag.tags ? inferredHtmlStringPaths(tag.tags, tagPath) : [];
+    });
 }
 
 export async function generateSchemaCommand(args: string[]): Promise<void> {
@@ -142,7 +165,8 @@ export async function generateSchemaCommand(args: string[]): Promise<void> {
         process.exit(1);
     }
 
-    const yaml = await generateSchema(contentDir);
+    const { yaml, warnings } = await generateSchemaWithWarnings(contentDir);
+    for (const warning of warnings) console.warn(`⚠ ${warning}`);
     const dirName = path.basename(contentDir);
     const outputPath = path.join(contentDir, `${dirName}.jay-contract`);
 

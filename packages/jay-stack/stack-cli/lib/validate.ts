@@ -54,6 +54,7 @@ import { loadConfig, getConfigWithDefaults, isPositiveInteger, type JayConfig } 
 import { checkGetActionsReadingCookies } from '@jay-framework/plugin-validator';
 import { DEFAULT_ACTION_BODY_LIMIT_BYTES } from '@jay-framework/stack-server-runtime';
 import { buildMaterialiseOptions } from './materialise-context';
+import { checkHtmlSafety } from './validate-html-safety';
 import { extractScopeBlock, splitScopeBlocks } from './scope-css';
 import { buildRouteOracle, collectPublicAssets, checkInternalLinks } from './check-internal-links';
 import {
@@ -1742,7 +1743,7 @@ function resolveLinkedTags(tags: ContractTag[], contractDir: string): ContractTa
     });
 }
 
-function resolveContractLinks(contract: Contract, contractPath: string | undefined): Contract {
+export function resolveContractLinks(contract: Contract, contractPath: string | undefined): Contract {
     if (!contractPath) return contract;
     const contractDir = path.dirname(contractPath);
     return { ...contract, tags: resolveLinkedTags(contract.tags, contractDir) };
@@ -2169,6 +2170,13 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
             const domWarnings = checkDirectDocumentAccess(jayFile);
             for (const msg of domWarnings) {
                 warnings.push({ file: relativePath, message: msg });
+            }
+
+            // DL#237 — html-safety rules
+            const htmlSafety = checkHtmlSafety(parsedFile.val!, jayFile);
+            for (const msg of htmlSafety.warnings) warnings.push({ file: relativePath, message: msg });
+            for (const msg of htmlSafety.errors) {
+                errors.push({ file: relativePath, message: msg, stage: 'generate' });
             }
 
             // Check route params match contract params (contract→route)

@@ -1,0 +1,21 @@
+<html>
+<head>
+    <script type="application/jay-headless"
+            plugin="article"
+            contract="article"
+            key="article"></script>
+    <script type="application/jay-data">
+data:
+    </script>
+
+</head>
+<body>
+<div>
+    <h1>{article.title}</h1>
+    <div>{article.body}</div>
+    <section forEach="article.sections" trackBy="id"><div>{body}</div></section>
+    <p>{article.author.name}</p>
+    <aside>{article.author.bio}</aside>
+</div>
+</body>
+</html>

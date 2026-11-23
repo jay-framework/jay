@@ -1,0 +1,6 @@
+- slug: first
+  title: First post
+  body: "<p>Hello <b>world</b></p>"
+  author:
+    name: Dana
+    bio: "<i>Writer</i>"

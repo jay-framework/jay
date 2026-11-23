@@ -1,0 +1,8 @@
+name: author
+tags:
+  - tag: name
+    type: data
+    dataType: string
+  - tag: bio
+    type: data
+    dataType: html-string

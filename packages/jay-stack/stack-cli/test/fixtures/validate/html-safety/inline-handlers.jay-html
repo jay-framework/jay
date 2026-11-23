@@ -1,0 +1,19 @@
+<html>
+<head>
+    <script type="application/jay-headless"
+            plugin="article"
+            contract="article"
+            key="article"></script>
+    <script type="application/jay-data">
+data:
+    </script>
+
+</head>
+<body>
+<div>
+    <svg onload="init()"><circle r="1"></circle></svg>
+    <img src="/a.png" alt="a" onerror="fallback()">
+    <button onclick="buy()">Buy</button>
+</div>
+</body>
+</html>

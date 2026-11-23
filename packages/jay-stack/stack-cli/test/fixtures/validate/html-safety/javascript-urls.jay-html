@@ -1,0 +1,24 @@
+<html>
+<head>
+    <script type="application/jay-headless"
+            plugin="article"
+            contract="article"
+            key="article"></script>
+    <script type="application/jay-data">
+data:
+    </script>
+
+</head>
+<body>
+<div>
+    <a href="javascript:alert(1)">a</a>
+    <a HREF=" JavaScript:void(0)">b</a>
+    <a href="vbscript:msgbox(1)">c</a>
+    <iframe src="data:text/html,&lt;script&gt;alert(1)&lt;/script&gt;"></iframe>
+    <svg><a xlink:href="javascript:alert(2)"><text>d</text></a></svg>
+    <img src="data:image/png;base64,AAAA" alt="ok">
+    <a href="{article.title}">bound</a>
+    <a href="#safe">safe</a>
+</div>
+</body>
+</html>

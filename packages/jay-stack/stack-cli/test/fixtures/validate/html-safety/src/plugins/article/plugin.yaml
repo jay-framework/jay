@@ -1,0 +1,6 @@
+name: article
+module: ./article
+contracts:
+  - name: article
+    contract: ./article.jay-contract
+    component: article

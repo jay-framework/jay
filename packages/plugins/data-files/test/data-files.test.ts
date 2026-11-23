@@ -3,7 +3,7 @@ import path from 'node:path';
 import { parseDataFile, buildSlugIndex, clearParseCache } from '../lib/parse-data';
 import { loadSchema, clearSchemaCache } from '../lib/load-schema';
 import { resolveReferences, clearFileCache } from '../lib/resolve-references';
-import { generateSchema } from '../lib/generate-schema';
+import { generateSchema, generateSchemaWithWarnings } from '../lib/generate-schema';
 
 const fixturesDir = path.join(__dirname, 'fixtures');
 
@@ -171,6 +171,23 @@ describe('resolveReferences', () => {
         await expect(
             resolveReferences(row, schema.tags, path.join(fixturesDir, 'circular')),
         ).rejects.toThrow('Circular reference detected');
+    });
+});
+
+// DL#237 — inferring html-string (raw HTML) from a value starting with `<` is announced, not silent.
+describe('generateSchema html-string inference warning', () => {
+    const inferredWarning = (field: string) =>
+        `data.yaml: field ${field} was inferred as html-string (raw HTML) because its value starts with <. ` +
+        `Declare it string if it is text. See agent-kit/developer/html-safety.md.`;
+
+    it('generate-schema warns with file and field when it infers html-string', async () => {
+        const { warnings } = await generateSchemaWithWarnings(path.join(fixturesDir, 'html-inferred'));
+        expect(warnings).toEqual([inferredWarning('body'), inferredWarning('author.bio')]);
+    });
+
+    it('generate-schema does not warn for a plain string', async () => {
+        const { warnings } = await generateSchemaWithWarnings(path.join(fixturesDir, 'team'));
+        expect(warnings).toEqual([]);
     });
 });
 

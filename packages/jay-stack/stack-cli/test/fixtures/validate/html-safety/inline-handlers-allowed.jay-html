@@ -1,0 +1,21 @@
+<html>
+<head>
+    <script type="application/jay-headless"
+            plugin="article"
+            contract="article"
+            key="article"></script>
+    <script type="application/jay-data">
+data:
+    </script>
+    <script type="application/jay-validations">
+jay-stack:
+  allow-inline-handler: ["svg@onload"]
+    </script>
+</head>
+<body>
+<div>
+    <svg onload="init()"><circle r="1"></circle></svg>
+    <img src="/a.png" alt="a" onerror="fallback()">
+</div>
+</body>
+</html>

@@ -1,0 +1,21 @@
+<html>
+<head>
+    <script type="application/jay-headless"
+            plugin="article"
+            contract="article"
+            key="article"></script>
+    <script type="application/jay-data">
+data:
+    </script>
+    <script type="application/jay-validations">
+jay-stack:
+  allow-javascript-url: ["javascript:void(0)"]
+    </script>
+</head>
+<body>
+<div>
+    <a href="javascript:void(0)">a</a>
+    <a href="javascript:alert(1)">b</a>
+</div>
+</body>
+</html>
