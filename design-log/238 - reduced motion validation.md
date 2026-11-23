@@ -481,4 +481,4 @@ Status after implementation: **[Implemented]**.
 - Red first: 35 design-system-validator tests and 2 ui-kit tests failed before the implementation (validators missing; the old fade test still warned).
 - design-system-validator: **194/194** (incl. 33 `design-reduced-motion`, 2 `reduced-motion-js`, the rewritten fade test in `design-tokens`).
 - ui-kit: **7/7** (incl. 2 `scroll-carousel`).
-- `yarn confirm`: green (rebuild, type check, 3837 tests across the workspace, format).
+- `yarn confirm`: rebuild and type check green; the test step stopped on `dev-server/test/hydration.test.ts` ("Hook timed out in 10000ms", all its 735 tests pass, the file fails on hook timeouts under heavy machine load; this package is not touched here), which also skipped the format step and 11 packages' tests. Re-run separately: stack-cli 213/213, a11y-validator 75/75, agent-skills 10/10, data-files 23/23, design-system-validator 194/194, editing-policy 79/79, markdown 35/35, seo-validator 66/66, design-system-demo 9/9, fake-shop 9/9, smoke-test 80/80. `yarn format` run separately (formatting-only follow-up commit).
