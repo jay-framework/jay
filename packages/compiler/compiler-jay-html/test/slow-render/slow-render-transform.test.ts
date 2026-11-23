@@ -5,10 +5,14 @@ import {
     discoverHeadlessInstances,
     resolveHeadlessInstances,
     SlowRenderInput,
+    parseJayFile,
+    generateElementFile,
+    JAY_IMPORT_RESOLVER,
 } from '../../lib';
+import { generateServerElementFile } from '../../lib/jay-target/jay-html-compiler-server';
 import { parseContract } from '../../lib';
 import { Contract } from '../../lib';
-import { checkValidationErrors, prettifyHtml } from '@jay-framework/compiler-shared';
+import { checkValidationErrors, prettifyHtml, RuntimeMode } from '@jay-framework/compiler-shared';
 import { promises } from 'node:fs';
 import path from 'path';
 
@@ -49,6 +53,29 @@ async function runSlowRenderTest(folder: string) {
     expect(prettifyHtml(result.val!.preRenderedJayHtml)).toEqual(
         prettifyHtml(fixture.expectedOutput),
     );
+}
+
+
+/** Compile a pre-rendered page (contract reference replaced by an empty inline data script). */
+async function compileBothTargets(preRenderedJayHtml: string) {
+    const standalone = preRenderedJayHtml.replace(
+        /<script type="application\/jay-data"[^>]*><\/script>/,
+        '<script type="application/jay-data">\ndata:\n</script>',
+    );
+    const parsed = await parseJayFile(standalone, 'Escaped', '', {}, JAY_IMPORT_RESOLVER, '');
+    expect(parsed.validations).toEqual([]);
+    const element = generateElementFile(parsed.val!, RuntimeMode.MainTrusted);
+    const server = generateServerElementFile(parsed.val!);
+    expect(element.validations).toEqual([]);
+    expect(server.validations).toEqual([]);
+    return { elementCode: element.val!, serverCode: server.val! };
+}
+
+/** String literals emitted as static text: `e('h1', {}, ['…'])` children or server `w('…')` text writes. */
+function extractStaticTexts(code: string): string[] {
+    const elementTexts = [...code.matchAll(/e\('h1', \{\}, \[\s*'([^']*)'\]\)/g)].map((m) => m[1]);
+    const serverTexts = [...code.matchAll(/w\('([^<' ][^']*)'\)/g)].map((m) => m[1]);
+    return [...elementTexts, ...serverTexts];
 }
 
 describe('Slow Render Transform', () => {
@@ -137,6 +164,51 @@ describe('Slow Render Transform', () => {
 
         it('should preserve headless component references and resolve slow bindings', async () => {
             await runSlowRenderTest('headless-preserved');
+        });
+    });
+
+    /**
+     * Bug: slow-phase bindings were spliced into the pre-rendered jay-html as raw text, so a plain
+     * `string` slow value containing markup became live HTML, and a literal `&amp;` in an attribute
+     * with a slow binding was decoded to a bare `&`.
+     * Found in: design-log/237 - html-string xss sanitization.md (Problem rows 6, 6b, 6d)
+     * Expected: non-html-string slow text is escaped; slow attribute values escape `&` and `"` once;
+     *   html-string slow text stays raw (trusted markup).
+     * Actual: `<img src=x onerror=alert(1)>` was emitted as an element; `A &amp; {name}` became `A & x<y`.
+     */
+    describe('Slow value escaping (DL#237)', () => {
+        it('escapes a plain string slow value containing markup', async () => {
+            await runSlowRenderTest('slow-string-markup-escaped');
+        });
+
+        it('escapes a quote in a slow attribute value', async () => {
+            await runSlowRenderTest('slow-attribute-quote-escaped');
+        });
+
+        it('does not double-escape an attribute with a literal entity and a slow binding', async () => {
+            const fixture = await readSlowRenderFixture('slow-attribute-literal-entity');
+            const result = slowRenderTransform({
+                jayHtmlContent: fixture.input,
+                slowViewState: fixture.slowViewState,
+                contract: fixture.contract,
+            });
+            expect(result.validations).toEqual([]);
+            expect(result.val!.preRenderedJayHtml).toMatch(/<span title="A &amp; x<y">/);
+        });
+
+        it('keeps html-string slow value raw', async () => {
+            await runSlowRenderTest('slow-html-string-raw');
+        });
+
+        it('compiles escaped slow text without double-escape or re-decode', async () => {
+            const escapedOutput = (await readSlowRenderFixture('slow-string-markup-escaped'))
+                .expectedOutput;
+            const { elementCode, serverCode } = await compileBothTargets(escapedOutput);
+            const literalText = '<img src=x onerror=alert(1)>';
+            expect(extractStaticTexts(elementCode)).toEqual([literalText]);
+            expect(extractStaticTexts(serverCode)).toEqual(['&lt;img src=x onerror=alert(1)&gt;']);
+            expect(serverCode).not.toMatch(/&amp;lt;/);
+            expect(elementCode).not.toMatch(/e\('img'/);
         });
     });
 });

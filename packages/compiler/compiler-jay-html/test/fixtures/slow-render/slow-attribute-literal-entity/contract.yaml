@@ -1,0 +1,6 @@
+name: Test
+tags:
+  - tag: name
+    type: data
+    dataType: string
+    phase: slow

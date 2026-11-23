@@ -9,7 +9,12 @@ import {
     getLinkedContractDir,
     getEffectivePhase,
 } from '../contract';
-import { isEnumType, WithValidations } from '@jay-framework/compiler-shared';
+import {
+    isEnumType,
+    isHtmlStringType,
+    JayType,
+    WithValidations,
+} from '@jay-framework/compiler-shared';
 import {
     parseConditionForSlowRender,
     SlowRenderContext,
@@ -82,6 +87,8 @@ interface PhaseInfo {
     trackBy?: string;
     /** For enum-typed properties, the list of enum value names (e.g., ["PHYSICAL", "DIGITAL"]) */
     enumValues?: string[];
+    /** The contract dataType — html-string values are inlined raw, everything else is escaped (DL#237). */
+    dataType?: JayType;
 }
 
 /**
@@ -117,6 +124,7 @@ function buildPhaseMap(
             isArray: tag.repeated || false,
             trackBy: tag.trackBy,
             enumValues,
+            dataType: tag.dataType,
         });
 
         // Process nested tags (inline sub-contract)
@@ -235,9 +243,38 @@ function hasBindings(text: string): boolean {
 }
 
 /**
+ * DL#237 — how resolved slow values are written back into the pre-rendered jay-html.
+ * - `text`: the input is raw text (entities still encoded), so each resolved non-html-string value is
+ *   HTML-escaped; html-string values and the literal text are left as-is.
+ * - `attribute`: the input is the decoded attribute value, so values are returned unescaped and the
+ *   caller escapes the whole string once with {@link escapeAttributeValue}.
+ */
+type SlowValueEscapeMode = 'text' | 'attribute';
+
+function escapeTextValue(value: string): string {
+    return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/** node-html-parser stores `setAttribute` values as raw text, so `&` and `"` must be escaped first. */
+function escapeAttributeValue(value: string): string {
+    return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+}
+
+function formatSlowValue(
+    value: unknown,
+    info: PhaseInfo | undefined,
+    mode: SlowValueEscapeMode,
+): string {
+    const text = String(value);
+    if (mode === 'attribute' || (info?.dataType && isHtmlStringType(info.dataType))) return text;
+    return escapeTextValue(text);
+}
+
+/**
  * Resolve bindings in a text string, replacing slow-phase bindings with values
  *
  * @param text - The text containing bindings
+ * @param mode - How resolved values are escaped (see {@link SlowValueEscapeMode})
  * @param contextData - The data object for the current context (could be root or array item)
  * @param phaseMap - Map of property paths to phase info
  * @param contextPath - The property path prefix for phase lookup
@@ -247,6 +284,7 @@ function resolveTextBindings(
     text: string,
     contextData: Record<string, unknown>,
     phaseMap: Map<string, PhaseInfo>,
+    mode: SlowValueEscapeMode,
     contextPath: string = '',
 ): WithValidations<string> {
     const validationErrors: string[] = [];
@@ -274,7 +312,7 @@ function resolveTextBindings(
                 }
 
                 // Valid value (including falsy values like 0, '', false)
-                return String(value);
+                return formatSlowValue(value, phaseMap.get(fullPath), mode);
             }
         }
 
@@ -347,12 +385,16 @@ function transformElement(
                 return WithValidations.pure(null);
             }
             if (attrValue && hasBindings(attrValue)) {
-                return resolveTextBindings(attrValue, contextData, phaseMap, contextPath).map(
-                    (resolved) => {
-                        element.setAttribute(attrName, resolved);
-                        return null; // Side effect only
-                    },
-                );
+                return resolveTextBindings(
+                    attrValue,
+                    contextData,
+                    phaseMap,
+                    'attribute',
+                    contextPath,
+                ).map((resolved) => {
+                    element.setAttribute(attrName, escapeAttributeValue(resolved));
+                    return null; // Side effect only
+                });
             }
             return WithValidations.pure(null);
         });
@@ -409,7 +451,7 @@ function transformChildren(
         } else if (child.nodeType === NodeType.TEXT_NODE) {
             const text = child.rawText;
             if (hasBindings(text)) {
-                return resolveTextBindings(text, contextData, phaseMap, contextPath).map(
+                return resolveTextBindings(text, contextData, phaseMap, 'text', contextPath).map(
                     (resolved) => {
                         (child as Node & { _rawText: string })._rawText = resolved;
                         return [child as Node];

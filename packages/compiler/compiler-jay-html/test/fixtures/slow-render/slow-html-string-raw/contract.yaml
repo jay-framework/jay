@@ -1,0 +1,6 @@
+name: Test
+tags:
+  - tag: bio
+    type: data
+    dataType: html-string
+    phase: slow
