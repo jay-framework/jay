@@ -661,3 +661,6 @@ Videos at the workspace root. Chrome = installed Google Chrome 157 via Playwrigh
 Validation: R1–R11. Guide: `forms-and-autofill.md` (plugin) + framework pointer. Framework feature: none (the CSS source markers are a compiler comment change for locating findings).
 
 **Follow-up (found by the DL#243 `yarn confirm`):** the final `yarn format` of this log's confirm run reformatted the two new CSS fixtures (`test/fixtures/css-test/imported.css`, `with-import.css`) to multi-line CSS after the tests had run, so the exact marker test failed on the next run. The expected string now matches the formatted fixtures; the markers it pins are unchanged. compiler-jay-html `css-extraction.test.ts` 14/14 again.
+
+
+**Re-attempt 2026-11-24 (QA agent):** Accessibility and Automation now work from iTerm (System Events, Safari and VoiceOver AppleScript all answered), but `screencapture` still fails with "could not create image from display" even when run in an iTerm window, so **Screen Recording is still not effective** for iTerm (most likely iTerm must be fully quit and relaunched after the grant, or the grant is on a different app entry). No video could be recorded, so every Safari, VoiceOver and native-autofill cell above stays FAILED / not demonstrated. No Safari My Card, Keychain entry or QA-site data was created, so nothing needs deleting.
