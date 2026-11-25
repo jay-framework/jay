@@ -2,7 +2,7 @@ import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { vi } from 'vitest';
+import { vi, type Mock } from 'vitest';
 import { createGitRunner, type GitRunner } from '../lib/core/git-runner';
 import type { ShareContext } from '../lib/core/context';
 import type { SetupRun } from '../lib/core/plugin-handlers';
@@ -22,7 +22,7 @@ export interface Sandbox {
     bare(url: string): string;
     git(args: string[], cwd: string): string;
     ctx(overrides?: Partial<ShareContext>): ShareContext;
-    setupSpy: ReturnType<typeof vi.fn<[string, string], Promise<SetupRun>>>;
+    setupSpy: Mock<(projectRoot: string, folder: string) => Promise<SetupRun>>;
     gitSpy: ReturnType<typeof vi.fn>;
     copyFixturePlugin(folder: string, fixture?: string): string;
     /** Clones `url` into a scratch "teammate" working copy. */
