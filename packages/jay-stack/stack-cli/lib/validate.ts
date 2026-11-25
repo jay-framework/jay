@@ -2436,6 +2436,7 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
     if (!options.compileOnly) {
         warnings.push(...(await checkProjectGetActionsReadingCookies(projectRoot)));
         warnings.push(...checkActionBodyLimitConfig(config));
+        warnings.push(...checkActionPollConfig(config));
     }
 
     if (options.compileOnly) {
@@ -3050,4 +3051,35 @@ function checkActionBodyLimitConfig(config: JayConfig): ValidationWarning[] {
                 `the default of ${DEFAULT_ACTION_BODY_LIMIT_BYTES} bytes is used`,
         },
     ];
+}
+
+/** Over this, a poll (which also waits the budget) risks the common 55 s gateway limit (DL#239). */
+const ACTION_POLL_WARN_MS = 45000;
+
+/** DL#239 — `.jay` `server.actionPollAfterMs`, when present, must be a positive integer well under the gateway limit. */
+function checkActionPollConfig(config: JayConfig): ValidationWarning[] {
+    const server = config.server;
+    if (!server || !('actionPollAfterMs' in server)) return [];
+    const value = server.actionPollAfterMs;
+    if (!isPositiveInteger(value)) {
+        return [
+            {
+                file: '.jay',
+                message:
+                    `invalid-action-poll-after: server.actionPollAfterMs must be a positive integer (got ${JSON.stringify(value)}); ` +
+                    `polling is disabled`,
+            },
+        ];
+    }
+    if (value >= ACTION_POLL_WARN_MS) {
+        return [
+            {
+                file: '.jay',
+                message:
+                    `large-action-poll-after: server.actionPollAfterMs is ${value}ms; a poll also waits up to this budget, ` +
+                    `so a value near or above a gateway's limit (commonly 55000ms) can still time out — keep it well under (25000ms is recommended)`,
+            },
+        ];
+    }
+    return [];
 }

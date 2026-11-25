@@ -18,6 +18,7 @@
         <li><a href="/headless/">Headless</a> — headless component from local plugin</li>
         <li><a href="/headfull/">Headfull</a> — headfull component with own jay-html</li>
         <li><a href="/actions/">Actions</a> — server action endpoints</li>
+        <li><a href="/long-actions/">Long Actions</a> — DL#239: long action, query, and stream (202 + ticket poll / resumable segments)</li>
         <li><a href="/dynamic/item-a/">Dynamic (item-a)</a> — dynamic route instance</li>
         <li><a href="/dynamic/item-b/">Dynamic (item-b)</a> — dynamic route instance</li>
         <li><a href="/async-data/">Async Data</a> — async data resolution</li>

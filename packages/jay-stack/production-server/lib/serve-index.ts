@@ -32,7 +32,9 @@ export {
 export { fetchPageRequest } from './serve/fetch-page-handler';
 export {
     fetchActionRequest,
+    fetchActionResultRequest,
     isActionRequest,
+    isActionResultRequest,
     registerActionsFromManifest,
     registerActionsFromModules,
 } from './serve/fetch-action-handler';

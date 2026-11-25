@@ -7,6 +7,7 @@ import {
     updateConfig,
     getConfigWithDefaults,
     resolveActionBodyLimitBytes,
+    resolveActionPollAfterMs,
     JayConfig,
 } from '../lib/config';
 
@@ -141,5 +142,24 @@ describe('resolveActionBodyLimitBytes (DL#234)', () => {
     it('should ignore an invalid override', () => {
         const config: JayConfig = { server: { actionBodyLimitBytes: 2097152 } };
         expect(resolveActionBodyLimitBytes(config, 0)).toEqual(2097152);
+    });
+});
+
+describe('resolveActionPollAfterMs (DL#239)', () => {
+    it('is undefined (off) when absent', () => {
+        expect(resolveActionPollAfterMs({})).toBeUndefined();
+        expect(resolveActionPollAfterMs({ server: {} })).toBeUndefined();
+    });
+
+    it('reads a positive integer from .jay', () => {
+        expect(resolveActionPollAfterMs({ server: { actionPollAfterMs: 25000 } })).toEqual(25000);
+    });
+
+    it('lets a programmatic override win', () => {
+        expect(resolveActionPollAfterMs({ server: { actionPollAfterMs: 25000 } }, 50)).toEqual(50);
+    });
+
+    it.each([0, -5, 1.5, 'x' as unknown as number])('is off for an invalid value (%s)', (value) => {
+        expect(resolveActionPollAfterMs({ server: { actionPollAfterMs: value } })).toBeUndefined();
     });
 });

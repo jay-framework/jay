@@ -9,7 +9,9 @@ import { fetchPageRequest } from './fetch-page-handler';
 import { renderErrorPage } from './render-error-page';
 import {
     isActionRequest,
+    isActionResultRequest,
     fetchActionRequest,
+    fetchActionResultRequest,
     registerActionsFromManifest,
 } from './fetch-action-handler';
 import { fetchStaticFile } from './fetch-static-handler';
@@ -25,6 +27,8 @@ export interface MainServerOptions {
     testMode?: boolean;
     /** Cap on a JSON action request body in UTF-8 bytes (DL#234; default 1 MiB) */
     actionBodyLimitBytes?: number;
+    /** Long-request poll budget in ms (DL#239); absent → off */
+    actionPollAfterMs?: number;
 }
 
 function toFetchRequest(req: http.IncomingMessage): Request {
@@ -117,10 +121,19 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
                 return;
             }
 
+            if (isActionResultRequest(url.pathname)) {
+                const response = await fetchActionResultRequest(toFetchRequest(req), undefined, {
+                    actionPollAfterMs: options.actionPollAfterMs,
+                });
+                await pipeFetchResponse(response, res);
+                return;
+            }
+
             if (isActionRequest(url.pathname)) {
                 const fetchReq = toFetchRequest(req);
                 const response = await fetchActionRequest(fetchReq, undefined, {
                     actionBodyLimitBytes: options.actionBodyLimitBytes,
+                    actionPollAfterMs: options.actionPollAfterMs,
                 });
                 await pipeFetchResponse(response, res);
                 return;
@@ -178,6 +191,7 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
                 staticBaseUrl,
                 cookies,
                 renderer,
+                options.actionPollAfterMs,
             );
             await pipeFetchResponse(response, res);
         } catch (err: any) {

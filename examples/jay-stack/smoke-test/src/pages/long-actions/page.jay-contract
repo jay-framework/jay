@@ -1,0 +1,34 @@
+name: Page
+tags:
+  - tag: actionResult
+    type: data
+    dataType: string
+    phase: fast+interactive
+    description: Result of the long POST action (defers to a 202 + ticket poll)
+
+  - tag: queryResult
+    type: data
+    dataType: string
+    phase: fast+interactive
+    description: Result of the long GET query (deferred)
+
+  - tag: streamLog
+    type: data
+    dataType: string
+    phase: fast+interactive
+    description: Accumulated chunks from the long stream (resumable segments)
+
+  - tag: run-action
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Run the long POST action
+
+  - tag: run-query
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Run the long GET query
+
+  - tag: run-stream
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Run the long stream

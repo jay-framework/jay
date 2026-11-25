@@ -6,3 +6,7 @@ devServer:
   sourceEditing: true
 site:
   baseUrl: https://smoke-test.example.com
+server:
+  # DL#239 — break actions that run past this budget into a 202 + ticket poll (and streams into
+  # resumable segments). Small here so the long.* actions exercise the path; counter.* stay under it.
+  actionPollAfterMs: 400

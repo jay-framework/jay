@@ -18,6 +18,9 @@ editorServer:
   portRange:
     - 3101
     - 3200
+# server:                           # runtime settings for `jay-stack dev` and `jay-stack serve`
+#   actionBodyLimitBytes: 1048576   # cap on a JSON action request body (DL#234)
+#   actionPollAfterMs: 25000       # poll for long action results past a gateway's limit (DL#239)
 ```
 
 ### Key Fields
@@ -28,6 +31,8 @@ editorServer:
 - `devServer.portRange` — Port range for the dev server
 - `devServer.allowedHosts` — Hosts the dev server's host-check accepts beyond localhost — a list in Vite host-suffix syntax (e.g. `['.example.dev']`) or `true` to disable the check (cloud preview only). Absent = localhost-only (DL#220)
 - `devServer.sourceEditing` — When `true`, inject source-editing markers (`jay-dev-*`) so the AIditor source-editing inspector can map a rendered pixel back to its jay-html source. **Off by default; dev-only** — the markers change rendered output, so enable only for AIditor / source-editing sessions, never in production. See the devops **source-editing** guide (DL#219)
+- `server.actionBodyLimitBytes` — Cap on a JSON action request body in UTF-8 bytes (default 1 MiB, DL#234)
+- `server.actionPollAfterMs` — Long-request poll budget in ms (DL#239). Absent = off. When set, an action that runs longer than this is delivered via a `202` + ticket the client polls transparently, so it survives an upstream gateway's request timeout (e.g. a sandbox that cuts at 55 s). Write actions normally; the transport handles long ones. See the devops **long-request polling** guide for when to enable it
 
 ## Plugin Configuration (config/)
 
