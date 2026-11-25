@@ -104,12 +104,13 @@ Each entry's description leads with a **status tag**: **[Design]** (approved/in-
 
 ## Server Actions & Client-Server Communication
 
-| #   | Title                                                                                                             | Description                                                                |
-| --- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| 63  | [jay-stack server actions](63%20-%20jay-stack%20server%20actions)                                                 | RPC-style server actions: `makeJayAction`, `makeJayQuery`, action registry |
-| 82  | [automatic server-side action service injection](82%20-%20automatic%20server-side%20action%20service%20injection) | Auto-inject services when actions called from server code                  |
-| 129 | [streaming actions](129%20-%20streaming%20actions)                                                                | `makeJayStream` with `AsyncGenerator` handlers, SSE transport              |
-| 131 | [multipart file upload in actions](131%20-%20multipart%20file%20upload%20in%20actions)                            | `withFiles()` opt-in for binary uploads via FormData, `JayFile` temp paths |
+| #   | Title                                                                                                               | Description                                                                                                                                                       |
+| --- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 63  | [jay-stack server actions](63%20-%20jay-stack%20server%20actions)                                                   | RPC-style server actions: `makeJayAction`, `makeJayQuery`, action registry                                                                                        |
+| 82  | [automatic server-side action service injection](82%20-%20automatic%20server-side%20action%20service%20injection)   | Auto-inject services when actions called from server code                                                                                                         |
+| 129 | [streaming actions](129%20-%20streaming%20actions)                                                                  | `makeJayStream` with `AsyncGenerator` handlers, SSE transport                                                                                                     |
+| 131 | [multipart file upload in actions](131%20-%20multipart%20file%20upload%20in%20actions)                              | `withFiles()` opt-in for binary uploads via FormData, `JayFile` temp paths                                                                                        |
+| 239 | [deferred action results for gateway timeouts](239%20-%20deferred%20action%20results%20for%20gateway%20timeouts.md) | **[Design]** — dispatchers race `execute` against a 25 s budget → `202` ticket; client caller long-polls `_result/<ticket>` transparently; streams get heartbeats |
 
 ---
 
