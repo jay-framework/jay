@@ -1,0 +1,23 @@
+<html>
+<head>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+  <div>
+    <h1>Long Actions Test</h1>
+    <p>DL#239 — long-running action, query, and stream. The endpoints run past
+      <code>server.actionPollAfterMs</code>, so the server breaks them into a 202 + ticket poll
+      (action/query) or resumable NDJSON segments (stream). The buttons drive the real client
+      caller; the same endpoints are also tested directly via HTTP.</p>
+
+    <button ref="run-action">Run Slow Action</button>
+    <p>Action result: <span>{actionResult}</span></p>
+
+    <button ref="run-query">Run Slow Query</button>
+    <p>Query result: <span>{queryResult}</span></p>
+
+    <button ref="run-stream">Run Stream</button>
+    <p>Stream log: <span>{streamLog}</span></p>
+  </div>
+</body>
+</html>

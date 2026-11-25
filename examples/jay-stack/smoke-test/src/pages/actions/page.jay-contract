@@ -1,0 +1,17 @@
+name: Page
+tags:
+  - tag: count
+    type: data
+    dataType: number
+    phase: fast+interactive
+    description: Current counter value
+
+  - tag: get-count
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Fetch the current count via the counter.getCount query
+
+  - tag: increment
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Increment the count via the counter.increment action

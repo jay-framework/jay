@@ -15,3 +15,4 @@ export * from './head-tags';
 export * from './cookies';
 export * from './error-view-state';
 export * from './action-request';
+export * from './polled-action-results';

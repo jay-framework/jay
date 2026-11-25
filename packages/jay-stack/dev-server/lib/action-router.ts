@@ -16,8 +16,17 @@ import {
     isSecureRequest,
     needsSameOriginCheck,
     parseCookies,
+    runPollable,
+    awaitTicket,
+    verifyTicket,
+    peekTicketMeta,
+    openStreamTicket,
+    readStreamSegment,
+    type ActionExecutionResult,
     type IncomingRequest,
     type RegisteredActionEntry,
+    type Settled,
+    type StreamSegmentEvent,
 } from '@jay-framework/stack-server-runtime';
 import type { HttpMethod, JayFile } from '@jay-framework/fullstack-component';
 import { getDevLogger } from '@jay-framework/logger';
@@ -31,6 +40,15 @@ import crypto from 'crypto';
  */
 export const ACTION_ENDPOINT_BASE = '/_jay/actions';
 
+/** The base path for polled-result polls (DL#239). */
+export const ACTION_RESULT_ENDPOINT_BASE = '/_jay/action-results';
+
+/** The request header carrying the client-derived ticket on a deferrable POST (DL#239). */
+const TICKET_HEADER = 'jay-action-ticket';
+
+/** Never cache a polled 202 or any poll response (DL#239, DL#230). */
+const NO_STORE = 'private, no-store';
+
 /**
  * Options for creating the action router.
  */
@@ -40,6 +58,8 @@ export interface ActionRouterOptions {
      * Defaults to the global actionRegistry.
      */
     registry?: ActionRegistry;
+    /** Long-request poll budget in ms (DL#239); absent → off. A poll waits up to this too. */
+    actionPollAfterMs?: number;
 }
 
 /**
@@ -164,22 +184,68 @@ export function createActionRouter(options?: ActionRouterOptions): RequestHandle
             res.set('Cache-Control', registry.getCacheHeaders(actionName)!);
         }
 
+        // Long-request polling (DL#239): when a budget is configured and the request carries a
+        // valid ticket, a request that runs past the budget is broken into an initial response plus
+        // follow-up polls, instead of being held open past an upstream gateway's limit.
+        const ticket = req.headers?.[TICKET_HEADER] as string | undefined;
+        const budget = options?.actionPollAfterMs;
+        const pollable = typeof budget === 'number' && !!ticket && verifyTicket(ticket);
+        const meta = { actionName, needsSameOriginCheck: needsSameOriginCheck(action) };
+
         // Streaming action (DL#129): respond with NDJSON
         if (registry.isStreaming(actionName)) {
             res.setHeader('Content-Type', 'application/x-ndjson');
             res.setHeader('Transfer-Encoding', 'chunked');
 
-            try {
-                const generator = registry.executeStream(actionName, input, incoming);
-                for await (const chunk of generator) {
-                    res.write(JSON.stringify({ chunk }) + '\n');
+            if (pollable) {
+                openStreamTicket(
+                    ticket!,
+                    registry.executeStream(actionName, input, incoming),
+                    meta,
+                    budget! * 2,
+                );
+                await writeStreamSegment(res, actionName, ticket!, 0, budget!);
+            } else {
+                try {
+                    const generator = registry.executeStream(actionName, input, incoming);
+                    for await (const chunk of generator) {
+                        res.write(JSON.stringify({ chunk }) + '\n');
+                    }
+                    res.write(JSON.stringify({ done: true }) + '\n');
+                } catch (err: any) {
+                    res.write(JSON.stringify({ error: err.message }) + '\n');
                 }
-                res.write(JSON.stringify({ done: true }) + '\n');
-            } catch (err: any) {
-                res.write(JSON.stringify({ error: err.message }) + '\n');
             }
             cleanup();
             res.end();
+            timing?.end();
+            return;
+        }
+
+        if (pollable) {
+            const outcome = await runPollable<ActionExecutionResult<unknown>>(
+                ticket!,
+                () => registry.execute(actionName, input, incoming),
+                budget!,
+                meta,
+            );
+            cleanup();
+            if (outcome.kind === 'pending') {
+                res.set('Cache-Control', NO_STORE);
+                res.status(202).json({ pending: { ticket } });
+            } else {
+                // Within budget: identical to today, including GET cache headers. Only the 202 and
+                // the poll delivery are no-store (DL#239 Q4).
+                if (
+                    requestMethod === 'GET' &&
+                    outcome.settled.ok &&
+                    outcome.settled.value.success
+                ) {
+                    const cacheHeaders = registry.getCacheHeaders(actionName);
+                    if (cacheHeaders) res.set('Cache-Control', cacheHeaders);
+                }
+                deliverSettled(res, actionName, outcome.settled, false);
+            }
             timing?.end();
             return;
         }
@@ -196,25 +262,146 @@ export function createActionRouter(options?: ActionRouterOptions): RequestHandle
             }
         }
 
-        // Return result
-        if (result.success) {
-            for (const setCookie of result.setCookies ?? []) {
-                res.append('Set-Cookie', setCookie);
-            }
-            res.status(200).json({
-                success: true,
-                data: result.data,
+        deliverResult(res, result);
+        timing?.end();
+    };
+}
+
+/** Writes a request/response ActionExecutionResult to the express response (today's mapping). */
+function deliverResult(res: Response, result: ActionExecutionResult<unknown>): void {
+    if (result.success) {
+        for (const setCookie of result.setCookies ?? []) {
+            res.append('Set-Cookie', setCookie);
+        }
+        res.status(200).json({ success: true, data: result.data });
+    } else {
+        const statusCode = getStatusCodeForError(result.error.code, result.error.isActionError);
+        res.status(statusCode).json({ success: false, error: result.error });
+    }
+}
+
+/** Unwraps a settled handler outcome; a defensive late rejection becomes a generic 500. */
+function deliverSettled(
+    res: Response,
+    actionName: string,
+    settled: Settled<ActionExecutionResult<unknown>>,
+    polled: boolean,
+): void {
+    if (polled) res.set('Cache-Control', NO_STORE);
+    if (!settled.ok) {
+        res.status(500).json({
+            success: false,
+            error: {
+                code: 'INTERNAL_ERROR',
+                message: 'Internal server error',
+                isActionError: false,
+            },
+        });
+        return;
+    }
+    deliverResult(res, settled.value);
+}
+
+/** Writes one polled stream segment as NDJSON (DL#239): chunk lines, then resume/done/error. */
+async function writeStreamSegment(
+    res: Response,
+    actionName: string,
+    ticket: string,
+    from: number,
+    budget: number,
+): Promise<void> {
+    const segment = readStreamSegment(ticket, from, budget, budget * 2);
+    if (!segment) {
+        res.write(JSON.stringify({ error: 'RESULT_NOT_FOUND' }) + '\n');
+        return;
+    }
+    for await (const event of segment) {
+        res.write(serializeSegmentEvent(event) + '\n');
+    }
+}
+
+function serializeSegmentEvent(event: StreamSegmentEvent<unknown>): string {
+    switch (event.kind) {
+        case 'chunk':
+            return JSON.stringify({ chunk: event.chunk });
+        case 'done':
+            return JSON.stringify({ done: true });
+        case 'resume':
+            return JSON.stringify({ resume: true });
+        case 'error':
+            return JSON.stringify({
+                error: event.error instanceof Error ? event.error.message : String(event.error),
             });
-        } else {
-            // Determine status code based on error type
-            const statusCode = getStatusCodeForError(result.error.code, result.error.isActionError);
-            res.status(statusCode).json({
-                success: false,
-                error: result.error,
-            });
+    }
+}
+
+/**
+ * The polled-result poll handler (DL#239), mounted at ACTION_RESULT_ENDPOINT_BASE. Delivers a
+ * value ticket as JSON (202 while running, final on settle) or a stream ticket as one NDJSON
+ * segment from `?from=<cursor>`. Unknown / expired / bad-MAC → 404 RESULT_NOT_FOUND.
+ */
+export function createActionResultRouter(options?: ActionRouterOptions): RequestHandler {
+    const registry = options?.registry ?? actionRegistry;
+    const budget = options?.actionPollAfterMs ?? 0;
+
+    return async (req: Request, res: Response) => {
+        const ticket = req.path.slice(1); // strip leading '/'
+        res.set('Cache-Control', NO_STORE);
+
+        if (!ticket || !verifyTicket(ticket)) {
+            res.status(404).json(resultNotFound());
+            return;
         }
 
-        timing?.end();
+        const meta = peekTicketMeta(ticket);
+        if (
+            meta?.needsSameOriginCheck &&
+            isCrossOriginRequest({
+                secFetchSite: req.headers['sec-fetch-site'] as string | undefined,
+                origin: req.headers.origin,
+                requestOrigin: `${req.protocol}://${req.headers.host}`,
+            })
+        ) {
+            res.status(403).json(crossOriginErrorResponse(meta.actionName));
+            return;
+        }
+
+        const from = Number((req.query.from as string | undefined) ?? '0');
+        const segment = readStreamSegment(
+            ticket,
+            Number.isFinite(from) ? from : 0,
+            budget,
+            budget * 2,
+        );
+        if (segment) {
+            res.setHeader('Content-Type', 'application/x-ndjson');
+            res.setHeader('Transfer-Encoding', 'chunked');
+            for await (const event of segment) {
+                res.write(serializeSegmentEvent(event) + '\n');
+            }
+            res.end();
+            return;
+        }
+
+        const outcome = await awaitTicket<ActionExecutionResult<unknown>>(ticket, budget);
+        if (outcome.kind === 'unknown') {
+            res.status(404).json(resultNotFound());
+        } else if (outcome.kind === 'pending') {
+            res.status(202).json({ pending: { ticket } });
+        } else {
+            deliverSettled(res, outcome.meta.actionName, outcome.settled, true);
+        }
+    };
+}
+
+function resultNotFound() {
+    return {
+        success: false,
+        error: {
+            code: 'RESULT_NOT_FOUND',
+            message: 'Action result is no longer available',
+            isActionError: false,
+        },
     };
 }
 

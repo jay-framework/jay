@@ -8,6 +8,7 @@ import {
     serializeScripts,
     headMetaToHeadTags,
     getClientInitData,
+    issueSeed,
 } from '@jay-framework/stack-server-runtime';
 import type { HeadTag } from '@jay-framework/fullstack-component';
 import { deepMergeViewStates } from '@jay-framework/view-state-merge';
@@ -73,6 +74,7 @@ export async function fetchPageRequest(
     staticBaseUrl: string,
     cookies: Record<string, string> = {},
     renderer?: InstanceRenderer,
+    actionPollAfterMs?: number,
 ): Promise<Response> {
     const { route, instance } = match;
     const t0 = Date.now();
@@ -227,7 +229,13 @@ export async function fetchPageRequest(
         async start(controller) {
             const write = (s: string) => controller.enqueue(encoder.encode(s));
 
-            const headParts = [headTagsHtml, modulePreloads, cssLink, headScriptsHtml]
+            // Deferred-action seed (DL#239): the client derives tickets from it, so it must be in
+            // the page before the hydrate script runs. Only when long-request polling is enabled.
+            const seedScript =
+                typeof actionPollAfterMs === 'number'
+                    ? `<script>window.__jay=window.__jay||{};window.__jay.actionSeed=${JSON.stringify(issueSeed())}</script>`
+                    : '';
+            const headParts = [headTagsHtml, modulePreloads, cssLink, headScriptsHtml, seedScript]
                 .filter(Boolean)
                 .join('\n');
             write(`<!doctype html>

@@ -1,13 +1,14 @@
 <html>
 <head>
-  <script type="application/jay-data">
-    data:
-  </script>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
 </head>
 <body>
   <div>
     <h1>Actions Test</h1>
-    <p>Action endpoints are tested directly via HTTP</p>
+    <p>Server action endpoints (also tested directly via HTTP).</p>
+    <p>Count: <span>{count}</span></p>
+    <button ref="get-count">Get Count</button>
+    <button ref="increment">Increment</button>
   </div>
 </body>
 </html>

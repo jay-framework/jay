@@ -41,6 +41,15 @@ export interface JayConfig {
     server?: {
         /** Cap on a JSON action request body in UTF-8 bytes (positive integer; default 1 MiB). */
         actionBodyLimitBytes?: number;
+        /**
+         * Switch an action to polling after this many ms (DL#239): the dispatcher races the handler
+         * against this budget and, if it is exceeded, answers `202` + a ticket the client polls.
+         * Absent → polling off. A positive integer well under the upstream gateway's limit (a poll
+         * also waits up to the budget); 25000 is the recommended value behind a 55 s gateway. Enable
+         * only on a single-process deployment (see the devops guide); not for fetch-handler platforms
+         * or multi-instance.
+         */
+        actionPollAfterMs?: number;
     };
     /** Project-wide validation suppressions for project-level concerns (DL#214). */
     validations?: {
@@ -129,6 +138,17 @@ export function resolveActionBodyLimitBytes(config: JayConfig, override?: number
 
 export function isPositiveInteger(value: unknown): value is number {
     return typeof value === 'number' && Number.isInteger(value) && value > 0;
+}
+
+/**
+ * The long-request poll budget (DL#239): `.jay` `server.actionPollAfterMs` when a positive integer,
+ * else `undefined` (polling off). A positive-integer `override` wins (used by tests/CLI flags).
+ */
+export function resolveActionPollAfterMs(config: JayConfig, override?: number): number | undefined {
+    if (isPositiveInteger(override)) return override;
+    const configured = config.server?.actionPollAfterMs;
+    if (isPositiveInteger(configured)) return configured;
+    return undefined;
 }
 
 export function updateConfig(updates: Partial<JayConfig>): void {

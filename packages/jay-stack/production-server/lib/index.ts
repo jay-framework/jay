@@ -63,7 +63,9 @@ export { fetchPageRequest } from './serve/fetch-page-handler';
 export { renderErrorPage } from './serve/render-error-page';
 export {
     fetchActionRequest,
+    fetchActionResultRequest,
     isActionRequest,
+    isActionResultRequest,
     registerActionsFromManifest,
     registerActionsFromModules,
     type FetchActionOptions,

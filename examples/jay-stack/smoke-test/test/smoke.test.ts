@@ -300,6 +300,126 @@ function expectPage(body: string) {
 }
 
 // =========================================================================
+// DL#239 — long-running actions (poll + resumable stream segments)
+// Registered in both dev and production-self-hosted modes (both read .jay
+// server.actionPollAfterMs). Exercises the full HTTP path a browser client drives:
+// the SSR-injected seed, the 202 + ticket poll for value/query, and NDJSON stream segments.
+// =========================================================================
+
+function registerDeferredPollingTests(getServer: () => SmokeTestServer) {
+    describe('DL#239 — long-running actions', () => {
+        const base = () => getServer().url;
+
+        // The client derives tickets from the seed the server injects into the page.
+        async function readSeed(): Promise<string> {
+            const { body } = await fetchPage(base(), '/long-actions/');
+            const m = body.match(/window\.__jay\.actionSeed=("(?:[^"\\]|\\.)*")/);
+            if (!m) throw new Error('no window.__jay.actionSeed injected into the page');
+            return JSON.parse(m[1]) as string;
+        }
+
+        it('/long-actions — page renders', async () => {
+            const { status, body } = await fetchPage(base(), '/long-actions/');
+            expect(status).toBe(200);
+            expect(body).toMatch(/Long Actions Test/);
+        });
+        const ticketFor = (seed: string, n = 0) => `${seed}.${n}`;
+
+        async function pollValue(ticket: string): Promise<Response> {
+            for (let i = 0; i < 50; i++) {
+                const res = await fetch(`${base()}/_jay/action-results/${ticket}`);
+                if (res.status !== 202) return res;
+            }
+            throw new Error('poll never completed');
+        }
+
+        async function parseNdjson(res: Response): Promise<any[]> {
+            return (await res.text())
+                .split('\n')
+                .filter((l) => l.trim())
+                .map((l) => JSON.parse(l));
+        }
+
+        it('injects window.__jay.actionSeed into the page', async () => {
+            const seed = await readSeed();
+            expect(seed).toMatch(/^[^.]+\.[^.]+$/); // nonce.mac
+        });
+
+        it('defers a long POST action and delivers the result via poll', async () => {
+            const ticket = ticketFor(await readSeed());
+            const first = await fetch(`${base()}/_jay/actions/long.slowAction`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Jay-Action-Ticket': ticket },
+                body: JSON.stringify({ label: 'hi' }),
+            });
+            expect(first.status).toBe(202);
+            expect(first.headers.get('cache-control')).toBe('private, no-store');
+            expect((await first.json()).pending.ticket).toBe(ticket);
+
+            const done = await pollValue(ticket);
+            expect(done.status).toBe(200);
+            const json = await done.json();
+            expect(json.success).toBe(true);
+            expect(json.data).toMatchObject({ label: 'hi', at: 'slowAction' });
+        });
+
+        it('defers a long GET query', async () => {
+            const ticket = ticketFor(await readSeed());
+            const first = await fetch(`${base()}/_jay/actions/long.slowQuery`, {
+                headers: { 'Jay-Action-Ticket': ticket },
+            });
+            expect(first.status).toBe(202);
+            const done = await pollValue(ticket);
+            expect(done.status).toBe(200);
+            expect((await done.json()).data).toMatchObject({ value: 'slow-query-result' });
+        });
+
+        it('404s a bad-MAC ticket on the result route', async () => {
+            const res = await fetch(`${base()}/_jay/action-results/nonce.badmac.0`);
+            expect(res.status).toBe(404);
+            expect((await res.json()).error.code).toBe('RESULT_NOT_FOUND');
+        });
+
+        // ~5s: the ticker's gaps grow (95·n), so later chunks are seconds apart.
+        it('streams a long action in resumable segments', async () => {
+            const ticket = ticketFor(await readSeed());
+            const chunks: number[] = [];
+            let done = false;
+
+            let events = await parseNdjson(
+                await fetch(`${base()}/_jay/actions/long.ticker`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Jay-Action-Ticket': ticket },
+                    body: JSON.stringify({ n: 10 }),
+                }),
+            );
+            for (let guard = 0; guard < 50 && !done; guard++) {
+                for (const e of events) {
+                    if ('chunk' in e) chunks.push(e.chunk);
+                    else if (e.done) done = true;
+                    else if (e.error) throw new Error('stream error: ' + e.error);
+                }
+                if (done) break;
+                events = await parseNdjson(
+                    await fetch(`${base()}/_jay/action-results/${ticket}?from=${chunks.length}`),
+                );
+            }
+            expect(done).toBe(true);
+            expect(chunks).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        }, 20000);
+
+        it('a fast action with a ticket returns 200 directly (within budget)', async () => {
+            const ticket = ticketFor(await readSeed());
+            const res = await fetch(`${base()}/_jay/actions/counter.getCount`, {
+                headers: { 'Jay-Action-Ticket': ticket },
+            });
+            expect(res.status).toBe(200);
+            expect((await res.json()).success).toBe(true);
+        });
+    });
+}
+
+// =========================================================================
 // Tests
 // =========================================================================
 
@@ -314,6 +434,8 @@ describe('Smoke Test', () => {
         afterAll(async () => {
             await server?.stop();
         });
+
+        registerDeferredPollingTests(() => server);
 
         it('health check responds', async () => {
             const response = await fetch(`${server.url}/_jay/health`);
@@ -656,6 +778,8 @@ describe('Smoke Test', () => {
         afterAll(async () => {
             await server?.stop();
         });
+
+        registerDeferredPollingTests(() => server);
 
         it('/ — static page', async () => {
             const { status, body } = await fetchPage(server.url, '/');

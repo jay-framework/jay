@@ -48,6 +48,17 @@ describe('transform-action-imports', () => {
             expect(isActionImport('./utils/cart')).toBe(false);
             expect(isActionImport('@jay-framework/fullstack-component')).toBe(false);
         });
+
+        it('should not treat a page under an actions-named route folder as an action', () => {
+            // A route entry imports the page; its folder may be named `actions` or `*-actions`.
+            expect(isActionImport('../../../src/pages/actions/page.ts')).toBe(false);
+            expect(isActionImport('../../../src/pages/long-actions/page.ts')).toBe(false);
+            expect(isActionImport('./page')).toBe(false);
+        });
+
+        it('should match a resolved action module id with an extension', () => {
+            expect(isActionImport('/abs/src/actions/counter.actions.ts')).toBe(true);
+        });
     });
 
     describe('extractActionsFromSource', () => {

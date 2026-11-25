@@ -71,20 +71,34 @@ export function isActionModule(filePath: string): boolean {
 }
 
 /**
- * Checks if an import source refers to an action module.
+ * Checks if an import source (or a resolved module id) refers to an action module.
+ *
+ * Matches an action module by its own name or by living directly in an `actions/` directory —
+ * but never treats a **page** (`page.ts`/`page.js`, what a route entry imports) as an action, even
+ * when the page's route folder is named `actions` (`src/pages/actions/page.ts`) or ends in
+ * `-actions` (`.../long-actions/page.ts`). A looser substring match on `/actions/` / `-actions`
+ * used to misclassify those pages and break their client bundles.
+ *
+ * Matches:
+ * - `cart.actions`, `../actions/cart.actions`, `counter.actions.ts` (name ends `.actions`)
+ * - `./mood-actions` (hyphen variant)
+ * - `@jay-plugin-store/actions`, `../actions` (bare `actions` barrel)
+ * - `./actions/cart`, `src/actions/cart` (file directly inside an `actions/` dir)
+ * Does not match: `src/pages/actions/page.ts`, `.../long-actions/page.ts`, `./utils/cart`.
  */
 export function isActionImport(importSource: string): boolean {
-    // Match patterns like:
-    // - './actions/cart.actions'
-    // - '../actions/cart.actions'
-    // - '@jay-plugin-store/actions'
-    // - 'src/actions/cart.actions'
-    // - './mood-actions' (hyphen variant)
+    const parts = importSource.split('/');
+    const name = (parts.pop() ?? '').replace(/\.(ts|js|mts|cts|mjs|cjs)$/, '');
+    const parentDir = parts[parts.length - 1];
+
+    // `page` is a reserved page-module name, never an action — a route entry imports it.
+    if (name === 'page') return false;
+
     return (
-        importSource.includes('.actions') ||
-        importSource.includes('-actions') ||
-        importSource.includes('/actions/') ||
-        importSource.endsWith('/actions')
+        name === 'actions' ||
+        name.endsWith('.actions') ||
+        name.endsWith('-actions') ||
+        parentDir === 'actions'
     );
 }
 

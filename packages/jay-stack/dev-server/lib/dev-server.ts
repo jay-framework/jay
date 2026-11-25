@@ -47,8 +47,14 @@ import { Request, Response } from 'express';
 import { DevServerOptions } from './dev-server-options';
 import { ServiceLifecycleManager } from './service-lifecycle';
 import { deepMergeViewStates } from '@jay-framework/view-state-merge';
-import { createActionRouter, actionBodyParser, ACTION_ENDPOINT_BASE } from './action-router';
-import { actionRegistry } from '@jay-framework/stack-server-runtime';
+import {
+    createActionRouter,
+    createActionResultRouter,
+    actionBodyParser,
+    ACTION_ENDPOINT_BASE,
+    ACTION_RESULT_ENDPOINT_BASE,
+} from './action-router';
+import { actionRegistry, issueSeed } from '@jay-framework/stack-server-runtime';
 import {
     slowRenderTransform,
     parseContract,
@@ -368,6 +374,7 @@ function defaults(options: DevServerOptions): DevServerOptions {
         allowedHosts: options.allowedHosts,
         sourceEditing: options.sourceEditing,
         actionBodyLimitBytes: options.actionBodyLimitBytes,
+        actionPollAfterMs: options.actionPollAfterMs,
     };
 }
 
@@ -1141,7 +1148,9 @@ async function handleClientOnlyRequest(
     );
     timing?.recordViteClient(Date.now() - viteStart);
 
-    res.status(200).set({ 'Content-Type': 'text/html' }).send(compiledPageHtml);
+    res.status(200)
+        .set({ 'Content-Type': 'text/html' })
+        .send(injectActionSeedScript(compiledPageHtml));
     timing?.end();
 }
 
@@ -1254,7 +1263,9 @@ async function sendResponse(
     );
     timing?.recordViteClient(Date.now() - viteStart);
 
-    res.status(statusCode).set({ 'Content-Type': 'text/html' }).send(compiledPageHtml);
+    res.status(statusCode)
+        .set({ 'Content-Type': 'text/html' })
+        .send(injectActionSeedScript(compiledPageHtml));
     timing?.end();
 }
 
@@ -1558,7 +1569,7 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     setupServiceHotReload(vite, lifecycleManager);
 
     // Set up action router for /_jay/actions/* endpoints
-    setupActionRouter(vite, buildFolder!, options.actionBodyLimitBytes);
+    setupActionRouter(vite, buildFolder!, options.actionBodyLimitBytes, options.actionPollAfterMs);
 
     // Scan routes, excluding any page files found inside the build folder.
     // This prevents pre-rendered cache files from being picked up as additional routes
@@ -1753,18 +1764,44 @@ function setupServiceHotReload(
  * Sets up the action router for handling /_jay/actions/* requests.
  * Actions are RPC-style endpoints that can be called from the client.
  */
+/** Deferral budget for the dev server (DL#239); set by setupActionRouter, read by seed injection. */
+let devActionPollAfterMs: number | undefined;
+
+/**
+ * Injects the deferred-action seed into a page's <head> (DL#239) when deferral is enabled, so the
+ * client can derive tickets before the hydrate script runs. No-op otherwise.
+ */
+function injectActionSeedScript(html: string): string {
+    if (typeof devActionPollAfterMs !== 'number') return html;
+    const script = `<script>window.__jay=window.__jay||{};window.__jay.actionSeed=${JSON.stringify(
+        issueSeed(),
+    )}</script>`;
+    return html.includes('</head>') ? html.replace('</head>', `${script}</head>`) : script + html;
+}
+
 function setupActionRouter(
     vite: ViteDevServer,
     buildFolder: string,
     actionBodyLimitBytes: number | undefined,
+    actionPollAfterMs: number | undefined,
 ): void {
+    devActionPollAfterMs = actionPollAfterMs;
     // Add body parser middleware for action requests (DL#131: multipart support, DL#234: size cap)
     vite.middlewares.use(
         actionBodyParser({ buildFolder, registry: actionRegistry, actionBodyLimitBytes }),
     );
 
+    // Deferred-result poll route must be mounted before the action router (DL#239).
+    vite.middlewares.use(
+        ACTION_RESULT_ENDPOINT_BASE,
+        createActionResultRouter({ registry: actionRegistry, actionPollAfterMs }),
+    );
+
     // Add action router
-    vite.middlewares.use(ACTION_ENDPOINT_BASE, createActionRouter({ registry: actionRegistry }));
+    vite.middlewares.use(
+        ACTION_ENDPOINT_BASE,
+        createActionRouter({ registry: actionRegistry, actionPollAfterMs }),
+    );
 
     getLogger().info(`[Actions] Action router mounted at ${ACTION_ENDPOINT_BASE}`);
 }
