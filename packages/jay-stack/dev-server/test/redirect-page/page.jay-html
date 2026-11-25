@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Redirect Page</title>
+    <script type="application/jay-data">
+        data:
+    </script>
+</head>
+<body>
+    <div>
+        <h1>Never rendered</h1>
+    </div>
+</body>
+</html>

@@ -35,6 +35,18 @@ describe('dev server', () => {
         return match?.[1] || '/@id/__x00__/index.html?html-proxy&index=0.js';
     }
 
+    it('sends a Location header when the fast phase redirects', async () => {
+        const httpServer = http.createServer();
+        const devServer = await mkDevServer(optionsForDir('./redirect-page', httpServer));
+        try {
+            const [, headers, status] = await makeRequest(devServer.routes[0].handler, '/');
+            expect(status).toBe(302);
+            expect(headers['Location']).toBe('/target?from=redirect-page');
+        } finally {
+            await devServer.viteServer.close();
+        }
+    });
+
     it('should handle a simple jay-html file without code', async () => {
         const httpServer = http.createServer();
         const devServer = await mkDevServer(optionsForDir('./simple-page', httpServer));
@@ -484,7 +496,10 @@ function clearScriptForTest(script: string) {
     );
 }
 
-async function makeRequest(handler: any, path: string): Promise<[string, Record<string, string>]> {
+async function makeRequest(
+    handler: any,
+    path: string,
+): Promise<[string, Record<string, string>, number]> {
     return new Promise((resolve, reject) => {
         const req = {
             method: 'GET',
@@ -518,11 +533,11 @@ async function makeRequest(handler: any, path: string): Promise<[string, Record<
             },
             set: (headers: any) => res,
             send: (data: string) => {
-                resolve([data, resHeaders]);
+                resolve([data, resHeaders, statusCode]);
                 return res;
             },
             end: (data?: string) => {
-                resolve([data || '', resHeaders]);
+                resolve([data || '', resHeaders, statusCode]);
                 return res;
             },
             writeHead: (code: number, headers?: any) => {
@@ -547,7 +562,7 @@ async function makeRequest(handler: any, path: string): Promise<[string, Record<
             emit: () => true,
             writable: true,
             write: (data: string) => {
-                resolve([data, resHeaders]);
+                resolve([data, resHeaders, statusCode]);
                 return true;
             },
             cork: () => {},

@@ -496,7 +496,9 @@ async function handleOtherResponseCodes(
     url: string,
 ) {
     if (renderedResult.kind === `Redirect`) {
-        res.status(renderedResult.status).end('redirect to ' + renderedResult.location);
+        res.status(renderedResult.status);
+        res.setHeader('Location', renderedResult.location);
+        res.end('redirect to ' + renderedResult.location);
         return;
     }
     // DL#218 — a component/plugin returned an error outcome: render the matching error page
