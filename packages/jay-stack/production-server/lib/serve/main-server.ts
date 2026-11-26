@@ -29,6 +29,14 @@ export interface MainServerOptions {
     actionBodyLimitBytes?: number;
     /** Long-request poll budget in ms (DL#239); absent → off */
     actionPollAfterMs?: number;
+    /** Max wait (ms) for the refresh of an `expired` instance (DL#226/#240); default 2000. */
+    staleWaitMs?: number;
+    /** Max wait (ms) of a render-on-miss before 503 (DL#227/#240); default 8000. */
+    missTimeoutMs?: number;
+    /** Max concurrent slow renders (DL#227/#240); default 5. */
+    slowRenderConcurrency?: number;
+    /** Emit the `jay-freshness` response header (DL#226/#240); default true. */
+    freshnessHeader?: boolean;
 }
 
 function toFetchRequest(req: http.IncomingMessage): Request {
@@ -79,7 +87,10 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
     const backendDir = path.join(buildDir, 'backend');
     const frontendDir = path.join(buildDir, 'frontend');
     const artifacts = new FilesystemArtifactStore(backendDir);
-    const renderer = new InstanceRenderer(artifacts);
+    const renderer = new InstanceRenderer(artifacts, {
+        concurrency: options.slowRenderConcurrency,
+        missTimeoutMs: options.missTimeoutMs,
+    });
 
     const manifest = await artifacts.readManifest();
     logger.important(
@@ -191,7 +202,11 @@ export async function startMainServer(options: MainServerOptions): Promise<void>
                 staticBaseUrl,
                 cookies,
                 renderer,
-                options.actionPollAfterMs,
+                {
+                    actionPollAfterMs: options.actionPollAfterMs,
+                    staleWaitMs: options.staleWaitMs,
+                    freshnessHeader: options.freshnessHeader,
+                },
             );
             await pipeFetchResponse(response, res);
         } catch (err: any) {

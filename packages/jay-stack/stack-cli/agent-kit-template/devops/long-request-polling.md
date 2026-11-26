@@ -19,6 +19,9 @@ server:
   actionPollAfterMs: 25000 # recommended behind a 55 s gateway
 ```
 
+Or, without editing the committed `.jay`, the env override `JAY_SERVER_ACTION_POLL_AFTER_MS=25000`
+(DL#240; see [configuration.md](configuration.md)).
+
 - **Absent → off** (the default). The server behaves exactly as before.
 - The value must be a **positive integer, well under the gateway's limit**, because a poll also waits
   up to the budget. `25000` clears both a 55 s gateway and the common 30 s proxy cut. `jay-stack

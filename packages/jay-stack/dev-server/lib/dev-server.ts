@@ -348,7 +348,9 @@ function resolvePluginModule(
 }
 
 function defaults(options: DevServerOptions): DevServerOptions {
-    const publicBaseUrlPath = options.publicBaseUrlPath || process.env.BASE || '/';
+    // Base path comes from the caller (stack-cli resolves `.jay` devServer.base + its
+    // JAY_DEV_SERVER_BASE env override, DL#240); default '/'.
+    const publicBaseUrlPath = options.publicBaseUrlPath || '/';
     const projectRootFolder = options.projectRootFolder || '.';
     const pagesRootFolder = path.resolve(
         projectRootFolder,

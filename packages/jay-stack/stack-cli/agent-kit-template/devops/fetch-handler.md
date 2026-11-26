@@ -35,29 +35,40 @@ interface JayFetchHandlerOptions {
   actionModules?: Array<{ module: Record<string, unknown>; name: string }>;
 
   actionBodyLimitBytes?: number; // JSON action body cap in bytes (default 1 MiB) → 413 over it
+  staleWaitMs?: number; // Max wait for an expired instance's refresh (default 2000)
+  missTimeoutMs?: number; // Max wait of a render-on-miss before 503 (default 8000)
+  slowRenderConcurrency?: number; // Max concurrent slow renders (default 5)
+  freshnessHeader?: boolean; // Emit the jay-freshness header (default true)
 }
 ```
 
-| Option                 | Required | Description                                                                                                                          |
-| ---------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `backendDir`           | \*       | Path to the backend build directory. Creates a `FilesystemArtifactStore` internally                                                  |
-| `artifactStore`        | \*       | Custom `ArtifactStore` implementation (e.g., cloud storage). Use instead of `backendDir`                                             |
-| `staticBaseUrl`        | No       | URL prefix for import maps, CSS links, and client bundles. Set to your CDN URL for external hosting. Default: `/`                    |
-| `frontendDir`          | No       | When provided, the handler serves static files from this directory. Omit for CDN deployments where static files are hosted elsewhere |
-| `plugins`              | No       | Pre-imported plugin init modules. Bypasses filesystem discovery — use for bundled deployments                                        |
-| `actionModules`        | No       | Pre-imported action modules. Bypasses filesystem discovery — use for bundled deployments                                             |
-| `actionBodyLimitBytes` | No       | Cap on a JSON action request body in UTF-8 bytes. Default 1 MiB; over it → 413 `PAYLOAD_TOO_LARGE`                                   |
+| Option                                                                        | Required | Description                                                                                                                          |
+| ----------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `backendDir`                                                                  | \*       | Path to the backend build directory. Creates a `FilesystemArtifactStore` internally                                                  |
+| `artifactStore`                                                               | \*       | Custom `ArtifactStore` implementation (e.g., cloud storage). Use instead of `backendDir`                                             |
+| `staticBaseUrl`                                                               | No       | URL prefix for import maps, CSS links, and client bundles. Set to your CDN URL for external hosting. Default: `/`                    |
+| `frontendDir`                                                                 | No       | When provided, the handler serves static files from this directory. Omit for CDN deployments where static files are hosted elsewhere |
+| `plugins`                                                                     | No       | Pre-imported plugin init modules. Bypasses filesystem discovery — use for bundled deployments                                        |
+| `actionModules`                                                               | No       | Pre-imported action modules. Bypasses filesystem discovery — use for bundled deployments                                             |
+| `actionBodyLimitBytes`                                                        | No       | Cap on a JSON action request body in UTF-8 bytes. Default 1 MiB; over it → 413 `PAYLOAD_TOO_LARGE`                                   |
+| `staleWaitMs` / `missTimeoutMs` / `slowRenderConcurrency` / `freshnessHeader` | No       | Serving knobs from `.jay` `server.*` — see [configuration.md](configuration.md)                                                      |
 
 \* One of `backendDir` or `artifactStore` is required.
 
-The handler does not read `.jay`. To honour the project's `server.actionBodyLimitBytes`, resolve it at bootstrap:
+The handler does not read `.jay`. To honour the project's `server.*` settings (and their `JAY_SERVER_*`
+env overrides, DL#240), resolve them at bootstrap with `loadConfig` — which applies the env overrides:
 
 ```typescript
 import { loadConfig, resolveActionBodyLimitBytes } from '@jay-framework/stack-cli';
 
+const config = loadConfig(projectRoot);
 const handler = createJayFetchHandler({
   backendDir,
-  actionBodyLimitBytes: resolveActionBodyLimitBytes(loadConfig(projectRoot)),
+  actionBodyLimitBytes: resolveActionBodyLimitBytes(config),
+  staleWaitMs: config.server?.staleWaitMs,
+  missTimeoutMs: config.server?.missTimeoutMs,
+  slowRenderConcurrency: config.server?.slowRenderConcurrency,
+  freshnessHeader: config.server?.freshnessHeader,
 });
 ```
 

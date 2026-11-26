@@ -62,7 +62,7 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
     const { server, viteServer, routes, service, errorPageHandler } = await mkDevServer({
         pagesRootFolder: path.resolve(resolvedConfig.devServer.pagesBase),
         projectRootFolder: process.cwd(),
-        publicBaseUrlPath: '/',
+        publicBaseUrlPath: resolvedConfig.devServer.base ?? '/',
         jayRollupConfig: jayOptions,
         logLevel: options.logLevel,
         httpServer,

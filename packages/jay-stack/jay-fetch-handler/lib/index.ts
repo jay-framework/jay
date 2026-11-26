@@ -35,10 +35,19 @@ export interface JayFetchHandlerOptions {
 
     /**
      * Cap on a JSON action request body in UTF-8 bytes (DL#234; default 1 MiB).
-     * Custom bootstraps can resolve it from the project `.jay` with `loadConfig` +
-     * `resolveActionBodyLimitBytes` from `@jay-framework/stack-cli`.
+     * Custom bootstraps resolve it from the project `.jay` with `loadConfig` +
+     * `resolveActionBodyLimitBytes` from `@jay-framework/stack-cli`, which also applies the
+     * `JAY_SERVER_ACTION_BODY_LIMIT_BYTES` env override (DL#240).
      */
     actionBodyLimitBytes?: number;
+    /** Max wait (ms) for the refresh of an `expired` instance (DL#226/#240); default 2000. */
+    staleWaitMs?: number;
+    /** Max wait (ms) of a render-on-miss before 503 (DL#227/#240); default 8000. */
+    missTimeoutMs?: number;
+    /** Max concurrent slow renders (DL#227/#240); default 5. */
+    slowRenderConcurrency?: number;
+    /** Emit the `jay-freshness` response header (DL#226/#240); default true. */
+    freshnessHeader?: boolean;
 }
 
 export function createJayFetchHandler(
@@ -48,7 +57,10 @@ export function createJayFetchHandler(
     const artifacts = options.artifactStore ?? new FilesystemArtifactStore(options.backendDir!);
     const backendDir = options.backendDir;
     // Refresh + render-on-miss (DL#226/#227); inert when the store has no `writeCacheData`.
-    const renderer = new InstanceRenderer(artifacts);
+    const renderer = new InstanceRenderer(artifacts, {
+        concurrency: options.slowRenderConcurrency,
+        missTimeoutMs: options.missTimeoutMs,
+    });
     const logger = getLogger();
     let initialized = false;
 
@@ -122,6 +134,10 @@ export function createJayFetchHandler(
             staticBaseUrl,
             cookies,
             renderer,
+            {
+                staleWaitMs: options.staleWaitMs,
+                freshnessHeader: options.freshnessHeader,
+            },
         );
     };
 }

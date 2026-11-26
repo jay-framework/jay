@@ -27,31 +27,11 @@ export interface CreateViteServerOptions {
     httpServer?: Server;
     /**
      * Hosts Vite's dev-server host-check accepts, beyond localhost (DL#220). A list of hosts (Vite
-     * host-suffix syntax, e.g. `.example.dev`), or `true` to disable the check entirely. Merged with
-     * the `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS` env var. `undefined`/empty → Vite's default.
+     * host-suffix syntax, e.g. `.example.dev`), or `true` to disable the check entirely. Pre-resolved
+     * by stack-cli (`.jay` devServer.allowedHosts + `JAY_DEV_SERVER_ALLOWED_HOSTS`, DL#240).
+     * `undefined` → Vite's localhost-only default.
      */
     allowedHosts?: string[] | true;
-}
-
-/**
- * Resolves Vite's `server.allowedHosts` from the `.jay` config value and the
- * `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS` env var (Vite's own convention — honored natively only in
- * Vite 6, so the nested Vite 5.4 needs us to read it). Returns `true` (disable check) if either source
- * says so, a de-duplicated merged list otherwise, or `undefined` when neither is set (Vite keeps its
- * localhost-only default). (DL#220)
- */
-export function resolveAllowedHosts(
-    fromConfig: string[] | true | undefined,
-    env: string | undefined,
-): string[] | true | undefined {
-    if (fromConfig === true) return true;
-    const envHosts = (env ?? '')
-        .split(',')
-        .map((host) => host.trim())
-        .filter(Boolean);
-    if (envHosts.includes('true')) return true;
-    const merged = [...(fromConfig ?? []), ...envHosts];
-    return merged.length ? Array.from(new Set(merged)) : undefined;
 }
 
 /**
@@ -72,10 +52,9 @@ export async function createViteServer(options: CreateViteServerOptions): Promis
         allowedHosts,
     } = options;
 
-    const resolvedAllowedHosts = resolveAllowedHosts(
-        allowedHosts,
-        process.env.__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS,
-    );
+    // `allowedHosts` arrives pre-resolved from stack-cli (`.jay` devServer.allowedHosts +
+    // its JAY_DEV_SERVER_ALLOWED_HOSTS env override, DL#240).
+    const resolvedAllowedHosts = allowedHosts;
 
     const vite = await createServer({
         // Don't start HTTP server - we use middleware mode
