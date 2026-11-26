@@ -7,9 +7,9 @@ paste its import + region, then run `jay-stack sync` to flatten the markup. See
 
 ## Badge
 
-| Variant | Title | Template |
-| --- | --- | --- |
-| (default) |  | ./src/components/badge/badge.jay-html |
+| Variant   | Title | Template                              |
+| --------- | ----- | ------------------------------------- |
+| (default) |       | ./src/components/badge/badge.jay-html |
 
 ```html
 <script
@@ -29,9 +29,9 @@ _No template yet (COMPONENT-NO-TEMPLATE) — this component can't be flattened u
 
 ## Button
 
-| Variant | Title | Template |
-| --- | --- | --- |
-| (default) |  | ./src/components/button/button.jay-html |
+| Variant   | Title | Template                                |
+| --------- | ----- | --------------------------------------- |
+| (default) |       | ./src/components/button/button.jay-html |
 
 ```html
 <script
@@ -47,9 +47,9 @@ Then run `jay-stack sync` to flatten it.
 
 ## Card
 
-| Variant | Title | Template |
-| --- | --- | --- |
-| (default) |  | ./src/components/card/card.jay-html |
+| Variant   | Title | Template                            |
+| --------- | ----- | ----------------------------------- |
+| (default) |       | ./src/components/card/card.jay-html |
 
 ```html
 <script
@@ -65,9 +65,9 @@ Then run `jay-stack sync` to flatten it.
 
 ## DismissCard
 
-| Variant | Title | Template |
-| --- | --- | --- |
-| (default) |  | ./src/components/dismiss-card/dismiss-card.jay-html |
+| Variant   | Title | Template                                            |
+| --------- | ----- | --------------------------------------------------- |
+| (default) |       | ./src/components/dismiss-card/dismiss-card.jay-html |
 
 ```html
 <script
@@ -83,9 +83,9 @@ Then run `jay-stack sync` to flatten it.
 
 ## InfoBox
 
-| Variant | Title | Template |
-| --- | --- | --- |
-| (default) |  | ./src/components/info-box/info-box.jay-html |
+| Variant   | Title | Template                                    |
+| --------- | ----- | ------------------------------------------- |
+| (default) |       | ./src/components/info-box/info-box.jay-html |
 
 ```html
 <script
@@ -105,9 +105,9 @@ _No template yet (COMPONENT-NO-TEMPLATE) — this component can't be flattened u
 
 ## Section
 
-| Variant | Title | Template |
-| --- | --- | --- |
-| (default) |  | ./src/components/section/section.jay-html |
+| Variant   | Title | Template                                  |
+| --------- | ----- | ----------------------------------------- |
+| (default) |       | ./src/components/section/section.jay-html |
 
 ```html
 <script
@@ -123,9 +123,9 @@ Then run `jay-stack sync` to flatten it.
 
 ## TagCard
 
-| Variant | Title | Template |
-| --- | --- | --- |
-| (default) |  | ./src/components/tag-card/tag-card.jay-html |
+| Variant   | Title | Template                                    |
+| --------- | ----- | ------------------------------------------- |
+| (default) |       | ./src/components/tag-card/tag-card.jay-html |
 
 ```html
 <script
