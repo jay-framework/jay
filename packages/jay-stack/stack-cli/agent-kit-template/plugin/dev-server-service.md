@@ -46,6 +46,11 @@ const routes = service.listRoutes();
 // [{ path: '/products/kitan/[[category]]', jayHtmlPath: '...', compPath: '...' }]
 ```
 
+`devOnly: true` is set for plugin routes declared `devOnly` and for project pages with
+`<meta name="jay-dev-only" />` in their `<head>`. For a project page, adding or removing the marker
+on an existing page leaves `devOnly` stale until the dev server restarts (new pages are picked up
+on creation).
+
 ### loadRouteParams(route)
 
 Async generator that yields param batches from the route's `loadParams`:

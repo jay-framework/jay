@@ -46,6 +46,46 @@ for **error pages**, not navigable routes. They are selected by response status 
 appear in the sitemap, and visiting `/404` directly returns a normal 404. See
 [error-pages-guide.md](error-pages-guide.md).
 
+## Dev-Only Pages
+
+A page that must exist **only in the dev server** — a component showcase, a preview page a tool
+generates so it renders with the project's real components, styles and plugins — is marked with a
+`<meta>` in its `<head>`:
+
+```html
+<!-- src/pages/_preview/button/page.jay-html -->
+<html>
+  <head>
+    <meta name="jay-dev-only" />
+    <script type="application/jay-data">
+      data:
+          title: string
+    </script>
+  </head>
+  <body>
+    <div class="preview">{title}</div>
+  </body>
+</html>
+```
+
+- `jay-stack dev` serves it like any page; `listRoutes()` reports it with `devOnly: true`.
+- `jay-stack build` excludes it completely: its `page.ts`, server element, CSS, client bundle,
+  manifest entry, sitemap and llms.txt line never reach the build output.
+- `content` is optional; if present it must be exactly `"true"`. To make the page public, **delete
+  the tag** — `content="false"` is an error, not an opt-out.
+- The marker must be in `<head>`; in `<body>` it is ignored (and is an error).
+- It does not work on error pages (`404/`, `5xx/`, ...): error pages always ship.
+- **Adding or removing the marker on an existing page needs a dev-server restart** before
+  `listRoutes()` reports the new `devOnly` value (the page itself renders either way). Write the
+  marker when you create the page.
+- **What still ships:** only page-owned code is excluded. Project-wide code — `src/actions`,
+  `src/components`, `src/plugins`, and everything in `public/` — ships as usual. Don't put
+  preview-only assets in `public/`. Server-only tooling logic belongs in a plugin action marked
+  `devOnly: true` (see `plugin/plugin-routes.md`), not in project actions.
+- A production page must not link to a dev-only page (dead link in production), and a dev-only page
+  must not use the path of a plugin route (the dev server would serve your page, production the
+  plugin's). `jay-stack validate` reports both — see `validation-guide.md`.
+
 ## Static Route Overrides
 
 A static route can override a dynamic route for a specific URL — giving one particular page a custom layout while the dynamic route handles everything else:

@@ -109,7 +109,10 @@ describe('checkInternalLinks', () => {
     const oracle: RouteOracle = {
         staticUrls: new Set(['/', '/about']),
         dynamicMatchers: [/^\/blog\/[^/]+$/],
+        devOnlyStaticUrls: new Set(),
+        devOnlyDynamicMatchers: [],
         selfUrlByPath: new Map(),
+        devOnlyJayHtmlPaths: new Set(),
     };
     const assetUrls = new Set(['/images/logo.svg']);
 

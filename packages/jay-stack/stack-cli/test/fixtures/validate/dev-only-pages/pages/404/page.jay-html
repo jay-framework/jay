@@ -1,0 +1,10 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+    <meta name="jay-dev-only" />
+</head>
+<body><h1>Not found</h1></body>
+</html>

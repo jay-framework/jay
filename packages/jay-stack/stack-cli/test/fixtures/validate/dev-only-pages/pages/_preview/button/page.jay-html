@@ -1,0 +1,13 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+    <meta name="jay-dev-only" content="true" />
+</head>
+<body>
+    <a href="/_tools/inspector">Dev-only to dev-only</a>
+    <a href="/about">Dev-only to production</a>
+</body>
+</html>

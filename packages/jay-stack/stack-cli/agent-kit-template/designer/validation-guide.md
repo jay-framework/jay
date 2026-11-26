@@ -159,6 +159,19 @@ The core `jay-stack validate` emits four warnings that nudge you to reuse UI thr
 </script>
 ```
 
+### Dev-only page errors
+
+Pages marked `<meta name="jay-dev-only" />` (see "Dev-Only Pages" in `routing.md`) have five
+errors. Each message starts with its code.
+
+| Code                            | Meaning                                                              | Fix                                                                                       |
+| ------------------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `DEV-ONLY-LINKED-FROM-PROD`     | A production page links to a URL only a dev-only page produces       | Remove the link or mark the linking page dev-only (`allow-broken-links: true` suppresses) |
+| `DEV-ONLY-ERROR-PAGE`           | The marker is on an error page (`404/`, `5xx/`, ...) — it is ignored | Remove the marker; error pages always ship                                                |
+| `DEV-ONLY-INVALID-CONTENT`      | `content` is something other than `"true"`                           | Use `content="true"` or no `content`; delete the tag to make the page public              |
+| `DEV-ONLY-MARKER-NOT-IN-HEAD`   | The marker is outside `<head>` — it is ignored and the page ships    | Move it into `<head>`                                                                     |
+| `DEV-ONLY-SHADOWS-PLUGIN-ROUTE` | A dev-only page has the path of a plugin route                       | Move the page to a free path (dev would serve it, production the plugin's route)          |
+
 ### When you can't suppress
 
 If a warning comes from dynamic content (`{post.content}`) or a generated file, you can't suppress it in the template. This is a validator limitation — the warning is a false positive. Don't loop trying to fix it.

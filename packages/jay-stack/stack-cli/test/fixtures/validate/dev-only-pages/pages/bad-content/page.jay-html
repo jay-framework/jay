@@ -1,0 +1,10 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+    <meta name="jay-dev-only" content="false" />
+</head>
+<body><h1>Bad content</h1></body>
+</html>

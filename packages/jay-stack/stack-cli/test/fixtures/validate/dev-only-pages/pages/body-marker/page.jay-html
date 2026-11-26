@@ -1,0 +1,12 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+</head>
+<body>
+    <meta name="jay-dev-only" />
+    <h1>Body marker</h1>
+</body>
+</html>

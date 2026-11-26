@@ -1,0 +1,15 @@
+<html>
+<head>
+    <meta name="jay-dev-only" />
+    <script type="application/jay-data">
+data:
+    devPreviewTitle: string
+    </script>
+    <style>.dev-preview-only-style { color: red }</style>
+</head>
+<body>
+    <div class="dev-preview-only-style">
+        <h1>{devPreviewTitle}</h1>
+    </div>
+</body>
+</html>

@@ -28,12 +28,18 @@ export interface LinkFinding {
 }
 
 export interface RouteOracle {
-    /** Concrete URLs that definitely exist: static pages + fully-inferred DL#156 static overrides. */
+    /** Concrete production URLs: static pages + fully-inferred DL#156 static overrides (DL#240: no dev-only pages). */
     staticUrls: Set<string>;
-    /** Matchers for routes with ≥1 unresolved dynamic segment — a match means "defer to Check 2". */
+    /** Production matchers for routes with ≥1 unresolved dynamic segment — a match means "defer to Check 2". */
     dynamicMatchers: RegExp[];
-    /** Resolved absolute page-file path → its own concrete URL (for self-link detection). */
+    /** DL#240 — concrete URLs produced only by dev-only pages (`<meta name="jay-dev-only">`). */
+    devOnlyStaticUrls: Set<string>;
+    /** DL#240 — dynamic-route matchers of dev-only pages. */
+    devOnlyDynamicMatchers: RegExp[];
+    /** Resolved absolute page-file path → its own concrete URL (for self-link detection). All routes. */
     selfUrlByPath: Map<string, string>;
+    /** DL#240 — resolved absolute page-file paths of dev-only pages, keyed like {@link selfUrlByPath}. */
+    devOnlyJayHtmlPaths: Set<string>;
 }
 
 const SUPPRESS_KEY = 'allow-broken-links';
@@ -108,20 +114,57 @@ export async function buildRouteOracle(pagesBase: string): Promise<RouteOracle> 
         routes = [];
     }
 
-    const staticUrls = new Set<string>();
-    const dynamicMatchers: RegExp[] = [];
-    const selfUrlByPath = new Map<string, string>();
-    for (const route of routes) {
-        const concrete = routeToConcreteUrl(route);
-        if (concrete !== null) {
-            staticUrls.add(concrete);
-            if (route.jayHtmlPath) selfUrlByPath.set(path.resolve(route.jayHtmlPath), concrete);
-        }
-        if (route.segments.some((s) => typeof s !== 'string')) {
-            dynamicMatchers.push(routeToRegex(route));
-        }
+    const oracle: RouteOracle = {
+        staticUrls: new Set(),
+        dynamicMatchers: [],
+        devOnlyStaticUrls: new Set(),
+        devOnlyDynamicMatchers: [],
+        selfUrlByPath: new Map(),
+        devOnlyJayHtmlPaths: new Set(),
+    };
+    for (const route of routes) addRouteToOracle(oracle, route);
+    return oracle;
+}
+
+/** Add one route to the oracle, partitioned on DL#240 `devOnly`. */
+function addRouteToOracle(oracle: RouteOracle, route: JayRoute): void {
+    const staticUrls = route.devOnly ? oracle.devOnlyStaticUrls : oracle.staticUrls;
+    const dynamicMatchers = route.devOnly ? oracle.devOnlyDynamicMatchers : oracle.dynamicMatchers;
+    const concrete = routeToConcreteUrl(route);
+    if (concrete !== null) {
+        staticUrls.add(concrete);
+        if (route.jayHtmlPath) oracle.selfUrlByPath.set(path.resolve(route.jayHtmlPath), concrete);
     }
-    return { staticUrls, dynamicMatchers, selfUrlByPath };
+    if (route.segments.some((s) => typeof s !== 'string')) {
+        dynamicMatchers.push(routeToRegex(route));
+    }
+    if (route.devOnly && route.jayHtmlPath) {
+        oracle.devOnlyJayHtmlPaths.add(path.resolve(route.jayHtmlPath));
+    }
+}
+
+/** DL#240 — how a link target resolves: in production, only to a dev-only page, or nowhere. */
+type TargetResolution = 'production' | 'devOnly' | 'none';
+
+function resolveTarget(
+    oracle: RouteOracle,
+    assetUrls: Set<string>,
+    target: string,
+): TargetResolution {
+    if (
+        oracle.staticUrls.has(target) ||
+        assetUrls.has(target) ||
+        oracle.dynamicMatchers.some((re) => re.test(target)) // dynamic deferred to Check 2
+    ) {
+        return 'production';
+    }
+    if (
+        oracle.devOnlyStaticUrls.has(target) ||
+        oracle.devOnlyDynamicMatchers.some((re) => re.test(target))
+    ) {
+        return 'devOnly';
+    }
+    return 'none';
 }
 
 /** Recursively collect public-folder files as root-relative URLs (`/images/logo.svg`). Never throws. */
@@ -283,7 +326,9 @@ export function checkInternalLinks(options: CheckInternalLinksOptions): LinkFind
 
         // The page's own URL — only pages (not reused components) have one; used to flag self-links and to
         // resolve this page's own `#fragment` links.
-        const ownUrl = oracle.selfUrlByPath.get(path.resolve(projectRoot ?? '.', relativePath));
+        const pagePath = path.resolve(projectRoot ?? '.', relativePath);
+        const ownUrl = oracle.selfUrlByPath.get(pagePath);
+        const linkingPageIsDevOnly = oracle.devOnlyJayHtmlPaths.has(pagePath);
         const ownIds = ownUrl !== undefined ? idsByUrl.get(ownUrl) : undefined;
 
         for (const anchor of parsed.body.querySelectorAll('a[href]')) {
@@ -352,12 +397,25 @@ export function checkInternalLinks(options: CheckInternalLinksOptions): LinkFind
                 continue;
             }
 
-            const resolves =
-                oracle.staticUrls.has(target) ||
-                assetUrls.has(target) ||
-                oracle.dynamicMatchers.some((re) => re.test(target)); // dynamic deferred to Check 2
+            const resolution = resolveTarget(oracle, assetUrls, target);
 
-            if (!resolves) {
+            // DL#240 — a production page linking to a page that exists only in the dev server.
+            if (resolution === 'devOnly' && !linkingPageIsDevOnly) {
+                if (allowBroken) continue;
+                findings.push({
+                    file: relativePath,
+                    severity: 'error',
+                    message:
+                        `DEV-ONLY-LINKED-FROM-PROD: anchor ${tag} links to "${target}", which only a ` +
+                        `dev-only page produces — it is a dead link in production.`,
+                    suggestion:
+                        'Remove the link, or mark the linking page dev-only with <meta name="jay-dev-only">. ' +
+                        `Otherwise ${SUPPRESS_HINT}.`,
+                });
+                continue;
+            }
+
+            if (resolution === 'none') {
                 if (allowBroken) continue;
                 findings.push({
                     file: relativePath,

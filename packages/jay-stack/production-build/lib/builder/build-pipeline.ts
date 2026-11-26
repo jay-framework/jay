@@ -17,7 +17,7 @@ import {
     generateRobotsTxtIfAbsent,
     FilesystemArtifactStore,
 } from '@jay-framework/production-server';
-import { scanPluginRoutes } from './plugin-routes';
+import { scanProductionPluginRoutes } from './plugin-routes';
 import { compileRouteServerElement, compileRouteHydrateScript } from './server-element-compile';
 import { generateRouteHydrationEntry } from './hydration-entry-gen';
 import { buildInstanceClient } from './instance-client-build';
@@ -280,7 +280,7 @@ export async function buildVersion(options: BuildOptions): Promise<RouteManifest
     };
 
     // 0f. Discover plugin routes
-    const pluginRoutes = await scanPluginRoutes(options.projectRoot, routes);
+    const pluginRoutes = await scanProductionPluginRoutes(options.projectRoot, routes);
 
     // DL#180 (finishing DL#171 Phase 2): dev-only routes are dev-server tooling (e.g. plugin
     // settings UIs). Exclude them from the production build entirely — never compiled, bundled,

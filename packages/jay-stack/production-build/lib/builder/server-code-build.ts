@@ -67,7 +67,9 @@ export async function discoverServerEntries(
 
     const pages: Record<string, string> = {};
     for (const route of routes) {
-        if (route.compPath) {
+        // DL#240 — a dev-only project page's module must never reach the backend bundle. The
+        // route is still returned so the build pipeline can log its exclusion.
+        if (route.compPath && !route.devOnly) {
             const relativePath = path.relative(projectRoot, route.compPath);
             const entryName = relativePath.replace(/^src\//, '').replace(/\.ts$/, '');
             pages[entryName] = route.compPath;

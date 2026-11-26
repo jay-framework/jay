@@ -32,6 +32,12 @@ describe('route-to-express-route', () => {
                 '/error-pages/5xx',
                 '/error-pages/502',
                 '/error-pages/blog/404',
+                // Dev-only fixtures (DL#240): nested under the shared root, so 404 is a normal route here.
+                '/dev-only',
+                '/dev-only/about',
+                '/dev-only/preview',
+                '/dev-only/body-marker',
+                '/dev-only/404',
             ]),
         );
     });

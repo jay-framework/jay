@@ -27,7 +27,7 @@ export {
 export type { RouteInfo, ParamPart, MaterializedEntry } from './builder/param-routing';
 export { buildRouteEntry, discoverActions, writeRouteManifest } from './builder/route-manifest';
 export { generateRouteHydrationEntry } from './builder/hydration-entry-gen';
-export { scanPluginRoutes } from './builder/plugin-routes';
+export { scanPluginRoutes, scanProductionPluginRoutes } from './builder/plugin-routes';
 
 // Re-export production-server types for convenience
 export * from '@jay-framework/production-server';

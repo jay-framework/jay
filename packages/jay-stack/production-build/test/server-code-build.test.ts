@@ -15,6 +15,15 @@ describe('discoverServerEntries', () => {
             recursive: true,
         });
 
+        await fs.mkdir(path.join(projectRoot, 'src/pages/preview'), { recursive: true });
+        await fs.writeFile(
+            path.join(projectRoot, 'src/pages/preview/page.jay-html'),
+            '<html><head><meta name="jay-dev-only" /></head><body>preview</body></html>\n',
+        );
+        await fs.writeFile(
+            path.join(projectRoot, 'src/pages/preview/page.ts'),
+            'export const page = {};\n',
+        );
         await fs.writeFile(
             path.join(projectRoot, 'src/components/site-header.ts'),
             'export const SiteHeader = {};\n',
@@ -56,5 +65,23 @@ describe('discoverServerEntries', () => {
         expect(entries.pages['plugins/wix-bookings/lib/init']).toBe(
             path.join(projectRoot, 'src/plugins/wix-bookings/lib/init.ts'),
         );
+    });
+
+    it('does not compile the page module of a dev-only project page (DL#240)', async () => {
+        const { entries } = await discoverServerEntries(
+            projectRoot,
+            path.join(projectRoot, 'src/pages'),
+        );
+
+        expect(Object.keys(entries.pages)).not.toContain('pages/preview/page');
+    });
+
+    it('still returns the dev-only route so the build can log its exclusion (DL#240)', async () => {
+        const { routes } = await discoverServerEntries(
+            projectRoot,
+            path.join(projectRoot, 'src/pages'),
+        );
+
+        expect(routes.find((r) => r.rawRoute === '/preview')?.devOnly).toBe(true);
     });
 });

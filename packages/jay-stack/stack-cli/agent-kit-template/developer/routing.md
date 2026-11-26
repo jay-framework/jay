@@ -208,6 +208,15 @@ HTTP cookies are available in the **fast render phase only** via `props.cookies`
 - In the interactive phase, use `document.cookie` directly
 - To set response headers (e.g. `Cache-Control: no-store`), use `responseHeaders` in `phaseOutput()` options
 
+## Dev-Only Pages
+
+Mark a page that must exist only in the dev server (previews, tooling pages) with
+`<meta name="jay-dev-only" />` in its `<head>`. It is served by `jay-stack dev` and fully excluded
+from `jay-stack build`, including its `page.ts`. Project actions, components and `public/` are
+project-wide and still ship — put server-only tooling logic in a plugin `devOnly` action. Toggling
+the marker on an existing page needs a dev-server restart for `listRoutes()`. Full rules: see
+"Dev-Only Pages" in the designer routing guide (`designer/routing.md`).
+
 ## Plugin Routes
 
 Plugins can provide their own pages via `routes` in `plugin.yaml`. These are backoffice tools, admin dashboards, or editors with boxed designs that don't need per-site customization.

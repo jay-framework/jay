@@ -332,3 +332,44 @@ describe('createRoute', () => {
 function resolveFixture(relativePath: string): string {
     return path.resolve('test/fixtures/' + relativePath);
 }
+
+describe('dev-only project pages (DL#240)', () => {
+    const options: ScanFilesOptions = { jayHtmlFilename: 'page.jay-html', compFilename: 'page.ts' };
+
+    it('marks a page with <meta name="jay-dev-only"> in <head> as devOnly', async () => {
+        const { routes } = await scanRoutes('./test/fixtures/dev-only', options);
+        const preview = routes.find((r) => r.rawRoute === '/preview');
+        expect(preview?.devOnly).toBe(true);
+    });
+
+    it('omits the devOnly key for a page without the marker', async () => {
+        const { routes } = await scanRoutes('./test/fixtures/dev-only', options);
+        const about = routes.find((r) => r.rawRoute === '/about');
+        expect(about).toBeDefined();
+        expect('devOnly' in about!).toBe(false);
+    });
+
+    it('ignores a marker that is only in <body>', async () => {
+        const { routes } = await scanRoutes('./test/fixtures/dev-only', options);
+        const bodyMarker = routes.find((r) => r.rawRoute === '/body-marker');
+        expect(bodyMarker).toBeDefined();
+        expect('devOnly' in bodyMarker!).toBe(false);
+    });
+
+    it('does not turn a marked error-page folder into a route, and leaves the error page unchanged', async () => {
+        const { routes, errorPages } = await scanRoutes('./test/fixtures/dev-only', options);
+        expect(routes.map((r) => r.rawRoute).sort()).toEqual([
+            '',
+            '/about',
+            '/body-marker',
+            '/preview',
+        ]);
+        expect(errorPages).toEqual([
+            {
+                token: '404',
+                jayHtmlPath: path.resolve('test/fixtures/dev-only/404/page.jay-html'),
+                compPath: '',
+            },
+        ]);
+    });
+});

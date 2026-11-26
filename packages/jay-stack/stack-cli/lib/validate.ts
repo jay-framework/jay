@@ -49,7 +49,11 @@ import {
     type DiffEntry,
 } from '@jay-framework/compiler-inline-composition';
 import { parse as parseHtml, HTMLElement, NodeType } from 'node-html-parser';
-import { scanRoutes } from '@jay-framework/stack-route-scanner';
+import {
+    scanRoutes,
+    DEV_ONLY_META_SELECTOR,
+    type ScanResult,
+} from '@jay-framework/stack-route-scanner';
 import { loadConfig, getConfigWithDefaults, isPositiveInteger, type JayConfig } from './config';
 import { checkGetActionsReadingCookies } from '@jay-framework/plugin-validator';
 import { DEFAULT_ACTION_BODY_LIMIT_BYTES } from '@jay-framework/stack-server-runtime';
@@ -604,6 +608,100 @@ function checkPageComponentExport(jayHtmlPath: string): string | null {
         `${path.relative(dirname, compPath)} exists but does not export "${exportName}". ` +
         `Remove the file or add the export.`
     );
+}
+
+// --- DL#240 — dev-only page marker checks ---
+
+/**
+ * `DEV-ONLY-INVALID-CONTENT` and `DEV-ONLY-MARKER-NOT-IN-HEAD`. The route scanner treats the mere
+ * presence of the marker in `<head>` as dev-only and reads nothing else, so a wrong `content` or a
+ * marker outside `<head>` would silently mean the opposite of what the author wrote.
+ */
+function checkDevOnlyMarker(jayHtmlContent: string): string[] {
+    const root = parseHtml(jayHtmlContent, { blockTextElements: { script: true, style: true } });
+    const messages: string[] = [];
+    for (const marker of root.querySelectorAll(DEV_ONLY_META_SELECTOR)) {
+        if (!isInsideHead(marker)) {
+            messages.push(
+                'DEV-ONLY-MARKER-NOT-IN-HEAD: <meta name="jay-dev-only"> is outside <head> — it ' +
+                    'is ignored and the page ships to production.',
+            );
+            continue;
+        }
+        const content = marker.getAttribute('content');
+        if (content !== undefined && content !== 'true') {
+            messages.push(
+                `DEV-ONLY-INVALID-CONTENT: <meta name="jay-dev-only"> has content="${content}" — only ` +
+                    'content="true" (or no content) is allowed, and the page is treated as dev-only ' +
+                    'whatever the value says.',
+            );
+        }
+    }
+    return messages;
+}
+
+function isInsideHead(element: HTMLElement): boolean {
+    for (let node = element.parentNode; node; node = node.parentNode) {
+        if (node.rawTagName?.toLowerCase() === 'head') return true;
+    }
+    return false;
+}
+
+/** `DEV-ONLY-ERROR-PAGE` — the marker on a DL#218 error page, which is not a route, so it is ignored. */
+function checkDevOnlyErrorPages(scan: ScanResult, projectRoot: string): ValidationError[] {
+    const errors: ValidationError[] = [];
+    for (const errorPage of scan.errorPages ?? []) {
+        let content: string;
+        try {
+            content = fs.readFileSync(errorPage.jayHtmlPath, 'utf-8');
+        } catch {
+            continue;
+        }
+        const head = parseHtml(content).querySelector('head');
+        if (!head?.querySelector(DEV_ONLY_META_SELECTOR)) continue;
+        errors.push({
+            file: path.relative(projectRoot, errorPage.jayHtmlPath),
+            message:
+                `DEV-ONLY-ERROR-PAGE: error page "${errorPage.token}" has <meta name="jay-dev-only">, but error ` +
+                'pages are not routes — the marker is ignored and the page ships to production.',
+            suggestion: 'Remove the marker; error pages always ship.',
+            stage: 'generate',
+        });
+    }
+    return errors;
+}
+
+/**
+ * `DEV-ONLY-SHADOWS-PLUGIN-ROUTE` — a dev-only project page at a path a plugin also provides. The
+ * dev server serves the project page there, the production build serves the plugin's route, so the
+ * two diverge silently. Only package plugins provide routes (`scanPluginRoutes` skips local
+ * `src/plugins`), so local plugins are not checked.
+ */
+async function checkDevOnlyShadowsPluginRoute(
+    scan: ScanResult,
+    projectRoot: string,
+): Promise<ValidationError[]> {
+    const devOnlyRoutes = scan.routes.filter((route) => route.devOnly);
+    if (devOnlyRoutes.length === 0) return [];
+    // Lazy, like run-production: production-build is heavy and only needed when a dev-only page exists.
+    const { scanPluginRoutes } = await import('@jay-framework/production-build');
+    const pluginRoutes = await scanPluginRoutes(projectRoot, []);
+    const errors: ValidationError[] = [];
+    for (const route of devOnlyRoutes) {
+        const pluginRoute = pluginRoutes.find((candidate) => candidate.rawRoute === route.rawRoute);
+        if (!pluginRoute) continue;
+        errors.push({
+            file: path.relative(projectRoot, route.jayHtmlPath),
+            message:
+                `DEV-ONLY-SHADOWS-PLUGIN-ROUTE: dev-only page "${route.rawRoute}" has the same route as a ` +
+                `route of plugin "${pluginRoute.packageName}" — the dev server serves this page, production ` +
+                "serves the plugin's.",
+            suggestion:
+                'Move the dev-only page to a path no plugin provides, or remove the marker if the page should replace the plugin route in production too.',
+            stage: 'generate',
+        });
+    }
+    return errors;
 }
 
 // --- Direct document access check ---
@@ -2165,6 +2263,11 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                 });
             }
 
+            // DL#240 — dev-only marker must be valid and inside <head>
+            for (const message of checkDevOnlyMarker(content)) {
+                errors.push({ file: relativePath, message, stage: 'parse' });
+            }
+
             // Check page.ts for direct document access
             const domWarnings = checkDirectDocumentAccess(jayFile);
             for (const msg of domWarnings) {
@@ -2468,12 +2571,16 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
     // Resolution is by status (exact → family), so `5xx` covers every 500-class response and `404`
     // the most common 4xx. A site that accepts the plain-text fallback suppresses the nudge via `.jay`
     // `validations: { allow-no-error-pages: true }` — a project-tree concern, not a single page's markup.
+    // One scan shared by the error-page nudge and the DL#240 dev-only checks. The dev-only checks run
+    // regardless of `allow-no-error-pages`.
+    const scanResult: ScanResult = fs.existsSync(scanDir)
+        ? await scanRoutes(scanDir, { jayHtmlFilename: 'page.jay-html', compFilename: 'page.ts' })
+        : { routes: [], errorPages: [] };
+    errors.push(...checkDevOnlyErrorPages(scanResult, projectRoot));
+    errors.push(...(await checkDevOnlyShadowsPluginRoute(scanResult, projectRoot)));
+
     const allowNoErrorPages = config.validations?.['allow-no-error-pages'] === true;
     if (!allowNoErrorPages) {
-        const scanResult = await scanRoutes(scanDir, {
-            jayHtmlFilename: 'page.jay-html',
-            compFilename: 'page.ts',
-        });
         const errorPages = scanResult.errorPages ?? [];
         const tokens = new Set(errorPages.map((ep) => ep.token));
         // `404` is covered by an exact page or the `4xx` family; `5xx` only by a `5xx` family page.

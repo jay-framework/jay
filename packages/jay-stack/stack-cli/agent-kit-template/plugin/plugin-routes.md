@@ -160,6 +160,10 @@ routes:
     description: Dev-server admin UI
 ```
 
+For a dev-only page that lives in a **project** (`src/pages`) rather than a plugin, don't wrap it in
+a plugin: put `<meta name="jay-dev-only" />` in the page's `<head>` (see "Dev-Only Pages" in
+`designer/routing.md`). It feeds the same `devOnly` flag.
+
 ### What `devOnly` does (framework)
 
 | Concern                        | Behavior                                                             |

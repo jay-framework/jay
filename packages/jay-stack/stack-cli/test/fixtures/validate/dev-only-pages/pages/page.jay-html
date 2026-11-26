@@ -1,0 +1,17 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+</head>
+<body>
+    <nav>
+        <a href="/about">About</a>
+        <a href="/blog/preview">Matches a dev-only static page and the production blog/[slug]</a>
+        <a href="/_preview/button">Dev-only static</a>
+        <a href="/_tools/inspector">Dev-only dynamic</a>
+        <a href="/nowhere">Broken</a>
+    </nav>
+</body>
+</html>

@@ -458,3 +458,45 @@ describe('error pages (DL#218)', () => {
         expect(entry.headMeta).toBeDefined();
     });
 });
+
+describe('dev-only project pages (DL#240)', () => {
+    async function listFilesRecursively(dir: string): Promise<string[]> {
+        const entries = await fs.readdir(dir, { withFileTypes: true });
+        const nested = await Promise.all(
+            entries.map((entry) => {
+                const fullPath = path.join(dir, entry.name);
+                return entry.isDirectory() ? listFilesRecursively(fullPath) : [fullPath];
+            }),
+        );
+        return nested.flat();
+    }
+
+    it('keeps the dev-only page out of the route manifest', () => {
+        expect(manifest.routes.map((r) => r.pattern)).not.toContain('/dev-preview');
+    });
+
+    it('leaves no trace of the dev-only page anywhere in the build output', async () => {
+        const files = await listFilesRecursively(buildDir);
+        const pathsNamingThePage = files.filter((file) => file.includes('dev-preview'));
+        expect(pathsNamingThePage).toEqual([]);
+
+        const filesMentioningThePage: string[] = [];
+        for (const file of files) {
+            const text = await fs.readFile(file, 'utf-8');
+            if (
+                ['dev-preview', 'DEV_PREVIEW_PAGE_MODULE_SENTINEL', 'dev-preview-only-style'].some(
+                    (needle) => text.includes(needle),
+                )
+            ) {
+                filesMentioningThePage.push(path.relative(buildDir, file));
+            }
+        }
+        expect(filesMentioningThePage).toEqual([]);
+    });
+
+    it('still builds the production pages', () => {
+        expect(manifest.routes.map((r) => r.pattern)).toEqual(
+            expect.arrayContaining(['', '/home', '/featured', '/catalog']),
+        );
+    });
+});

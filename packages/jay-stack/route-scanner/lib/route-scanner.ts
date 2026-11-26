@@ -151,7 +151,8 @@ async function scanDirectory(
             errorPages = [...errorPages, ...nested.errorPages];
         } else if (item.name === options.jayHtmlFilename) {
             const route = convertToRoutePath(BASE_DIR, fullPath, options);
-            const { params, validations } = await parseHeadlessProps(fullPath);
+            const { params, validations, devOnly } = await parsePageHead(fullPath);
+            if (devOnly) route.devOnly = true;
             if (params) {
                 const hasDynamicSegments = route.segments.some((s) => typeof s !== 'string');
                 if (hasDynamicSegments) {
@@ -275,19 +276,29 @@ function dedentYaml(text: string): string {
     return lines.map((l) => l.slice(minIndent)).join('\n');
 }
 
+/** The `<head>` meta that marks a project page as dev-server only (DL#240). */
+export const DEV_ONLY_META_SELECTOR = 'meta[name="jay-dev-only"]';
+
+interface PageHeadInfo {
+    params: Record<string, string> | undefined;
+    validations: string[];
+    devOnly: boolean;
+}
+
 /**
- * Extract static props/params from headless script tag YAML bodies (DL#156).
- * Replaces the deprecated <script type="application/jay-params"> mechanism (DL#113).
- * Merges all headless YAML bodies into a single params object for route matching.
+ * Read page-level metadata from a page's `<head>` in a single parse:
+ * - static props/params from headless script tag YAML bodies (DL#156), replacing the
+ *   deprecated <script type="application/jay-params"> mechanism (DL#113). All headless YAML
+ *   bodies merge into a single params object for route matching;
+ * - the dev-only marker `<meta name="jay-dev-only">` (DL#240). Only `<head>` counts; the
+ *   `content` value is checked by `jay-stack validate`, not here.
  */
-async function parseHeadlessProps(
-    jayHtmlPath: string,
-): Promise<{ params: Record<string, string> | undefined; validations: string[] }> {
+async function parsePageHead(jayHtmlPath: string): Promise<PageHeadInfo> {
     let content: string;
     try {
         content = await fs.readFile(jayHtmlPath, 'utf-8');
     } catch {
-        return { params: undefined, validations: [] };
+        return { params: undefined, validations: [], devOnly: false };
     }
 
     const root = parse(content, {
@@ -295,6 +306,7 @@ async function parseHeadlessProps(
         blockTextElements: { script: true, style: true },
     });
     const head = root.querySelector('head');
+    const devOnly = head?.querySelector(DEV_ONLY_META_SELECTOR) != null;
     const validations: string[] = [];
 
     const paramScripts = (head ?? root).querySelectorAll('script[type="application/jay-params"]');
@@ -330,7 +342,7 @@ async function parseHeadlessProps(
         }
     }
 
-    return { params: merged, validations };
+    return { params: merged, validations, devOnly };
 }
 
 /**

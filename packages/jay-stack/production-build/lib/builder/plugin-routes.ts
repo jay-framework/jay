@@ -11,6 +11,21 @@ import fs from 'node:fs';
 
 const require = createRequire(import.meta.url);
 
+/**
+ * Plugin routes for the production build (DL#240). A dev-only project page does not exist in
+ * production, so it must not take precedence over (and silently remove) a plugin's production
+ * route at the same path. The dev server keeps plain {@link scanPluginRoutes} precedence.
+ */
+export async function scanProductionPluginRoutes(
+    projectRoot: string,
+    projectRoutes: JayRoutes,
+): Promise<JayRoutes> {
+    return scanPluginRoutes(
+        projectRoot,
+        projectRoutes.filter((route) => !route.devOnly),
+    );
+}
+
 export async function scanPluginRoutes(
     projectRoot: string,
     projectRoutes: JayRoutes,
