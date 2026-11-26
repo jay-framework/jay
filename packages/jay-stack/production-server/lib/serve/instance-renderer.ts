@@ -35,9 +35,16 @@ export type MissOutcome =
     | { kind: 'unavailable'; retryAfterSeconds: number };
 
 export interface InstanceRendererOptions {
-    /** Max concurrent slow renders (refresh + miss). Env `JAY_SLOW_RENDER_CONCURRENCY`, default 5. */
+    /**
+     * Max concurrent slow renders (refresh + miss), default 5. Resolved from `.jay`
+     * `server.slowRenderConcurrency` / `JAY_SERVER_SLOW_RENDER_CONCURRENCY` by the server bootstrap
+     * (DL#240) and passed in.
+     */
     concurrency?: number;
-    /** Max wait of a render-on-miss. Env `JAY_MISS_TIMEOUT_MS`, default 8000. */
+    /**
+     * Max wait of a render-on-miss, default 8000. Resolved from `.jay` `server.missTimeoutMs` /
+     * `JAY_SERVER_MISS_TIMEOUT_MS` by the server bootstrap (DL#240) and passed in.
+     */
     missTimeoutMs?: number;
     retryAfterSeconds?: number;
     negativeCache?: NegativeCache;
@@ -65,12 +72,6 @@ const REDIRECT_MAX_ENTRIES = 1_000;
 interface Backoff {
     failures: number;
     nextAttemptAt: number;
-}
-
-function envNumber(name: string, fallback: number): number {
-    const raw = typeof process !== 'undefined' ? process.env?.[name] : undefined;
-    const value = raw === undefined ? NaN : Number(raw);
-    return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
 /**
@@ -105,11 +106,8 @@ export class InstanceRenderer {
         private readonly store: ArtifactStore,
         options: InstanceRendererOptions = {},
     ) {
-        this.concurrency =
-            options.concurrency ??
-            envNumber('JAY_SLOW_RENDER_CONCURRENCY', DEFAULT_SLOW_RENDER_CONCURRENCY);
-        this.missTimeoutMs =
-            options.missTimeoutMs ?? envNumber('JAY_MISS_TIMEOUT_MS', DEFAULT_MISS_TIMEOUT_MS);
+        this.concurrency = options.concurrency ?? DEFAULT_SLOW_RENDER_CONCURRENCY;
+        this.missTimeoutMs = options.missTimeoutMs ?? DEFAULT_MISS_TIMEOUT_MS;
         this.retryAfterSeconds = options.retryAfterSeconds ?? DEFAULT_RETRY_AFTER_SECONDS;
         this.negativeCache = options.negativeCache ?? new NegativeCache();
         this.now = options.now ?? Date.now;

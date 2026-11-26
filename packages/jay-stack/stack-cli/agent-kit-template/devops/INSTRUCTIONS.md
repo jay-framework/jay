@@ -87,9 +87,12 @@ devServer:
   # allowedHosts: true
 ```
 
-Platforms that already set Vite's `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS` env var (comma-separated
-hosts, or `true`) need **no** `.jay` change — the dev server reads and merges it. Do **not** add a
-`src/pages/vite.config.ts` to work around this; use the config above (DL#220).
+A platform that cannot edit the committed `.jay` can set the same value through the env override
+`JAY_DEV_SERVER_ALLOWED_HOSTS` (comma-separated hosts, or `true`) — it **replaces** the `.jay` value
+(DL#240; this renames the old `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS`, which no longer works, and
+drops its merge behavior). Do **not** add a `src/pages/vite.config.ts` to work around this; use the
+config above (DL#220). See [configuration.md](configuration.md) for every setting's `.jay` key and
+env override.
 
 > HMR over a proxy may additionally need Vite's `server.hmr` client settings — not required for serving
 > pages, only for live reload through the proxy.
@@ -98,7 +101,7 @@ hosts, or `true`) need **no** `.jay` change — the dev server reads and merges 
 
 `jay-stack-cli dev` takes **no** `--port` / `--host` flags. The Express server binds all interfaces, so
 the container is reachable as-is; set the port in `.jay` (`devServer.portRange`, e.g. `[3000, 3000]` to
-pin it).
+pin it), or without editing `.jay` via the env override `JAY_DEV_SERVER_PORT_RANGE=3000,3000` (DL#240).
 
 ### 3. Credentials are read from files, not env vars
 
@@ -142,11 +145,12 @@ stop) — the sanctioned hooks for container healthchecks and lifecycle, instead
 
 ## Guides
 
-| File                                               | Topic                                                               |
-| -------------------------------------------------- | ------------------------------------------------------------------- |
-| [production-build.md](production-build.md)         | Build pipeline, output structure, frontend/backend split            |
-| [serving-modes.md](serving-modes.md)               | Self-hosted, CDN, BaaS (fetch handler), CLI flags                   |
-| [fetch-handler.md](fetch-handler.md)               | Fetch handler, ArtifactStore interface, BaaS custom stores          |
-| [invalidation.md](invalidation.md)                 | Rebuild, renderer server, cleanup                                   |
-| [source-editing.md](source-editing.md)             | Enable + use the source-editing inspector (AIditor, DL#219)         |
-| [long-request-polling.md](long-request-polling.md) | Long actions behind a gateway timeout: `actionPollAfterMs` (DL#239) |
+| File                                               | Topic                                                                               |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| [configuration.md](configuration.md)               | **Master `.jay` config reference**: every setting, file key + env override (DL#240) |
+| [production-build.md](production-build.md)         | Build pipeline, output structure, frontend/backend split                            |
+| [serving-modes.md](serving-modes.md)               | Self-hosted, CDN, BaaS (fetch handler), CLI flags                                   |
+| [fetch-handler.md](fetch-handler.md)               | Fetch handler, ArtifactStore interface, BaaS custom stores                          |
+| [invalidation.md](invalidation.md)                 | Rebuild, renderer server, cleanup                                                   |
+| [source-editing.md](source-editing.md)             | Enable + use the source-editing inspector (AIditor, DL#219)                         |
+| [long-request-polling.md](long-request-polling.md) | Long actions behind a gateway timeout: `actionPollAfterMs` (DL#239)                 |

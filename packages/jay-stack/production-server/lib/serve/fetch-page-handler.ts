@@ -20,16 +20,20 @@ import { classify, applyFreshness, FRESHNESS_HEADER, type FreshnessState } from 
 import type { InstanceRenderer } from './instance-renderer';
 import type { CacheEntry } from '../types';
 
-/** Max time a request waits for the refresh of an `expired` instance (env `JAY_STALE_WAIT_MS`). */
-function staleWaitMs(): number {
-    const value = Number(process.env.JAY_STALE_WAIT_MS);
-    return Number.isFinite(value) && value >= 0 && process.env.JAY_STALE_WAIT_MS !== undefined
-        ? value
-        : 2000;
-}
+/** Default max time (ms) a request waits for the refresh of an `expired` instance (DL#226). */
+export const DEFAULT_STALE_WAIT_MS = 2000;
 
-function freshnessHeaderEnabled(): boolean {
-    return process.env.JAY_FRESHNESS_HEADER !== 'off';
+/**
+ * Per-request serving knobs resolved from `.jay` `server.*` (and its `JAY_SERVER_*` env overrides)
+ * by the server bootstrap and passed in (DL#240).
+ */
+export interface FetchPageOptions {
+    /** Long-request poll budget in ms (DL#239); absent → off. */
+    actionPollAfterMs?: number;
+    /** Max wait for the refresh of an `expired` instance; default {@link DEFAULT_STALE_WAIT_MS}. */
+    staleWaitMs?: number;
+    /** Emit the `jay-freshness` header; default `true`. */
+    freshnessHeader?: boolean;
 }
 
 async function waitFor<T>(promise: Promise<T>, ms: number): Promise<T | undefined> {
@@ -53,6 +57,7 @@ async function resolveEntry(
     cached: CacheEntry,
     match: MatchResult,
     renderer: InstanceRenderer | undefined,
+    staleWaitMs: number,
 ): Promise<{ entry: CacheEntry; state: FreshnessState }> {
     const now = Date.now();
     const state = classify(cached, now);
@@ -60,7 +65,7 @@ async function resolveEntry(
 
     const refresh = renderer.refresh(match.route, match.params);
     if (state === 'expired' && (refresh.kind === 'started' || refresh.kind === 'joined')) {
-        const renewed = await waitFor(refresh.done, staleWaitMs());
+        const renewed = await waitFor(refresh.done, staleWaitMs);
         if (renewed) return { entry: renewed, state: 'fresh' };
     }
     return { entry: cached, state };
@@ -74,9 +79,14 @@ export async function fetchPageRequest(
     staticBaseUrl: string,
     cookies: Record<string, string> = {},
     renderer?: InstanceRenderer,
-    actionPollAfterMs?: number,
+    serveOptions: FetchPageOptions = {},
 ): Promise<Response> {
     const { route, instance } = match;
+    const {
+        actionPollAfterMs,
+        staleWaitMs = DEFAULT_STALE_WAIT_MS,
+        freshnessHeader = true,
+    } = serveOptions;
     const t0 = Date.now();
 
     let tCache = 0,
@@ -91,13 +101,14 @@ export async function fetchPageRequest(
             return r;
         }),
     ]);
-    // On the expired path this awaits the stale re-render (up to JAY_STALE_WAIT_MS) — the dominant
+    // On the expired path this awaits the stale re-render (up to staleWaitMs) — the dominant
     // cost of a refresh request (DL#226); measure it so the timing log accounts for `total`.
     const tBeforeResolve = Date.now();
     const { entry: cached, state: freshnessState } = await resolveEntry(
         storedEntry,
         match,
         renderer,
+        staleWaitMs,
     );
     const tData = Date.now();
 
@@ -222,7 +233,7 @@ export async function fetchPageRequest(
         cached,
         freshnessState,
         Date.now(),
-        { freshnessHeader: freshnessHeaderEnabled() },
+        { freshnessHeader },
     );
     const freshnessLog = responseHeaders[FRESHNESS_HEADER];
     const stream = new ReadableStream({

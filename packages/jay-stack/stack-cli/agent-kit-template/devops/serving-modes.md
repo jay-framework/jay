@@ -123,21 +123,24 @@ The main server keeps slow-render data fresh and serves items that did not exist
 
 **Stale-while-revalidate.** When slow render returns `ttl` / `grace` (seconds, see the developer `render-results.md` guide), the server classifies each instance as `fresh`, `stale` or `expired`:
 
-| State     | Served                                                                       | Headers                                                    |
-| --------- | ---------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `fresh`   | Stored data; `max-age` / `s-maxage` clamped to the remaining TTL             | `jay-freshness: fresh, <age>ms`                            |
-| `stale`   | Stored data immediately, refresh runs in the background                      | `Cache-Control: no-store`, `jay-freshness: stale, <age>ms` |
-| `expired` | Waits up to `JAY_STALE_WAIT_MS` (2000) for the refresh, else the stored data | as `stale`, or `fresh` if the refresh finished             |
+| State     | Served                                                                        | Headers                                                    |
+| --------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `fresh`   | Stored data; `max-age` / `s-maxage` clamped to the remaining TTL              | `jay-freshness: fresh, <age>ms`                            |
+| `stale`   | Stored data immediately, refresh runs in the background                       | `Cache-Control: no-store`, `jay-freshness: stale, <age>ms` |
+| `expired` | Waits up to `server.staleWaitMs` (2000) for the refresh, else the stored data | as `stale`, or `fresh` if the refresh finished             |
 
 Old data is never cached by CDNs (`no-store`) so a refresh becomes visible at once; validators (`ETag` gets `-<renderedAt>` appended, `Last-Modified`) are kept so crawlers and browsers can still revalidate cheaply.
 
 **Render on miss.** A URL that matches a route but has no instance (e.g. a product published after the build) is slow-rendered on the first request, stored, and served. If the slow render answers `notFound()` the request is a real 404 (remembered in memory for 10 minutes); if it cannot render right now the server answers `503` with `Retry-After: 2`.
 
-**Limits.** Concurrent requests for the same instance share one slow render. At most `JAY_SLOW_RENDER_CONCURRENCY` (default 5) slow renders run at once across refreshes and misses; there is no queue — a refresh that finds all slots busy serves the old data, a miss answers 503. A failed refresh backs off before retrying.
+**Limits.** Concurrent requests for the same instance share one slow render. At most `server.slowRenderConcurrency` (default 5) slow renders run at once across refreshes and misses; there is no queue — a refresh that finds all slots busy serves the old data, a miss answers 503. A failed refresh backs off before retrying.
 
-| Variable                      | Default | Meaning                                                |
-| ----------------------------- | ------- | ------------------------------------------------------ |
-| `JAY_SLOW_RENDER_CONCURRENCY` | `5`     | Max concurrent slow renders (refresh + render-on-miss) |
-| `JAY_STALE_WAIT_MS`           | `2000`  | Max wait for the refresh of an `expired` instance      |
-| `JAY_MISS_TIMEOUT_MS`         | `8000`  | Max wait of a render-on-miss before 503                |
-| `JAY_FRESHNESS_HEADER`        | on      | Set to `off` to omit the `jay-freshness` header        |
+These are `.jay` `server.*` settings; each also has a `JAY_SERVER_*` env override (DL#240). Full
+reference, including the old→new env rename, in [configuration.md](configuration.md).
+
+| `.jay` `server.*`       | Env override                         | Default | Meaning                                                |
+| ----------------------- | ------------------------------------ | ------- | ------------------------------------------------------ |
+| `slowRenderConcurrency` | `JAY_SERVER_SLOW_RENDER_CONCURRENCY` | `5`     | Max concurrent slow renders (refresh + render-on-miss) |
+| `staleWaitMs`           | `JAY_SERVER_STALE_WAIT_MS`           | `2000`  | Max wait for the refresh of an `expired` instance      |
+| `missTimeoutMs`         | `JAY_SERVER_MISS_TIMEOUT_MS`         | `8000`  | Max wait of a render-on-miss before 503                |
+| `freshnessHeader`       | `JAY_SERVER_FRESHNESS_HEADER`        | `on`    | Set `false`/`off` to omit the `jay-freshness` header   |

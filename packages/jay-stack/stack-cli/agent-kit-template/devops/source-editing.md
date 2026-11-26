@@ -17,6 +17,9 @@ devServer:
   sourceEditing: true
 ```
 
+Or, without editing `.jay`, the env override `JAY_DEV_SERVER_SOURCE_EDITING=on` (DL#240; see
+[configuration.md](configuration.md)).
+
 When on, the dev server injects `jay-dev-*` markers into rendered pages (`jay-dev-src` line ranges on every
 element, `jay-dev-item` on `forEach` roots, `jay-dev-region*` on region roots). Off by default — the markers
 change rendered output, so enable only for source-editing sessions, never in production.

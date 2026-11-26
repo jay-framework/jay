@@ -158,6 +158,8 @@ export async function runServe(
         });
     } else {
         const { startMainServer } = await import('@jay-framework/production-server');
+        // One load — env overrides (DL#240) are already applied inside loadConfig.
+        const config = loadConfig(ctx.resolvedPath);
         await startMainServer({
             buildRoot: ctx.buildRoot,
             version: ctx.version,
@@ -165,8 +167,12 @@ export async function runServe(
             testMode: options.testMode,
             publicBasePath: options.staticBaseUrl,
             serveStatic: options.serveStatic,
-            actionBodyLimitBytes: resolveActionBodyLimitBytes(loadConfig(ctx.resolvedPath)),
-            actionPollAfterMs: resolveActionPollAfterMs(loadConfig(ctx.resolvedPath)),
+            actionBodyLimitBytes: resolveActionBodyLimitBytes(config),
+            actionPollAfterMs: resolveActionPollAfterMs(config),
+            staleWaitMs: config.server?.staleWaitMs,
+            missTimeoutMs: config.server?.missTimeoutMs,
+            slowRenderConcurrency: config.server?.slowRenderConcurrency,
+            freshnessHeader: config.server?.freshnessHeader,
         });
     }
 }

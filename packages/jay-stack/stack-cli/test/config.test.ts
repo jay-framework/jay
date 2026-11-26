@@ -8,6 +8,8 @@ import {
     getConfigWithDefaults,
     resolveActionBodyLimitBytes,
     resolveActionPollAfterMs,
+    applyEnvOverrides,
+    ENV_OVERRIDES,
     JayConfig,
 } from '../lib/config';
 
@@ -161,5 +163,97 @@ describe('resolveActionPollAfterMs (DL#239)', () => {
 
     it.each([0, -5, 1.5, 'x' as unknown as number])('is off for an invalid value (%s)', (value) => {
         expect(resolveActionPollAfterMs({ server: { actionPollAfterMs: value } })).toBeUndefined();
+    });
+});
+
+describe('applyEnvOverrides (DL#240)', () => {
+    it('lets an env var override a .jay value', () => {
+        const config: JayConfig = { server: { actionBodyLimitBytes: 1000 } };
+        applyEnvOverrides(config, { JAY_SERVER_ACTION_BODY_LIMIT_BYTES: '2097152' });
+        expect(config.server?.actionBodyLimitBytes).toEqual(2097152);
+    });
+
+    it('sets a value when the .jay field (and section) is absent', () => {
+        const config: JayConfig = {};
+        applyEnvOverrides(config, { JAY_SERVER_ACTION_POLL_AFTER_MS: '25000' });
+        expect(config.server?.actionPollAfterMs).toEqual(25000);
+    });
+
+    it('leaves the config untouched when no override env is set', () => {
+        const config: JayConfig = { server: { staleWaitMs: 3000 } };
+        applyEnvOverrides(config, {});
+        expect(config).toEqual({ server: { staleWaitMs: 3000 } });
+    });
+
+    it('warns and ignores an invalid value, keeping the base value', () => {
+        const config: JayConfig = { server: { actionBodyLimitBytes: 1000 } };
+        applyEnvOverrides(config, { JAY_SERVER_ACTION_BODY_LIMIT_BYTES: 'not-a-number' });
+        expect(config.server?.actionBodyLimitBytes).toEqual(1000);
+    });
+
+    it('parses on/off booleans', () => {
+        const on: JayConfig = {};
+        applyEnvOverrides(on, { JAY_SERVER_FRESHNESS_HEADER: 'off' });
+        expect(on.server?.freshnessHeader).toBe(false);
+
+        const off: JayConfig = {};
+        applyEnvOverrides(off, { JAY_SERVER_FRESHNESS_HEADER: 'on' });
+        expect(off.server?.freshnessHeader).toBe(true);
+    });
+
+    it('parses a comma-separated allowed-hosts list (replace, not merge)', () => {
+        const config: JayConfig = { devServer: { allowedHosts: ['.from-file.dev'] } };
+        applyEnvOverrides(config, { JAY_DEV_SERVER_ALLOWED_HOSTS: ' .a.dev , .b.dev ,' });
+        expect(config.devServer?.allowedHosts).toEqual(['.a.dev', '.b.dev']);
+    });
+
+    it('parses the literal "true" for allowed-hosts', () => {
+        const config: JayConfig = {};
+        applyEnvOverrides(config, { JAY_DEV_SERVER_ALLOWED_HOSTS: 'true' });
+        expect(config.devServer?.allowedHosts).toBe(true);
+    });
+
+    it('parses a port-range integer pair', () => {
+        const config: JayConfig = {};
+        applyEnvOverrides(config, { JAY_DEV_SERVER_PORT_RANGE: '4000,4100' });
+        expect(config.devServer?.portRange).toEqual([4000, 4100]);
+    });
+
+    it('feeds resolveActionBodyLimitBytes after override', () => {
+        const config: JayConfig = { server: { actionBodyLimitBytes: 1000 } };
+        applyEnvOverrides(config, { JAY_SERVER_ACTION_BODY_LIMIT_BYTES: '2097152' });
+        expect(resolveActionBodyLimitBytes(config)).toEqual(2097152);
+    });
+
+    // Verification criterion (DL#240 #4): every overridable leaf of JayConfig has exactly one
+    // registry row. Update this list and the registry together when adding a config field.
+    it('covers every overridable config field with exactly one registry row', () => {
+        const names = ENV_OVERRIDES.map((e) => e.env).sort();
+        expect(new Set(names).size).toEqual(names.length); // no duplicates
+        expect(names).toEqual(
+            [
+                'JAY_DEV_SERVER_PORT_RANGE',
+                'JAY_DEV_SERVER_PAGES_BASE',
+                'JAY_DEV_SERVER_COMPONENTS_BASE',
+                'JAY_DEV_SERVER_PUBLIC_FOLDER',
+                'JAY_DEV_SERVER_CONFIG_BASE',
+                'JAY_DEV_SERVER_ALLOWED_HOSTS',
+                'JAY_DEV_SERVER_SOURCE_EDITING',
+                'JAY_DEV_SERVER_BASE',
+                'JAY_SITE_BASE_URL',
+                'JAY_SITE_NAME',
+                'JAY_SITE_LOGO',
+                'JAY_SITE_DESCRIPTION',
+                'JAY_SITE_SAME_AS',
+                'JAY_SERVER_ACTION_BODY_LIMIT_BYTES',
+                'JAY_SERVER_ACTION_POLL_AFTER_MS',
+                'JAY_SERVER_STALE_WAIT_MS',
+                'JAY_SERVER_MISS_TIMEOUT_MS',
+                'JAY_SERVER_SLOW_RENDER_CONCURRENCY',
+                'JAY_SERVER_FRESHNESS_HEADER',
+                'JAY_VALIDATIONS_ALLOW_NO_ARD',
+                'JAY_VALIDATIONS_ALLOW_NO_ERROR_PAGES',
+            ].sort(),
+        );
     });
 });
